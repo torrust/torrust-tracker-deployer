@@ -2,7 +2,7 @@ name: Test LXD Container Provisioning
 
 # NOTE: This workflow uses CI-specific approaches like 'sudo chmod 666' on the LXD socket
 # and 'sudo' with LXD commands. These approaches are NOT recommended for local development.
-# For local use, follow the proper group membership approach documented in config/lxd/README.md
+# For local use, follow the proper group membership approach documented in config/tofu/lxd/README.md
 
 on:
   push:
@@ -53,19 +53,19 @@ jobs:
           tofu version
 
       - name: Initialize OpenTofu
-        working-directory: config/lxd
+        working-directory: config/tofu/lxd
         run: tofu init
 
       - name: Validate OpenTofu configuration
-        working-directory: config/lxd
+        working-directory: config/tofu/lxd
         run: tofu validate
 
       - name: Plan deployment
-        working-directory: config/lxd
+        working-directory: config/tofu/lxd
         run: tofu plan
 
       - name: Apply configuration
-        working-directory: config/lxd
+        working-directory: config/tofu/lxd
         run: |
           # Run with sudo to ensure LXD access in CI environment
           # NOTE: For local development, use "sg lxd -c 'tofu apply'" instead
@@ -129,12 +129,12 @@ jobs:
           sudo lxc exec torrust-vm -- systemctl status ssh || echo "ssh service check failed"
 
       - name: Get container outputs
-        working-directory: config/lxd
+        working-directory: config/tofu/lxd
         run: sudo -E tofu output
 
       - name: Cleanup
         if: always()
-        working-directory: config/lxd
+        working-directory: config/tofu/lxd
         run: |
           echo "Cleaning up container..."
           # Use sudo for CI environment cleanup

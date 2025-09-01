@@ -14,23 +14,23 @@ This repository contains configurations for testing VM provisioning and cloud-in
 
 This repository tests two different virtualization technologies:
 
-### 🖥️ **Multipass (`config/multipass/`)**
+### 🖥️ **Multipass (`config/tofu/multipass/`)**
 
 - **Technology**: Full VMs with nested virtualization
 - **Status**: ⚠️ Works in GitHub Actions but undocumented
 - **Best for**: Local development, full VM isolation
 - **Requirements**: Nested virtualization support
 
-**[📖 See detailed documentation →](config/multipass/README.md)**
+**[📖 See detailed documentation →](config/tofu/multipass/README.md)**
 
-### ☁️ **LXD Containers (`config/lxd/`)**
+### ☁️ **LXD Containers (`config/tofu/lxd/`)**
 
 - **Technology**: System containers with cloud-init support
 - **Status**: ✅ Guaranteed GitHub Actions compatibility
 - **Best for**: CI/CD environments, fast provisioning
 - **Requirements**: No special virtualization needed
 
-**[📖 See detailed documentation →](config/lxd/README.md)**
+**[📖 See detailed documentation →](config/tofu/lxd/README.md)**
 
 ## 🔄 **Quick Comparison**
 
@@ -49,8 +49,8 @@ This repository tests two different virtualization technologies:
 
 Choose your preferred approach:
 
-1. **For local development**: Start with [Multipass configuration](config/multipass/README.md)
-2. **For CI/CD reliability**: Use [LXD configuration](config/lxd/README.md)
+1. **For local development**: Start with [Multipass configuration](config/tofu/multipass/README.md)
+2. **For CI/CD reliability**: Use [LXD configuration](config/tofu/lxd/README.md)
 3. **For testing both**: Try both approaches to compare
 
 ## 🧪 **Testing in GitHub Actions**
@@ -86,14 +86,15 @@ Both configurations include GitHub Actions workflows for CI testing:
 
 ```text
 ├── config/
-│   ├── multipass/
-│   │   ├── main.tf           # OpenTofu configuration for Multipass VMs
-│   │   ├── cloud-init.yml    # Cloud-init configuration
-│   │   └── README.md         # Multipass-specific documentation
-│   └── lxd/
-│       ├── main.tf           # OpenTofu configuration for LXD containers
-│       ├── cloud-init.yml    # Cloud-init configuration (same as multipass)
-│       └── README.md         # LXD-specific documentation
+│   └── tofu/
+│       ├── multipass/
+│       │   ├── main.tf           # OpenTofu configuration for Multipass VMs
+│       │   ├── cloud-init.yml    # Cloud-init configuration
+│       │   └── README.md         # Multipass-specific documentation
+│       └── lxd/
+│           ├── main.tf           # OpenTofu configuration for LXD containers
+│           ├── cloud-init.yml    # Cloud-init configuration (same as multipass)
+│           └── README.md         # LXD-specific documentation
 ├── .github/
 │   └── workflows/
 │       ├── test-multipass-provision.yml  # Tests Multipass VMs

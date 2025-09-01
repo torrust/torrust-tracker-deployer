@@ -65,19 +65,19 @@ jobs:
           tofu version
 
       - name: Initialize OpenTofu
-        working-directory: config/multipass
+        working-directory: config/tofu/multipass
         run: tofu init
 
       - name: Validate OpenTofu configuration
-        working-directory: config/multipass
+        working-directory: config/tofu/multipass
         run: tofu validate
 
       - name: Plan deployment
-        working-directory: config/multipass
+        working-directory: config/tofu/multipass
         run: tofu plan
 
       - name: Apply configuration
-        working-directory: config/multipass
+        working-directory: config/tofu/multipass
         run: |
           # Run with sudo to ensure multipass access
           sudo -E tofu apply -auto-approve
@@ -125,12 +125,12 @@ jobs:
           sudo multipass exec torrust-vm -- free -h || echo "free failed"
 
       - name: Get VM outputs
-        working-directory: config/multipass
+        working-directory: config/tofu/multipass
         run: sudo -E tofu output
 
       - name: Cleanup
         if: always()
-        working-directory: config/multipass
+        working-directory: config/tofu/multipass
         run: |
           echo "Cleaning up VM..."
           sudo -E tofu destroy -auto-approve || true
