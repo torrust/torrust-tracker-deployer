@@ -1,13 +1,14 @@
 #cloud-config
-package_update: true
-package_upgrade: true
+# Commented out for faster VM creation during development
+# package_update: true
+# package_upgrade: true
 
-packages:
-  - curl
-  - wget
-  - git
-  - htop
-  - vim
+# packages:
+#   - curl
+#   - wget
+#   - git
+#   - htop
+#   - vim
 
 users:
   - name: torrust

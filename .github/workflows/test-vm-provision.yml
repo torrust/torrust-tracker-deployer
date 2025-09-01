@@ -1,0 +1,107 @@
+name: Test VM Provisioning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  test-provision:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Multipass
+        run: |
+          sudo snap install multipass
+
+      - name: Install OpenTofu
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
+          chmod +x install-opentofu.sh
+          ./install-opentofu.sh --install-method deb
+          sudo apt update && sudo apt install -y opentofu
+
+      - name: Verify installations
+        run: |
+          multipass version
+          tofu version
+
+      - name: Initialize OpenTofu
+        working-directory: templates/tofu
+        run: tofu init
+
+      - name: Validate OpenTofu configuration
+        working-directory: templates/tofu
+        run: tofu validate
+
+      - name: Plan deployment
+        working-directory: templates/tofu
+        run: tofu plan
+
+      - name: Apply configuration
+        working-directory: templates/tofu
+        run: tofu apply -auto-approve
+
+      - name: Wait for VM to be ready
+        run: |
+          echo "Waiting for VM to be fully initialized..."
+          sleep 30
+
+          # Wait up to 5 minutes for cloud-init to complete
+          timeout=300
+          elapsed=0
+          while [ $elapsed -lt $timeout ]; do
+            if multipass exec torrust-vm -- test -f /tmp/provision_complete 2>/dev/null; then
+              echo "VM provisioning completed successfully!"
+              break
+            fi
+            echo "Waiting for VM provisioning to complete... ($elapsed/$timeout seconds)"
+            sleep 10
+            elapsed=$((elapsed + 10))
+          done
+
+          if [ $elapsed -ge $timeout ]; then
+            echo "Timeout waiting for VM provisioning to complete"
+            exit 1
+          fi
+
+      - name: Test VM functionality
+        run: |
+          # Test basic connectivity
+          multipass list
+          multipass info torrust-vm
+
+          # Test SSH access
+          multipass exec torrust-vm -- whoami
+
+          # Test system information
+          multipass exec torrust-vm -- lsb_release -a
+          multipass exec torrust-vm -- df -h
+          multipass exec torrust-vm -- free -h
+
+      - name: Get VM outputs
+        working-directory: templates/tofu
+        run: tofu output
+
+      - name: Cleanup on success
+        if: success()
+        working-directory: templates/tofu
+        run: tofu destroy -auto-approve
+
+      - name: Cleanup on failure
+        if: failure()
+        working-directory: templates/tofu
+        run: |
+          echo "Cleaning up after failure..."
+          tofu destroy -auto-approve || true
+          multipass delete torrust-vm --purge || true
+
+      - name: Final verification
+        run: |
+          echo "Verifying cleanup..."
+          multipass list
