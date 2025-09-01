@@ -15,15 +15,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Multipass
+      - name: Install and configure Multipass
         run: |
           sudo snap install multipass
-          # Wait for multipass to initialize and check if it's working
+
+          # Wait for multipass to fully initialize
+          echo "Waiting for multipass daemon to start..."
+          sleep 15
+
+          # Check if multipass daemon is running
+          sudo systemctl status snap.multipass.multipassd.service || true
+
+          # Try to start the daemon explicitly if needed
+          sudo systemctl start snap.multipass.multipassd.service || true
+
+          # Wait a bit more
+          sleep 10
+
+          # Check multipass status
           sudo multipass version
-          # Try to configure multipass for CI environment
-          sudo multipass set local.driver=qemu || true
-          # Test if multipass is accessible
-          sudo -E multipass list || echo "Multipass not accessible, will use validation-only mode"
+
+          # Set up permissions - add runner to multipass group
+          sudo usermod -a -G multipass runner || true
+
+          # Try to configure multipass for virtualization
+          sudo multipass set local.driver=qemu
+
+          # Test basic multipass functionality
+          sudo multipass list
 
       - name: Install OpenTofu
         run: |
@@ -33,7 +52,7 @@ jobs:
 
       - name: Verify installations
         run: |
-          multipass version
+          sudo multipass version
           tofu version
 
       - name: Initialize OpenTofu
@@ -49,13 +68,12 @@ jobs:
         run: tofu plan
 
       - name: Apply configuration
-        id: apply
-        continue-on-error: true
         working-directory: templates/tofu
-        run: sudo -E tofu apply -auto-approve
+        run: |
+          # Run with sudo to ensure multipass access
+          sudo -E tofu apply -auto-approve
 
       - name: Wait for VM to be ready
-        if: steps.apply.outcome == 'success'
         run: |
           echo "Waiting for VM to be fully initialized..."
           sleep 30
@@ -64,7 +82,7 @@ jobs:
           timeout=300
           elapsed=0
           while [ $elapsed -lt $timeout ]; do
-            if multipass exec torrust-vm -- test -f /tmp/provision_complete 2>/dev/null; then
+            if sudo multipass exec torrust-vm -- test -f /tmp/provision_complete 2>/dev/null; then
               echo "VM provisioning completed successfully!"
               break
             fi
@@ -79,49 +97,38 @@ jobs:
           fi
 
       - name: Test VM functionality
-        if: steps.apply.outcome == 'success'
         run: |
           # Test basic connectivity
-          multipass list
-          multipass info torrust-vm
+          sudo multipass list
+          sudo multipass info torrust-vm
 
           # Test SSH access
-          multipass exec torrust-vm -- whoami
+          sudo multipass exec torrust-vm -- whoami
 
           # Test installed packages
-          multipass exec torrust-vm -- which git
-          multipass exec torrust-vm -- which curl
-          multipass exec torrust-vm -- which wget
+          sudo multipass exec torrust-vm -- which git
+          sudo multipass exec torrust-vm -- which curl
+          sudo multipass exec torrust-vm -- which wget
 
           # Test system information
-          multipass exec torrust-vm -- lsb_release -a
-          multipass exec torrust-vm -- df -h
-          multipass exec torrust-vm -- free -h
+          sudo multipass exec torrust-vm -- lsb_release -a
+          sudo multipass exec torrust-vm -- df -h
+          sudo multipass exec torrust-vm -- free -h
 
       - name: Get VM outputs
-        if: steps.apply.outcome == 'success'
         working-directory: templates/tofu
-        run: tofu output
+        run: sudo -E tofu output
 
-      - name: Cleanup on success
-        if: steps.apply.outcome == 'success'
-        working-directory: templates/tofu
-        run: tofu destroy -auto-approve
-
-      - name: Cleanup on failure
-        if: failure() && steps.apply.outcome == 'success'
+      - name: Cleanup
+        if: always()
         working-directory: templates/tofu
         run: |
-          echo "Cleaning up after failure..."
-          tofu destroy -auto-approve || true
-          multipass delete torrust-vm --purge || true
+          echo "Cleaning up VM..."
+          sudo -E tofu destroy -auto-approve || true
+          sudo multipass delete torrust-vm --purge || true
 
-      - name: Report VM creation status
+      - name: Final verification
+        if: always()
         run: |
-          if [ "${{ steps.apply.outcome }}" == "success" ]; then
-            echo "✅ VM provisioning test completed successfully"
-          else
-            echo "⚠️  VM creation failed - this is expected in GitHub Actions environment"
-            echo "The workflow successfully validated the OpenTofu configuration"
-            echo "VM creation typically fails in CI due to nested virtualization limitations"
-          fi
+          echo "Verifying cleanup..."
+          sudo multipass list
