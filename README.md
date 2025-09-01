@@ -48,7 +48,7 @@ If both commands return version information, you can skip the installation steps
 
 This project provides two different approaches for VM provisioning and testing:
 
-### 🖥️ **Local Development (`config/local/`)**
+### 🖥️ **Local Development (`config/multipass/`)**
 
 - **Technology**: Multipass + QEMU system mode
 - **Virtualization**: Full VMs with nested virtualization
@@ -56,7 +56,7 @@ This project provides two different approaches for VM provisioning and testing:
 - **Requirements**: Supports nested virtualization (KVM/Hyper-V)
 - **Cloud-init**: Full support with complete boot process
 
-### ☁️ **CI/CD Environment (`config/ci/`)**
+### ☁️ **CI/CD Environment (`config/lxd/`)**
 
 - **Technology**: LXD system containers
 - **Virtualization**: Container-based with systemd support
@@ -81,8 +81,8 @@ This project provides two different approaches for VM provisioning and testing:
 
 The main configuration consists of:
 
-- **`config/local/main.tf`** - OpenTofu configuration defining the Multipass VM
-- **`config/local/cloud-init.yml`** - Cloud-init configuration for VM initialization
+- **`config/multipass/main.tf`** - OpenTofu configuration defining the Multipass VM
+- **`config/multipass/cloud-init.yml`** - Cloud-init configuration for VM initialization
 
 The setup includes:
 
@@ -95,10 +95,10 @@ The setup includes:
 
 Before provisioning, you may want to customize:
 
-1. **SSH Key**: Edit the `config/local/cloud-init.yml` file and replace the SSH key with your actual public key
-2. **VM Specifications**: Adjust CPU, memory, and disk size in `config/local/main.tf`
+1. **SSH Key**: Edit the `config/multipass/cloud-init.yml` file and replace the SSH key with your actual public key
+2. **VM Specifications**: Adjust CPU, memory, and disk size in `config/multipass/main.tf`
 3. **VM Name**: Change the instance name from "torrust-vm" to your preferred name
-4. **Packages**: Modify the packages list in `config/local/cloud-init.yml` to include additional software
+4. **Packages**: Modify the packages list in `config/multipass/cloud-init.yml` to include additional software
 
 ## Provisioning
 
@@ -107,7 +107,7 @@ To provision the virtual machine:
 1. **Navigate to the OpenTofu template directory**:
 
    ```bash
-   cd config/local
+   cd config/multipass
    ```
 
 2. **Initialize OpenTofu**:
@@ -203,7 +203,7 @@ To destroy the virtual machine and clean up resources:
 1. **Navigate to the OpenTofu template directory** (if not already there):
 
    ```bash
-   cd config/local
+   cd config/multipass
    ```
 
 2. **Destroy the infrastructure**:
@@ -242,16 +242,16 @@ multipass logs torrust-vm
 
 ```text
 ├── config/
-│   ├── local/
+│   ├── multipass/
 │   │   ├── main.tf           # OpenTofu configuration for Multipass VMs
 │   │   └── cloud-init.yml    # Cloud-init configuration
-│   └── ci/
+│   └── lxd/
 │       ├── main.tf           # OpenTofu configuration for LXD containers
-│       └── cloud-init.yml    # Cloud-init configuration (same as local)
+│       └── cloud-init.yml    # Cloud-init configuration (same as multipass)
 ├── .github/
 │   └── workflows/
-│       ├── test-vm-provision.yml     # Tests Multipass VMs (nested virt)
-│       └── test-lxd-provision.yml    # Tests LXD containers (no nested virt)
+│       ├── test-multipass-provision.yml  # Tests Multipass VMs (nested virt)
+│       └── test-lxd-provision.yml        # Tests LXD containers (no nested virt)
 ├── README.md                 # Documentation
 └── .gitignore                # Git ignore rules
 ```
