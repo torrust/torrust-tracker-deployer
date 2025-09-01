@@ -41,7 +41,17 @@ If both commands return version information, you can skip the installation steps
    # Add your user to the lxd group
    sudo usermod -a -G lxd $USER
 
-   # You may need to log out and back in for group changes to take effect
+   # IMPORTANT: For group membership to take effect, you MUST do ONE of:
+   # Option 1 (Temporary): Use 'newgrp lxd' to start a new shell with the group active
+   # Option 2: Log out and log back in completely
+   # Option 3: Close terminal and open a new one
+   # Option 4 (Most Reliable): Reboot your system if other methods don't work
+
+   # Verify you're in the lxd group (should show your username)
+   getent group lxd | grep "$USER"
+
+   # Verify the group is active in your session (lxd should be in the list)
+   id -nG
    ```
 
 2. **OpenTofu**: Install from [https://opentofu.org/](https://opentofu.org/)
@@ -54,6 +64,62 @@ If both commands return version information, you can skip the installation steps
    ```
 
 ## Configuration
+
+### Proper LXD Group Setup (Required for Direct LXD Access)
+
+**The Problem**: LXD's client (`lxc`) connects to the daemon via a Unix socket that only members of the `lxd` group can access. Even if your user is in the `lxd` group, your current shell session might not have picked up that membership yet, resulting in "permission denied" errors.
+
+**The Solution**: Based on the [official LXD documentation](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/#add-the-current-user-to-the-lxd-group), follow these steps:
+
+1. **Check if you're already in the lxd group**:
+
+   ```bash
+   getent group lxd | grep "$USER"
+   ```
+
+   If this returns your username, you're already in the group.
+
+2. **Verify your current session has the group active**:
+
+   ```bash
+   id -nG
+   ```
+
+   If `lxd` is not in the list, your session hasn't picked up the group membership.
+
+3. **If not in the group, add yourself**:
+
+   ```bash
+   sudo usermod -aG lxd "$USER"
+   ```
+
+4. **Activate the group membership** (choose ONE method):
+
+   **Method 1 (Temporary)**: Start a subshell with the group active:
+
+   ```bash
+   newgrp lxd
+   ```
+
+   **Method 2 (Permanent)**: Log out and log back in completely
+
+   **Method 3 (Permanent)**: Close your terminal and open a new one
+
+   **Method 4 (Most Reliable)**: Reboot your system - this ensures all processes pick up the new group membership
+
+   **Note**: In some cases, logging out/in or closing the terminal may not be sufficient, and a full system reboot may be required to properly activate the group membership.
+
+5. **Verify the setup works**:
+
+   ```bash
+   lxc version
+   ```
+
+   If this works without `sudo` or permission errors, you're all set!
+
+**Important**: The official LXD documentation states that if `lxd init --minimal` results in an error, "your group membership might not have taken effect. In this case, close and re-open your terminal, then try again."
+
+### Container Configuration Files
 
 The LXD configuration consists of:
 
@@ -107,6 +173,26 @@ To provision the container:
 
    Type `yes` when prompted to confirm the creation.
 
+   **Note**: If you encounter LXD socket permission issues, use:
+
+   ```bash
+   sg lxd -c "tofu apply"
+   ```
+
+   Example successful output:
+
+   ```text
+   Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+
+   Outputs:
+   container_info = {
+     "image" = "ubuntu:22.04"
+     "ip_address" = "10.140.190.155"
+     "name" = "torrust-vm"
+     "status" = "Running"
+   }
+   ```
+
 5. **Get container information**:
 
    ```bash
@@ -118,6 +204,9 @@ To provision the container:
    ```bash
    # Direct shell access
    lxc exec torrust-vm -- /bin/bash
+
+   # If you have LXD permission issues, use:
+   sg lxd -c "lxc exec torrust-vm -- /bin/bash"
 
    # SSH access (if you configured your SSH key and networking)
    ssh torrust@<container-ip-address>
@@ -131,6 +220,9 @@ To provision the container:
 # Using lxc directly
 lxc exec torrust-vm -- /bin/bash
 
+# If you have permission issues, use sg to switch to lxd group
+sg lxd -c "lxc exec torrust-vm -- /bin/bash"
+
 # Or via SSH (if you configured your SSH key)
 ssh torrust@<container-ip-address>
 ```
@@ -138,7 +230,11 @@ ssh torrust@<container-ip-address>
 ### Check Container Status
 
 ```bash
+# Preferred (if group membership is active)
 lxc list
+
+# If you get permission denied, use:
+sg lxd -c "lxc list"
 ```
 
 ### Stop the Container
@@ -197,6 +293,12 @@ To destroy the container and clean up resources:
 
    Type `yes` when prompted to confirm the destruction.
 
+   **Note**: If you encounter LXD permission issues, use:
+
+   ```bash
+   sg lxd -c "tofu destroy"
+   ```
+
 ## Troubleshooting
 
 ### Common Issues
@@ -204,6 +306,13 @@ To destroy the container and clean up resources:
 1. **LXD not found**: Ensure LXD is installed via snap
 2. **Permission errors**: Make sure your user is in the `lxd` group
 3. **Socket permissions**: In CI environments, you may need to adjust socket permissions
+4. **LXD unix socket not accessible**: If you get `Error: LXD unix socket "/var/snap/lxd/common/lxd/unix.socket" not accessible: permission denied`, follow the [Proper LXD Group Setup](#proper-lxd-group-setup-required-for-direct-lxd-access) section above. Quick fixes:
+   - **Most Reliable**: Reboot your system after adding yourself to the `lxd` group
+   - **Alternative**: Log out and log back in after adding yourself to the `lxd` group
+   - **Temporary**: Use `sg lxd -c "lxc command"` to run LXD commands with proper group access
+   - **Alternative**: Use `newgrp lxd` to activate the group in your current session
+   - **CI environments only**: As a temporary workaround (not recommended for regular use), you can use `sudo chmod 666 /var/snap/lxd/common/lxd/unix.socket` but this creates security risks
+   - **Last resort**: Use `sudo` with LXD commands, though this is not recommended for regular use
 
 ### Useful Commands
 
@@ -219,6 +328,29 @@ lxc info torrust-vm
 
 # View container logs
 lxc info torrust-vm --show-log
+
+# Troubleshoot LXD permissions
+# Check if you're in the lxd group
+groups $USER
+
+# Check current active groups (lxd should be in this list)
+id -nG
+
+# If lxd is missing from id -nG, your session hasn't picked up group membership
+# Fix with: newgrp lxd (temporary), log out/in, or reboot (most reliable)
+
+# Check socket permissions
+ls -la /var/snap/lxd/common/lxd/unix.socket
+
+# If permission denied error occurs, try activating lxd group
+newgrp lxd
+
+# Or use sg (switch group) to run commands with proper group access
+sg lxd -c "lxc list"
+sg lxd -c "lxc info torrust-vm"
+
+# Or as a workaround, use sudo (not recommended for regular use)
+sudo lxc list
 ```
 
 ## GitHub Actions Support
@@ -230,6 +362,8 @@ This configuration is designed specifically for CI/CD environments like GitHub A
 - **Workflow**: `.github/workflows/test-lxd-provision.yml`
 - **Status**: Fully supported and tested
 - **No special requirements**: Works in standard GitHub Actions runners
+
+**Important Note**: The GitHub workflow uses `sudo chmod 666` on the LXD socket as a workaround for CI environments where terminal restarts aren't practical. **This approach is not recommended for local development** due to security implications. For local use, follow the proper group membership approach described in the troubleshooting section.
 
 ### Pros and Cons
 

@@ -1,5 +1,9 @@
 name: Test LXD Container Provisioning
 
+# NOTE: This workflow uses CI-specific approaches like 'sudo chmod 666' on the LXD socket
+# and 'sudo' with LXD commands. These approaches are NOT recommended for local development.
+# For local use, follow the proper group membership approach documented in config/lxd/README.md
+
 on:
   push:
     branches: [main, develop]
@@ -29,7 +33,9 @@ jobs:
           # Add runner to lxd group
           sudo usermod -a -G lxd runner
 
-          # Fix socket permissions for CI environment
+          # IMPORTANT: This approach is ONLY for CI environments
+          # For local development, use proper group membership instead
+          # Fix socket permissions for CI environment (NOT recommended for local use)
           sudo chmod 666 /var/snap/lxd/common/lxd/unix.socket
 
           # Test basic LXD functionality
@@ -61,7 +67,8 @@ jobs:
       - name: Apply configuration
         working-directory: config/lxd
         run: |
-          # Run with sudo to ensure LXD access
+          # Run with sudo to ensure LXD access in CI environment
+          # NOTE: For local development, use "sg lxd -c 'tofu apply'" instead
           sudo -E tofu apply -auto-approve
 
       - name: Wait for container to be ready
@@ -130,6 +137,8 @@ jobs:
         working-directory: config/lxd
         run: |
           echo "Cleaning up container..."
+          # Use sudo for CI environment cleanup
+          # NOTE: For local development, use "sg lxd -c 'tofu destroy'" instead
           sudo -E tofu destroy -auto-approve || true
           sudo lxc delete torrust-vm --force || true
 
