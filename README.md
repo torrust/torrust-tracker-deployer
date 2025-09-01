@@ -44,6 +44,39 @@ If both commands return version information, you can skip the installation steps
    ./install-opentofu.sh --install-method deb
    ```
 
+## Configuration Options
+
+This project provides two different approaches for VM provisioning and testing:
+
+### 🖥️ **Local Development (`config/local/`)**
+
+- **Technology**: Multipass + QEMU system mode
+- **Virtualization**: Full VMs with nested virtualization
+- **Best for**: Local development and testing
+- **Requirements**: Supports nested virtualization (KVM/Hyper-V)
+- **Cloud-init**: Full support with complete boot process
+
+### ☁️ **CI/CD Environment (`config/ci/`)**
+
+- **Technology**: LXD system containers
+- **Virtualization**: Container-based with systemd support
+- **Best for**: GitHub Actions and CI environments
+- **Requirements**: No nested virtualization needed
+- **Cloud-init**: Full support in container boot process
+
+### 🔄 **Comparison**
+
+| Feature | Local (Multipass) | CI (LXD Containers) |
+|---------|-------------------|-------------------|
+| **Nested Virtualization** | ✅ Required | ❌ Not needed |
+| **GitHub Actions Support** | 🔶 Discovered but undocumented | ✅ Guaranteed |
+| **Cloud-init Support** | ✅ Full VM boot | ✅ Container boot |
+| **Resource Usage** | ❌ Higher (full VMs) | ✅ Lower (containers) |
+| **Isolation Level** | ✅ Complete (separate kernel) | 🔶 Process-level |
+| **Boot Time** | ❌ Slower (full boot) | ✅ Faster (container start) |
+| **Systemd Services** | ✅ Full support | ✅ Full support |
+| **Network Isolation** | ✅ Full isolation | ✅ Container networking |
+
 ## Configuration
 
 The main configuration consists of:
@@ -209,9 +242,16 @@ multipass logs torrust-vm
 
 ```text
 ├── config/
-│   └── local/
-│       ├── main.tf           # OpenTofu configuration
-│       └── cloud-init.yml    # Cloud-init configuration
+│   ├── local/
+│   │   ├── main.tf           # OpenTofu configuration for Multipass VMs
+│   │   └── cloud-init.yml    # Cloud-init configuration
+│   └── ci/
+│       ├── main.tf           # OpenTofu configuration for LXD containers  
+│       └── cloud-init.yml    # Cloud-init configuration (same as local)
+├── .github/
+│   └── workflows/
+│       ├── test-vm-provision.yml     # Tests Multipass VMs (nested virt)
+│       └── test-lxd-provision.yml    # Tests LXD containers (no nested virt)
 ├── README.md                 # Documentation
 └── .gitignore                # Git ignore rules
 ```
