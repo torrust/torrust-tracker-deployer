@@ -23,7 +23,7 @@ variable "container_name" {
 variable "image" {
   description = "LXD image to use"
   type        = string
-  default     = "ubuntu:22.04"
+  default     = "ubuntu:24.04"
 }
 
 # Create a profile for our container with cloud-init support
