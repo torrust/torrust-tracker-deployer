@@ -216,6 +216,39 @@ multipass logs torrust-vm
 └── .gitignore                # Git ignore rules
 ```
 
+## GitHub Actions Integration
+
+🎉 **Exciting Discovery**: This project successfully demonstrates **nested virtualization in GitHub Actions**!
+
+Contrary to popular belief, we've proven that GitHub Actions runners can create and manage VMs using Multipass. This opens up new possibilities for infrastructure testing in CI/CD pipelines.
+
+### Working GitHub Actions Workflow
+
+The repository includes a fully functional GitHub Actions workflow (`.github/workflows/test-vm-provision.yml`) that:
+
+- ✅ Installs and configures Multipass in GitHub Actions
+- ✅ Provisions VMs using OpenTofu + Multipass
+- ✅ Tests VM functionality (SSH, package installation, etc.)
+- ✅ Automatically cleans up resources
+
+**View successful runs**: [GitHub Actions](https://github.com/josecelano/torrust-testing-infra-poc/actions)
+
+### Community Impact
+
+This capability has significant implications for:
+
+- **Infrastructure testing**: Testing VM provisioning tools in CI
+- **DevOps education**: Training scenarios requiring VM creation
+- **Container alternatives**: When containers aren't sufficient for testing needs
+
+### Official Documentation Request
+
+Since this capability isn't documented in official GitHub Actions documentation, we've created an issue to request clarification from the GitHub Actions team:
+
+**📋 GitHub Issue**: [Documentation Request: Nested Virtualization Support in GitHub-hosted Runners](https://github.com/actions/runner-images/issues/12933)
+
+This issue asks for official confirmation and documentation of nested virtualization capabilities in GitHub Actions runners.
+
 ## Next Steps
 
 This is a basic setup. Future enhancements could include:
@@ -223,5 +256,5 @@ This is a basic setup. Future enhancements could include:
 - Multiple VMs for different testing scenarios
 - Custom images with pre-installed Torrust components
 - Network configuration for multi-VM setups
-- Integration with CI/CD pipelines
+- Enhanced CI/CD integration with nested virtualization
 - Automated testing scripts
