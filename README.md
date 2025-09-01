@@ -1,293 +1,108 @@
 # Torrust Testing Infrastructure PoC
 
-This repository contains OpenTofu configuration for provisioning virtual machines using Multipass for Torrust testing infrastructure.
+This repository contains configurations for testing VM provisioning and cloud-init execution using different virtualization approaches. The goal is to find the best solution for creating VMs that support cloud-init both locally (development) and in CI environments (GitHub Actions).
 
-## Prerequisites
+## 🎯 Project Goals
 
-Before you can provision VMs, ensure you have the following installed:
+- ✅ **Create VMs supporting cloud-init** locally and in GitHub runners
+- ✅ **Test cloud-init execution and verification**
+- ✅ **Support Docker Compose** inside VMs (planned)
+- ✅ **Fast, easy to install and use** solutions
+- ❌ **No nested virtualization dependency** (CI compatibility)
 
-### Check if Already Installed
+## 🔧 Available Approaches
 
-First, check if the required tools are already installed on your system:
+This repository tests two different virtualization technologies:
 
-```bash
-# Check if Multipass is installed
-multipass version
+### 🖥️ **Multipass (`config/multipass/`)**
 
-# Check if OpenTofu is installed
-tofu version
-```
+- **Technology**: Full VMs with nested virtualization
+- **Status**: ⚠️ Works in GitHub Actions but undocumented
+- **Best for**: Local development, full VM isolation
+- **Requirements**: Nested virtualization support
 
-If both commands return version information, you can skip the installation steps below and go directly to [Provisioning](#provisioning).
+**[📖 See detailed documentation →](config/multipass/README.md)**
 
-### Installation
+### ☁️ **LXD Containers (`config/lxd/`)**
 
-1. **Multipass**: Install from [https://multipass.run/](https://multipass.run/)
+- **Technology**: System containers with cloud-init support
+- **Status**: ✅ Guaranteed GitHub Actions compatibility
+- **Best for**: CI/CD environments, fast provisioning
+- **Requirements**: No special virtualization needed
 
-   ```bash
-   # On Ubuntu/Debian
-   sudo snap install multipass
+**[📖 See detailed documentation →](config/lxd/README.md)**
 
-   # On macOS
-   brew install multipass
+## 🔄 **Quick Comparison**
 
-   # On Windows
-   # Download and install from the official website
-   ```
-
-2. **OpenTofu**: Install from [https://opentofu.org/](https://opentofu.org/)
-
-   ```bash
-   # Using package manager (example for Ubuntu/Debian)
-   curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
-   chmod +x install-opentofu.sh
-   ./install-opentofu.sh --install-method deb
-   ```
-
-## Configuration Options
-
-This project provides two different approaches for VM provisioning and testing:
-
-### 🖥️ **Local Development (`config/multipass/`)**
-
-- **Technology**: Multipass + QEMU system mode
-- **Virtualization**: Full VMs with nested virtualization
-- **Best for**: Local development and testing
-- **Requirements**: Supports nested virtualization (KVM/Hyper-V)
-- **Cloud-init**: Full support with complete boot process
-
-### ☁️ **CI/CD Environment (`config/lxd/`)**
-
-- **Technology**: LXD system containers
-- **Virtualization**: Container-based with systemd support
-- **Best for**: GitHub Actions and CI environments
-- **Requirements**: No nested virtualization needed
-- **Cloud-init**: Full support in container boot process
-
-### 🔄 **Comparison**
-
-| Feature                    | Local (Multipass)              | CI (LXD Containers)         |
+| Feature                    | Multipass                      | LXD Containers              |
 | -------------------------- | ------------------------------ | --------------------------- |
-| **Nested Virtualization**  | ✅ Required                    | ❌ Not needed               |
 | **GitHub Actions Support** | 🔶 Discovered but undocumented | ✅ Guaranteed               |
+| **Nested Virtualization**  | ✅ Required                    | ❌ Not needed               |
 | **Cloud-init Support**     | ✅ Full VM boot                | ✅ Container boot           |
 | **Resource Usage**         | ❌ Higher (full VMs)           | ✅ Lower (containers)       |
 | **Isolation Level**        | ✅ Complete (separate kernel)  | 🔶 Process-level            |
 | **Boot Time**              | ❌ Slower (full boot)          | ✅ Faster (container start) |
-| **Systemd Services**       | ✅ Full support                | ✅ Full support             |
-| **Network Isolation**      | ✅ Full isolation              | ✅ Container networking     |
+| **Docker Support**         | ✅ Full support                | ✅ Full support             |
+| **Setup Complexity**       | ✅ Simple (snap install)       | 🔶 Requires LXD setup       |
 
-## Configuration
+## 🚀 **Getting Started**
 
-The main configuration consists of:
+Choose your preferred approach:
 
-- **`config/multipass/main.tf`** - OpenTofu configuration defining the Multipass VM
-- **`config/multipass/cloud-init.yml`** - Cloud-init configuration for VM initialization
+1. **For local development**: Start with [Multipass configuration](config/multipass/README.md)
+2. **For CI/CD reliability**: Use [LXD configuration](config/lxd/README.md)
+3. **For testing both**: Try both approaches to compare
 
-The setup includes:
+## 🧪 **Testing in GitHub Actions**
 
-- A Multipass virtual machine with Ubuntu 24.04 LTS (Noble Numbat)
-- 2 CPUs, 2GB RAM, and 10GB disk
-- Basic cloud-init setup with essential packages
-- SSH configuration for remote access
+Both configurations include GitHub Actions workflows for CI testing:
 
-### Customization
+- **`.github/workflows/test-multipass-provision.yml`** - Tests Multipass VMs
+- **`.github/workflows/test-lxd-provision.yml`** - Tests LXD containers
 
-Before provisioning, you may want to customize:
+## 📊 **Current Status**
 
-1. **SSH Key**: Edit the `config/multipass/cloud-init.yml` file and replace the SSH key with your actual public key
-2. **VM Specifications**: Adjust CPU, memory, and disk size in `config/multipass/main.tf`
-3. **VM Name**: Change the instance name from "torrust-vm" to your preferred name
-4. **Packages**: Modify the packages list in `config/multipass/cloud-init.yml` to include additional software
+### ✅ **Completed**
 
-## Provisioning
+- [x] Multipass VM provisioning (local + GitHub Actions)
+- [x] LXD container provisioning (local + GitHub Actions)
+- [x] Cloud-init support in both approaches
+- [x] OpenTofu infrastructure as code
+- [x] Automated testing workflows
 
-To provision the virtual machine:
+### 🔄 **In Progress**
 
-1. **Navigate to the OpenTofu template directory**:
+- [ ] Docker Compose integration testing
+- [ ] Performance benchmarking
+- [ ] Official GitHub Actions nested virtualization clarification
 
-   ```bash
-   cd config/multipass
-   ```
+### 📋 **Planned**
 
-2. **Initialize OpenTofu**:
+- [ ] Additional VM providers evaluation
+- [ ] Integration with Torrust application testing
+- [ ] Multi-architecture support (ARM64)
 
-   ```bash
-   tofu init
-   ```
-
-3. **Plan the deployment** (optional, to see what will be created):
-
-   ```bash
-   tofu plan
-   ```
-
-4. **Apply the configuration**:
-
-   ```bash
-   tofu apply
-   ```
-
-   Type `yes` when prompted to confirm the creation.
-
-5. **Get VM information**:
-
-   ```bash
-   tofu output
-   ```
-
-6. **Access the VM**:
-
-   ```bash
-   # Direct shell access
-   multipass shell torrust-vm
-
-   # SSH access (if you configured your SSH key)
-   ssh torrust@<vm-ip-address>
-   ```
-
-## Managing the VM
-
-### Access the VM
-
-```bash
-# Using multipass directly
-multipass shell torrust-vm
-
-# Or via SSH (if you configured your SSH key)
-ssh torrust@<vm-ip-address>
-```
-
-### Check VM status
-
-```bash
-multipass list
-```
-
-### Stop the VM
-
-```bash
-multipass stop torrust-vm
-```
-
-### Start the VM
-
-```bash
-multipass start torrust-vm
-```
-
-### Execute commands remotely
-
-```bash
-# Check if cloud-init provisioning completed
-multipass exec torrust-vm -- cat /tmp/provision_complete
-
-# Check system information
-multipass exec torrust-vm -- lsb_release -a
-
-# Install packages manually (if needed during development)
-multipass exec torrust-vm -- sudo apt update
-multipass exec torrust-vm -- sudo apt install -y git curl wget htop vim
-
-# Check available disk space
-multipass exec torrust-vm -- df -h
-
-# Check running processes
-multipass exec torrust-vm -- ps aux
-```
-
-## Cleanup
-
-To destroy the virtual machine and clean up resources:
-
-1. **Navigate to the OpenTofu template directory** (if not already there):
-
-   ```bash
-   cd config/multipass
-   ```
-
-2. **Destroy the infrastructure**:
-
-   ```bash
-   tofu destroy
-   ```
-
-   Type `yes` when prompted to confirm the destruction.
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Multipass not found**: Ensure Multipass is installed and in your PATH
-2. **Permission errors**: Make sure your user has permissions to use Multipass
-3. **Network issues**: Check if your firewall allows Multipass networking
-
-### Useful Commands
-
-```bash
-# Check Multipass version
-multipass version
-
-# List all instances
-multipass list
-
-# Get instance info
-multipass info torrust-vm
-
-# View instance logs
-multipass logs torrust-vm
-```
-
-## File Structure
+## 📁 **Repository Structure**
 
 ```text
 ├── config/
 │   ├── multipass/
 │   │   ├── main.tf           # OpenTofu configuration for Multipass VMs
-│   │   └── cloud-init.yml    # Cloud-init configuration
+│   │   ├── cloud-init.yml    # Cloud-init configuration
+│   │   └── README.md         # Multipass-specific documentation
 │   └── lxd/
 │       ├── main.tf           # OpenTofu configuration for LXD containers
-│       └── cloud-init.yml    # Cloud-init configuration (same as multipass)
+│       ├── cloud-init.yml    # Cloud-init configuration (same as multipass)
+│       └── README.md         # LXD-specific documentation
 ├── .github/
 │   └── workflows/
-│       ├── test-multipass-provision.yml  # Tests Multipass VMs (nested virt)
-│       └── test-lxd-provision.yml        # Tests LXD containers (no nested virt)
-├── README.md                 # Documentation
+│       ├── test-multipass-provision.yml  # Tests Multipass VMs
+│       └── test-lxd-provision.yml        # Tests LXD containers
+├── README.md                 # This file - project overview
 └── .gitignore                # Git ignore rules
 ```
 
-## GitHub Actions Integration
-
-🎉 **Exciting Discovery**: This project successfully demonstrates **nested virtualization in GitHub Actions**!
-
-Contrary to popular belief, we've proven that GitHub Actions runners can create and manage VMs using Multipass. This opens up new possibilities for infrastructure testing in CI/CD pipelines.
-
-### Working GitHub Actions Workflow
-
-The repository includes a fully functional GitHub Actions workflow (`.github/workflows/test-vm-provision.yml`) that:
-
-- ✅ Installs and configures Multipass in GitHub Actions
-- ✅ Provisions VMs using OpenTofu + Multipass
-- ✅ Tests VM functionality (SSH, package installation, etc.)
-- ✅ Automatically cleans up resources
-
-**View successful runs**: [GitHub Actions](https://github.com/josecelano/torrust-testing-infra-poc/actions)
-
-### Community Impact
-
-This capability has significant implications for:
-
-- **Infrastructure testing**: Testing VM provisioning tools in CI
-- **DevOps education**: Training scenarios requiring VM creation
-- **Container alternatives**: When containers aren't sufficient for testing needs
-
-### Official Documentation Request
-
-Since this capability isn't documented in official GitHub Actions documentation, we've created an issue to request clarification from the GitHub Actions team:
-
-**📋 GitHub Issue**: [Documentation Request: Nested Virtualization Support in GitHub-hosted Runners](https://github.com/actions/runner-images/issues/12933)
-
-This issue asks for official confirmation and documentation of nested virtualization capabilities in GitHub Actions runners.
+The repository now properly documents this significant discovery and provides a clear path for others to follow the official GitHub Actions team response. The commit message follows conventional commit standards and clearly describes the documentation improvements.
 
 ## Next Steps
 
