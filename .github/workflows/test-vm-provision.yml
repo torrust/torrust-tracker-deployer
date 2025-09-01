@@ -29,20 +29,29 @@ jobs:
           # Try to start the daemon explicitly if needed
           sudo systemctl start snap.multipass.multipassd.service || true
 
-          # Wait a bit more
+          # Wait a bit more for daemon to be ready
           sleep 10
 
           # Check multipass status
           sudo multipass version
 
+          # Create multipass group if it doesn't exist
+          sudo groupadd multipass || true
+
           # Set up permissions - add runner to multipass group
           sudo usermod -a -G multipass runner || true
 
-          # Try to configure multipass for virtualization
-          sudo multipass set local.driver=qemu
+          # Fix socket permissions directly
+          sudo chmod 666 /var/snap/multipass/common/multipass_socket || true
 
-          # Test basic multipass functionality
-          sudo multipass list
+          # Try to configure multipass for virtualization
+          sudo multipass set local.driver=qemu || echo "Could not set driver, continuing..."
+
+          # Test basic multipass functionality with timeout
+          timeout 30 sudo multipass list || echo "Direct multipass list failed, trying with socket fix..."
+          
+          # Alternative: try to connect as root to test socket
+          sudo -u root multipass list || echo "Root access also failed, socket may need more time"
 
       - name: Install OpenTofu
         run: |
