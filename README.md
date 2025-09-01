@@ -14,44 +14,152 @@ This repository contains configurations for testing VM provisioning and cloud-in
 
 This repository tests two different virtualization technologies:
 
-### 🖥️ **Multipass (`config/tofu/multipass/`)**
-
-- **Technology**: Full VMs with nested virtualization
-- **Status**: ⚠️ Works in GitHub Actions but undocumented
-- **Best for**: Local development, full VM isolation
-- **Requirements**: Nested virtualization support
-
-**[📖 See detailed documentation →](config/tofu/multipass/README.md)**
-
-### ☁️ **LXD Containers (`config/tofu/lxd/`)**
+### ☁️ **LXD Containers (`config/tofu/lxd/`)** - **OFFICIAL**
 
 - **Technology**: System containers with cloud-init support
-- **Status**: ✅ Guaranteed GitHub Actions compatibility
-- **Best for**: CI/CD environments, fast provisioning
+- **Status**: ✅ Official provider - Guaranteed GitHub Actions compatibility
+- **Best for**: CI/CD environments, fast provisioning, local development
 - **Requirements**: No special virtualization needed
 
 **[📖 See detailed documentation →](config/tofu/lxd/README.md)**
 
+### 🖥️ **Multipass (`config/tofu/multipass/`)** - **EXPERIMENTAL**
+
+- **Technology**: Full VMs with nested virtualization
+- **Status**: ⚠️ Experimental - Works in GitHub Actions but undocumented support
+- **Best for**: Local development requiring full VM isolation
+- **Requirements**: Nested virtualization support
+
+**[📖 See detailed documentation →](config/tofu/multipass/README.md)**
+
 ## 🔄 **Quick Comparison**
 
-| Feature                    | Multipass                      | LXD Containers              |
-| -------------------------- | ------------------------------ | --------------------------- |
-| **GitHub Actions Support** | 🔶 Discovered but undocumented | ✅ Guaranteed               |
-| **Nested Virtualization**  | ✅ Required                    | ❌ Not needed               |
-| **Cloud-init Support**     | ✅ Full VM boot                | ✅ Container boot           |
-| **Resource Usage**         | ❌ Higher (full VMs)           | ✅ Lower (containers)       |
-| **Isolation Level**        | ✅ Complete (separate kernel)  | 🔶 Process-level            |
-| **Boot Time**              | ❌ Slower (full boot)          | ✅ Faster (container start) |
-| **Docker Support**         | ✅ Full support                | ✅ Full support             |
-| **Setup Complexity**       | ✅ Simple (snap install)       | 🔶 Requires LXD setup       |
+| Feature                    | LXD Containers (Official)   | Multipass (Experimental)       |
+| -------------------------- | --------------------------- | ------------------------------ |
+| **Status**                 | ✅ Official Provider        | ⚠️ Experimental                |
+| **GitHub Actions Support** | ✅ Guaranteed               | 🔶 Discovered but undocumented |
+| **Nested Virtualization**  | ❌ Not needed               | ✅ Required                    |
+| **Cloud-init Support**     | ✅ Container boot           | ✅ Full VM boot                |
+| **Resource Usage**         | ✅ Lower (containers)       | ❌ Higher (full VMs)           |
+| **Isolation Level**        | 🔶 Process-level            | ✅ Complete (separate kernel)  |
+| **Boot Time**              | ✅ Faster (container start) | ❌ Slower (full boot)          |
+| **Docker Support**         | ✅ Full support             | ✅ Full support                |
+| **Setup Complexity**       | 🔶 Requires LXD setup       | ✅ Simple (snap install)       |
 
 ## 🚀 **Getting Started**
 
-Choose your preferred approach:
+### 🏠 **Local Deployment (Recommended)**
 
-1. **For local development**: Start with [Multipass configuration](config/tofu/multipass/README.md)
-2. **For CI/CD reliability**: Use [LXD configuration](config/tofu/lxd/README.md)
-3. **For testing both**: Try both approaches to compare
+The **LXD provider** is the official and recommended approach for both local development and CI/CD environments. Multipass is experimental as GitHub runners' full virtualization support is undocumented.
+
+#### **1. Prerequisites Verification**
+
+Before deploying, verify that all required tools are installed:
+
+```bash
+# Check LXD installation
+lxd version
+
+# Check OpenTofu installation
+tofu version
+
+# Check Ansible installation
+ansible --version
+```
+
+**Install missing tools:**
+
+```bash
+# Install LXD (via snap - recommended)
+sudo snap install lxd
+sudo lxd init --auto
+sudo usermod -a -G lxd $USER
+
+# Install OpenTofu
+curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
+chmod +x install-opentofu.sh
+./install-opentofu.sh --install-method deb
+
+# Install Ansible
+sudo apt update && sudo apt install ansible
+
+# IMPORTANT: After adding user to lxd group, restart your terminal or run:
+newgrp lxd
+```
+
+#### **2. Deploy Infrastructure with OpenTofu**
+
+Navigate to the LXD configuration and deploy the VM:
+
+```bash
+# Navigate to LXD configuration
+cd config/tofu/lxd
+
+# Initialize OpenTofu
+tofu init
+
+# Review planned changes (optional)
+tofu plan
+
+# Deploy the infrastructure
+tofu apply
+# Type 'yes' when prompted
+
+# View deployment results
+tofu output
+```
+
+After successful deployment, you should see output similar to:
+
+```text
+container_info = {
+  "image" = "ubuntu:24.04"
+  "ip_address" = "10.140.190.177"
+  "name" = "torrust-vm"
+  "status" = "Running"
+}
+```
+
+#### **3. Configure with Ansible**
+
+Execute Ansible playbooks to configure and verify the deployed VM:
+
+```bash
+# Navigate to Ansible configuration
+cd ../../ansible
+
+# Update inventory with the VM's IP address
+# Edit inventory.yml and update ansible_host with the IP from step 2
+
+# Test connectivity
+ansible all -m ping
+
+# Execute the cloud-init verification playbook
+ansible-playbook wait-cloud-init.yml
+```
+
+#### **4. Verification**
+
+Verify the deployment is working correctly:
+
+```bash
+# Check VM status
+lxc list torrust-vm
+
+# Connect to the VM
+lxc exec torrust-vm -- /bin/bash
+
+# Test SSH connection (from Ansible directory)
+ssh -i ~/.ssh/testing_rsa torrust@<VM_IP>
+```
+
+### 🧪 **Alternative Approaches**
+
+Choose your preferred approach for specific use cases:
+
+1. **For local development**: Start with [LXD configuration](config/tofu/lxd/README.md) (recommended)
+2. **For experimental testing**: Try [Multipass configuration](config/tofu/multipass/README.md) (nested virtualization required)
+3. **For testing both**: Compare both approaches to evaluate differences
 
 ## 🎭 **Ansible Configuration Management**
 
