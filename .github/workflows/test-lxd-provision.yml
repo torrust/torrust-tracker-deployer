@@ -1,0 +1,140 @@
+name: Test LXD Container Provisioning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  test-lxd-provision:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install and configure LXD
+        run: |
+          sudo snap install lxd
+
+          # Wait for LXD to fully initialize
+          echo "Waiting for LXD daemon to start..."
+          sleep 15
+
+          # Initialize LXD with default settings
+          sudo lxd init --auto
+
+          # Add runner to lxd group
+          sudo usermod -a -G lxd runner
+
+          # Fix socket permissions for CI environment
+          sudo chmod 666 /var/snap/lxd/common/lxd/unix.socket
+
+          # Test basic LXD functionality
+          sudo lxc list
+
+      - name: Install OpenTofu
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
+          chmod +x install-opentofu.sh
+          ./install-opentofu.sh --install-method deb
+
+      - name: Verify installations
+        run: |
+          sudo lxc version
+          tofu version
+
+      - name: Initialize OpenTofu
+        working-directory: config/ci
+        run: tofu init
+
+      - name: Validate OpenTofu configuration
+        working-directory: config/ci
+        run: tofu validate
+
+      - name: Plan deployment
+        working-directory: config/ci
+        run: tofu plan
+
+      - name: Apply configuration
+        working-directory: config/ci
+        run: |
+          # Run with sudo to ensure LXD access
+          sudo -E tofu apply -auto-approve
+
+      - name: Wait for container to be ready
+        run: |
+          echo "Waiting for container to be fully initialized..."
+          sleep 30
+
+          # Wait up to 5 minutes for cloud-init to complete
+          timeout=300
+          elapsed=0
+          while [ $elapsed -lt $timeout ]; do
+            if sudo lxc exec torrust-vm -- test -f /tmp/provision_complete 2>/dev/null; then
+              echo "Container provisioning completed successfully!"
+              break
+            fi
+            echo "Waiting for container provisioning to complete... ($elapsed/$timeout seconds)"
+            sleep 10
+            elapsed=$((elapsed + 10))
+          done
+
+          if [ $elapsed -ge $timeout ]; then
+            echo "Timeout waiting for container provisioning to complete"
+            exit 1
+          fi
+
+      - name: Test container functionality
+        run: |
+          # Test basic connectivity
+          sudo lxc list
+          sudo lxc info torrust-vm
+
+          # Test command execution
+          sudo lxc exec torrust-vm -- whoami
+
+          # Test system information with error handling
+          echo "Getting system information..."
+          sudo lxc exec torrust-vm -- cat /etc/os-release || echo "os-release failed"
+          sleep 1
+
+          sudo lxc exec torrust-vm -- df -h || echo "df failed"
+          sleep 1
+
+          sudo lxc exec torrust-vm -- free -h || echo "free failed"
+          sleep 1
+
+          # Test cloud-init functionality
+          echo "Testing cloud-init..."
+          sudo lxc exec torrust-vm -- cloud-init status || echo "cloud-init status failed"
+          sleep 1
+
+          # Test user creation
+          echo "Testing user creation..."
+          sudo lxc exec torrust-vm -- id torrust || echo "torrust user not found"
+          sleep 1
+
+          # Test systemd services
+          echo "Testing systemd..."
+          sudo lxc exec torrust-vm -- systemctl status ssh || echo "ssh service check failed"
+
+      - name: Get container outputs
+        working-directory: config/ci
+        run: sudo -E tofu output
+
+      - name: Cleanup
+        if: always()
+        working-directory: config/ci
+        run: |
+          echo "Cleaning up container..."
+          sudo -E tofu destroy -auto-approve || true
+          sudo lxc delete torrust-vm --force || true
+
+      - name: Final verification
+        if: always()
+        run: |
+          echo "Verifying cleanup..."
+          sudo lxc list
