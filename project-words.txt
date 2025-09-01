@@ -1,8 +1,10 @@
 cloudinit
 cpus
 larstobi
+multipassd
 NOPASSWD
 runcmd
 tfstate
 tfvars
 tlsv
+usermod

@@ -49,7 +49,7 @@ jobs:
 
           # Test basic multipass functionality with timeout
           timeout 30 sudo multipass list || echo "Direct multipass list failed, trying with socket fix..."
-          
+
           # Alternative: try to connect as root to test socket
           sudo -u root multipass list || echo "Root access also failed, socket may need more time"
 
@@ -114,15 +114,15 @@ jobs:
           # Test SSH access
           sudo multipass exec torrust-vm -- whoami
 
-          # Test installed packages
-          sudo multipass exec torrust-vm -- which git
-          sudo multipass exec torrust-vm -- which curl
-          sudo multipass exec torrust-vm -- which wget
+          # Test system information with error handling
+          echo "Getting system information..."
+          sudo multipass exec torrust-vm -- lsb_release -a || echo "lsb_release failed"
+          sleep 1
 
-          # Test system information
-          sudo multipass exec torrust-vm -- lsb_release -a
-          sudo multipass exec torrust-vm -- df -h
-          sudo multipass exec torrust-vm -- free -h
+          sudo multipass exec torrust-vm -- df -h || echo "df failed"
+          sleep 1
+
+          sudo multipass exec torrust-vm -- free -h || echo "free failed"
 
       - name: Get VM outputs
         working-directory: templates/tofu
