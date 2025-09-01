@@ -48,8 +48,8 @@ If both commands return version information, you can skip the installation steps
 
 The main configuration consists of:
 
-- **`config/tofu/main.tf`** - OpenTofu configuration defining the Multipass VM
-- **`config/tofu/cloud-init.yml`** - Cloud-init configuration for VM initialization
+- **`config/local/main.tf`** - OpenTofu configuration defining the Multipass VM
+- **`config/local/cloud-init.yml`** - Cloud-init configuration for VM initialization
 
 The setup includes:
 
@@ -62,10 +62,10 @@ The setup includes:
 
 Before provisioning, you may want to customize:
 
-1. **SSH Key**: Edit the `config/tofu/cloud-init.yml` file and replace the SSH key with your actual public key
-2. **VM Specifications**: Adjust CPU, memory, and disk size in `config/tofu/main.tf`
+1. **SSH Key**: Edit the `config/local/cloud-init.yml` file and replace the SSH key with your actual public key
+2. **VM Specifications**: Adjust CPU, memory, and disk size in `config/local/main.tf`
 3. **VM Name**: Change the instance name from "torrust-vm" to your preferred name
-4. **Packages**: Modify the packages list in `config/tofu/cloud-init.yml` to include additional software
+4. **Packages**: Modify the packages list in `config/local/cloud-init.yml` to include additional software
 
 ## Provisioning
 
@@ -74,7 +74,7 @@ To provision the virtual machine:
 1. **Navigate to the OpenTofu template directory**:
 
    ```bash
-   cd config/tofu
+   cd config/local
    ```
 
 2. **Initialize OpenTofu**:
@@ -170,7 +170,7 @@ To destroy the virtual machine and clean up resources:
 1. **Navigate to the OpenTofu template directory** (if not already there):
 
    ```bash
-   cd config/tofu
+   cd config/local
    ```
 
 2. **Destroy the infrastructure**:
@@ -209,7 +209,7 @@ multipass logs torrust-vm
 
 ```text
 ├── config/
-│   └── tofu/
+│   └── local/
 │       ├── main.tf           # OpenTofu configuration
 │       └── cloud-init.yml    # Cloud-init configuration
 ├── README.md                 # Documentation
