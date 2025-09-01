@@ -1,9 +1,14 @@
 cloudinit
 cpus
+debootstrap
 larstobi
+lxdbr
 multipassd
+noninteractive
 NOPASSWD
+resolv
 runcmd
+sysfs
 tfstate
 tfvars
 tlsv

@@ -66,16 +66,16 @@ This project provides two different approaches for VM provisioning and testing:
 
 ### 🔄 **Comparison**
 
-| Feature | Local (Multipass) | CI (LXD Containers) |
-|---------|-------------------|-------------------|
-| **Nested Virtualization** | ✅ Required | ❌ Not needed |
-| **GitHub Actions Support** | 🔶 Discovered but undocumented | ✅ Guaranteed |
-| **Cloud-init Support** | ✅ Full VM boot | ✅ Container boot |
-| **Resource Usage** | ❌ Higher (full VMs) | ✅ Lower (containers) |
-| **Isolation Level** | ✅ Complete (separate kernel) | 🔶 Process-level |
-| **Boot Time** | ❌ Slower (full boot) | ✅ Faster (container start) |
-| **Systemd Services** | ✅ Full support | ✅ Full support |
-| **Network Isolation** | ✅ Full isolation | ✅ Container networking |
+| Feature                    | Local (Multipass)              | CI (LXD Containers)         |
+| -------------------------- | ------------------------------ | --------------------------- |
+| **Nested Virtualization**  | ✅ Required                    | ❌ Not needed               |
+| **GitHub Actions Support** | 🔶 Discovered but undocumented | ✅ Guaranteed               |
+| **Cloud-init Support**     | ✅ Full VM boot                | ✅ Container boot           |
+| **Resource Usage**         | ❌ Higher (full VMs)           | ✅ Lower (containers)       |
+| **Isolation Level**        | ✅ Complete (separate kernel)  | 🔶 Process-level            |
+| **Boot Time**              | ❌ Slower (full boot)          | ✅ Faster (container start) |
+| **Systemd Services**       | ✅ Full support                | ✅ Full support             |
+| **Network Isolation**      | ✅ Full isolation              | ✅ Container networking     |
 
 ## Configuration
 
@@ -246,7 +246,7 @@ multipass logs torrust-vm
 │   │   ├── main.tf           # OpenTofu configuration for Multipass VMs
 │   │   └── cloud-init.yml    # Cloud-init configuration
 │   └── ci/
-│       ├── main.tf           # OpenTofu configuration for LXD containers  
+│       ├── main.tf           # OpenTofu configuration for LXD containers
 │       └── cloud-init.yml    # Cloud-init configuration (same as local)
 ├── .github/
 │   └── workflows/
