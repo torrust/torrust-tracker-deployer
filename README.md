@@ -53,6 +53,30 @@ Choose your preferred approach:
 2. **For CI/CD reliability**: Use [LXD configuration](config/tofu/lxd/README.md)
 3. **For testing both**: Try both approaches to compare
 
+## 🎭 **Ansible Configuration Management**
+
+Once VMs are provisioned by OpenTofu, we use **Ansible** to execute tasks and manage configuration on the running instances.
+
+### ⚙️ **Ansible Setup (`config/ansible/`)**
+
+- **Technology**: Agentless configuration management and task automation
+- **Purpose**: Execute tasks on OpenTofu-provisioned VMs
+- **Features**: Cloud-init verification, system configuration, application deployment
+
+**[📖 See detailed Ansible documentation →](config/ansible/README.md)**
+
+### 🔄 **Infrastructure Workflow**
+
+1. **Provision**: OpenTofu creates and configures VMs with cloud-init
+2. **Configure**: Ansible connects to VMs and executes management tasks
+3. **Verify**: Automated checks ensure proper setup and functionality
+
+| Phase              | Tool               | Purpose                                     |
+| ------------------ | ------------------ | ------------------------------------------- |
+| **Infrastructure** | OpenTofu/Terraform | VM provisioning and cloud-init setup        |
+| **Configuration**  | Ansible            | Task execution and configuration management |
+| **Verification**   | Ansible Playbooks  | System checks and validation                |
+
 ## 🧪 **Testing in GitHub Actions**
 
 Both configurations include GitHub Actions workflows for CI testing:
@@ -68,10 +92,13 @@ Both configurations include GitHub Actions workflows for CI testing:
 - [x] LXD container provisioning (local + GitHub Actions)
 - [x] Cloud-init support in both approaches
 - [x] OpenTofu infrastructure as code
+- [x] Ansible configuration management setup
+- [x] Basic cloud-init verification playbook
 - [x] Automated testing workflows
 
 ### 🔄 **In Progress**
 
+- [ ] Extended Ansible playbooks for application deployment
 - [ ] Docker Compose integration testing
 - [ ] Performance benchmarking
 - [ ] Official GitHub Actions nested virtualization clarification
@@ -86,15 +113,20 @@ Both configurations include GitHub Actions workflows for CI testing:
 
 ```text
 ├── config/
-│   └── tofu/
-│       ├── multipass/
-│       │   ├── main.tf           # OpenTofu configuration for Multipass VMs
-│       │   ├── cloud-init.yml    # Cloud-init configuration
-│       │   └── README.md         # Multipass-specific documentation
-│       └── lxd/
-│           ├── main.tf           # OpenTofu configuration for LXD containers
-│           ├── cloud-init.yml    # Cloud-init configuration (same as multipass)
-│           └── README.md         # LXD-specific documentation
+│   ├── tofu/
+│   │   ├── multipass/
+│   │   │   ├── main.tf           # OpenTofu configuration for Multipass VMs
+│   │   │   ├── cloud-init.yml    # Cloud-init configuration
+│   │   │   └── README.md         # Multipass-specific documentation
+│   │   └── lxd/
+│   │       ├── main.tf           # OpenTofu configuration for LXD containers
+│   │       ├── cloud-init.yml    # Cloud-init configuration (same as multipass)
+│   │       └── README.md         # LXD-specific documentation
+│   └── ansible/
+│       ├── ansible.cfg           # Ansible configuration
+│       ├── inventory.yml         # Host inventory for provisioned VMs
+│       ├── wait-cloud-init.yml   # Playbook to wait for cloud-init completion
+│       └── README.md             # Ansible-specific documentation
 ├── .github/
 │   └── workflows/
 │       ├── test-multipass-provision.yml  # Tests Multipass VMs

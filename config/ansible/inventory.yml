@@ -1,0 +1,61 @@
+# Ansible Inventory File (YAML format)
+# This file defines the hosts (servers/VMs) that Ansible will manage
+# and how to connect to them
+#
+# 🔗 COMPLETE OPENTOFU INTEGRATION WORKFLOW:
+#
+# 1. OpenTofu Provisioning (config/tofu/lxd/main.tf):
+#    - Creates LXD container named "torrust-vm" (variable: container_name)
+#    - Applies cloud-init configuration from cloud-init.yml
+#    - Assigns dynamic IP address via lxdbr0 network
+#
+# 2. Cloud-init Setup (config/tofu/lxd/cloud-init.yml):
+#    - Creates user "torrust" with sudo privileges
+#    - Installs SSH public key for authentication
+#    - Enables SSH service for remote access
+#
+# 3. Ansible Connection (this file):
+#    - Uses dynamic IP from step 1 (ansible_host)
+#    - Connects as user from step 2 (ansible_user)
+#    - Authenticates with private key matching step 2 (ansible_ssh_private_key_file)
+
+# 'all' is the top-level group that contains all hosts
+all:
+  # 'hosts' section defines individual machines
+  hosts:
+    # Host name: 'torrust-vm' (this is how we refer to this host in playbooks)
+    # 🔗 OPENTOFU: This name matches var.container_name in config/tofu/lxd/main.tf
+    # 🔗 OPENTOFU: This is the actual LXD container name created by OpenTofu
+    torrust-vm:
+      # The actual IP address or hostname to connect to
+      # ⚠️  IMPORTANT: This IP comes from the VM provisioned by OpenTofu
+      # 🔗 OPENTOFU: IP assigned by lxd_instance.torrust_vm via lxdbr0 network
+      # 🔗 DISCOVERY: Find current IP with: lxc list torrust-vm
+      # 🔗 AUTOMATION: Could be retrieved via: lxc list torrust-vm -f json | jq -r '.[0].state.network.eth0.addresses[0].address'
+      ansible_host: 10.140.190.177
+
+      # The username to use when connecting via SSH
+      # 🔗 CLOUD-INIT: This must match the user created in cloud-init
+      # 🔗 EXACT MATCH: config/tofu/lxd/cloud-init.yml -> users[0].name: "torrust"
+      # 🔗 OPENTOFU: OpenTofu provisions the VM with this user via cloud-init
+      ansible_user: torrust
+
+      # Connection method - we're using SSH
+      ansible_connection: ssh
+
+      # Path to the private SSH key file
+      # 🔗 CLOUD-INIT: This private key corresponds to the PUBLIC key in cloud-init
+      # 🔗 EXACT MATCH: config/tofu/lxd/cloud-init.yml -> users[0].ssh_authorized_keys[0]
+      # 🔗 KEY PAIR: ~/.ssh/testing_rsa (private) <-> cloud-init public key
+      # 🔗 OPENTOFU: OpenTofu injects the public key, Ansible uses the private key to connect
+      ansible_ssh_private_key_file: ~/.ssh/testing_rsa
+
+      # Additional SSH arguments for this host
+      # StrictHostKeyChecking=no skips host key verification (lab use only)
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+
+  # 'vars' section defines variables that apply to all hosts in this group
+  vars:
+    # Tell Ansible which Python interpreter to use on the remote hosts
+    # Most modern Linux systems use python3
+    ansible_python_interpreter: /usr/bin/python3
