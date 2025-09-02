@@ -75,8 +75,8 @@ jobs:
       - name: Run wait-cloud-init E2E test
         run: |
           # Run the E2E test with verbose output for better debugging
-          # Use sudo -E to preserve environment variables for OpenTofu/LXD access
-          sudo -E cargo run --bin e2e-tests -- wait-cloud-init --verbose
+          # Use sudo -E and preserve PATH to ensure cargo is accessible
+          sudo -E env "PATH=$PATH" cargo run --bin e2e-tests -- wait-cloud-init --verbose
         env:
           # Preserve environment variables for the E2E test
           RUST_LOG: debug
