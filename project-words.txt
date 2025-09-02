@@ -1,9 +1,11 @@
 cloudinit
 cpus
+dearmor
 debootstrap
 eprintln
 getent
 journalctl
+keyrings
 larstobi
 lxdbr
 multipassd

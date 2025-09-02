@@ -32,169 +32,107 @@ This repository tests two different virtualization technologies:
 
 **[📖 See detailed documentation →](config/tofu/multipass/README.md)**
 
-## 🔄 **Quick Comparison**
+## � Provider Comparison
 
-| Feature                    | LXD Containers (Official)   | Multipass (Experimental)       |
-| -------------------------- | --------------------------- | ------------------------------ |
-| **Status**                 | ✅ Official Provider        | ⚠️ Experimental                |
-| **GitHub Actions Support** | ✅ Guaranteed               | 🔶 Discovered but undocumented |
-| **Nested Virtualization**  | ❌ Not needed               | ✅ Required                    |
-| **Cloud-init Support**     | ✅ Container boot           | ✅ Full VM boot                |
-| **Resource Usage**         | ✅ Lower (containers)       | ❌ Higher (full VMs)           |
-| **Isolation Level**        | 🔶 Process-level            | ✅ Complete (separate kernel)  |
-| **Boot Time**              | ✅ Faster (container start) | ❌ Slower (full boot)          |
-| **Docker Support**         | ✅ Full support             | ✅ Full support                |
-| **Setup Complexity**       | 🔶 Requires LXD setup       | ✅ Simple (snap install)       |
+**[📖 See detailed comparison →](docs/vm-providers.md)**
 
-## 🚀 **Getting Started**
+| Feature                    | LXD (Official)   | Multipass (Experimental) |
+| -------------------------- | ---------------- | ------------------------ |
+| **GitHub Actions Support** | ✅ Guaranteed    | ⚠️ Undocumented          |
+| **Nested Virtualization**  | ❌ Not needed    | ✅ Required              |
+| **Boot Time**              | ✅ ~5-10s        | ❌ ~30-60s               |
+| **Resource Usage**         | ✅ Lower         | ❌ Higher                |
+| **Isolation Level**        | 🔶 Process-level | ✅ Hardware-level        |
 
-### 🏠 **Local Deployment (Recommended)**
+## 🚀 Quick Start
 
-The **LXD provider** is the official and recommended approach for both local development and CI/CD environments. Multipass is experimental as GitHub runners' full virtualization support is undocumented.
+### Prerequisites
 
-#### **1. Prerequisites Verification**
-
-Before deploying, verify that all required tools are installed:
+Install the required tools:
 
 ```bash
-# Check LXD installation
-lxd version
-
-# Check OpenTofu installation
-tofu version
-
-# Check Ansible installation
-ansible --version
+# Check installations
+lxd version && tofu version && ansible --version
 ```
 
-**Install missing tools:**
+**Missing tools?** See detailed installation guides:
+
+- **[📖 OpenTofu Setup Guide →](docs/opentofu.md)**
+- **[📖 Ansible Setup Guide →](docs/ansible.md)**
+
+**Quick install:**
 
 ```bash
-# Install LXD (via snap - recommended)
-sudo snap install lxd
-sudo lxd init --auto
-sudo usermod -a -G lxd $USER
+# Install LXD
+sudo snap install lxd && sudo lxd init --auto && sudo usermod -a -G lxd $USER && newgrp lxd
 
 # Install OpenTofu
-curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
-chmod +x install-opentofu.sh
-./install-opentofu.sh --install-method deb
+curl -fsSL https://get.opentofu.org/install-opentofu.sh | sudo bash
 
 # Install Ansible
-sudo apt update && sudo apt install ansible
-
-# IMPORTANT: After adding user to lxd group, restart your terminal or run:
-newgrp lxd
+sudo apt install ansible
 ```
 
-#### **2. Deploy Infrastructure with OpenTofu**
+### Deployment Steps
 
-Navigate to the LXD configuration and deploy the VM:
+#### 1. Deploy Infrastructure
 
 ```bash
 # Navigate to LXD configuration
 cd config/tofu/lxd
 
-# Initialize OpenTofu
-tofu init
-
-# Review planned changes (optional)
-tofu plan
-
-# Deploy the infrastructure
-tofu apply
-# Type 'yes' when prompted
-
-# View deployment results
-tofu output
+# Initialize and deploy
+tofu init && tofu apply
 ```
 
-After successful deployment, you should see output similar to:
-
-```text
-container_info = {
-  "image" = "ubuntu:24.04"
-  "ip_address" = "10.140.190.177"
-  "name" = "torrust-vm"
-  "status" = "Running"
-}
-```
-
-#### **3. Configure with Ansible**
-
-Execute Ansible playbooks to configure and verify the deployed VM:
+#### 2. Configure with Ansible
 
 ```bash
 # Navigate to Ansible configuration
 cd ../../ansible
 
-# Update inventory with the VM's IP address
-# Edit inventory.yml and update ansible_host with the IP from step 2
-
-# Test connectivity
-ansible all -m ping
-
-# Execute the cloud-init verification playbook
+# Update inventory.yml with the VM's IP from step 1
+# Then run the verification playbook
 ansible-playbook wait-cloud-init.yml
 ```
 
-#### **4. Verification**
-
-Verify the deployment is working correctly:
+#### 3. Verify Deployment
 
 ```bash
 # Check VM status
 lxc list torrust-vm
 
-# Connect to the VM
+# Connect to VM
 lxc exec torrust-vm -- /bin/bash
 
-# Test SSH connection (from Ansible directory)
+# Test SSH connection
 ssh -i ~/.ssh/testing_rsa torrust@<VM_IP>
 ```
 
-### 🧪 **Alternative Approaches**
-
-Choose your preferred approach for specific use cases:
-
-1. **For local development**: Start with [LXD configuration](config/tofu/lxd/README.md) (recommended)
-2. **For experimental testing**: Try [Multipass configuration](config/tofu/multipass/README.md) (nested virtualization required)
-3. **For testing both**: Compare both approaches to evaluate differences
-
-## 🎭 **Ansible Configuration Management**
-
-Once VMs are provisioned by OpenTofu, we use **Ansible** to execute tasks and manage configuration on the running instances.
-
-### ⚙️ **Ansible Setup (`config/ansible/`)**
-
-- **Technology**: Agentless configuration management and task automation
-- **Purpose**: Execute tasks on OpenTofu-provisioned VMs
-- **Features**: Cloud-init verification, system configuration, application deployment
-
-**[📖 See detailed Ansible documentation →](config/ansible/README.md)**
-
-### 🔄 **Infrastructure Workflow**
+## 🎭 Infrastructure Workflow
 
 1. **Provision**: OpenTofu creates and configures VMs with cloud-init
 2. **Configure**: Ansible connects to VMs and executes management tasks
 3. **Verify**: Automated checks ensure proper setup and functionality
 
-| Phase              | Tool               | Purpose                                     |
-| ------------------ | ------------------ | ------------------------------------------- |
-| **Infrastructure** | OpenTofu/Terraform | VM provisioning and cloud-init setup        |
-| **Configuration**  | Ansible            | Task execution and configuration management |
-| **Verification**   | Ansible Playbooks  | System checks and validation                |
+| Phase              | Tool              | Purpose                                     |
+| ------------------ | ----------------- | ------------------------------------------- |
+| **Infrastructure** | OpenTofu          | VM provisioning and cloud-init setup        |
+| **Configuration**  | Ansible           | Task execution and configuration management |
+| **Verification**   | Ansible Playbooks | System checks and validation                |
 
-## 🧪 **Testing in GitHub Actions**
+**[📖 See detailed Ansible documentation →](docs/ansible.md)**
+
+## 🧪 Testing in GitHub Actions
 
 Both configurations include GitHub Actions workflows for CI testing:
 
 - **`.github/workflows/test-multipass-provision.yml`** - Tests Multipass VMs
 - **`.github/workflows/test-lxd-provision.yml`** - Tests LXD containers
 
-## 📊 **Current Status**
+## 📊 Current Status
 
-### ✅ **Completed**
+### ✅ Completed
 
 - [x] Multipass VM provisioning (local + GitHub Actions)
 - [x] LXD container provisioning (local + GitHub Actions)
@@ -204,48 +142,43 @@ Both configurations include GitHub Actions workflows for CI testing:
 - [x] Basic cloud-init verification playbook
 - [x] Automated testing workflows
 
-### 🔄 **In Progress**
+### 🔄 In Progress
 
 - [ ] Extended Ansible playbooks for application deployment
 - [ ] Docker Compose integration testing
 - [ ] Performance benchmarking
 - [ ] Official GitHub Actions nested virtualization clarification
 
-### 📋 **Planned**
+### 📋 Planned
 
 - [ ] Additional VM providers evaluation
 - [ ] Integration with Torrust application testing
 - [ ] Multi-architecture support (ARM64)
 
-## 📁 **Repository Structure**
+## 📁 Repository Structure
 
 ```text
+├── docs/                     # Detailed documentation
+│   ├── opentofu.md          # OpenTofu setup and usage guide
+│   ├── ansible.md           # Ansible setup and usage guide
+│   └── vm-providers.md      # Detailed provider comparison
 ├── config/
 │   ├── tofu/
-│   │   ├── multipass/
-│   │   │   ├── main.tf           # OpenTofu configuration for Multipass VMs
-│   │   │   ├── cloud-init.yml    # Cloud-init configuration
-│   │   │   └── README.md         # Multipass-specific documentation
-│   │   └── lxd/
-│   │       ├── main.tf           # OpenTofu configuration for LXD containers
-│   │       ├── cloud-init.yml    # Cloud-init configuration (same as multipass)
-│   │       └── README.md         # LXD-specific documentation
-│   └── ansible/
-│       ├── ansible.cfg           # Ansible configuration
-│       ├── inventory.yml         # Host inventory for provisioned VMs
-│       ├── wait-cloud-init.yml   # Playbook to wait for cloud-init completion
-│       └── README.md             # Ansible-specific documentation
-├── .github/
-│   └── workflows/
-│       ├── test-multipass-provision.yml  # Tests Multipass VMs
-│       └── test-lxd-provision.yml        # Tests LXD containers
-├── README.md                 # This file - project overview
-└── .gitignore                # Git ignore rules
+│   │   ├── multipass/       # Multipass VM configuration
+│   │   └── lxd/             # LXD container configuration
+│   └── ansible/             # Ansible configuration management
+├── .github/workflows/       # CI/CD workflows
+├── README.md               # This file - project overview
+└── .gitignore              # Git ignore rules
 ```
 
-The repository now properly documents this significant discovery and provides a clear path for others to follow the official GitHub Actions team response. The commit message follows conventional commit standards and clearly describes the documentation improvements.
+## 📚 Documentation
 
-## Next Steps
+- **[📖 OpenTofu Setup Guide](docs/opentofu.md)** - Installation, common commands, and best practices
+- **[📖 Ansible Setup Guide](docs/ansible.md)** - Installation, configuration, and project usage
+- **[📖 VM Providers Comparison](docs/vm-providers.md)** - Detailed comparison and decision rationale
+
+## 🔮 Next Steps
 
 This is a basic setup. Future enhancements could include:
 
@@ -253,4 +186,4 @@ This is a basic setup. Future enhancements could include:
 - Custom images with pre-installed Torrust components
 - Network configuration for multi-VM setups
 - Enhanced CI/CD integration with nested virtualization
-- Automated testing scripts
+- Automated testing scripts for Torrust applications
