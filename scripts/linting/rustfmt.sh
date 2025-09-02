@@ -34,7 +34,7 @@ log_error() {
 log_info "Running Rust formatter check..."
 
 # Run cargo fmt --check to verify formatting
-if cargo fmt --check; then
+if cargo fmt --check --quiet; then
     log_success "Rust formatting check passed!"
     exit 0
 else

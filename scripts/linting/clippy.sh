@@ -35,6 +35,7 @@ log_info "Running Rust Clippy linter..."
 
 # Run clippy with comprehensive checks (same as meson target)
 CARGO_INCREMENTAL=0 cargo clippy \
+    --quiet \
     --no-deps \
     --tests \
     --benches \
