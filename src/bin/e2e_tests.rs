@@ -83,12 +83,7 @@ impl TestEnvironment {
         })
     }
 
-    async fn run_command(
-        &self,
-        cmd: &str,
-        args: &[&str],
-        working_dir: Option<&Path>,
-    ) -> Result<String> {
+    fn run_command(&self, cmd: &str, args: &[&str], working_dir: Option<&Path>) -> Result<String> {
         let mut command = Command::new(cmd);
         command.args(args);
 
@@ -124,7 +119,7 @@ impl TestEnvironment {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 
-    async fn provision_infrastructure(&self) -> Result<String> {
+    fn provision_infrastructure(&self) -> Result<String> {
         println!("🚀 Provisioning test infrastructure...");
 
         // First, we need to update the container name in the OpenTofu config
@@ -136,32 +131,28 @@ impl TestEnvironment {
         // Initialize OpenTofu
         println!("   Initializing OpenTofu...");
         self.run_command("tofu", &["init"], Some(&tofu_dir))
-            .await
             .context("Failed to initialize OpenTofu")?;
 
         // Apply infrastructure
         println!("   Applying infrastructure...");
         self.run_command("tofu", &["apply", "-auto-approve"], Some(&tofu_dir))
-            .await
             .context("Failed to apply OpenTofu configuration")?;
 
         // Get the container IP
         let container_ip = self
             .get_container_ip()
-            .await
             .context("Failed to get container IP after provisioning")?;
 
         println!("✅ Infrastructure provisioned successfully");
-        println!("   Container IP: {}", container_ip);
+        println!("   Container IP: {container_ip}");
 
         Ok(container_ip)
     }
 
-    async fn get_container_ip(&self) -> Result<String> {
+    fn get_container_ip(&self) -> Result<String> {
         // Get container information
         let output = self
             .run_command("lxc", &["list", "torrust-vm", "--format=json"], None)
-            .await
             .context("Failed to list LXC containers")?;
 
         let containers: Value =
@@ -193,7 +184,7 @@ impl TestEnvironment {
 
         while attempt < max_attempts {
             let result = Command::new("ssh")
-                .args(&[
+                .args([
                     "-i",
                     self.ssh_key_path.to_str().unwrap(),
                     "-o",
@@ -202,7 +193,7 @@ impl TestEnvironment {
                     "UserKnownHostsFile=/dev/null",
                     "-o",
                     "ConnectTimeout=5",
-                    &format!("torrust@{}", ip),
+                    &format!("torrust@{ip}"),
                     "echo 'SSH connected'",
                 ])
                 .stdout(Stdio::null())
@@ -246,10 +237,8 @@ impl TestEnvironment {
         let ip_regex =
             Regex::new(r"ansible_host: \d+\.\d+\.\d+\.\d+").context("Failed to create IP regex")?;
 
-        let updated_content = ip_regex.replace(
-            &inventory_content,
-            &format!("ansible_host: {}", container_ip),
-        );
+        let updated_content =
+            ip_regex.replace(&inventory_content, &format!("ansible_host: {container_ip}"));
 
         // Replace the SSH key path to use our temporary key
         let ssh_key_regex = Regex::new(r"ansible_ssh_private_key_file: [^\n]+")
@@ -267,7 +256,7 @@ impl TestEnvironment {
             .await
             .context("Failed to write updated inventory file")?;
 
-        println!("✅ Ansible inventory updated with IP: {}", container_ip);
+        println!("✅ Ansible inventory updated with IP: {container_ip}");
         println!(
             "✅ Ansible inventory updated with SSH key: {}",
             self.ssh_key_path.display()
@@ -275,11 +264,11 @@ impl TestEnvironment {
         Ok(())
     }
 
-    async fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
-        println!("🎭 Running Ansible playbook: {}", playbook);
+    fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
+        println!("🎭 Running Ansible playbook: {playbook}");
 
         let ansible_dir = self.project_root.join("config/ansible");
-        let playbook_path = format!("{}.yml", playbook);
+        let playbook_path = format!("{playbook}.yml");
 
         let mut args = vec!["ansible-playbook", &playbook_path];
         if self.verbose {
@@ -287,26 +276,25 @@ impl TestEnvironment {
         }
 
         self.run_command("ansible-playbook", &[&playbook_path], Some(&ansible_dir))
-            .await
-            .context(format!("Failed to run Ansible playbook: {}", playbook))?;
+            .context(format!("Failed to run Ansible playbook: {playbook}"))?;
 
         println!("✅ Ansible playbook executed successfully");
         Ok(())
     }
 
-    async fn validate_cloud_init_completion(&self, container_ip: &str) -> Result<()> {
+    fn validate_cloud_init_completion(&self, container_ip: &str) -> Result<()> {
         println!("🔍 Validating cloud-init completion...");
 
         // Check cloud-init status
         let output = Command::new("ssh")
-            .args(&[
+            .args([
                 "-i",
                 self.ssh_key_path.to_str().unwrap(),
                 "-o",
                 "StrictHostKeyChecking=no",
                 "-o",
                 "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{}", container_ip),
+                &format!("torrust@{container_ip}"),
                 "cloud-init status",
             ])
             .output()
@@ -326,14 +314,14 @@ impl TestEnvironment {
 
         // Check for completion marker file
         let marker_check = Command::new("ssh")
-            .args(&[
+            .args([
                 "-i",
                 self.ssh_key_path.to_str().unwrap(),
                 "-o",
                 "StrictHostKeyChecking=no",
                 "-o",
                 "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{}", container_ip),
+                &format!("torrust@{container_ip}"),
                 "test -f /var/lib/cloud/instance/boot-finished",
             ])
             .status()
@@ -349,12 +337,12 @@ impl TestEnvironment {
         Ok(())
     }
 
-    async fn cleanup(&self) -> Result<()> {
+    fn cleanup(&self) {
         if self.keep_env {
             println!("🔒 Keeping test environment as requested");
             println!("   Container: torrust-vm");
             println!("   Connect with: lxc exec torrust-vm -- /bin/bash");
-            return Ok(());
+            return;
         }
 
         println!("🧹 Cleaning up test environment...");
@@ -362,16 +350,12 @@ impl TestEnvironment {
         let tofu_dir = self.project_root.join("config/tofu/lxd");
 
         // Destroy infrastructure
-        let result = self
-            .run_command("tofu", &["destroy", "-auto-approve"], Some(&tofu_dir))
-            .await;
+        let result = self.run_command("tofu", &["destroy", "-auto-approve"], Some(&tofu_dir));
 
         match result {
             Ok(_) => println!("✅ Test environment cleaned up successfully"),
-            Err(e) => println!("⚠️  Warning: Cleanup failed: {}", e),
+            Err(e) => println!("⚠️  Warning: Cleanup failed: {e}"),
         }
-
-        Ok(())
     }
 }
 
@@ -381,7 +365,7 @@ impl Drop for TestEnvironment {
             // Try basic cleanup in case async cleanup failed
             let tofu_dir = self.project_root.join("config/tofu/lxd");
             let _ = Command::new("tofu")
-                .args(&["destroy", "-auto-approve"])
+                .args(["destroy", "-auto-approve"])
                 .current_dir(&tofu_dir)
                 .output();
         }
@@ -392,7 +376,7 @@ async fn test_wait_cloud_init(env: &TestEnvironment) -> Result<()> {
     println!("🧪 Starting wait-cloud-init E2E test");
 
     // 1. Provision infrastructure
-    let container_ip = env.provision_infrastructure().await?;
+    let container_ip = env.provision_infrastructure()?;
 
     // 2. Wait for SSH connectivity
     env.wait_for_ssh_connectivity(&container_ip).await?;
@@ -401,10 +385,10 @@ async fn test_wait_cloud_init(env: &TestEnvironment) -> Result<()> {
     env.update_ansible_inventory(&container_ip).await?;
 
     // 4. Run the wait-cloud-init playbook
-    env.run_ansible_playbook("wait-cloud-init").await?;
+    env.run_ansible_playbook("wait-cloud-init")?;
 
     // 5. Validate cloud-init completion
-    env.validate_cloud_init_completion(&container_ip).await?;
+    env.validate_cloud_init_completion(&container_ip)?;
 
     println!("🎉 wait-cloud-init E2E test completed successfully!");
     Ok(())
@@ -425,23 +409,19 @@ async fn main() -> Result<()> {
         TestType::WaitCloudInit => test_wait_cloud_init(&env).await,
     };
 
-    let cleanup_result = env.cleanup().await;
+    env.cleanup();
 
     let test_duration = test_start.elapsed();
-    println!("\n📊 Test execution time: {:?}", test_duration);
+    println!("\n📊 Test execution time: {test_duration:?}");
 
     // Handle results
-    match (result, cleanup_result) {
-        (Ok(()), Ok(())) => {
+    match result {
+        Ok(()) => {
             println!("✅ All tests passed and cleanup completed successfully");
             Ok(())
         }
-        (Ok(()), Err(cleanup_err)) => {
-            println!("✅ Tests passed but cleanup failed: {}", cleanup_err);
-            Ok(()) // Don't fail the test due to cleanup issues
-        }
-        (Err(test_err), _) => {
-            println!("❌ Test failed: {}", test_err);
+        Err(test_err) => {
+            println!("❌ Test failed: {test_err}");
             Err(test_err)
         }
     }
