@@ -1,6 +1,8 @@
 # Torrust Testing Infrastructure
 
-This Rust application provides automated testing infrastructure for Torrust projects. It manages VM provisioning and cloud-init execution using different virtualization approaches, with the goal of finding the best solution for creating VMs that support cloud-init both locally (development) and in CI environments (GitHub Actions).
+This Rust application provides automated testing infrastructure for Torrust projects. It manages VM provisioning and
+cloud-init execution using different virtualization approaches, with the goal of finding the best solution for
+creating VMs that support cloud-init both locally (development) and in CI environments (GitHub Actions).
 
 ## 🎯 Project Goals
 

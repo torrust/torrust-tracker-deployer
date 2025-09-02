@@ -54,7 +54,9 @@ id -nG
 
 **The Problem**: LXD's client (`lxc`) connects to the daemon via a Unix socket that only members of the `lxd` group can access. Even if your user is in the `lxd` group, your current shell session might not have picked up that membership yet, resulting in "permission denied" errors.
 
-**The Solution**: Based on the [official LXD documentation](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/#add-the-current-user-to-the-lxd-group), follow these steps:
+**The Solution**: Based on the
+[official LXD documentation](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/#add-the-current-user-to-the-lxd-group),
+follow these steps:
 
 1. **Check if you're already in the lxd group**:
 
@@ -102,7 +104,8 @@ id -nG
 
    If this works without `sudo` or permission errors, you're all set!
 
-**Important**: The official LXD documentation states that if `lxd init --minimal` results in an error, "your group membership might not have taken effect. In this case, close and re-open your terminal, then try again."
+**Important**: The official LXD documentation states that if `lxd init --minimal` results in an error, "your group
+membership might not have taken effect. In this case, close and re-open your terminal, then try again."
 
 ## Basic LXD Operations
 

@@ -43,7 +43,7 @@ fi
 
 # Run the linter
 log_info "Scanning markdown files..."
-if find . -name "*.md" -type f -not -path "./.terraform/*" -exec markdownlint {} + 2>&1; then
+if find . -name "*.md" -type f -not -path "*/.terraform/*" -exec markdownlint {} + 2>&1; then
     log_success "All markdown files passed linting!"
     exit 0
 else

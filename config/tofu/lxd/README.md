@@ -264,7 +264,10 @@ This OpenTofu configuration is designed specifically for CI/CD environments like
 - **Status**: Fully supported and tested
 - **Requirements**: Works in standard GitHub Actions runners
 
-**Important Note**: The GitHub workflow uses `sudo chmod 666` on the LXD socket as a workaround for CI environments where terminal restarts aren't practical. **This approach is not recommended for local development** due to security implications. For local use, follow the proper group membership approach described in the [LXD documentation](../../docs/tech-stack/lxd.md#proper-lxd-group-setup).
+**Important Note**: The GitHub workflow uses `sudo chmod 666` on the LXD socket as a workaround for CI environments
+where terminal restarts aren't practical. **This approach is not recommended for local development** due to security
+implications. For local use, follow the proper group membership approach described in the
+[LXD documentation](../../docs/tech-stack/lxd.md#proper-lxd-group-setup).
 
 ### Configuration Benefits for CI
 
@@ -276,4 +279,5 @@ This OpenTofu configuration is designed specifically for CI/CD environments like
 
 ## Additional Information
 
-For more information about LXD system containers, including Docker support, general capabilities, and detailed troubleshooting, see the [LXD documentation](../../docs/tech-stack/lxd.md).
+For more information about LXD system containers, including Docker support, general capabilities, and detailed
+troubleshooting, see the [LXD documentation](../../docs/tech-stack/lxd.md).
