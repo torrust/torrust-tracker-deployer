@@ -20,6 +20,7 @@ publickey
 pytest
 resolv
 runcmd
+rustflags
 serde
 subshell
 sysfs

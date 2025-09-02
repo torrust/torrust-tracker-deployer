@@ -50,3 +50,6 @@ Thumbs.db
 # Rust build artifacts
 target/
 Cargo.lock
+
+# Coverage reports
+.coverage/
