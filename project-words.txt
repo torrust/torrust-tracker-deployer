@@ -1,4 +1,6 @@
+buildx
 cloudinit
+containerd
 cpus
 dearmor
 debootstrap
@@ -13,6 +15,7 @@ newgrp
 noninteractive
 NOPASSWD
 publickey
+pytest
 resolv
 runcmd
 serde

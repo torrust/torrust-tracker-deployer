@@ -94,6 +94,9 @@ cd ../../ansible
 # Update inventory.yml with the VM's IP from step 1
 # Then run the verification playbook
 ansible-playbook wait-cloud-init.yml
+
+# Install Docker on the VM
+ansible-playbook install-docker.yml
 ```
 
 #### 3. Verify Deployment
@@ -107,6 +110,10 @@ lxc exec torrust-vm -- /bin/bash
 
 # Test SSH connection
 ssh -i ~/.ssh/testing_rsa torrust@<VM_IP>
+
+# Verify Docker installation
+lxc exec torrust-vm -- docker --version
+lxc exec torrust-vm -- docker run --rm hello-world
 ```
 
 ## 🎭 Infrastructure Workflow
@@ -140,6 +147,7 @@ Both configurations include GitHub Actions workflows for CI testing:
 - [x] OpenTofu infrastructure as code
 - [x] Ansible configuration management setup
 - [x] Basic cloud-init verification playbook
+- [x] Docker installation playbook
 - [x] Automated testing workflows
 
 ### 🔄 In Progress

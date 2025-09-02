@@ -1,0 +1,131 @@
+---
+# Ansible Playbook: Install Docker
+# This playbook installs Docker CE on Ubuntu/Debian systems
+#
+# 🔗 RELATIONSHIP WITH INFRASTRUCTURE:
+# 1. This playbook runs after VM provisioning (OpenTofu) and cloud-init completion
+# 2. It prepares the VM for running containerized applications
+# 3. Can be used as part of a larger deployment pipeline for Torrust applications
+
+# Define which hosts this playbook will run on
+- name: Install Docker
+  hosts: all # Run on all hosts defined in inventory.yml
+  gather_facts: true # Collect system information to determine OS and version
+  become: true # Use sudo/root privileges for system-level operations
+
+  # Variables that can be customized
+  vars:
+    docker_edition: ce # Community Edition
+    docker_package: "docker-{{ docker_edition }}"
+    # Map architecture to Docker repository format
+    docker_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+
+  # List of tasks to execute in order
+  tasks:
+    # Task 1: Update package cache
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600 # Cache valid for 1 hour
+      when: ansible_os_family == "Debian"
+
+    # Task 2: Install required packages for Docker repository
+    - name: Install required packages for Docker repository
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == "Debian"
+
+    # Task 3: Add Docker's official GPG key
+    - name: Add Docker's official GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+      when: ansible_os_family == "Debian"
+
+    # Task 4: Add Docker repository
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ docker_arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+      when: ansible_os_family == "Debian"
+
+    # Task 5: Update package cache after adding repository
+    - name: Update apt package cache after adding Docker repository
+      ansible.builtin.apt:
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    # Task 6: Install Docker packages
+    - name: Install Docker packages
+      ansible.builtin.apt:
+        name:
+          - "{{ docker_package }}"
+          - "{{ docker_package }}-cli"
+          - containerd.io
+          - docker-buildx-plugin
+        state: present
+      when: ansible_os_family == "Debian"
+
+    # Task 7: Start and enable Docker service
+    - name: Start and enable Docker service
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    # Task 8: Add user to docker group (for non-root Docker usage)
+    - name: Add user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+      register: user_added_to_docker_group
+
+    # Task 9: Verify Docker installation
+    - name: Verify Docker installation
+      ansible.builtin.command: docker --version
+      register: docker_version
+      changed_when: false
+
+    # Task 10: Display Docker version
+    - name: Display Docker version
+      ansible.builtin.debug:
+        msg: "{{ docker_version.stdout }}"
+
+    # Task 11: Test Docker with hello-world (optional verification)
+    - name: Test Docker with hello-world container
+      ansible.builtin.command: docker run --rm hello-world
+      register: docker_test
+      changed_when: false
+      ignore_errors: true # Don't fail the playbook if this test fails
+
+    # Task 12: Display Docker test result
+    - name: Display Docker test result
+      ansible.builtin.debug:
+        msg: "{{ docker_test.stdout }}"
+      when: docker_test is succeeded
+
+    # Task 13: Warning about group membership
+    - name: Important notice about Docker group membership
+      ansible.builtin.debug:
+        msg: |
+          ⚠️  IMPORTANT: User '{{ ansible_user }}' has been added to the 'docker' group.
+          You may need to log out and log back in (or restart the session) for this change to take effect.
+          Alternatively, you can use 'newgrp docker' to activate the group membership in the current session.
+      when: user_added_to_docker_group is changed
+
+  # Handlers section - tasks that run when triggered by other tasks
+  handlers:
+    # Handler: Restart Docker service if needed
+    - name: restart docker
+      ansible.builtin.systemd:
+        name: docker
+        state: restarted
