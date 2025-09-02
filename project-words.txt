@@ -4,6 +4,7 @@ containerd
 cpus
 dearmor
 debootstrap
+dtolnay
 ehthumbs
 eprintln
 getent
