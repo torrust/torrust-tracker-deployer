@@ -15,11 +15,11 @@ struct Cli {
     /// Test to run
     #[arg(value_enum)]
     test: TestType,
-    
+
     /// Keep the test environment after completion
     #[arg(long)]
     keep: bool,
-    
+
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
@@ -37,23 +37,25 @@ struct TestEnvironment {
     ssh_key_path: PathBuf,
     #[allow(dead_code)] // Kept to maintain temp directory lifetime
     temp_dir: Option<tempfile::TempDir>,
+    #[allow(dead_code)] // Used for cleanup but not directly accessed
+    original_inventory: Option<String>,
 }
 
 impl TestEnvironment {
     fn new(keep_env: bool, verbose: bool) -> Result<Self> {
         // Get project root (current directory when running from root)
         let project_root = std::env::current_dir()?;
-        
+
         // Create temporary directory for SSH keys
         let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
-        
+
         // Copy SSH private key from fixtures to temp directory
         let fixtures_ssh_key = project_root.join("fixtures/testing_rsa");
         let temp_ssh_key = temp_dir.path().join("testing_rsa");
-        
+
         std::fs::copy(&fixtures_ssh_key, &temp_ssh_key)
             .context("Failed to copy SSH private key to temporary directory")?;
-        
+
         // Set proper permissions on the SSH key (600)
         #[cfg(unix)]
         {
@@ -62,42 +64,51 @@ impl TestEnvironment {
             perms.set_mode(0o600);
             std::fs::set_permissions(&temp_ssh_key, perms)?;
         }
-        
+
         if verbose {
-            println!("🔑 SSH key copied to temporary location: {}", temp_ssh_key.display());
+            println!(
+                "🔑 SSH key copied to temporary location: {}",
+                temp_ssh_key.display()
+            );
             println!("📁 Temporary directory: {}", temp_dir.path().display());
         }
-        
+
         Ok(Self {
             project_root,
             keep_env,
             verbose,
             ssh_key_path: temp_ssh_key,
             temp_dir: Some(temp_dir),
+            original_inventory: None,
         })
     }
-    
-    async fn run_command(&self, cmd: &str, args: &[&str], working_dir: Option<&Path>) -> Result<String> {
+
+    async fn run_command(
+        &self,
+        cmd: &str,
+        args: &[&str],
+        working_dir: Option<&Path>,
+    ) -> Result<String> {
         let mut command = Command::new(cmd);
         command.args(args);
-        
+
         if let Some(dir) = working_dir {
             command.current_dir(dir);
         }
-        
+
         if self.verbose {
             println!("🔧 Running: {} {}", cmd, args.join(" "));
             if let Some(dir) = working_dir {
                 println!("   Working directory: {}", dir.display());
             }
         }
-        
+
         let output = command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
             .context(format!("Failed to execute: {} {}", cmd, args.join(" ")))?;
-        
+
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -109,189 +120,235 @@ impl TestEnvironment {
                 stderr
             ));
         }
-        
+
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
-    
+
     async fn provision_infrastructure(&self) -> Result<String> {
         println!("🚀 Provisioning test infrastructure...");
-        
+
         // First, we need to update the container name in the OpenTofu config
         // For now, we'll use the existing config but this means tests might conflict
         // TODO: Make this configurable with variables later
-        
+
         let tofu_dir = self.project_root.join("config/tofu/lxd");
-        
+
         // Initialize OpenTofu
         println!("   Initializing OpenTofu...");
-        self.run_command("tofu", &["init"], Some(&tofu_dir)).await
+        self.run_command("tofu", &["init"], Some(&tofu_dir))
+            .await
             .context("Failed to initialize OpenTofu")?;
-        
+
         // Apply infrastructure
         println!("   Applying infrastructure...");
-        self.run_command("tofu", &["apply", "-auto-approve"], Some(&tofu_dir)).await
+        self.run_command("tofu", &["apply", "-auto-approve"], Some(&tofu_dir))
+            .await
             .context("Failed to apply OpenTofu configuration")?;
-        
+
         // Get the container IP
-        let container_ip = self.get_container_ip().await
+        let container_ip = self
+            .get_container_ip()
+            .await
             .context("Failed to get container IP after provisioning")?;
-        
+
         println!("✅ Infrastructure provisioned successfully");
         println!("   Container IP: {}", container_ip);
-        
+
         Ok(container_ip)
     }
-    
+
     async fn get_container_ip(&self) -> Result<String> {
         // Get container information
-        let output = self.run_command("lxc", &["list", "torrust-vm", "--format=json"], None).await
+        let output = self
+            .run_command("lxc", &["list", "torrust-vm", "--format=json"], None)
+            .await
             .context("Failed to list LXC containers")?;
-        
-        let containers: Value = serde_json::from_str(&output)
-            .context("Failed to parse LXC list output")?;
-        
-        let container = containers.as_array()
+
+        let containers: Value =
+            serde_json::from_str(&output).context("Failed to parse LXC list output")?;
+
+        let container = containers
+            .as_array()
             .and_then(|arr| arr.first())
             .ok_or_else(|| anyhow!("No container found"))?;
-        
+
         let ip = container["state"]["network"]["eth0"]["addresses"]
             .as_array()
             .and_then(|addresses| {
-                addresses.iter().find(|addr| {
-                    addr["family"].as_str() == Some("inet")
-                })
+                addresses
+                    .iter()
+                    .find(|addr| addr["family"].as_str() == Some("inet"))
             })
             .and_then(|addr| addr["address"].as_str())
             .ok_or_else(|| anyhow!("Could not find IPv4 address for container"))?;
-        
+
         Ok(ip.to_string())
     }
-    
+
     async fn wait_for_ssh_connectivity(&self, ip: &str) -> Result<()> {
         println!("🔌 Waiting for SSH connectivity...");
-        
+
         let max_attempts = 30;
         let mut attempt = 0;
-        
+
         while attempt < max_attempts {
             let result = Command::new("ssh")
                 .args(&[
-                    "-i", self.ssh_key_path.to_str().unwrap(),
-                    "-o", "StrictHostKeyChecking=no",
-                    "-o", "UserKnownHostsFile=/dev/null",
-                    "-o", "ConnectTimeout=5",
+                    "-i",
+                    self.ssh_key_path.to_str().unwrap(),
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    "-o",
+                    "UserKnownHostsFile=/dev/null",
+                    "-o",
+                    "ConnectTimeout=5",
                     &format!("torrust@{}", ip),
-                    "echo 'SSH connected'"
+                    "echo 'SSH connected'",
                 ])
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .status();
-            
+
             if let Ok(status) = result {
                 if status.success() {
                     println!("✅ SSH connectivity established");
                     return Ok(());
                 }
             }
-            
+
             if attempt % 5 == 0 {
-                println!("   Still waiting for SSH... (attempt {}/{})", attempt + 1, max_attempts);
+                println!(
+                    "   Still waiting for SSH... (attempt {}/{})",
+                    attempt + 1,
+                    max_attempts
+                );
             }
-            
+
             sleep(Duration::from_secs(2)).await;
             attempt += 1;
         }
-        
-        Err(anyhow!("SSH connectivity could not be established after {} attempts", max_attempts))
+
+        Err(anyhow!(
+            "SSH connectivity could not be established after {} attempts",
+            max_attempts
+        ))
     }
-    
+
     async fn update_ansible_inventory(&self, container_ip: &str) -> Result<()> {
         println!("📝 Updating Ansible inventory...");
-        
+
         let inventory_path = self.project_root.join("config/ansible/inventory.yml");
-        let inventory_content = tokio::fs::read_to_string(&inventory_path).await
+        let inventory_content = tokio::fs::read_to_string(&inventory_path)
+            .await
             .context("Failed to read inventory file")?;
-        
+
         // Replace the IP address in the inventory
-        let ip_regex = Regex::new(r"ansible_host: \d+\.\d+\.\d+\.\d+")
-            .context("Failed to create IP regex")?;
-        
+        let ip_regex =
+            Regex::new(r"ansible_host: \d+\.\d+\.\d+\.\d+").context("Failed to create IP regex")?;
+
         let updated_content = ip_regex.replace(
             &inventory_content,
-            &format!("ansible_host: {}", container_ip)
+            &format!("ansible_host: {}", container_ip),
         );
-        
-        tokio::fs::write(&inventory_path, updated_content.as_ref()).await
+
+        // Replace the SSH key path to use our temporary key
+        let ssh_key_regex = Regex::new(r"ansible_ssh_private_key_file: [^\n]+")
+            .context("Failed to create SSH key regex")?;
+
+        let final_content = ssh_key_regex.replace(
+            &updated_content,
+            &format!(
+                "ansible_ssh_private_key_file: {}",
+                self.ssh_key_path.to_str().unwrap()
+            ),
+        );
+
+        tokio::fs::write(&inventory_path, final_content.as_ref())
+            .await
             .context("Failed to write updated inventory file")?;
-        
+
         println!("✅ Ansible inventory updated with IP: {}", container_ip);
+        println!(
+            "✅ Ansible inventory updated with SSH key: {}",
+            self.ssh_key_path.display()
+        );
         Ok(())
     }
-    
+
     async fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
         println!("🎭 Running Ansible playbook: {}", playbook);
-        
+
         let ansible_dir = self.project_root.join("config/ansible");
         let playbook_path = format!("{}.yml", playbook);
-        
+
         let mut args = vec!["ansible-playbook", &playbook_path];
         if self.verbose {
             args.push("-vvv");
         }
-        
-        self.run_command("ansible-playbook", &[&playbook_path], Some(&ansible_dir)).await
+
+        self.run_command("ansible-playbook", &[&playbook_path], Some(&ansible_dir))
+            .await
             .context(format!("Failed to run Ansible playbook: {}", playbook))?;
-        
+
         println!("✅ Ansible playbook executed successfully");
         Ok(())
     }
-    
+
     async fn validate_cloud_init_completion(&self, container_ip: &str) -> Result<()> {
         println!("🔍 Validating cloud-init completion...");
-        
+
         // Check cloud-init status
         let output = Command::new("ssh")
             .args(&[
-                "-i", self.ssh_key_path.to_str().unwrap(),
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
+                "-i",
+                self.ssh_key_path.to_str().unwrap(),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
                 &format!("torrust@{}", container_ip),
-                "cloud-init status"
+                "cloud-init status",
             ])
             .output()
             .context("Failed to check cloud-init status")?;
-        
+
         if !output.status.success() {
             return Err(anyhow!("Failed to execute cloud-init status command"));
         }
-        
+
         let status_output = String::from_utf8_lossy(&output.stdout);
         if !status_output.contains("status: done") {
-            return Err(anyhow!("Cloud-init status is not 'done': {}", status_output));
+            return Err(anyhow!(
+                "Cloud-init status is not 'done': {}",
+                status_output
+            ));
         }
-        
+
         // Check for completion marker file
         let marker_check = Command::new("ssh")
             .args(&[
-                "-i", self.ssh_key_path.to_str().unwrap(),
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
+                "-i",
+                self.ssh_key_path.to_str().unwrap(),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
                 &format!("torrust@{}", container_ip),
-                "test -f /var/lib/cloud/instance/boot-finished"
+                "test -f /var/lib/cloud/instance/boot-finished",
             ])
             .status()
             .context("Failed to check cloud-init completion marker")?;
-        
+
         if !marker_check.success() {
             return Err(anyhow!("Cloud-init completion marker file not found"));
         }
-        
+
         println!("✅ Cloud-init validation passed");
         println!("   ✓ Cloud-init status is 'done'");
         println!("   ✓ Completion marker file exists");
         Ok(())
     }
-    
+
     async fn cleanup(&self) -> Result<()> {
         if self.keep_env {
             println!("🔒 Keeping test environment as requested");
@@ -299,19 +356,21 @@ impl TestEnvironment {
             println!("   Connect with: lxc exec torrust-vm -- /bin/bash");
             return Ok(());
         }
-        
+
         println!("🧹 Cleaning up test environment...");
-        
+
         let tofu_dir = self.project_root.join("config/tofu/lxd");
-        
+
         // Destroy infrastructure
-        let result = self.run_command("tofu", &["destroy", "-auto-approve"], Some(&tofu_dir)).await;
-        
+        let result = self
+            .run_command("tofu", &["destroy", "-auto-approve"], Some(&tofu_dir))
+            .await;
+
         match result {
             Ok(_) => println!("✅ Test environment cleaned up successfully"),
             Err(e) => println!("⚠️  Warning: Cleanup failed: {}", e),
         }
-        
+
         Ok(())
     }
 }
@@ -331,22 +390,22 @@ impl Drop for TestEnvironment {
 
 async fn test_wait_cloud_init(env: &TestEnvironment) -> Result<()> {
     println!("🧪 Starting wait-cloud-init E2E test");
-    
+
     // 1. Provision infrastructure
     let container_ip = env.provision_infrastructure().await?;
-    
+
     // 2. Wait for SSH connectivity
     env.wait_for_ssh_connectivity(&container_ip).await?;
-    
+
     // 3. Update Ansible inventory
     env.update_ansible_inventory(&container_ip).await?;
-    
+
     // 4. Run the wait-cloud-init playbook
     env.run_ansible_playbook("wait-cloud-init").await?;
-    
+
     // 5. Validate cloud-init completion
     env.validate_cloud_init_completion(&container_ip).await?;
-    
+
     println!("🎉 wait-cloud-init E2E test completed successfully!");
     Ok(())
 }
@@ -354,23 +413,23 @@ async fn test_wait_cloud_init(env: &TestEnvironment) -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    
+
     println!("🚀 Torrust Testing Infrastructure E2E Tests");
     println!("===========================================");
-    
+
     let env = TestEnvironment::new(cli.keep, cli.verbose)?;
-    
+
     let test_start = Instant::now();
-    
+
     let result = match cli.test {
         TestType::WaitCloudInit => test_wait_cloud_init(&env).await,
     };
-    
+
     let cleanup_result = env.cleanup().await;
-    
+
     let test_duration = test_start.elapsed();
     println!("\n📊 Test execution time: {:?}", test_duration);
-    
+
     // Handle results
     match (result, cleanup_result) {
         (Ok(()), Ok(())) => {
