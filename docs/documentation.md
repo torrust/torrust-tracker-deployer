@@ -9,9 +9,10 @@ docs/
 ├── tech-stack/          # Generic technology documentation
 │   ├── ansible.md       # Ansible installation, setup, and basic usage
 │   ├── lxd.md          # LXD system containers overview and setup
-│   ├── meson.md        # Meson build system and task runner
 │   └── opentofu.md     # OpenTofu/Terraform installation and usage
 ├── research/           # Research notes and exploration docs
+├── decisions/          # Architecture Decision Records (ADRs)
+│   └── meson-removal.md # Decision to remove Meson build system
 └── *.md               # Project-specific documentation
 ```
 
@@ -49,8 +50,24 @@ docs/
 
 - Technology research and comparisons
 - Proof-of-concept findings
-- Architecture decision records (ADRs)
 - Experimental approaches and their outcomes
+- Preliminary investigations and findings
+
+### 🎯 Architecture Decisions (`docs/decisions/`)
+
+**Purpose**: Records of significant architectural and technical decisions.
+
+**What belongs here**:
+
+- Architecture Decision Records (ADRs)
+- Technology adoption or removal decisions
+- Process and workflow changes
+- Design pattern choices and rationales
+- Tool and dependency decisions
+
+**Examples**:
+
+- `meson-removal.md` - Decision to remove Meson build system and rationale
 
 ### 📋 Project Documentation (`docs/*.md`)
 
@@ -90,16 +107,25 @@ docs/
 ### When adding new documentation
 
 1. **Generic tool documentation** → `docs/tech-stack/`
+
    - If it could be useful in other projects using the same tool
 
 2. **Project-specific documentation** → `docs/`
+
    - If it's specific to how this project works
 
 3. **Configuration documentation** → `config/*/README.md`
+
    - If it's about a specific configuration or setup
 
 4. **Research and exploration** → `docs/research/`
+
    - If it's about investigating or comparing approaches
+
+5. **Architecture decisions** → `docs/decisions/`
+   - If documenting a significant technical or architectural decision
+   - When removing or adding major dependencies
+   - For process or workflow changes that affect contributors
 
 ### Cross-referencing
 
@@ -112,12 +138,15 @@ docs/
 
 ```markdown
 <!-- From config documentation to tech stack -->
+
 For general LXD setup, see the [LXD documentation](../../docs/tech-stack/lxd.md).
 
 <!-- From project docs to tech stack -->
+
 Install OpenTofu following the [OpenTofu setup guide](tech-stack/opentofu.md).
 
 <!-- From tech stack to project usage -->
+
 For project-specific usage, see the [LXD configuration guide](../config/tofu/lxd/README.md).
 ```
 
@@ -126,7 +155,7 @@ For project-specific usage, see the [LXD configuration guide](../config/tofu/lxd
 ### When updating tools
 
 1. **Update tech stack docs** for generic tool changes
-2. **Update project docs** for project-specific impacts  
+2. **Update project docs** for project-specific impacts
 3. **Update configuration docs** for configuration-specific changes
 4. **Check all cross-references** remain valid
 
@@ -136,6 +165,24 @@ For project-specific usage, see the [LXD configuration guide](../config/tofu/lxd
 2. **Document project integration** in project docs
 3. **Create configuration documentation** if there are specific configurations
 4. **Update this guide** if new categories are needed
+
+### When making architectural decisions
+
+1. **Document significant decisions** in `docs/decisions/`
+2. **Use descriptive filenames** (e.g., `tool-name-adoption.md`, `framework-removal.md`)
+3. **Include context and reasoning** for future contributors
+4. **Document when to reconsider** the decision
+
+### Decision document format
+
+Decision documents should include:
+
+- **Status** (adopted, removed, superseded)
+- **Context** that led to the decision
+- **Problems** or requirements that drove the decision
+- **Decision** made and alternatives considered
+- **Consequences** both positive and negative
+- **When to reconsider** the decision
 
 This organization ensures documentation is:
 
