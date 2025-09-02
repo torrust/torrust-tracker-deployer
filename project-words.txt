@@ -6,6 +6,7 @@ dearmor
 debootstrap
 dtolnay
 ehthumbs
+elif
 eprintln
 getent
 journalctl
@@ -14,14 +15,19 @@ larstobi
 lxdbr
 multipassd
 newgrp
+noconfirm
 noninteractive
 NOPASSWD
+nullglob
+pacman
+pipefail
 publickey
 pytest
 resolv
 runcmd
 rustflags
 serde
+shellcheck
 subshell
 sysfs
 terraformrc

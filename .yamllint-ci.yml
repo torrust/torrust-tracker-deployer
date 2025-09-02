@@ -1,0 +1,14 @@
+extends: default
+
+rules:
+  line-length:
+    max: 200 # More reasonable for infrastructure code
+  comments:
+    min-spaces-from-content: 1 # Allow single space before comments
+  document-start: disable # Cloud-init files don't need --- start
+  truthy:
+    allowed-values: ["true", "false", "yes", "no", "on", "off"] # Allow cloud-init and GitHub Actions common values
+
+# Ignore cloud-init files for comment spacing since #cloud-config is a special directive
+ignore: |
+  **/cloud-init.yml

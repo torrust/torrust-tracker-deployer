@@ -95,17 +95,28 @@ torrust-testing-infra
 
 #### Development Tasks
 
-This project uses [Meson](https://mesonbuild.com/) as a task runner for common development commands:
+This project includes convenient scripts for common development tasks:
 
 ```bash
-# Setup Meson (one-time setup)
-meson setup builddir
+# Run all linters (markdown, YAML, shell scripts, Rust)
+./scripts/linting/lint.sh all
 
-# Run comprehensive clippy linting
-meson compile -C builddir clippy
+# Run individual linters
+./scripts/linting/lint.sh md         # Markdown linting
+./scripts/linting/lint.sh yaml       # YAML linting
+./scripts/linting/lint.sh clippy     # Rust code analysis
+./scripts/linting/lint.sh rustfmt    # Rust formatting check
+./scripts/linting/lint.sh shellcheck # Shell script linting
+
+# Or run scripts directly
+./scripts/linting/markdown.sh
+./scripts/linting/yaml.sh
+./scripts/linting/clippy.sh
+./scripts/linting/rustfmt.sh
+./scripts/linting/shellcheck.sh
 ```
 
-**[📖 See full Meson setup guide →](docs/tech-stack/meson.md)**
+**[📖 See linting documentation →](docs/linting.md)**
 
 #### Running E2E Tests
 
@@ -236,8 +247,9 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 │   ├── tech-stack/          # Generic technology documentation
 │   │   ├── opentofu.md      # OpenTofu installation and usage
 │   │   ├── ansible.md       # Ansible installation and usage
-│   │   ├── lxd.md          # LXD system containers
-│   │   └── meson.md        # Meson task runner
+│   │   └── lxd.md          # LXD system containers
+│   ├── decisions/           # Architecture Decision Records (ADRs)
+│   │   └── meson-removal.md # Decision to remove Meson build system
 │   ├── documentation.md     # Documentation organization guide
 │   └── vm-providers.md      # Provider comparison for this project
 ├── config/
@@ -245,6 +257,12 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 │   │   ├── multipass/       # Multipass VM configuration
 │   │   └── lxd/             # LXD container configuration
 │   └── ansible/             # Ansible configuration management
+├── scripts/                  # Development and utility scripts
+│   └── linting/             # Linting scripts and tools
+│       ├── markdown.sh      # Markdown linting
+│       ├── yaml.sh          # YAML linting
+│       ├── clippy.sh        # Rust clippy linting
+│       └── lint.sh          # Unified linting command interface
 ├── .github/workflows/       # CI/CD workflows
 ├── Cargo.toml              # Rust project configuration
 ├── README.md               # This file - project overview
