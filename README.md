@@ -93,6 +93,20 @@ cargo install --path .
 torrust-testing-infra
 ```
 
+#### Development Tasks
+
+This project uses [Meson](https://mesonbuild.com/) as a task runner for common development commands:
+
+```bash
+# Setup Meson (one-time setup)
+meson setup builddir
+
+# Run comprehensive clippy linting
+meson compile -C builddir clippy
+```
+
+**[📖 See full Meson setup guide →](docs/meson.md)**
+
 #### Running E2E Tests
 
 Use the E2E tests binary to run automated infrastructure tests:

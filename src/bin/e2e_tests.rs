@@ -364,10 +364,12 @@ impl Drop for TestEnvironment {
         if !self.keep_env {
             // Try basic cleanup in case async cleanup failed
             let tofu_dir = self.project_root.join("config/tofu/lxd");
-            drop(Command::new("tofu")
-                .args(["destroy", "-auto-approve"])
-                .current_dir(&tofu_dir)
-                .output());
+            drop(
+                Command::new("tofu")
+                    .args(["destroy", "-auto-approve"])
+                    .current_dir(&tofu_dir)
+                    .output(),
+            );
         }
     }
 }

@@ -51,5 +51,8 @@ Thumbs.db
 target/
 Cargo.lock
 
+# Meson build directory
+builddir/
+
 # Coverage reports
 .coverage/
