@@ -2,16 +2,85 @@
 
 ## Overview
 
-This document outlines the research and decision-making process for implementing automated testing of Ansible playbooks in the Torrust Testing Infrastructure project.
+This document outlines the testing strategy for Ansible playbooks in the Torrust Testing Infrastructure project. Based on comprehensive research comparing Docker containers vs LXD containers, we have established an LXD-exclusive approach for all Ansible testing.
+
+## Updated Strategy (September 2025)
+
+After extensive research and testing (documented in [docker-vs-lxd-ansible-testing.md](docker-vs-lxd-ansible-testing.md)), we have adopted a **single-platform LXD strategy** that prioritizes:
+
+- **Completeness**: Full infrastructure and application testing capabilities
+- **Realism**: Production-equivalent environment behavior
+- **Efficiency**: VM reuse for multiple playbook executions
+- **Sequential Testing**: Playbooks executed in deployment order
 
 ## Requirements
 
 - Test playbooks like `wait-cloud-init.yml` that require cloud-init execution
-- Fast testing for future playbooks (Docker installation, firewall setup, etc.)
-- Support for testing playbook dependencies and integration scenarios
+- Support for infrastructure playbooks (Docker installation, firewall setup, etc.)
+- Support for application deployment playbooks (Docker Compose stacks)
+- Test playbook dependencies and integration scenarios in deployment order
 - Each playbook should validate its own pre-conditions and post-conditions
+- Reuse provisioned VMs for efficiency across multiple playbook tests
 
-## Alternatives Evaluated
+## Current Strategy: LXD-Only Approach
+
+### Core Decision
+
+**Use LXD containers exclusively** for all Ansible playbook testing based on research findings that demonstrate:
+
+1. ✅ **Complete functionality**: Supports all required features (systemd, Docker daemon, networking)
+2. ✅ **Real testing**: Can validate actual service deployment and functionality
+3. ✅ **Production equivalence**: Behaves like actual cloud VMs
+4. ✅ **Reasonable performance**: ~17s setup + ~5s per playbook is acceptable
+5. ✅ **Consistent workflow**: Single testing approach reduces complexity
+6. ✅ **CI/CD ready**: Proven to work in GitHub Actions
+
+### Testing Workflow
+
+#### 1. VM Provisioning and Reuse
+
+```bash
+# Provision LXD container once
+cd config/tofu/lxd
+tofu apply -auto-approve  # ~17.6s initial setup
+
+# Reuse the same VM for multiple playbook tests
+cd ../../ansible
+```
+
+#### 2. Sequential Playbook Execution
+
+Execute playbooks in the order they would run during actual deployment:
+
+```bash
+# Infrastructure Setup (in dependency order)
+time ansible-playbook wait-cloud-init.yml           # ~2.5s
+time ansible-playbook install-docker.yml            # ~27.7s
+time ansible-playbook install-docker-compose.yml    # ~5.6s
+time ansible-playbook setup-firewall.yml            # ~3.5s
+
+# Application Deployment
+time ansible-playbook deploy-docker-stack.yml       # ~22.6s
+```
+
+#### 3. VM Cleanup (When Needed)
+
+```bash
+cd config/tofu/lxd
+tofu destroy -auto-approve  # Clean slate for next test cycle
+```
+
+### Benefits of This Approach
+
+- **Realistic Testing**: Full systemd, cloud-init, and Docker daemon support
+- **Dependency Validation**: Tests actual playbook execution chains
+- **Performance Efficiency**: VM reuse eliminates repeated provisioning overhead
+- **Integration Testing**: Validates that playbooks work together as intended
+- **Production Parity**: Matches actual cloud deployment environment
+
+## Previously Evaluated Alternatives
+
+> **Note**: The following alternatives were extensively researched but determined to be insufficient for our comprehensive testing needs. See [Decision Record: Rejecting Docker for Ansible Testing](../decisions/docker-testing-rejection.md) for detailed analysis.
 
 ### 1. Molecule with Docker Driver
 
@@ -118,74 +187,89 @@ This document outlines the research and decision-making process for implementing
 
 ## Selected Strategy
 
-### Hybrid Approach
+### LXD-Only Testing Strategy
 
-We have decided to implement a **hybrid testing strategy** that optimizes for both speed and completeness:
+Based on comprehensive research and performance testing, we have implemented a **single-platform LXD strategy** that provides:
 
-#### 1. Molecule with Docker Driver (Primary)
+#### Core Components
 
-- **Use case**: Most playbooks (Docker installation, firewall setup, package management, etc.)
-- **Benefits**: Fast feedback loop, good for development and CI
-- **Limitations**: Cannot test systemd services or cloud-init scenarios
+1. **Single VM Reuse**: Provision one LXD container and reuse for multiple playbook tests
+2. **Sequential Execution**: Run playbooks in deployment order to test real integration scenarios
+3. **Complete Environment**: Full systemd, cloud-init, Docker daemon, and networking support
+4. **Production Parity**: LXD containers behave identically to cloud VMs
 
-#### 2. LXD Containers (Special Cases)
+#### Implementation Details
 
-- **Use case**: Cloud-init related tests (like `wait-cloud-init.yml`)
-- **Benefits**: Proper cloud-init support, better systemd compatibility
-- **Setup**: Use base images similar to `config/tofu/lxd/cloud-init.yml`
+**Base Infrastructure**:
 
-#### 3. Integration Test Suite
+- Ubuntu 24.04 LXD containers with cloud-init support
+- SSH access using fixtures/testing_rsa keys
+- OpenTofu for consistent VM provisioning
 
-- **Use case**: Testing playbook dependencies and execution chains
-- **Implementation**: Single long-running VM for dependency chain testing
-- **Benefits**: Simulates real deployment scenarios
+**Test Execution Pattern**:
 
-#### 4. Built-in Validation
+```bash
+# One-time setup
+cd config/tofu/lxd && tofu apply -auto-approve
 
-- **Requirement**: Each playbook includes pre-condition and post-condition checks
-- **Implementation**: Use Ansible facts and assertions
-- **Benefits**: Self-documenting requirements and outcomes
+# Sequential playbook testing (reusing same VM)
+cd ../../ansible
+ansible-playbook wait-cloud-init.yml
+ansible-playbook install-docker.yml
+ansible-playbook install-docker-compose.yml
+ansible-playbook setup-firewall.yml
+ansible-playbook deploy-docker-stack.yml
 
-## Implementation Plan
+# Cleanup when needed
+cd ../tofu/lxd && tofu destroy -auto-approve
+```
 
-### Phase 1: Molecule Setup
+**Performance Metrics**:
 
-1. Configure Molecule with Docker driver for basic playbooks
-2. Create standardized test scenarios
-3. Implement basic idempotency testing
+- Initial VM provisioning: ~17.6 seconds
+- Playbook execution: ~3-28 seconds per playbook
+- Total integration test cycle: ~60-80 seconds (all playbooks)
 
-### Phase 2: LXD Integration
+#### Built-in Validation Requirements
 
-1. Set up LXD for cloud-init testing
-2. Create base images matching production environment
-3. Test `wait-cloud-init.yml` specifically
+Each playbook must include:
 
-### Phase 3: Integration Testing
+- **Pre-condition checks**: Verify environment requirements before execution
+- **Post-condition validation**: Confirm expected state after execution
+- **Idempotency testing**: Ensure safe re-execution
+- **Error handling**: Graceful failure with clear messaging
 
-1. Design integration test scenarios
-2. Implement playbook dependency chains
-3. Create comprehensive test suites
+## Rationale for LXD-Only Approach
 
-### Phase 4: Validation Framework
+## Rationale for LXD-Only Approach
 
-1. Add pre/post-condition checks to existing playbooks
-2. Standardize assertion patterns
-3. Document testing best practices
+This strategy addresses our specific needs while avoiding the limitations discovered in alternative approaches:
 
-## Rationale
+- **Complete Testing Coverage**: Unlike Docker containers, LXD supports full systemd services, Docker daemon operations, and complex networking scenarios
+- **Production Equivalence**: LXD containers behave identically to cloud VMs, ensuring test results accurately predict production behavior
+- **Efficient Resource Usage**: VM reuse eliminates the overhead of repeated provisioning while maintaining test isolation through playbook idempotency
+- **Simplified Workflow**: Single testing platform reduces complexity and maintenance overhead
+- **Real Integration Testing**: Sequential playbook execution validates actual deployment scenarios and dependencies
 
-This hybrid approach addresses our specific needs:
+## Implementation Status
 
-- **Speed**: Docker-based tests provide rapid feedback for most scenarios
-- **Completeness**: LXD handles cloud-init and systemd requirements
-- **Realism**: Integration tests simulate actual deployment conditions
-- **Maintainability**: Built-in validations ensure playbooks are self-documenting
+### Completed
 
-The strategy balances development velocity with test coverage, ensuring we can quickly iterate on playbooks while maintaining confidence in their behavior across different environments.
+- ✅ LXD infrastructure setup with OpenTofu
+- ✅ SSH key management using fixtures/ directory
+- ✅ Performance benchmarking and optimization
+- ✅ Basic playbook testing (install-docker.yml, setup-firewall.yml)
+- ✅ Application deployment testing (deploy-docker-stack.yml)
 
-## Next Steps
+### In Progress
 
-1. Set up Molecule framework with Docker driver
-2. Configure LXD for cloud-init testing scenarios
-3. Begin implementing tests for existing playbooks
-4. Establish CI/CD integration for automated testing
+- 🔄 Standardizing playbook validation patterns
+- 🔄 Creating comprehensive test scenarios
+- 🔄 Documentation of best practices
+
+### Next Steps
+
+1. **Enhance Existing Playbooks**: Add pre/post-condition validation to all playbooks
+2. **Create Test Scenarios**: Develop standard test cases for different playbook types
+3. **CI/CD Integration**: Implement automated testing in GitHub Actions
+4. **Monitoring and Metrics**: Track test performance and reliability over time
