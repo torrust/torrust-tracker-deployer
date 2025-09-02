@@ -12,7 +12,7 @@ This configuration creates:
 - Network isolation with container networking
 - 10GB disk allocation
 
-For general information about LXD system containers, see the [LXD documentation](../../docs/lxd.md).
+For general information about LXD system containers, see the [LXD documentation](../../docs/tech-stack/lxd.md).
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ Before provisioning, ensure you have:
 
 ### Required Software
 
-1. **LXD**: See [LXD installation guide](../../docs/lxd.md#installation) for detailed setup instructions
+1. **LXD**: See [LXD installation guide](../../docs/tech-stack/lxd.md#installation) for detailed setup instructions
 2. **OpenTofu**: Install from [https://opentofu.org/](https://opentofu.org/)
 
    ```bash
@@ -46,7 +46,7 @@ If both commands return version information, you can proceed to [Configuration](
 
 ### LXD Access Setup
 
-Ensure your user has proper access to LXD. If you encounter permission errors, see the [LXD Group Setup guide](../../docs/lxd.md#proper-lxd-group-setup) for detailed instructions.
+Ensure your user has proper access to LXD. If you encounter permission errors, see the [LXD Group Setup guide](../../docs/tech-stack/lxd.md#proper-lxd-group-setup) for detailed instructions.
 
 ### Configuration Files
 
@@ -207,7 +207,7 @@ lxc exec torrust-vm -- ps aux
 lxc exec torrust-vm -- cloud-init status
 ```
 
-For more LXD commands and troubleshooting, see the [LXD documentation](../../docs/lxd.md).
+For more LXD commands and troubleshooting, see the [LXD documentation](../../docs/tech-stack/lxd.md).
 
 ## Cleanup
 
@@ -239,7 +239,7 @@ To destroy the container and clean up resources:
 
 1. **OpenTofu not found**: Ensure OpenTofu is installed and in your PATH
 2. **LXD provider errors**: Verify LXD is running and accessible
-3. **Permission errors**: See [LXD Group Setup guide](../../docs/lxd.md#proper-lxd-group-setup)
+3. **Permission errors**: See [LXD Group Setup guide](../../docs/tech-stack/lxd.md#proper-lxd-group-setup)
 4. **Container creation fails**: Check if the specified image is available
 
 ### LXD Permission Issues
@@ -252,7 +252,7 @@ sg lxd -c "tofu apply"
 sg lxd -c "tofu destroy"
 ```
 
-For detailed LXD troubleshooting, see the [LXD documentation](../../docs/lxd.md#troubleshooting).
+For detailed LXD troubleshooting, see the [LXD documentation](../../docs/tech-stack/lxd.md#troubleshooting).
 
 ## GitHub Actions Support
 
@@ -264,7 +264,7 @@ This OpenTofu configuration is designed specifically for CI/CD environments like
 - **Status**: Fully supported and tested
 - **Requirements**: Works in standard GitHub Actions runners
 
-**Important Note**: The GitHub workflow uses `sudo chmod 666` on the LXD socket as a workaround for CI environments where terminal restarts aren't practical. **This approach is not recommended for local development** due to security implications. For local use, follow the proper group membership approach described in the [LXD documentation](../../docs/lxd.md#proper-lxd-group-setup).
+**Important Note**: The GitHub workflow uses `sudo chmod 666` on the LXD socket as a workaround for CI environments where terminal restarts aren't practical. **This approach is not recommended for local development** due to security implications. For local use, follow the proper group membership approach described in the [LXD documentation](../../docs/tech-stack/lxd.md#proper-lxd-group-setup).
 
 ### Configuration Benefits for CI
 
@@ -276,4 +276,4 @@ This OpenTofu configuration is designed specifically for CI/CD environments like
 
 ## Additional Information
 
-For more information about LXD system containers, including Docker support, general capabilities, and detailed troubleshooting, see the [LXD documentation](../../docs/lxd.md).
+For more information about LXD system containers, including Docker support, general capabilities, and detailed troubleshooting, see the [LXD documentation](../../docs/tech-stack/lxd.md).

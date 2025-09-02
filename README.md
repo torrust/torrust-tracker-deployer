@@ -59,8 +59,8 @@ lxd version && tofu version && ansible --version && cargo --version
 
 **Missing tools?** See detailed installation guides:
 
-- **[📖 OpenTofu Setup Guide →](docs/opentofu.md)**
-- **[📖 Ansible Setup Guide →](docs/ansible.md)**
+- **[📖 OpenTofu Setup Guide →](docs/tech-stack/opentofu.md)**
+- **[📖 Ansible Setup Guide →](docs/tech-stack/ansible.md)**
 
 **Quick install:**
 
@@ -105,7 +105,7 @@ meson setup builddir
 meson compile -C builddir clippy
 ```
 
-**[📖 See full Meson setup guide →](docs/meson.md)**
+**[📖 See full Meson setup guide →](docs/tech-stack/meson.md)**
 
 #### Running E2E Tests
 
@@ -188,7 +188,7 @@ lxc exec torrust-vm -- docker-compose --version
 | **Configuration**  | Ansible           | Task execution and configuration management |
 | **Verification**   | Ansible Playbooks | System checks and validation                |
 
-**[📖 See detailed Ansible documentation →](docs/ansible.md)**
+**[📖 See detailed Ansible documentation →](docs/tech-stack/ansible.md)**
 
 ## 🧪 Testing in GitHub Actions
 
@@ -233,9 +233,13 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 │   └── bin/
 │       └── e2e_tests.rs     # E2E tests binary
 ├── docs/                     # Detailed documentation
-│   ├── opentofu.md          # OpenTofu setup and usage guide
-│   ├── ansible.md           # Ansible setup and usage guide
-│   └── vm-providers.md      # Detailed provider comparison
+│   ├── tech-stack/          # Generic technology documentation
+│   │   ├── opentofu.md      # OpenTofu installation and usage
+│   │   ├── ansible.md       # Ansible installation and usage
+│   │   ├── lxd.md          # LXD system containers
+│   │   └── meson.md        # Meson task runner
+│   ├── documentation.md     # Documentation organization guide
+│   └── vm-providers.md      # Provider comparison for this project
 ├── config/
 │   ├── tofu/
 │   │   ├── multipass/       # Multipass VM configuration
@@ -250,8 +254,9 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 
 ## 📚 Documentation
 
-- **[📖 OpenTofu Setup Guide](docs/opentofu.md)** - Installation, common commands, and best practices
-- **[📖 Ansible Setup Guide](docs/ansible.md)** - Installation, configuration, and project usage
+- **[📖 Documentation Organization Guide](docs/documentation.md)** - How documentation is organized and where to contribute
+- **[📖 OpenTofu Setup Guide](docs/tech-stack/opentofu.md)** - Installation, common commands, and best practices
+- **[📖 Ansible Setup Guide](docs/tech-stack/ansible.md)** - Installation, configuration, and project usage
 - **[📖 VM Providers Comparison](docs/vm-providers.md)** - Detailed comparison and decision rationale
 
 ## 🔮 Next Steps
