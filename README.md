@@ -178,10 +178,11 @@ lxc exec torrust-vm -- docker-compose --version
 
 ## 🧪 Testing in GitHub Actions
 
-Both configurations include GitHub Actions workflows for CI testing:
+The repository includes comprehensive GitHub Actions workflows for CI testing:
 
-- **`.github/workflows/test-multipass-provision.yml`** - Tests Multipass VMs
-- **`.github/workflows/test-lxd-provision.yml`** - Tests LXD containers
+- **`.github/workflows/test-e2e.yml`** - **End-to-End Tests** - Runs automated E2E tests using the Rust binary
+- **`.github/workflows/test-lxd-provision.yml`** - Tests LXD container provisioning
+- **`.github/workflows/test-multipass-provision.yml`** - Tests Multipass VM provisioning
 
 ## 📊 Current Status
 
@@ -196,6 +197,7 @@ Both configurations include GitHub Actions workflows for CI testing:
 - [x] Docker installation playbook
 - [x] Docker Compose installation playbook
 - [x] Automated testing workflows
+- [x] End-to-End (E2E) testing infrastructure and workflows
 
 ### 🔄 In Progress
 
