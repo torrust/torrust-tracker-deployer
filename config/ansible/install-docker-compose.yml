@@ -1,0 +1,151 @@
+---
+# Ansible Playbook: Install Docker Compose
+# This playbook installs Docker Compose on Ubuntu/Debian systems
+#
+# 🔗 RELATIONSHIP WITH INFRASTRUCTURE:
+# 1. This playbook runs after VM provisioning (OpenTofu) and cloud-init completion
+# 2. This should be run after the Docker installation playbook (install-docker.yml)
+# 3. It prepares the VM for running multi-container applications with docker-compose
+
+# Define which hosts this playbook will run on
+- name: Install Docker Compose
+  hosts: all # Run on all hosts defined in inventory.yml
+  gather_facts: true # Collect system information to determine OS and version
+  become: true # Use sudo/root privileges for system-level operations
+
+  # Variables that can be customized
+  vars:
+    docker_compose_version: "2.29.7" # Latest stable version as of Sept 2025
+    # Map architecture to Docker Compose binary format
+    docker_compose_arch: "{{ 'x86_64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+    docker_compose_url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-linux-{{ docker_compose_arch }}"
+
+  # List of tasks to execute in order
+  tasks:
+    # Task 1: Check if Docker is installed
+    - name: Check if Docker is installed
+      ansible.builtin.command: docker --version
+      register: docker_check
+      failed_when: false
+      changed_when: false
+
+    # Task 2: Fail if Docker is not installed
+    - name: Ensure Docker is installed before proceeding
+      ansible.builtin.fail:
+        msg: "Docker is not installed. Please run the install-docker.yml playbook first."
+      when: docker_check.rc != 0
+
+    # Task 3: Display Docker version for confirmation
+    - name: Display current Docker version
+      ansible.builtin.debug:
+        msg: "Docker is installed: {{ docker_check.stdout }}"
+      when: docker_check.rc == 0
+
+    # Task 4: Check if Docker Compose is already installed
+    - name: Check if Docker Compose is already installed
+      ansible.builtin.command: docker-compose --version
+      register: docker_compose_check
+      failed_when: false
+      changed_when: false
+
+    # Task 5: Display current Docker Compose version if already installed
+    - name: Display current Docker Compose version
+      ansible.builtin.debug:
+        msg: "Docker Compose already installed: {{ docker_compose_check.stdout }}"
+      when: docker_compose_check.rc == 0
+
+    # Task 6: Create keyrings directory if it doesn't exist
+    - name: Create /usr/local/bin directory
+      ansible.builtin.file:
+        path: /usr/local/bin
+        state: directory
+        mode: '0755'
+
+    # Task 7: Download Docker Compose binary
+    - name: Download Docker Compose binary
+      ansible.builtin.get_url:
+        url: "{{ docker_compose_url }}"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+        owner: root
+        group: root
+        force: true # Overwrite if exists to ensure we have the specified version
+      register: docker_compose_download
+
+    # Task 8: Create symbolic link for system-wide access
+    - name: Create symbolic link for docker-compose
+      ansible.builtin.file:
+        src: /usr/local/bin/docker-compose
+        dest: /usr/bin/docker-compose
+        state: link
+        force: true # Overwrite existing symlink if present
+
+    # Task 9: Verify Docker Compose installation
+    - name: Verify Docker Compose installation
+      ansible.builtin.command: docker-compose --version
+      register: docker_compose_version_output
+      changed_when: false
+
+    # Task 10: Display Docker Compose version
+    - name: Display Docker Compose version
+      ansible.builtin.debug:
+        msg: "{{ docker_compose_version_output.stdout }}"
+
+    # Task 11: Test Docker Compose with a simple compose file
+    - name: Create test docker-compose.yml file
+      ansible.builtin.copy:
+        content: |
+          version: '3.8'
+          services:
+            hello-world:
+              image: hello-world
+              container_name: compose-test-hello
+        dest: /tmp/test-docker-compose.yml
+        mode: '0644'
+
+    # Task 12: Test Docker Compose functionality
+    - name: Test Docker Compose with hello-world
+      ansible.builtin.command: docker-compose -f /tmp/test-docker-compose.yml up --no-start
+      register: docker_compose_test
+      changed_when: false
+      ignore_errors: true # Don't fail the playbook if this test fails
+
+    # Task 13: Clean up test compose file and containers
+    - name: Clean up test docker-compose resources
+      ansible.builtin.command: docker-compose -f /tmp/test-docker-compose.yml down --remove-orphans
+      ignore_errors: true
+      changed_when: false
+
+    # Task 14: Remove test compose file
+    - name: Remove test docker-compose.yml file
+      ansible.builtin.file:
+        path: /tmp/test-docker-compose.yml
+        state: absent
+
+    # Task 15: Display Docker Compose test result
+    - name: Display Docker Compose test result
+      ansible.builtin.debug:
+        msg: "Docker Compose test completed successfully"
+      when: docker_compose_test.rc == 0
+
+    # Task 16: Display installation summary
+    - name: Installation summary
+      ansible.builtin.debug:
+        msg: |
+          ✅ Docker Compose installation completed!
+          📦 Version: {{ docker_compose_version }}
+          📍 Binary location: /usr/local/bin/docker-compose
+          🔗 Symlink: /usr/bin/docker-compose
+          🏠 Architecture: {{ docker_compose_arch }}
+          
+          You can now use Docker Compose to manage multi-container applications:
+          - docker-compose --version
+          - docker-compose up
+          - docker-compose down
+
+  # Handlers section - tasks that run when triggered by other tasks
+  handlers:
+    # Handler: No specific handlers needed for Docker Compose installation
+    - name: docker-compose installed
+      ansible.builtin.debug:
+        msg: "Docker Compose has been installed successfully"

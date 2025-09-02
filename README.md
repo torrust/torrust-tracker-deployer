@@ -97,6 +97,9 @@ ansible-playbook wait-cloud-init.yml
 
 # Install Docker on the VM
 ansible-playbook install-docker.yml
+
+# Install Docker Compose on the VM (optional)
+ansible-playbook install-docker-compose.yml
 ```
 
 #### 3. Verify Deployment
@@ -114,6 +117,9 @@ ssh -i ~/.ssh/testing_rsa torrust@<VM_IP>
 # Verify Docker installation
 lxc exec torrust-vm -- docker --version
 lxc exec torrust-vm -- docker run --rm hello-world
+
+# Verify Docker Compose installation (if installed)
+lxc exec torrust-vm -- docker-compose --version
 ```
 
 ## 🎭 Infrastructure Workflow
@@ -148,12 +154,12 @@ Both configurations include GitHub Actions workflows for CI testing:
 - [x] Ansible configuration management setup
 - [x] Basic cloud-init verification playbook
 - [x] Docker installation playbook
+- [x] Docker Compose installation playbook
 - [x] Automated testing workflows
 
 ### 🔄 In Progress
 
 - [ ] Extended Ansible playbooks for application deployment
-- [ ] Docker Compose integration testing
 - [ ] Performance benchmarking
 - [ ] Official GitHub Actions nested virtualization clarification
 
