@@ -1,3 +1,5 @@
+[![Linting](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/linting.yml/badge.svg)](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/linting.yml) [![E2E Tests](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-e2e.yml/badge.svg)](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-e2e.yml) [![Test LXD Container Provisioning](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-lxd-provision.yml) [![Test Multipass VM Provisioning](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-multipass-provision.yml/badge.svg)](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-multipass-provision.yml)
+
 # Torrust Testing Infrastructure
 
 This Rust application provides automated testing infrastructure for Torrust projects. It manages VM provisioning and
