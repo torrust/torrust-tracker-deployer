@@ -5,6 +5,7 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
+use tempfile::TempDir;
 use tokio::time::sleep;
 
 #[derive(Parser)]
@@ -33,6 +34,9 @@ struct TestEnvironment {
     project_root: PathBuf,
     keep_env: bool,
     verbose: bool,
+    ssh_key_path: PathBuf,
+    #[allow(dead_code)] // Kept to maintain temp directory lifetime
+    temp_dir: Option<tempfile::TempDir>,
 }
 
 impl TestEnvironment {
@@ -40,10 +44,36 @@ impl TestEnvironment {
         // Get project root (current directory when running from root)
         let project_root = std::env::current_dir()?;
         
+        // Create temporary directory for SSH keys
+        let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
+        
+        // Copy SSH private key from fixtures to temp directory
+        let fixtures_ssh_key = project_root.join("fixtures/testing_rsa");
+        let temp_ssh_key = temp_dir.path().join("testing_rsa");
+        
+        std::fs::copy(&fixtures_ssh_key, &temp_ssh_key)
+            .context("Failed to copy SSH private key to temporary directory")?;
+        
+        // Set proper permissions on the SSH key (600)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&temp_ssh_key)?.permissions();
+            perms.set_mode(0o600);
+            std::fs::set_permissions(&temp_ssh_key, perms)?;
+        }
+        
+        if verbose {
+            println!("🔑 SSH key copied to temporary location: {}", temp_ssh_key.display());
+            println!("📁 Temporary directory: {}", temp_dir.path().display());
+        }
+        
         Ok(Self {
             project_root,
             keep_env,
             verbose,
+            ssh_key_path: temp_ssh_key,
+            temp_dir: Some(temp_dir),
         })
     }
     
@@ -140,17 +170,13 @@ impl TestEnvironment {
     async fn wait_for_ssh_connectivity(&self, ip: &str) -> Result<()> {
         println!("🔌 Waiting for SSH connectivity...");
         
-        let ssh_key = dirs::home_dir()
-            .ok_or_else(|| anyhow!("Could not determine home directory"))?
-            .join(".ssh/testing_rsa");
-        
         let max_attempts = 30;
         let mut attempt = 0;
         
         while attempt < max_attempts {
             let result = Command::new("ssh")
                 .args(&[
-                    "-i", ssh_key.to_str().unwrap(),
+                    "-i", self.ssh_key_path.to_str().unwrap(),
                     "-o", "StrictHostKeyChecking=no",
                     "-o", "UserKnownHostsFile=/dev/null",
                     "-o", "ConnectTimeout=5",
@@ -223,14 +249,10 @@ impl TestEnvironment {
     async fn validate_cloud_init_completion(&self, container_ip: &str) -> Result<()> {
         println!("🔍 Validating cloud-init completion...");
         
-        let ssh_key = dirs::home_dir()
-            .ok_or_else(|| anyhow!("Could not determine home directory"))?
-            .join(".ssh/testing_rsa");
-        
         // Check cloud-init status
         let output = Command::new("ssh")
             .args(&[
-                "-i", ssh_key.to_str().unwrap(),
+                "-i", self.ssh_key_path.to_str().unwrap(),
                 "-o", "StrictHostKeyChecking=no",
                 "-o", "UserKnownHostsFile=/dev/null",
                 &format!("torrust@{}", container_ip),
@@ -251,7 +273,7 @@ impl TestEnvironment {
         // Check for completion marker file
         let marker_check = Command::new("ssh")
             .args(&[
-                "-i", ssh_key.to_str().unwrap(),
+                "-i", self.ssh_key_path.to_str().unwrap(),
                 "-o", "StrictHostKeyChecking=no",
                 "-o", "UserKnownHostsFile=/dev/null",
                 &format!("torrust@{}", container_ip),
