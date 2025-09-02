@@ -4,6 +4,7 @@ containerd
 cpus
 dearmor
 debootstrap
+ehthumbs
 eprintln
 getent
 journalctl
@@ -21,6 +22,7 @@ runcmd
 serde
 subshell
 sysfs
+terraformrc
 tfstate
 tfvars
 tlsv

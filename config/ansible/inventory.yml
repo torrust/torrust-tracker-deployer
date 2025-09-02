@@ -32,7 +32,7 @@ all:
       # 🔗 OPENTOFU: IP assigned by lxd_instance.torrust_vm via lxdbr0 network
       # 🔗 DISCOVERY: Find current IP with: lxc list torrust-vm
       # 🔗 AUTOMATION: Could be retrieved via: lxc list torrust-vm -f json | jq -r '.[0].state.network.eth0.addresses[0].address'
-      ansible_host: 10.140.190.177
+      ansible_host: 10.140.190.84
 
       # The username to use when connecting via SSH
       # 🔗 CLOUD-INIT: This must match the user created in cloud-init

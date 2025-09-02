@@ -46,3 +46,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Rust build artifacts
+target/
+Cargo.lock

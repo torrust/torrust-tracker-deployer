@@ -1,6 +1,6 @@
-# Torrust Testing Infrastructure PoC
+# Torrust Testing Infrastructure
 
-This repository contains configurations for testing VM provisioning and cloud-init execution using different virtualization approaches. The goal is to find the best solution for creating VMs that support cloud-init both locally (development) and in CI environments (GitHub Actions).
+This Rust application provides automated testing infrastructure for Torrust projects. It manages VM provisioning and cloud-init execution using different virtualization approaches, with the goal of finding the best solution for creating VMs that support cloud-init both locally (development) and in CI environments (GitHub Actions).
 
 ## 🎯 Project Goals
 
@@ -48,11 +48,13 @@ This repository tests two different virtualization technologies:
 
 ### Prerequisites
 
+This is a Rust application that automates testing infrastructure deployment using OpenTofu and Ansible.
+
 Install the required tools:
 
 ```bash
 # Check installations
-lxd version && tofu version && ansible --version
+lxd version && tofu version && ansible --version && cargo --version
 ```
 
 **Missing tools?** See detailed installation guides:
@@ -63,6 +65,9 @@ lxd version && tofu version && ansible --version
 **Quick install:**
 
 ```bash
+# Install Rust (if not already installed)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
 # Install LXD
 sudo snap install lxd && sudo lxd init --auto && sudo usermod -a -G lxd $USER && newgrp lxd
 
@@ -73,7 +78,42 @@ curl -fsSL https://get.opentofu.org/install-opentofu.sh | sudo bash
 sudo apt install ansible
 ```
 
-### Deployment Steps
+### Usage
+
+#### Main Application
+
+The main application provides usage instructions:
+
+```bash
+# Build and run the application
+cargo run
+
+# Or install and run directly
+cargo install --path .
+torrust-testing-infra
+```
+
+#### Running E2E Tests
+
+Use the E2E tests binary to run automated infrastructure tests:
+
+```bash
+# Run the wait-cloud-init test
+cargo run --bin e2e-tests -- wait-cloud-init
+
+# Keep the test environment after completion
+cargo run --bin e2e-tests -- wait-cloud-init --keep
+
+# Run with verbose output
+cargo run --bin e2e-tests -- wait-cloud-init --verbose
+
+# See all available options
+cargo run --bin e2e-tests -- --help
+```
+
+### Manual Deployment Steps
+
+If you prefer manual deployment instead of using the E2E tests:
 
 #### 1. Deploy Infrastructure
 
@@ -172,6 +212,10 @@ Both configurations include GitHub Actions workflows for CI testing:
 ## 📁 Repository Structure
 
 ```text
+├── src/                      # Rust application source code
+│   ├── main.rs              # Main application binary
+│   └── bin/
+│       └── e2e_tests.rs     # E2E tests binary
 ├── docs/                     # Detailed documentation
 │   ├── opentofu.md          # OpenTofu setup and usage guide
 │   ├── ansible.md           # Ansible setup and usage guide
@@ -182,7 +226,9 @@ Both configurations include GitHub Actions workflows for CI testing:
 │   │   └── lxd/             # LXD container configuration
 │   └── ansible/             # Ansible configuration management
 ├── .github/workflows/       # CI/CD workflows
+├── Cargo.toml              # Rust project configuration
 ├── README.md               # This file - project overview
+├── target/                 # Rust build artifacts (ignored)
 └── .gitignore              # Git ignore rules
 ```
 
