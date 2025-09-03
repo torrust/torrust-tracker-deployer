@@ -65,52 +65,21 @@ sleep 15
 log_info "Initializing LXD with default settings..."
 sudo lxd init --auto
 
-# Add current user to lxd group
-if is_ci_environment; then
-    # In CI environments (like GitHub Actions), the user is typically 'runner'
-    CURRENT_USER="${RUNNER_USER:-runner}"
-    log_info "Adding CI user '${CURRENT_USER}' to lxd group..."
-else
-    # For local development
-    CURRENT_USER="${USER:-$(whoami)}"
-    log_info "Adding user '${CURRENT_USER}' to lxd group..."
-fi
-sudo usermod -a -G lxd "${CURRENT_USER}"
+# Add runner to lxd group
+log_info "Adding runner to lxd group..."
+sudo usermod -a -G lxd runner
 
-# CI-specific socket permission fix
-if is_ci_environment; then
-    log_warn "CI environment detected - applying socket permission fix"
-    log_warn "IMPORTANT: This approach is ONLY for CI environments"
-    log_warn "For local development, use proper group membership instead"
-    
-    # Fix socket permissions for CI environment (NOT recommended for local use)
-    sudo chmod 666 /var/snap/lxd/common/lxd/unix.socket
-else
-    log_info "Non-CI environment detected"
-    log_info "For group membership to take effect, you may need to:"
-    log_info "1. Run 'newgrp lxd' for immediate effect in current shell"
-    log_info "2. Or log out and log back in"
-    log_info "3. Or restart your terminal"
-    log_info "See config/tofu/lxd/README.md for detailed instructions"
-fi
+# IMPORTANT: This approach is ONLY for CI environments
+# For local development, use proper group membership instead
+# Fix socket permissions for CI environment (NOT recommended for local use)
+log_warn "IMPORTANT: This approach is ONLY for CI environments"
+log_warn "For local development, use proper group membership instead"
+sudo chmod 666 /var/snap/lxd/common/lxd/unix.socket
 
 # Test basic LXD functionality
 log_info "Testing basic LXD functionality..."
-if is_ci_environment; then
-    sudo lxc list
-    LXD_VERSION=$(sudo lxc version)
-else
-    # For local development, try without sudo first
-    if lxc list &> /dev/null; then
-        lxc list
-        LXD_VERSION=$(lxc version)
-    else
-        log_warn "Direct lxc access failed, you may need to activate group membership"
-        log_warn "Try: newgrp lxd"
-        sudo lxc list
-        LXD_VERSION=$(sudo lxc version)
-    fi
-fi
+sudo lxc list
 
+LXD_VERSION=$(sudo lxc version)
 log_success "✅ LXD successfully configured: ${LXD_VERSION}"
 log_info "LXD is ready for use"
