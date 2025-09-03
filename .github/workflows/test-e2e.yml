@@ -29,37 +29,13 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install and configure LXD
-        run: |
-          sudo snap install lxd
-
-          # Wait for LXD to fully initialize
-          echo "Waiting for LXD daemon to start..."
-          sleep 15
-
-          # Initialize LXD with default settings
-          sudo lxd init --auto
-
-          # Add runner to lxd group
-          sudo usermod -a -G lxd runner
-
-          # IMPORTANT: This approach is ONLY for CI environments
-          # For local development, use proper group membership instead
-          # Fix socket permissions for CI environment (NOT recommended for local use)
-          sudo chmod 666 /var/snap/lxd/common/lxd/unix.socket
-
-          # Test basic LXD functionality
-          sudo lxc list
+        run: ./scripts/setup/install-lxd-ci.sh
 
       - name: Install OpenTofu
-        run: |
-          curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
-          chmod +x install-opentofu.sh
-          ./install-opentofu.sh --install-method deb
+        run: ./scripts/setup/install-opentofu.sh
 
       - name: Install Ansible
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
+        run: ./scripts/setup/install-ansible.sh
 
       - name: Verify installations
         run: |
