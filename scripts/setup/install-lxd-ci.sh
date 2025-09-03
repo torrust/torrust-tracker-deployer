@@ -66,8 +66,15 @@ log_info "Initializing LXD with default settings..."
 sudo lxd init --auto
 
 # Add current user to lxd group
-CURRENT_USER="${USER:-$(whoami)}"
-log_info "Adding user '${CURRENT_USER}' to lxd group..."
+if is_ci_environment; then
+    # In CI environments (like GitHub Actions), the user is typically 'runner'
+    CURRENT_USER="${RUNNER_USER:-runner}"
+    log_info "Adding CI user '${CURRENT_USER}' to lxd group..."
+else
+    # For local development
+    CURRENT_USER="${USER:-$(whoami)}"
+    log_info "Adding user '${CURRENT_USER}' to lxd group..."
+fi
 sudo usermod -a -G lxd "${CURRENT_USER}"
 
 # CI-specific socket permission fix
