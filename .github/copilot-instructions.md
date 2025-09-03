@@ -23,7 +23,10 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 
 1. **Before creating branches**: Read [`docs/contributing/branching.md`](../docs/contributing/branching.md) for naming conventions (`{issue-number}-{short-description}`)
 
-2. **Before committing**: Read [`docs/contributing/commit-process.md`](../docs/contributing/commit-process.md) for conventional commits (`{type}: [#{issue}] {description}`)
+2. **Before committing**: Read [`docs/contributing/commit-process.md`](../docs/contributing/commit-process.md) for conventional commits
+
+   - **With issue branch**: `{type}: [#{issue}] {description}` (when branch name starts with `{issue-number}-`)
+   - **Without issue branch**: `{type}: {description}` (when working on main or branch without issue number prefix)
 
 3. **Before committing**: Always run `./scripts/linting/lint.sh all` - all linters must pass
 
