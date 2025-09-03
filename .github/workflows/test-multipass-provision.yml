@@ -16,48 +16,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install and configure Multipass
-        run: |
-          sudo snap install multipass
-
-          # Wait for multipass to fully initialize
-          echo "Waiting for multipass daemon to start..."
-          sleep 15
-
-          # Check if multipass daemon is running
-          sudo systemctl status snap.multipass.multipassd.service || true
-
-          # Try to start the daemon explicitly if needed
-          sudo systemctl start snap.multipass.multipassd.service || true
-
-          # Wait a bit more for daemon to be ready
-          sleep 10
-
-          # Check multipass status
-          sudo multipass version
-
-          # Create multipass group if it doesn't exist
-          sudo groupadd multipass || true
-
-          # Set up permissions - add runner to multipass group
-          sudo usermod -a -G multipass runner || true
-
-          # Fix socket permissions directly
-          sudo chmod 666 /var/snap/multipass/common/multipass_socket || true
-
-          # Try to configure multipass for virtualization
-          sudo multipass set local.driver=qemu || echo "Could not set driver, continuing..."
-
-          # Test basic multipass functionality with timeout
-          timeout 30 sudo multipass list || echo "Direct multipass list failed, trying with socket fix..."
-
-          # Alternative: try to connect as root to test socket
-          sudo -u root multipass list || echo "Root access also failed, socket may need more time"
+        run: ./scripts/setup/install-multipass-ci.sh
 
       - name: Install OpenTofu
-        run: |
-          curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
-          chmod +x install-opentofu.sh
-          ./install-opentofu.sh --install-method deb
+        run: ./scripts/setup/install-opentofu.sh
 
       - name: Verify installations
         run: |
