@@ -1,0 +1,37 @@
+# Torrust Testing Infrastructure - AI Assistant Instructions
+
+## 📋 Project Overview
+
+This is a testing infrastructure proof-of-concept for the Torrust ecosystem. It uses OpenTofu (Terraform), Ansible, and Rust to provision and manage testing environments with LXD containers and Multipass VMs.
+
+## 🏗️ Tech Stack
+
+- **Languages**: Rust, Shell scripts, YAML
+- **Infrastructure**: OpenTofu (Terraform), Ansible
+- **Providers**: LXD containers, Multipass VMs
+- **Tools**: Docker, cloud-init
+
+## 📁 Key Directories
+
+- `src/` - Rust source code and binaries
+- `config/ansible/` - Ansible playbooks and inventory
+- `config/tofu/` - OpenTofu/Terraform configurations
+- `scripts/linting/` - Code quality scripts
+- `docs/` - Project documentation
+
+## 🔧 Essential Rules
+
+1. **Before creating branches**: Read [`docs/contributing/branching.md`](../docs/contributing/branching.md) for naming conventions (`{issue-number}-{short-description}`)
+
+2. **Before committing**: Read [`docs/contributing/commit-process.md`](../docs/contributing/commit-process.md) for conventional commits (`{type}: [#{issue}] {description}`)
+
+3. **Before committing**: Always run `./scripts/linting/lint.sh all` - all linters must pass
+
+## 🧪 Build & Test
+
+- **Build**: `cargo build`
+- **Test**: `cargo test`
+- **Lint**: `./scripts/linting/lint.sh all` (mandatory before commits)
+- **E2E**: `cargo run --bin e2e-tests wait-cloud-init`
+
+Follow the project conventions and ensure all checks pass.
