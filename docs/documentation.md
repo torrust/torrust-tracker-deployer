@@ -6,6 +6,11 @@ This guide explains how documentation is organized in this project to help contr
 
 ```text
 docs/
+├── contributing/        # Contribution guidelines and workflows
+│   ├── README.md        # Contribution guide overview
+│   ├── branching.md     # Branching conventions
+│   ├── commit-process.md # Commit process and pre-commit checks
+│   └── linting.md       # Linting tools and conventions
 ├── tech-stack/          # Generic technology documentation
 │   ├── ansible.md       # Ansible installation, setup, and basic usage
 │   ├── lxd.md          # LXD system containers overview and setup
@@ -17,6 +22,25 @@ docs/
 ```
 
 ## 📝 Documentation Categories
+
+### 🤝 Contribution Documentation (`docs/contributing/`)
+
+**Purpose**: Guidelines and conventions for project contributors.
+
+**What belongs here**:
+
+- Branching conventions and naming standards
+- Commit message standards and pre-commit processes
+- Code quality standards and linting setup
+- Development environment setup
+- Pull request and review processes
+- Testing guidelines and requirements
+
+**Examples**:
+
+- `branching.md` - Branch naming conventions
+- `commit-process.md` - Conventional commits and pre-commit checks
+- `linting.md` - Linting tools, configuration, and usage
 
 ### 🔧 Tech Stack Documentation (`docs/tech-stack/`)
 
