@@ -1,15 +1,15 @@
 fn main() {
-    println!("🏗️  Torrust Testing Infrastructure");
-    println!("=================================");
+    println!("🏗️  Torrust Tracker Deploy");
+    println!("=========================");
     println!();
-    println!("This repository provides automated testing infrastructure for Torrust projects.");
+    println!("This repository provides automated deployment infrastructure for Torrust tracker projects.");
     println!("The infrastructure includes VM provisioning with OpenTofu and configuration");
     println!("management with Ansible playbooks.");
     println!();
     println!("📋 Getting Started:");
     println!("   Please follow the instructions in the README.md file to:");
     println!("   1. Set up the required dependencies (OpenTofu, Ansible, LXD)");
-    println!("   2. Provision the testing infrastructure");
+    println!("   2. Provision the deployment infrastructure");
     println!("   3. Deploy and configure the services");
     println!();
     println!("🧪 Running E2E Tests:");

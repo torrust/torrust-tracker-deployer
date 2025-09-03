@@ -1,6 +1,6 @@
 # Branching Conventions
 
-This document outlines the branching conventions for the Torrust Testing Infrastructure project.
+This document outlines the branching conventions for the Torrust Tracker Deploy project.
 
 ## 🌿 Branch Naming
 

@@ -10,7 +10,7 @@ use tokio::time::sleep;
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
-#[command(about = "E2E tests for Torrust Testing Infrastructure")]
+#[command(about = "E2E tests for Torrust Tracker Deploy")]
 struct Cli {
     /// Test to run
     #[arg(value_enum)]
@@ -400,7 +400,7 @@ async fn test_wait_cloud_init(env: &TestEnvironment) -> Result<()> {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    println!("🚀 Torrust Testing Infrastructure E2E Tests");
+    println!("🚀 Torrust Tracker Deploy E2E Tests");
     println!("===========================================");
 
     let env = TestEnvironment::new(cli.keep, cli.verbose)?;

@@ -1,12 +1,12 @@
 [package]
-name = "torrust-testing-infra"
+name = "torrust-tracker-deploy"
 version = "0.1.0"
 edition = "2021"
-description = "Torrust Testing Infrastructure with Ansible and OpenTofu"
+description = "Torrust Tracker Deployment Infrastructure with Ansible and OpenTofu"
 license = "MIT"
-default-run = "torrust-testing-infra"
+default-run = "torrust-tracker-deploy"
 [[bin]]
-name = "torrust-testing-infra"
+name = "torrust-tracker-deploy"
 path = "src/main.rs"
 [[bin]]
 name = "e2e-tests"

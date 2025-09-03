@@ -1,8 +1,8 @@
-[![Linting](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/linting.yml/badge.svg)](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/linting.yml) [![E2E Tests](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-e2e.yml/badge.svg)](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-e2e.yml) [![Test LXD Container Provisioning](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-lxd-provision.yml) [![Test Multipass VM Provisioning](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-multipass-provision.yml/badge.svg)](https://github.com/josecelano/torrust-testing-infra-poc/actions/workflows/test-multipass-provision.yml)
+[![Linting](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/linting.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/linting.yml) [![E2E Tests](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml) [![Test LXD Container Provisioning](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml) [![Test Multipass VM Provisioning](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-multipass-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-multipass-provision.yml)
 
-# Torrust Testing Infrastructure
+# Torrust Tracker Deploy
 
-This Rust application provides automated testing infrastructure for Torrust projects. It manages VM provisioning and
+This Rust application provides automated deployment infrastructure for Torrust tracker projects. It manages VM provisioning and
 cloud-init execution using different virtualization approaches, with the goal of finding the best solution for
 creating VMs that support cloud-init both locally (development) and in CI environments (GitHub Actions).
 
@@ -52,7 +52,7 @@ This repository tests two different virtualization technologies:
 
 ### Prerequisites
 
-This is a Rust application that automates testing infrastructure deployment using OpenTofu and Ansible.
+This is a Rust application that automates deployment infrastructure using OpenTofu and Ansible.
 
 Install the required tools:
 
@@ -94,7 +94,7 @@ cargo run
 
 # Or install and run directly
 cargo install --path .
-torrust-testing-infra
+torrust-tracker-deploy
 ```
 
 #### Development Tasks
@@ -226,7 +226,7 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 - [x] Docker installation playbook
 - [x] Docker Compose installation playbook
 - [x] Automated testing workflows
-- [x] End-to-End (E2E) testing infrastructure and workflows
+- [x] End-to-End (E2E) deployment infrastructure and workflows
 
 ### 🔄 In Progress
 

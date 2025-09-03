@@ -1,8 +1,8 @@
-# Torrust Testing Infrastructure - AI Assistant Instructions
+# Torrust Tracker Deploy - AI Assistant Instructions
 
 ## 📋 Project Overview
 
-This is a testing infrastructure proof-of-concept for the Torrust ecosystem. It uses OpenTofu (Terraform), Ansible, and Rust to provision and manage testing environments with LXD containers and Multipass VMs.
+This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. It uses OpenTofu (Terraform), Ansible, and Rust to provision and manage deployment environments with LXD containers and Multipass VMs.
 
 ## 🏗️ Tech Stack
 

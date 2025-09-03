@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the testing strategy for Ansible playbooks in the Torrust Testing Infrastructure project. Based on comprehensive research comparing Docker containers vs LXD containers, we have established an LXD-exclusive approach for all Ansible testing.
+This document outlines the testing strategy for Ansible playbooks in the Torrust Tracker Deploy project. Based on comprehensive research comparing Docker containers vs LXD containers, we have established an LXD-exclusive approach for all Ansible testing.
 
 ## Updated Strategy (September 2025)
 

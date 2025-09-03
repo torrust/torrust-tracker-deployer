@@ -51,8 +51,8 @@ git push origin 42-add-your-feature-name
 
 ## 🤝 Getting Help
 
-- **Issues**: Check existing [GitHub issues](https://github.com/josecelano/torrust-testing-infra-poc/issues)
-- **Discussions**: Start a [GitHub discussion](https://github.com/josecelano/torrust-testing-infra-poc/discussions)
+- **Issues**: Check existing [GitHub issues](https://github.com/torrust/torrust-tracker-deploy-rust-poc/issues)
+- **Discussions**: Start a [GitHub discussion](https://github.com/torrust/torrust-tracker-deploy-rust-poc/discussions)
 - **Documentation**: Review the [docs folder](../) for detailed information
 
 Thank you for contributing! 🎉

@@ -7,7 +7,7 @@
 
 ## Context and Problem Statement
 
-During the development of the Torrust Testing Infrastructure project, we needed to establish a testing strategy for Ansible playbooks. The initial hypothesis was that Docker containers could provide faster testing cycles compared to full VMs or LXD containers, potentially offering significant development velocity improvements.
+During the development of the Torrust Tracker Deploy project, we needed to establish a testing strategy for Ansible playbooks. The initial hypothesis was that Docker containers could provide faster testing cycles compared to full VMs or LXD containers, potentially offering significant development velocity improvements.
 
 The core question was: **Should we use lightweight Docker containers for Ansible playbook testing to achieve faster feedback loops?**
 
@@ -17,7 +17,7 @@ The core question was: **Should we use lightweight Docker containers for Ansible
 - **Resource Efficiency**: Lower resource consumption for CI/CD pipelines
 - **Comprehensive Testing**: Need to test both infrastructure and application deployment playbooks
 - **Production Parity**: Test environment should behave like production cloud VMs
-- **Maintenance Overhead**: Simpler testing infrastructure reduces long-term costs
+- **Maintenance Overhead**: Simpler deployment infrastructure reduces long-term costs
 
 ## Considered Options
 
@@ -71,7 +71,7 @@ The core question was: **Should we use lightweight Docker containers for Ansible
 **Cons**:
 
 - Increased maintenance complexity
-- Dual testing infrastructure
+- Dual deployment infrastructure
 - Potential inconsistencies between environments
 
 ## Decision Outcome

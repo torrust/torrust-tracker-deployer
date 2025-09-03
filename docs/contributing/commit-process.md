@@ -1,6 +1,6 @@
 # Commit Process and Pre-commit Checks
 
-This document outlines the commit process, including required pre-commit checks and conventions for the Torrust Testing Infrastructure project.
+This document outlines the commit process, including required pre-commit checks and conventions for the Torrust Tracker Deploy project.
 
 ## 📝 Conventional Commits
 

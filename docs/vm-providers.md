@@ -1,10 +1,10 @@
 # VM Providers Comparison: LXD vs Multipass
 
-This document provides a detailed comparison between LXD containers and Multipass VMs for the Torrust testing infrastructure, explaining why LXD was chosen as the official provider.
+This document provides a detailed comparison between LXD containers and Multipass VMs for the Torrust tracker deployment infrastructure, explaining why LXD was chosen as the official provider.
 
 ## 🔄 Overview
 
-For the Torrust testing infrastructure, we evaluated two main approaches for creating virtual environments that support cloud-init:
+For the Torrust tracker deployment infrastructure, we evaluated two main approaches for creating virtual environments that support cloud-init:
 
 1. **LXD Containers** - System containers with cloud-init support
 2. **Multipass VMs** - Full virtual machines with nested virtualization
