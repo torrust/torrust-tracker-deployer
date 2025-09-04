@@ -13,7 +13,6 @@ journalctl
 keyrings
 larstobi
 lxdbr
-multipassd
 newgrp
 noconfirm
 noninteractive

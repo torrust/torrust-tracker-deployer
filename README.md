@@ -1,9 +1,11 @@
-[![Linting](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/linting.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/linting.yml) [![E2E Tests](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml) [![Test LXD Container Provisioning](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml) [![Test Multipass VM Provisioning](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-multipass-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-multipass-provision.yml)
+[![Linting](https://github.co**[📖 See detailed comparison →](docs/vm-providers.md)\*\*
+
+LXD provides the optimal balance of performance, official support, and compatibility for our use case.orrust-tracker-deploy-rust-poc/actions/workflows/linting.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/linting.yml) [![E2E Tests](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml) [![Test LXD Container Provisioning](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml)
 
 # Torrust Tracker Deploy
 
 This Rust application provides automated deployment infrastructure for Torrust tracker projects. It manages VM provisioning and
-cloud-init execution using different virtualization approaches, with the goal of finding the best solution for
+cloud-init execution using LXD containers, with the goal of finding the best solution for
 creating VMs that support cloud-init both locally (development) and in CI environments (GitHub Actions).
 
 ## 🎯 Project Goals
@@ -16,7 +18,7 @@ creating VMs that support cloud-init both locally (development) and in CI enviro
 
 ## 🔧 Available Approaches
 
-This repository tests two different virtualization technologies:
+This repository uses LXD containers for virtualization:
 
 ### ☁️ **LXD Containers (`config/tofu/lxd/`)** - **OFFICIAL**
 
@@ -26,15 +28,6 @@ This repository tests two different virtualization technologies:
 - **Requirements**: No special virtualization needed
 
 **[📖 See detailed documentation →](config/tofu/lxd/README.md)**
-
-### 🖥️ **Multipass (`config/tofu/multipass/`)** - **EXPERIMENTAL**
-
-- **Technology**: Full VMs with nested virtualization
-- **Status**: ⚠️ Experimental - Works in GitHub Actions but undocumented support
-- **Best for**: Local development requiring full VM isolation
-- **Requirements**: Nested virtualization support
-
-**[📖 See detailed documentation →](config/tofu/multipass/README.md)**
 
 ## � Provider Comparison
 
@@ -211,15 +204,13 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 
 - **`.github/workflows/test-e2e.yml`** - **End-to-End Tests** - Runs automated E2E tests using the Rust binary
 - **`.github/workflows/test-lxd-provision.yml`** - Tests LXD container provisioning
-- **`.github/workflows/test-multipass-provision.yml`** - Tests Multipass VM provisioning
 
 ## 📊 Current Status
 
 ### ✅ Completed
 
-- [x] Multipass VM provisioning (local + GitHub Actions)
 - [x] LXD container provisioning (local + GitHub Actions)
-- [x] Cloud-init support in both approaches
+- [x] Cloud-init support for LXD containers
 - [x] OpenTofu infrastructure as code
 - [x] Ansible configuration management setup
 - [x] Basic cloud-init verification playbook
@@ -258,7 +249,6 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 │   └── vm-providers.md      # Provider comparison for this project
 ├── config/
 │   ├── tofu/
-│   │   ├── multipass/       # Multipass VM configuration
 │   │   └── lxd/             # LXD container configuration
 │   └── ansible/             # Ansible configuration management
 ├── scripts/                  # Development and utility scripts

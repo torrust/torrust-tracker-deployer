@@ -139,6 +139,5 @@ This decision is validated by:
 
 - [VM Providers Comparison Documentation](../vm-providers.md)
 - [GitHub Actions Runner Images Issue #12933](https://github.com/actions/runner-images/issues/12933)
-- [Test Multipass Provision Workflow](.github/workflows/test-multipass-provision.yml)
 - LXD Official Documentation
 - GitHub Actions Official Documentation

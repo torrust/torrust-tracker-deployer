@@ -100,15 +100,14 @@ cd config/tofu/lxd
 tofu init && tofu apply
 ```
 
-### Multipass Quick Start
+### ~~Multipass Quick Start~~ (Deprecated)
+
+> **Note**: Multipass support has been removed from this project as of the LXD over Multipass decision.
+> For Multipass-related documentation and examples, see: https://github.com/torrust/torrust-tracker-deploy-rust-poc
 
 ```bash
-# Install Multipass
-sudo snap install multipass
-
-# Deploy with OpenTofu (if nested virtualization is available)
-cd config/tofu/multipass
-tofu init && tofu apply
+# Multipass is no longer supported in this repository
+# See the link above for Multipass examples and documentation
 ```
 
 ## 🔍 Technical Deep Dive

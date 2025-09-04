@@ -12,7 +12,6 @@ This directory contains installation and configuration scripts for the tools req
 ### Container/VM Providers
 
 - **`install-lxd-ci.sh`** - Install and configure LXD (CI-optimized)
-- **`install-multipass-ci.sh`** - Install and configure Multipass (CI-optimized)
 
 ## Usage
 
@@ -27,9 +26,6 @@ This directory contains installation and configuration scripts for the tools req
 
 # Install LXD (CI environment)
 ./scripts/setup/install-lxd-ci.sh
-
-# Install Multipass (CI environment)
-./scripts/setup/install-multipass-ci.sh
 ```
 
 ### Batch Installation
@@ -39,9 +35,8 @@ This directory contains installation and configuration scripts for the tools req
 ./scripts/setup/install-opentofu.sh
 ./scripts/setup/install-ansible.sh
 
-# Choose your container provider
-./scripts/setup/install-lxd-ci.sh       # OR
-./scripts/setup/install-multipass-ci.sh
+# Install container provider
+./scripts/setup/install-lxd-ci.sh
 ```
 
 ## CI vs Local Development
@@ -92,7 +87,6 @@ These scripts replace duplicated installation code in GitHub Actions workflows:
 
 - **`.github/workflows/test-e2e.yml`**
 - **`.github/workflows/test-lxd-provision.yml`**
-- **`.github/workflows/test-multipass-provision.yml`**
 
 ## Troubleshooting
 
@@ -115,7 +109,6 @@ If you encounter permission errors:
 - **OpenTofu**: Requires `curl` and package management tools
 - **Ansible**: Requires Python and pip (usually pre-installed)
 - **LXD**: Requires snap and sufficient privileges
-- **Multipass**: Requires snap and virtualization support
 
 ## Future Enhancements
 
