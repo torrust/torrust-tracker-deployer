@@ -12,10 +12,6 @@ use tokio::time::sleep;
 #[command(name = "e2e-tests")]
 #[command(about = "E2E tests for Torrust Tracker Deploy")]
 struct Cli {
-    /// Test to run
-    #[arg(value_enum)]
-    test: TestType,
-
     /// Keep the test environment after completion
     #[arg(long)]
     keep: bool,
@@ -23,11 +19,6 @@ struct Cli {
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
-}
-
-#[derive(clap::ValueEnum, Clone)]
-enum TestType {
-    WaitCloudInit,
 }
 
 struct TestEnvironment {
@@ -337,6 +328,145 @@ impl TestEnvironment {
         Ok(())
     }
 
+    fn validate_docker_installation(&self, container_ip: &str) -> Result<()> {
+        println!("🔍 Validating Docker installation...");
+
+        // Check Docker version
+        let output = Command::new("ssh")
+            .args([
+                "-i",
+                self.ssh_key_path.to_str().unwrap(),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                &format!("torrust@{container_ip}"),
+                "docker --version",
+            ])
+            .output()
+            .context("Failed to check Docker version")?;
+
+        if !output.status.success() {
+            return Err(anyhow!("Docker is not installed or not accessible"));
+        }
+
+        let docker_version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        println!("✅ Docker installation validated");
+        println!("   ✓ Docker version: {docker_version}");
+
+        // Check Docker daemon status
+        let daemon_check = Command::new("ssh")
+            .args([
+                "-i",
+                self.ssh_key_path.to_str().unwrap(),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                &format!("torrust@{container_ip}"),
+                "sudo systemctl is-active docker",
+            ])
+            .output()
+            .context("Failed to check Docker daemon status")?;
+
+        if !daemon_check.status.success() {
+            return Err(anyhow!("Docker daemon is not running"));
+        }
+
+        println!("   ✓ Docker daemon is active");
+        Ok(())
+    }
+
+    fn validate_docker_compose_installation(&self, container_ip: &str) -> Result<()> {
+        println!("🔍 Validating Docker Compose installation...");
+
+        // Check Docker Compose version
+        let output = Command::new("ssh")
+            .args([
+                "-i",
+                self.ssh_key_path.to_str().unwrap(),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                &format!("torrust@{container_ip}"),
+                "docker-compose --version",
+            ])
+            .output()
+            .context("Failed to check Docker Compose version")?;
+
+        if !output.status.success() {
+            return Err(anyhow!("Docker Compose is not installed or not accessible"));
+        }
+
+        let compose_version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        println!("✅ Docker Compose installation validated");
+        println!("   ✓ Docker Compose version: {compose_version}");
+
+        // Test basic docker-compose functionality with a simple test file
+        let test_compose_content = r"services:
+  test:
+    image: hello-world
+";
+
+        // Create a temporary test docker-compose.yml file
+        let create_test_file = Command::new("ssh")
+            .args([
+                "-i",
+                self.ssh_key_path.to_str().unwrap(),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                &format!("torrust@{container_ip}"),
+                &format!("echo '{test_compose_content}' > /tmp/test-docker-compose.yml"),
+            ])
+            .status()
+            .context("Failed to create test docker-compose.yml")?;
+
+        if !create_test_file.success() {
+            return Err(anyhow!("Failed to create test docker-compose.yml file"));
+        }
+
+        // Validate docker-compose file
+        let validate_compose = Command::new("ssh")
+            .args([
+                "-i",
+                self.ssh_key_path.to_str().unwrap(),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                &format!("torrust@{container_ip}"),
+                "cd /tmp && docker-compose -f test-docker-compose.yml config",
+            ])
+            .status()
+            .context("Failed to validate docker-compose configuration")?;
+
+        if !validate_compose.success() {
+            return Err(anyhow!("Docker Compose configuration validation failed"));
+        }
+
+        // Clean up test file
+        drop(
+            Command::new("ssh")
+                .args([
+                    "-i",
+                    self.ssh_key_path.to_str().unwrap(),
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    "-o",
+                    "UserKnownHostsFile=/dev/null",
+                    &format!("torrust@{container_ip}"),
+                    "rm -f /tmp/test-docker-compose.yml",
+                ])
+                .status(),
+        );
+
+        println!("   ✓ Docker Compose configuration validation passed");
+        Ok(())
+    }
+
     fn cleanup(&self) {
         if self.keep_env {
             println!("🔒 Keeping test environment as requested");
@@ -374,8 +504,14 @@ impl Drop for TestEnvironment {
     }
 }
 
-async fn test_wait_cloud_init(env: &TestEnvironment) -> Result<()> {
-    println!("🧪 Starting wait-cloud-init E2E test");
+async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
+    println!("🧪 Starting full deployment E2E test");
+    println!("   This will test all Ansible playbooks in production order:");
+    println!("   1. Provision VM with cloud-init");
+    println!("   2. Wait for cloud-init completion");
+    println!("   3. Install Docker");
+    println!("   4. Install Docker Compose");
+    println!();
 
     // 1. Provision infrastructure
     let container_ip = env.provision_infrastructure()?;
@@ -387,12 +523,30 @@ async fn test_wait_cloud_init(env: &TestEnvironment) -> Result<()> {
     env.update_ansible_inventory(&container_ip).await?;
 
     // 4. Run the wait-cloud-init playbook
+    println!("📋 Step 1: Waiting for cloud-init completion...");
     env.run_ansible_playbook("wait-cloud-init")?;
 
     // 5. Validate cloud-init completion
     env.validate_cloud_init_completion(&container_ip)?;
 
-    println!("🎉 wait-cloud-init E2E test completed successfully!");
+    // 6. Run the install-docker playbook
+    println!("📋 Step 2: Installing Docker...");
+    env.run_ansible_playbook("install-docker")?;
+
+    // 7. Validate Docker installation
+    env.validate_docker_installation(&container_ip)?;
+
+    // 8. Run the install-docker-compose playbook
+    println!("📋 Step 3: Installing Docker Compose...");
+    env.run_ansible_playbook("install-docker-compose")?;
+
+    // 9. Validate Docker Compose installation
+    env.validate_docker_compose_installation(&container_ip)?;
+
+    println!("🎉 Full deployment E2E test completed successfully!");
+    println!("   ✅ Cloud-init setup completed");
+    println!("   ✅ Docker installed and running");
+    println!("   ✅ Docker Compose installed and functional");
     Ok(())
 }
 
@@ -407,9 +561,7 @@ async fn main() -> Result<()> {
 
     let test_start = Instant::now();
 
-    let result = match cli.test {
-        TestType::WaitCloudInit => test_wait_cloud_init(&env).await,
-    };
+    let result = run_full_deployment_test(&env).await;
 
     env.cleanup();
 

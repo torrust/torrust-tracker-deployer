@@ -103,7 +103,7 @@ cargo run --bin linter shellcheck # Shell scripts
 cargo test
 
 # Run E2E tests (if applicable to your changes)
-cargo run --bin e2e-tests wait-cloud-init
+cargo run --bin e2e-tests
 ```
 
 ## 📋 Commit Quality Guidelines

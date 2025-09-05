@@ -37,7 +37,7 @@ cargo run --bin linter all
 
 # 4. Run tests
 cargo test
-cargo run --bin e2e-tests wait-cloud-init
+cargo run --bin e2e-tests
 
 # 5. Commit with conventional format (include issue number)
 git add .
@@ -50,6 +50,7 @@ git push origin 42-add-your-feature-name
 ## 📖 Additional Resources
 
 - [Main Documentation](../documentation.md) - Project documentation organization
+- [E2E Testing Guide](../e2e-testing.md) - End-to-end testing setup and usage
 - [Linting Guide](../linting.md) - Detailed linting setup and usage
 - [Tech Stack](../tech-stack/) - Technology-specific documentation
 - [Architecture Decisions](../decisions/) - Decision records and rationale
