@@ -104,38 +104,6 @@ impl TemplateEngine {
         Ok(())
     }
 
-    /// Validate that a context contains required variables
-    ///
-    /// # Errors
-    /// Returns an error if any required variables are missing from the context
-    pub fn validate_required_variables<T: Serialize>(
-        &self,
-        context: &T,
-        required_vars: &[&str],
-    ) -> Result<()> {
-        // Serialize context to get access to fields
-        let value =
-            serde_json::to_value(context).context("Failed to serialize context for validation")?;
-
-        let obj = value
-            .as_object()
-            .ok_or_else(|| anyhow!("Context must be a JSON object"))?;
-
-        // Check each required variable
-        for var in required_vars {
-            if !obj.contains_key(*var) {
-                return Err(anyhow!("Required template variable missing: {}", var));
-            }
-
-            // Check if the value is null
-            if obj[*var].is_null() {
-                return Err(anyhow!("Required template variable is null: {}", var));
-            }
-        }
-
-        Ok(())
-    }
-
     /// Validates template substitution by rendering in memory and returning the result
     ///
     /// # Errors

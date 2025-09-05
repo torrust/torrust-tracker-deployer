@@ -95,8 +95,15 @@ mod integration_tests {
         let invalid_content = "invalid template content without required variables";
         let result = InventoryTemplate::new(invalid_content, "192.168.1.100", "/path/to/key");
 
+        // Static templates are now valid - they just don't use template variables
+        assert!(result.is_ok());
+
+        // Test that templates with undefined variables fail
+        let undefined_var_content = "server ansible_host={{undefined_variable}}\n";
+        let result = InventoryTemplate::new(undefined_var_content, "192.168.1.100", "/path/to/key");
+
         assert!(result.is_err());
-        println!("✅ Invalid template content correctly rejected");
+        println!("✅ Template with undefined variables correctly rejected");
     }
 
     /// Test that template rendering doesn't modify any files in the templates directory

@@ -19,16 +19,14 @@ struct InstallDockerComposeContext {
 }
 
 impl TemplateContext for InstallDockerComposeContext {
-    fn required_variables(&self) -> Vec<&'static str> {
-        // No required variables for static template
-        vec![]
-    }
+    // No required methods - Tera handles validation
 }
 
 impl InstallDockerComposeTemplate {
     /// Creates a new `InstallDockerComposeTemplate`, validating the template content and variable substitution
     ///
     /// # Errors
+    /// 
     /// Returns an error if:
     /// - Required variables are missing from the template
     /// - Template validation fails

@@ -5,8 +5,8 @@
 use serde::Serialize;
 
 pub trait TemplateContext {
-    /// Returns list of required template variables
-    fn required_variables(&self) -> Vec<&'static str>;
+    // Marker trait for template contexts
+    // No required methods - let Tera handle validation during rendering
 }
 
 /// Context for static templates (no variables needed)

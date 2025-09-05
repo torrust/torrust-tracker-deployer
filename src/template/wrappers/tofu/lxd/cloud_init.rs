@@ -19,10 +19,7 @@ struct CloudInitContext {
 }
 
 impl TemplateContext for CloudInitContext {
-    fn required_variables(&self) -> Vec<&'static str> {
-        // No required variables for static template
-        vec![]
-    }
+    // No required methods - Tera handles validation
 }
 
 impl CloudInitTemplate {

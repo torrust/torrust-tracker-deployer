@@ -19,16 +19,14 @@ struct WaitCloudInitContext {
 }
 
 impl TemplateContext for WaitCloudInitContext {
-    fn required_variables(&self) -> Vec<&'static str> {
-        // No required variables for static template
-        vec![]
-    }
+    // No required methods - Tera handles validation
 }
 
 impl WaitCloudInitTemplate {
     /// Creates a new `WaitCloudInitTemplate`, validating the template content and variable substitution
     ///
     /// # Errors
+    /// 
     /// Returns an error if:
     /// - Required variables are missing from the template
     /// - Template validation fails

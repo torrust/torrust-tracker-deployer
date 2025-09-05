@@ -4,7 +4,7 @@
 
 use crate::template::context::TemplateContext;
 use crate::template::{StaticContext, TemplateRenderer};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
@@ -22,48 +22,38 @@ struct InventoryContext {
 }
 
 impl TemplateContext for InventoryContext {
-    fn required_variables(&self) -> Vec<&'static str> {
-        // This list must match the `InventoryContext` struct fields that are not optional.
-        vec!["ansible_host", "ansible_ssh_private_key_file"]
-    }
+    // No required methods - Tera handles validation
 }
 
 impl InventoryTemplate {
     /// Creates a new `InventoryTemplate`, validating the template content and variable substitution
     ///
     /// # Errors
+    /// 
     /// Returns an error if:
-    /// - Required variables are missing from the template
+    /// - Template syntax is invalid
+    /// - Required variables cannot be substituted
     /// - Template validation fails
     pub fn new(
         template_content: &str,
         ansible_host: &str,
         ansible_ssh_private_key_file: &str,
     ) -> Result<Self> {
-        // Validate that required placeholders exist in template
-        let required_vars = ["ansible_host", "ansible_ssh_private_key_file"];
-        for var in &required_vars {
-            let placeholder = format!("{{{{{var}}}}}");
-            if !template_content.contains(&placeholder) {
-                return Err(anyhow!(
-                    "Template content missing required placeholder '{}'",
-                    placeholder
-                ));
-            }
-        }
-
-        // Test variable substitution to ensure it works
         let context = InventoryContext {
             ansible_host: ansible_host.to_string(),
             ansible_ssh_private_key_file: ansible_ssh_private_key_file.to_string(),
         };
 
-        // Create a temporary engine with the template content
+        // Create template engine and validate rendering
         let template_name = "inventory.yml";
         let engine =
             crate::template::TemplateEngine::with_template_content(template_name, template_content)
                 .with_context(|| "Failed to create template engine with content")?;
 
+        // This will fail if:
+        // - Template has syntax errors
+        // - Template references undefined variables
+        // - Template cannot be rendered for any reason
         let validated_content = engine
             .validate_template_substitution_by_name(template_name, &context)
             .with_context(|| "Template validation failed during construction")?;
@@ -154,38 +144,49 @@ mod tests {
         // Test with empty template content
         let result = InventoryTemplate::new("", "10.0.0.1", "/home/user/.ssh/id_rsa");
 
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("missing required placeholder"));
+        // Empty templates are valid in Tera - they just render as empty strings
+        assert!(result.is_ok());
+        let template = result.unwrap();
+        assert_eq!(template.content, "");
     }
 
     #[test]
     fn test_missing_placeholder() {
-        // Create template content with missing placeholder
-        let template_content = "[all]\nserver ansible_host={{ansible_host}}\n"; // missing ansible_ssh_private_key_file
+        // Create template content with only one placeholder
+        let template_content = "[all]\nserver ansible_host={{ansible_host}}\n";
 
         let result = InventoryTemplate::new(template_content, "10.0.0.1", "/home/user/.ssh/id_rsa");
 
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("missing required placeholder"));
+        // This is valid - templates don't need to use all available context variables
+        assert!(result.is_ok());
+        let template = result.unwrap();
+        assert!(template.content.contains("ansible_host=10.0.0.1"));
     }
 
     #[test]
     fn test_early_error_detection_both_variables_missing() {
         // Create template content with no placeholder variables at all
-        let template_content = "[all]\nserver ansible_host=192.168.1.1\n"; // Static values instead of template variables
+        let template_content = "[all]\nserver ansible_host=192.168.1.1\n";
 
         let result = InventoryTemplate::new(template_content, "10.0.0.1", "/home/user/.ssh/id_rsa");
 
-        // Should fail because both required variables are missing
+        // Static templates are valid - they just don't use template variables
+        assert!(result.is_ok());
+        let template = result.unwrap();
+        assert!(template.content.contains("ansible_host=192.168.1.1"));
+    }
+
+    #[test]
+    fn test_undefined_variable_error() {
+        // Create template content that references an undefined variable
+        let template_content = "[all]\nserver ansible_host={{undefined_variable}}\n";
+
+        let result = InventoryTemplate::new(template_content, "10.0.0.1", "/home/user/.ssh/id_rsa");
+
+        // This should fail because the template references an undefined variable
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("missing required placeholder"));
+        assert!(error_msg.contains("Template validation failed during construction"));
     }
 
     #[test]
