@@ -2,7 +2,65 @@ use anyhow::Result;
 use std::process::Command;
 use tracing::{error, info, warn};
 
-use crate::linting::utils::{install_shellcheck, is_command_available};
+use crate::linting::utils::is_command_available;
+
+/// Install shellcheck using system package manager
+///
+/// # Errors
+///
+/// Returns an error if no supported package manager is found or if installation fails.
+fn install_shellcheck() -> Result<()> {
+    info!("Installing ShellCheck...");
+
+    // Try different package managers
+    if is_command_available("apt-get") {
+        let output = Command::new("sudo").args(["apt-get", "update"]).output()?;
+
+        if !output.status.success() {
+            warn!("Failed to update package list");
+        }
+
+        let output = Command::new("sudo")
+            .args(["apt-get", "install", "-y", "shellcheck"])
+            .output()?;
+
+        if output.status.success() {
+            info!("shellcheck installed successfully");
+            return Ok(());
+        }
+    } else if is_command_available("dnf") {
+        let output = Command::new("sudo")
+            .args(["dnf", "install", "-y", "ShellCheck"])
+            .output()?;
+
+        if output.status.success() {
+            info!("shellcheck installed successfully");
+            return Ok(());
+        }
+    } else if is_command_available("pacman") {
+        let output = Command::new("sudo")
+            .args(["pacman", "-S", "--noconfirm", "shellcheck"])
+            .output()?;
+
+        if output.status.success() {
+            info!("shellcheck installed successfully");
+            return Ok(());
+        }
+    } else if is_command_available("brew") {
+        let output = Command::new("brew")
+            .args(["install", "shellcheck"])
+            .output()?;
+
+        if output.status.success() {
+            info!("shellcheck installed successfully");
+            return Ok(());
+        }
+    }
+
+    error!("Could not install shellcheck: unsupported package manager");
+    info!("Please install shellcheck manually: https://github.com/koalaman/shellcheck#installing");
+    Err(anyhow::anyhow!("Could not install shellcheck"))
+}
 
 /// Find shell scripts in the current directory
 ///
