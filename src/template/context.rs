@@ -4,11 +4,9 @@
 
 use serde::Serialize;
 
-/// Context for Ansible inventory template
-#[derive(Serialize, Clone, Debug)]
-pub struct AnsibleInventoryContext {
-    pub ansible_host: String,
-    pub ansible_ssh_private_key_file: String,
+pub trait TemplateContext {
+    /// Returns list of required template variables
+    fn required_variables(&self) -> Vec<&'static str>;
 }
 
 /// Context for static templates (no variables needed)

@@ -19,7 +19,7 @@ pub mod utils;
 pub mod wrappers;
 
 // Re-export commonly used items
-pub use context::{AnsibleInventoryContext, StaticContext};
+pub use context::StaticContext;
 pub use engine::TemplateEngine;
 pub use renderer::TemplateRenderer;
 pub use utils::copy_static_file;
@@ -34,18 +34,6 @@ mod tests {
         let context = StaticContext::default();
         let serialized = serde_json::to_value(&context).unwrap();
         assert!(serialized.is_object());
-    }
-
-    #[test]
-    fn test_ansible_inventory_context() {
-        let context = AnsibleInventoryContext {
-            ansible_host: "192.168.1.100".to_string(),
-            ansible_ssh_private_key_file: "/path/to/key".to_string(),
-        };
-
-        let serialized = serde_json::to_value(&context).unwrap();
-        assert_eq!(serialized["ansible_host"], "192.168.1.100");
-        assert_eq!(serialized["ansible_ssh_private_key_file"], "/path/to/key");
     }
 
     #[test]

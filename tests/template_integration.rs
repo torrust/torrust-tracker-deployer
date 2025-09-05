@@ -28,15 +28,18 @@ mod integration_tests {
             return Ok(());
         }
 
+        // Read the template content
+        let template_content = std::fs::read_to_string(&template_path)?;
+
         // Create temporary output directory
         let temp_dir = TempDir::new()?;
         let output_path = temp_dir.path().join("inventory.yml");
 
         // Test with realistic values
         let inventory = InventoryTemplate::new(
-            template_path,
-            "192.168.1.100".to_string(),
-            "/home/user/.ssh/testing_rsa".to_string(),
+            &template_content,
+            "192.168.1.100",
+            "/home/user/.ssh/testing_rsa",
         )?;
 
         // Render the template
@@ -76,26 +79,24 @@ mod integration_tests {
             return;
         }
 
+        // Read the template content
+        let Ok(template_content) = std::fs::read_to_string(&template_path) else {
+            println!("Skipping test: Could not read template file");
+            return;
+        };
+
         // Test that missing variables are caught during construction
-        let result = InventoryTemplate::new(
-            template_path.clone(),
-            String::new(), // Empty IP should still work for construction
-            String::new(), // Empty SSH key should still work for construction
-        );
+        let result = InventoryTemplate::new(&template_content, "", "");
 
         // Construction should succeed even with empty values
         assert!(result.is_ok());
 
-        // Test that invalid template path fails
-        let invalid_path = PathBuf::from("templates/ansible/nonexistent.yml.tera");
-        let result = InventoryTemplate::new(
-            invalid_path,
-            "192.168.1.100".to_string(),
-            "/path/to/key".to_string(),
-        );
+        // Test that invalid template content fails
+        let invalid_content = "invalid template content without required variables";
+        let result = InventoryTemplate::new(invalid_content, "192.168.1.100", "/path/to/key");
 
         assert!(result.is_err());
-        println!("✅ Invalid template path correctly rejected");
+        println!("✅ Invalid template content correctly rejected");
     }
 
     /// Test that template rendering doesn't modify any files in the templates directory
@@ -118,9 +119,9 @@ mod integration_tests {
         // Render the template multiple times with different values
         for i in 1..=3 {
             let inventory = InventoryTemplate::new(
-                template_path.clone(),
-                format!("192.168.1.{i}"),
-                format!("/home/user{i}/.ssh/key"),
+                &original_content,
+                &format!("192.168.1.{i}"),
+                &format!("/home/user{i}/.ssh/key"),
             )?;
 
             let context = StaticContext::default();
@@ -156,16 +157,13 @@ mod integration_tests {
         // Simulate template rendering to build directory
         if PathBuf::from("templates/ansible/inventory.yml.tera").exists() {
             let template_path = PathBuf::from("templates/ansible/inventory.yml.tera");
+            let template_content = std::fs::read_to_string(&template_path)?;
             let output_path = build_ansible.join("inventory.yml");
 
             let inventory = InventoryTemplate::new(
-                template_path,
-                "10.0.0.100".to_string(),
-                temp_dir
-                    .path()
-                    .join("ssh_key")
-                    .to_string_lossy()
-                    .to_string(),
+                &template_content,
+                "10.0.0.100",
+                &temp_dir.path().join("ssh_key").to_string_lossy(),
             )?;
 
             let context = StaticContext::default();

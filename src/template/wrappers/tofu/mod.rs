@@ -5,4 +5,4 @@
 pub mod lxd;
 
 // Re-export LXD templates for easier access
-pub use lxd::{CloudInitTemplate, MainTfTemplate, ReadmeTemplate};
+pub use lxd::{CloudInitTemplate, MainTfTemplate};

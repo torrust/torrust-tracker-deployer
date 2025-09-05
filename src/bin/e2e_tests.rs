@@ -107,13 +107,6 @@ impl TestEnvironment {
             .await
             .context("Failed to copy cloud-init.yml to build directory")?;
 
-        // Copy README.md
-        let source_readme = templates_tofu_dir.join("README.md");
-        let dest_readme = build_tofu_dir.join("README.md");
-        tokio::fs::copy(&source_readme, &dest_readme)
-            .await
-            .context("Failed to copy README.md to build directory")?;
-
         if self.verbose {
             println!(
                 "   ✅ Static templates copied to: {}",
@@ -141,10 +134,13 @@ impl TestEnvironment {
             .join("templates/ansible/inventory.yml.tera");
         let inventory_output_path = build_ansible_dir.join("inventory.yml");
 
+        let inventory_template_content = std::fs::read_to_string(&inventory_template_path)
+            .context("Failed to read inventory template file")?;
+
         let inventory_template = InventoryTemplate::new(
-            inventory_template_path,
-            container_ip.to_string(),
-            self.ssh_key_path.to_string_lossy().to_string(),
+            &inventory_template_content,
+            container_ip,
+            &self.ssh_key_path.to_string_lossy(),
         )
         .context("Failed to create InventoryTemplate")?;
 

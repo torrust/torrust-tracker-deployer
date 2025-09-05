@@ -46,6 +46,19 @@ impl TemplateEngine {
         Ok(Self { tera })
     }
 
+    /// Creates a new `TemplateEngine` instance with template content
+    ///
+    /// # Errors
+    /// Returns an error if the template content cannot be parsed
+    pub fn with_template_content(template_name: &str, template_content: &str) -> Result<Self> {
+        let mut tera = Tera::default();
+
+        tera.add_raw_template(template_name, template_content)
+            .with_context(|| format!("Failed to parse template content for: {template_name}"))?;
+
+        Ok(Self { tera })
+    }
+
     /// Render a template file with the given context
     ///
     /// # Errors
@@ -139,10 +152,22 @@ impl TemplateEngine {
             .to_string_lossy()
             .to_string();
 
+        self.validate_template_substitution_by_name(&template_name, context)
+    }
+
+    /// Validates template substitution by template name and returns the result
+    ///
+    /// # Errors
+    /// Returns an error if template rendering fails or variables cannot be substituted
+    pub fn validate_template_substitution_by_name<T: Serialize>(
+        &self,
+        template_name: &str,
+        context: &T,
+    ) -> Result<String> {
         // Render template to string instead of file
         let rendered_content = self
             .tera
-            .render(&template_name, &tera::Context::from_serialize(context)?)
+            .render(template_name, &tera::Context::from_serialize(context)?)
             .with_context(|| {
                 format!("Failed to validate template substitution: {template_name}")
             })?;

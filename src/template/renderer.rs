@@ -14,9 +14,6 @@ pub trait TemplateRenderer {
     /// Returns the path to the template file
     fn template_path(&self) -> &Path;
 
-    /// Returns list of required template variables
-    fn required_variables(&self) -> Vec<&'static str>;
-
     /// Renders the template with the given context to the output path
     ///
     /// # Errors

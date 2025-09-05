@@ -12,7 +12,7 @@ This configuration creates:
 - Network isolation with container networking
 - 10GB disk allocation
 
-For general information about LXD system containers, see the [LXD documentation](../../docs/tech-stack/lxd.md).
+For general information about LXD system containers, see the [LXD documentation](lxd.md).
 
 ## Prerequisites
 
