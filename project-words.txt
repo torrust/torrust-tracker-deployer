@@ -25,6 +25,7 @@ publickey
 pytest
 resolv
 runcmd
+RUSTDOCFLAGS
 rustflags
 rustup
 serde
