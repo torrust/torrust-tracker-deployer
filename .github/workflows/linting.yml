@@ -39,5 +39,8 @@ jobs:
       - name: Install markdownlint-cli
         run: npm install -g markdownlint-cli
 
+      - name: Build Rust linter
+        run: cargo build --release --bin linter
+
       - name: Run all linters
-        run: ./scripts/linting/lint.sh all
+        run: ./target/release/linter all
