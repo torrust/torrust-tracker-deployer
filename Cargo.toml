@@ -1,3 +1,9 @@
+[workspace]
+members = [
+  "packages/linting",
+]
+resolver = "2"
+
 [package]
 name = "torrust-tracker-deploy"
 version = "0.1.0"
@@ -27,5 +33,4 @@ clap = { version = "4.0", features = [ "derive" ] }
 regex = "1.0"
 dirs = "5.0"
 tempfile = "3.0"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
+torrust-linting = { path = "packages/linting" }

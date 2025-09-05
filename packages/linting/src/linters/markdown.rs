@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::process::Command;
 use tracing::{error, info};
 
-use crate::linting::utils::{install_npm_tool, is_command_available};
+use crate::utils::{install_npm_tool, is_command_available};
 
 /// Run the markdown linter
 ///

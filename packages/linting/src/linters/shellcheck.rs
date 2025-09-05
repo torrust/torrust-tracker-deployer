@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::process::Command;
 use tracing::{error, info, warn};
 
-use crate::linting::utils::is_command_available;
+use crate::utils::is_command_available;
 
 /// Install shellcheck using system package manager
 ///

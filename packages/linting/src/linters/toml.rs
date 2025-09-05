@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::process::Command;
 use tracing::{error, info};
 
-use crate::linting::utils::is_command_available;
+use crate::utils::is_command_available;
 
 /// Install Taplo CLI using cargo
 ///
