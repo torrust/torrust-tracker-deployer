@@ -14,6 +14,7 @@ on:
 jobs:
   test-lxd-provision:
     runs-on: ubuntu-latest
+    timeout-minutes: 20 # Set reasonable timeout for LXD provisioning
 
     steps:
       - name: Checkout repository
@@ -30,6 +31,12 @@ jobs:
           sudo lxc version
           tofu version
 
+      - name: Test LXD socket permissions
+        run: |
+          # Test that LXD commands work without sudo due to socket permissions
+          lxc version
+          lxc list
+
       - name: Initialize OpenTofu
         working-directory: config/tofu/lxd
         run: tofu init
@@ -45,9 +52,9 @@ jobs:
       - name: Apply configuration
         working-directory: config/tofu/lxd
         run: |
-          # Run with sudo to ensure LXD access in CI environment
+          # Use tofu without sudo since socket permissions are set up
           # NOTE: For local development, use "sg lxd -c 'tofu apply'" instead
-          sudo -E tofu apply -auto-approve
+          tofu apply -auto-approve
 
       - name: Wait for container to be ready
         run: |
@@ -58,7 +65,7 @@ jobs:
           timeout=300
           elapsed=0
           while [ $elapsed -lt $timeout ]; do
-            if sudo lxc exec torrust-vm -- test -f /tmp/provision_complete 2>/dev/null; then
+            if lxc exec torrust-vm -- test -f /tmp/provision_complete 2>/dev/null; then
               echo "Container provisioning completed successfully!"
               break
             fi
@@ -75,53 +82,53 @@ jobs:
       - name: Test container functionality
         run: |
           # Test basic connectivity
-          sudo lxc list
-          sudo lxc info torrust-vm
+          lxc list
+          lxc info torrust-vm
 
           # Test command execution
-          sudo lxc exec torrust-vm -- whoami
+          lxc exec torrust-vm -- whoami
 
           # Test system information with error handling
           echo "Getting system information..."
-          sudo lxc exec torrust-vm -- cat /etc/os-release || echo "os-release failed"
+          lxc exec torrust-vm -- cat /etc/os-release || echo "os-release failed"
           sleep 1
 
-          sudo lxc exec torrust-vm -- df -h || echo "df failed"
+          lxc exec torrust-vm -- df -h || echo "df failed"
           sleep 1
 
-          sudo lxc exec torrust-vm -- free -h || echo "free failed"
+          lxc exec torrust-vm -- free -h || echo "free failed"
           sleep 1
 
           # Test cloud-init functionality
           echo "Testing cloud-init..."
-          sudo lxc exec torrust-vm -- cloud-init status || echo "cloud-init status failed"
+          lxc exec torrust-vm -- cloud-init status || echo "cloud-init status failed"
           sleep 1
 
           # Test user creation
           echo "Testing user creation..."
-          sudo lxc exec torrust-vm -- id torrust || echo "torrust user not found"
+          lxc exec torrust-vm -- id torrust || echo "torrust user not found"
           sleep 1
 
           # Test systemd services
           echo "Testing systemd..."
-          sudo lxc exec torrust-vm -- systemctl status ssh || echo "ssh service check failed"
+          lxc exec torrust-vm -- systemctl status ssh || echo "ssh service check failed"
 
       - name: Get container outputs
         working-directory: config/tofu/lxd
-        run: sudo -E tofu output
+        run: tofu output
 
       - name: Cleanup
         if: always()
         working-directory: config/tofu/lxd
         run: |
           echo "Cleaning up container..."
-          # Use sudo for CI environment cleanup
+          # Use tofu without sudo since socket permissions are set up
           # NOTE: For local development, use "sg lxd -c 'tofu destroy'" instead
-          sudo -E tofu destroy -auto-approve || true
-          sudo lxc delete torrust-vm --force || true
+          tofu destroy -auto-approve || true
+          lxc delete torrust-vm --force || true
 
       - name: Final verification
         if: always()
         run: |
           echo "Verifying cleanup..."
-          sudo lxc list
+          lxc list
