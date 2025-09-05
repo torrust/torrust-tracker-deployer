@@ -30,15 +30,6 @@ jobs:
           toolchain: stable
           components: clippy, rustfmt
 
-      - name: Install yamllint
-        run: sudo apt-get install -y yamllint
-
-      - name: Install ShellCheck
-        run: sudo apt-get install -y shellcheck
-
-      - name: Install markdownlint-cli
-        run: npm install -g markdownlint-cli
-
       - name: Build Rust linter
         run: cargo build --release --bin linter
 
