@@ -93,7 +93,7 @@ torrust-tracker-deploy
 This project includes convenient scripts for common development tasks:
 
 ```bash
-# Run all linters (markdown, YAML, shell scripts, Rust)
+# Run all linters (markdown, YAML, TOML, shell scripts, Rust)
 cargo run --bin linter all
 ```
 
@@ -102,6 +102,7 @@ Or run individual linters:
 ```bash
 cargo run --bin linter markdown    # Markdown linting
 cargo run --bin linter yaml        # YAML linting
+cargo run --bin linter toml        # TOML linting
 cargo run --bin linter clippy      # Rust code analysis
 cargo run --bin linter rustfmt     # Rust formatting check
 cargo run --bin linter shellcheck  # Shell script linting

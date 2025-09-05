@@ -150,3 +150,31 @@ pub fn install_shellcheck() -> Result<()> {
     info!("Please install shellcheck manually: https://github.com/koalaman/shellcheck#installing");
     Err(anyhow::anyhow!("Could not install shellcheck"))
 }
+
+/// Install Taplo CLI using cargo
+///
+/// # Errors
+///
+/// Returns an error if cargo is not available or if the installation fails.
+pub fn install_taplo() -> Result<()> {
+    info!("Installing Taplo CLI...");
+
+    // Check if cargo is available
+    if !is_command_available("cargo") {
+        error!("Cargo is required to install Taplo CLI");
+        return Err(anyhow::anyhow!("Cargo is not available"));
+    }
+
+    let output = Command::new("cargo")
+        .args(["install", "taplo-cli", "--locked"])
+        .output()?;
+
+    if output.status.success() {
+        info!("Taplo CLI installed successfully");
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        error!("Failed to install Taplo CLI: {}", stderr);
+        Err(anyhow::anyhow!("Failed to install Taplo CLI"))
+    }
+}

@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 use torrust_tracker_deploy::linting::linters::{
     run_clippy_linter, run_markdown_linter, run_rustfmt_linter, run_shellcheck_linter,
-    run_yaml_linter,
+    run_toml_linter, run_yaml_linter,
 };
 use tracing::{error, info, Level};
 
@@ -23,6 +23,9 @@ enum Commands {
 
     /// Run YAML linter
     Yaml,
+
+    /// Run TOML linter using Taplo
+    Toml,
 
     /// Run Rust clippy linter
     Clippy,
@@ -63,6 +66,15 @@ fn run_all_linters() -> Result<()> {
         Ok(()) => {}
         Err(e) => {
             error!("YAML linting failed: {e}");
+            failed = true;
+        }
+    }
+
+    // Run TOML linter
+    match run_toml_linter() {
+        Ok(()) => {}
+        Err(e) => {
+            error!("TOML linting failed: {e}");
             failed = true;
         }
     }
@@ -121,6 +133,9 @@ fn main() -> Result<()> {
         Some(Commands::Yaml) => {
             run_yaml_linter()?;
         }
+        Some(Commands::Toml) => {
+            run_toml_linter()?;
+        }
         Some(Commands::Clippy) => {
             run_clippy_linter()?;
         }
@@ -141,6 +156,7 @@ fn main() -> Result<()> {
             println!("Examples:");
             println!("  cargo run --bin linter markdown   # Run markdown linter");
             println!("  cargo run --bin linter yaml       # Run YAML linter");
+            println!("  cargo run --bin linter toml       # Run TOML linter");
             println!("  cargo run --bin linter clippy     # Run Rust clippy linter");
             println!("  cargo run --bin linter rustfmt    # Run Rust formatter check");
             println!("  cargo run --bin linter shellcheck # Run ShellCheck linter");

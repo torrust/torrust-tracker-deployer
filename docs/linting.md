@@ -21,6 +21,7 @@ cargo run --bin linter all
 # Run specific linters
 cargo run --bin linter markdown    # Markdown only
 cargo run --bin linter yaml        # YAML only
+cargo run --bin linter toml        # TOML only
 cargo run --bin linter clippy      # Rust code analysis only
 cargo run --bin linter rustfmt     # Rust formatting check only
 cargo run --bin linter shellcheck  # Shell scripts only
@@ -35,6 +36,7 @@ The Rust linter binary will automatically install the required tools if they're 
 
 - **markdownlint-cli**: Installed via npm
 - **yamllint**: Installed via system package manager (apt, dnf, pacman) or pip3
+- **Taplo CLI**: Installed via cargo for TOML linting and formatting
 - **ShellCheck**: Installed via system package manager (apt, dnf, pacman, brew)
 - **Rust clippy & rustfmt**: Installed as part of the Rust toolchain
 
@@ -47,6 +49,7 @@ and CI environments. The workflow runs on every push and pull request.
 
 - **Markdown**: `.markdownlint.json` - Controls line length, heading styles, etc.
 - **YAML**: `.yamllint-ci.yml` - Controls line length, indentation, etc.
+- **TOML**: `.taplo.toml` - Controls formatting, indentation, array handling, etc.
 
 ## Benefits
 

@@ -6,7 +6,7 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 
 ## 🏗️ Tech Stack
 
-- **Languages**: Rust, Shell scripts, YAML
+- **Languages**: Rust, Shell scripts, YAML, TOML
 - **Infrastructure**: OpenTofu (Terraform), Ansible
 - **Providers**: LXD containers, Multipass VMs
 - **Tools**: Docker, cloud-init
@@ -16,7 +16,6 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 - `src/` - Rust source code and binaries
 - `config/ansible/` - Ansible playbooks and inventory
 - `config/tofu/` - OpenTofu/Terraform configurations
-- `scripts/linting/` - Code quality scripts
 - `docs/` - Project documentation
 
 ## 🔧 Essential Rules

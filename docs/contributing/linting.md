@@ -35,6 +35,12 @@ cargo run --bin linter markdown
 cargo run --bin linter yaml
 ```
 
+**TOML linting**:
+
+```bash
+cargo run --bin linter toml
+```
+
 **Rust code analysis**:
 
 ```bash
@@ -127,6 +133,43 @@ services:
 # Use consistent quotes
 name: "my-service"
 version: "1.0" # Consistent with project style
+```
+
+### TOML Linting (`taplo`)
+
+**Configuration**: `.taplo.toml`
+
+Key settings:
+
+- **Formatting**: Preserves blank lines and doesn't reorder keys
+- **Arrays**: Trailing commas enabled, consistent expansion
+- **Alignment**: Comments aligned, entries not aligned for readability
+- **Indentation**: Tables and entries maintain natural structure
+
+**Common fixes**:
+
+```toml
+# Use consistent formatting
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tokio = "1.0"
+
+# Arrays with trailing commas
+features = [
+    "derive",
+    "serde",
+]
+
+# Proper spacing around values
+name = "torrust-tracker"  # Good
+name="torrust-tracker"    # Bad - needs spaces
+```
+
+**Auto-fix formatting**:
+
+```bash
+# Fix all TOML files automatically
+taplo fmt **/*.toml
 ```
 
 ### Shell Script Linting (`shellcheck`)
