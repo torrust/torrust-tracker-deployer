@@ -14,7 +14,7 @@ on:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 20 # Set reasonable timeout for E2E tests
+    timeout-minutes: 30 # Increased timeout for better network reliability in CI
 
     steps:
       - name: Checkout repository

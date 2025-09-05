@@ -21,6 +21,7 @@ nullglob
 oneline
 pacman
 pipefail
+prereq
 publickey
 pytest
 resolv

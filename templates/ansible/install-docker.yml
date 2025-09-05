@@ -22,14 +22,53 @@
 
   # List of tasks to execute in order
   tasks:
-    # Task 1: Update package cache
+    # Task 0: Network diagnostics for CI troubleshooting
+    - name: Check network connectivity and DNS resolution
+      ansible.builtin.shell: |
+        echo "=== Network Diagnostics ==="
+        echo "Testing DNS resolution..."
+        nslookup archive.ubuntu.com || echo "DNS resolution failed"
+        echo "Testing connectivity to Ubuntu repositories..."
+        curl -I https://archive.ubuntu.com/ubuntu/ --connect-timeout 10 || echo "Ubuntu repo unreachable"
+        echo "Testing connectivity to Docker repositories..."
+        curl -I https://download.docker.com --connect-timeout 10 || echo "Docker repo unreachable"
+        echo "Current apt sources:"
+        cat /etc/apt/sources.list
+      register: network_diagnostics
+      changed_when: false
+      ignore_errors: true
+
+    - name: Display network diagnostics
+      ansible.builtin.debug:
+        var: network_diagnostics.stdout_lines
+      when: network_diagnostics is defined
+
+    # Task 1: Update package cache with retries and better error handling
     - name: Update apt package cache
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600 # Cache valid for 1 hour
+        force_apt_get: true # Force using apt-get instead of aptitude for better CI compatibility
+      register: apt_update_result
+      retries: 3
+      delay: 10
+      until: apt_update_result is succeeded
       when: ansible_os_family == "Debian"
+      ignore_errors: false # Fail if apt update ultimately fails
 
-    # Task 2: Install required packages for Docker repository
+    # Task 1.1: Fallback apt update with different approach if needed
+    - name: Fallback apt update with apt-get directly
+      ansible.builtin.command: apt-get update
+      register: apt_get_update
+      retries: 2
+      delay: 15
+      until: apt_get_update.rc == 0
+      when:
+        - ansible_os_family == "Debian"
+        - apt_update_result is failed
+      ignore_errors: false
+
+    # Task 2: Install required packages for Docker repository with retries
     - name: Install required packages for Docker repository
       ansible.builtin.apt:
         name:
@@ -39,6 +78,11 @@
           - gnupg
           - lsb-release
         state: present
+        force_apt_get: true
+      register: prereq_packages
+      retries: 3
+      delay: 10
+      until: prereq_packages is succeeded
       when: ansible_os_family == "Debian"
 
     # Task 3: Add Docker's official GPG key
@@ -57,13 +101,18 @@
         filename: docker
       when: ansible_os_family == "Debian"
 
-    # Task 5: Update package cache after adding repository
+    # Task 5: Update package cache after adding repository with retries
     - name: Update apt package cache after adding Docker repository
       ansible.builtin.apt:
         update_cache: true
+        force_apt_get: true # Force using apt-get for better CI compatibility
+      register: apt_update_docker_repo
+      retries: 3
+      delay: 10
+      until: apt_update_docker_repo is succeeded
       when: ansible_os_family == "Debian"
 
-    # Task 6: Install Docker packages
+    # Task 6: Install Docker packages with retries
     - name: Install Docker packages
       ansible.builtin.apt:
         name:
@@ -72,6 +121,11 @@
           - containerd.io
           - docker-buildx-plugin
         state: present
+        force_apt_get: true
+      register: docker_install
+      retries: 3
+      delay: 10
+      until: docker_install is succeeded
       when: ansible_os_family == "Debian"
 
     # Task 7: Start and enable Docker service
