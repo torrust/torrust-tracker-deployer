@@ -1,6 +1,4 @@
-[![Linting](https://github.co**[📖 See detailed comparison →](docs/vm-providers.md)\*\*
-
-LXD provides the optimal balance of performance, official support, and compatibility for our use case.orrust-tracker-deploy-rust-poc/actions/workflows/linting.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/linting.yml) [![E2E Tests](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml) [![Test LXD Container Provisioning](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml)
+[![Linting](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/linting.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/linting.yml) [![E2E Tests](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-e2e.yml) [![Test LXD Container Provisioning](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deploy-rust-poc/actions/workflows/test-lxd-provision.yml)
 
 # Torrust Tracker Deploy
 
