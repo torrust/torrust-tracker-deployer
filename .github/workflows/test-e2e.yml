@@ -2,7 +2,7 @@ name: E2E Tests
 
 # NOTE: This workflow uses CI-specific approaches like 'sudo chmod 666' on the LXD socket
 # and 'sudo' with LXD commands. These approaches are NOT recommended for local development.
-# For local use, follow the proper group membership approach documented in config/tofu/lxd/README.md
+# For local use, follow the proper group membership approach documented in templates/tofu/lxd/README.md
 
 on:
   push:
@@ -59,7 +59,7 @@ jobs:
 
       - name: Get test outputs (on success)
         if: success()
-        working-directory: config/tofu/lxd
+        working-directory: build/tofu/lxd
         run: |
           echo "=== Infrastructure Outputs ==="
           sudo -E tofu output || echo "No outputs available"
@@ -77,7 +77,7 @@ jobs:
           sudo lxc list || echo "LXC list failed"
 
           echo "=== OpenTofu State ==="
-          cd config/tofu/lxd
+          cd build/tofu/lxd
           sudo -E tofu show || echo "No state to show"
 
           echo "=== System Resources ==="
@@ -89,7 +89,7 @@ jobs:
 
       - name: Cleanup infrastructure (always run)
         if: always()
-        working-directory: config/tofu/lxd
+        working-directory: build/tofu/lxd
         run: |
           echo "Cleaning up test infrastructure..."
           # Use sudo for CI environment cleanup

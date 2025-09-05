@@ -110,7 +110,7 @@ docs/
 - `vm-providers.md` - Comparison of VM providers for this project
 - Project-specific usage patterns and workflows
 
-### 📁 Configuration Documentation (`config/*/README.md`)
+### 📁 Configuration Documentation (`templates/*/README.md`)
 
 **Purpose**: Documentation for specific configurations within the project.
 
@@ -123,8 +123,8 @@ docs/
 
 **Examples**:
 
-- `config/tofu/lxd/README.md` - How to use the LXD OpenTofu configuration
-- `config/ansible/README.md` - How to use the Ansible playbooks
+- `templates/tofu/lxd/README.md` - How to use the LXD OpenTofu configuration
+- `templates/ansible/README.md` - How to use the Ansible playbooks
 
 ## 🎯 Guidelines for Contributors
 
@@ -138,7 +138,7 @@ docs/
 
    - If it's specific to how this project works
 
-3. **Configuration documentation** → `config/*/README.md`
+3. **Configuration documentation** → `templates/*/README.md`
 
    - If it's about a specific configuration or setup
 
@@ -171,7 +171,7 @@ Install OpenTofu following the [OpenTofu setup guide](tech-stack/opentofu.md).
 
 <!-- From tech stack to project usage -->
 
-For project-specific usage, see the [LXD configuration guide](../config/tofu/lxd/README.md).
+For project-specific usage, see the [LXD configuration guide](../templates/tofu/lxd/README.md).
 ```
 
 ## 🔄 Maintaining Documentation

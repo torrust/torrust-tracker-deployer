@@ -41,7 +41,7 @@ After extensive research and testing (documented in [docker-vs-lxd-ansible-testi
 
 ```bash
 # Provision LXD container once
-cd config/tofu/lxd
+cd build/tofu/lxd
 tofu apply -auto-approve  # ~17.6s initial setup
 
 # Reuse the same VM for multiple playbook tests
@@ -66,7 +66,7 @@ time ansible-playbook deploy-docker-stack.yml       # ~22.6s
 #### 3. VM Cleanup (When Needed)
 
 ```bash
-cd config/tofu/lxd
+cd build/tofu/lxd
 tofu destroy -auto-approve  # Clean slate for next test cycle
 ```
 
@@ -210,7 +210,7 @@ Based on comprehensive research and performance testing, we have implemented a *
 
 ```bash
 # One-time setup
-cd config/tofu/lxd && tofu apply -auto-approve
+cd build/tofu/lxd && tofu apply -auto-approve
 
 # Sequential playbook testing (reusing same VM)
 cd ../../ansible

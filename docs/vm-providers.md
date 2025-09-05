@@ -96,7 +96,7 @@ sudo usermod -a -G lxd $USER
 newgrp lxd
 
 # Deploy with OpenTofu
-cd config/tofu/lxd
+cd templates/tofu/lxd
 tofu init && tofu apply
 ```
 

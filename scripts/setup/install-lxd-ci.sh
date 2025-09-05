@@ -3,7 +3,7 @@
 # 
 # IMPORTANT: This script uses CI-specific approaches like 'sudo chmod 666' on the LXD socket
 # and 'sudo' with LXD commands. These approaches are NOT recommended for local development.
-# For local use, follow the proper group membership approach documented in config/tofu/lxd/README.md
+# For local use, follow the proper group membership approach documented in templates/tofu/lxd/README.md
 
 set -euo pipefail
 

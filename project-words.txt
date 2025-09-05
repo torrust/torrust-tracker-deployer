@@ -33,6 +33,7 @@ shellcheck
 subshell
 sysfs
 Taplo
+Tera
 terraformrc
 tfstate
 tfvars

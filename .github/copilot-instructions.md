@@ -14,8 +14,9 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 ## 📁 Key Directories
 
 - `src/` - Rust source code and binaries
-- `config/ansible/` - Ansible playbooks and inventory
-- `config/tofu/` - OpenTofu/Terraform configurations
+- `templates/ansible/` - Ansible playbook templates
+- `templates/tofu/` - OpenTofu/Terraform configuration templates
+- `build/` - Generated runtime configurations (git-ignored)
 - `docs/` - Project documentation
 
 ## 🔧 Essential Rules

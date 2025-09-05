@@ -79,7 +79,7 @@ To provision the container:
 1. **Navigate to the LXD configuration directory**:
 
    ```bash
-   cd config/lxd
+   cd build/tofu/lxd  # Use build directory for runtime operations
    ```
 
 2. **Initialize OpenTofu**:
@@ -216,7 +216,7 @@ To destroy the container and clean up resources:
 1. **Navigate to the configuration directory** (if not already there):
 
    ```bash
-   cd config/lxd
+   cd build/tofu/lxd  # Use build directory for runtime operations
    ```
 
 2. **Destroy the infrastructure**:

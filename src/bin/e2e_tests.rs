@@ -1,12 +1,15 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
-use regex::Regex;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 use tempfile::TempDir;
 use tokio::time::sleep;
+
+// Import template system
+use torrust_tracker_deploy::template::wrappers::ansible::inventory::InventoryTemplate;
+use torrust_tracker_deploy::template::{StaticContext, TemplateRenderer};
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -23,6 +26,8 @@ struct Cli {
 
 struct TestEnvironment {
     project_root: PathBuf,
+    #[allow(dead_code)] // Will be used in template rendering
+    build_dir: PathBuf,
     keep_env: bool,
     verbose: bool,
     ssh_key_path: PathBuf,
@@ -65,6 +70,7 @@ impl TestEnvironment {
         }
 
         Ok(Self {
+            build_dir: project_root.join("build"),
             project_root,
             keep_env,
             verbose,
@@ -72,6 +78,118 @@ impl TestEnvironment {
             temp_dir: Some(temp_dir),
             original_inventory: None,
         })
+    }
+
+    /// Stage 1: Render static templates (tofu) to build/tofu/ directory
+    async fn render_static_templates(&self) -> Result<()> {
+        println!("🏗️  Stage 1: Rendering static templates to build directory...");
+
+        // Create build directory structure
+        let build_tofu_dir = self.build_dir.join("tofu/lxd");
+        tokio::fs::create_dir_all(&build_tofu_dir)
+            .await
+            .context("Failed to create build/tofu/lxd directory")?;
+
+        // Copy static tofu templates (no variables for now)
+        let templates_tofu_dir = self.project_root.join("templates/tofu/lxd");
+
+        // Copy main.tf
+        let source_main_tf = templates_tofu_dir.join("main.tf");
+        let dest_main_tf = build_tofu_dir.join("main.tf");
+        tokio::fs::copy(&source_main_tf, &dest_main_tf)
+            .await
+            .context("Failed to copy main.tf to build directory")?;
+
+        // Copy cloud-init.yml
+        let source_cloud_init = templates_tofu_dir.join("cloud-init.yml");
+        let dest_cloud_init = build_tofu_dir.join("cloud-init.yml");
+        tokio::fs::copy(&source_cloud_init, &dest_cloud_init)
+            .await
+            .context("Failed to copy cloud-init.yml to build directory")?;
+
+        // Copy README.md
+        let source_readme = templates_tofu_dir.join("README.md");
+        let dest_readme = build_tofu_dir.join("README.md");
+        tokio::fs::copy(&source_readme, &dest_readme)
+            .await
+            .context("Failed to copy README.md to build directory")?;
+
+        if self.verbose {
+            println!(
+                "   ✅ Static templates copied to: {}",
+                build_tofu_dir.display()
+            );
+        }
+
+        println!("✅ Stage 1 complete: Static templates ready");
+        Ok(())
+    }
+
+    /// Stage 3: Render ansible templates with runtime variables to build/ansible/
+    async fn render_runtime_templates(&self, container_ip: &str) -> Result<()> {
+        println!("🎭 Stage 3: Rendering runtime templates with variables...");
+
+        // Create build directory structure
+        let build_ansible_dir = self.build_dir.join("ansible");
+        tokio::fs::create_dir_all(&build_ansible_dir)
+            .await
+            .context("Failed to create build/ansible directory")?;
+
+        // Render inventory.yml.tera with runtime variables
+        let inventory_template_path = self
+            .project_root
+            .join("templates/ansible/inventory.yml.tera");
+        let inventory_output_path = build_ansible_dir.join("inventory.yml");
+
+        let inventory_template = InventoryTemplate::new(
+            inventory_template_path,
+            container_ip.to_string(),
+            self.ssh_key_path.to_string_lossy().to_string(),
+        )
+        .context("Failed to create InventoryTemplate")?;
+
+        let static_context = StaticContext::default();
+        inventory_template
+            .render(&static_context, &inventory_output_path)
+            .context("Failed to render inventory template")?;
+
+        // Copy static ansible files
+        let templates_ansible_dir = self.project_root.join("templates/ansible");
+
+        // Copy ansible.cfg
+        let source_cfg = templates_ansible_dir.join("ansible.cfg");
+        let dest_cfg = build_ansible_dir.join("ansible.cfg");
+        tokio::fs::copy(&source_cfg, &dest_cfg)
+            .await
+            .context("Failed to copy ansible.cfg to build directory")?;
+
+        // Copy playbooks
+        for playbook in &[
+            "install-docker.yml",
+            "install-docker-compose.yml",
+            "wait-cloud-init.yml",
+        ] {
+            let source_playbook = templates_ansible_dir.join(playbook);
+            let dest_playbook = build_ansible_dir.join(playbook);
+            tokio::fs::copy(&source_playbook, &dest_playbook)
+                .await
+                .with_context(|| format!("Failed to copy {playbook} to build directory"))?;
+        }
+
+        if self.verbose {
+            println!(
+                "   ✅ Runtime templates rendered to: {}",
+                build_ansible_dir.display()
+            );
+            println!("   ✅ Inventory rendered with IP: {container_ip}");
+            println!(
+                "   ✅ Inventory rendered with SSH key: {}",
+                self.ssh_key_path.display()
+            );
+        }
+
+        println!("✅ Stage 3 complete: Runtime templates ready");
+        Ok(())
     }
 
     fn run_command(&self, cmd: &str, args: &[&str], working_dir: Option<&Path>) -> Result<String> {
@@ -111,13 +229,10 @@ impl TestEnvironment {
     }
 
     fn provision_infrastructure(&self) -> Result<String> {
-        println!("🚀 Provisioning test infrastructure...");
+        println!("🚀 Stage 2: Provisioning test infrastructure...");
 
-        // First, we need to update the container name in the OpenTofu config
-        // For now, we'll use the existing config but this means tests might conflict
-        // TODO: Make this configurable with variables later
-
-        let tofu_dir = self.project_root.join("config/tofu/lxd");
+        // Use the build directory instead of config directory
+        let tofu_dir = self.build_dir.join("tofu/lxd");
 
         // Initialize OpenTofu
         println!("   Initializing OpenTofu...");
@@ -134,7 +249,7 @@ impl TestEnvironment {
             .get_container_ip()
             .context("Failed to get container IP after provisioning")?;
 
-        println!("✅ Infrastructure provisioned successfully");
+        println!("✅ Stage 2 complete: Infrastructure provisioned");
         println!("   Container IP: {container_ip}");
 
         Ok(container_ip)
@@ -216,49 +331,10 @@ impl TestEnvironment {
         ))
     }
 
-    async fn update_ansible_inventory(&self, container_ip: &str) -> Result<()> {
-        println!("📝 Updating Ansible inventory...");
-
-        let inventory_path = self.project_root.join("config/ansible/inventory.yml");
-        let inventory_content = tokio::fs::read_to_string(&inventory_path)
-            .await
-            .context("Failed to read inventory file")?;
-
-        // Replace the IP address in the inventory
-        let ip_regex =
-            Regex::new(r"ansible_host: \d+\.\d+\.\d+\.\d+").context("Failed to create IP regex")?;
-
-        let updated_content =
-            ip_regex.replace(&inventory_content, &format!("ansible_host: {container_ip}"));
-
-        // Replace the SSH key path to use our temporary key
-        let ssh_key_regex = Regex::new(r"ansible_ssh_private_key_file: [^\n]+")
-            .context("Failed to create SSH key regex")?;
-
-        let final_content = ssh_key_regex.replace(
-            &updated_content,
-            &format!(
-                "ansible_ssh_private_key_file: {}",
-                self.ssh_key_path.to_str().unwrap()
-            ),
-        );
-
-        tokio::fs::write(&inventory_path, final_content.as_ref())
-            .await
-            .context("Failed to write updated inventory file")?;
-
-        println!("✅ Ansible inventory updated with IP: {container_ip}");
-        println!(
-            "✅ Ansible inventory updated with SSH key: {}",
-            self.ssh_key_path.display()
-        );
-        Ok(())
-    }
-
     fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
-        println!("🎭 Running Ansible playbook: {playbook}");
+        println!("🎭 Stage 4: Running Ansible playbook: {playbook}");
 
-        let ansible_dir = self.project_root.join("config/ansible");
+        let ansible_dir = self.build_dir.join("ansible");
         let playbook_path = format!("{playbook}.yml");
 
         let mut args = vec!["ansible-playbook", &playbook_path];
@@ -269,7 +345,7 @@ impl TestEnvironment {
         self.run_command("ansible-playbook", &[&playbook_path], Some(&ansible_dir))
             .context(format!("Failed to run Ansible playbook: {playbook}"))?;
 
-        println!("✅ Ansible playbook executed successfully");
+        println!("✅ Stage 4: Ansible playbook executed successfully");
         Ok(())
     }
 
@@ -477,7 +553,7 @@ impl TestEnvironment {
 
         println!("🧹 Cleaning up test environment...");
 
-        let tofu_dir = self.project_root.join("config/tofu/lxd");
+        let tofu_dir = self.build_dir.join("tofu/lxd");
 
         // Destroy infrastructure
         let result = self.run_command("tofu", &["destroy", "-auto-approve"], Some(&tofu_dir));
@@ -493,7 +569,7 @@ impl Drop for TestEnvironment {
     fn drop(&mut self) {
         if !self.keep_env {
             // Try basic cleanup in case async cleanup failed
-            let tofu_dir = self.project_root.join("config/tofu/lxd");
+            let tofu_dir = self.build_dir.join("tofu/lxd");
             drop(
                 Command::new("tofu")
                     .args(["destroy", "-auto-approve"])
@@ -505,31 +581,34 @@ impl Drop for TestEnvironment {
 }
 
 async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
-    println!("🧪 Starting full deployment E2E test");
-    println!("   This will test all Ansible playbooks in production order:");
-    println!("   1. Provision VM with cloud-init");
-    println!("   2. Wait for cloud-init completion");
-    println!("   3. Install Docker");
-    println!("   4. Install Docker Compose");
+    println!("🧪 Starting full deployment E2E test with template-based workflow");
+    println!("   This will test the complete 4-stage template system:");
+    println!("   Stage 1: Render static templates to build/");
+    println!("   Stage 2: Provision VM with OpenTofu from build/");
+    println!("   Stage 3: Render runtime templates with variables");
+    println!("   Stage 4: Run Ansible playbooks from build/");
     println!();
 
-    // 1. Provision infrastructure
+    // Stage 1: Render static templates to build/tofu/
+    env.render_static_templates().await?;
+
+    // Stage 2: Provision infrastructure from build directory
     let container_ip = env.provision_infrastructure()?;
 
-    // 2. Wait for SSH connectivity
+    // Wait for SSH connectivity
     env.wait_for_ssh_connectivity(&container_ip).await?;
 
-    // 3. Update Ansible inventory
-    env.update_ansible_inventory(&container_ip).await?;
+    // Stage 3: Render ansible templates with runtime variables
+    env.render_runtime_templates(&container_ip).await?;
 
-    // 4. Run the wait-cloud-init playbook
+    // Stage 4: Run Ansible playbooks from build directory
     println!("📋 Step 1: Waiting for cloud-init completion...");
     env.run_ansible_playbook("wait-cloud-init")?;
 
-    // 5. Validate cloud-init completion
+    // Validate cloud-init completion
     env.validate_cloud_init_completion(&container_ip)?;
 
-    // 6. Run the install-docker playbook
+    // Run the install-docker playbook
     println!("📋 Step 2: Installing Docker...");
     env.run_ansible_playbook("install-docker")?;
 

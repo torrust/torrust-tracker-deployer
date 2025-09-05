@@ -53,7 +53,7 @@ The scripts automatically detect CI environments and apply appropriate configura
 
 For local development, see the dedicated documentation:
 
-- **LXD**: [config/tofu/lxd/README.md](../../config/tofu/lxd/README.md)
+- **LXD**: [templates/tofu/lxd/README.md](../../templates/tofu/lxd/README.md)
 - **LXD Tech Stack**: [docs/tech-stack/lxd.md](../../docs/tech-stack/lxd.md)
 
 **Important**: The CI scripts use `sudo` commands and socket permission modifications that are **NOT recommended** for local development. Use proper group membership for local setups.

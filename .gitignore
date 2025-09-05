@@ -50,6 +50,9 @@ Thumbs.db
 target/
 Cargo.lock
 
+# Template build directory (runtime-generated configs)
+build/
+
 # Meson build directory
 builddir/
 

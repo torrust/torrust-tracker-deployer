@@ -32,7 +32,7 @@ all:
       # 🔗 OPENTOFU: IP assigned by lxd_instance.torrust_vm via lxdbr0 network
       # 🔗 DISCOVERY: Find current IP with: lxc list torrust-vm
       # 🔗 AUTOMATION: Could be retrieved via: lxc list torrust-vm -f json | jq -r '.[0].state.network.eth0.addresses[0].address'
-      ansible_host: 10.140.190.84
+      ansible_host: {{ansible_host}}
 
       # The username to use when connecting via SSH
       # 🔗 CLOUD-INIT: This must match the user created in cloud-init
@@ -48,7 +48,7 @@ all:
       # 🔗 EXACT MATCH: config/tofu/lxd/cloud-init.yml -> users[0].ssh_authorized_keys[0]
       # 🔗 KEY PAIR: ~/.ssh/testing_rsa (private) <-> cloud-init public key
       # 🔗 OPENTOFU: OpenTofu injects the public key, Ansible uses the private key to connect
-      ansible_ssh_private_key_file: ~/.ssh/testing_rsa
+      ansible_ssh_private_key_file: {{ansible_ssh_private_key_file}}
 
       # Additional SSH arguments for this host
       # StrictHostKeyChecking=no skips host key verification (lab use only)

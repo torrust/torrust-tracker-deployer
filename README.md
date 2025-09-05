@@ -18,14 +18,14 @@ creating VMs that support cloud-init both locally (development) and in CI enviro
 
 This repository uses LXD containers for virtualization:
 
-### ☁️ **LXD Containers (`config/tofu/lxd/`)** - **OFFICIAL**
+### ☁️ **LXD Containers (`templates/tofu/lxd/`)** - **OFFICIAL**
 
 - **Technology**: System containers with cloud-init support
 - **Status**: ✅ Official provider - Guaranteed GitHub Actions compatibility
 - **Best for**: CI/CD environments, fast provisioning, local development
 - **Requirements**: No special virtualization needed
 
-**[📖 See detailed documentation →](config/tofu/lxd/README.md)**
+**[📖 See detailed documentation →](templates/tofu/lxd/README.md)**
 
 ## � Provider Comparison
 
@@ -136,7 +136,7 @@ If you prefer manual deployment instead of using the E2E tests:
 
 ```bash
 # Navigate to LXD configuration
-cd config/tofu/lxd
+cd templates/tofu/lxd
 
 # Initialize and deploy
 tofu init && tofu apply
@@ -242,10 +242,13 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 │   │   └── meson-removal.md # Decision to remove Meson build system
 │   ├── documentation.md     # Documentation organization guide
 │   └── vm-providers.md      # Provider comparison for this project
-├── config/
-│   ├── tofu/
-│   │   └── lxd/             # LXD container configuration
-│   └── ansible/             # Ansible configuration management
+├── templates/               # 📁 Template configurations (git-tracked)
+│   ├── tofu/                # 🏗️ OpenTofu/Terraform templates
+│   │   └── lxd/             # LXD container template configuration
+│   └── ansible/             # 🤖 Ansible playbook templates
+├── build/                   # 📁 Generated runtime configs (git-ignored)
+│   ├── tofu/                # 🏗️ Runtime OpenTofu configs
+│   └── ansible/             # 🤖 Runtime Ansible configs
 ├── scripts/                  # Development and utility scripts
 │   └── setup/               # Setup scripts for dependencies
 ├── src/                     # Rust source code

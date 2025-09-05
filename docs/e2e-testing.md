@@ -43,7 +43,7 @@ The E2E tests execute the following steps in production order:
 
 1. **Infrastructure Provisioning**
 
-   - Uses OpenTofu configuration from `config/tofu/lxd/`
+   - Uses OpenTofu configuration from `templates/tofu/lxd/`
    - Creates LXD container with Ubuntu and cloud-init configuration
 
 2. **Cloud-init Completion** (`wait-cloud-init.yml`)
@@ -118,7 +118,7 @@ lxc stop torrust-vm
 lxc delete torrust-vm
 
 # Or use OpenTofu to clean up
-cd config/tofu/lxd
+cd build/tofu/lxd
 tofu destroy -auto-approve
 ```
 

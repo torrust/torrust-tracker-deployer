@@ -527,7 +527,7 @@ docker run -d --name torrust-test-container -p 2222:22 torrust-ansible-test
 docker run -d --name torrust-enhanced-container -p 2223:22 torrust-ansible-test-enhanced
 
 # Test with LXD
-cd config/tofu/lxd
+cd templates/tofu/lxd
 time tofu apply -auto-approve                    # 17.6s
 cd ../../ansible
 time ansible-playbook install-docker.yml        # 27.7s

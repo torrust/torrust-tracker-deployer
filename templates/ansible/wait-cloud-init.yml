@@ -3,8 +3,8 @@
 # This playbook connects to VMs and waits for cloud-init to finish its setup process
 #
 # 🔗 RELATIONSHIP WITH OPENTOFU:
-# 1. OpenTofu (config/tofu/lxd/main.tf) provisions the VM/container
-# 2. OpenTofu configures cloud-init (config/tofu/lxd/cloud-init.yml) during provisioning
+# 1. OpenTofu (templates/tofu/lxd/main.tf) provisions the VM/container
+# 2. OpenTofu configures cloud-init (templates/tofu/lxd/cloud-init.yml) during provisioning
 # 3. Cloud-init runs inside the VM to set up users, SSH keys, and basic configuration
 # 4. This Ansible playbook waits for cloud-init to complete before proceeding
 # 5. Once cloud-init is done, Ansible can safely manage the VM
@@ -19,7 +19,7 @@
   tasks:
     # Task 1: Wait for cloud-init to create its completion marker file
     # 🔗 CLOUD-INIT RELATIONSHIP: This file is created when cloud-init finishes
-    # all tasks defined in config/tofu/lxd/cloud-init.yml
+    # all tasks defined in templates/tofu/lxd/cloud-init.yml
     - name: Wait for cloud-init to finish
       ansible.builtin.wait_for:
         path: /var/lib/cloud/instance/boot-finished # File created when cloud-init completes
