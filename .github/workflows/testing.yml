@@ -48,7 +48,7 @@ jobs:
 
       - id: setup
         name: Setup Toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.toolchain }}
           components: clippy
@@ -102,7 +102,7 @@ jobs:
 
       - id: setup
         name: Setup Toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.toolchain }}
 
@@ -130,7 +130,7 @@ jobs:
 
       - id: setup
         name: Setup Toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.toolchain }}
 
