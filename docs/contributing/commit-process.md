@@ -84,14 +84,14 @@ Before committing any changes, you **MUST** complete the following checks:
 
 ```bash
 # Run all linters at once
-./scripts/linting/lint.sh all
+cargo run --bin linter all
 
 # Or run individually
-./scripts/linting/lint.sh md         # Markdown
-./scripts/linting/lint.sh yaml       # YAML
-./scripts/linting/lint.sh clippy     # Rust code analysis
-./scripts/linting/lint.sh rustfmt    # Rust formatting
-./scripts/linting/lint.sh shellcheck # Shell scripts
+cargo run --bin linter markdown   # Markdown
+cargo run --bin linter yaml       # YAML
+cargo run --bin linter clippy     # Rust code analysis
+cargo run --bin linter rustfmt    # Rust formatting
+cargo run --bin linter shellcheck # Shell scripts
 ```
 
 **All linters must pass** before committing. Fix any reported issues.

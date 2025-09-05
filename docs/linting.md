@@ -16,36 +16,22 @@ This project uses automated linting to maintain code quality and consistency acr
 
 ```bash
 # Run all linters
-./lint all
+cargo run --bin linter all
 
 # Run specific linters
-./lint md         # Markdown only
-./lint yaml       # YAML only
-./lint clippy     # Rust code analysis only
-./lint rustfmt    # Rust formatting check only
-./lint shellcheck # Shell scripts only
+cargo run --bin linter markdown    # Markdown only
+cargo run --bin linter yaml        # YAML only
+cargo run --bin linter clippy      # Rust code analysis only
+cargo run --bin linter rustfmt     # Rust formatting check only
+cargo run --bin linter shellcheck  # Shell scripts only
 
 # Show help
-./lint help
-```
-
-### Direct Script Execution
-
-```bash
-# Run all linters
-./scripts/linting/lint.sh all
-
-# Run specific linters
-./scripts/linting/markdown.sh
-./scripts/linting/yaml.sh
-./scripts/linting/clippy.sh
-./scripts/linting/rustfmt.sh
-./scripts/linting/shellcheck.sh
+cargo run --bin linter --help
 ```
 
 ## Installation
 
-The scripts will automatically install the required tools if they're not already present:
+The Rust linter binary will automatically install the required tools if they're not already present:
 
 - **markdownlint-cli**: Installed via npm
 - **yamllint**: Installed via system package manager (apt, dnf, pacman) or pip3
@@ -54,7 +40,7 @@ The scripts will automatically install the required tools if they're not already
 
 ## CI/CD Integration
 
-The same scripts are used in GitHub Actions, ensuring consistency between local development
+The same Rust binary is used in GitHub Actions, ensuring consistency between local development
 and CI environments. The workflow runs on every push and pull request.
 
 ## Configuration
@@ -66,6 +52,7 @@ and CI environments. The workflow runs on every push and pull request.
 
 ✅ **Consistent formatting** across all team members  
 ✅ **Automatic tool installation** for easy setup  
-✅ **Same scripts** used locally and in CI  
-✅ **Clean, readable output** with emoji indicators  
-✅ **Cross-platform support** for different package managers
+✅ **Same binary** used locally and in CI  
+✅ **Structured logging** with timestamps and targets  
+✅ **Cross-platform support** for different package managers  
+✅ **Type-safe implementation** with Rust error handling

@@ -65,7 +65,7 @@ Despite being set up, only one meson target was ever created (`clippy`), indicat
 
 - **Clippy target** → `scripts/lint/clippy.sh` with identical arguments
 - **Task organization** → Organized shell scripts in `scripts/lint/` directory
-- **Unified interface** → `scripts/lint.sh` wrapper script
+- **Unified interface** → `cargo run --bin linter` Rust binary
 
 ### Updated Documentation
 

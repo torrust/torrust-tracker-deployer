@@ -20,7 +20,7 @@ This guide will help you understand our development practices and contribution w
 
 ## 🔧 Development Workflow Summary
 
-```bash
+````bash
 # 1. Create a feature branch (use issue number)
 git checkout -b 42-add-your-feature-name
 
@@ -28,7 +28,12 @@ git checkout -b 42-add-your-feature-name
 # ... edit files ...
 
 # 3. Run linters before committing
-./scripts/linting/lint.sh all
+# Pre-commit Checklist
+
+Before each commit, run:
+
+```bash
+cargo run --bin linter all
 
 # 4. Run tests
 cargo test
@@ -40,7 +45,7 @@ git commit -m "feat: [#42] add new testing feature"
 
 # 6. Push and create PR
 git push origin 42-add-your-feature-name
-```
+````
 
 ## 📖 Additional Resources
 

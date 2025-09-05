@@ -96,21 +96,17 @@ This project includes convenient scripts for common development tasks:
 
 ```bash
 # Run all linters (markdown, YAML, shell scripts, Rust)
-./scripts/linting/lint.sh all
+cargo run --bin linter all
+```
 
-# Run individual linters
-./scripts/linting/lint.sh md         # Markdown linting
-./scripts/linting/lint.sh yaml       # YAML linting
-./scripts/linting/lint.sh clippy     # Rust code analysis
-./scripts/linting/lint.sh rustfmt    # Rust formatting check
-./scripts/linting/lint.sh shellcheck # Shell script linting
+Or run individual linters:
 
-# Or run scripts directly
-./scripts/linting/markdown.sh
-./scripts/linting/yaml.sh
-./scripts/linting/clippy.sh
-./scripts/linting/rustfmt.sh
-./scripts/linting/shellcheck.sh
+```bash
+cargo run --bin linter markdown    # Markdown linting
+cargo run --bin linter yaml        # YAML linting
+cargo run --bin linter clippy      # Rust code analysis
+cargo run --bin linter rustfmt     # Rust formatting check
+cargo run --bin linter shellcheck  # Shell script linting
 ```
 
 **[📖 See linting documentation →](docs/linting.md)**
@@ -252,11 +248,12 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 │   │   └── lxd/             # LXD container configuration
 │   └── ansible/             # Ansible configuration management
 ├── scripts/                  # Development and utility scripts
-│   └── linting/             # Linting scripts and tools
-│       ├── markdown.sh      # Markdown linting
-│       ├── yaml.sh          # YAML linting
-│       ├── clippy.sh        # Rust clippy linting
-│       └── lint.sh          # Unified linting command interface
+│   └── setup/               # Setup scripts for dependencies
+├── src/                     # Rust source code
+│   ├── bin/                 # Binary executables
+│   │   ├── linter.rs        # Unified linting command interface
+│   │   └── e2e_tests.rs     # End-to-end testing binary
+│   └── linting/             # Linting module and implementations
 ├── .github/workflows/       # CI/CD workflows
 ├── Cargo.toml              # Rust project configuration
 ├── README.md               # This file - project overview

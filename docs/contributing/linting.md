@@ -16,30 +16,41 @@ We use multiple linting tools to maintain code quality across different file typ
 
 ## 🚀 Quick Start
 
-### Run All Linters
+**Run all linters** (recommended):
 
 ```bash
-# Recommended: Run all linters at once
-./scripts/linting/lint.sh all
+cargo run --bin linter all
 ```
 
-### Run Individual Linters
+**Run individual linters**:
 
 ```bash
-# Markdown only
-./scripts/linting/lint.sh md
+# Individual linters
+cargo run --bin linter markdown
+```
 
-# YAML only
-./scripts/linting/lint.sh yaml
+**YAML linting**:
 
-# Rust code analysis
-./scripts/linting/lint.sh clippy
+```bash
+cargo run --bin linter yaml
+```
 
-# Rust formatting check
-./scripts/linting/lint.sh rustfmt
+**Rust code analysis**:
 
-# Shell scripts
-./scripts/linting/lint.sh shellcheck
+```bash
+cargo run --bin linter clippy
+```
+
+**Rust formatting**:
+
+```bash
+cargo run --bin linter rustfmt
+```
+
+**Shell script linting**:
+
+```bash
+cargo run --bin linter shellcheck
 ```
 
 ### Direct Script Execution
@@ -228,11 +239,14 @@ ignore: |
 
 ### GitHub Actions Workflow
 
-The same linting scripts run in CI/CD (`.github/workflows/linting.yml`):
+The same linting binary runs in CI/CD (`.github/workflows/linting.yml`):
 
 ```yaml
+- name: Build Rust linter
+  run: cargo build --release --bin linter
+
 - name: Run all linters
-  run: ./scripts/linting/lint.sh all
+  run: ./target/release/linter all
 ```
 
 This ensures **consistency between local development and CI environments**.
@@ -244,7 +258,7 @@ Integrate linting into your Git workflow:
 ```bash
 #!/bin/bash
 # .git/hooks/pre-commit
-if ! ./scripts/linting/lint.sh all; then
+if ! cargo run --bin linter all; then
     echo "❌ Linting failed. Please fix issues before committing."
     exit 1
 fi
@@ -281,7 +295,7 @@ rustup component add clippy rustfmt
 
 ### Before Committing
 
-1. **Always run linters**: `./scripts/linting/lint.sh all`
+1. **Always run linters**: `cargo run --bin linter all`
 2. **Fix all issues**: Don't commit with linting errors
 3. **Understand the rules**: Learn why rules exist, don't just fix blindly
 
@@ -295,9 +309,9 @@ rustup component add clippy rustfmt
 
 ```bash
 # Run specific linters for faster feedback during development
-./scripts/linting/lint.sh md     # Only markdown (fastest)
-./scripts/linting/lint.sh yaml   # Only YAML files
-./scripts/linting/lint.sh clippy # Only Rust analysis (slowest)
+cargo run --bin linter markdown    # Only markdown (fastest)
+cargo run --bin linter yaml        # Only YAML files
+cargo run --bin linter clippy      # Only Rust analysis (slowest)
 ```
 
 ## 🚨 Troubleshooting

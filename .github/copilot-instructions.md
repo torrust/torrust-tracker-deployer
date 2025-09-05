@@ -28,13 +28,13 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
    - **With issue branch**: `{type}: [#{issue}] {description}` (when branch name starts with `{issue-number}-`)
    - **Without issue branch**: `{type}: {description}` (when working on main or branch without issue number prefix)
 
-3. **Before committing**: Always run `./scripts/linting/lint.sh all` - all linters must pass
+3. **Before committing**: Always run `cargo run --bin linter all` - all linters must pass
 
 ## 🧪 Build & Test
 
 - **Build**: `cargo build`
 - **Test**: `cargo test`
-- **Lint**: `./scripts/linting/lint.sh all` (mandatory before commits)
+- **Lint**: `cargo run --bin linter all` (mandatory before commits)
 - **E2E**: `cargo run --bin e2e-tests wait-cloud-init`
 
 Follow the project conventions and ensure all checks pass.
