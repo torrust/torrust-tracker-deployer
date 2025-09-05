@@ -14,7 +14,7 @@ fn main() {
     println!();
     println!("🧪 Running E2E Tests:");
     println!("   Use the e2e-tests binary to run end-to-end tests:");
-    println!("   cargo run --bin e2e-tests -- wait-cloud-init");
+    println!("   cargo run --bin e2e-tests");
     println!();
     println!("📖 For detailed instructions, see: README.md");
 }

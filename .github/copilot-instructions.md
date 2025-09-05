@@ -35,6 +35,6 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 - **Build**: `cargo build`
 - **Test**: `cargo test`
 - **Lint**: `cargo run --bin linter all` (mandatory before commits)
-- **E2E**: `cargo run --bin e2e-tests wait-cloud-init`
+- **E2E**: `cargo run --bin e2e-tests`
 
 Follow the project conventions and ensure all checks pass.

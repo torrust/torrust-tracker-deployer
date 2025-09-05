@@ -115,14 +115,14 @@ cargo run --bin linter shellcheck  # Shell script linting
 Use the E2E tests binary to run automated infrastructure tests:
 
 ```bash
-# Run the wait-cloud-init test
-cargo run --bin e2e-tests -- wait-cloud-init
+# Run the E2E tests
+cargo run --bin e2e-tests
 
 # Keep the test environment after completion
-cargo run --bin e2e-tests -- wait-cloud-init --keep
+cargo run --bin e2e-tests -- --keep
 
 # Run with verbose output
-cargo run --bin e2e-tests -- wait-cloud-init --verbose
+cargo run --bin e2e-tests -- --verbose
 
 # See all available options
 cargo run --bin e2e-tests -- --help

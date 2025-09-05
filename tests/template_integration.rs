@@ -46,20 +46,20 @@ mod integration_tests {
         // Verify the output file exists and has the right content
         assert!(output_path.exists());
 
-        let content = std::fs::read_to_string(&output_path)?;
+        let file_content = std::fs::read_to_string(&output_path)?;
 
         // Verify variables were substituted
-        assert!(content.contains("ansible_host: 192.168.1.100"));
-        assert!(content.contains("ansible_ssh_private_key_file: /home/user/.ssh/testing_rsa"));
+        assert!(file_content.contains("ansible_host: 192.168.1.100"));
+        assert!(file_content.contains("ansible_ssh_private_key_file: /home/user/.ssh/testing_rsa"));
 
         // Verify no template variables remain
-        assert!(!content.contains("{{ansible_host}}"));
-        assert!(!content.contains("{{ansible_ssh_private_key_file}}"));
+        assert!(!file_content.contains("{{ansible_host}}"));
+        assert!(!file_content.contains("{{ansible_ssh_private_key_file}}"));
 
         // Verify it's valid YAML structure
-        assert!(content.contains("all:"));
-        assert!(content.contains("torrust-vm:"));
-        assert!(content.contains("ansible_user: torrust"));
+        assert!(file_content.contains("all:"));
+        assert!(file_content.contains("torrust-vm:"));
+        assert!(file_content.contains("ansible_user: torrust"));
 
         println!("✅ Real inventory template rendered successfully");
         Ok(())
@@ -67,20 +67,20 @@ mod integration_tests {
 
     /// Test variable validation with real template
     #[test]
-    fn test_real_template_variable_validation() -> Result<()> {
+    fn test_real_template_variable_validation() {
         let template_path = PathBuf::from("templates/ansible/inventory.yml.tera");
 
         // Skip test if template file doesn't exist
         if !template_path.exists() {
             println!("Skipping test: inventory template not found");
-            return Ok(());
+            return;
         }
 
         // Test that missing variables are caught during construction
         let result = InventoryTemplate::new(
             template_path.clone(),
-            "".to_string(), // Empty IP should still work for construction
-            "".to_string(), // Empty SSH key should still work for construction
+            String::new(), // Empty IP should still work for construction
+            String::new(), // Empty SSH key should still work for construction
         );
 
         // Construction should succeed even with empty values
@@ -96,8 +96,6 @@ mod integration_tests {
 
         assert!(result.is_err());
         println!("✅ Invalid template path correctly rejected");
-
-        Ok(())
     }
 
     /// Test that template rendering doesn't modify any files in the templates directory
@@ -175,8 +173,8 @@ mod integration_tests {
 
             // Verify output in build directory
             assert!(output_path.exists());
-            let content = std::fs::read_to_string(&output_path)?;
-            assert!(content.contains("10.0.0.100"));
+            let file_content = std::fs::read_to_string(&output_path)?;
+            assert!(file_content.contains("10.0.0.100"));
         }
 
         println!("✅ Build directory workflow completed successfully");

@@ -48,11 +48,11 @@ jobs:
         run: |
           cargo build --bin e2e-tests --release
 
-      - name: Run wait-cloud-init E2E test
+      - name: Run E2E test
         run: |
           # Run the E2E test with verbose output for better debugging
           # Use sudo -E and preserve PATH to ensure cargo is accessible
-          sudo -E env "PATH=$PATH" cargo run --bin e2e-tests -- wait-cloud-init --verbose
+          sudo -E env "PATH=$PATH" cargo run --bin e2e-tests -- --verbose
         env:
           # Preserve environment variables for the E2E test
           RUST_LOG: debug
