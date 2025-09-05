@@ -28,13 +28,14 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
    - **With issue branch**: `{type}: [#{issue}] {description}` (when branch name starts with `{issue-number}-`)
    - **Without issue branch**: `{type}: {description}` (when working on main or branch without issue number prefix)
 
-3. **Before committing**: Always run `cargo run --bin linter all` - all linters must pass
+3. **Before committing**: Always run `cargo run --bin linter all` and `cargo machete` - all linters must pass and no unused dependencies allowed
 
 ## 🧪 Build & Test
 
 - **Build**: `cargo build`
 - **Test**: `cargo test`
 - **Lint**: `cargo run --bin linter all` (mandatory before commits)
+- **Dependencies**: `cargo machete` (mandatory before commits - no unused dependencies)
 - **E2E**: `cargo run --bin e2e-tests`
 
 Follow the project conventions and ensure all checks pass.
