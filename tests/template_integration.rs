@@ -5,10 +5,11 @@
 
 use anyhow::Result;
 use std::path::PathBuf;
+use std::str::FromStr;
 use tempfile::TempDir;
 use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
-    InventoryContext, InventoryTemplate,
+    AnsibleHost, InventoryContext, InventoryTemplate, SshPrivateKeyFile,
 };
 use torrust_tracker_deploy::template::TemplateRenderer;
 
@@ -40,8 +41,12 @@ mod integration_tests {
 
         // Test with realistic values
         let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
-        let inventory_context =
-            InventoryContext::new("192.168.1.100", "/home/user/.ssh/testing_rsa")?;
+        let host = AnsibleHost::from_str("192.168.1.100")?;
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/testing_rsa")?;
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()?;
         let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
         // Render the template
@@ -88,25 +93,35 @@ mod integration_tests {
 
         // Test that valid variables are accepted
         let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
-        let inventory_context = InventoryContext::new("127.0.0.1", "/path/to/key")?;
+        let host = AnsibleHost::from_str("127.0.0.1")?;
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key")?;
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()?;
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Construction should succeed with valid IP and SSH key path
         assert!(result.is_ok());
 
         // Test that invalid IP address is rejected
-        let result = InventoryContext::new("invalid.ip.address", "/path/to/key");
+        let result = AnsibleHost::from_str("invalid.ip.address");
         assert!(result.is_err());
 
         // Test that empty SSH key path is rejected
-        let result = InventoryContext::new("192.168.1.100", "");
+        let result = SshPrivateKeyFile::new("");
         assert!(result.is_err());
 
         // Test that invalid template content fails
         let invalid_content = "invalid template content without required variables";
         let invalid_template_file =
             File::new("inventory.yml.tera", invalid_content.to_string()).unwrap();
-        let inventory_context = InventoryContext::new("192.168.1.100", "/path/to/key")?;
+        let host = AnsibleHost::from_str("192.168.1.100")?;
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key")?;
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()?;
         let result = InventoryTemplate::new(&invalid_template_file, &inventory_context);
 
         // Static templates are now valid - they just don't use template variables
@@ -144,10 +159,12 @@ mod integration_tests {
         // Render the template multiple times with different values
         for i in 1..=3 {
             let template_file = File::new("inventory.yml.tera", original_content.clone()).unwrap();
-            let inventory_context = InventoryContext::new(
-                &format!("192.168.1.{i}"),
-                &format!("/home/user{i}/.ssh/key"),
-            )?;
+            let host = AnsibleHost::from_str(&format!("192.168.1.{i}"))?;
+            let ssh_key = SshPrivateKeyFile::new(format!("/home/user{i}/.ssh/key"))?;
+            let inventory_context = InventoryContext::builder()
+                .with_host(host)
+                .with_ssh_priv_key_path(ssh_key)
+                .build()?;
             let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
             inventory.render(&output_path)?;
@@ -186,10 +203,13 @@ mod integration_tests {
             let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
             let output_path = build_ansible.join("inventory.yml");
 
-            let inventory_context = InventoryContext::new(
-                "10.0.0.100",
-                &temp_dir.path().join("ssh_key").to_string_lossy(),
-            )?;
+            let host = AnsibleHost::from_str("10.0.0.100")?;
+            let ssh_key =
+                SshPrivateKeyFile::new(temp_dir.path().join("ssh_key").to_string_lossy().as_ref())?;
+            let inventory_context = InventoryContext::builder()
+                .with_host(host)
+                .with_ssh_priv_key_path(ssh_key)
+                .build()?;
             let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
             inventory.render(&output_path)?;

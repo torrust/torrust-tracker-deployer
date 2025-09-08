@@ -11,10 +11,42 @@ use anyhow::{Context, Result};
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
+use thiserror::Error;
+
+#[cfg(test)]
 use std::str::FromStr;
 
-pub use ansible_host::AnsibleHost;
-pub use ssh_private_key_file::SshPrivateKeyFile;
+pub use ansible_host::{AnsibleHost, AnsibleHostError};
+pub use ssh_private_key_file::{SshPrivateKeyFile, SshPrivateKeyFileError};
+
+/// Errors that can occur when creating an `InventoryContext`
+#[derive(Debug, Error)]
+pub enum InventoryContextError {
+    #[error("Invalid ansible host: {0}")]
+    InvalidAnsibleHost(#[from] AnsibleHostError),
+
+    #[error("Invalid SSH private key file: {0}")]
+    InvalidSshPrivateKeyFile(#[from] SshPrivateKeyFileError),
+
+    #[error("Missing ansible host - must be set before building")]
+    MissingAnsibleHost,
+
+    #[error("Missing SSH private key file - must be set before building")]
+    MissingSshPrivateKeyFile,
+}
+
+/// Errors that can occur when creating an `InventoryTemplate`
+#[derive(Debug, Error)]
+pub enum InventoryTemplateError {
+    #[error("Failed to create template engine: {0}")]
+    TemplateEngineCreation(String),
+
+    #[error("Template validation failed: {0}")]
+    TemplateValidation(String),
+
+    #[error("Failed to render template: {0}")]
+    TemplateRendering(String),
+}
 
 #[derive(Debug)]
 pub struct InventoryTemplate {
@@ -28,23 +60,76 @@ pub struct InventoryContext {
     ansible_ssh_private_key_file: SshPrivateKeyFile,
 }
 
-impl InventoryContext {
-    /// Creates a new `InventoryContext`
+/// Builder for `InventoryContext` with fluent interface
+#[derive(Debug, Default)]
+pub struct InventoryContextBuilder {
+    ansible_host: Option<AnsibleHost>,
+    ansible_ssh_private_key_file: Option<SshPrivateKeyFile>,
+}
+
+impl InventoryContextBuilder {
+    /// Creates a new empty builder
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the Ansible host for the builder.
+    #[must_use]
+    pub fn with_host(mut self, ansible_host: AnsibleHost) -> Self {
+        self.ansible_host = Some(ansible_host);
+        self
+    }
+
+    /// Sets the SSH private key file path for the builder.
+    #[must_use]
+    pub fn with_ssh_priv_key_path(mut self, ssh_private_key_file: SshPrivateKeyFile) -> Self {
+        self.ansible_ssh_private_key_file = Some(ssh_private_key_file);
+        self
+    }
+
+    /// Builds the `InventoryContext`
     ///
     /// # Errors
     ///
-    /// Returns an error if the `ansible_host` cannot be parsed as a valid IP address
-    /// or if the `ansible_ssh_private_key_file` path is invalid
-    pub fn new(ansible_host: &str, ansible_ssh_private_key_file: &str) -> Result<Self> {
-        let ansible_host = AnsibleHost::from_str(ansible_host)
-            .map_err(|e| anyhow::anyhow!("Invalid ansible host: {}", e))?;
-        let ansible_ssh_private_key_file = SshPrivateKeyFile::new(ansible_ssh_private_key_file)
-            .map_err(|e| anyhow::anyhow!("Invalid SSH private key file path: {}", e))?;
+    /// Returns an error if either `ansible_host` or `ansible_ssh_private_key_file` is missing
+    pub fn build(self) -> Result<InventoryContext, InventoryContextError> {
+        let ansible_host = self
+            .ansible_host
+            .ok_or(InventoryContextError::MissingAnsibleHost)?;
 
+        let ansible_ssh_private_key_file = self
+            .ansible_ssh_private_key_file
+            .ok_or(InventoryContextError::MissingSshPrivateKeyFile)?;
+
+        Ok(InventoryContext {
+            ansible_host,
+            ansible_ssh_private_key_file,
+        })
+    }
+}
+
+impl InventoryContext {
+    /// Creates a new `InventoryContext` using typed parameters
+    ///
+    /// # Errors
+    ///
+    /// This method cannot fail with the current implementation since it takes
+    /// already validated types, but returns Result for consistency with builder pattern
+    pub fn new(
+        ansible_host: AnsibleHost,
+        ansible_ssh_private_key_file: SshPrivateKeyFile,
+    ) -> Result<Self, InventoryContextError> {
         Ok(Self {
             ansible_host,
             ansible_ssh_private_key_file,
         })
+    }
+
+    /// Creates a new builder for `InventoryContext` with fluent interface
+    #[must_use]
+    pub fn builder() -> InventoryContextBuilder {
+        InventoryContextBuilder::new()
     }
 
     /// Get the ansible host value as a string
@@ -81,7 +166,10 @@ impl InventoryTemplate {
     /// - Template syntax is invalid
     /// - Required variables cannot be substituted
     /// - Template validation fails
-    pub fn new(template_file: &File, inventory_context: &InventoryContext) -> Result<Self> {
+    pub fn new(
+        template_file: &File,
+        inventory_context: &InventoryContext,
+    ) -> Result<Self, InventoryTemplateError> {
         let context = InventoryContext {
             ansible_host: inventory_context.ansible_host_wrapper().clone(),
             ansible_ssh_private_key_file: inventory_context
@@ -96,7 +184,7 @@ impl InventoryTemplate {
                 template_file.content(),
                 &context,
             )
-            .with_context(|| "Failed to create and validate template")?;
+            .map_err(|e| InventoryTemplateError::TemplateEngineCreation(e.to_string()))?;
 
         Ok(Self {
             context,
@@ -146,7 +234,13 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context = InventoryContext::new("192.168.1.100", "/path/to/key").unwrap();
+        let host = AnsibleHost::from_str("192.168.1.100").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         let template = InventoryTemplate::new(&template_file, &inventory_context).unwrap();
 
         assert_eq!(template.ansible_host(), "192.168.1.100");
@@ -160,8 +254,13 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context =
-            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
+        let host = AnsibleHost::from_str("10.0.0.1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         let template = InventoryTemplate::new(&template_file, &inventory_context).unwrap();
 
         assert_eq!(template.ansible_host(), "10.0.0.1");
@@ -176,8 +275,13 @@ mod tests {
         // Test with empty template content
         let template_file = File::new("inventory.yml.tera", String::new()).unwrap();
 
-        let inventory_context =
-            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
+        let host = AnsibleHost::from_str("10.0.0.1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Empty templates are valid in Tera - they just render as empty strings
@@ -193,8 +297,13 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context =
-            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
+        let host = AnsibleHost::from_str("10.0.0.1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // This is valid - templates don't need to use all available context variables
@@ -210,8 +319,13 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context =
-            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
+        let host = AnsibleHost::from_str("10.0.0.1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Static templates are valid - they just don't use template variables
@@ -227,14 +341,22 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context =
-            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
+        let host = AnsibleHost::from_str("10.0.0.1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // This should fail because the template references an undefined variable
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("Failed to create and validate template"));
+        assert!(
+            error_msg.contains("Failed to create template engine")
+                || error_msg.contains("template engine")
+        );
     }
 
     #[test]
@@ -244,8 +366,13 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context =
-            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
+        let host = AnsibleHost::from_str("10.0.0.1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Should fail during template validation
@@ -259,8 +386,13 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context =
-            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
+        let host = AnsibleHost::from_str("10.0.0.1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         assert!(result.is_err());
@@ -274,8 +406,13 @@ mod tests {
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
         // Template validation happens during construction, not during render
-        let inventory_context =
-            InventoryContext::new("192.168.1.100", "/home/user/.ssh/test_key").unwrap();
+        let host = AnsibleHost::from_str("192.168.1.100").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/test_key").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         let template = InventoryTemplate::new(&template_file, &inventory_context).unwrap();
 
         // Verify that the template was pre-validated and contains rendered content
@@ -288,10 +425,10 @@ mod tests {
 
     #[test]
     fn test_invalid_ip_address() {
-        // Test that invalid IP addresses are rejected
-        let result = InventoryContext::new("invalid-ip", "/path/to/key");
-        assert!(result.is_err());
+        // Test that invalid IP addresses are rejected by the AnsibleHost wrapper
+        let result = AnsibleHost::from_str("invalid-ip");
 
+        assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Invalid IP address format"));
     }
@@ -299,20 +436,38 @@ mod tests {
     #[test]
     fn test_valid_ipv4_address() {
         // Test valid IPv4 address
-        let context = InventoryContext::new("192.168.1.100", "/path/to/key").unwrap();
+        let host = AnsibleHost::from_str("192.168.1.100").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
+        let context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         assert_eq!(context.ansible_host(), "192.168.1.100");
     }
 
     #[test]
     fn test_valid_ipv6_address() {
         // Test valid IPv6 address
-        let context = InventoryContext::new("2001:db8::1", "/path/to/key").unwrap();
+        let host = AnsibleHost::from_str("2001:db8::1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
+        let context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
         assert_eq!(context.ansible_host(), "2001:db8::1");
     }
 
     #[test]
     fn test_wrapper_types() {
-        let context = InventoryContext::new("10.0.0.1", "/path/to/key").unwrap();
+        let host = AnsibleHost::from_str("10.0.0.1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
+        let context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
 
         // Test wrapper access
         let host_wrapper = context.ansible_host_wrapper();
@@ -320,5 +475,81 @@ mod tests {
 
         assert_eq!(host_wrapper.as_str(), "10.0.0.1");
         assert_eq!(key_wrapper.as_str(), "/path/to/key");
+    }
+
+    #[test]
+    fn test_builder_pattern_fluent_interface() {
+        // Test the fluent builder interface as requested
+        let host = AnsibleHost::from_str("192.168.1.100").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
+
+        assert_eq!(inventory_context.ansible_host(), "192.168.1.100");
+        assert_eq!(
+            inventory_context.ansible_ssh_private_key_file(),
+            "/home/user/.ssh/id_rsa"
+        );
+    }
+
+    #[test]
+    fn test_builder_with_typed_parameters() {
+        // Test builder with typed parameters instead of strings
+        let host = AnsibleHost::from_str("10.0.0.1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
+
+        let inventory_context = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .unwrap();
+
+        assert_eq!(inventory_context.ansible_host(), "10.0.0.1");
+        assert_eq!(
+            inventory_context.ansible_ssh_private_key_file(),
+            "/path/to/key"
+        );
+    }
+
+    #[test]
+    fn test_builder_missing_host_error() {
+        // Test that builder fails when host is missing
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
+        let result = InventoryContext::builder()
+            .with_ssh_priv_key_path(ssh_key)
+            .build();
+
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Missing ansible host"));
+    }
+
+    #[test]
+    fn test_builder_missing_ssh_key_error() {
+        // Test that builder fails when SSH key is missing
+        let host = AnsibleHost::from_str("192.168.1.100").unwrap();
+        let result = InventoryContext::builder().with_host(host).build();
+
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Missing SSH private key file"));
+    }
+
+    #[test]
+    fn test_new_with_typed_parameters() {
+        // Test the new direct constructor with typed parameters
+        let host = AnsibleHost::from_str("192.168.1.50").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/etc/ssh/test_key").unwrap();
+
+        let inventory_context = InventoryContext::new(host, ssh_key).unwrap();
+
+        assert_eq!(inventory_context.ansible_host(), "192.168.1.50");
+        assert_eq!(
+            inventory_context.ansible_ssh_private_key_file(),
+            "/etc/ssh/test_key"
+        );
     }
 }

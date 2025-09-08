@@ -3,6 +3,7 @@ use clap::Parser;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::str::FromStr;
 use std::time::{Duration, Instant};
 use tempfile::TempDir;
 use tokio::time::sleep;
@@ -10,7 +11,7 @@ use tokio::time::sleep;
 // Import template system
 use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
-    InventoryContext, InventoryTemplate,
+    AnsibleHost, InventoryContext, InventoryTemplate, SshPrivateKeyFile,
 };
 use torrust_tracker_deploy::template::TemplateRenderer;
 
@@ -143,9 +144,18 @@ impl TestEnvironment {
         let inventory_template_file = File::new("inventory.yml.tera", inventory_template_content)
             .context("Failed to create inventory template file")?;
 
-        let inventory_context =
-            InventoryContext::new(container_ip, &self.ssh_key_path.to_string_lossy())
-                .context("Failed to create InventoryContext")?;
+        let inventory_context = {
+            let host =
+                AnsibleHost::from_str(container_ip).context("Failed to parse container IP")?;
+            let ssh_key = SshPrivateKeyFile::new(self.ssh_key_path.to_string_lossy().as_ref())
+                .context("Failed to parse SSH key path")?;
+
+            InventoryContext::builder()
+                .with_host(host)
+                .with_ssh_priv_key_path(ssh_key)
+                .build()
+                .context("Failed to create InventoryContext")?
+        };
         let inventory_template =
             InventoryTemplate::new(&inventory_template_file, &inventory_context)
                 .context("Failed to create InventoryTemplate")?;
