@@ -6,8 +6,9 @@
 //! dynamic Ansible templates after VMs are provisioned and their IP addresses known).
 //!
 //! ## Module Structure
+//!
 //! - `renderer` - `TemplateRenderer` trait definition
-//! - `engine` - `TemplateEngine` implementation using Tera
+//! - `engine` - `TemplateValidator` implementation using Tera
 //! - `utils` - Utility functions for file operations
 //! - `wrappers` - Concrete template wrapper implementations
 
@@ -18,7 +19,7 @@ pub mod utils;
 pub mod wrappers;
 
 // Re-export commonly used items
-pub use engine::TemplateEngine;
+pub use engine::TemplateValidator;
 pub use renderer::TemplateRenderer;
 pub use utils::copy_static_file;
 
@@ -44,72 +45,6 @@ mod tests {
     }
 
     #[test]
-    fn test_template_engine_creation() -> anyhow::Result<()> {
-        let temp_dir = TempDir::new()?;
-        let template_file = temp_dir.path().join("test.yml.tera");
-        std::fs::write(&template_file, "test: {{value}}")?;
-
-        let _engine = TemplateEngine::with_template(&template_file)?;
-
-        // Test that the engine was created successfully
-        // We can't test much more without exposing internals, but creation is the main thing
-        Ok(())
-    }
-
-    #[test]
-    fn test_template_engine_missing_file() {
-        let temp_dir = TempDir::new().unwrap();
-        let non_existent = temp_dir.path().join("missing.yml.tera");
-
-        let result = TemplateEngine::with_template(&non_existent);
-
-        assert!(result.is_err());
-        let error_msg = format!("{}", result.unwrap_err());
-        assert!(error_msg.contains("Failed to read template file"));
-    }
-
-    #[test]
-    fn test_template_engine_validation() -> anyhow::Result<()> {
-        let temp_dir = TempDir::new()?;
-        let template_file = temp_dir.path().join("test.yml.tera");
-        std::fs::write(&template_file, "name: {{name}}\nvalue: {{value}}")?;
-
-        let engine = TemplateEngine::with_template(&template_file)?;
-
-        // Test successful validation
-        let context = serde_json::json!({
-            "name": "test",
-            "value": "hello"
-        });
-
-        let result = engine.validate_template_substitution(&template_file, &context)?;
-        assert!(result.contains("name: test"));
-        assert!(result.contains("value: hello"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_template_engine_validation_missing_variable() -> anyhow::Result<()> {
-        let temp_dir = TempDir::new()?;
-        let template_file = temp_dir.path().join("test.yml.tera");
-        std::fs::write(&template_file, "name: {{name}}\nvalue: {{missing_var}}")?;
-
-        let engine = TemplateEngine::with_template(&template_file)?;
-
-        // Test with missing variable
-        let context = serde_json::json!({
-            "name": "test"
-            // missing_var is not provided
-        });
-
-        let result = engine.validate_template_substitution(&template_file, &context);
-        assert!(result.is_err());
-
-        Ok(())
-    }
-
-    #[test]
     fn test_build_directory_creation() -> anyhow::Result<()> {
         let temp_dir = TempDir::new()?;
         let source_file = temp_dir.path().join("source.txt");
@@ -125,88 +60,5 @@ mod tests {
         assert_eq!(content, "build test");
 
         Ok(())
-    }
-
-    #[test]
-    fn test_template_engine_with_validated_content_success() -> anyhow::Result<()> {
-        use serde::Serialize;
-
-        #[derive(Serialize)]
-        struct TestContext {
-            name: String,
-            value: u32,
-        }
-
-        let template_content = "Hello {{name}}! Value: {{value}}";
-        let context = TestContext {
-            name: "World".to_string(),
-            value: 42,
-        };
-
-        let (engine, rendered_content) = TemplateEngine::with_validated_template_content(
-            "test_template",
-            template_content,
-            &context,
-        )?;
-
-        // Verify the engine was created
-        assert!(format!("{engine:?}").contains("TemplateEngine"));
-
-        // Verify the rendered content is correct
-        assert_eq!(rendered_content, "Hello World! Value: 42");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_template_engine_with_validated_content_undefined_variable() {
-        use serde::Serialize;
-
-        #[derive(Serialize)]
-        struct TestContext {
-            name: String,
-        }
-
-        let template_content = "Hello {{name}}! Value: {{undefined_variable}}";
-        let context = TestContext {
-            name: "World".to_string(),
-        };
-
-        let result = TemplateEngine::with_validated_template_content(
-            "test_template",
-            template_content,
-            &context,
-        );
-
-        // Should fail due to undefined variable
-        assert!(result.is_err());
-        let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("Template validation failed during construction"));
-    }
-
-    #[test]
-    fn test_template_engine_with_validated_content_malformed_syntax() {
-        use serde::Serialize;
-
-        #[derive(Serialize)]
-        struct TestContext {
-            name: String,
-        }
-
-        let template_content = "Hello {{name! Invalid syntax";
-        let context = TestContext {
-            name: "World".to_string(),
-        };
-
-        let result = TemplateEngine::with_validated_template_content(
-            "test_template",
-            template_content,
-            &context,
-        );
-
-        // Should fail due to malformed template syntax
-        assert!(result.is_err());
-        let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("Failed to create template engine with content"));
     }
 }

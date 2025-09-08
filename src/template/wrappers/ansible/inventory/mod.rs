@@ -56,9 +56,9 @@ impl InventoryTemplate {
         template_file: &File,
         inventory_context: InventoryContext,
     ) -> Result<Self, InventoryTemplateError> {
-        // Create template engine and validate rendering
-        let (_engine, validated_content) =
-            crate::template::TemplateEngine::with_validated_template_content(
+        // Create template validator and validate rendering
+        let (_validator, validated_content) =
+            crate::template::TemplateValidator::with_validated_template_content(
                 template_file.filename(),
                 template_file.content(),
                 &inventory_context,
