@@ -8,7 +8,7 @@
 //! ## Module Structure
 //!
 //! - `renderer` - `TemplateRenderer` trait definition
-//! - `engine` - `TemplateValidator` implementation using Tera
+//! - `engine` - `TemplateEngine` implementation using Tera
 //! - `utils` - Utility functions for file operations
 //! - `wrappers` - Concrete template wrapper implementations
 
@@ -19,7 +19,7 @@ pub mod utils;
 pub mod wrappers;
 
 // Re-export commonly used items
-pub use engine::TemplateValidator;
+pub use engine::TemplateEngine;
 pub use renderer::TemplateRenderer;
 pub use utils::copy_static_file;
 
