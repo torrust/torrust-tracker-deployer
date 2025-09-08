@@ -8,11 +8,9 @@
 //! ## Module Structure
 //! - `renderer` - `TemplateRenderer` trait definition
 //! - `engine` - `TemplateEngine` implementation using Tera
-//! - `context` - Template context types
 //! - `utils` - Utility functions for file operations
 //! - `wrappers` - Concrete template wrapper implementations
 
-pub mod context;
 pub mod engine;
 pub mod file;
 pub mod renderer;
@@ -20,7 +18,6 @@ pub mod utils;
 pub mod wrappers;
 
 // Re-export commonly used items
-pub use context::StaticContext;
 pub use engine::TemplateEngine;
 pub use renderer::TemplateRenderer;
 pub use utils::copy_static_file;
@@ -29,13 +26,6 @@ pub use utils::copy_static_file;
 mod tests {
     use super::*;
     use tempfile::TempDir;
-
-    #[test]
-    fn test_static_context_creation() {
-        let context = StaticContext::default();
-        let serialized = serde_json::to_value(&context).unwrap();
-        assert!(serialized.is_object());
-    }
 
     #[test]
     fn test_copy_static_file() -> anyhow::Result<()> {
