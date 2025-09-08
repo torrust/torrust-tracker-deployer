@@ -34,9 +34,12 @@ impl InventoryContext {
     /// # Errors
     ///
     /// Returns an error if the `ansible_host` cannot be parsed as a valid IP address
+    /// or if the `ansible_ssh_private_key_file` path is invalid
     pub fn new(ansible_host: &str, ansible_ssh_private_key_file: &str) -> Result<Self> {
-        let ansible_host = AnsibleHost::from_str(ansible_host)?;
-        let ansible_ssh_private_key_file = SshPrivateKeyFile::new(ansible_ssh_private_key_file);
+        let ansible_host = AnsibleHost::from_str(ansible_host)
+            .map_err(|e| anyhow::anyhow!("Invalid ansible host: {}", e))?;
+        let ansible_ssh_private_key_file = SshPrivateKeyFile::new(ansible_ssh_private_key_file)
+            .map_err(|e| anyhow::anyhow!("Invalid SSH private key file path: {}", e))?;
 
         Ok(Self {
             ansible_host,
@@ -53,7 +56,7 @@ impl InventoryContext {
     /// Get the ansible SSH private key file path as a string
     #[must_use]
     pub fn ansible_ssh_private_key_file(&self) -> String {
-        self.ansible_ssh_private_key_file.as_string()
+        self.ansible_ssh_private_key_file.as_str()
     }
 
     /// Get the ansible host wrapper

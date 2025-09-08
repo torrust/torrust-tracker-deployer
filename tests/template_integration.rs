@@ -86,14 +86,21 @@ mod integration_tests {
             return Ok(());
         };
 
-        // Test that missing variables are caught during construction
+        // Test that valid variables are accepted
         let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
-        // Empty string won't parse as IP - this test now needs a valid IP
-        let inventory_context = InventoryContext::new("127.0.0.1", "")?;
+        let inventory_context = InventoryContext::new("127.0.0.1", "/path/to/key")?;
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
-        // Construction should succeed even with empty SSH key path but valid IP
+        // Construction should succeed with valid IP and SSH key path
         assert!(result.is_ok());
+
+        // Test that invalid IP address is rejected
+        let result = InventoryContext::new("invalid.ip.address", "/path/to/key");
+        assert!(result.is_err());
+
+        // Test that empty SSH key path is rejected
+        let result = InventoryContext::new("192.168.1.100", "");
+        assert!(result.is_err());
 
         // Test that invalid template content fails
         let invalid_content = "invalid template content without required variables";
