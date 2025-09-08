@@ -135,4 +135,87 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_template_engine_with_validated_content_success() -> anyhow::Result<()> {
+        use serde::Serialize;
+
+        #[derive(Serialize)]
+        struct TestContext {
+            name: String,
+            value: u32,
+        }
+
+        let template_content = "Hello {{name}}! Value: {{value}}";
+        let context = TestContext {
+            name: "World".to_string(),
+            value: 42,
+        };
+
+        let (engine, rendered_content) = TemplateEngine::with_validated_template_content(
+            "test_template",
+            template_content,
+            &context,
+        )?;
+
+        // Verify the engine was created
+        assert!(format!("{engine:?}").contains("TemplateEngine"));
+
+        // Verify the rendered content is correct
+        assert_eq!(rendered_content, "Hello World! Value: 42");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_template_engine_with_validated_content_undefined_variable() {
+        use serde::Serialize;
+
+        #[derive(Serialize)]
+        struct TestContext {
+            name: String,
+        }
+
+        let template_content = "Hello {{name}}! Value: {{undefined_variable}}";
+        let context = TestContext {
+            name: "World".to_string(),
+        };
+
+        let result = TemplateEngine::with_validated_template_content(
+            "test_template",
+            template_content,
+            &context,
+        );
+
+        // Should fail due to undefined variable
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Template validation failed during construction"));
+    }
+
+    #[test]
+    fn test_template_engine_with_validated_content_malformed_syntax() {
+        use serde::Serialize;
+
+        #[derive(Serialize)]
+        struct TestContext {
+            name: String,
+        }
+
+        let template_content = "Hello {{name! Invalid syntax";
+        let context = TestContext {
+            name: "World".to_string(),
+        };
+
+        let result = TemplateEngine::with_validated_template_content(
+            "test_template",
+            template_content,
+            &context,
+        );
+
+        // Should fail due to malformed template syntax
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Failed to create template engine with content"));
+    }
 }

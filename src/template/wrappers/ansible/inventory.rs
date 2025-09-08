@@ -42,17 +42,13 @@ impl InventoryTemplate {
         // Create template engine and validate rendering
         let template_name = "inventory.yml";
 
-        let engine =
-            crate::template::TemplateEngine::with_template_content(template_name, template_content)
-                .with_context(|| "Failed to create template engine with content")?;
-
-        // This will fail if:
-        // - Template has syntax errors
-        // - Template references undefined variables
-        // - Template cannot be rendered for any reason
-        let validated_content = engine
-            .validate_template_substitution_by_name(template_name, &context)
-            .with_context(|| "Template validation failed during construction")?;
+        let (_engine, validated_content) =
+            crate::template::TemplateEngine::with_validated_template_content(
+                template_name,
+                template_content,
+                &context,
+            )
+            .with_context(|| "Failed to create and validate template")?;
 
         Ok(Self {
             context,
@@ -182,7 +178,7 @@ mod tests {
         // This should fail because the template references an undefined variable
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("Template validation failed during construction"));
+        assert!(error_msg.contains("Failed to create and validate template"));
     }
 
     #[test]

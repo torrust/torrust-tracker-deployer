@@ -59,6 +59,33 @@ impl TemplateEngine {
         Ok(Self { tera })
     }
 
+    /// Creates a new `TemplateEngine` with template content and validates it with the given context
+    ///
+    /// This method combines template creation and validation to ensure templates are always
+    /// instantiated in a valid state. It will fail if:
+    /// - Template has syntax errors
+    /// - Template references undefined variables
+    /// - Template cannot be rendered for any reason
+    ///
+    /// # Errors
+    /// Returns an error if template content cannot be parsed or validation fails
+    pub fn with_validated_template_content<T: Serialize>(
+        template_name: &str,
+        template_content: &str,
+        context: &T,
+    ) -> Result<(Self, String)> {
+        // Create the template engine
+        let engine = Self::with_template_content(template_name, template_content)
+            .with_context(|| "Failed to create template engine with content")?;
+
+        // Validate the template by rendering it
+        let validated_content = engine
+            .validate_template_substitution_by_name(template_name, context)
+            .with_context(|| "Template validation failed during construction")?;
+
+        Ok((engine, validated_content))
+    }
+
     /// Render a template file with the given context
     ///
     /// # Errors
