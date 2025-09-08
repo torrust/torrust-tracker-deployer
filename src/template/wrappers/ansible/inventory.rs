@@ -2,7 +2,6 @@
 //!
 //! This template has mandatory variables that must be provided at construction time.
 
-use crate::template::context::TemplateContext;
 use crate::template::{StaticContext, TemplateRenderer};
 use anyhow::{Context, Result};
 use serde::Serialize;
@@ -21,15 +20,11 @@ struct InventoryContext {
     ansible_ssh_private_key_file: String,
 }
 
-impl TemplateContext for InventoryContext {
-    // No required methods - Tera handles validation
-}
-
 impl InventoryTemplate {
     /// Creates a new `InventoryTemplate`, validating the template content and variable substitution
     ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if:
     /// - Template syntax is invalid
     /// - Required variables cannot be substituted
@@ -46,6 +41,7 @@ impl InventoryTemplate {
 
         // Create template engine and validate rendering
         let template_name = "inventory.yml";
+
         let engine =
             crate::template::TemplateEngine::with_template_content(template_name, template_content)
                 .with_context(|| "Failed to create template engine with content")?;

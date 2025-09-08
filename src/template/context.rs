@@ -4,11 +4,6 @@
 
 use serde::Serialize;
 
-pub trait TemplateContext {
-    // Marker trait for template contexts
-    // No required methods - let Tera handle validation during rendering
-}
-
 /// Context for static templates (no variables needed)
 #[derive(Serialize, Clone, Debug)]
 pub struct StaticContext {
