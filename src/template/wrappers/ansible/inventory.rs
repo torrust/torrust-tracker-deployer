@@ -6,8 +6,118 @@ use crate::template::file::File;
 use crate::template::{StaticContext, TemplateRenderer};
 use anyhow::{Context, Result};
 use serde::Serialize;
+use std::fmt;
 use std::fs;
+use std::net::IpAddr;
 use std::path::Path;
+use std::str::FromStr;
+
+/// Wrapper type for Ansible host address using the newtype pattern
+///
+/// Ansible's `ansible_host` can contain:
+/// - Hostnames (e.g., "server.example.com")
+/// - FQDN (e.g., "www.example.com")
+/// - IP addresses (IPv4/IPv6)
+/// - Custom connection aliases
+/// - SSH proxy configurations
+///
+/// For this implementation, we only support IP addresses (IPv4 and IPv6) for simplicity.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AnsibleHost(IpAddr);
+
+impl AnsibleHost {
+    /// Create a new `AnsibleHost` from an IP address
+    #[must_use]
+    pub fn new(ip: IpAddr) -> Self {
+        Self(ip)
+    }
+
+    /// Get the inner IP address
+    #[must_use]
+    pub fn as_ip_addr(&self) -> &IpAddr {
+        &self.0
+    }
+
+    /// Convert to string representation
+    #[must_use]
+    pub fn as_str(&self) -> String {
+        self.0.to_string()
+    }
+}
+
+impl FromStr for AnsibleHost {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let ip = IpAddr::from_str(s).with_context(|| format!("Invalid IP address format: {s}"))?;
+        Ok(Self(ip))
+    }
+}
+
+impl fmt::Display for AnsibleHost {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Serialize for AnsibleHost {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.0.to_string())
+    }
+}
+
+/// Wrapper type for SSH private key file path using the newtype pattern
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SshPrivateKeyFile(String);
+
+impl SshPrivateKeyFile {
+    /// Create a new `SshPrivateKeyFile` from a string path
+    pub fn new<S: Into<String>>(path: S) -> Self {
+        Self(path.into())
+    }
+
+    /// Get the inner path as a string reference
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Get the inner path as a string
+    #[must_use]
+    pub fn as_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl From<&str> for SshPrivateKeyFile {
+    fn from(path: &str) -> Self {
+        Self::new(path)
+    }
+}
+
+impl From<String> for SshPrivateKeyFile {
+    fn from(path: String) -> Self {
+        Self(path)
+    }
+}
+
+impl fmt::Display for SshPrivateKeyFile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Serialize for SshPrivateKeyFile {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.0)
+    }
+}
 
 #[derive(Debug)]
 pub struct InventoryTemplate {
@@ -17,29 +127,47 @@ pub struct InventoryTemplate {
 
 #[derive(Serialize, Debug)]
 pub struct InventoryContext {
-    ansible_host: String,
-    ansible_ssh_private_key_file: String,
+    ansible_host: AnsibleHost,
+    ansible_ssh_private_key_file: SshPrivateKeyFile,
 }
 
 impl InventoryContext {
     /// Creates a new `InventoryContext`
-    #[must_use]
-    pub fn new(ansible_host: &str, ansible_ssh_private_key_file: &str) -> Self {
-        Self {
-            ansible_host: ansible_host.to_string(),
-            ansible_ssh_private_key_file: ansible_ssh_private_key_file.to_string(),
-        }
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `ansible_host` cannot be parsed as a valid IP address
+    pub fn new(ansible_host: &str, ansible_ssh_private_key_file: &str) -> Result<Self> {
+        let ansible_host = AnsibleHost::from_str(ansible_host)?;
+        let ansible_ssh_private_key_file = SshPrivateKeyFile::new(ansible_ssh_private_key_file);
+
+        Ok(Self {
+            ansible_host,
+            ansible_ssh_private_key_file,
+        })
     }
 
-    /// Get the ansible host value
+    /// Get the ansible host value as a string
     #[must_use]
-    pub fn ansible_host(&self) -> &str {
+    pub fn ansible_host(&self) -> String {
+        self.ansible_host.as_str()
+    }
+
+    /// Get the ansible SSH private key file path as a string
+    #[must_use]
+    pub fn ansible_ssh_private_key_file(&self) -> String {
+        self.ansible_ssh_private_key_file.as_string()
+    }
+
+    /// Get the ansible host wrapper
+    #[must_use]
+    pub fn ansible_host_wrapper(&self) -> &AnsibleHost {
         &self.ansible_host
     }
 
-    /// Get the ansible SSH private key file path
+    /// Get the ansible SSH private key file wrapper
     #[must_use]
-    pub fn ansible_ssh_private_key_file(&self) -> &str {
+    pub fn ansible_ssh_private_key_file_wrapper(&self) -> &SshPrivateKeyFile {
         &self.ansible_ssh_private_key_file
     }
 }
@@ -55,10 +183,10 @@ impl InventoryTemplate {
     /// - Template validation fails
     pub fn new(template_file: &File, inventory_context: &InventoryContext) -> Result<Self> {
         let context = InventoryContext {
-            ansible_host: inventory_context.ansible_host().to_string(),
+            ansible_host: inventory_context.ansible_host_wrapper().clone(),
             ansible_ssh_private_key_file: inventory_context
-                .ansible_ssh_private_key_file()
-                .to_string(),
+                .ansible_ssh_private_key_file_wrapper()
+                .clone(),
         };
 
         // Create template engine and validate rendering
@@ -76,16 +204,16 @@ impl InventoryTemplate {
         })
     }
 
-    /// Get the ansible host value
+    /// Get the ansible host value as a string
     #[must_use]
-    pub fn ansible_host(&self) -> &str {
-        &self.context.ansible_host
+    pub fn ansible_host(&self) -> String {
+        self.context.ansible_host()
     }
 
-    /// Get the ansible SSH private key file path
+    /// Get the ansible SSH private key file path as a string
     #[must_use]
-    pub fn ansible_ssh_private_key_file(&self) -> &str {
-        &self.context.ansible_ssh_private_key_file
+    pub fn ansible_ssh_private_key_file(&self) -> String {
+        self.context.ansible_ssh_private_key_file()
     }
 }
 
@@ -131,7 +259,7 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context = InventoryContext::new("192.168.1.100", "/path/to/key");
+        let inventory_context = InventoryContext::new("192.168.1.100", "/path/to/key").unwrap();
         let template = InventoryTemplate::new(&template_file, &inventory_context).unwrap();
 
         assert_eq!(template.ansible_host(), "192.168.1.100");
@@ -145,7 +273,8 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
+        let inventory_context =
+            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
         let template = InventoryTemplate::new(&template_file, &inventory_context).unwrap();
 
         assert_eq!(template.ansible_host(), "10.0.0.1");
@@ -160,7 +289,8 @@ mod tests {
         // Test with empty template content
         let template_file = File::new("inventory.yml.tera", String::new()).unwrap();
 
-        let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
+        let inventory_context =
+            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Empty templates are valid in Tera - they just render as empty strings
@@ -176,7 +306,8 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
+        let inventory_context =
+            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // This is valid - templates don't need to use all available context variables
@@ -192,7 +323,8 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
+        let inventory_context =
+            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Static templates are valid - they just don't use template variables
@@ -208,7 +340,8 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
+        let inventory_context =
+            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // This should fail because the template references an undefined variable
@@ -224,7 +357,8 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
+        let inventory_context =
+            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Should fail during template validation
@@ -238,7 +372,8 @@ mod tests {
 
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
-        let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
+        let inventory_context =
+            InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa").unwrap();
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         assert!(result.is_err());
@@ -252,7 +387,8 @@ mod tests {
         let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
 
         // Template validation happens during construction, not during render
-        let inventory_context = InventoryContext::new("192.168.1.100", "/home/user/.ssh/test_key");
+        let inventory_context =
+            InventoryContext::new("192.168.1.100", "/home/user/.ssh/test_key").unwrap();
         let template = InventoryTemplate::new(&template_file, &inventory_context).unwrap();
 
         // Verify that the template was pre-validated and contains rendered content
@@ -261,5 +397,41 @@ mod tests {
             template.ansible_ssh_private_key_file(),
             "/home/user/.ssh/test_key"
         );
+    }
+
+    #[test]
+    fn test_invalid_ip_address() {
+        // Test that invalid IP addresses are rejected
+        let result = InventoryContext::new("invalid-ip", "/path/to/key");
+        assert!(result.is_err());
+
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Invalid IP address format"));
+    }
+
+    #[test]
+    fn test_valid_ipv4_address() {
+        // Test valid IPv4 address
+        let context = InventoryContext::new("192.168.1.100", "/path/to/key").unwrap();
+        assert_eq!(context.ansible_host(), "192.168.1.100");
+    }
+
+    #[test]
+    fn test_valid_ipv6_address() {
+        // Test valid IPv6 address
+        let context = InventoryContext::new("2001:db8::1", "/path/to/key").unwrap();
+        assert_eq!(context.ansible_host(), "2001:db8::1");
+    }
+
+    #[test]
+    fn test_wrapper_types() {
+        let context = InventoryContext::new("10.0.0.1", "/path/to/key").unwrap();
+
+        // Test wrapper access
+        let host_wrapper = context.ansible_host_wrapper();
+        let key_wrapper = context.ansible_ssh_private_key_file_wrapper();
+
+        assert_eq!(host_wrapper.as_str(), "10.0.0.1");
+        assert_eq!(key_wrapper.as_str(), "/path/to/key");
     }
 }

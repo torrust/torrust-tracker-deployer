@@ -10,11 +10,13 @@ ehthumbs
 elif
 eprintln
 getent
+Hostnames
 journalctl
 keyrings
 larstobi
 lxdbr
 newgrp
+newtype
 noconfirm
 noninteractive
 NOPASSWD

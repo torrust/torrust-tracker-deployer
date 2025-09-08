@@ -41,7 +41,7 @@ mod integration_tests {
         // Test with realistic values
         let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
         let inventory_context =
-            InventoryContext::new("192.168.1.100", "/home/user/.ssh/testing_rsa");
+            InventoryContext::new("192.168.1.100", "/home/user/.ssh/testing_rsa")?;
         let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
         // Render the template
@@ -72,34 +72,35 @@ mod integration_tests {
 
     /// Test variable validation with real template
     #[test]
-    fn test_real_template_variable_validation() {
+    fn test_real_template_variable_validation() -> Result<()> {
         let template_path = PathBuf::from("templates/ansible/inventory.yml.tera");
 
         // Skip test if template file doesn't exist
         if !template_path.exists() {
             println!("Skipping test: inventory template not found");
-            return;
+            return Ok(());
         }
 
         // Read the template content
         let Ok(template_content) = std::fs::read_to_string(&template_path) else {
             println!("Skipping test: Could not read template file");
-            return;
+            return Ok(());
         };
 
         // Test that missing variables are caught during construction
         let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
-        let inventory_context = InventoryContext::new("", "");
+        // Empty string won't parse as IP - this test now needs a valid IP
+        let inventory_context = InventoryContext::new("127.0.0.1", "")?;
         let result = InventoryTemplate::new(&template_file, &inventory_context);
 
-        // Construction should succeed even with empty values
+        // Construction should succeed even with empty SSH key path but valid IP
         assert!(result.is_ok());
 
         // Test that invalid template content fails
         let invalid_content = "invalid template content without required variables";
         let invalid_template_file =
             File::new("inventory.yml.tera", invalid_content.to_string()).unwrap();
-        let inventory_context = InventoryContext::new("192.168.1.100", "/path/to/key");
+        let inventory_context = InventoryContext::new("192.168.1.100", "/path/to/key")?;
         let result = InventoryTemplate::new(&invalid_template_file, &inventory_context);
 
         // Static templates are now valid - they just don't use template variables
@@ -113,6 +114,8 @@ mod integration_tests {
 
         assert!(result.is_err());
         println!("✅ Template with undefined variables correctly rejected");
+
+        Ok(())
     }
 
     /// Test that template rendering doesn't modify any files in the templates directory
@@ -138,7 +141,7 @@ mod integration_tests {
             let inventory_context = InventoryContext::new(
                 &format!("192.168.1.{i}"),
                 &format!("/home/user{i}/.ssh/key"),
-            );
+            )?;
             let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
             let context = StaticContext::default();
@@ -181,7 +184,7 @@ mod integration_tests {
             let inventory_context = InventoryContext::new(
                 "10.0.0.100",
                 &temp_dir.path().join("ssh_key").to_string_lossy(),
-            );
+            )?;
             let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
             let context = StaticContext::default();

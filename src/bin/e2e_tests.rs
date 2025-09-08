@@ -144,7 +144,8 @@ impl TestEnvironment {
             .context("Failed to create inventory template file")?;
 
         let inventory_context =
-            InventoryContext::new(container_ip, &self.ssh_key_path.to_string_lossy());
+            InventoryContext::new(container_ip, &self.ssh_key_path.to_string_lossy())
+                .context("Failed to create InventoryContext")?;
         let inventory_template =
             InventoryTemplate::new(&inventory_template_file, &inventory_context)
                 .context("Failed to create InventoryTemplate")?;
