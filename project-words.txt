@@ -33,6 +33,7 @@ rustflags
 rustup
 serde
 shellcheck
+smorimoto
 subshell
 sysfs
 Taplo

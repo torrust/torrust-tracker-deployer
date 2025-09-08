@@ -3,6 +3,10 @@ name: Test LXD Container Provisioning
 # NOTE: This workflow uses CI-specific approaches like 'sudo chmod 666' on the LXD socket
 # and 'sudo' with LXD commands. These approaches are NOT recommended for local development.
 # For local use, follow the proper group membership approach documented in templates/tofu/lxd/README.md
+#
+# NETWORK TUNING: We use smorimoto/tune-github-hosted-runner-network to fix flaky networking
+# issues that may affect container provisioning in GitHub Actions.
+# See: https://github.com/actions/runner-images/issues/1187
 
 on:
   push:
@@ -19,6 +23,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
 
       - name: Install and configure LXD
         run: ./scripts/setup/install-lxd-ci.sh

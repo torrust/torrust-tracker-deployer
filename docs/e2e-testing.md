@@ -127,6 +127,31 @@ tofu destroy -auto-approve
 - **SSH connectivity failures**: Usually means cloud-init is still running or SSH configuration failed
 - **Ansible connection errors**: Check if the container IP is accessible and SSH key permissions are correct
 - **OpenTofu errors**: Ensure LXD is properly configured and you have sufficient privileges
+- **Network connectivity issues in CI**: See [CI Network Issues](#ci-network-issues) section below
+
+### CI Network Issues
+
+GitHub Actions runners sometimes experience intermittent network connectivity problems that can cause:
+
+- Docker GPG key downloads to fail (`Network is unreachable` errors)
+- Package repository access timeouts
+- Generally flaky network behavior
+
+**Root Cause**: This is a known issue with GitHub-hosted runners running in Azure:
+
+- [GitHub Issue #1187](https://github.com/actions/runner-images/issues/1187) - Original networking issue
+- [GitHub Issue #2890](https://github.com/actions/runner-images/issues/2890) - Specific apt repository timeout issues
+
+**Solution**: We use the [`smorimoto/tune-github-hosted-runner-network`](https://github.com/marketplace/actions/tune-github-hosted-runner-network) action to disable TCP/UDP offload and fix these networking issues.
+
+**Implementation**: The action is automatically added to CI workflows and runs before any network-dependent operations.
+
+**Playbook Adaptations**: Our Ansible playbooks also include:
+
+- CI environment detection
+- Adaptive retry strategies with longer timeouts in CI
+- Graceful handling of network failures
+- Fallback installation methods when needed
 
 ### Debug Mode
 
