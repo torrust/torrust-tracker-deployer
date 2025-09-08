@@ -12,7 +12,7 @@ use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
     InventoryContext, InventoryTemplate,
 };
-use torrust_tracker_deploy::template::{StaticContext, TemplateRenderer};
+use torrust_tracker_deploy::template::TemplateRenderer;
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -150,9 +150,8 @@ impl TestEnvironment {
             InventoryTemplate::new(&inventory_template_file, &inventory_context)
                 .context("Failed to create InventoryTemplate")?;
 
-        let static_context = StaticContext::default();
         inventory_template
-            .render(&static_context, &inventory_output_path)
+            .render(&inventory_output_path)
             .context("Failed to render inventory template")?;
 
         // Copy static ansible files

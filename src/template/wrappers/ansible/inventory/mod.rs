@@ -6,7 +6,7 @@ pub mod ansible_host;
 pub mod ssh_private_key_file;
 
 use crate::template::file::File;
-use crate::template::{StaticContext, TemplateRenderer};
+use crate::template::TemplateRenderer;
 use anyhow::{Context, Result};
 use serde::Serialize;
 use std::fs;
@@ -115,15 +115,7 @@ impl InventoryTemplate {
 }
 
 impl TemplateRenderer for InventoryTemplate {
-    type Context = StaticContext; // We don't use external context since we have fields
-
-    fn template_path(&self) -> &Path {
-        // Since we're working with content instead of paths, return a dummy path
-        // This should be refactored in the trait if this pattern is used more widely
-        Path::new("inventory.yml")
-    }
-
-    fn render(&self, _context: &Self::Context, output_path: &Path) -> Result<()> {
+    fn render(&self, output_path: &Path) -> Result<()> {
         // Create output directory if it doesn't exist
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent).with_context(|| {
@@ -136,11 +128,6 @@ impl TemplateRenderer for InventoryTemplate {
             format!("Failed to write template output: {}", output_path.display())
         })?;
 
-        Ok(())
-    }
-
-    fn validate_context(&self, _context: &Self::Context) -> Result<()> {
-        // Validation is built-in since fields are mandatory at construction
         Ok(())
     }
 }

@@ -10,7 +10,7 @@ use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
     InventoryContext, InventoryTemplate,
 };
-use torrust_tracker_deploy::template::{StaticContext, TemplateRenderer};
+use torrust_tracker_deploy::template::TemplateRenderer;
 
 #[cfg(test)]
 mod integration_tests {
@@ -45,8 +45,7 @@ mod integration_tests {
         let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
         // Render the template
-        let context = StaticContext::default();
-        inventory.render(&context, &output_path)?;
+        inventory.render(&output_path)?;
 
         // Verify the output file exists and has the right content
         assert!(output_path.exists());
@@ -144,8 +143,7 @@ mod integration_tests {
             )?;
             let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
-            let context = StaticContext::default();
-            inventory.render(&context, &output_path)?;
+            inventory.render(&output_path)?;
         }
 
         // Verify the original template is unchanged
@@ -187,8 +185,7 @@ mod integration_tests {
             )?;
             let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
-            let context = StaticContext::default();
-            inventory.render(&context, &output_path)?;
+            inventory.render(&output_path)?;
 
             // Verify output in build directory
             assert!(output_path.exists());
