@@ -38,5 +38,9 @@ Tera
 terraformrc
 tfstate
 tfvars
+thiserror
 tlsv
 usermod
+значение
+ключ
+конфиг

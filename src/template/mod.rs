@@ -14,6 +14,7 @@
 
 pub mod context;
 pub mod engine;
+pub mod file;
 pub mod renderer;
 pub mod utils;
 pub mod wrappers;
