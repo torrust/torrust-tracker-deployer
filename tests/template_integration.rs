@@ -47,7 +47,7 @@ mod integration_tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .build()?;
-        let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
+        let inventory = InventoryTemplate::new(&template_file, inventory_context)?;
 
         // Render the template
         inventory.render(&output_path)?;
@@ -99,7 +99,7 @@ mod integration_tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .build()?;
-        let result = InventoryTemplate::new(&template_file, &inventory_context);
+        let result = InventoryTemplate::new(&template_file, inventory_context);
 
         // Construction should succeed with valid IP and SSH key path
         assert!(result.is_ok());
@@ -122,7 +122,7 @@ mod integration_tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .build()?;
-        let result = InventoryTemplate::new(&invalid_template_file, &inventory_context);
+        let result = InventoryTemplate::new(&invalid_template_file, inventory_context.clone());
 
         // Static templates are now valid - they just don't use template variables
         assert!(result.is_ok());
@@ -131,7 +131,7 @@ mod integration_tests {
         let undefined_var_content = "server ansible_host={{undefined_variable}}\n";
         let undefined_template_file =
             File::new("inventory.yml.tera", undefined_var_content.to_string()).unwrap();
-        let result = InventoryTemplate::new(&undefined_template_file, &inventory_context);
+        let result = InventoryTemplate::new(&undefined_template_file, inventory_context);
 
         assert!(result.is_err());
         println!("✅ Template with undefined variables correctly rejected");
@@ -165,7 +165,7 @@ mod integration_tests {
                 .with_host(host)
                 .with_ssh_priv_key_path(ssh_key)
                 .build()?;
-            let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
+            let inventory = InventoryTemplate::new(&template_file, inventory_context)?;
 
             inventory.render(&output_path)?;
         }
@@ -210,7 +210,7 @@ mod integration_tests {
                 .with_host(host)
                 .with_ssh_priv_key_path(ssh_key)
                 .build()?;
-            let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
+            let inventory = InventoryTemplate::new(&template_file, inventory_context)?;
 
             inventory.render(&output_path)?;
 

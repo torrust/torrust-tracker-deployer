@@ -157,7 +157,7 @@ impl TestEnvironment {
                 .context("Failed to create InventoryContext")?
         };
         let inventory_template =
-            InventoryTemplate::new(&inventory_template_file, &inventory_context)
+            InventoryTemplate::new(&inventory_template_file, inventory_context)
                 .context("Failed to create InventoryTemplate")?;
 
         inventory_template
