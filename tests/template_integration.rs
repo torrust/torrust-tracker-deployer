@@ -6,6 +6,7 @@
 use anyhow::Result;
 use std::path::PathBuf;
 use tempfile::TempDir;
+use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
     InventoryContext, InventoryTemplate,
 };
@@ -38,9 +39,10 @@ mod integration_tests {
         let output_path = temp_dir.path().join("inventory.yml");
 
         // Test with realistic values
+        let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
         let inventory_context =
             InventoryContext::new("192.168.1.100", "/home/user/.ssh/testing_rsa");
-        let inventory = InventoryTemplate::new(&template_content, &inventory_context)?;
+        let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
         // Render the template
         let context = StaticContext::default();
@@ -86,23 +88,28 @@ mod integration_tests {
         };
 
         // Test that missing variables are caught during construction
+        let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
         let inventory_context = InventoryContext::new("", "");
-        let result = InventoryTemplate::new(&template_content, &inventory_context);
+        let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Construction should succeed even with empty values
         assert!(result.is_ok());
 
         // Test that invalid template content fails
         let invalid_content = "invalid template content without required variables";
+        let invalid_template_file =
+            File::new("inventory.yml.tera", invalid_content.to_string()).unwrap();
         let inventory_context = InventoryContext::new("192.168.1.100", "/path/to/key");
-        let result = InventoryTemplate::new(invalid_content, &inventory_context);
+        let result = InventoryTemplate::new(&invalid_template_file, &inventory_context);
 
         // Static templates are now valid - they just don't use template variables
         assert!(result.is_ok());
 
         // Test that templates with undefined variables fail
         let undefined_var_content = "server ansible_host={{undefined_variable}}\n";
-        let result = InventoryTemplate::new(undefined_var_content, &inventory_context);
+        let undefined_template_file =
+            File::new("inventory.yml.tera", undefined_var_content.to_string()).unwrap();
+        let result = InventoryTemplate::new(&undefined_template_file, &inventory_context);
 
         assert!(result.is_err());
         println!("✅ Template with undefined variables correctly rejected");
@@ -127,11 +134,12 @@ mod integration_tests {
 
         // Render the template multiple times with different values
         for i in 1..=3 {
+            let template_file = File::new("inventory.yml.tera", original_content.clone()).unwrap();
             let inventory_context = InventoryContext::new(
                 &format!("192.168.1.{i}"),
                 &format!("/home/user{i}/.ssh/key"),
             );
-            let inventory = InventoryTemplate::new(&original_content, &inventory_context)?;
+            let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
             let context = StaticContext::default();
             inventory.render(&context, &output_path)?;
@@ -167,13 +175,14 @@ mod integration_tests {
         if PathBuf::from("templates/ansible/inventory.yml.tera").exists() {
             let template_path = PathBuf::from("templates/ansible/inventory.yml.tera");
             let template_content = std::fs::read_to_string(&template_path)?;
+            let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
             let output_path = build_ansible.join("inventory.yml");
 
             let inventory_context = InventoryContext::new(
                 "10.0.0.100",
                 &temp_dir.path().join("ssh_key").to_string_lossy(),
             );
-            let inventory = InventoryTemplate::new(&template_content, &inventory_context)?;
+            let inventory = InventoryTemplate::new(&template_file, &inventory_context)?;
 
             let context = StaticContext::default();
             inventory.render(&context, &output_path)?;

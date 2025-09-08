@@ -8,6 +8,7 @@ use tempfile::TempDir;
 use tokio::time::sleep;
 
 // Import template system
+use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
     InventoryContext, InventoryTemplate,
 };
@@ -139,10 +140,13 @@ impl TestEnvironment {
         let inventory_template_content = std::fs::read_to_string(&inventory_template_path)
             .context("Failed to read inventory template file")?;
 
+        let inventory_template_file = File::new("inventory.yml.tera", inventory_template_content)
+            .context("Failed to create inventory template file")?;
+
         let inventory_context =
             InventoryContext::new(container_ip, &self.ssh_key_path.to_string_lossy());
         let inventory_template =
-            InventoryTemplate::new(&inventory_template_content, &inventory_context)
+            InventoryTemplate::new(&inventory_template_file, &inventory_context)
                 .context("Failed to create InventoryTemplate")?;
 
         let static_context = StaticContext::default();

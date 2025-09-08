@@ -2,6 +2,7 @@
 //!
 //! This template has mandatory variables that must be provided at construction time.
 
+use crate::template::file::File;
 use crate::template::{StaticContext, TemplateRenderer};
 use anyhow::{Context, Result};
 use serde::Serialize;
@@ -52,7 +53,7 @@ impl InventoryTemplate {
     /// - Template syntax is invalid
     /// - Required variables cannot be substituted
     /// - Template validation fails
-    pub fn new(template_content: &str, inventory_context: &InventoryContext) -> Result<Self> {
+    pub fn new(template_file: &File, inventory_context: &InventoryContext) -> Result<Self> {
         let context = InventoryContext {
             ansible_host: inventory_context.ansible_host().to_string(),
             ansible_ssh_private_key_file: inventory_context
@@ -61,12 +62,10 @@ impl InventoryTemplate {
         };
 
         // Create template engine and validate rendering
-        let template_name = "inventory.yml";
-
         let (_engine, validated_content) =
             crate::template::TemplateEngine::with_validated_template_content(
-                template_name,
-                template_content,
+                template_file.filename(),
+                template_file.content(),
                 &context,
             )
             .with_context(|| "Failed to create and validate template")?;
@@ -130,8 +129,10 @@ mod tests {
         // Use template content directly instead of file
         let template_content = "[all]\nserver ansible_host={{ansible_host}} ansible_ssh_private_key_file={{ansible_ssh_private_key_file}}\n";
 
+        let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
+
         let inventory_context = InventoryContext::new("192.168.1.100", "/path/to/key");
-        let template = InventoryTemplate::new(template_content, &inventory_context).unwrap();
+        let template = InventoryTemplate::new(&template_file, &inventory_context).unwrap();
 
         assert_eq!(template.ansible_host(), "192.168.1.100");
         assert_eq!(template.ansible_ssh_private_key_file(), "/path/to/key");
@@ -142,8 +143,10 @@ mod tests {
         // Use template content directly instead of file
         let template_content = "[all]\nserver ansible_host={{ansible_host}} ansible_ssh_private_key_file={{ansible_ssh_private_key_file}}\n";
 
+        let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
+
         let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
-        let template = InventoryTemplate::new(template_content, &inventory_context).unwrap();
+        let template = InventoryTemplate::new(&template_file, &inventory_context).unwrap();
 
         assert_eq!(template.ansible_host(), "10.0.0.1");
         assert_eq!(
@@ -155,8 +158,10 @@ mod tests {
     #[test]
     fn test_empty_template_content() {
         // Test with empty template content
+        let template_file = File::new("inventory.yml.tera", String::new()).unwrap();
+
         let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
-        let result = InventoryTemplate::new("", &inventory_context);
+        let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Empty templates are valid in Tera - they just render as empty strings
         assert!(result.is_ok());
@@ -169,8 +174,10 @@ mod tests {
         // Create template content with only one placeholder
         let template_content = "[all]\nserver ansible_host={{ansible_host}}\n";
 
+        let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
+
         let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
-        let result = InventoryTemplate::new(template_content, &inventory_context);
+        let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // This is valid - templates don't need to use all available context variables
         assert!(result.is_ok());
@@ -183,8 +190,10 @@ mod tests {
         // Create template content with no placeholder variables at all
         let template_content = "[all]\nserver ansible_host=192.168.1.1\n";
 
+        let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
+
         let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
-        let result = InventoryTemplate::new(template_content, &inventory_context);
+        let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Static templates are valid - they just don't use template variables
         assert!(result.is_ok());
@@ -197,8 +206,10 @@ mod tests {
         // Create template content that references an undefined variable
         let template_content = "[all]\nserver ansible_host={{undefined_variable}}\n";
 
+        let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
+
         let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
-        let result = InventoryTemplate::new(template_content, &inventory_context);
+        let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // This should fail because the template references an undefined variable
         assert!(result.is_err());
@@ -211,8 +222,10 @@ mod tests {
         // Create template content with malformed Tera syntax
         let template_content = "[all]\nserver ansible_host={{ansible_host}} ansible_ssh_private_key_file={{ansible_ssh_private_key_file}}\nmalformed={{unclosed_var\n";
 
+        let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
+
         let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
-        let result = InventoryTemplate::new(template_content, &inventory_context);
+        let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         // Should fail during template validation
         assert!(result.is_err());
@@ -223,8 +236,10 @@ mod tests {
         // Test with different malformed template syntax
         let template_content = "invalid {{{{ syntax";
 
+        let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
+
         let inventory_context = InventoryContext::new("10.0.0.1", "/home/user/.ssh/id_rsa");
-        let result = InventoryTemplate::new(template_content, &inventory_context);
+        let result = InventoryTemplate::new(&template_file, &inventory_context);
 
         assert!(result.is_err());
     }
@@ -234,9 +249,11 @@ mod tests {
         // Create valid template content
         let template_content = "[all]\nserver ansible_host={{ansible_host}} ansible_ssh_private_key_file={{ansible_ssh_private_key_file}}\n";
 
+        let template_file = File::new("inventory.yml.tera", template_content.to_string()).unwrap();
+
         // Template validation happens during construction, not during render
         let inventory_context = InventoryContext::new("192.168.1.100", "/home/user/.ssh/test_key");
-        let template = InventoryTemplate::new(template_content, &inventory_context).unwrap();
+        let template = InventoryTemplate::new(&template_file, &inventory_context).unwrap();
 
         // Verify that the template was pre-validated and contains rendered content
         assert_eq!(template.ansible_host(), "192.168.1.100");
