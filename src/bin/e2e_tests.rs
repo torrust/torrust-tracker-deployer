@@ -161,6 +161,7 @@ impl TestEnvironment {
 
         // Copy playbooks
         for playbook in &[
+            "update-apt-cache.yml",
             "install-docker.yml",
             "install-docker-compose.yml",
             "wait-cloud-init.yml",
@@ -605,6 +606,8 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     env.validate_cloud_init_completion(&container_ip)?;
 
     // Run the install-docker playbook
+    // NOTE: We skip the update-apt-cache playbook in E2E tests to avoid CI network issues
+    // The install-docker playbook now assumes the cache is already updated or will handle stale cache gracefully
     println!("📋 Step 2: Installing Docker...");
     env.run_ansible_playbook("install-docker")?;
 

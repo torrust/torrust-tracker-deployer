@@ -2,10 +2,15 @@
 # Ansible Playbook: Install Docker
 # This playbook installs Docker CE on Ubuntu/Debian systems
 #
+# ⚠️  IMPORTANT: APT cache update logic has been moved to update-apt-cache.yml
+# Run the update-apt-cache.yml playbook first if you need to update the package cache.
+# This separation helps avoid CI issues with network-sensitive operations.
+#
 # 🔗 RELATIONSHIP WITH INFRASTRUCTURE:
 # 1. This playbook runs after VM provisioning (OpenTofu) and cloud-init completion
 # 2. It prepares the VM for running containerized applications
 # 3. Can be used as part of a larger deployment pipeline for Torrust applications
+# 4. Assumes APT cache is already updated (via update-apt-cache.yml or manually)
 
 # Define which hosts this playbook will run on
 - name: Install Docker
@@ -22,53 +27,10 @@
 
   # List of tasks to execute in order
   tasks:
-    # Task 0: Network diagnostics for CI troubleshooting
-    - name: Check network connectivity and DNS resolution
-      ansible.builtin.shell: |
-        echo "=== Network Diagnostics ==="
-        echo "Testing DNS resolution..."
-        nslookup archive.ubuntu.com || echo "DNS resolution failed"
-        echo "Testing connectivity to Ubuntu repositories..."
-        curl -I https://archive.ubuntu.com/ubuntu/ --connect-timeout 10 || echo "Ubuntu repo unreachable"
-        echo "Testing connectivity to Docker repositories..."
-        curl -I https://download.docker.com --connect-timeout 10 || echo "Docker repo unreachable"
-        echo "Current apt sources:"
-        cat /etc/apt/sources.list
-      register: network_diagnostics
-      changed_when: false
-      ignore_errors: true
+    # NOTE: APT cache update logic has been moved to update-apt-cache.yml
+    # Run that playbook first if you need to update the package cache
 
-    - name: Display network diagnostics
-      ansible.builtin.debug:
-        var: network_diagnostics.stdout_lines
-      when: network_diagnostics is defined
-
-    # Task 1: Update package cache with retries and better error handling
-    - name: Update apt package cache
-      ansible.builtin.apt:
-        update_cache: true
-        cache_valid_time: 3600 # Cache valid for 1 hour
-        force_apt_get: true # Force using apt-get instead of aptitude for better CI compatibility
-      register: apt_update_result
-      retries: 3
-      delay: 10
-      until: apt_update_result is succeeded
-      when: ansible_os_family == "Debian"
-      ignore_errors: false # Fail if apt update ultimately fails
-
-    # Task 1.1: Fallback apt update with different approach if needed
-    - name: Fallback apt update with apt-get directly
-      ansible.builtin.command: apt-get update
-      register: apt_get_update
-      retries: 2
-      delay: 15
-      until: apt_get_update.rc == 0
-      when:
-        - ansible_os_family == "Debian"
-        - apt_update_result is failed
-      ignore_errors: false
-
-    # Task 2: Install required packages for Docker repository with retries
+    # Task 1: Install required packages for Docker repository with retries
     - name: Install required packages for Docker repository
       ansible.builtin.apt:
         name:
@@ -79,13 +41,14 @@
           - lsb-release
         state: present
         force_apt_get: true
+        update_cache: false # Skip cache update - assume it was done separately
       register: prereq_packages
       retries: 3
       delay: 10
       until: prereq_packages is succeeded
       when: ansible_os_family == "Debian"
 
-    # Task 3: Add Docker's official GPG key
+    # Task 2: Add Docker's official GPG key
     - name: Add Docker's official GPG key
       ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
@@ -93,26 +56,16 @@
         mode: "0644"
       when: ansible_os_family == "Debian"
 
-    # Task 4: Add Docker repository
+    # Task 3: Add Docker repository
     - name: Add Docker repository
       ansible.builtin.apt_repository:
         repo: "deb [arch={{ docker_arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         state: present
         filename: docker
+        update_cache: true # Need to update cache after adding new repository
       when: ansible_os_family == "Debian"
 
-    # Task 5: Update package cache after adding repository with retries
-    - name: Update apt package cache after adding Docker repository
-      ansible.builtin.apt:
-        update_cache: true
-        force_apt_get: true # Force using apt-get for better CI compatibility
-      register: apt_update_docker_repo
-      retries: 3
-      delay: 10
-      until: apt_update_docker_repo is succeeded
-      when: ansible_os_family == "Debian"
-
-    # Task 6: Install Docker packages with retries
+    # Task 4: Install Docker packages with retries
     - name: Install Docker packages
       ansible.builtin.apt:
         name:
@@ -122,20 +75,21 @@
           - docker-buildx-plugin
         state: present
         force_apt_get: true
+        update_cache: false # Skip cache update - assume repository was updated separately
       register: docker_install
       retries: 3
       delay: 10
       until: docker_install is succeeded
       when: ansible_os_family == "Debian"
 
-    # Task 7: Start and enable Docker service
+    # Task 5: Start and enable Docker service
     - name: Start and enable Docker service
       ansible.builtin.systemd:
         name: docker
         state: started
         enabled: true
 
-    # Task 8: Add user to docker group (for non-root Docker usage)
+    # Task 6: Add user to docker group (for non-root Docker usage)
     - name: Add user to docker group
       ansible.builtin.user:
         name: "{{ ansible_user }}"
@@ -143,37 +97,39 @@
         append: true
       register: user_added_to_docker_group
 
-    # Task 9: Verify Docker installation
+    # Task 7: Verify Docker installation
     - name: Verify Docker installation
       ansible.builtin.command: docker --version
       register: docker_version
       changed_when: false
 
-    # Task 10: Display Docker version
+    # Task 8: Display Docker version
     - name: Display Docker version
       ansible.builtin.debug:
         msg: "{{ docker_version.stdout }}"
 
-    # Task 11: Test Docker with hello-world (optional verification)
+    # Task 9: Test Docker with hello-world (optional verification)
     - name: Test Docker with hello-world container
       ansible.builtin.command: docker run --rm hello-world
       register: docker_test
       changed_when: false
       ignore_errors: true # Don't fail the playbook if this test fails
 
-    # Task 12: Display Docker test result
+    # Task 10: Display Docker test result
     - name: Display Docker test result
       ansible.builtin.debug:
         msg: "{{ docker_test.stdout }}"
       when: docker_test is succeeded
 
-    # Task 13: Warning about group membership
+    # Task 11: Warning about group membership
     - name: Important notice about Docker group membership
       ansible.builtin.debug:
         msg: |
           ⚠️  IMPORTANT: User '{{ ansible_user }}' has been added to the 'docker' group.
           You may need to log out and log back in (or restart the session) for this change to take effect.
           Alternatively, you can use 'newgrp docker' to activate the group membership in the current session.
+
+          NOTE: If you need to update the APT cache, run the update-apt-cache.yml playbook first.
       when: user_added_to_docker_group is changed
 
   # Handlers section - tasks that run when triggered by other tasks

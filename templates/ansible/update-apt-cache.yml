@@ -1,0 +1,79 @@
+---
+# Ansible Playbook: Update APT Cache
+# This playbook handles apt package cache updates with retries and diagnostics
+#
+# 🔗 RELATIONSHIP WITH INFRASTRUCTURE:
+# 1. This playbook runs after VM provisioning (OpenTofu) and cloud-init completion
+# 2. It prepares the system for package installations by updating the apt cache
+# 3. Extracted from other playbooks to isolate network-sensitive operations
+
+# Define which hosts this playbook will run on
+- name: Update APT Package Cache
+  hosts: all # Run on all hosts defined in inventory.yml
+  gather_facts: true # Collect system information to determine OS and version
+  become: true # Use sudo/root privileges for system-level operations
+
+  # List of tasks to execute in order
+  tasks:
+    # Task 0: Network diagnostics for CI troubleshooting
+    - name: Check network connectivity and DNS resolution
+      ansible.builtin.shell: |
+        echo "=== Network Diagnostics ==="
+        echo "Testing DNS resolution..."
+        nslookup archive.ubuntu.com || echo "DNS resolution failed"
+        echo "Testing connectivity to Ubuntu repositories..."
+        curl -I https://archive.ubuntu.com/ubuntu/ --connect-timeout 10 || echo "Ubuntu repo unreachable"
+        echo "Testing connectivity to Docker repositories..."
+        curl -I https://download.docker.com --connect-timeout 10 || echo "Docker repo unreachable"
+        echo "Current apt sources:"
+        cat /etc/apt/sources.list
+      register: network_diagnostics
+      changed_when: false
+      ignore_errors: true
+
+    - name: Display network diagnostics
+      ansible.builtin.debug:
+        var: network_diagnostics.stdout_lines
+      when: network_diagnostics is defined
+
+    # Task 1: Update package cache with retries and better error handling
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600 # Cache valid for 1 hour
+        force_apt_get: true # Force using apt-get instead of aptitude for better CI compatibility
+      register: apt_update_result
+      retries: 3
+      delay: 10
+      until: apt_update_result is succeeded
+      when: ansible_os_family == "Debian"
+      ignore_errors: false # Fail if apt update ultimately fails
+
+    # Task 1.1: Fallback apt update with different approach if needed
+    - name: Fallback apt update with apt-get directly
+      ansible.builtin.command: apt-get update
+      register: apt_get_update
+      retries: 2
+      delay: 15
+      until: apt_get_update.rc == 0
+      when:
+        - ansible_os_family == "Debian"
+        - apt_update_result is failed
+      ignore_errors: false
+
+    # Task 2: Update package cache after adding repository with retries
+    - name: Update apt package cache (final update)
+      ansible.builtin.apt:
+        update_cache: true
+        force_apt_get: true # Force using apt-get for better CI compatibility
+      register: apt_update_final
+      retries: 3
+      delay: 10
+      until: apt_update_final is succeeded
+      when: ansible_os_family == "Debian"
+
+    # Task 3: Display apt update completion status
+    - name: Display apt update completion status
+      ansible.builtin.debug:
+        msg: "APT cache update completed successfully"
+      when: apt_update_final is succeeded or apt_get_update is succeeded

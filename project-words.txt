@@ -17,6 +17,7 @@ newgrp
 noconfirm
 noninteractive
 NOPASSWD
+nslookup
 nullglob
 oneline
 pacman
