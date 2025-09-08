@@ -228,7 +228,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_inventory_template_creation() {
+    fn it_should_create_inventory_template_successfully() {
         // Use template content directly instead of file
         let template_content = "[all]\nserver ansible_host={{ansible_host}} ansible_ssh_private_key_file={{ansible_ssh_private_key_file}}\n";
 
@@ -248,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inventory_template_context_generation() {
+    fn it_should_generate_inventory_template_context() {
         // Use template content directly instead of file
         let template_content = "[all]\nserver ansible_host={{ansible_host}} ansible_ssh_private_key_file={{ansible_ssh_private_key_file}}\n";
 
@@ -271,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_template_content() {
+    fn it_should_accept_empty_template_content() {
         // Test with empty template content
         let template_file = File::new("inventory.yml.tera", String::new()).unwrap();
 
@@ -291,7 +291,7 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_placeholder() {
+    fn it_should_work_with_missing_placeholder_variables() {
         // Create template content with only one placeholder
         let template_content = "[all]\nserver ansible_host={{ansible_host}}\n";
 
@@ -313,7 +313,7 @@ mod tests {
     }
 
     #[test]
-    fn test_early_error_detection_both_variables_missing() {
+    fn it_should_accept_static_template_with_no_variables() {
         // Create template content with no placeholder variables at all
         let template_content = "[all]\nserver ansible_host=192.168.1.1\n";
 
@@ -335,7 +335,7 @@ mod tests {
     }
 
     #[test]
-    fn test_undefined_variable_error() {
+    fn it_should_fail_when_template_references_undefined_variable() {
         // Create template content that references an undefined variable
         let template_content = "[all]\nserver ansible_host={{undefined_variable}}\n";
 
@@ -360,7 +360,7 @@ mod tests {
     }
 
     #[test]
-    fn test_early_error_detection_template_validation_fails() {
+    fn it_should_fail_when_template_validation_fails() {
         // Create template content with malformed Tera syntax
         let template_content = "[all]\nserver ansible_host={{ansible_host}} ansible_ssh_private_key_file={{ansible_ssh_private_key_file}}\nmalformed={{unclosed_var\n";
 
@@ -380,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    fn test_early_error_detection_malformed_syntax() {
+    fn it_should_fail_when_template_has_malformed_syntax() {
         // Test with different malformed template syntax
         let template_content = "invalid {{{{ syntax";
 
@@ -399,7 +399,7 @@ mod tests {
     }
 
     #[test]
-    fn test_template_validation_at_construction() {
+    fn it_should_validate_template_at_construction_time() {
         // Create valid template content
         let template_content = "[all]\nserver ansible_host={{ansible_host}} ansible_ssh_private_key_file={{ansible_ssh_private_key_file}}\n";
 
@@ -424,7 +424,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_ip_address() {
+    fn it_should_reject_invalid_ip_address() {
         // Test that invalid IP addresses are rejected by the AnsibleHost wrapper
         let result = AnsibleHost::from_str("invalid-ip");
 
@@ -434,7 +434,7 @@ mod tests {
     }
 
     #[test]
-    fn test_valid_ipv4_address() {
+    fn it_should_accept_valid_ipv4_address() {
         // Test valid IPv4 address
         let host = AnsibleHost::from_str("192.168.1.100").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
@@ -447,7 +447,7 @@ mod tests {
     }
 
     #[test]
-    fn test_valid_ipv6_address() {
+    fn it_should_accept_valid_ipv6_address() {
         // Test valid IPv6 address
         let host = AnsibleHost::from_str("2001:db8::1").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
@@ -460,7 +460,7 @@ mod tests {
     }
 
     #[test]
-    fn test_wrapper_types() {
+    fn it_should_provide_access_to_wrapper_types() {
         let host = AnsibleHost::from_str("10.0.0.1").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
         let context = InventoryContext::builder()
@@ -478,7 +478,7 @@ mod tests {
     }
 
     #[test]
-    fn test_builder_pattern_fluent_interface() {
+    fn it_should_support_builder_pattern_fluent_interface() {
         // Test the fluent builder interface as requested
         let host = AnsibleHost::from_str("192.168.1.100").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
@@ -496,7 +496,7 @@ mod tests {
     }
 
     #[test]
-    fn test_builder_with_typed_parameters() {
+    fn it_should_work_with_builder_typed_parameters() {
         // Test builder with typed parameters instead of strings
         let host = AnsibleHost::from_str("10.0.0.1").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
@@ -515,7 +515,7 @@ mod tests {
     }
 
     #[test]
-    fn test_builder_missing_host_error() {
+    fn it_should_fail_when_builder_missing_host() {
         // Test that builder fails when host is missing
         let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
         let result = InventoryContext::builder()
@@ -528,7 +528,7 @@ mod tests {
     }
 
     #[test]
-    fn test_builder_missing_ssh_key_error() {
+    fn it_should_fail_when_builder_missing_ssh_key() {
         // Test that builder fails when SSH key is missing
         let host = AnsibleHost::from_str("192.168.1.100").unwrap();
         let result = InventoryContext::builder().with_host(host).build();
@@ -539,7 +539,7 @@ mod tests {
     }
 
     #[test]
-    fn test_new_with_typed_parameters() {
+    fn it_should_create_new_inventory_context_with_typed_parameters() {
         // Test the new direct constructor with typed parameters
         let host = AnsibleHost::from_str("192.168.1.50").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/etc/ssh/test_key").unwrap();
