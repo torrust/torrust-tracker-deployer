@@ -1,6 +1,5 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use clap::Parser;
-use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Instant;
@@ -9,6 +8,7 @@ use tracing_subscriber::fmt;
 
 // Import command execution system
 use torrust_tracker_deploy::command::CommandExecutor;
+use torrust_tracker_deploy::lxd::LxdClient;
 use torrust_tracker_deploy::opentofu::OpenTofuClient;
 use torrust_tracker_deploy::ssh::SshClient;
 // Import template system
@@ -51,6 +51,7 @@ struct TestEnvironment {
     command_executor: CommandExecutor,
     opentofu_client: OpenTofuClient,
     ssh_client: SshClient,
+    lxd_client: LxdClient,
     #[allow(dead_code)] // Kept to maintain temp directory lifetime
     temp_dir: Option<tempfile::TempDir>,
     #[allow(dead_code)] // Used for cleanup but not directly accessed
@@ -101,6 +102,9 @@ impl TestEnvironment {
         // Create OpenTofu client pointing to build/tofu/lxd directory
         let opentofu_client = OpenTofuClient::new(project_root.join("build/tofu/lxd"), verbose);
 
+        // Create LXD client for container management
+        let lxd_client = LxdClient::new(verbose);
+
         if verbose {
             println!(
                 "🔑 SSH key copied to temporary location: {}",
@@ -123,6 +127,7 @@ impl TestEnvironment {
             command_executor,
             opentofu_client,
             ssh_client,
+            lxd_client,
             temp_dir: Some(temp_dir),
             original_inventory: None,
         })
@@ -287,30 +292,9 @@ impl TestEnvironment {
     }
 
     fn get_container_ip(&self) -> Result<String> {
-        // Get container information
-        let output = self
-            .run_command("lxc", &["list", "torrust-vm", "--format=json"], None)
-            .context("Failed to list LXC containers")?;
-
-        let containers: Value =
-            serde_json::from_str(&output).context("Failed to parse LXC list output")?;
-
-        let container = containers
-            .as_array()
-            .and_then(|arr| arr.first())
-            .ok_or_else(|| anyhow!("No container found"))?;
-
-        let ip = container["state"]["network"]["eth0"]["addresses"]
-            .as_array()
-            .and_then(|addresses| {
-                addresses
-                    .iter()
-                    .find(|addr| addr["family"].as_str() == Some("inet"))
-            })
-            .and_then(|addr| addr["address"].as_str())
-            .ok_or_else(|| anyhow!("Could not find IPv4 address for container"))?;
-
-        Ok(ip.to_string())
+        self.lxd_client
+            .get_instance_ip("torrust-vm")
+            .context("Failed to get instance IP")
     }
 
     fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
@@ -360,7 +344,7 @@ impl Drop for TestEnvironment {
             // Try basic cleanup in case async cleanup failed
             // Using emergency_destroy for consistent OpenTofu handling
             let tofu_dir = self.build_dir.join("tofu/lxd");
-            
+
             drop(torrust_tracker_deploy::opentofu::emergency_destroy(
                 &tofu_dir,
             ));
