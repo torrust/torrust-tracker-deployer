@@ -13,7 +13,6 @@ use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
     AnsibleHost, InventoryContext, InventoryTemplate, SshPrivateKeyFile,
 };
-use torrust_tracker_deploy::template::TemplateRenderer;
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]

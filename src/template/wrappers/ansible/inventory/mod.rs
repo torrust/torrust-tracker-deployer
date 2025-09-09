@@ -5,9 +5,8 @@
 pub mod context;
 
 use crate::template::file::File;
-use crate::template::{TemplateEngineError, TemplateRenderer};
-use anyhow::{Context, Result};
-use std::fs;
+use crate::template::{write_file_with_dir_creation, FileWriteError, TemplateEngineError};
+use anyhow::Result;
 use std::path::Path;
 
 #[cfg(test)]
@@ -67,23 +66,14 @@ impl InventoryTemplate {
     pub fn ansible_ssh_private_key_file(&self) -> String {
         self.context.ansible_ssh_private_key_file()
     }
-}
 
-impl TemplateRenderer for InventoryTemplate {
-    fn render(&self, output_path: &Path) -> Result<()> {
-        // Create output directory if it doesn't exist
-        if let Some(parent) = output_path.parent() {
-            fs::create_dir_all(parent).with_context(|| {
-                format!("Failed to create output directory: {}", parent.display())
-            })?;
-        }
-
-        // Write the pre-validated content directly
-        fs::write(output_path, &self.content).with_context(|| {
-            format!("Failed to write template output: {}", output_path.display())
-        })?;
-
-        Ok(())
+    /// Render the template to a file at the specified output path
+    ///
+    /// # Errors
+    /// Returns `FileWriteError::DirectoryCreation` if the parent directory cannot be created,
+    /// or `FileWriteError::FileWrite` if the file cannot be written
+    pub fn render(&self, output_path: &Path) -> Result<(), FileWriteError> {
+        write_file_with_dir_creation(output_path, &self.content)
     }
 }
 

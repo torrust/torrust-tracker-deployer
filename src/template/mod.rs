@@ -21,7 +21,7 @@ pub mod wrappers;
 // Re-export commonly used items
 pub use engine::{TemplateEngine, TemplateEngineError};
 pub use renderer::TemplateRenderer;
-pub use utils::copy_static_file;
+pub use utils::{copy_static_file, write_file_with_dir_creation, FileWriteError};
 
 #[cfg(test)]
 mod tests {
