@@ -14,14 +14,14 @@
 
 pub mod engine;
 pub mod file;
+pub mod file_ops;
 pub mod renderer;
-pub mod utils;
 pub mod wrappers;
 
 // Re-export commonly used items
 pub use engine::{TemplateEngine, TemplateEngineError};
+pub use file_ops::{copy_file_with_dir_creation, write_file_with_dir_creation, FileOperationError};
 pub use renderer::TemplateRenderer;
-pub use utils::{copy_static_file, write_file_with_dir_creation, FileWriteError};
 
 #[cfg(test)]
 mod tests {
@@ -29,14 +29,14 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn test_copy_static_file() -> anyhow::Result<()> {
+    fn test_copy_file_with_dir_creation() -> anyhow::Result<()> {
         let temp_dir = TempDir::new()?;
         let source_file = temp_dir.path().join("source.txt");
         let dest_file = temp_dir.path().join("subdir/dest.txt");
 
         std::fs::write(&source_file, "test content")?;
 
-        copy_static_file(&source_file, &dest_file)?;
+        copy_file_with_dir_creation(&source_file, &dest_file)?;
 
         let content = std::fs::read_to_string(&dest_file)?;
         assert_eq!(content, "test content");
@@ -53,7 +53,7 @@ mod tests {
         std::fs::write(&source_file, "build test")?;
 
         // This should create all necessary parent directories
-        copy_static_file(&source_file, &dest_file)?;
+        copy_file_with_dir_creation(&source_file, &dest_file)?;
 
         assert!(dest_file.exists());
         let content = std::fs::read_to_string(&dest_file)?;

@@ -5,7 +5,7 @@
 pub mod context;
 
 use crate::template::file::File;
-use crate::template::{write_file_with_dir_creation, FileWriteError, TemplateEngineError};
+use crate::template::{write_file_with_dir_creation, FileOperationError, TemplateEngineError};
 use anyhow::Result;
 use std::path::Path;
 
@@ -70,9 +70,9 @@ impl InventoryTemplate {
     /// Render the template to a file at the specified output path
     ///
     /// # Errors
-    /// Returns `FileWriteError::DirectoryCreation` if the parent directory cannot be created,
-    /// or `FileWriteError::FileWrite` if the file cannot be written
-    pub fn render(&self, output_path: &Path) -> Result<(), FileWriteError> {
+    /// Returns `FileOperationError::DirectoryCreation` if the parent directory cannot be created,
+    /// or `FileOperationError::FileWrite` if the file cannot be written
+    pub fn render(&self, output_path: &Path) -> Result<(), FileOperationError> {
         write_file_with_dir_creation(output_path, &self.content)
     }
 }
