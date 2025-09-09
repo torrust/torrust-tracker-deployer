@@ -29,9 +29,11 @@ tokio = { version = "1.0", features = [ "full" ] }
 anyhow = "1.0"
 clap = { version = "4.0", features = [ "derive" ] }
 derive_more = "0.99"
+rust-embed = "8.0"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = "1.0"
 tempfile = "3.0"
 tera = "1.0"
 thiserror = "1.0"
 torrust-linting = { path = "packages/linting" }
+tracing = "0.1"

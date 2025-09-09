@@ -53,6 +53,9 @@ Cargo.lock
 # Template build directory (runtime-generated configs)
 build/
 
+# Template data directory (runtime-generated templates)
+data/
+
 # Meson build directory
 builddir/
 

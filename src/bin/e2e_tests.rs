@@ -13,6 +13,7 @@ use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
     AnsibleHost, InventoryContext, InventoryTemplate, SshPrivateKeyFile,
 };
+use torrust_tracker_deploy::template::TemplateManager;
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -25,15 +26,21 @@ struct Cli {
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
+
+    /// Templates directory path (default: ./data/templates)
+    #[arg(long, default_value = "./data/templates")]
+    templates_dir: String,
 }
 
 struct TestEnvironment {
+    #[allow(dead_code)] // Still used for SSH key fixtures and cleanup
     project_root: PathBuf,
     #[allow(dead_code)] // Will be used in template rendering
     build_dir: PathBuf,
     keep_env: bool,
     verbose: bool,
     ssh_key_path: PathBuf,
+    template_manager: TemplateManager,
     #[allow(dead_code)] // Kept to maintain temp directory lifetime
     temp_dir: Option<tempfile::TempDir>,
     #[allow(dead_code)] // Used for cleanup but not directly accessed
@@ -41,9 +48,20 @@ struct TestEnvironment {
 }
 
 impl TestEnvironment {
-    fn new(keep_env: bool, verbose: bool) -> Result<Self> {
+    fn new(keep_env: bool, verbose: bool, templates_dir: String) -> Result<Self> {
         // Get project root (current directory when running from root)
         let project_root = std::env::current_dir()?;
+
+        // Create template manager
+        let template_manager = TemplateManager::new(templates_dir);
+
+        // Clean templates directory to ensure we use fresh templates from embedded resources
+        if verbose {
+            println!("🧹 Cleaning templates directory to ensure fresh embedded templates...");
+        }
+        template_manager.clean_templates_dir()?;
+
+        template_manager.ensure_templates_dir()?;
 
         // Create temporary directory for SSH keys
         let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
@@ -70,6 +88,10 @@ impl TestEnvironment {
                 temp_ssh_key.display()
             );
             println!("📁 Temporary directory: {}", temp_dir.path().display());
+            println!(
+                "📄 Templates directory: {}",
+                template_manager.templates_dir().display()
+            );
         }
 
         Ok(Self {
@@ -78,6 +100,7 @@ impl TestEnvironment {
             keep_env,
             verbose,
             ssh_key_path: temp_ssh_key,
+            template_manager,
             temp_dir: Some(temp_dir),
             original_inventory: None,
         })
@@ -94,17 +117,19 @@ impl TestEnvironment {
             .context("Failed to create build/tofu/lxd directory")?;
 
         // Copy static tofu templates (no variables for now)
-        let templates_tofu_dir = self.project_root.join("templates/tofu/lxd");
-
-        // Copy main.tf
-        let source_main_tf = templates_tofu_dir.join("main.tf");
+        // Get template paths, creating them from embedded resources if needed
+        let source_main_tf = self
+            .template_manager
+            .get_template_path("tofu/lxd/main.tf")?;
         let dest_main_tf = build_tofu_dir.join("main.tf");
         tokio::fs::copy(&source_main_tf, &dest_main_tf)
             .await
             .context("Failed to copy main.tf to build directory")?;
 
         // Copy cloud-init.yml
-        let source_cloud_init = templates_tofu_dir.join("cloud-init.yml");
+        let source_cloud_init = self
+            .template_manager
+            .get_template_path("tofu/lxd/cloud-init.yml")?;
         let dest_cloud_init = build_tofu_dir.join("cloud-init.yml");
         tokio::fs::copy(&source_cloud_init, &dest_cloud_init)
             .await
@@ -133,8 +158,8 @@ impl TestEnvironment {
 
         // Render inventory.yml.tera with runtime variables
         let inventory_template_path = self
-            .project_root
-            .join("templates/ansible/inventory.yml.tera");
+            .template_manager
+            .get_template_path("ansible/inventory.yml.tera")?;
         let inventory_output_path = build_ansible_dir.join("inventory.yml");
 
         let inventory_template_content = std::fs::read_to_string(&inventory_template_path)
@@ -164,10 +189,10 @@ impl TestEnvironment {
             .context("Failed to render inventory template")?;
 
         // Copy static ansible files
-        let templates_ansible_dir = self.project_root.join("templates/ansible");
-
         // Copy ansible.cfg
-        let source_cfg = templates_ansible_dir.join("ansible.cfg");
+        let source_cfg = self
+            .template_manager
+            .get_template_path("ansible/ansible.cfg")?;
         let dest_cfg = build_ansible_dir.join("ansible.cfg");
         tokio::fs::copy(&source_cfg, &dest_cfg)
             .await
@@ -180,7 +205,9 @@ impl TestEnvironment {
             "install-docker-compose.yml",
             "wait-cloud-init.yml",
         ] {
-            let source_playbook = templates_ansible_dir.join(playbook);
+            let source_playbook = self
+                .template_manager
+                .get_template_path(&format!("ansible/{playbook}"))?;
             let dest_playbook = build_ansible_dir.join(playbook);
             tokio::fs::copy(&source_playbook, &dest_playbook)
                 .await
@@ -682,7 +709,7 @@ async fn main() -> Result<()> {
     println!("🚀 Torrust Tracker Deploy E2E Tests");
     println!("===========================================");
 
-    let env = TestEnvironment::new(cli.keep, cli.verbose)?;
+    let env = TestEnvironment::new(cli.keep, cli.verbose, cli.templates_dir)?;
 
     let test_start = Instant::now();
 
