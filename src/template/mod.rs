@@ -19,7 +19,7 @@ pub mod utils;
 pub mod wrappers;
 
 // Re-export commonly used items
-pub use engine::TemplateEngine;
+pub use engine::{TemplateEngine, TemplateEngineError};
 pub use renderer::TemplateRenderer;
 pub use utils::copy_static_file;
 

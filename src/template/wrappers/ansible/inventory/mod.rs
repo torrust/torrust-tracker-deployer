@@ -5,11 +5,10 @@
 pub mod context;
 
 use crate::template::file::File;
-use crate::template::TemplateRenderer;
+use crate::template::{TemplateEngineError, TemplateRenderer};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
-use thiserror::Error;
 
 #[cfg(test)]
 use std::str::FromStr;
@@ -18,19 +17,6 @@ pub use context::{
     AnsibleHost, AnsibleHostError, InventoryContext, InventoryContextBuilder, InventoryContextError,
 };
 pub use context::{SshPrivateKeyFile, SshPrivateKeyFileError};
-
-/// Errors that can occur when creating an `InventoryTemplate`
-#[derive(Debug, Error)]
-pub enum InventoryTemplateError {
-    #[error("Failed to create template engine: {0}")]
-    TemplateEngineCreation(String),
-
-    #[error("Template validation failed: {0}")]
-    TemplateValidation(String),
-
-    #[error("Failed to render template: {0}")]
-    TemplateRendering(String),
-}
 
 #[derive(Debug)]
 pub struct InventoryTemplate {
@@ -55,16 +41,14 @@ impl InventoryTemplate {
     pub fn new(
         template_file: &File,
         inventory_context: InventoryContext,
-    ) -> Result<Self, InventoryTemplateError> {
-        // Create template engine and validate rendering
+    ) -> Result<Self, TemplateEngineError> {
         let mut engine = crate::template::TemplateEngine::new();
-        let validated_content = engine
-            .render(
-                template_file.filename(),
-                template_file.content(),
-                &inventory_context,
-            )
-            .map_err(|e| InventoryTemplateError::TemplateEngineCreation(e.to_string()))?;
+
+        let validated_content = engine.render(
+            template_file.filename(),
+            template_file.content(),
+            &inventory_context,
+        )?;
 
         Ok(Self {
             context: inventory_context,
@@ -233,10 +217,7 @@ mod tests {
         // This should fail because the template references an undefined variable
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
-        assert!(
-            error_msg.contains("Failed to create template engine")
-                || error_msg.contains("template engine")
-        );
+        assert!(error_msg.contains("Failed to render template") || error_msg.contains("template"));
     }
 
     #[test]
