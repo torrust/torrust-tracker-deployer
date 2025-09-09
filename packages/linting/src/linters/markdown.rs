@@ -19,7 +19,7 @@ pub fn run_markdown_linter() -> Result<()> {
     // Run the linter
     info!(target: "markdown", "Scanning markdown files...");
 
-    // Find all markdown files, excluding terraform directories (like the bash version)
+    // Find all markdown files, excluding terraform and target directories
     let find_output = Command::new("find")
         .args([
             ".",
@@ -30,6 +30,9 @@ pub fn run_markdown_linter() -> Result<()> {
             "-not",
             "-path",
             "*/.terraform/*",
+            "-not",
+            "-path",
+            "./target/*",
         ])
         .output()?;
 
