@@ -28,9 +28,6 @@ pub enum TemplateEngineError {
         #[source]
         source: tera::Error,
     },
-
-    #[error("Template validation failed: unresolved placeholders remain in rendered content")]
-    UnresolvedPlaceholders,
 }
 
 /// Template processing engine for validation and rendering
@@ -101,11 +98,9 @@ impl TemplateEngine {
         template_name: &str,
         context: &T,
     ) -> Result<String, TemplateEngineError> {
-        // Convert context to Tera context
         let tera_context = tera::Context::from_serialize(context)
             .map_err(|source| TemplateEngineError::ContextSerialization { source })?;
 
-        // Render template to string
         let rendered_content =
             self.tera
                 .render(template_name, &tera_context)
@@ -113,11 +108,6 @@ impl TemplateEngine {
                     template_name: template_name.to_string(),
                     source,
                 })?;
-
-        // Verify no placeholders remain (basic check for {{ }} patterns)
-        if rendered_content.contains("{{") && rendered_content.contains("}}") {
-            return Err(TemplateEngineError::UnresolvedPlaceholders);
-        }
 
         Ok(rendered_content)
     }
@@ -371,6 +361,77 @@ settings:
             validator.render("template-with_special.chars", template_content, &context)?;
 
         assert_eq!(rendered_content, "Hello World!");
+        Ok(())
+    }
+
+    #[test]
+    fn it_should_allow_extra_variables_in_context() -> Result<(), TemplateEngineError> {
+        let mut validator = TemplateEngine::new();
+        let template_content = "Hello {{name}}!"; // Only uses 'name' variable
+        let context = TestContext {
+            name: "World".to_string(),
+            value: 42, // This variable is not used in the template but should be allowed
+        };
+
+        let rendered_content =
+            validator.render("extra_vars_template", template_content, &context)?;
+
+        // Should render successfully and ignore the extra 'value' variable
+        assert_eq!(rendered_content, "Hello World!");
+        Ok(())
+    }
+
+    #[test]
+    fn it_should_allow_tera_delimiters_in_rendered_output() -> Result<(), TemplateEngineError> {
+        let mut validator = TemplateEngine::new();
+
+        // Simple template that outputs content containing Tera-like delimiters
+        // We use raw blocks to prevent Tera from parsing the output delimiters
+        let template_content =
+            "Hello {{name}}! Use {% raw %}{{ variable }}{% endraw %} in your config.";
+
+        let context = TestContext {
+            name: "World".to_string(),
+            value: 42,
+        };
+
+        let rendered_content =
+            validator.render("delimiter_template", template_content, &context)?;
+
+        // Should render successfully and contain delimiters in the final output
+        assert_eq!(
+            rendered_content,
+            "Hello World! Use {{ variable }} in your config."
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn it_should_allow_all_tera_delimiter_types_in_output() -> Result<(), TemplateEngineError> {
+        #[derive(Serialize)]
+        struct SimpleContext {
+            app_name: String,
+        }
+
+        let mut validator = TemplateEngine::new();
+
+        // Template demonstrating all Tera delimiter types can appear in final output
+        let template_content = r"App: {{app_name}}
+Expression example: {% raw %}{{ expr }}{% endraw %}
+Statement example: {% raw %}{% if condition %}{% endraw %}
+Comment example: {% raw %}{# comment #}{% endraw %}";
+
+        let context = SimpleContext {
+            app_name: "MyApp".to_string(),
+        };
+
+        let rendered_content = validator.render("all_delimiters", template_content, &context)?;
+
+        // Should render successfully and preserve all delimiter types in output
+        assert!(rendered_content.contains("App: MyApp"));
+        assert!(rendered_content.contains("{{ expr }}"));
+        assert!(rendered_content.contains("{% if condition %}"));
+        assert!(rendered_content.contains("{# comment #}"));
         Ok(())
     }
 }
