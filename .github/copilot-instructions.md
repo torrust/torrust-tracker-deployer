@@ -34,6 +34,7 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 
 - **Build**: `cargo build`
 - **Test**: `cargo test`
+- **Unit Tests**: When writing unit tests, follow conventions described in [`docs/contributing/testing.md`](../docs/contributing/testing.md)
 - **Lint**: `cargo run --bin linter all` (mandatory before commits)
 - **Dependencies**: `cargo machete` (mandatory before commits - no unused dependencies)
 - **E2E**: `cargo run --bin e2e-tests`
