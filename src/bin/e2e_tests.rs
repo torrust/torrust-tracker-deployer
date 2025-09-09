@@ -17,7 +17,9 @@ use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
 };
 use torrust_tracker_deploy::template::TemplateManager;
 // Import remote actions
-use torrust_tracker_deploy::actions::{CloudInitValidator, DockerValidator, RemoteAction};
+use torrust_tracker_deploy::actions::{
+    CloudInitValidator, DockerComposeValidator, DockerValidator, RemoteAction,
+};
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -322,81 +324,6 @@ impl TestEnvironment {
         Ok(())
     }
 
-    fn validate_docker_compose_installation(&self, container_ip: &str) -> Result<()> {
-        println!("🔍 Validating Docker Compose installation...");
-
-        // First check if Docker is available (Docker Compose requires Docker)
-        let docker_available = self
-            .ssh_client
-            .check_command(container_ip, "docker --version")
-            .context("Failed to check Docker availability for Compose")?;
-
-        if !docker_available {
-            println!("⚠️  Docker Compose validation skipped");
-            println!("   ℹ️  Docker is not available, so Docker Compose cannot be validated");
-            println!("   ℹ️  This is expected in CI environments with network limitations");
-            return Ok(()); // Don't fail the test, just skip validation
-        }
-
-        // Check Docker Compose version
-        let Ok(compose_version) = self
-            .ssh_client
-            .execute(container_ip, "docker-compose --version")
-        else {
-            println!(
-                "⚠️  Docker Compose not found, this is expected if Docker installation was skipped"
-            );
-            return Ok(()); // Don't fail, just note the situation
-        };
-
-        let compose_version = compose_version.trim();
-        println!("✅ Docker Compose installation validated");
-        println!("   ✓ Docker Compose version: {compose_version}");
-
-        // Test basic docker-compose functionality with a simple test file (only if Docker is working)
-        let test_compose_content = r"services:
-  test:
-    image: hello-world
-";
-
-        // Create a temporary test docker-compose.yml file
-        let create_test_success = self
-            .ssh_client
-            .check_command(
-                container_ip,
-                &format!("echo '{test_compose_content}' > /tmp/test-docker-compose.yml"),
-            )
-            .context("Failed to create test docker-compose.yml")?;
-
-        if !create_test_success {
-            println!("   ⚠️  Could not create test docker-compose.yml file");
-            return Ok(()); // Don't fail, just skip the functional test
-        }
-
-        // Validate docker-compose file
-        let validate_success = self
-            .ssh_client
-            .check_command(
-                container_ip,
-                "cd /tmp && docker-compose -f test-docker-compose.yml config",
-            )
-            .context("Failed to validate docker-compose configuration")?;
-
-        if validate_success {
-            println!("   ✓ Docker Compose configuration validation passed");
-        } else {
-            println!("   ⚠️  Docker Compose configuration validation skipped");
-        }
-
-        // Clean up test file
-        drop(
-            self.ssh_client
-                .check_command(container_ip, "rm -f /tmp/test-docker-compose.yml"),
-        );
-
-        Ok(())
-    }
-
     fn cleanup(&self) {
         if self.keep_env {
             println!("🔒 Keeping test environment as requested");
@@ -478,7 +405,9 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     env.run_ansible_playbook("install-docker-compose")?;
 
     // 9. Validate Docker Compose installation
-    env.validate_docker_compose_installation(&container_ip)?;
+    let docker_compose_validator =
+        DockerComposeValidator::new(&env.ssh_key_path, "torrust", env.verbose);
+    docker_compose_validator.execute(&container_ip).await?;
 
     println!("🎉 Full deployment E2E test completed successfully!");
     println!("   ✅ Cloud-init setup completed");
