@@ -26,7 +26,7 @@ impl DockerComposeValidator {
 
 impl RemoteAction for DockerComposeValidator {
     fn name(&self) -> &'static str {
-        "docker-compose-installation"
+        "docker-compose-validation"
     }
 
     async fn execute(&self, server_ip: &str) -> Result<()> {

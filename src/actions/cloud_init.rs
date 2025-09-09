@@ -26,7 +26,7 @@ impl CloudInitValidator {
 
 impl RemoteAction for CloudInitValidator {
     fn name(&self) -> &'static str {
-        "cloud-init-completion"
+        "cloud-init-validation"
     }
 
     async fn execute(&self, server_ip: &str) -> Result<()> {

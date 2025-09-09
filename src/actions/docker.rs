@@ -26,7 +26,7 @@ impl DockerValidator {
 
 impl RemoteAction for DockerValidator {
     fn name(&self) -> &'static str {
-        "docker-installation"
+        "docker-validation"
     }
 
     async fn execute(&self, server_ip: &str) -> Result<()> {
