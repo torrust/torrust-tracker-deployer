@@ -8,6 +8,8 @@ debootstrap
 dtolnay
 ehthumbs
 elif
+endfor
+endraw
 eprintln
 getent
 Hostnames
