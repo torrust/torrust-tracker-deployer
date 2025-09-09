@@ -8,6 +8,8 @@ use std::time::{Duration, Instant};
 use tempfile::TempDir;
 use tokio::time::sleep;
 
+// Import command execution system
+use torrust_tracker_deploy::command::CommandExecutor;
 // Import template system
 use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
@@ -41,6 +43,7 @@ struct TestEnvironment {
     verbose: bool,
     ssh_key_path: PathBuf,
     template_manager: TemplateManager,
+    command_executor: CommandExecutor,
     #[allow(dead_code)] // Kept to maintain temp directory lifetime
     temp_dir: Option<tempfile::TempDir>,
     #[allow(dead_code)] // Used for cleanup but not directly accessed
@@ -54,6 +57,9 @@ impl TestEnvironment {
 
         // Create template manager
         let template_manager = TemplateManager::new(templates_dir);
+
+        // Create command executor with verbosity setting
+        let command_executor = CommandExecutor::new(verbose);
 
         // Clean templates directory to ensure we use fresh templates from embedded resources
         if verbose {
@@ -101,6 +107,7 @@ impl TestEnvironment {
             verbose,
             ssh_key_path: temp_ssh_key,
             template_manager,
+            command_executor,
             temp_dir: Some(temp_dir),
             original_inventory: None,
         })
@@ -231,39 +238,9 @@ impl TestEnvironment {
     }
 
     fn run_command(&self, cmd: &str, args: &[&str], working_dir: Option<&Path>) -> Result<String> {
-        let mut command = Command::new(cmd);
-        command.args(args);
-
-        if let Some(dir) = working_dir {
-            command.current_dir(dir);
-        }
-
-        if self.verbose {
-            println!("🔧 Running: {} {}", cmd, args.join(" "));
-            if let Some(dir) = working_dir {
-                println!("   Working directory: {}", dir.display());
-            }
-        }
-
-        let output = command
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .context(format!("Failed to execute: {} {}", cmd, args.join(" ")))?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(anyhow!(
-                "Command failed: {} {}\nStdout: {}\nStderr: {}",
-                cmd,
-                args.join(" "),
-                stdout,
-                stderr
-            ));
-        }
-
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        self.command_executor
+            .run_command(cmd, args, working_dir)
+            .map_err(anyhow::Error::from)
     }
 
     fn provision_infrastructure(&self) -> Result<String> {

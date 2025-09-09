@@ -11,6 +11,10 @@
 //!     - `ansible` - Wrappers for templates/ansible/ files
 //!     - `tofu` - Wrappers for templates/tofu/ files
 //!
+//! ## Command Execution
+//! - `command` - Command execution utilities with optional verbosity
+//!
 //! Linting functionality has been moved to its own package: packages/linting
 
+pub mod command;
 pub mod template;
