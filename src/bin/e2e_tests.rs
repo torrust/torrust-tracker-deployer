@@ -2,13 +2,14 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::str::FromStr;
 use std::time::Instant;
 use tempfile::TempDir;
+use tracing_subscriber::fmt;
 
 // Import command execution system
 use torrust_tracker_deploy::command::CommandExecutor;
+use torrust_tracker_deploy::opentofu::OpenTofuClient;
 use torrust_tracker_deploy::ssh::SshClient;
 // Import template system
 use torrust_tracker_deploy::template::file::File;
@@ -48,6 +49,7 @@ struct TestEnvironment {
     ssh_key_path: PathBuf,
     template_manager: TemplateManager,
     command_executor: CommandExecutor,
+    opentofu_client: OpenTofuClient,
     ssh_client: SshClient,
     #[allow(dead_code)] // Kept to maintain temp directory lifetime
     temp_dir: Option<tempfile::TempDir>,
@@ -96,6 +98,9 @@ impl TestEnvironment {
         // Create SSH client with the configured key and username
         let ssh_client = SshClient::new(&temp_ssh_key, "torrust", verbose);
 
+        // Create OpenTofu client pointing to build/tofu/lxd directory
+        let opentofu_client = OpenTofuClient::new(project_root.join("build/tofu/lxd"), verbose);
+
         if verbose {
             println!(
                 "🔑 SSH key copied to temporary location: {}",
@@ -116,6 +121,7 @@ impl TestEnvironment {
             ssh_key_path: temp_ssh_key,
             template_manager,
             command_executor,
+            opentofu_client,
             ssh_client,
             temp_dir: Some(temp_dir),
             original_inventory: None,
@@ -255,17 +261,18 @@ impl TestEnvironment {
     fn provision_infrastructure(&self) -> Result<String> {
         println!("🚀 Stage 2: Provisioning test infrastructure...");
 
-        // Use the build directory instead of config directory
-        let tofu_dir = self.build_dir.join("tofu/lxd");
-
         // Initialize OpenTofu
         println!("   Initializing OpenTofu...");
-        self.run_command("tofu", &["init"], Some(&tofu_dir))
+        self.opentofu_client
+            .init()
+            .map_err(anyhow::Error::from)
             .context("Failed to initialize OpenTofu")?;
 
         // Apply infrastructure
         println!("   Applying infrastructure...");
-        self.run_command("tofu", &["apply", "-auto-approve"], Some(&tofu_dir))
+        self.opentofu_client
+            .apply(true) // auto_approve = true
+            .map_err(anyhow::Error::from)
             .context("Failed to apply OpenTofu configuration")?;
 
         // Get the container IP
@@ -334,10 +341,11 @@ impl TestEnvironment {
 
         println!("🧹 Cleaning up test environment...");
 
-        let tofu_dir = self.build_dir.join("tofu/lxd");
-
-        // Destroy infrastructure
-        let result = self.run_command("tofu", &["destroy", "-auto-approve"], Some(&tofu_dir));
+        // Destroy infrastructure using OpenTofuClient
+        let result = self
+            .opentofu_client
+            .destroy(true) // auto_approve = true
+            .map_err(anyhow::Error::from);
 
         match result {
             Ok(_) => println!("✅ Test environment cleaned up successfully"),
@@ -350,13 +358,12 @@ impl Drop for TestEnvironment {
     fn drop(&mut self) {
         if !self.keep_env {
             // Try basic cleanup in case async cleanup failed
+            // Using emergency_destroy for consistent OpenTofu handling
             let tofu_dir = self.build_dir.join("tofu/lxd");
-            drop(
-                Command::new("tofu")
-                    .args(["destroy", "-auto-approve"])
-                    .current_dir(&tofu_dir)
-                    .output(),
-            );
+            
+            drop(torrust_tracker_deploy::opentofu::emergency_destroy(
+                &tofu_dir,
+            ));
         }
     }
 }
@@ -420,6 +427,9 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize tracing subscriber to display logs from OpenTofuClient
+    fmt::init();
+
     let cli = Cli::parse();
 
     println!("🚀 Torrust Tracker Deploy E2E Tests");

@@ -14,10 +14,12 @@
 //! ## Command Execution
 //! - `command` - Command execution utilities with optional verbosity
 //! - `ssh` - SSH command execution utilities with secure defaults
+//! - `opentofu` - `OpenTofu` infrastructure management utilities
 //!
 //! Linting functionality has been moved to its own package: packages/linting
 
 pub mod actions;
 pub mod command;
+pub mod opentofu;
 pub mod ssh;
 pub mod template;

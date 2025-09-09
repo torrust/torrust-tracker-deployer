@@ -1,0 +1,282 @@
+use std::path::{Path, PathBuf};
+
+use tracing::info;
+
+use crate::command::{CommandError, CommandExecutor};
+
+/// A specialized `OpenTofu` client for infrastructure management.
+/// This client provides a consistent interface for `OpenTofu` operations:
+/// - Initialize `OpenTofu` configurations  
+/// - Plan infrastructure changes
+/// - Apply infrastructure changes
+/// - Destroy infrastructure
+///
+/// Uses `CommandExecutor` as a collaborator for actual command execution.
+pub struct OpenTofuClient {
+    working_dir: PathBuf,
+    command_executor: CommandExecutor,
+}
+
+impl OpenTofuClient {
+    /// Creates a new `OpenTofuClient`
+    ///
+    /// # Arguments
+    /// * `working_dir` - Path to the directory containing `OpenTofu` configuration files
+    /// * `verbose` - Whether to log commands being executed
+    #[must_use]
+    pub fn new<P: Into<PathBuf>>(working_dir: P, verbose: bool) -> Self {
+        Self {
+            working_dir: working_dir.into(),
+            command_executor: CommandExecutor::new(verbose),
+        }
+    }
+
+    /// Initialize `OpenTofu` configuration
+    ///
+    /// # Returns
+    /// * `Ok(String)` - The stdout output if the command succeeds
+    /// * `Err(CommandError)` - Error describing what went wrong
+    ///
+    /// # Errors
+    /// This function will return an error if:
+    /// * The `OpenTofu` initialization fails
+    /// * The working directory does not exist or is not accessible
+    pub fn init(&self) -> Result<String, CommandError> {
+        info!(
+            "Initializing OpenTofu in directory: {}",
+            self.working_dir.display()
+        );
+
+        self.command_executor
+            .run_command("tofu", &["init"], Some(&self.working_dir))
+    }
+
+    /// Plan infrastructure changes
+    ///
+    /// # Returns
+    /// * `Ok(String)` - The stdout output if the command succeeds
+    /// * `Err(CommandError)` - Error describing what went wrong
+    ///
+    /// # Errors
+    /// This function will return an error if:
+    /// * The `OpenTofu` plan fails
+    /// * The configuration is not initialized
+    pub fn plan(&self) -> Result<String, CommandError> {
+        info!(
+            "Planning infrastructure changes in directory: {}",
+            self.working_dir.display()
+        );
+
+        self.command_executor
+            .run_command("tofu", &["plan"], Some(&self.working_dir))
+    }
+
+    /// Apply infrastructure changes
+    ///
+    /// # Arguments
+    /// * `auto_approve` - Whether to automatically approve the changes without interactive confirmation
+    ///
+    /// # Returns
+    /// * `Ok(String)` - The stdout output if the command succeeds
+    /// * `Err(CommandError)` - Error describing what went wrong
+    ///
+    /// # Errors
+    /// This function will return an error if:
+    /// * The `OpenTofu` apply fails
+    /// * The configuration is not initialized
+    pub fn apply(&self, auto_approve: bool) -> Result<String, CommandError> {
+        info!(
+            "Applying infrastructure changes in directory: {}",
+            self.working_dir.display()
+        );
+
+        let mut args = vec!["apply"];
+        if auto_approve {
+            args.push("-auto-approve");
+        }
+
+        self.command_executor
+            .run_command("tofu", &args, Some(&self.working_dir))
+    }
+
+    /// Destroy infrastructure
+    ///
+    /// # Arguments
+    /// * `auto_approve` - Whether to automatically approve the destruction without interactive confirmation
+    ///
+    /// # Returns
+    /// * `Ok(String)` - The stdout output if the command succeeds
+    /// * `Err(CommandError)` - Error describing what went wrong
+    ///
+    /// # Errors
+    /// This function will return an error if:
+    /// * The `OpenTofu` destroy fails
+    /// * The configuration is not initialized
+    pub fn destroy(&self, auto_approve: bool) -> Result<String, CommandError> {
+        info!(
+            "Destroying infrastructure in directory: {}",
+            self.working_dir.display()
+        );
+
+        let mut args = vec!["destroy"];
+        if auto_approve {
+            args.push("-auto-approve");
+        }
+
+        self.command_executor
+            .run_command("tofu", &args, Some(&self.working_dir))
+    }
+
+    /// Get the working directory path
+    #[must_use]
+    pub fn working_dir(&self) -> &Path {
+        &self.working_dir
+    }
+}
+
+/// Emergency destroy operation for cleanup scenarios
+///
+/// This function performs a destructive `OpenTofu` destroy operation without prompting.
+/// It's designed for use in Drop implementations and other cleanup scenarios where
+/// interactive confirmation is not possible.
+///
+/// # Arguments
+///
+/// * `working_dir` - Directory containing the `OpenTofu` configuration files
+///
+/// # Returns
+///
+/// * `Result<(), Box<dyn std::error::Error>>` - Success or error from the destroy operation
+///
+/// # Errors
+///
+/// Returns an error if the `OpenTofu` destroy command fails or if there are issues
+/// with command execution.
+pub fn emergency_destroy<P: AsRef<Path>>(working_dir: P) -> Result<(), Box<dyn std::error::Error>> {
+    use std::process::Command;
+
+    tracing::debug!(
+        "Emergency destroy: Executing `OpenTofu` destroy in directory: {}",
+        working_dir.as_ref().display()
+    );
+
+    let output = Command::new("tofu")
+        .args(["destroy", "-auto-approve"])
+        .current_dir(&working_dir)
+        .output()?;
+
+    if output.status.success() {
+        tracing::debug!("Emergency destroy: `OpenTofu` destroy completed successfully");
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        tracing::error!("Emergency destroy: `OpenTofu` destroy failed: {stderr}");
+        Err(format!("`OpenTofu` destroy failed: {stderr}").into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    fn create_test_config_dir() -> TempDir {
+        let temp_dir = TempDir::new().unwrap();
+        let main_tf_content = r#"
+terraform {
+  required_version = ">= 1.0"
+}
+
+resource "null_resource" "test" {
+  provisioner "local-exec" {
+    command = "echo 'test'"
+  }
+}
+"#;
+        fs::write(temp_dir.path().join("main.tf"), main_tf_content).unwrap();
+        temp_dir
+    }
+
+    #[test]
+    fn it_should_create_opentofu_client_with_valid_parameters() {
+        let client = OpenTofuClient::new("/path/to/config", false);
+
+        assert_eq!(client.working_dir.to_string_lossy(), "/path/to/config");
+    }
+
+    #[test]
+    fn it_should_create_opentofu_client_with_verbose_enabled() {
+        let client = OpenTofuClient::new("/path/to/config", true);
+
+        assert_eq!(client.working_dir.to_string_lossy(), "/path/to/config");
+        // Note: verbose is now encapsulated in the CommandExecutor collaborator
+    }
+
+    #[test]
+    fn it_should_return_working_directory_path() {
+        let client = OpenTofuClient::new("/test/path", false);
+
+        assert_eq!(client.working_dir(), Path::new("/test/path"));
+    }
+
+    #[test]
+    fn it_should_construct_pathbuf_from_string() {
+        let path_str = "/some/test/path";
+        let client = OpenTofuClient::new(path_str, false);
+
+        assert_eq!(client.working_dir(), Path::new(path_str));
+    }
+
+    #[test]
+    fn it_should_construct_pathbuf_from_path() {
+        let path = Path::new("/another/test/path");
+        let client = OpenTofuClient::new(path, true);
+
+        assert_eq!(client.working_dir(), path);
+    }
+
+    // Integration test that would require OpenTofu to be installed
+    // These tests are more suitable for integration testing in a CI environment
+    #[ignore = "requires OpenTofu installation"]
+    #[test]
+    fn it_should_initialize_opentofu_configuration() {
+        let temp_dir = create_test_config_dir();
+        let client = OpenTofuClient::new(temp_dir.path(), false);
+
+        // This would fail if OpenTofu is not installed, so we ignore it by default
+        match client.init() {
+            Ok(output) => {
+                assert!(
+                    output.contains("Terraform has been successfully initialized")
+                        || output.contains("OpenTofu has been successfully initialized")
+                );
+            }
+            Err(_) => {
+                // Expected if OpenTofu is not installed
+                println!("OpenTofu not available for testing");
+            }
+        }
+    }
+
+    #[ignore = "requires OpenTofu installation"]
+    #[test]
+    fn it_should_plan_opentofu_configuration() {
+        let temp_dir = create_test_config_dir();
+        let client = OpenTofuClient::new(temp_dir.path(), false);
+
+        // Initialize first (this would also be ignored if OpenTofu is not available)
+        drop(client.init());
+
+        // This would fail if OpenTofu is not installed, so we ignore it by default
+        match client.plan() {
+            Ok(_output) => {
+                // Plan succeeded
+            }
+            Err(_) => {
+                // Expected if OpenTofu is not installed
+                println!("OpenTofu not available for testing");
+            }
+        }
+    }
+}

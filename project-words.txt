@@ -26,6 +26,7 @@ nslookup
 nullglob
 oneline
 pacman
+pathbuf
 pipefail
 prereq
 publickey
