@@ -1,4 +1,5 @@
 buildx
+cloneable
 cloudinit
 connrefused
 containerd
@@ -44,6 +45,7 @@ sysfs
 Taplo
 Tera
 terraformrc
+tést
 testuser
 tfstate
 tfvars
