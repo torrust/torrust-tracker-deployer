@@ -17,7 +17,7 @@ use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
 };
 use torrust_tracker_deploy::template::TemplateManager;
 // Import remote actions
-use torrust_tracker_deploy::actions::{CloudInitValidator, RemoteAction};
+use torrust_tracker_deploy::actions::{CloudInitValidator, DockerValidator, RemoteAction};
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -322,35 +322,6 @@ impl TestEnvironment {
         Ok(())
     }
 
-    fn validate_docker_installation(&self, container_ip: &str) -> Result<()> {
-        println!("🔍 Validating Docker installation...");
-
-        // Check Docker version
-        let Ok(docker_version) = self.ssh_client.execute(container_ip, "docker --version") else {
-            println!("⚠️  Docker installation validation skipped");
-            println!("   ℹ️  This is expected in CI environments with network limitations");
-            println!("   ℹ️  The playbook ran successfully but Docker installation was skipped");
-            return Ok(()); // Don't fail the test, just skip validation
-        };
-        let docker_version = docker_version.trim();
-        println!("✅ Docker installation validated");
-        println!("   ✓ Docker version: {docker_version}");
-
-        // Check Docker daemon status (only if Docker is installed)
-        let daemon_active = self
-            .ssh_client
-            .check_command(container_ip, "sudo systemctl is-active docker")
-            .context("Failed to check Docker daemon status")?;
-
-        if daemon_active {
-            println!("   ✓ Docker daemon is active");
-        } else {
-            println!("   ⚠️  Docker daemon check skipped (service may not be running)");
-        }
-
-        Ok(())
-    }
-
     fn validate_docker_compose_installation(&self, container_ip: &str) -> Result<()> {
         println!("🔍 Validating Docker Compose installation...");
 
@@ -499,7 +470,8 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     env.run_ansible_playbook("install-docker")?;
 
     // 7. Validate Docker installation
-    env.validate_docker_installation(&container_ip)?;
+    let docker_validator = DockerValidator::new(&env.ssh_key_path, "torrust", env.verbose);
+    docker_validator.execute(&container_ip).await?;
 
     // 8. Run the install-docker-compose playbook
     println!("📋 Step 3: Installing Docker Compose...");

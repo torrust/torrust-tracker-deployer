@@ -1,8 +1,10 @@
 use anyhow::Result;
 
 pub mod cloud_init;
+pub mod docker;
 
 pub use cloud_init::CloudInitValidator;
+pub use docker::DockerValidator;
 
 /// Trait for remote actions that can be executed on a server via SSH
 ///
