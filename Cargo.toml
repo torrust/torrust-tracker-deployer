@@ -37,3 +37,4 @@ tera = "1.0"
 thiserror = "1.0"
 torrust-linting = { path = "packages/linting" }
 tracing = "0.1"
+tracing-subscriber = "0.3"

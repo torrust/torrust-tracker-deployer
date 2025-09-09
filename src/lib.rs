@@ -17,6 +17,7 @@
 //!
 //! Linting functionality has been moved to its own package: packages/linting
 
+pub mod actions;
 pub mod command;
 pub mod ssh;
 pub mod template;

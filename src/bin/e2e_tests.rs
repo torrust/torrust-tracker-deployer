@@ -16,6 +16,8 @@ use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
     AnsibleHost, InventoryContext, InventoryTemplate, SshPrivateKeyFile,
 };
 use torrust_tracker_deploy::template::TemplateManager;
+// Import remote actions
+use torrust_tracker_deploy::actions::{CloudInitValidator, RemoteAction};
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -320,40 +322,6 @@ impl TestEnvironment {
         Ok(())
     }
 
-    fn validate_cloud_init_completion(&self, container_ip: &str) -> Result<()> {
-        println!("🔍 Validating cloud-init completion...");
-
-        // Check cloud-init status
-        let status_output = self
-            .ssh_client
-            .execute(container_ip, "cloud-init status")
-            .context("Failed to check cloud-init status")?;
-        if !status_output.contains("status: done") {
-            return Err(anyhow!(
-                "Cloud-init status is not 'done': {}",
-                status_output
-            ));
-        }
-
-        // Check for completion marker file
-        let marker_exists = self
-            .ssh_client
-            .check_command(
-                container_ip,
-                "test -f /var/lib/cloud/instance/boot-finished",
-            )
-            .context("Failed to check cloud-init completion marker")?;
-
-        if !marker_exists {
-            return Err(anyhow!("Cloud-init completion marker file not found"));
-        }
-
-        println!("✅ Cloud-init validation passed");
-        println!("   ✓ Cloud-init status is 'done'");
-        println!("   ✓ Completion marker file exists");
-        Ok(())
-    }
-
     fn validate_docker_installation(&self, container_ip: &str) -> Result<()> {
         println!("🔍 Validating Docker installation...");
 
@@ -521,7 +489,8 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     env.run_ansible_playbook("wait-cloud-init")?;
 
     // Validate cloud-init completion
-    env.validate_cloud_init_completion(&container_ip)?;
+    let cloud_init_validator = CloudInitValidator::new(&env.ssh_key_path, "torrust", env.verbose);
+    cloud_init_validator.execute(&container_ip).await?;
 
     // Run the install-docker playbook
     // NOTE: We skip the update-apt-cache playbook in E2E tests to avoid CI network issues
