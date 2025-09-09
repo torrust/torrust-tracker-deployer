@@ -13,8 +13,10 @@
 //!
 //! ## Command Execution
 //! - `command` - Command execution utilities with optional verbosity
+//! - `ssh` - SSH command execution utilities with secure defaults
 //!
 //! Linting functionality has been moved to its own package: packages/linting
 
 pub mod command;
+pub mod ssh;
 pub mod template;

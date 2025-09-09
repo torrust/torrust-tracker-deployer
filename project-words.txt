@@ -43,6 +43,7 @@ sysfs
 Taplo
 Tera
 terraformrc
+testuser
 tfstate
 tfvars
 thiserror

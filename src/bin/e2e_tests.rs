@@ -2,14 +2,14 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::str::FromStr;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tempfile::TempDir;
-use tokio::time::sleep;
 
 // Import command execution system
 use torrust_tracker_deploy::command::CommandExecutor;
+use torrust_tracker_deploy::ssh::SshClient;
 // Import template system
 use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
@@ -44,6 +44,7 @@ struct TestEnvironment {
     ssh_key_path: PathBuf,
     template_manager: TemplateManager,
     command_executor: CommandExecutor,
+    ssh_client: SshClient,
     #[allow(dead_code)] // Kept to maintain temp directory lifetime
     temp_dir: Option<tempfile::TempDir>,
     #[allow(dead_code)] // Used for cleanup but not directly accessed
@@ -88,6 +89,9 @@ impl TestEnvironment {
             std::fs::set_permissions(&temp_ssh_key, perms)?;
         }
 
+        // Create SSH client with the configured key and username
+        let ssh_client = SshClient::new(&temp_ssh_key, "torrust", verbose);
+
         if verbose {
             println!(
                 "🔑 SSH key copied to temporary location: {}",
@@ -108,6 +112,7 @@ impl TestEnvironment {
             ssh_key_path: temp_ssh_key,
             template_manager,
             command_executor,
+            ssh_client,
             temp_dir: Some(temp_dir),
             original_inventory: None,
         })
@@ -297,55 +302,6 @@ impl TestEnvironment {
         Ok(ip.to_string())
     }
 
-    async fn wait_for_ssh_connectivity(&self, ip: &str) -> Result<()> {
-        println!("🔌 Waiting for SSH connectivity...");
-
-        let max_attempts = 30;
-        let mut attempt = 0;
-
-        while attempt < max_attempts {
-            let result = Command::new("ssh")
-                .args([
-                    "-i",
-                    self.ssh_key_path.to_str().unwrap(),
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "UserKnownHostsFile=/dev/null",
-                    "-o",
-                    "ConnectTimeout=5",
-                    &format!("torrust@{ip}"),
-                    "echo 'SSH connected'",
-                ])
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status();
-
-            if let Ok(status) = result {
-                if status.success() {
-                    println!("✅ SSH connectivity established");
-                    return Ok(());
-                }
-            }
-
-            if attempt % 5 == 0 {
-                println!(
-                    "   Still waiting for SSH... (attempt {}/{})",
-                    attempt + 1,
-                    max_attempts
-                );
-            }
-
-            sleep(Duration::from_secs(2)).await;
-            attempt += 1;
-        }
-
-        Err(anyhow!(
-            "SSH connectivity could not be established after {} attempts",
-            max_attempts
-        ))
-    }
-
     fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
         println!("🎭 Stage 4: Running Ansible playbook: {playbook}");
 
@@ -368,25 +324,10 @@ impl TestEnvironment {
         println!("🔍 Validating cloud-init completion...");
 
         // Check cloud-init status
-        let output = Command::new("ssh")
-            .args([
-                "-i",
-                self.ssh_key_path.to_str().unwrap(),
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{container_ip}"),
-                "cloud-init status",
-            ])
-            .output()
+        let status_output = self
+            .ssh_client
+            .execute(container_ip, "cloud-init status")
             .context("Failed to check cloud-init status")?;
-
-        if !output.status.success() {
-            return Err(anyhow!("Failed to execute cloud-init status command"));
-        }
-
-        let status_output = String::from_utf8_lossy(&output.stdout);
         if !status_output.contains("status: done") {
             return Err(anyhow!(
                 "Cloud-init status is not 'done': {}",
@@ -395,21 +336,15 @@ impl TestEnvironment {
         }
 
         // Check for completion marker file
-        let marker_check = Command::new("ssh")
-            .args([
-                "-i",
-                self.ssh_key_path.to_str().unwrap(),
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{container_ip}"),
+        let marker_exists = self
+            .ssh_client
+            .check_command(
+                container_ip,
                 "test -f /var/lib/cloud/instance/boot-finished",
-            ])
-            .status()
+            )
             .context("Failed to check cloud-init completion marker")?;
 
-        if !marker_check.success() {
+        if !marker_exists {
             return Err(anyhow!("Cloud-init completion marker file not found"));
         }
 
@@ -423,47 +358,23 @@ impl TestEnvironment {
         println!("🔍 Validating Docker installation...");
 
         // Check Docker version
-        let output = Command::new("ssh")
-            .args([
-                "-i",
-                self.ssh_key_path.to_str().unwrap(),
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{container_ip}"),
-                "docker --version",
-            ])
-            .output()
-            .context("Failed to check Docker version")?;
-
-        if !output.status.success() {
+        let Ok(docker_version) = self.ssh_client.execute(container_ip, "docker --version") else {
             println!("⚠️  Docker installation validation skipped");
             println!("   ℹ️  This is expected in CI environments with network limitations");
             println!("   ℹ️  The playbook ran successfully but Docker installation was skipped");
             return Ok(()); // Don't fail the test, just skip validation
-        }
-
-        let docker_version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        };
+        let docker_version = docker_version.trim();
         println!("✅ Docker installation validated");
         println!("   ✓ Docker version: {docker_version}");
 
         // Check Docker daemon status (only if Docker is installed)
-        let daemon_check = Command::new("ssh")
-            .args([
-                "-i",
-                self.ssh_key_path.to_str().unwrap(),
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{container_ip}"),
-                "sudo systemctl is-active docker",
-            ])
-            .output()
+        let daemon_active = self
+            .ssh_client
+            .check_command(container_ip, "sudo systemctl is-active docker")
             .context("Failed to check Docker daemon status")?;
 
-        if daemon_check.status.success() {
+        if daemon_active {
             println!("   ✓ Docker daemon is active");
         } else {
             println!("   ⚠️  Docker daemon check skipped (service may not be running)");
@@ -476,21 +387,12 @@ impl TestEnvironment {
         println!("🔍 Validating Docker Compose installation...");
 
         // First check if Docker is available (Docker Compose requires Docker)
-        let docker_check = Command::new("ssh")
-            .args([
-                "-i",
-                self.ssh_key_path.to_str().unwrap(),
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{container_ip}"),
-                "docker --version",
-            ])
-            .output()
+        let docker_available = self
+            .ssh_client
+            .check_command(container_ip, "docker --version")
             .context("Failed to check Docker availability for Compose")?;
 
-        if !docker_check.status.success() {
+        if !docker_available {
             println!("⚠️  Docker Compose validation skipped");
             println!("   ℹ️  Docker is not available, so Docker Compose cannot be validated");
             println!("   ℹ️  This is expected in CI environments with network limitations");
@@ -498,28 +400,17 @@ impl TestEnvironment {
         }
 
         // Check Docker Compose version
-        let output = Command::new("ssh")
-            .args([
-                "-i",
-                self.ssh_key_path.to_str().unwrap(),
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{container_ip}"),
-                "docker-compose --version",
-            ])
-            .output()
-            .context("Failed to check Docker Compose version")?;
-
-        if !output.status.success() {
+        let Ok(compose_version) = self
+            .ssh_client
+            .execute(container_ip, "docker-compose --version")
+        else {
             println!(
                 "⚠️  Docker Compose not found, this is expected if Docker installation was skipped"
             );
             return Ok(()); // Don't fail, just note the situation
-        }
+        };
 
-        let compose_version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let compose_version = compose_version.trim();
         println!("✅ Docker Compose installation validated");
         println!("   ✓ Docker Compose version: {compose_version}");
 
@@ -530,41 +421,29 @@ impl TestEnvironment {
 ";
 
         // Create a temporary test docker-compose.yml file
-        let create_test_file = Command::new("ssh")
-            .args([
-                "-i",
-                self.ssh_key_path.to_str().unwrap(),
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{container_ip}"),
+        let create_test_success = self
+            .ssh_client
+            .check_command(
+                container_ip,
                 &format!("echo '{test_compose_content}' > /tmp/test-docker-compose.yml"),
-            ])
-            .status()
+            )
             .context("Failed to create test docker-compose.yml")?;
 
-        if !create_test_file.success() {
+        if !create_test_success {
             println!("   ⚠️  Could not create test docker-compose.yml file");
             return Ok(()); // Don't fail, just skip the functional test
         }
 
         // Validate docker-compose file
-        let validate_compose = Command::new("ssh")
-            .args([
-                "-i",
-                self.ssh_key_path.to_str().unwrap(),
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                &format!("torrust@{container_ip}"),
+        let validate_success = self
+            .ssh_client
+            .check_command(
+                container_ip,
                 "cd /tmp && docker-compose -f test-docker-compose.yml config",
-            ])
-            .status()
+            )
             .context("Failed to validate docker-compose configuration")?;
 
-        if validate_compose.success() {
+        if validate_success {
             println!("   ✓ Docker Compose configuration validation passed");
         } else {
             println!("   ⚠️  Docker Compose configuration validation skipped");
@@ -572,18 +451,8 @@ impl TestEnvironment {
 
         // Clean up test file
         drop(
-            Command::new("ssh")
-                .args([
-                    "-i",
-                    self.ssh_key_path.to_str().unwrap(),
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "UserKnownHostsFile=/dev/null",
-                    &format!("torrust@{container_ip}"),
-                    "rm -f /tmp/test-docker-compose.yml",
-                ])
-                .status(),
+            self.ssh_client
+                .check_command(container_ip, "rm -f /tmp/test-docker-compose.yml"),
         );
 
         Ok(())
@@ -642,7 +511,7 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     let container_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    env.wait_for_ssh_connectivity(&container_ip).await?;
+    env.ssh_client.wait_for_connectivity(&container_ip).await?;
 
     // Stage 3: Render ansible templates with runtime variables
     env.render_runtime_templates(&container_ip).await?;
