@@ -292,9 +292,14 @@ impl TestEnvironment {
     }
 
     fn get_container_ip(&self) -> Result<String> {
-        self.lxd_client
+        let ip = self
+            .lxd_client
             .get_instance_ip("torrust-vm")
-            .context("Failed to get instance IP")
+            .context("Failed to get instance IP")?
+            .ok_or_else(|| {
+                anyhow::anyhow!("Instance 'torrust-vm' not found or has no IP address")
+            })?;
+        Ok(ip.to_string())
     }
 
     fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
