@@ -4,10 +4,9 @@
 //!
 //! ## Template System
 //! - `template` - Template rendering system with modular organization:
-//!   - `renderer` - `TemplateRenderer` trait definition
 //!   - `engine` - `TemplateEngine` implementation  
-//!   - `context` - Template context types
-//!   - `utils` - Utility functions
+//!   - `file` - Template file utilities
+//!   - `file_ops` - File operation utilities
 //!   - `wrappers` - Concrete template implementations organized by directory:
 //!     - `ansible` - Wrappers for templates/ansible/ files
 //!     - `tofu` - Wrappers for templates/tofu/ files
