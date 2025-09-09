@@ -12,7 +12,7 @@ pub enum FileWriteError {
     /// Failed to create the output directory
     #[error("Failed to create output directory: {path}")]
     DirectoryCreation { path: String },
-    
+
     /// Failed to write the file to the output path
     #[error("Failed to write file to: {path}")]
     FileWrite { path: String },

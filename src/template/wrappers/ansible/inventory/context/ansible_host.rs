@@ -68,7 +68,7 @@ mod tests {
     use std::net::{Ipv4Addr, Ipv6Addr};
 
     #[test]
-    fn test_new_with_ipv4() {
+    fn it_should_create_ansible_host_with_ipv4() {
         let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
         let host = AnsibleHost::new(ip);
         assert_eq!(host.as_ip_addr(), &ip);
@@ -76,7 +76,7 @@ mod tests {
     }
 
     #[test]
-    fn test_new_with_ipv6() {
+    fn it_should_create_ansible_host_with_ipv6() {
         let ip = IpAddr::V6(Ipv6Addr::new(
             0x2001, 0x0db8, 0x85a3, 0, 0, 0x8a2e, 0x0370, 0x7334,
         ));
@@ -86,7 +86,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_str_valid_ipv4() {
+    fn it_should_parse_valid_ipv4_from_string() {
         let result = AnsibleHost::from_str("192.168.1.1");
         assert!(result.is_ok());
         let host = result.unwrap();
@@ -94,7 +94,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_str_valid_ipv6() {
+    fn it_should_parse_valid_ipv6_from_string() {
         let result = AnsibleHost::from_str("2001:db8:85a3::8a2e:370:7334");
         assert!(result.is_ok());
         let host = result.unwrap();
@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_str_localhost_ipv4() {
+    fn it_should_parse_localhost_ipv4() {
         let result = AnsibleHost::from_str("127.0.0.1");
         assert!(result.is_ok());
         let host = result.unwrap();
@@ -110,7 +110,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_str_localhost_ipv6() {
+    fn it_should_parse_localhost_ipv6() {
         let result = AnsibleHost::from_str("::1");
         assert!(result.is_ok());
         let host = result.unwrap();
@@ -118,7 +118,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_str_invalid_ip() {
+    fn it_should_fail_with_invalid_ip_address() {
         let result = AnsibleHost::from_str("invalid.ip.address");
         assert_eq!(
             result,
@@ -129,7 +129,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_str_invalid_ipv4() {
+    fn it_should_fail_with_invalid_ipv4_values() {
         let result = AnsibleHost::from_str("256.256.256.256");
         assert_eq!(
             result,
@@ -140,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_str_empty_string() {
+    fn it_should_fail_with_empty_string() {
         let result = AnsibleHost::from_str("");
         assert_eq!(
             result,
@@ -151,48 +151,48 @@ mod tests {
     }
 
     #[test]
-    fn test_display_trait() {
+    fn it_should_implement_display_trait() {
         let host = AnsibleHost::from_str("192.168.1.100").unwrap();
         assert_eq!(format!("{host}"), "192.168.1.100");
     }
 
     #[test]
-    fn test_serialization_ipv4() {
+    fn it_should_serialize_ipv4_to_json() {
         let host = AnsibleHost::from_str("10.0.0.1").unwrap();
         let json = serde_json::to_string(&host).unwrap();
         assert_eq!(json, "\"10.0.0.1\"");
     }
 
     #[test]
-    fn test_serialization_ipv6() {
+    fn it_should_serialize_ipv6_to_json() {
         let host = AnsibleHost::from_str("::1").unwrap();
         let json = serde_json::to_string(&host).unwrap();
         assert_eq!(json, "\"::1\"");
     }
 
     #[test]
-    fn test_clone_and_equality() {
+    fn it_should_support_clone_and_equality() {
         let host1 = AnsibleHost::from_str("192.168.1.1").unwrap();
         let host2 = host1.clone();
         assert_eq!(host1, host2);
     }
 
     #[test]
-    fn test_from_trait_ipv4() {
+    fn it_should_support_from_trait_for_ipv4() {
         let ip = IpAddr::V4(Ipv4Addr::new(172, 16, 0, 1));
         let host = AnsibleHost::from(ip);
         assert_eq!(host.as_str(), "172.16.0.1");
     }
 
     #[test]
-    fn test_from_trait_ipv6() {
+    fn it_should_support_from_trait_for_ipv6() {
         let ip = IpAddr::V6(Ipv6Addr::LOCALHOST);
         let host = AnsibleHost::from(ip);
         assert_eq!(host.as_str(), "::1");
     }
 
     #[test]
-    fn test_error_display() {
+    fn it_should_display_error_message_correctly() {
         let error = AnsibleHostError::InvalidIpAddress {
             input: "bad_input".to_string(),
         };

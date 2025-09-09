@@ -86,7 +86,7 @@ mod tests {
     use serde_json;
 
     #[test]
-    fn test_new_valid_path() {
+    fn it_should_create_ssh_private_key_file_with_valid_path() {
         let result = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa");
         assert!(result.is_ok());
 
@@ -95,65 +95,65 @@ mod tests {
     }
 
     #[test]
-    fn test_new_empty_path() {
+    fn it_should_fail_with_empty_path() {
         let result = SshPrivateKeyFile::new("");
         assert_eq!(result, Err(SshPrivateKeyFileError::EmptyPath));
     }
 
     #[test]
-    fn test_new_invalid_path_with_null() {
+    fn it_should_fail_with_invalid_path_containing_null() {
         let result = SshPrivateKeyFile::new("/path/with/\0/null");
         assert_eq!(result, Err(SshPrivateKeyFileError::InvalidPath));
     }
 
     #[test]
-    fn test_display_trait() {
+    fn it_should_implement_display_trait() {
         let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
         assert_eq!(format!("{ssh_key}"), "/home/user/.ssh/id_rsa");
     }
 
     #[test]
-    fn test_serialization() {
+    fn it_should_serialize_to_json() {
         let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
         let json = serde_json::to_string(&ssh_key).unwrap();
         assert_eq!(json, "\"/home/user/.ssh/id_rsa\"");
     }
 
     #[test]
-    fn test_try_from_string() {
+    fn it_should_support_try_from_string() {
         let result = SshPrivateKeyFile::try_from("/path/to/key".to_string());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().as_str(), "/path/to/key");
     }
 
     #[test]
-    fn test_try_from_str() {
+    fn it_should_support_try_from_str() {
         let result = SshPrivateKeyFile::try_from("/path/to/key");
         assert!(result.is_ok());
         assert_eq!(result.unwrap().as_str(), "/path/to/key");
     }
 
     #[test]
-    fn test_try_from_empty_string() {
+    fn it_should_fail_try_from_empty_string() {
         let result = SshPrivateKeyFile::try_from("");
         assert_eq!(result, Err(SshPrivateKeyFileError::EmptyPath));
     }
 
     #[test]
-    fn test_clone_and_equality() {
+    fn it_should_support_clone_and_equality() {
         let ssh_key1 = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
         let ssh_key2 = ssh_key1.clone();
         assert_eq!(ssh_key1, ssh_key2);
     }
 
     #[test]
-    fn test_as_path() {
+    fn it_should_provide_access_to_path() {
         let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
         assert_eq!(ssh_key.as_path(), Path::new("/home/user/.ssh/id_rsa"));
     }
 
     #[test]
-    fn test_as_path_buf() {
+    fn it_should_provide_access_to_path_buf() {
         let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/id_rsa").unwrap();
         assert_eq!(
             ssh_key.as_path_buf(),
