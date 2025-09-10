@@ -226,7 +226,6 @@ impl SshClient {
                 }
                 Ok(false) => {
                     // Connection failed, continue trying
-                    #[allow(clippy::manual_is_multiple_of)]
                     if (attempt + 1) % 5 == 0 {
                         info!(
                             "   Still waiting for SSH to {}... (attempt {}/{})",
