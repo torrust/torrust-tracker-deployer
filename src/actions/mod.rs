@@ -19,7 +19,7 @@ pub enum RemoteActionError {
         action_name: String,
         message: String,
     },
-    
+
     /// Action execution failed with custom error
     #[error("Action '{action_name}' execution failed: {message}")]
     ExecutionFailed {

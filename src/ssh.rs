@@ -16,7 +16,7 @@ pub enum SshError {
         attempts: u32,
         timeout_seconds: u32,
     },
-    
+
     /// Underlying command execution failed
     #[error("SSH command execution failed: {source}")]
     CommandFailed {
