@@ -66,32 +66,6 @@ resource "lxd_instance" "torrust_vm" {
     "security.nesting"    = "true"
     "security.privileged" = "false"
   }
-
-  # Wait for cloud-init to complete
-  provisioner "local-exec" {
-    command = <<-EOT
-      echo "Waiting for container to start..."
-      sleep 10
-      
-      # Wait for cloud-init to complete (up to 5 minutes)
-      timeout=300
-      elapsed=0
-      while [ $elapsed -lt $timeout ]; do
-        if lxc exec ${var.container_name} -- test -f /tmp/provision_complete 2>/dev/null; then
-          echo "Container provisioning completed successfully!"
-          break
-        fi
-        echo "Waiting for container provisioning to complete... ($elapsed/$timeout seconds)"
-        sleep 10
-        elapsed=$((elapsed + 10))
-      done
-      
-      if [ $elapsed -ge $timeout ]; then
-        echo "Warning: Timeout waiting for container provisioning to complete"
-        echo "Container may still be initializing..."
-      fi
-    EOT
-  }
 }
 
 # Output information about the container
