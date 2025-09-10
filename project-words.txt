@@ -38,6 +38,7 @@ runcmd
 RUSTDOCFLAGS
 rustflags
 rustup
+secureboot
 serde
 shellcheck
 smorimoto

@@ -60,16 +60,26 @@ impl LxdJsonParser {
     /// * `Ok(Option<IpAddr>)` - IPv4 address if found, None otherwise
     /// * `Err(anyhow::Error)` - Error parsing IP address
     fn extract_ipv4_address(instance: &Value) -> Result<Option<IpAddr>> {
-        let addresses = instance["state"]["network"]["eth0"]["addresses"].as_array();
+        let network = instance["state"]["network"].as_object();
 
-        if let Some(addresses) = addresses {
-            for addr in addresses {
-                if addr["family"].as_str() == Some("inet") {
-                    if let Some(ip_str) = addr["address"].as_str() {
-                        let ip = ip_str
-                            .parse::<IpAddr>()
-                            .with_context(|| format!("Failed to parse IP address: {ip_str}"))?;
-                        return Ok(Some(ip));
+        if let Some(network) = network {
+            // Iterate through all network interfaces (eth0, enp5s0, etc.)
+            for (interface_name, interface_data) in network {
+                // Skip loopback interface
+                if interface_name == "lo" {
+                    continue;
+                }
+
+                if let Some(addresses) = interface_data["addresses"].as_array() {
+                    for addr in addresses {
+                        if addr["family"].as_str() == Some("inet") {
+                            if let Some(ip_str) = addr["address"].as_str() {
+                                let ip = ip_str.parse::<IpAddr>().with_context(|| {
+                                    format!("Failed to parse IP address: {ip_str}")
+                                })?;
+                                return Ok(Some(ip));
+                            }
+                        }
                     }
                 }
             }

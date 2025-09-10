@@ -32,6 +32,8 @@ resource "lxd_profile" "torrust_profile" {
 
   config = {
     "user.user-data" = file("${path.module}/cloud-init.yml")
+    "limits.memory"  = "2GB"
+    "limits.cpu"     = "2"
   }
 
   device {
@@ -54,18 +56,20 @@ resource "lxd_profile" "torrust_profile" {
   }
 }
 
-# Create the LXD container (VM-like system container)
+# Create the LXD virtual machine
 resource "lxd_instance" "torrust_vm" {
   name      = var.container_name
   image     = var.image
-  type      = "container"
+  type      = "virtual-machine"
   profiles  = [lxd_profile.torrust_profile.name]
 
   config = {
     "boot.autostart"      = "true"
-    "security.nesting"    = "true"
-    "security.privileged" = "false"
+    "security.secureboot" = "false"
   }
+
+  # Give VM more time to start up
+  wait_for_network = true
 }
 
 # Output information about the container

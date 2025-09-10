@@ -70,6 +70,64 @@ impl LxdClient {
         Ok(Some(ip))
     }
 
+    /// Wait for an instance to get an IP address (useful for VMs that take time to boot)
+    ///
+    /// # Arguments
+    ///
+    /// * `instance_name` - Name of the instance to wait for
+    /// * `timeout_seconds` - Maximum time to wait in seconds
+    /// * `poll_interval_seconds` - How often to check in seconds
+    ///
+    /// # Returns
+    /// * `Ok(IpAddr)` - The IP address when found
+    /// * `Err(anyhow::Error)` - Timeout or other error
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// * Timeout is reached without getting an IP
+    /// * LXD command execution fails
+    /// * JSON parsing fails
+    pub fn wait_for_instance_ip(
+        &self,
+        instance_name: &str,
+        timeout_seconds: u64,
+        poll_interval_seconds: u64,
+    ) -> Result<IpAddr> {
+        use std::time::{Duration, Instant};
+
+        info!(
+            "Waiting for instance '{}' to get IP address (timeout: {}s, poll interval: {}s)",
+            instance_name, timeout_seconds, poll_interval_seconds
+        );
+
+        let start_time = Instant::now();
+        let timeout = Duration::from_secs(timeout_seconds);
+        let poll_interval = Duration::from_secs(poll_interval_seconds);
+
+        loop {
+            if let Some(ip) = self.get_instance_ip(instance_name)? {
+                info!(
+                    "Instance '{}' got IP address: {} (waited {:?})",
+                    instance_name,
+                    ip,
+                    start_time.elapsed()
+                );
+                return Ok(ip);
+            }
+
+            if start_time.elapsed() >= timeout {
+                return Err(anyhow::anyhow!(
+                    "Timeout waiting for instance '{}' to get IP address after {:?}",
+                    instance_name,
+                    timeout
+                ));
+            }
+
+            std::thread::sleep(poll_interval);
+        }
+    }
+
     /// Get a specific instance by name
     ///
     /// # Arguments

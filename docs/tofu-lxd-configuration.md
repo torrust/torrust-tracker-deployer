@@ -1,18 +1,111 @@
 # LXD OpenTofu Configuration
 
-This OpenTofu configuration provisions **LXD system containers** to create VM-like environments with cloud-init support, without requiring nested virtualization.
+This OpenTofu configuration provisions **LXD virtual machines** to create full VM environments with cloud-init support and complete kernel isolation.
 
 ## Overview
 
 This configuration creates:
 
-- An LXD system container with Ubuntu 22.04 LTS
-- Full systemd support (unlike regular containers)
-- Basic cloud-init setup with essential packages
-- Network isolation with container networking
+- An LXD virtual machine with Ubuntu 24.04 LTS
+- Complete kernel isolation (true virtualization)
+- Full systemd and cloud-init support
+- Network isolation with VM networking
 - 10GB disk allocation
+- 2GB RAM and 2 CPU cores
 
-For general information about LXD system containers, see the [LXD documentation](lxd.md).
+For the architectural decision rationale, see [LXD VMs over Containers Decision](decisions/lxd-vm-over-containers.md).
+
+For general information about LXD virtual machines vs containers, see the [Instance Types](#instance-types-virtual-machines-vs-containers) section below.
+
+## Instance Types: Virtual Machines vs Containers
+
+LXD supports two types of instances:
+
+### Virtual Machines (Current Configuration)
+
+- **Type**: `virtual-machine`
+- **Isolation**: Full kernel isolation with separate kernel
+- **Boot time**: ~20-30 seconds (proper kernel boot)
+- **Resource overhead**: Higher (2GB RAM minimum recommended)
+- **Networking**: Full network stack with proper interface names (`enp5s0`, etc.)
+- **Security**: Strong isolation through hardware virtualization
+- **Cloud-init**: Full compatibility with all cloud-init features
+- **Use cases**: Production workloads, kernel-dependent software, maximum isolation
+
+### Containers (Alternative)
+
+- **Type**: `container`
+- **Isolation**: Namespace isolation (shared kernel)
+- **Boot time**: ~2-5 seconds (process startup)
+- **Resource overhead**: Lower (can run with minimal RAM)
+- **Networking**: Virtual networking with predictable names (`eth0`)
+- **Security**: Good isolation but shared kernel
+- **Cloud-init**: Limited compatibility
+- **Use cases**: Development, testing, lightweight workloads
+
+### Performance Comparison
+
+Based on E2E test results:
+
+| Instance Type   | E2E Test Time   | Boot Time | Resource Usage       | Isolation Level  |
+| --------------- | --------------- | --------- | -------------------- | ---------------- |
+| Virtual Machine | **~52 seconds** | ~20-30s   | 2GB RAM, 2 CPU       | Full (Hardware)  |
+| Container       | ~85 seconds     | ~2-5s     | <1GB RAM, Shared CPU | Good (Namespace) |
+
+**Virtual machines are ~37% faster** for complete deployment workflows due to:
+
+- More predictable boot sequence
+- Better cloud-init integration
+- Fewer networking conflicts
+- More robust systemd environment
+
+### Architecture Decision: Why Virtual Machines?
+
+This project uses **virtual machines** as the primary instance type for strategic reasons:
+
+#### Production Alignment
+
+- **Future cloud providers** (Hetzner, AWS, DigitalOcean) use virtual machines
+- **Consistent behavior** across development and production environments
+- **True isolation** that matches cloud VM characteristics
+
+#### When to Consider Containers Instead
+
+Containers could be valuable for:
+
+- **Faster CI/CD testing** (~2-5s boot vs ~20-30s for VMs)
+- **GitHub Actions shared runners** (limited resources, faster startup)
+- **Resource-constrained development** (less RAM/CPU usage)
+- **Integration testing** where speed > production fidelity
+
+However, **virtual machines remain the default** to ensure deployment scripts, Ansible playbooks, and configurations work identically in production cloud environments.
+
+### Switching Instance Types
+
+To switch between virtual machines and containers, modify the `templates/tofu/lxd/main.tf` file:
+
+```hcl
+resource "lxd_instance" "torrust_vm" {
+  name      = var.container_name
+  image     = var.image
+  type      = "virtual-machine"  # Change to "container" if needed
+  profiles  = [lxd_profile.torrust_profile.name]
+
+  config = {
+    # VM-specific settings
+    "boot.autostart"      = "true"
+    "security.secureboot" = "false"
+  }
+
+  wait_for_network = true
+}
+```
+
+**Note:** Container-specific configurations may require different settings:
+
+- Remove `security.secureboot` (VM-only)
+- Add `security.nesting = "true"` and `security.privileged = "false"` for containers
+- Adjust resource limits in the profile accordingly
 
 ## Prerequisites
 

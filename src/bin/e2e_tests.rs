@@ -313,6 +313,8 @@ impl TestEnvironment {
     }
 
     fn get_instance_ip(&self) -> Result<String> {
+        // For E2E tests, we should rely on OpenTofu outputs since they already wait for network
+        // This is a secondary validation that the instance is accessible via LXD
         let ip = self
             .lxd_client
             .get_instance_ip("torrust-vm")
