@@ -11,11 +11,10 @@ use torrust_tracker_deploy::ansible::AnsibleClient;
 use torrust_tracker_deploy::lxd::LxdClient;
 use torrust_tracker_deploy::opentofu::OpenTofuClient;
 use torrust_tracker_deploy::ssh::SshClient;
-use torrust_tracker_deploy::stages::ProvisionTemplateRenderer;
+use torrust_tracker_deploy::stages::{ConfigurationTemplateRenderer, ProvisionTemplateRenderer};
 // Import template system
-use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
-    AnsibleHost, InventoryContext, InventoryTemplate, SshPrivateKeyFile,
+    AnsibleHost, InventoryContext, SshPrivateKeyFile,
 };
 use torrust_tracker_deploy::template::TemplateManager;
 // Import remote actions
@@ -51,6 +50,7 @@ struct TestEnvironment {
     template_manager: TemplateManager,
     opentofu_client: OpenTofuClient,
     provision_renderer: ProvisionTemplateRenderer,
+    configuration_renderer: ConfigurationTemplateRenderer,
     ssh_client: SshClient,
     lxd_client: LxdClient,
     ansible_client: AnsibleClient,
@@ -111,6 +111,10 @@ impl TestEnvironment {
         let provision_renderer =
             ProvisionTemplateRenderer::new(project_root.join("build"), verbose);
 
+        // Create configuration template renderer
+        let configuration_renderer =
+            ConfigurationTemplateRenderer::new(project_root.join("build"), verbose);
+
         if verbose {
             println!(
                 "🔑 SSH key copied to temporary location: {}",
@@ -132,6 +136,7 @@ impl TestEnvironment {
             template_manager,
             opentofu_client,
             provision_renderer,
+            configuration_renderer,
             ssh_client,
             lxd_client,
             ansible_client,
@@ -150,26 +155,7 @@ impl TestEnvironment {
 
     /// Stage 3: Render configuration templates (`Ansible`) with runtime variables to build/ansible/
     async fn render_configuration_templates(&self, instance_ip: &str) -> Result<()> {
-        println!("🎭 Stage 3: Rendering configuration templates with variables...");
-
-        // Create build directory structure
-        let build_ansible_dir = self.build_dir.join("ansible");
-        tokio::fs::create_dir_all(&build_ansible_dir)
-            .await
-            .context("Failed to create build/ansible directory")?;
-
-        // Render inventory.yml.tera with runtime variables
-        let inventory_template_path = self
-            .template_manager
-            .get_template_path("ansible/inventory.yml.tera")?;
-        let inventory_output_path = build_ansible_dir.join("inventory.yml");
-
-        let inventory_template_content = std::fs::read_to_string(&inventory_template_path)
-            .context("Failed to read inventory template file")?;
-
-        let inventory_template_file = File::new("inventory.yml.tera", inventory_template_content)
-            .context("Failed to create inventory template file")?;
-
+        // Create inventory context with runtime variables
         let inventory_context = {
             let host = AnsibleHost::from_str(instance_ip).context("Failed to parse instance IP")?;
             let ssh_key = SshPrivateKeyFile::new(self.ssh_key_path.to_string_lossy().as_ref())
@@ -181,54 +167,12 @@ impl TestEnvironment {
                 .build()
                 .context("Failed to create InventoryContext")?
         };
-        let inventory_template =
-            InventoryTemplate::new(&inventory_template_file, inventory_context)
-                .context("Failed to create InventoryTemplate")?;
 
-        inventory_template
-            .render(&inventory_output_path)
-            .context("Failed to render inventory template")?;
-
-        // Copy static ansible files
-        // Copy ansible.cfg
-        let source_cfg = self
-            .template_manager
-            .get_template_path("ansible/ansible.cfg")?;
-        let dest_cfg = build_ansible_dir.join("ansible.cfg");
-        tokio::fs::copy(&source_cfg, &dest_cfg)
+        // Use the configuration renderer to handle all template rendering
+        self.configuration_renderer
+            .render(&self.template_manager, &inventory_context)
             .await
-            .context("Failed to copy ansible.cfg to build directory")?;
-
-        // Copy playbooks
-        for playbook in &[
-            "update-apt-cache.yml",
-            "install-docker.yml",
-            "install-docker-compose.yml",
-            "wait-cloud-init.yml",
-        ] {
-            let source_playbook = self
-                .template_manager
-                .get_template_path(&format!("ansible/{playbook}"))?;
-            let dest_playbook = build_ansible_dir.join(playbook);
-            tokio::fs::copy(&source_playbook, &dest_playbook)
-                .await
-                .with_context(|| format!("Failed to copy {playbook} to build directory"))?;
-        }
-
-        if self.verbose {
-            println!(
-                "   ✅ Configuration templates rendered to: {}",
-                build_ansible_dir.display()
-            );
-            println!("   ✅ Inventory rendered with IP: {instance_ip}");
-            println!(
-                "   ✅ Inventory rendered with SSH key: {}",
-                self.ssh_key_path.display()
-            );
-        }
-
-        println!("✅ Stage 3 complete: Configuration templates ready");
-        Ok(())
+            .map_err(|e| anyhow::anyhow!(e))
     }
 
     fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
