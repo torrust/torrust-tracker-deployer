@@ -176,7 +176,7 @@ impl OpenTofuClient {
     /// This function will return an error if:
     /// * The `OpenTofu` output command fails
     /// * The output cannot be parsed as JSON
-    /// * The `container_info` section is missing or malformed
+    /// * The `instance_info` section is missing or malformed
     pub fn get_instance_info(&self) -> Result<InstanceInfo, OpenTofuError> {
         info!(
             "Getting OpenTofu outputs from directory: {}",
@@ -189,8 +189,8 @@ impl OpenTofuClient {
             Some(&self.working_dir),
         )?;
 
-        let container_info = OpenTofuJsonParser::parse_container_info(&output)?;
-        Ok(container_info)
+        let instance_info = OpenTofuJsonParser::parse_instance_info(&output)?;
+        Ok(instance_info)
     }
 
     /// Get the working directory path
@@ -311,7 +311,7 @@ resource "null_resource" "test" {
 
         let invalid_json = "not valid json";
 
-        let parse_error = OpenTofuJsonParser::parse_container_info(invalid_json).unwrap_err();
+        let parse_error = OpenTofuJsonParser::parse_instance_info(invalid_json).unwrap_err();
         let opentofu_error = OpenTofuError::ParseError(parse_error);
 
         assert!(matches!(opentofu_error, OpenTofuError::ParseError(_)));

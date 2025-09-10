@@ -69,7 +69,10 @@ resource "lxd_instance" "torrust_vm" {
 }
 
 # Output information about the container
-output "container_info" {
+# IMPORTANT: This output is parsed by src/opentofu/json_parser.rs
+# The output name "instance_info" and all fields (name, image, status, ip_address)
+# are required by the parser and must remain present with these exact names.
+output "instance_info" {
   description = "Information about the created container"
   value = {
     name       = lxd_instance.torrust_vm.name

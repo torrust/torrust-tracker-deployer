@@ -114,7 +114,7 @@ To provision the container:
    Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
 
    Outputs:
-   container_info = {
+   instance_info = {
      "image" = "ubuntu:22.04"
      "ip_address" = "10.140.190.155"
      "name" = "torrust-vm"

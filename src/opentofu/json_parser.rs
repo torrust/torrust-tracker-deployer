@@ -26,7 +26,7 @@ pub enum ParseError {
 pub(crate) struct OpenTofuJsonParser;
 
 impl OpenTofuJsonParser {
-    /// Parse `container_info` from `OpenTofu` JSON output
+    /// Parse `instance_info` from `OpenTofu` JSON output
     ///
     /// # Arguments
     ///
@@ -34,29 +34,29 @@ impl OpenTofuJsonParser {
     ///
     /// # Returns
     ///
-    /// * `Ok(ContainerInfo)` - Parsed container information
+    /// * `Ok(InstanceInfo)` - Parsed instance information
     /// * `Err(ParseError)` - Parsing error
     ///
     /// # Errors
     ///
     /// This function will return an error if:
     /// * The JSON cannot be parsed
-    /// * The `container_info` section is missing
+    /// * The `instance_info` section is missing
     /// * Required fields are missing or have wrong types
-    pub fn parse_container_info(json_output: &str) -> Result<InstanceInfo, ParseError> {
+    pub fn parse_instance_info(json_output: &str) -> Result<InstanceInfo, ParseError> {
         let outputs: Value =
             serde_json::from_str(json_output).map_err(|e| ParseError::JsonError {
                 message: format!("Failed to parse OpenTofu output as JSON: {e}"),
             })?;
 
-        let container_info_value = outputs
-            .get("container_info")
+        let instance_info_value = outputs
+            .get("instance_info")
             .and_then(|v| v.get("value"))
             .ok_or_else(|| ParseError::FieldError {
-                message: "container_info section not found in OpenTofu outputs".to_string(),
+                message: "instance_info section not found in OpenTofu outputs".to_string(),
             })?;
 
-        let image = container_info_value
+        let image = instance_info_value
             .get("image")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ParseError::FieldError {
@@ -64,7 +64,7 @@ impl OpenTofuJsonParser {
             })?
             .to_string();
 
-        let ip_address_str = container_info_value
+        let ip_address_str = instance_info_value
             .get("ip_address")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ParseError::FieldError {
@@ -75,7 +75,7 @@ impl OpenTofuJsonParser {
             message: format!("ip_address field is not a valid IP address: {e}"),
         })?;
 
-        let name = container_info_value
+        let name = instance_info_value
             .get("name")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ParseError::FieldError {
@@ -83,7 +83,7 @@ impl OpenTofuJsonParser {
             })?
             .to_string();
 
-        let status = container_info_value
+        let status = instance_info_value
             .get("status")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ParseError::FieldError {
@@ -105,9 +105,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_should_parse_container_info_from_valid_json() {
+    fn it_should_parse_instance_info_from_valid_json() {
         let json_output = r#"{
-            "container_info": {
+            "instance_info": {
                 "value": {
                     "image": "ubuntu:24.04",
                     "ip_address": "10.140.190.68",
@@ -117,7 +117,7 @@ mod tests {
             }
         }"#;
 
-        let result = OpenTofuJsonParser::parse_container_info(json_output).unwrap();
+        let result = OpenTofuJsonParser::parse_instance_info(json_output).unwrap();
 
         assert_eq!(result.image, "ubuntu:24.04");
         assert_eq!(
@@ -132,34 +132,34 @@ mod tests {
     fn it_should_fail_with_invalid_json() {
         let invalid_json = "not valid json";
 
-        let result = OpenTofuJsonParser::parse_container_info(invalid_json);
+        let result = OpenTofuJsonParser::parse_instance_info(invalid_json);
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ParseError::JsonError { .. }));
     }
 
     #[test]
-    fn it_should_fail_when_container_info_section_missing() {
+    fn it_should_fail_when_instance_info_section_missing() {
         let json_output = r#"{
             "other_output": {
                 "value": "some value"
             }
         }"#;
 
-        let result = OpenTofuJsonParser::parse_container_info(json_output);
+        let result = OpenTofuJsonParser::parse_instance_info(json_output);
 
         assert!(result.is_err());
         let error = result.unwrap_err();
         assert!(matches!(error, ParseError::FieldError { .. }));
         assert!(error
             .to_string()
-            .contains("container_info section not found"));
+            .contains("instance_info section not found"));
     }
 
     #[test]
     fn it_should_fail_when_required_field_missing() {
         let json_output = r#"{
-            "container_info": {
+            "instance_info": {
                 "value": {
                     "image": "ubuntu:24.04",
                     "ip_address": "10.140.190.68",
@@ -168,7 +168,7 @@ mod tests {
             }
         }"#;
 
-        let result = OpenTofuJsonParser::parse_container_info(json_output);
+        let result = OpenTofuJsonParser::parse_instance_info(json_output);
 
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn it_should_fail_when_field_has_wrong_type() {
         let json_output = r#"{
-            "container_info": {
+            "instance_info": {
                 "value": {
                     "image": 123,
                     "ip_address": "10.140.190.68",
@@ -189,7 +189,7 @@ mod tests {
             }
         }"#;
 
-        let result = OpenTofuJsonParser::parse_container_info(json_output);
+        let result = OpenTofuJsonParser::parse_instance_info(json_output);
 
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn it_should_fail_when_ip_address_is_invalid() {
         let json_output = r#"{
-            "container_info": {
+            "instance_info": {
                 "value": {
                     "image": "ubuntu:24.04",
                     "ip_address": "invalid-ip-address",
@@ -212,7 +212,7 @@ mod tests {
             }
         }"#;
 
-        let result = OpenTofuJsonParser::parse_container_info(json_output);
+        let result = OpenTofuJsonParser::parse_instance_info(json_output);
 
         assert!(result.is_err());
         let error = result.unwrap_err();
