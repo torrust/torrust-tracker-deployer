@@ -315,13 +315,19 @@ impl TestEnvironment {
     fn get_instance_ip(&self) -> Result<String> {
         // For E2E tests, we should rely on OpenTofu outputs since they already wait for network
         // This is a secondary validation that the instance is accessible via LXD
-        let ip = self
+
+        // First, check if the instance exists
+        let instance = self
             .lxd_client
-            .get_instance_ip("torrust-vm")
-            .context("Failed to get instance IP")?
-            .ok_or_else(|| {
-                anyhow::anyhow!("Instance 'torrust-vm' not found or has no IP address")
-            })?;
+            .get_instance_by_name("torrust-vm")
+            .context("Failed to query LXD for instance information")?
+            .ok_or_else(|| anyhow::anyhow!("Instance 'torrust-vm' was not found in LXD"))?;
+
+        // Then, check if the instance has an IP address
+        let ip = instance.ip_address.ok_or_else(|| {
+            anyhow::anyhow!("Instance 'torrust-vm' exists but has no IPv4 address assigned")
+        })?;
+
         Ok(ip.to_string())
     }
 
