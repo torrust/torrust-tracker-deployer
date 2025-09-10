@@ -284,15 +284,32 @@ impl TestEnvironment {
             .map_err(anyhow::Error::from)
             .context("Failed to apply OpenTofu configuration")?;
 
-        // Get the instance IP
-        let instance_ip = self
+        // Get the instance IP from OpenTofu outputs
+        // NOTE: We prefer OpenTofu outputs over provider-specific methods because:
+        // - If we add more providers (different than LXD) in the future, we have two options:
+        //   1. Use the method that each provider provides to get the IP
+        //   2. Use OpenTofu for all of them, so the OpenTofu output has a contract with this app.
+        //      It has to return always the instance info we expect.
+        // Using OpenTofu outputs provides a consistent interface across all providers.
+        let opentofu_instance_info = self
+            .opentofu_client
+            .get_instance_info()
+            .map_err(anyhow::Error::from)
+            .context("Failed to get container info from OpenTofu outputs")?;
+
+        let opentofu_instance_ip = opentofu_instance_info.ip_address.to_string();
+
+        // Get the instance IP from LXD client (keeping for comparison/validation)
+        let lxd_instance_ip = self
             .get_instance_ip()
-            .context("Failed to get instance IP after provisioning")?;
+            .context("Failed to get instance IP from LXD client")?;
 
         println!("✅ Stage 2 complete: Infrastructure provisioned");
-        println!("   Instance IP: {instance_ip}");
+        println!("   Instance IP from OpenTofu: {opentofu_instance_ip}");
+        println!("   Instance IP from LXD client: {lxd_instance_ip}");
 
-        Ok(instance_ip)
+        // Return the IP from OpenTofu as it's our preferred source
+        Ok(opentofu_instance_ip)
     }
 
     fn get_instance_ip(&self) -> Result<String> {

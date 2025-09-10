@@ -1,8 +1,34 @@
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use tracing::info;
 
 use crate::command::{CommandError, CommandExecutor};
+
+use super::json_parser::{OpenTofuJsonParser, ParseError};
+
+/// Container information extracted from `OpenTofu` outputs
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InstanceInfo {
+    pub image: String,
+    pub ip_address: IpAddr,
+    pub name: String,
+    pub status: String,
+}
+
+/// Errors that can occur during `OpenTofu` operations
+#[derive(Error, Debug)]
+pub enum OpenTofuError {
+    /// Command execution failed
+    #[error("Command execution failed: {0}")]
+    CommandError(#[from] CommandError),
+
+    /// JSON parsing failed
+    #[error("Parse error: {0}")]
+    ParseError(#[from] ParseError),
+}
 
 /// A specialized `OpenTofu` client for infrastructure management.
 /// This client provides a consistent interface for `OpenTofu` operations:
@@ -21,6 +47,7 @@ impl OpenTofuClient {
     /// Creates a new `OpenTofuClient`
     ///
     /// # Arguments
+    ///
     /// * `working_dir` - Path to the directory containing `OpenTofu` configuration files
     /// * `verbose` - Whether to log commands being executed
     #[must_use]
@@ -34,10 +61,12 @@ impl OpenTofuClient {
     /// Initialize `OpenTofu` configuration
     ///
     /// # Returns
+    ///
     /// * `Ok(String)` - The stdout output if the command succeeds
     /// * `Err(CommandError)` - Error describing what went wrong
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * The `OpenTofu` initialization fails
     /// * The working directory does not exist or is not accessible
@@ -54,10 +83,12 @@ impl OpenTofuClient {
     /// Plan infrastructure changes
     ///
     /// # Returns
+    ///
     /// * `Ok(String)` - The stdout output if the command succeeds
     /// * `Err(CommandError)` - Error describing what went wrong
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * The `OpenTofu` plan fails
     /// * The configuration is not initialized
@@ -74,13 +105,16 @@ impl OpenTofuClient {
     /// Apply infrastructure changes
     ///
     /// # Arguments
+    ///
     /// * `auto_approve` - Whether to automatically approve the changes without interactive confirmation
     ///
     /// # Returns
+    ///
     /// * `Ok(String)` - The stdout output if the command succeeds
     /// * `Err(CommandError)` - Error describing what went wrong
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * The `OpenTofu` apply fails
     /// * The configuration is not initialized
@@ -102,13 +136,16 @@ impl OpenTofuClient {
     /// Destroy infrastructure
     ///
     /// # Arguments
+    ///
     /// * `auto_approve` - Whether to automatically approve the destruction without interactive confirmation
     ///
     /// # Returns
+    ///
     /// * `Ok(String)` - The stdout output if the command succeeds
     /// * `Err(CommandError)` - Error describing what went wrong
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * The `OpenTofu` destroy fails
     /// * The configuration is not initialized
@@ -127,51 +164,39 @@ impl OpenTofuClient {
             .run_command("tofu", &args, Some(&self.working_dir))
     }
 
+    /// Get `OpenTofu` outputs and parse container information
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(ContainerInfo)` - Parsed container information from `OpenTofu` outputs
+    /// * `Err(OpenTofuError)` - Error describing what went wrong
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// * The `OpenTofu` output command fails
+    /// * The output cannot be parsed as JSON
+    /// * The `container_info` section is missing or malformed
+    pub fn get_instance_info(&self) -> Result<InstanceInfo, OpenTofuError> {
+        info!(
+            "Getting OpenTofu outputs from directory: {}",
+            self.working_dir.display()
+        );
+
+        let output = self.command_executor.run_command(
+            "tofu",
+            &["output", "-json"],
+            Some(&self.working_dir),
+        )?;
+
+        let container_info = OpenTofuJsonParser::parse_container_info(&output)?;
+        Ok(container_info)
+    }
+
     /// Get the working directory path
     #[must_use]
     pub fn working_dir(&self) -> &Path {
         &self.working_dir
-    }
-}
-
-/// Emergency destroy operation for cleanup scenarios
-///
-/// This function performs a destructive `OpenTofu` destroy operation without prompting.
-/// It's designed for use in Drop implementations and other cleanup scenarios where
-/// interactive confirmation is not possible.
-///
-/// # Arguments
-///
-/// * `working_dir` - Directory containing the `OpenTofu` configuration files
-///
-/// # Returns
-///
-/// * `Result<(), Box<dyn std::error::Error>>` - Success or error from the destroy operation
-///
-/// # Errors
-///
-/// Returns an error if the `OpenTofu` destroy command fails or if there are issues
-/// with command execution.
-pub fn emergency_destroy<P: AsRef<Path>>(working_dir: P) -> Result<(), Box<dyn std::error::Error>> {
-    use std::process::Command;
-
-    tracing::debug!(
-        "Emergency destroy: Executing `OpenTofu` destroy in directory: {}",
-        working_dir.as_ref().display()
-    );
-
-    let output = Command::new("tofu")
-        .args(["destroy", "-auto-approve"])
-        .current_dir(&working_dir)
-        .output()?;
-
-    if output.status.success() {
-        tracing::debug!("Emergency destroy: `OpenTofu` destroy completed successfully");
-        Ok(())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        tracing::error!("Emergency destroy: `OpenTofu` destroy failed: {stderr}");
-        Err(format!("`OpenTofu` destroy failed: {stderr}").into())
     }
 }
 
@@ -278,5 +303,32 @@ resource "null_resource" "test" {
                 println!("OpenTofu not available for testing");
             }
         }
+    }
+
+    #[test]
+    fn it_should_wrap_parse_error_in_opentofu_error() {
+        use crate::opentofu::json_parser::OpenTofuJsonParser;
+
+        let invalid_json = "not valid json";
+
+        let parse_error = OpenTofuJsonParser::parse_container_info(invalid_json).unwrap_err();
+        let opentofu_error = OpenTofuError::ParseError(parse_error);
+
+        assert!(matches!(opentofu_error, OpenTofuError::ParseError(_)));
+        assert!(opentofu_error.to_string().contains("Parse error"));
+    }
+
+    #[test]
+    fn it_should_wrap_command_error_in_opentofu_error() {
+        let command_error = CommandError::StartupFailed {
+            command: "tofu".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "Command not found"),
+        };
+        let opentofu_error = OpenTofuError::CommandError(command_error);
+
+        assert!(matches!(opentofu_error, OpenTofuError::CommandError(_)));
+        assert!(opentofu_error
+            .to_string()
+            .contains("Command execution failed"));
     }
 }
