@@ -2,7 +2,7 @@ use std::path::Path;
 use tracing::{info, warn};
 
 use crate::actions::{RemoteAction, RemoteActionError};
-use crate::ssh::SshClient;
+use crate::command_wrappers::ssh::SshClient;
 
 /// Action that validates Docker installation and daemon status on the server
 pub struct DockerValidator {

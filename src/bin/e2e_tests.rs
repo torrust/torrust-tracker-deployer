@@ -7,10 +7,10 @@ use tempfile::TempDir;
 use tracing_subscriber::fmt;
 
 // Import command execution system
-use torrust_tracker_deploy::ansible::AnsibleClient;
-use torrust_tracker_deploy::lxd::LxdClient;
-use torrust_tracker_deploy::opentofu::OpenTofuClient;
-use torrust_tracker_deploy::ssh::SshClient;
+use torrust_tracker_deploy::command_wrappers::ansible::AnsibleClient;
+use torrust_tracker_deploy::command_wrappers::lxd::LxdClient;
+use torrust_tracker_deploy::command_wrappers::opentofu::OpenTofuClient;
+use torrust_tracker_deploy::command_wrappers::ssh::SshClient;
 use torrust_tracker_deploy::stages::{ConfigurationTemplateRenderer, ProvisionTemplateRenderer};
 // Import template system
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
@@ -280,9 +280,7 @@ impl Drop for TestEnvironment {
             // Using emergency_destroy for consistent OpenTofu handling
             let tofu_dir = self.build_dir.join("tofu/lxd");
 
-            drop(torrust_tracker_deploy::opentofu::emergency_destroy(
-                &tofu_dir,
-            ));
+            drop(torrust_tracker_deploy::command_wrappers::opentofu::emergency_destroy(&tofu_dir));
         }
     }
 }

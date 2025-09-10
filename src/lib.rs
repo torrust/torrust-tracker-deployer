@@ -13,17 +13,16 @@
 //!
 //! ## Command Execution
 //! - `command` - Command execution utilities with optional verbosity
-//! - `ssh` - SSH command execution utilities with secure defaults
-//! - `opentofu` - `OpenTofu` infrastructure management utilities
-//! - `lxd` - LXD container management utilities
+//! - `command_wrappers` - Generic command wrappers for external tools:
+//!   - `ssh` - SSH command execution utilities with secure defaults
+//!   - `ansible` - Ansible configuration management utilities
+//!   - `opentofu` - `OpenTofu` infrastructure management utilities
+//!   - `lxd` - LXD container management utilities
 //!
 //! Linting functionality has been moved to its own package: packages/linting
 
 pub mod actions;
-pub mod ansible;
 pub mod command;
-pub mod lxd;
-pub mod opentofu;
-pub mod ssh;
+pub mod command_wrappers;
 pub mod stages;
 pub mod template;

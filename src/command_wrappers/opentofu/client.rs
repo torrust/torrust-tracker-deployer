@@ -307,7 +307,7 @@ resource "null_resource" "test" {
 
     #[test]
     fn it_should_wrap_parse_error_in_opentofu_error() {
-        use crate::opentofu::json_parser::OpenTofuJsonParser;
+        use crate::command_wrappers::opentofu::json_parser::OpenTofuJsonParser;
 
         let invalid_json = "not valid json";
 

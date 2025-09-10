@@ -2,7 +2,7 @@ use std::path::Path;
 use tracing::info;
 
 use crate::actions::{RemoteAction, RemoteActionError};
-use crate::ssh::SshClient;
+use crate::command_wrappers::ssh::SshClient;
 
 /// Action that checks if cloud-init has completed successfully on the server
 pub struct CloudInitValidator {
