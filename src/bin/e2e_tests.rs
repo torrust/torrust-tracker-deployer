@@ -11,6 +11,7 @@ use torrust_tracker_deploy::ansible::AnsibleClient;
 use torrust_tracker_deploy::lxd::LxdClient;
 use torrust_tracker_deploy::opentofu::OpenTofuClient;
 use torrust_tracker_deploy::ssh::SshClient;
+use torrust_tracker_deploy::stages::ProvisionTemplateRenderer;
 // Import template system
 use torrust_tracker_deploy::template::file::File;
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
@@ -49,6 +50,7 @@ struct TestEnvironment {
     ssh_key_path: PathBuf,
     template_manager: TemplateManager,
     opentofu_client: OpenTofuClient,
+    provision_renderer: ProvisionTemplateRenderer,
     ssh_client: SshClient,
     lxd_client: LxdClient,
     ansible_client: AnsibleClient,
@@ -105,6 +107,10 @@ impl TestEnvironment {
         // Create Ansible client pointing to build/ansible directory
         let ansible_client = AnsibleClient::new(project_root.join("build/ansible"), verbose);
 
+        // Create provision template renderer
+        let provision_renderer =
+            ProvisionTemplateRenderer::new(project_root.join("build"), verbose);
+
         if verbose {
             println!(
                 "🔑 SSH key copied to temporary location: {}",
@@ -125,6 +131,7 @@ impl TestEnvironment {
             ssh_key_path: temp_ssh_key,
             template_manager,
             opentofu_client,
+            provision_renderer,
             ssh_client,
             lxd_client,
             ansible_client,
@@ -135,42 +142,10 @@ impl TestEnvironment {
 
     /// Stage 1: Render provision templates (`OpenTofu`) to build/tofu/ directory
     async fn render_provision_templates(&self) -> Result<()> {
-        println!("🏗️  Stage 1: Rendering provision templates to build directory...");
-
-        // Create build directory structure
-        let build_tofu_dir = self.build_dir.join("tofu/lxd");
-        tokio::fs::create_dir_all(&build_tofu_dir)
+        self.provision_renderer
+            .render(&self.template_manager)
             .await
-            .context("Failed to create build/tofu/lxd directory")?;
-
-        // Copy static tofu templates (no variables for now)
-        // Get template paths, creating them from embedded resources if needed
-        let source_main_tf = self
-            .template_manager
-            .get_template_path("tofu/lxd/main.tf")?;
-        let dest_main_tf = build_tofu_dir.join("main.tf");
-        tokio::fs::copy(&source_main_tf, &dest_main_tf)
-            .await
-            .context("Failed to copy main.tf to build directory")?;
-
-        // Copy cloud-init.yml
-        let source_cloud_init = self
-            .template_manager
-            .get_template_path("tofu/lxd/cloud-init.yml")?;
-        let dest_cloud_init = build_tofu_dir.join("cloud-init.yml");
-        tokio::fs::copy(&source_cloud_init, &dest_cloud_init)
-            .await
-            .context("Failed to copy cloud-init.yml to build directory")?;
-
-        if self.verbose {
-            println!(
-                "   ✅ Provision templates copied to: {}",
-                build_tofu_dir.display()
-            );
-        }
-
-        println!("✅ Stage 1 complete: Provision templates ready");
-        Ok(())
+            .map_err(|e| anyhow::anyhow!(e))
     }
 
     /// Stage 3: Render configuration templates (`Ansible`) with runtime variables to build/ansible/
@@ -384,7 +359,10 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     let instance_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    env.ssh_client.wait_for_connectivity(&instance_ip).await?;
+    env.ssh_client
+        .wait_for_connectivity(&instance_ip)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
 
     // Stage 3: Render configuration templates with runtime variables
     env.render_configuration_templates(&instance_ip).await?;
@@ -395,7 +373,10 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
 
     // Validate cloud-init completion
     let cloud_init_validator = CloudInitValidator::new(&env.ssh_key_path, "torrust", env.verbose);
-    cloud_init_validator.execute(&instance_ip).await?;
+    cloud_init_validator
+        .execute(&instance_ip)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
 
     // Run the install-docker playbook
     // NOTE: We skip the update-apt-cache playbook in E2E tests to avoid CI network issues
@@ -405,7 +386,10 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
 
     // 7. Validate Docker installation
     let docker_validator = DockerValidator::new(&env.ssh_key_path, "torrust", env.verbose);
-    docker_validator.execute(&instance_ip).await?;
+    docker_validator
+        .execute(&instance_ip)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
 
     // 8. Run the install-docker-compose playbook
     println!("📋 Step 3: Installing Docker Compose...");
@@ -414,7 +398,10 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     // 9. Validate Docker Compose installation
     let docker_compose_validator =
         DockerComposeValidator::new(&env.ssh_key_path, "torrust", env.verbose);
-    docker_compose_validator.execute(&instance_ip).await?;
+    docker_compose_validator
+        .execute(&instance_ip)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
 
     println!("🎉 Full deployment E2E test completed successfully!");
     println!("   ✅ Cloud-init setup completed");

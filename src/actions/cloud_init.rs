@@ -1,8 +1,7 @@
-use anyhow::{anyhow, Context, Result};
 use std::path::Path;
 use tracing::info;
 
-use crate::actions::RemoteAction;
+use crate::actions::{RemoteAction, RemoteActionError};
 use crate::ssh::SshClient;
 
 /// Action that checks if cloud-init has completed successfully on the server
@@ -29,30 +28,39 @@ impl RemoteAction for CloudInitValidator {
         "cloud-init-validation"
     }
 
-    async fn execute(&self, server_ip: &str) -> Result<()> {
+    async fn execute(&self, server_ip: &str) -> Result<(), RemoteActionError> {
         info!("🔍 Validating cloud-init completion...");
 
         // Check cloud-init status
         let status_output = self
             .ssh_client
             .execute(server_ip, "cloud-init status")
-            .context("Failed to check cloud-init status")?;
+            .map_err(|source| RemoteActionError::SshCommandFailed {
+                action_name: self.name().to_string(),
+                source,
+            })?;
 
         if !status_output.contains("status: done") {
-            return Err(anyhow!(
-                "Cloud-init status is not 'done': {}",
-                status_output
-            ));
+            return Err(RemoteActionError::ValidationFailed {
+                action_name: self.name().to_string(),
+                message: format!("Cloud-init status is not 'done': {status_output}"),
+            });
         }
 
         // Check for completion marker file
         let marker_exists = self
             .ssh_client
             .check_command(server_ip, "test -f /var/lib/cloud/instance/boot-finished")
-            .context("Failed to check cloud-init completion marker")?;
+            .map_err(|source| RemoteActionError::SshCommandFailed {
+                action_name: self.name().to_string(),
+                source,
+            })?;
 
         if !marker_exists {
-            return Err(anyhow!("Cloud-init completion marker file not found"));
+            return Err(RemoteActionError::ValidationFailed {
+                action_name: self.name().to_string(),
+                message: "Cloud-init completion marker file not found".to_string(),
+            });
         }
 
         info!("✅ Cloud-init validation passed");

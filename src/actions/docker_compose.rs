@@ -1,8 +1,7 @@
-use anyhow::{Context, Result};
 use std::path::Path;
 use tracing::{info, warn};
 
-use crate::actions::RemoteAction;
+use crate::actions::{RemoteAction, RemoteActionError};
 use crate::ssh::SshClient;
 
 /// Action that validates Docker Compose installation and basic functionality on the server
@@ -29,14 +28,17 @@ impl RemoteAction for DockerComposeValidator {
         "docker-compose-validation"
     }
 
-    async fn execute(&self, server_ip: &str) -> Result<()> {
+    async fn execute(&self, server_ip: &str) -> Result<(), RemoteActionError> {
         info!("🔍 Validating Docker Compose installation...");
 
         // First check if Docker is available (Docker Compose requires Docker)
         let docker_available = self
             .ssh_client
             .check_command(server_ip, "docker --version")
-            .context("Failed to check Docker availability for Compose")?;
+            .map_err(|source| RemoteActionError::SshCommandFailed {
+                action_name: self.name().to_string(),
+                source,
+            })?;
 
         if !docker_available {
             warn!("⚠️  Docker Compose validation skipped");
@@ -73,7 +75,10 @@ impl RemoteAction for DockerComposeValidator {
                 server_ip,
                 &format!("echo '{test_compose_content}' > /tmp/test-docker-compose.yml"),
             )
-            .context("Failed to create test docker-compose.yml")?;
+            .map_err(|source| RemoteActionError::SshCommandFailed {
+                action_name: self.name().to_string(),
+                source,
+            })?;
 
         if !create_test_success {
             warn!("   ⚠️  Could not create test docker-compose.yml file");
@@ -87,7 +92,10 @@ impl RemoteAction for DockerComposeValidator {
                 server_ip,
                 "cd /tmp && docker-compose -f test-docker-compose.yml config",
             )
-            .context("Failed to validate docker-compose configuration")?;
+            .map_err(|source| RemoteActionError::SshCommandFailed {
+                action_name: self.name().to_string(),
+                source,
+            })?;
 
         if validate_success {
             info!("   ✓ Docker Compose configuration validation passed");

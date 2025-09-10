@@ -1,8 +1,7 @@
-use anyhow::{Context, Result};
 use std::path::Path;
 use tracing::{info, warn};
 
-use crate::actions::RemoteAction;
+use crate::actions::{RemoteAction, RemoteActionError};
 use crate::ssh::SshClient;
 
 /// Action that validates Docker installation and daemon status on the server
@@ -29,7 +28,7 @@ impl RemoteAction for DockerValidator {
         "docker-validation"
     }
 
-    async fn execute(&self, server_ip: &str) -> Result<()> {
+    async fn execute(&self, server_ip: &str) -> Result<(), RemoteActionError> {
         info!("🔍 Validating Docker installation...");
 
         // Check Docker version
@@ -48,7 +47,10 @@ impl RemoteAction for DockerValidator {
         let daemon_active = self
             .ssh_client
             .check_command(server_ip, "sudo systemctl is-active docker")
-            .context("Failed to check Docker daemon status")?;
+            .map_err(|source| RemoteActionError::SshCommandFailed {
+                action_name: self.name().to_string(),
+                source,
+            })?;
 
         if daemon_active {
             info!("   ✓ Docker daemon is active");

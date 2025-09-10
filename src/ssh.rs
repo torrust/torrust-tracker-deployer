@@ -1,9 +1,29 @@
 use std::path::PathBuf;
 use std::time::Duration;
+use thiserror::Error;
 
 use tracing::info;
 
 use crate::command::{CommandError, CommandExecutor};
+
+/// Errors that can occur during SSH operations
+#[derive(Error, Debug)]
+pub enum SshError {
+    /// SSH connectivity could not be established within the timeout period
+    #[error("SSH connectivity to '{host_ip}' could not be established after {attempts} attempts ({timeout_seconds} seconds)")]
+    ConnectivityTimeout {
+        host_ip: String,
+        attempts: u32,
+        timeout_seconds: u32,
+    },
+    
+    /// Underlying command execution failed
+    #[error("SSH command execution failed: {source}")]
+    CommandFailed {
+        #[source]
+        source: CommandError,
+    },
+}
 
 /// A specialized SSH client with predefined security settings
 ///
@@ -184,44 +204,52 @@ impl SshClient {
     ///
     /// # Returns
     /// * `Ok(())` - SSH connectivity was successfully established
-    /// * `Err(anyhow::Error)` - SSH connectivity could not be established after all attempts
+    /// * `Err(SshError)` - SSH connectivity could not be established after all attempts
     ///
     /// # Errors
     /// This function will return an error if:
     /// * SSH connectivity cannot be established after 30 attempts (60 seconds total)
-    pub async fn wait_for_connectivity(&self, host_ip: &str) -> Result<(), anyhow::Error> {
+    pub async fn wait_for_connectivity(&self, host_ip: &str) -> Result<(), SshError> {
         info!("🔌 Waiting for SSH connectivity to {}", host_ip);
 
         let max_attempts = 30;
+        let timeout_seconds = 60;
         let mut attempt = 0;
 
         while attempt < max_attempts {
             let result = self.test_connectivity(host_ip);
 
-            if let Ok(is_connected) = result {
-                if is_connected {
+            match result {
+                Ok(true) => {
                     info!("✅ SSH connectivity established to {}", host_ip);
                     return Ok(());
                 }
-            }
+                Ok(false) => {
+                    // Connection failed, continue trying
+                    #[allow(clippy::manual_is_multiple_of)]
+                    if (attempt + 1) % 5 == 0 {
+                        info!(
+                            "   Still waiting for SSH to {}... (attempt {}/{})",
+                            host_ip,
+                            attempt + 1,
+                            max_attempts
+                        );
+                    }
 
-            if attempt % 5 == 0 {
-                info!(
-                    "   Still waiting for SSH to {}... (attempt {}/{})",
-                    host_ip,
-                    attempt + 1,
-                    max_attempts
-                );
+                    tokio::time::sleep(Duration::from_secs(2)).await;
+                    attempt += 1;
+                }
+                Err(e) => {
+                    return Err(SshError::CommandFailed { source: e });
+                }
             }
-
-            tokio::time::sleep(Duration::from_secs(2)).await;
-            attempt += 1;
         }
 
-        Err(anyhow::anyhow!(
-            "SSH connectivity could not be established after {} attempts",
-            max_attempts
-        ))
+        Err(SshError::ConnectivityTimeout {
+            host_ip: host_ip.to_string(),
+            attempts: max_attempts,
+            timeout_seconds,
+        })
     }
 }
 

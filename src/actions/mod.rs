@@ -1,4 +1,32 @@
-use anyhow::Result;
+use thiserror::Error;
+
+use crate::command::CommandError;
+
+/// Errors that can occur during remote action execution
+#[derive(Error, Debug)]
+pub enum RemoteActionError {
+    /// SSH command execution failed
+    #[error("SSH command execution failed during '{action_name}': {source}")]
+    SshCommandFailed {
+        action_name: String,
+        #[source]
+        source: CommandError,
+    },
+
+    /// Action validation failed
+    #[error("Action '{action_name}' validation failed: {message}")]
+    ValidationFailed {
+        action_name: String,
+        message: String,
+    },
+    
+    /// Action execution failed with custom error
+    #[error("Action '{action_name}' execution failed: {message}")]
+    ExecutionFailed {
+        action_name: String,
+        message: String,
+    },
+}
 
 pub mod cloud_init;
 pub mod docker;
@@ -29,6 +57,6 @@ pub trait RemoteAction {
     ///
     /// # Returns
     /// * `Ok(())` if the action executes successfully
-    /// * `Err(anyhow::Error)` if the action fails or encounters an error
-    async fn execute(&self, server_ip: &str) -> Result<()>;
+    /// * `Err(RemoteActionError)` if the action fails or encounters an error
+    async fn execute(&self, server_ip: &str) -> Result<(), RemoteActionError>;
 }

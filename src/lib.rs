@@ -25,4 +25,5 @@ pub mod command;
 pub mod lxd;
 pub mod opentofu;
 pub mod ssh;
+pub mod stages;
 pub mod template;
