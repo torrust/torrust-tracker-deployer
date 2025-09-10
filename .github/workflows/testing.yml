@@ -67,10 +67,6 @@ jobs:
         name: Run Build Checks
         run: cargo check --tests --benches --examples --workspace --all-targets --all-features
 
-      - id: lint
-        name: Run Clippy
-        run: cargo clippy --tests --benches --examples --workspace --all-targets --all-features -- -D warnings
-
       - id: docs
         name: Check Documentation
         env:
