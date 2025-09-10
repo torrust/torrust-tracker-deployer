@@ -30,6 +30,7 @@ pacman
 pathbuf
 pipefail
 prereq
+println
 publickey
 pytest
 resolv

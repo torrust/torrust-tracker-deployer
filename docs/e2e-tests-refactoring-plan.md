@@ -7,438 +7,484 @@
 
 ## 🔄 Refactoring Status
 
-- **Status**: 🔴 Planning Phase
-- **Last Updated**: September 9, 2025
-- **Completed Tasks**: 0/21 identified improvements
-- **Current Priority**: Extract Command Runner (High Priority)
+- **Status**: � Significant Progress Made
+- **Last Updated**: September 10, 2025
+- **Completed Tasks**: 8/13 identified improvements
+- **Current Priority**: Configuration Management and Stage Orchestration (Medium Priority)
 
 ## 📋 Current State Overview
 
-The `src/bin/e2e_tests.rs` module is a comprehensive end-to-end testing system that orchestrates infrastructure provisioning, configuration management, and validation. While functional, it suffers from several maintainability, readability, and extensibility issues.
+The `src/bin/e2e_tests.rs` module has undergone significant refactoring since the original plan. Major improvements include:
 
-## 🎯 Key Improvement Areas
+**✅ Completed Improvements:**
 
-### 1. Code Organization & Architecture
+- **Command Abstraction**: `CommandExecutor` extracted with proper error handling
+- **Client Libraries**: Dedicated client abstractions for OpenTofu, SSH, Ansible, and LXD
+- **Validation System**: `RemoteAction` trait with specific validators (CloudInit, Docker, DockerCompose)
+- **Template Management**: Integrated `TemplateManager` for template operations
+- **Async Operations**: Converted to async/await pattern for I/O operations
+- **Better Error Handling**: Structured error types and context preservation
+
+**❌ Remaining Issues:**
+
+- **God Class Pattern**: `TestEnvironment` still orchestrates everything (437 lines)
+- **Large Methods**: Several methods exceed 50+ lines
+- **Hard-coded Configuration**: No externalized configuration system
+- **Limited Observability**: Basic logging without structured progress tracking
+- **Sequential Execution**: Missed opportunities for parallel operations
+
+## 🎯 Remaining Improvement Areas
+
+### 1. Stage-Based Execution System
 
 #### Current Issues
 
-- **Single Responsibility Violation**: `TestEnvironment` handles infrastructure, configuration, validation, cleanup, and more
-- **God Class Pattern**: 735 lines in a single struct with 15+ methods
-- **Tight Coupling**: Direct dependencies on OpenTofu, Ansible, LXC, and SSH commands
+- **Monolithic Orchestration**: `TestEnvironment` directly orchestrates all stages
+- **No Stage Abstraction**: Stages are methods rather than independent components
+- **Limited Progress Tracking**: Basic println! messages without structured progress
 
 #### Recommended Improvements
 
-1. **Extract Command Runner**
+1. **Extract Stage Orchestrator**
 
 ```rust
-trait CommandRunner {
-    fn run(&self, cmd: &str, args: &[&str], working_dir: Option<&Path>) -> Result<CommandOutput>;
-    fn run_with_timeout(&self, cmd: &str, args: &[&str], timeout: Duration) -> Result<CommandOutput>;
+trait ExecutionStage {
+    fn name(&self) -> &'static str;
+    fn description(&self) -> &'static str;
+    async fn execute(&self, context: &mut StageContext) -> Result<()>;
+}
+
+struct StageOrchestrator {
+    stages: Vec<Box<dyn ExecutionStage>>,
+    progress_reporter: Box<dyn ProgressReporter>,
 }
 ```
 
-1. **Extract Infrastructure Provider**
+1. **Individual Stage Implementations**
 
 ```rust
-trait InfrastructureProvider {
-    async fn provision(&self) -> Result<ProvisionedResource>;
-    async fn get_resource_info(&self, resource_id: &str) -> Result<ResourceInfo>;
-    async fn cleanup(&self) -> Result<()>;
+struct TemplateRenderingStage {
+    template_manager: TemplateManager,
 }
 
-struct OpenTofuProvider {
-    runner: Box<dyn CommandRunner>,
-    working_dir: PathBuf,
+struct InfrastructureProvisioningStage {
+    opentofu_client: OpenTofuClient,
+}
+
+struct ConfigurationManagementStage {
+    ansible_client: AnsibleClient,
+    ssh_client: SshClient,
 }
 ```
 
-1. **Extract Configuration Manager**
-
-```rust
-trait ConfigurationManager {
-    async fn setup_connectivity(&self, target: &ResourceInfo) -> Result<()>;
-    async fn run_playbook(&self, playbook: &str) -> Result<()>;
-    fn validate_requirements(&self) -> Result<()>;
-}
-
-struct AnsibleManager {
-    runner: Box<dyn CommandRunner>,
-    ssh_client: Box<dyn SshClient>,
-    working_dir: PathBuf,
-}
-```
-
-### 2. Readability Improvements
+### 2. Configuration Management
 
 #### Current Issues
 
-- Methods exceed 50+ lines
-- Nested error handling
-- Inconsistent logging patterns
-- Magic strings and numbers
-
-#### Recommended Improvements
-
-1. **Break Down Large Methods**
-
-```rust
-// Current: render_runtime_templates (100+ lines)
-// Split into:
-async fn render_runtime_templates(&self, container_ip: &str) -> Result<()> {
-    self.create_build_structure().await?;
-    self.render_inventory_template(container_ip).await?;
-    self.copy_static_ansible_files().await?;
-    Ok(())
-}
-```
-
-1. **Extract Constants**
-
-```rust
-struct TestConfig {
-    ssh_connection_timeout: Duration,
-    max_ssh_retry_attempts: u32,
-    cloud_init_check_interval: Duration,
-    // ... other configuration
-}
-```
-
-1. **Standardize Logging**
-
-```rust
-trait Logger {
-    fn stage(&self, stage: u8, message: &str);
-    fn progress(&self, message: &str);
-    fn success(&self, message: &str);
-    fn warning(&self, message: &str);
-}
-```
-
-### 3. Observability Enhancements
-
-#### Current Issues
-
-- No structured logging
-- No operation timing
-- Limited error context
-- No progress tracking for long operations
-
-#### Recommended Improvements
-
-1. **Add Progress Tracking**
-
-```rust
-trait ProgressReporter {
-    fn start_operation(&self, name: &str, total_steps: u32);
-    fn advance(&self, step: u32, message: &str);
-    fn complete(&self, duration: Duration);
-}
-```
-
-1. **Enhanced Error Context**
-
-```rust
-#[derive(Debug, thiserror::Error)]
-enum E2ETestError {
-    #[error("Infrastructure provisioning failed: {source}")]
-    ProvisioningFailed { source: anyhow::Error, provider: String },
-
-    #[error("SSH connectivity failed after {attempts} attempts: {source}")]
-    SshConnectivityFailed { attempts: u32, source: anyhow::Error },
-}
-```
-
-1. **Operation Timing**
-
-```rust
-struct OperationTimer {
-    operations: HashMap<String, Duration>,
-}
-
-impl OperationTimer {
-    fn time_operation<T>(&mut self, name: &str, op: impl FnOnce() -> T) -> T {
-        let start = Instant::now();
-        let result = op();
-        self.operations.insert(name.to_string(), start.elapsed());
-        result
-    }
-}
-```
-
-### 4. SSH Operations Abstraction
-
-#### Current Issues
-
-- Repetitive SSH command construction (8+ similar patterns)
-- Hard-coded connection parameters
-- No connection pooling/reuse
-
-#### Recommended Improvements
-
-1. **SSH Client Abstraction**
-
-```rust
-trait SshClient {
-    async fn connect(&self, target: &str) -> Result<()>;
-    async fn execute(&self, command: &str) -> Result<String>;
-    async fn check_connectivity(&self) -> Result<bool>;
-    async fn upload_file(&self, local: &Path, remote: &str) -> Result<()>;
-}
-
-struct E2ESshClient {
-    key_path: PathBuf,
-    connection_timeout: Duration,
-    target_host: String,
-}
-```
-
-### 5. Validation System
-
-#### Current Issues
-
-- Validation logic scattered across multiple methods
-- Hard-coded service checks
-- No pluggable validation system
-
-#### Recommended Improvements
-
-1. **Pluggable Validation**
-
-```rust
-trait Validator {
-    fn name(&self) -> &str;
-    async fn validate(&self, context: &ValidationContext) -> Result<ValidationResult>;
-}
-
-struct DockerValidator;
-struct CloudInitValidator;
-struct DockerComposeValidator;
-
-struct ValidationRunner {
-    validators: Vec<Box<dyn Validator>>,
-    ssh_client: Box<dyn SshClient>,
-}
-```
-
-### 6. Configuration Management
-
-#### Current Issues
-
-- All configuration is hard-coded
-- No environment-specific settings
-- No way to customize behavior without code changes
+- **Hard-coded Values**: All timeouts, paths, and settings are embedded in code
+- **No Environment Overrides**: Cannot customize behavior without code changes
+- **Inflexible Testing**: Cannot easily test different scenarios or configurations
 
 #### Recommended Improvements
 
 1. **Configuration File Support**
 
 ```rust
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct E2EConfig {
     infrastructure: InfrastructureConfig,
     ssh: SshConfig,
     validation: ValidationConfig,
     timeouts: TimeoutConfig,
+    templates: TemplateConfig,
 }
 
-impl E2EConfig {
-    fn from_file<P: AsRef<Path>>(path: P) -> Result<Self>;
-    fn with_overrides(self, cli: &Cli) -> Self;
+#[derive(Deserialize, Debug)]
+struct TimeoutConfig {
+    ssh_connection: Duration,
+    cloud_init_wait: Duration,
+    playbook_execution: Duration,
 }
 ```
 
-### 7. Async Operations Optimization
+1. **CLI Override System**
+
+```rust
+impl E2EConfig {
+    fn from_file<P: AsRef<Path>>(path: P) -> Result<Self>;
+    fn with_cli_overrides(self, cli: &Cli) -> Self;
+    fn merge_with_defaults(self) -> Self;
+}
+```
+
+### 3. Enhanced Error Context and Reporting
 
 #### Current Issues
 
-- Sequential operations that could be parallel
-- Blocking operations in async context
-- No async SSH operations
+- **Generic Error Handling**: Heavy reliance on `anyhow::Error` without specific error types
+- **Limited Error Context**: Errors don't provide enough information for debugging
+- **No Test Reporting**: No structured test results or metrics collection
 
 #### Recommended Improvements
 
-1. **Parallel Template Processing**
+1. **Comprehensive Error Types**
+
+```rust
+#[derive(Debug, thiserror::Error)]
+enum E2ETestError {
+    #[error("Infrastructure provisioning failed: {source}")]
+    ProvisioningFailed {
+        source: anyhow::Error,
+        provider: String,
+        stage: String,
+    },
+
+    #[error("Template rendering failed for {template}: {source}")]
+    TemplateRenderingFailed {
+        template: String,
+        source: anyhow::Error,
+    },
+
+    #[error("Validation failed for {validator}: {source}")]
+    ValidationFailed {
+        validator: String,
+        source: anyhow::Error,
+    },
+}
+```
+
+1. **Test Result Reporting**
+
+```rust
+#[derive(Debug)]
+struct TestReport {
+    stages: HashMap<String, StageResult>,
+    total_duration: Duration,
+    success: bool,
+    errors: Vec<E2ETestError>,
+}
+
+struct StageResult {
+    name: String,
+    duration: Duration,
+    success: bool,
+    error: Option<E2ETestError>,
+}
+```
+
+### 4. Parallel Operations and Performance
+
+#### Current Issues
+
+- **Sequential Template Processing**: Templates are copied one by one
+- **Missed Parallel Opportunities**: Some validation steps could run concurrently
+- **No Operation Batching**: Individual operations that could be grouped
+
+#### Recommended Improvements
+
+1. **Parallel Template Operations**
 
 ```rust
 async fn copy_ansible_files_parallel(&self) -> Result<()> {
-    let tasks: Vec<_> = self.playbook_files()
+    let playbook_files = [
+        "update-apt-cache.yml",
+        "install-docker.yml",
+        "install-docker-compose.yml",
+        "wait-cloud-init.yml"
+    ];
+
+    let copy_tasks: Vec<_> = playbook_files
         .iter()
-        .map(|file| self.copy_template_file(file))
+        .map(|playbook| self.copy_playbook_template(playbook))
         .collect();
 
-    futures::future::try_join_all(tasks).await?;
+    futures::future::try_join_all(copy_tasks).await?;
     Ok(())
 }
 ```
 
-## 🏗️ Proposed Architecture
+1. **Concurrent Validation**
+
+```rust
+async fn run_parallel_validations(&self, container_ip: &str) -> Result<()> {
+    let validators = vec![
+        Box::new(CloudInitValidator::new(&self.ssh_key_path, "torrust", self.verbose)),
+        Box::new(DockerValidator::new(&self.ssh_key_path, "torrust", self.verbose)),
+        Box::new(DockerComposeValidator::new(&self.ssh_key_path, "torrust", self.verbose)),
+    ];
+
+    let validation_tasks: Vec<_> = validators
+        .into_iter()
+        .map(|validator| validator.execute(container_ip))
+        .collect();
+
+    futures::future::try_join_all(validation_tasks).await?;
+    Ok(())
+}
+```
+
+### 5. Observability and Progress Tracking
+
+#### Current Issues
+
+- **Basic Logging**: Simple println! statements without structured logging
+- **No Progress Indicators**: Long-running operations provide no progress feedback
+- **Limited Metrics**: No collection of performance or success metrics
+
+#### Recommended Improvements
+
+1. **Structured Progress Reporting**
+
+```rust
+trait ProgressReporter {
+    fn start_stage(&self, stage: &str, steps: u32);
+    fn advance_step(&self, step: u32, message: &str);
+    fn complete_stage(&self, duration: Duration, success: bool);
+    fn report_error(&self, error: &E2ETestError);
+}
+
+struct ConsoleProgressReporter {
+    start_time: Instant,
+    current_stage: Option<String>,
+}
+```
+
+1. **Metrics Collection**
+
+```rust
+#[derive(Debug)]
+struct TestMetrics {
+    stage_durations: HashMap<String, Duration>,
+    total_duration: Duration,
+    validation_results: Vec<ValidationResult>,
+    errors_encountered: Vec<E2ETestError>,
+}
+
+impl TestMetrics {
+    fn generate_report(&self) -> TestReport;
+    fn export_json(&self, path: &Path) -> Result<()>;
+}
+```
+
+## 🏗️ Updated Architecture Proposal
+
+**Current State (Improved):**
+
+- ✅ `CommandExecutor` - src/command.rs
+- ✅ Client abstractions - src/{opentofu,ssh,ansible}.rs, src/lxd/client.rs
+- ✅ Validation system - src/actions/ with `RemoteAction` trait
+- ✅ Template management - Integrated `TemplateManager`
+
+**Proposed Further Structure:**
 
 ```text
 src/
 ├── bin/
-│   └── e2e_tests.rs (orchestration only)
+│   └── e2e_tests.rs (minimal orchestration)
 ├── e2e/
 │   ├── mod.rs
-│   ├── config.rs
-│   ├── runner.rs
-│   ├── providers/
-│   │   ├── mod.rs
-│   │   ├── infrastructure.rs (trait)
-│   │   ├── opentofu.rs
-│   │   └── multipass.rs (future)
-│   ├── configuration/
-│   │   ├── mod.rs
-│   │   ├── manager.rs (trait)
-│   │   └── ansible.rs
-│   ├── connectivity/
-│   │   ├── mod.rs
-│   │   ├── ssh.rs
-│   │   └── health_check.rs
-│   ├── validation/
-│   │   ├── mod.rs
-│   │   ├── validator.rs (trait)
-│   │   ├── docker.rs
-│   │   ├── cloud_init.rs
-│   │   └── docker_compose.rs
-│   └── utils/
+│   ├── config.rs (configuration management)
+│   ├── orchestrator.rs (stage-based execution)
+│   ├── progress.rs (progress reporting)
+│   ├── metrics.rs (metrics collection)
+│   ├── error.rs (comprehensive error types)
+│   └── stages/
 │       ├── mod.rs
-│       ├── command_runner.rs
-│       ├── progress.rs
-│       └── timing.rs
+│       ├── template_rendering.rs
+│       ├── infrastructure_provisioning.rs
+│       ├── configuration_management.rs
+│       └── validation.rs
+├── command.rs (✅ exists)
+├── opentofu.rs (✅ exists)
+├── ssh.rs (✅ exists)
+├── ansible.rs (✅ exists)
+├── lxd/ (✅ exists)
+├── actions/ (✅ exists - validation system)
+└── template/ (✅ exists)
 ```
 
-## 📈 Implementation Roadmap
+## 📈 Updated Implementation Roadmap
 
-### 🚀 Phase 1: Foundation (High Priority)
+### 🎯 Phase 1: Configuration and Error Handling (High Priority)
 
-> **Goal**: Establish basic abstractions and reduce complexity
+> **Goal**: Add configuration management and improve error handling
 
-- [ ] **Task 1.1**: Extract `CommandRunner` trait and implementation
+- [ ] **Task 1.1**: Implement Configuration Management System
 
-  - Create `src/e2e/utils/command_runner.rs`
-  - Implement trait with timeout support
-  - Replace all direct `Command::new()` calls in `TestEnvironment`
-
-- [ ] **Task 1.2**: Extract custom error types
-
-  - Create `src/e2e/error.rs` with `E2ETestError` enum
-  - Replace generic `anyhow::Error` with specific error types
-  - Add proper error context and chain information
-
-- [ ] **Task 1.3**: Break down large methods
-  - Split `render_runtime_templates()` into 3-4 smaller methods
-  - Split `validate_docker_compose_installation()` into validation steps
-  - Split `run_full_deployment_test()` into stage-specific methods
-
-### 🏗️ Phase 2: Architecture (Medium Priority)
-
-> **Goal**: Implement proper separation of concerns
-
-- [ ] **Task 2.1**: Extract Infrastructure Provider
-
-  - Create `src/e2e/providers/infrastructure.rs` trait
-  - Implement `OpenTofuProvider` in `src/e2e/providers/opentofu.rs`
-  - Move all OpenTofu-specific logic from `TestEnvironment`
-
-- [ ] **Task 2.2**: Extract SSH Client Wrapper
-
-  - Create `src/e2e/connectivity/ssh.rs`
-  - Implement `SshClient` trait with connection pooling
-  - Replace all direct SSH command constructions (8+ locations)
-
-- [ ] **Task 2.3**: Add Configuration Management
   - Create `src/e2e/config.rs` with `E2EConfig` struct
-  - Support loading from file with CLI overrides
-  - Extract all hard-coded values to configuration
+  - Support TOML/YAML configuration files with CLI overrides
+  - Extract hard-coded timeouts, paths, and settings
+  - Add configuration validation
 
-### ✨ Phase 3: Polish (Low Priority)
+- [ ] **Task 1.2**: Enhanced Error Types and Context
 
-> **Goal**: Enhance observability and extensibility
+  - Create `src/e2e/error.rs` with comprehensive `E2ETestError` enum
+  - Replace remaining `anyhow::Error` usage with specific error types
+  - Add detailed error context and suggestions for resolution
+  - Implement error reporting and aggregation
 
-- [ ] **Task 3.1**: Implement Validation System
+### 🏗️ Phase 2: Stage-Based Architecture (Medium Priority)
 
-  - Create pluggable `Validator` trait
-  - Implement `DockerValidator`, `CloudInitValidator`, `DockerComposeValidator`
-  - Create `ValidationRunner` for coordinated validation
+> **Goal**: Replace monolithic orchestration with stage-based execution
 
-- [ ] **Task 3.2**: Add Progress Reporting
+- [ ] **Task 2.1**: Extract Stage Orchestrator
 
-  - Implement `ProgressReporter` trait
-  - Add operation timing with `OperationTimer`
-  - Enhance logging with structured output
+  - Create `src/e2e/orchestrator.rs` with `ExecutionStage` trait
+  - Implement `StageOrchestrator` for coordinated execution
+  - Add stage context passing and shared state management
 
-- [ ] **Task 3.3**: Optimize Async Operations
+- [ ] **Task 2.2**: Individual Stage Implementations
+
+  - Create `src/e2e/stages/template_rendering.rs`
+  - Create `src/e2e/stages/infrastructure_provisioning.rs`
+  - Create `src/e2e/stages/configuration_management.rs`
+  - Create `src/e2e/stages/validation.rs`
+
+- [ ] **Task 2.3**: Refactor TestEnvironment
+
+  - Reduce `TestEnvironment` to dependency injection container
+  - Move orchestration logic to `StageOrchestrator`
+  - Break down large methods into focused functions
+
+### 🎨 Phase 3: Observability and Performance (Lower Priority)
+
+> **Goal**: Add progress tracking, metrics, and parallel operations
+
+- [ ] **Task 3.1**: Progress Reporting System
+
+  - Create `src/e2e/progress.rs` with `ProgressReporter` trait
+  - Implement console progress indicators for long operations
+  - Add structured logging with operation context
+
+- [ ] **Task 3.2**: Metrics and Reporting
+
+  - Create `src/e2e/metrics.rs` for test metrics collection
+  - Implement test result reporting and export
+  - Add performance timing and success rate tracking
+
+- [ ] **Task 3.3**: Parallel Operations Optimization
+
   - Implement parallel template processing
-  - Add async SSH operations
-  - Optimize I/O bound operations
+  - Add concurrent validation execution
+  - Optimize I/O bound operations with proper async coordination
 
 ## ✅ Completed Tasks
 
-> **Instructions**: Move completed tasks here with completion date and contributor
+> **Instructions**: These tasks have been completed since the original refactoring plan
 
-No tasks completed yet.
+### 📅 September 2025 - Major Refactoring Phase
 
-## 🎯 Expected Benefits
+- **✅ Command Abstraction (Originally Task 1.1)**: `CommandExecutor` extracted with proper error handling and timeout support in `src/command.rs`
 
-- **Maintainability**: Smaller, focused components following SRP
-- **Testability**: Each component can be unit tested in isolation
-- **Extensibility**: Easy to add new providers, validators, or playbooks
-- **Readability**: Clear separation of concerns and consistent patterns
-- **Observability**: Better error reporting and progress tracking
-- **Reliability**: More robust error handling and recovery strategies
+- **✅ Infrastructure Provider (Originally Task 2.1)**: `OpenTofuClient` implemented in `src/opentofu.rs` with consistent interface for init, apply, destroy operations
 
-## 🔍 Detailed Analysis Summary
+- **✅ SSH Client Wrapper (Originally Task 2.2)**: `SshClient` implemented in `src/ssh.rs` with connection management, security settings, and async connectivity checking
 
-### Current Module Statistics
+- **✅ Configuration Management Client**: `AnsibleClient` implemented in `src/ansible.rs` for playbook execution and configuration management
 
-- **Lines of code**: 735 lines
-- **Methods in TestEnvironment**: 15+ methods
-- **Direct command executions**: 8+ different patterns
-- **SSH command constructions**: 8+ repetitive patterns
-- **Hard-coded values**: 20+ magic strings/numbers
-- **Error handling patterns**: 3+ different approaches
+- **✅ LXD Integration**: `LxdClient` implemented in `src/lxd/client.rs` for container management and IP address retrieval
 
-### Specific Code Smells Identified
+- **✅ Validation System (Originally Task 3.1)**: `RemoteAction` trait implemented in `src/actions/mod.rs` with specific validators:
 
-1. **Long Methods**:
+  - `CloudInitValidator` for cloud-init completion validation
+  - `DockerValidator` for Docker installation validation
+  - `DockerComposeValidator` for Docker Compose validation
 
-   - `render_runtime_templates()`: ~100 lines
-   - `validate_docker_compose_installation()`: ~110 lines
+- **✅ Template Integration**: `TemplateManager` successfully integrated for template rendering and management
+
+- **✅ Async Operations (Originally Task 3.3)**: Main execution flow converted to async/await pattern with proper async I/O operations
+
+- **✅ Error Handling Foundation**: `CommandError` type implemented with structured error reporting and context preservation
+
+### 🔢 Module Statistics Improvement
+
+- **Lines of Code**: Reduced from 735 → 437 lines (40% reduction)
+- **External Dependencies**: Abstracted behind client interfaces
+- **Error Handling**: Structured error types introduced
+- **Code Organization**: Separated concerns with dedicated client modules
+
+## 🎯 Expected Benefits from Further Refactoring
+
+**Already Achieved:**
+
+- ✅ **Better Abstraction**: Client libraries provide clean interfaces to external tools
+- ✅ **Improved Testability**: Individual clients can be unit tested in isolation
+- ✅ **Enhanced Extensibility**: Easy to add new validators through `RemoteAction` trait
+- ✅ **Structured Error Handling**: `CommandError` provides detailed error context
+- ✅ **Async Performance**: Non-blocking I/O operations improve responsiveness
+
+**Still To Achieve:**
+
+- **Configuration Flexibility**: External configuration files for environment-specific settings
+- **Enhanced Observability**: Structured progress reporting and metrics collection
+- **Stage-Based Architecture**: Clear separation of execution phases with independent stages
+- **Parallel Execution**: Concurrent operations for improved performance
+- **Comprehensive Error Context**: Detailed error reporting with resolution suggestions
+
+## 🔍 Updated Analysis Summary
+
+### Current Module Statistics (After Improvements)
+
+- **Lines of code**: 437 lines (reduced from 735, -40%)
+- **Methods in TestEnvironment**: 8 methods (reduced from 15+)
+- **Direct command executions**: 0 (abstracted behind client interfaces)
+- **Client abstractions**: 4 dedicated clients (OpenTofu, SSH, Ansible, LXD)
+- **Validation system**: 3 validators with `RemoteAction` trait
+- **Hard-coded values**: Still present but reduced
+
+### Remaining Code Smells
+
+1. **God Class Pattern**:
+
+   - `TestEnvironment` still orchestrates everything (437 lines)
+   - Handles dependency injection, template rendering, orchestration, and cleanup
+
+2. **Large Methods**:
+
+   - `render_runtime_templates()`: ~80 lines
    - `run_full_deployment_test()`: ~60 lines
 
-2. **Duplicated Code**:
+3. **Configuration Issues**:
 
-   - SSH command construction repeated 8+ times
-   - Similar error handling patterns throughout
-   - Repeated directory creation logic
+   - All timeouts, paths, and settings still hard-coded
+   - No environment-specific configuration support
 
-3. **Hard Dependencies**:
+4. **Limited Observability**:
+   - Basic println! logging without structured progress
+   - No metrics collection or detailed error reporting
 
-   - Direct calls to `tofu`, `lxc`, `ssh`, `ansible-playbook`
-   - No abstraction for external tools
-   - Tight coupling to specific file paths
+### Progress Assessment
 
-4. **Missing Abstractions**:
-   - No command runner interface
-   - No infrastructure provider abstraction
-   - No validation strategy pattern
+**Before Refactoring (Original State):**
 
-### Impact Assessment
+- Maintainability: 3/10
+- Testability: 2/10
+- Readability: 4/10
+- Extensibility: 2/10
 
-- **Current Maintainability Score**: 3/10
-- **Current Testability Score**: 2/10
-- **Current Readability Score**: 4/10
-- **Current Extensibility Score**: 2/10
+**Current State (After Major Improvements):**
 
-- **Post-Refactoring Expected Scores**:
-  - Maintainability: 8/10
-  - Testability: 9/10
-  - Readability: 8/10
-  - Extensibility: 9/10
+- Maintainability: 6/10 (improved client abstractions)
+- Testability: 7/10 (clients can be unit tested)
+- Readability: 6/10 (cleaner structure, async operations)
+- Extensibility: 8/10 (validation system, client interfaces)
 
-This refactoring would transform the monolithic e2e test module into a well-structured, maintainable, and extensible testing framework while preserving all existing functionality.
+**Target State (After Full Refactoring):**
+
+- Maintainability: 9/10 (stage-based architecture)
+- Testability: 9/10 (isolated components)
+- Readability: 8/10 (configuration-driven, clear stages)
+- Extensibility: 9/10 (pluggable stages and configuration)
+
+### Key Achievements
+
+- ✅ **40% code reduction** while maintaining all functionality
+- ✅ **Zero direct command calls** - all abstracted behind clients
+- ✅ **Extensible validation system** with trait-based architecture
+- ✅ **Async/await conversion** for better performance
+- ✅ **Structured error handling** foundation established
 
 ---
 
-_Report generated on September 9, 2025_  
-_Analysis of: `/src/bin/e2e_tests.rs` (735 lines)_
+_Report updated on September 10, 2025_  
+_Analysis of: `/src/bin/e2e_tests.rs` (437 lines, improved from 735 lines)_
