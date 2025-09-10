@@ -133,9 +133,9 @@ impl TestEnvironment {
         })
     }
 
-    /// Stage 1: Render static templates (tofu) to build/tofu/ directory
-    async fn render_static_templates(&self) -> Result<()> {
-        println!("🏗️  Stage 1: Rendering static templates to build directory...");
+    /// Stage 1: Render provision templates (`OpenTofu`) to build/tofu/ directory
+    async fn render_provision_templates(&self) -> Result<()> {
+        println!("🏗️  Stage 1: Rendering provision templates to build directory...");
 
         // Create build directory structure
         let build_tofu_dir = self.build_dir.join("tofu/lxd");
@@ -164,18 +164,18 @@ impl TestEnvironment {
 
         if self.verbose {
             println!(
-                "   ✅ Static templates copied to: {}",
+                "   ✅ Provision templates copied to: {}",
                 build_tofu_dir.display()
             );
         }
 
-        println!("✅ Stage 1 complete: Static templates ready");
+        println!("✅ Stage 1 complete: Provision templates ready");
         Ok(())
     }
 
-    /// Stage 3: Render ansible templates with runtime variables to build/ansible/
-    async fn render_runtime_templates(&self, instance_ip: &str) -> Result<()> {
-        println!("🎭 Stage 3: Rendering runtime templates with variables...");
+    /// Stage 3: Render configuration templates (`Ansible`) with runtime variables to build/ansible/
+    async fn render_configuration_templates(&self, instance_ip: &str) -> Result<()> {
+        println!("🎭 Stage 3: Rendering configuration templates with variables...");
 
         // Create build directory structure
         let build_ansible_dir = self.build_dir.join("ansible");
@@ -242,7 +242,7 @@ impl TestEnvironment {
 
         if self.verbose {
             println!(
-                "   ✅ Runtime templates rendered to: {}",
+                "   ✅ Configuration templates rendered to: {}",
                 build_ansible_dir.display()
             );
             println!("   ✅ Inventory rendered with IP: {instance_ip}");
@@ -252,7 +252,7 @@ impl TestEnvironment {
             );
         }
 
-        println!("✅ Stage 3 complete: Runtime templates ready");
+        println!("✅ Stage 3 complete: Configuration templates ready");
         Ok(())
     }
 
@@ -371,14 +371,14 @@ impl Drop for TestEnvironment {
 async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     println!("🧪 Starting full deployment E2E test with template-based workflow");
     println!("   This will test the complete 4-stage template system:");
-    println!("   Stage 1: Render static templates to build/");
+    println!("   Stage 1: Render provision templates to build/");
     println!("   Stage 2: Provision VM with OpenTofu from build/");
-    println!("   Stage 3: Render runtime templates with variables");
+    println!("   Stage 3: Render configuration templates with variables");
     println!("   Stage 4: Run Ansible playbooks from build/");
     println!();
 
-    // Stage 1: Render static templates to build/tofu/
-    env.render_static_templates().await?;
+    // Stage 1: Render provision templates to build/tofu/
+    env.render_provision_templates().await?;
 
     // Stage 2: Provision infrastructure from build directory
     let instance_ip = env.provision_infrastructure()?;
@@ -386,8 +386,8 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     // Wait for SSH connectivity
     env.ssh_client.wait_for_connectivity(&instance_ip).await?;
 
-    // Stage 3: Render ansible templates with runtime variables
-    env.render_runtime_templates(&instance_ip).await?;
+    // Stage 3: Render configuration templates with runtime variables
+    env.render_configuration_templates(&instance_ip).await?;
 
     // Stage 4: Run Ansible playbooks from build directory
     println!("📋 Step 1: Waiting for cloud-init completion...");
