@@ -7,7 +7,7 @@
 
 ## 🔄 Refactoring Status
 
-- **Status**: � Significant Progress Made
+- **Status**: ✅ Significant Progress Made
 - **Last Updated**: September 10, 2025
 - **Completed Tasks**: 8/13 identified improvements
 - **Current Priority**: Configuration Management and Stage Orchestration (Medium Priority)
@@ -18,30 +18,53 @@ The `src/bin/e2e_tests.rs` module has undergone significant refactoring since th
 
 **✅ Completed Improvements:**
 
-- **Command Abstraction**: `CommandExecutor` extracted with proper error handling
-- **Client Libraries**: Dedicated client abstractions for OpenTofu, SSH, Ansible, and LXD
-- **Validation System**: `RemoteAction` trait with specific validators (CloudInit, Docker, DockerCompose)
-- **Template Management**: Integrated `TemplateManager` for template operations
+- **Command Abstraction**: `CommandExecutor` extracted with proper error handling in `src/command.rs`
+- **Client Libraries**: Dedicated client abstractions for OpenTofu, SSH, Ansible, and LXD in `src/command_wrappers/`
+- **Validation System**: `RemoteAction` trait with specific validators (CloudInit, Docker, DockerCompose) in `src/actions/`
+- **Template Management**: `TemplateManager` integrated with dedicated renderers in `src/template/`, `src/tofu/`, `src/ansible/`
 - **Async Operations**: Converted to async/await pattern for I/O operations
-- **Better Error Handling**: Structured error types and context preservation
+- **Error Handling Foundation**: Structured error types with `anyhow` integration
+- **Configuration Pattern**: `Config` and `Services` dependency injection pattern established
+- **Code Organization**: Reduced from 735 → 427 lines (42% reduction) while maintaining functionality
 
 **❌ Remaining Issues:**
 
-- **God Class Pattern**: `TestEnvironment` still orchestrates everything (437 lines)
+- **God Class Pattern**: `TestEnvironment` still orchestrates everything (427 lines)
 - **Large Methods**: Several methods exceed 50+ lines
-- **Hard-coded Configuration**: No externalized configuration system
-- **Limited Observability**: Basic logging without structured progress tracking
+- **Hard-coded Configuration**: All timeouts, paths, and settings still embedded in code
+- **Limited Observability**: Basic println! messages without structured progress tracking
 - **Sequential Execution**: Missed opportunities for parallel operations
 
 ## 🎯 Remaining Improvement Areas
 
-### 1. Stage-Based Execution System
+### Current Well-Implemented Architecture
 
-#### Current Issues
+Before identifying remaining issues, it's worth noting the **4-Stage Execution Framework** is already well-implemented and working effectively:
 
-- **Monolithic Orchestration**: `TestEnvironment` directly orchestrates all stages
-- **No Stage Abstraction**: Stages are methods rather than independent components
-- **Limited Progress Tracking**: Basic println! messages without structured progress
+1. **Stage 1**: `render_provision_templates()` - Render OpenTofu templates to build/
+2. **Stage 2**: `provision_infrastructure()` - Initialize and apply OpenTofu configuration
+3. **Stage 3**: `render_configuration_templates()` - Render Ansible templates with runtime variables (instance IP)
+4. **Stage 4**: `run_ansible_playbook()` - Execute Ansible playbooks for configuration management
+
+This provides a clean separation of concerns and follows infrastructure-as-code best practices.
+
+### 1. Stage-Based Execution System Enhancement
+
+#### Current State (Good)
+
+The current implementation already provides a **well-structured 4-stage execution framework**:
+
+- ✅ Clear stage separation with dedicated methods
+- ✅ Logical flow from template rendering → provisioning → configuration → validation
+- ✅ Good error handling with `anyhow` context
+- ✅ Async operations where appropriate
+
+#### Remaining Enhancement Opportunities
+
+- **Stage Abstraction**: Convert methods to independent stage components
+- **Progress Tracking**: Add structured progress reporting for long-running stages
+- **Stage Context**: Shared context passing between stages
+- **Stage Validation**: Pre/post conditions for each stage
 
 #### Recommended Improvements
 
@@ -77,13 +100,23 @@ struct ConfigurationManagementStage {
 }
 ```
 
-### 2. Configuration Management
+### 2. Configuration Management Enhancement
 
-#### Current Issues
+#### Current State (Basic Implementation)
 
-- **Hard-coded Values**: All timeouts, paths, and settings are embedded in code
-- **No Environment Overrides**: Cannot customize behavior without code changes
-- **Inflexible Testing**: Cannot easily test different scenarios or configurations
+The current implementation has a **solid foundation** with `Config` and `Services`:
+
+- ✅ Centralized configuration with `Config` struct
+- ✅ Dependency injection pattern with `Services`
+- ✅ CLI argument parsing with `clap`
+- ✅ Path management for templates, build directories, SSH keys
+
+#### Remaining Enhancement Opportunities
+
+- **External Configuration Files**: TOML/YAML configuration files
+- **Environment-Specific Settings**: Development, staging, production configurations
+- **Timeout Configuration**: Externalized timeout values for SSH, cloud-init, deployments
+- **Provider Configuration**: Pluggable provider settings (not just LXD)
 
 #### Recommended Improvements
 
@@ -172,45 +205,27 @@ struct StageResult {
 }
 ```
 
-### 4. Parallel Operations and Performance
+### 4. Parallel Operations and Performance Enhancement
 
-#### Current Issues
+#### Current State (Sequential Execution)
 
-- **Sequential Template Processing**: Templates are copied one by one
-- **Missed Parallel Opportunities**: Some validation steps could run concurrently
-- **No Operation Batching**: Individual operations that could be grouped
+The current implementation executes most operations sequentially:
+
+- ✅ Async/await pattern implemented where appropriate
+- ❌ Validation steps run sequentially (could be parallel)
+- ❌ Template processing is sequential
+- ❌ No batching of similar operations
 
 #### Recommended Improvements
 
-1. **Parallel Template Operations**
-
-```rust
-async fn copy_ansible_files_parallel(&self) -> Result<()> {
-    let playbook_files = [
-        "update-apt-cache.yml",
-        "install-docker.yml",
-        "install-docker-compose.yml",
-        "wait-cloud-init.yml"
-    ];
-
-    let copy_tasks: Vec<_> = playbook_files
-        .iter()
-        .map(|playbook| self.copy_playbook_template(playbook))
-        .collect();
-
-    futures::future::try_join_all(copy_tasks).await?;
-    Ok(())
-}
-```
-
-1. **Concurrent Validation**
+1. **Parallel Validation Execution**
 
 ```rust
 async fn run_parallel_validations(&self, container_ip: &str) -> Result<()> {
     let validators = vec![
-        Box::new(CloudInitValidator::new(&self.ssh_key_path, "torrust", self.verbose)),
-        Box::new(DockerValidator::new(&self.ssh_key_path, "torrust", self.verbose)),
-        Box::new(DockerComposeValidator::new(&self.ssh_key_path, "torrust", self.verbose)),
+        CloudInitValidator::new(&self.config.ssh_key_path, &self.config.ssh_username, self.config.verbose),
+        DockerValidator::new(&self.config.ssh_key_path, &self.config.ssh_username, self.config.verbose),
+        DockerComposeValidator::new(&self.config.ssh_key_path, &self.config.ssh_username, self.config.verbose),
     ];
 
     let validation_tasks: Vec<_> = validators
@@ -223,150 +238,130 @@ async fn run_parallel_validations(&self, container_ip: &str) -> Result<()> {
 }
 ```
 
-### 5. Observability and Progress Tracking
+### 5. Code Quality Improvements
 
-#### Current Issues
+#### Identified Technical Debt
 
-- **Basic Logging**: Simple println! statements without structured logging
-- **No Progress Indicators**: Long-running operations provide no progress feedback
-- **Limited Metrics**: No collection of performance or success metrics
+Based on current code analysis, the following improvements would enhance code quality:
 
-#### Recommended Improvements
+1. **Method Size Reduction**: Several methods exceed 50+ lines and could be broken down:
 
-1. **Structured Progress Reporting**
+   - `provision_infrastructure()` (~45 lines) - could extract IP retrieval logic
+   - `render_configuration_templates()` (~25 lines) - good size but context creation could be extracted
+   - `run_full_deployment_test()` (~50 lines) - could extract stage coordination
 
-```rust
-trait ProgressReporter {
-    fn start_stage(&self, stage: &str, steps: u32);
-    fn advance_step(&self, step: u32, message: &str);
-    fn complete_stage(&self, duration: Duration, success: bool);
-    fn report_error(&self, error: &E2ETestError);
-}
+2. **Error Handling Consistency**: Mix of `anyhow::Error` and `map_err(|e| anyhow::anyhow!(e))` patterns could be more consistent
 
-struct ConsoleProgressReporter {
-    start_time: Instant,
-    current_stage: Option<String>,
-}
-```
+3. **Duplicate IP Retrieval Logic**: Currently gets IP from both OpenTofu and LXD - consolidate or make the validation more explicit
 
-1. **Metrics Collection**
-
-```rust
-#[derive(Debug)]
-struct TestMetrics {
-    stage_durations: HashMap<String, Duration>,
-    total_duration: Duration,
-    validation_results: Vec<ValidationResult>,
-    errors_encountered: Vec<E2ETestError>,
-}
-
-impl TestMetrics {
-    fn generate_report(&self) -> TestReport;
-    fn export_json(&self, path: &Path) -> Result<()>;
-}
-```
+4. **Hard-coded Values Still Present**:
+   - SSH connection timeouts
+   - Cloud-init wait durations
+   - Instance name "torrust-vm" is hard-coded
+   - Playbook names are hard-coded strings
 
 ## 🏗️ Updated Architecture Proposal
 
 **Current State (Improved):**
 
 - ✅ `CommandExecutor` - src/command.rs
-- ✅ Client abstractions - src/{opentofu,ssh,ansible}.rs, src/lxd/client.rs
+- ✅ Client abstractions - src/command_wrappers/ (OpenTofuClient, SshClient, AnsibleClient, LxdClient)
 - ✅ Validation system - src/actions/ with `RemoteAction` trait
-- ✅ Template management - Integrated `TemplateManager`
+- ✅ Template management - src/template/ with dedicated renderers in src/tofu/, src/ansible/
+- ✅ Configuration pattern - src/config.rs and src/container.rs for dependency injection
 
 **Proposed Further Structure:**
 
 ```text
 src/
 ├── bin/
-│   └── e2e_tests.rs (minimal orchestration)
-├── e2e/
+│   └── e2e_tests.rs (minimal orchestration - currently 427 lines)
+├── e2e/                           # NEW: E2E-specific modules
 │   ├── mod.rs
-│   ├── config.rs (configuration management)
-│   ├── orchestrator.rs (stage-based execution)
-│   ├── progress.rs (progress reporting)
-│   ├── metrics.rs (metrics collection)
-│   ├── error.rs (comprehensive error types)
+│   ├── config.rs                  # E2E configuration management
+│   ├── orchestrator.rs            # Stage-based execution
+│   ├── progress.rs                # Progress reporting
+│   ├── metrics.rs                 # Metrics collection
+│   ├── error.rs                   # Comprehensive error types
 │   └── stages/
 │       ├── mod.rs
 │       ├── template_rendering.rs
 │       ├── infrastructure_provisioning.rs
 │       ├── configuration_management.rs
 │       └── validation.rs
-├── command.rs (✅ exists)
-├── opentofu.rs (✅ exists)
-├── ssh.rs (✅ exists)
-├── ansible.rs (✅ exists)
-├── lxd/ (✅ exists)
-├── actions/ (✅ exists - validation system)
-└── template/ (✅ exists)
+├── command.rs                     # ✅ exists
+├── config.rs                      # ✅ exists
+├── container.rs                   # ✅ exists (Services)
+├── command_wrappers/              # ✅ exists
+│   ├── opentofu/
+│   ├── ssh.rs
+│   ├── ansible.rs
+│   └── lxd/
+├── actions/                       # ✅ exists - validation system
+├── template/                      # ✅ exists
+├── tofu/                          # ✅ exists - template renderer
+└── ansible/                       # ✅ exists - template renderer
 ```
 
 ## 📈 Updated Implementation Roadmap
 
-### 🎯 Phase 1: Configuration and Error Handling (High Priority)
+### 🎯 Phase 1: Enhanced Configuration and Observability (High Priority)
 
-> **Goal**: Add configuration management and improve error handling
+> **Goal**: Improve configuration management and add better observability
 
-- [ ] **Task 1.1**: Implement Configuration Management System
+- [ ] **Task 1.1**: External Configuration Files
 
-  - Create `src/e2e/config.rs` with `E2EConfig` struct
-  - Support TOML/YAML configuration files with CLI overrides
-  - Extract hard-coded timeouts, paths, and settings
-  - Add configuration validation
+  - Support TOML/YAML configuration files for environment-specific settings
+  - Extract hard-coded timeouts (SSH connection: 30s, cloud-init: 300s, etc.)
+  - Add environment profiles (dev, staging, production)
+  - Implement configuration validation and defaults
 
-- [ ] **Task 1.2**: Enhanced Error Types and Context
+- [ ] **Task 1.2**: Enhanced Progress Reporting
 
-  - Create `src/e2e/error.rs` with comprehensive `E2ETestError` enum
-  - Replace remaining `anyhow::Error` usage with specific error types
-  - Add detailed error context and suggestions for resolution
-  - Implement error reporting and aggregation
+  - Replace println! with structured progress reporting
+  - Add progress indicators for long-running operations (cloud-init wait, playbook execution)
+  - Implement operation timing and metrics collection
+  - Add stage-level progress tracking
 
-### 🏗️ Phase 2: Stage-Based Architecture (Medium Priority)
+### 🏗️ Phase 2: Stage Architecture Enhancement (Medium Priority)
 
-> **Goal**: Replace monolithic orchestration with stage-based execution
+> **Goal**: Enhance the current 4-stage architecture with better abstractions
 
-- [ ] **Task 2.1**: Extract Stage Orchestrator
+- [ ] **Task 2.1**: Stage Trait and Context System
 
-  - Create `src/e2e/orchestrator.rs` with `ExecutionStage` trait
-  - Implement `StageOrchestrator` for coordinated execution
-  - Add stage context passing and shared state management
+  - Create `ExecutionStage` trait for stage abstraction
+  - Implement `StageContext` for shared state between stages
+  - Add pre/post validation hooks for stages
+  - Create dedicated stage implementations
 
-- [ ] **Task 2.2**: Individual Stage Implementations
+- [ ] **Task 2.2**: Enhanced Error Context System
 
-  - Create `src/e2e/stages/template_rendering.rs`
-  - Create `src/e2e/stages/infrastructure_provisioning.rs`
-  - Create `src/e2e/stages/configuration_management.rs`
-  - Create `src/e2e/stages/validation.rs`
+  - Create comprehensive `E2ETestError` enum with stage context
+  - Add detailed error messages with resolution suggestions
+  - Implement error reporting and aggregation by stage
+  - Better error recovery and rollback mechanisms
 
-- [ ] **Task 2.3**: Refactor TestEnvironment
+### 🎨 Phase 3: Performance and Extensibility (Lower Priority)
 
-  - Reduce `TestEnvironment` to dependency injection container
-  - Move orchestration logic to `StageOrchestrator`
-  - Break down large methods into focused functions
+> **Goal**: Add parallel operations and extensibility features
 
-### 🎨 Phase 3: Observability and Performance (Lower Priority)
+- [ ] **Task 3.1**: Parallel Operations
 
-> **Goal**: Add progress tracking, metrics, and parallel operations
-
-- [ ] **Task 3.1**: Progress Reporting System
-
-  - Create `src/e2e/progress.rs` with `ProgressReporter` trait
-  - Implement console progress indicators for long operations
-  - Add structured logging with operation context
-
-- [ ] **Task 3.2**: Metrics and Reporting
-
-  - Create `src/e2e/metrics.rs` for test metrics collection
-  - Implement test result reporting and export
-  - Add performance timing and success rate tracking
-
-- [ ] **Task 3.3**: Parallel Operations Optimization
-
-  - Implement parallel template processing
-  - Add concurrent validation execution
+  - Implement concurrent validation execution (all validators run in parallel)
+  - Add parallel template processing where safe
   - Optimize I/O bound operations with proper async coordination
+
+- [ ] **Task 3.2**: TestEnvironment Simplification
+
+  - Extract `TestEnvironment` orchestration to dedicated orchestrator
+  - Simplify `TestEnvironment` to pure dependency injection container
+  - Break down remaining large methods (> 50 lines)
+
+- [ ] **Task 3.3**: Provider Extensibility
+
+  - Abstract provider-specific code behind traits
+  - Add support for additional providers beyond LXD
+  - Make provider selection configurable
 
 ## ✅ Completed Tasks
 
@@ -376,13 +371,13 @@ src/
 
 - **✅ Command Abstraction (Originally Task 1.1)**: `CommandExecutor` extracted with proper error handling and timeout support in `src/command.rs`
 
-- **✅ Infrastructure Provider (Originally Task 2.1)**: `OpenTofuClient` implemented in `src/opentofu.rs` with consistent interface for init, apply, destroy operations
+- **✅ Infrastructure Provider (Originally Task 2.1)**: `OpenTofuClient` implemented in `src/command_wrappers/opentofu/` with consistent interface for init, apply, destroy operations
 
-- **✅ SSH Client Wrapper (Originally Task 2.2)**: `SshClient` implemented in `src/ssh.rs` with connection management, security settings, and async connectivity checking
+- **✅ SSH Client Wrapper (Originally Task 2.2)**: `SshClient` implemented in `src/command_wrappers/ssh.rs` with connection management, security settings, and async connectivity checking
 
-- **✅ Configuration Management Client**: `AnsibleClient` implemented in `src/ansible.rs` for playbook execution and configuration management
+- **✅ Configuration Management Client**: `AnsibleClient` implemented in `src/command_wrappers/ansible.rs` for playbook execution and configuration management
 
-- **✅ LXD Integration**: `LxdClient` implemented in `src/lxd/client.rs` for container management and IP address retrieval
+- **✅ LXD Integration**: `LxdClient` implemented in `src/command_wrappers/lxd/client.rs` for container management and IP address retrieval
 
 - **✅ Validation System (Originally Task 3.1)**: `RemoteAction` trait implemented in `src/actions/mod.rs` with specific validators:
 
@@ -390,47 +385,70 @@ src/
   - `DockerValidator` for Docker installation validation
   - `DockerComposeValidator` for Docker Compose validation
 
-- **✅ Template Integration**: `TemplateManager` successfully integrated for template rendering and management
+- **✅ Template Integration**: `TemplateManager` integrated with dedicated renderers:
+
+  - `TofuTemplateRenderer` in `src/tofu/` for OpenTofu templates
+  - `AnsibleTemplateRenderer` in `src/ansible/` for Ansible templates
 
 - **✅ Async Operations (Originally Task 3.3)**: Main execution flow converted to async/await pattern with proper async I/O operations
 
-- **✅ Error Handling Foundation**: `CommandError` type implemented with structured error reporting and context preservation
+- **✅ Error Handling Foundation**: `CommandError` type implemented with structured error reporting and `anyhow` integration
+
+- **✅ Configuration Architecture**: `Config` and `Services` pattern implemented for dependency injection and configuration management
+
+- **✅ 4-Stage Execution Framework**: Well-defined execution stages implemented:
+
+  - Stage 1: Render provision templates (OpenTofu) to build/
+  - Stage 2: Provision infrastructure from build directory
+  - Stage 3: Render configuration templates (Ansible) with runtime variables
+  - Stage 4: Run Ansible playbooks from build/
+
+- **✅ Embedded Template System**: `TemplateManager` with embedded resources and reset functionality for fresh template extraction
+
+- **✅ Error Recovery**: Emergency cleanup with `emergency_destroy` function and proper Drop trait implementation
 
 ### 🔢 Module Statistics Improvement
 
-- **Lines of Code**: Reduced from 735 → 437 lines (40% reduction)
-- **External Dependencies**: Abstracted behind client interfaces
-- **Error Handling**: Structured error types introduced
-- **Code Organization**: Separated concerns with dedicated client modules
+- **Lines of Code**: Reduced from 735 → 427 lines (42% reduction)
+- **External Dependencies**: Abstracted behind client interfaces in `src/command_wrappers/`
+- **Error Handling**: Structured error types with `anyhow` integration
+- **Code Organization**: Separated concerns with dedicated client modules and dependency injection pattern
+- **Template System**: Dedicated renderers for different infrastructure components
 
 ## 🎯 Expected Benefits from Further Refactoring
 
 **Already Achieved:**
 
+- ✅ **Clean Architecture**: Well-structured 4-stage execution framework
 - ✅ **Better Abstraction**: Client libraries provide clean interfaces to external tools
 - ✅ **Improved Testability**: Individual clients can be unit tested in isolation
 - ✅ **Enhanced Extensibility**: Easy to add new validators through `RemoteAction` trait
-- ✅ **Structured Error Handling**: `CommandError` provides detailed error context
+- ✅ **Structured Error Handling**: `CommandError` and `anyhow` integration provide detailed error context
 - ✅ **Async Performance**: Non-blocking I/O operations improve responsiveness
+- ✅ **Template System**: Embedded templates with proper management and rendering
+- ✅ **Configuration Foundation**: `Config` and `Services` dependency injection pattern
 
 **Still To Achieve:**
 
 - **Configuration Flexibility**: External configuration files for environment-specific settings
 - **Enhanced Observability**: Structured progress reporting and metrics collection
-- **Stage-Based Architecture**: Clear separation of execution phases with independent stages
-- **Parallel Execution**: Concurrent operations for improved performance
-- **Comprehensive Error Context**: Detailed error reporting with resolution suggestions
+- **Parallel Execution**: Concurrent validation and template operations for improved performance
+- **Stage Abstraction**: Independent stage components with trait-based architecture
+- **Better Error Context**: More detailed error reporting with stage-specific context and resolution suggestions
+- **Provider Extensibility**: Support for infrastructure providers beyond LXD
 
 ## 🔍 Updated Analysis Summary
 
 ### Current Module Statistics (After Improvements)
 
-- **Lines of code**: 437 lines (reduced from 735, -40%)
+- **Lines of code**: 427 lines (reduced from 735, -42%)
 - **Methods in TestEnvironment**: 8 methods (reduced from 15+)
 - **Direct command executions**: 0 (abstracted behind client interfaces)
-- **Client abstractions**: 4 dedicated clients (OpenTofu, SSH, Ansible, LXD)
-- **Validation system**: 3 validators with `RemoteAction` trait
-- **Hard-coded values**: Still present but reduced
+- **Client abstractions**: 4 dedicated clients (OpenTofu, SSH, Ansible, LXD) in `src/command_wrappers/`
+- **Validation system**: 3 validators with `RemoteAction` trait in `src/actions/`
+- **Template renderers**: 2 specialized renderers (`TofuTemplateRenderer`, `AnsibleTemplateRenderer`)
+- **Configuration architecture**: `Config` + `Services` dependency injection pattern
+- **Hard-coded values**: Still present but significantly reduced
 
 ### Remaining Code Smells
 
@@ -478,13 +496,15 @@ src/
 
 ### Key Achievements
 
-- ✅ **40% code reduction** while maintaining all functionality
-- ✅ **Zero direct command calls** - all abstracted behind clients
-- ✅ **Extensible validation system** with trait-based architecture
+- ✅ **42% code reduction** while maintaining all functionality
+- ✅ **Zero direct command calls** - all abstracted behind clients in `src/command_wrappers/`
+- ✅ **Extensible validation system** with trait-based architecture in `src/actions/`
 - ✅ **Async/await conversion** for better performance
-- ✅ **Structured error handling** foundation established
+- ✅ **Structured error handling** foundation with `CommandError` and `anyhow` integration
+- ✅ **Template architecture** with specialized renderers for different components
+- ✅ **Dependency injection** pattern with `Config` and `Services`
 
 ---
 
 _Report updated on September 10, 2025_  
-_Analysis of: `/src/bin/e2e_tests.rs` (437 lines, improved from 735 lines)_
+_Analysis of: `/src/bin/e2e_tests.rs` (427 lines, improved from 735 lines)_
