@@ -1,6 +1,6 @@
-//! # Template Renderer for Provision Stage
+//! # `OpenTofu` Template Renderer
 //!
-//! This module handles `OpenTofu` template rendering for the provision stage of the deployment process.
+//! This module handles `OpenTofu` template rendering for deployment stages.
 //! It manages the creation of build directories, copying template files, and processing them with
 //! variable substitution.
 //!
@@ -73,15 +73,14 @@ pub enum ProvisionTemplateError {
 
 /// Renders `OpenTofu` provision templates to a build directory
 ///
-/// This collaborator is responsible for preparing `OpenTofu` templates for the provision stage
-/// of the deployment pipeline. It copies static templates from the template manager to the
-/// specified build directory.
-pub struct ProvisionTemplateRenderer {
+/// This collaborator is responsible for preparing `OpenTofu` templates for deployment stages.
+/// It copies static templates from the template manager to the specified build directory.
+pub struct TofuTemplateRenderer {
     build_dir: PathBuf,
     verbose: bool,
 }
 
-impl ProvisionTemplateRenderer {
+impl TofuTemplateRenderer {
     /// Default relative path for `OpenTofu` configuration files
     const OPENTOFU_BUILD_PATH: &'static str = "tofu/lxd";
 
@@ -263,7 +262,7 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
 
-        let renderer = ProvisionTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(&build_path, false);
 
         assert_eq!(renderer.build_dir, build_path);
         assert!(!renderer.verbose);
@@ -274,7 +273,7 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
 
-        let renderer = ProvisionTemplateRenderer::new(&build_path, true);
+        let renderer = TofuTemplateRenderer::new(&build_path, true);
 
         assert!(renderer.verbose);
     }
@@ -285,7 +284,7 @@ mod tests {
         let build_path = temp_dir.path().join("build");
         let expected_path = build_path.join("tofu/lxd");
 
-        let renderer = ProvisionTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(&build_path, false);
         let actual_path = renderer.build_opentofu_directory();
 
         assert_eq!(actual_path, expected_path);
@@ -293,7 +292,7 @@ mod tests {
 
     #[tokio::test]
     async fn it_should_build_correct_template_path_for_file() {
-        let template_path = ProvisionTemplateRenderer::build_template_path("main.tf");
+        let template_path = TofuTemplateRenderer::build_template_path("main.tf");
 
         assert_eq!(template_path, "tofu/lxd/main.tf");
     }
@@ -301,15 +300,15 @@ mod tests {
     #[tokio::test]
     async fn it_should_build_template_path_with_different_file_names() {
         assert_eq!(
-            ProvisionTemplateRenderer::build_template_path("cloud-init.yml"),
+            TofuTemplateRenderer::build_template_path("cloud-init.yml"),
             "tofu/lxd/cloud-init.yml"
         );
         assert_eq!(
-            ProvisionTemplateRenderer::build_template_path("variables.tf"),
+            TofuTemplateRenderer::build_template_path("variables.tf"),
             "tofu/lxd/variables.tf"
         );
         assert_eq!(
-            ProvisionTemplateRenderer::build_template_path("outputs.tf"),
+            TofuTemplateRenderer::build_template_path("outputs.tf"),
             "tofu/lxd/outputs.tf"
         );
     }
@@ -320,7 +319,7 @@ mod tests {
         let build_path = temp_dir.path().join("build");
         let expected_path = build_path.join("tofu/lxd");
 
-        let renderer = ProvisionTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(&build_path, false);
         let created_path = renderer
             .create_build_directory()
             .await
@@ -352,7 +351,7 @@ mod tests {
             .unwrap();
 
         let build_path = readonly_path.join("build");
-        let renderer = ProvisionTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(&build_path, false);
 
         let result = renderer.create_build_directory().await;
 
@@ -382,7 +381,7 @@ mod tests {
         // Create a template manager with empty templates directory
         let template_manager = TemplateManager::new(temp_dir.path());
 
-        let renderer = ProvisionTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(&build_path, false);
 
         // Try to copy a non-existent template
         let result = renderer
@@ -435,7 +434,7 @@ mod tests {
             .await
             .expect("Failed to write test template");
 
-        let renderer = ProvisionTemplateRenderer::new(temp_dir.path(), false);
+        let renderer = TofuTemplateRenderer::new(temp_dir.path(), false);
 
         let result = renderer
             .copy_templates(&template_manager, &["test.tf"], &build_path)
@@ -456,37 +455,37 @@ mod tests {
     // Input Validation Edge Case Tests
     #[test]
     fn it_should_handle_empty_file_name() {
-        let template_path = ProvisionTemplateRenderer::build_template_path("");
+        let template_path = TofuTemplateRenderer::build_template_path("");
         assert_eq!(template_path, "tofu/lxd/");
     }
 
     #[test]
     fn it_should_handle_file_names_with_path_separators() {
         // File names with forward slashes should be handled literally
-        let template_path = ProvisionTemplateRenderer::build_template_path("sub/dir/file.tf");
+        let template_path = TofuTemplateRenderer::build_template_path("sub/dir/file.tf");
         assert_eq!(template_path, "tofu/lxd/sub/dir/file.tf");
 
         // File names with backslashes (Windows-style)
-        let template_path = ProvisionTemplateRenderer::build_template_path("sub\\dir\\file.tf");
+        let template_path = TofuTemplateRenderer::build_template_path("sub\\dir\\file.tf");
         assert_eq!(template_path, "tofu/lxd/sub\\dir\\file.tf");
 
         // Relative path components
-        let template_path = ProvisionTemplateRenderer::build_template_path("../main.tf");
+        let template_path = TofuTemplateRenderer::build_template_path("../main.tf");
         assert_eq!(template_path, "tofu/lxd/../main.tf");
     }
 
     #[test]
     fn it_should_handle_special_characters_in_file_names() {
         // File names with spaces
-        let template_path = ProvisionTemplateRenderer::build_template_path("main file.tf");
+        let template_path = TofuTemplateRenderer::build_template_path("main file.tf");
         assert_eq!(template_path, "tofu/lxd/main file.tf");
 
         // File names with unicode characters
-        let template_path = ProvisionTemplateRenderer::build_template_path("файл.tf");
+        let template_path = TofuTemplateRenderer::build_template_path("файл.tf");
         assert_eq!(template_path, "tofu/lxd/файл.tf");
 
         // File names with special characters
-        let template_path = ProvisionTemplateRenderer::build_template_path("main@#$%.tf");
+        let template_path = TofuTemplateRenderer::build_template_path("main@#$%.tf");
         assert_eq!(template_path, "tofu/lxd/main@#$%.tf");
     }
 
@@ -494,7 +493,7 @@ mod tests {
     fn it_should_handle_very_long_file_names() {
         // Create a very long file name (300 characters)
         let long_name = "a".repeat(300) + ".tf";
-        let template_path = ProvisionTemplateRenderer::build_template_path(&long_name);
+        let template_path = TofuTemplateRenderer::build_template_path(&long_name);
         assert_eq!(template_path, format!("tofu/lxd/{long_name}"));
     }
 
@@ -511,7 +510,7 @@ mod tests {
             .expect("Failed to create existing directory");
         assert!(tofu_path.exists(), "Directory should already exist");
 
-        let renderer = ProvisionTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(&build_path, false);
         let created_path = renderer
             .create_build_directory()
             .await
@@ -528,7 +527,7 @@ mod tests {
 
         let template_manager = TemplateManager::new(temp_dir.path());
 
-        let renderer = ProvisionTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(&build_path, false);
 
         // Should succeed with empty array
         let result = renderer
@@ -560,7 +559,7 @@ mod tests {
             .await
             .expect("Failed to write test template");
 
-        let renderer = ProvisionTemplateRenderer::new(temp_dir.path(), false);
+        let renderer = TofuTemplateRenderer::new(temp_dir.path(), false);
 
         // Copy the same file twice - should succeed (overwrite)
         let result = renderer
@@ -601,8 +600,8 @@ mod tests {
             .await
             .expect("Failed to write test template 2");
 
-        let renderer1 = ProvisionTemplateRenderer::new(&build_path1, false);
-        let renderer2 = ProvisionTemplateRenderer::new(&build_path2, false);
+        let renderer1 = TofuTemplateRenderer::new(&build_path1, false);
+        let renderer2 = TofuTemplateRenderer::new(&build_path2, false);
 
         tokio::fs::create_dir_all(&build_path1)
             .await
@@ -654,7 +653,7 @@ mod tests {
             .await
             .expect("Failed to write existing template");
 
-        let renderer = ProvisionTemplateRenderer::new(temp_dir.path(), false);
+        let renderer = TofuTemplateRenderer::new(temp_dir.path(), false);
 
         // Try to copy both existing and non-existing files
         let result = renderer
@@ -706,7 +705,7 @@ mod tests {
             file_names.push(file_name);
         }
 
-        let renderer = ProvisionTemplateRenderer::new(temp_dir.path(), false);
+        let renderer = TofuTemplateRenderer::new(temp_dir.path(), false);
 
         let file_refs: Vec<&str> = file_names.iter().map(std::string::String::as_str).collect();
         let result = renderer

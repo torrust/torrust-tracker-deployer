@@ -7,11 +7,12 @@ use tempfile::TempDir;
 use tracing_subscriber::fmt;
 
 // Import command execution system
+use torrust_tracker_deploy::ansible::AnsibleTemplateRenderer;
 use torrust_tracker_deploy::command_wrappers::ansible::AnsibleClient;
 use torrust_tracker_deploy::command_wrappers::lxd::LxdClient;
 use torrust_tracker_deploy::command_wrappers::opentofu::OpenTofuClient;
 use torrust_tracker_deploy::command_wrappers::ssh::SshClient;
-use torrust_tracker_deploy::stages::{ConfigurationTemplateRenderer, ProvisionTemplateRenderer};
+use torrust_tracker_deploy::tofu::TofuTemplateRenderer;
 // Import template system
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
     AnsibleHost, InventoryContext, SshPrivateKeyFile,
@@ -49,8 +50,8 @@ struct TestEnvironment {
     ssh_key_path: PathBuf,
     template_manager: TemplateManager,
     opentofu_client: OpenTofuClient,
-    provision_renderer: ProvisionTemplateRenderer,
-    configuration_renderer: ConfigurationTemplateRenderer,
+    provision_renderer: TofuTemplateRenderer,
+    configuration_renderer: AnsibleTemplateRenderer,
     ssh_client: SshClient,
     lxd_client: LxdClient,
     ansible_client: AnsibleClient,
@@ -108,12 +109,11 @@ impl TestEnvironment {
         let ansible_client = AnsibleClient::new(project_root.join("build/ansible"), verbose);
 
         // Create provision template renderer
-        let provision_renderer =
-            ProvisionTemplateRenderer::new(project_root.join("build"), verbose);
+        let provision_renderer = TofuTemplateRenderer::new(project_root.join("build"), verbose);
 
         // Create configuration template renderer
         let configuration_renderer =
-            ConfigurationTemplateRenderer::new(project_root.join("build"), verbose);
+            AnsibleTemplateRenderer::new(project_root.join("build"), verbose);
 
         if verbose {
             println!(

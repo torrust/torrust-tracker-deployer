@@ -1,6 +1,6 @@
-//! # Template Renderer for Configuration Stage
+//! # Ansible Template Renderer
 //!
-//! This module handles `Ansible` template rendering for the configuration stage of the deployment process.
+//! This module handles `Ansible` template rendering for deployment stages.
 //! It manages the creation of build directories, copying static template files (playbooks and configs),
 //! and processing dynamic Tera templates with runtime variables (like inventory.yml.tera).
 //!
@@ -19,14 +19,14 @@
 //! # use tempfile::TempDir;
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! use torrust_tracker_deploy::stages::ConfigurationTemplateRenderer;
+//! use torrust_tracker_deploy::ansible::AnsibleTemplateRenderer;
 //! use torrust_tracker_deploy::template::TemplateManager;
 //! use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
 //!     InventoryContext, AnsibleHost, SshPrivateKeyFile
 //! };
 //!
 //! let temp_dir = TempDir::new()?;
-//! let renderer = ConfigurationTemplateRenderer::new(temp_dir.path(), true);
+//! let renderer = AnsibleTemplateRenderer::new(temp_dir.path(), true);
 //! let template_manager = TemplateManager::new("/path/to/templates");
 //!
 //! let host = AnsibleHost::from_str("192.168.1.100")?;
@@ -109,15 +109,15 @@ pub enum ConfigurationTemplateError {
 
 /// Renders `Ansible` configuration templates to a build directory
 ///
-/// This collaborator is responsible for preparing `Ansible` templates for the configuration stage
-/// of the deployment pipeline. It handles both static files (playbooks, configuration) and dynamic
-/// Tera templates that require runtime variable substitution (inventory files with IP addresses).
-pub struct ConfigurationTemplateRenderer {
+/// This collaborator is responsible for preparing `Ansible` templates for deployment stages.
+/// It handles both static files (playbooks, configuration) and dynamic Tera templates that
+/// require runtime variable substitution (inventory files with IP addresses).
+pub struct AnsibleTemplateRenderer {
     build_dir: PathBuf,
     verbose: bool,
 }
 
-impl ConfigurationTemplateRenderer {
+impl AnsibleTemplateRenderer {
     /// Default relative path for `Ansible` configuration files
     const ANSIBLE_BUILD_PATH: &'static str = "ansible";
 
@@ -454,7 +454,7 @@ mod tests {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
 
-        let renderer = ConfigurationTemplateRenderer::new(&build_path, false);
+        let renderer = AnsibleTemplateRenderer::new(&build_path, false);
 
         assert_eq!(renderer.build_dir, build_path);
         assert!(!renderer.verbose);
@@ -465,7 +465,7 @@ mod tests {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
 
-        let renderer = ConfigurationTemplateRenderer::new(&build_path, true);
+        let renderer = AnsibleTemplateRenderer::new(&build_path, true);
 
         assert!(renderer.verbose);
     }
@@ -476,7 +476,7 @@ mod tests {
         let build_path = temp_dir.path().join("build");
         let expected_path = build_path.join("ansible");
 
-        let renderer = ConfigurationTemplateRenderer::new(&build_path, false);
+        let renderer = AnsibleTemplateRenderer::new(&build_path, false);
         let actual_path = renderer.build_ansible_directory();
 
         assert_eq!(actual_path, expected_path);
@@ -484,15 +484,14 @@ mod tests {
 
     #[tokio::test]
     async fn it_should_build_correct_template_path_for_file() {
-        let template_path =
-            ConfigurationTemplateRenderer::build_template_path("inventory.yml.tera");
+        let template_path = AnsibleTemplateRenderer::build_template_path("inventory.yml.tera");
 
         assert_eq!(template_path, "ansible/inventory.yml.tera");
     }
 
     #[tokio::test]
     async fn it_should_build_template_path_for_static_file() {
-        let template_path = ConfigurationTemplateRenderer::build_template_path("ansible.cfg");
+        let template_path = AnsibleTemplateRenderer::build_template_path("ansible.cfg");
 
         assert_eq!(template_path, "ansible/ansible.cfg");
     }
@@ -501,7 +500,7 @@ mod tests {
     async fn it_should_create_build_directory_successfully() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
-        let renderer = ConfigurationTemplateRenderer::new(&build_path, false);
+        let renderer = AnsibleTemplateRenderer::new(&build_path, false);
 
         let result = renderer.create_build_directory().await;
 
@@ -517,7 +516,7 @@ mod tests {
         // Try to create a directory where we don't have permissions
         // Use a path that's likely to fail on most systems
         let invalid_path = Path::new("/root/invalid/path/that/should/not/exist");
-        let renderer = ConfigurationTemplateRenderer::new(invalid_path, false);
+        let renderer = AnsibleTemplateRenderer::new(invalid_path, false);
 
         let result = renderer.create_build_directory().await;
 
@@ -533,17 +532,14 @@ mod tests {
     #[tokio::test]
     async fn it_should_have_correct_template_file_constants() {
         assert_eq!(
-            ConfigurationTemplateRenderer::INVENTORY_TEMPLATE_FILE,
+            AnsibleTemplateRenderer::INVENTORY_TEMPLATE_FILE,
             "inventory.yml.tera"
         );
         assert_eq!(
-            ConfigurationTemplateRenderer::INVENTORY_OUTPUT_FILE,
+            AnsibleTemplateRenderer::INVENTORY_OUTPUT_FILE,
             "inventory.yml"
         );
-        assert_eq!(ConfigurationTemplateRenderer::ANSIBLE_BUILD_PATH, "ansible");
-        assert_eq!(
-            ConfigurationTemplateRenderer::ANSIBLE_TEMPLATE_PATH,
-            "ansible"
-        );
+        assert_eq!(AnsibleTemplateRenderer::ANSIBLE_BUILD_PATH, "ansible");
+        assert_eq!(AnsibleTemplateRenderer::ANSIBLE_TEMPLATE_PATH, "ansible");
     }
 }

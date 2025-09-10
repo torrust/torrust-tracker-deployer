@@ -19,10 +19,15 @@
 //!   - `opentofu` - `OpenTofu` infrastructure management utilities
 //!   - `lxd` - LXD container management utilities
 //!
+//! ## Template Renderers
+//! - `ansible` - Ansible template rendering utilities for deployment stages
+//! - `tofu` - `OpenTofu` template rendering utilities for infrastructure provisioning
+//!
 //! Linting functionality has been moved to its own package: packages/linting
 
 pub mod actions;
+pub mod ansible;
 pub mod command;
 pub mod command_wrappers;
-pub mod stages;
 pub mod template;
+pub mod tofu;
