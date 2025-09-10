@@ -23,11 +23,17 @@
 //! - `ansible` - Ansible template rendering utilities for deployment stages
 //! - `tofu` - `OpenTofu` template rendering utilities for infrastructure provisioning
 //!
+//! ## Configuration
+//! - `config` - Configuration management for deployment environments
+//! - `container` - Service container for dependency injection
+//!
 //! Linting functionality has been moved to its own package: packages/linting
 
 pub mod actions;
 pub mod ansible;
 pub mod command;
 pub mod command_wrappers;
+pub mod config;
+pub mod container;
 pub mod template;
 pub mod tofu;

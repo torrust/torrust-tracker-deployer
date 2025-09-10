@@ -1,23 +1,17 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Instant;
 use tempfile::TempDir;
 use tracing_subscriber::fmt;
 
 // Import command execution system
-use torrust_tracker_deploy::ansible::AnsibleTemplateRenderer;
-use torrust_tracker_deploy::command_wrappers::ansible::AnsibleClient;
-use torrust_tracker_deploy::command_wrappers::lxd::LxdClient;
-use torrust_tracker_deploy::command_wrappers::opentofu::OpenTofuClient;
-use torrust_tracker_deploy::command_wrappers::ssh::SshClient;
-use torrust_tracker_deploy::tofu::TofuTemplateRenderer;
+use torrust_tracker_deploy::config::Config;
+use torrust_tracker_deploy::container::Services;
 // Import template system
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
     AnsibleHost, InventoryContext, SshPrivateKeyFile,
 };
-use torrust_tracker_deploy::template::TemplateManager;
 // Import remote actions
 use torrust_tracker_deploy::actions::{
     CloudInitValidator, DockerComposeValidator, DockerValidator, RemoteAction,
@@ -40,42 +34,18 @@ struct Cli {
     templates_dir: String,
 }
 
+/// Main test environment combining configuration and services
 struct TestEnvironment {
-    #[allow(dead_code)] // Still used for SSH key fixtures and cleanup
-    project_root: PathBuf,
-    #[allow(dead_code)] // Will be used in template rendering
-    build_dir: PathBuf,
-    keep_env: bool,
-    verbose: bool,
-    ssh_key_path: PathBuf,
-    template_manager: TemplateManager,
-    opentofu_client: OpenTofuClient,
-    provision_renderer: TofuTemplateRenderer,
-    configuration_renderer: AnsibleTemplateRenderer,
-    ssh_client: SshClient,
-    lxd_client: LxdClient,
-    ansible_client: AnsibleClient,
-    #[allow(dead_code)] // Kept to maintain temp directory lifetime
+    config: Config,
+    services: Services,
+    #[allow(dead_code)] // Kept to maintain temp directory lifetime for tests
     temp_dir: Option<tempfile::TempDir>,
-    #[allow(dead_code)] // Used for cleanup but not directly accessed
-    original_inventory: Option<String>,
 }
 
 impl TestEnvironment {
     fn new(keep_env: bool, verbose: bool, templates_dir: String) -> Result<Self> {
         // Get project root (current directory when running from root)
         let project_root = std::env::current_dir()?;
-
-        // Create template manager
-        let template_manager = TemplateManager::new(templates_dir);
-
-        // Clean templates directory to ensure we use fresh templates from embedded resources
-        if verbose {
-            println!("🧹 Cleaning templates directory to ensure fresh embedded templates...");
-        }
-        template_manager.clean_templates_dir()?;
-
-        template_manager.ensure_templates_dir()?;
 
         // Create temporary directory for SSH keys
         let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
@@ -96,59 +66,53 @@ impl TestEnvironment {
             std::fs::set_permissions(&temp_ssh_key, perms)?;
         }
 
-        // Create SSH client with the configured key and username
-        let ssh_client = SshClient::new(&temp_ssh_key, "torrust", verbose);
+        // Create configuration
+        let config = Config::new(
+            keep_env,
+            verbose,
+            temp_ssh_key,
+            "torrust".to_string(),
+            "ansible".to_string(),
+            "tofu/lxd".to_string(),
+            templates_dir,
+            project_root.clone(),
+            project_root.join("build"),
+        );
 
-        // Create OpenTofu client pointing to build/tofu/lxd directory
-        let opentofu_client = OpenTofuClient::new(project_root.join("build/tofu/lxd"), verbose);
+        // Create services using the configuration
+        let services = Services::new(&config);
 
-        // Create LXD client for instance management
-        let lxd_client = LxdClient::new(verbose);
-
-        // Create Ansible client pointing to build/ansible directory
-        let ansible_client = AnsibleClient::new(project_root.join("build/ansible"), verbose);
-
-        // Create provision template renderer
-        let provision_renderer = TofuTemplateRenderer::new(project_root.join("build"), verbose);
-
-        // Create configuration template renderer
-        let configuration_renderer =
-            AnsibleTemplateRenderer::new(project_root.join("build"), verbose);
+        // Clean templates directory to ensure we use fresh templates from embedded resources
+        if verbose {
+            println!("🧹 Cleaning templates directory to ensure fresh embedded templates...");
+        }
+        services.template_manager.clean_templates_dir()?;
+        services.template_manager.ensure_templates_dir()?;
 
         if verbose {
             println!(
                 "🔑 SSH key copied to temporary location: {}",
-                temp_ssh_key.display()
+                config.ssh_key_path.display()
             );
             println!("📁 Temporary directory: {}", temp_dir.path().display());
             println!(
                 "📄 Templates directory: {}",
-                template_manager.templates_dir().display()
+                services.template_manager.templates_dir().display()
             );
         }
 
         Ok(Self {
-            build_dir: project_root.join("build"),
-            project_root,
-            keep_env,
-            verbose,
-            ssh_key_path: temp_ssh_key,
-            template_manager,
-            opentofu_client,
-            provision_renderer,
-            configuration_renderer,
-            ssh_client,
-            lxd_client,
-            ansible_client,
+            config,
+            services,
             temp_dir: Some(temp_dir),
-            original_inventory: None,
         })
     }
 
     /// Stage 1: Render provision templates (`OpenTofu`) to build/tofu/ directory
     async fn render_provision_templates(&self) -> Result<()> {
-        self.provision_renderer
-            .render(&self.template_manager)
+        self.services
+            .tofu_template_renderer
+            .render(&self.services.template_manager)
             .await
             .map_err(|e| anyhow::anyhow!(e))
     }
@@ -158,8 +122,9 @@ impl TestEnvironment {
         // Create inventory context with runtime variables
         let inventory_context = {
             let host = AnsibleHost::from_str(instance_ip).context("Failed to parse instance IP")?;
-            let ssh_key = SshPrivateKeyFile::new(self.ssh_key_path.to_string_lossy().as_ref())
-                .context("Failed to parse SSH key path")?;
+            let ssh_key =
+                SshPrivateKeyFile::new(self.config.ssh_key_path.to_string_lossy().as_ref())
+                    .context("Failed to parse SSH key path")?;
 
             InventoryContext::builder()
                 .with_host(host)
@@ -169,8 +134,9 @@ impl TestEnvironment {
         };
 
         // Use the configuration renderer to handle all template rendering
-        self.configuration_renderer
-            .render(&self.template_manager, &inventory_context)
+        self.services
+            .ansible_template_renderer
+            .render(&self.services.template_manager, &inventory_context)
             .await
             .map_err(|e| anyhow::anyhow!(e))
     }
@@ -178,7 +144,8 @@ impl TestEnvironment {
     fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
         println!("🎭 Stage 4: Running Ansible playbook: {playbook}");
 
-        self.ansible_client
+        self.services
+            .ansible_client
             .run_playbook(playbook)
             .context(format!("Failed to run Ansible playbook: {playbook}"))?;
 
@@ -191,14 +158,16 @@ impl TestEnvironment {
 
         // Initialize OpenTofu
         println!("   Initializing OpenTofu...");
-        self.opentofu_client
+        self.services
+            .opentofu_client
             .init()
             .map_err(anyhow::Error::from)
             .context("Failed to initialize OpenTofu")?;
 
         // Apply infrastructure
         println!("   Applying infrastructure...");
-        self.opentofu_client
+        self.services
+            .opentofu_client
             .apply(true) // auto_approve = true
             .map_err(anyhow::Error::from)
             .context("Failed to apply OpenTofu configuration")?;
@@ -211,6 +180,7 @@ impl TestEnvironment {
         //      It has to return always the instance info we expect.
         // Using OpenTofu outputs provides a consistent interface across all providers.
         let opentofu_instance_info = self
+            .services
             .opentofu_client
             .get_instance_info()
             .map_err(anyhow::Error::from)
@@ -237,6 +207,7 @@ impl TestEnvironment {
 
         // First, check if the instance exists
         let instance = self
+            .services
             .lxd_client
             .get_instance_by_name("torrust-vm")
             .context("Failed to query LXD for instance information")?
@@ -251,7 +222,7 @@ impl TestEnvironment {
     }
 
     fn cleanup(&self) {
-        if self.keep_env {
+        if self.config.keep_env {
             println!("🔒 Keeping test environment as requested");
             println!("   Instance: torrust-vm");
             println!("   Connect with: lxc exec torrust-vm -- /bin/bash");
@@ -262,6 +233,7 @@ impl TestEnvironment {
 
         // Destroy infrastructure using OpenTofuClient
         let result = self
+            .services
             .opentofu_client
             .destroy(true) // auto_approve = true
             .map_err(anyhow::Error::from);
@@ -275,10 +247,10 @@ impl TestEnvironment {
 
 impl Drop for TestEnvironment {
     fn drop(&mut self) {
-        if !self.keep_env {
+        if !self.config.keep_env {
             // Try basic cleanup in case async cleanup failed
             // Using emergency_destroy for consistent OpenTofu handling
-            let tofu_dir = self.build_dir.join("tofu/lxd");
+            let tofu_dir = self.config.build_dir.join(&self.config.opentofu_subfolder);
 
             drop(torrust_tracker_deploy::command_wrappers::opentofu::emergency_destroy(&tofu_dir));
         }
@@ -301,7 +273,8 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     let instance_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    env.ssh_client
+    env.services
+        .ssh_client
         .wait_for_connectivity(&instance_ip)
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
@@ -314,7 +287,11 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     env.run_ansible_playbook("wait-cloud-init")?;
 
     // Validate cloud-init completion
-    let cloud_init_validator = CloudInitValidator::new(&env.ssh_key_path, "torrust", env.verbose);
+    let cloud_init_validator = CloudInitValidator::new(
+        &env.config.ssh_key_path,
+        &env.config.ssh_username,
+        env.config.verbose,
+    );
     cloud_init_validator
         .execute(&instance_ip)
         .await
@@ -327,7 +304,11 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     env.run_ansible_playbook("install-docker")?;
 
     // 7. Validate Docker installation
-    let docker_validator = DockerValidator::new(&env.ssh_key_path, "torrust", env.verbose);
+    let docker_validator = DockerValidator::new(
+        &env.config.ssh_key_path,
+        &env.config.ssh_username,
+        env.config.verbose,
+    );
     docker_validator
         .execute(&instance_ip)
         .await
@@ -338,8 +319,11 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     env.run_ansible_playbook("install-docker-compose")?;
 
     // 9. Validate Docker Compose installation
-    let docker_compose_validator =
-        DockerComposeValidator::new(&env.ssh_key_path, "torrust", env.verbose);
+    let docker_compose_validator = DockerComposeValidator::new(
+        &env.config.ssh_key_path,
+        &env.config.ssh_username,
+        env.config.verbose,
+    );
     docker_compose_validator
         .execute(&instance_ip)
         .await
