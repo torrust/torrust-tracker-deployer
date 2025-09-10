@@ -99,7 +99,7 @@ impl TestEnvironment {
         // Create OpenTofu client pointing to build/tofu/lxd directory
         let opentofu_client = OpenTofuClient::new(project_root.join("build/tofu/lxd"), verbose);
 
-        // Create LXD client for container management
+        // Create LXD client for instance management
         let lxd_client = LxdClient::new(verbose);
 
         // Create Ansible client pointing to build/ansible directory
@@ -174,7 +174,7 @@ impl TestEnvironment {
     }
 
     /// Stage 3: Render ansible templates with runtime variables to build/ansible/
-    async fn render_runtime_templates(&self, container_ip: &str) -> Result<()> {
+    async fn render_runtime_templates(&self, instance_ip: &str) -> Result<()> {
         println!("🎭 Stage 3: Rendering runtime templates with variables...");
 
         // Create build directory structure
@@ -196,8 +196,7 @@ impl TestEnvironment {
             .context("Failed to create inventory template file")?;
 
         let inventory_context = {
-            let host =
-                AnsibleHost::from_str(container_ip).context("Failed to parse container IP")?;
+            let host = AnsibleHost::from_str(instance_ip).context("Failed to parse instance IP")?;
             let ssh_key = SshPrivateKeyFile::new(self.ssh_key_path.to_string_lossy().as_ref())
                 .context("Failed to parse SSH key path")?;
 
@@ -246,7 +245,7 @@ impl TestEnvironment {
                 "   ✅ Runtime templates rendered to: {}",
                 build_ansible_dir.display()
             );
-            println!("   ✅ Inventory rendered with IP: {container_ip}");
+            println!("   ✅ Inventory rendered with IP: {instance_ip}");
             println!(
                 "   ✅ Inventory rendered with SSH key: {}",
                 self.ssh_key_path.display()
@@ -285,18 +284,18 @@ impl TestEnvironment {
             .map_err(anyhow::Error::from)
             .context("Failed to apply OpenTofu configuration")?;
 
-        // Get the container IP
-        let container_ip = self
-            .get_container_ip()
-            .context("Failed to get container IP after provisioning")?;
+        // Get the instance IP
+        let instance_ip = self
+            .get_instance_ip()
+            .context("Failed to get instance IP after provisioning")?;
 
         println!("✅ Stage 2 complete: Infrastructure provisioned");
-        println!("   Container IP: {container_ip}");
+        println!("   Instance IP: {instance_ip}");
 
-        Ok(container_ip)
+        Ok(instance_ip)
     }
 
-    fn get_container_ip(&self) -> Result<String> {
+    fn get_instance_ip(&self) -> Result<String> {
         let ip = self
             .lxd_client
             .get_instance_ip("torrust-vm")
@@ -310,7 +309,7 @@ impl TestEnvironment {
     fn cleanup(&self) {
         if self.keep_env {
             println!("🔒 Keeping test environment as requested");
-            println!("   Container: torrust-vm");
+            println!("   Instance: torrust-vm");
             println!("   Connect with: lxc exec torrust-vm -- /bin/bash");
             return;
         }
@@ -357,13 +356,13 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     env.render_static_templates().await?;
 
     // Stage 2: Provision infrastructure from build directory
-    let container_ip = env.provision_infrastructure()?;
+    let instance_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    env.ssh_client.wait_for_connectivity(&container_ip).await?;
+    env.ssh_client.wait_for_connectivity(&instance_ip).await?;
 
     // Stage 3: Render ansible templates with runtime variables
-    env.render_runtime_templates(&container_ip).await?;
+    env.render_runtime_templates(&instance_ip).await?;
 
     // Stage 4: Run Ansible playbooks from build directory
     println!("📋 Step 1: Waiting for cloud-init completion...");
@@ -371,7 +370,7 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
 
     // Validate cloud-init completion
     let cloud_init_validator = CloudInitValidator::new(&env.ssh_key_path, "torrust", env.verbose);
-    cloud_init_validator.execute(&container_ip).await?;
+    cloud_init_validator.execute(&instance_ip).await?;
 
     // Run the install-docker playbook
     // NOTE: We skip the update-apt-cache playbook in E2E tests to avoid CI network issues
@@ -381,7 +380,7 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
 
     // 7. Validate Docker installation
     let docker_validator = DockerValidator::new(&env.ssh_key_path, "torrust", env.verbose);
-    docker_validator.execute(&container_ip).await?;
+    docker_validator.execute(&instance_ip).await?;
 
     // 8. Run the install-docker-compose playbook
     println!("📋 Step 3: Installing Docker Compose...");
@@ -390,7 +389,7 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     // 9. Validate Docker Compose installation
     let docker_compose_validator =
         DockerComposeValidator::new(&env.ssh_key_path, "torrust", env.verbose);
-    docker_compose_validator.execute(&container_ip).await?;
+    docker_compose_validator.execute(&instance_ip).await?;
 
     println!("🎉 Full deployment E2E test completed successfully!");
     println!("   ✅ Cloud-init setup completed");
