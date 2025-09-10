@@ -76,6 +76,22 @@ impl TemplateManager {
         Ok(())
     }
 
+    /// Clean and prepare the templates directory to ensure fresh embedded templates
+    ///
+    /// This method combines `clean_templates_dir()` and `ensure_templates_dir()` to provide
+    /// a clean slate for template operations. It's particularly useful in testing and
+    /// development environments where you want to ensure fresh templates from embedded resources.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if either directory cleaning or creation fails due to permissions
+    /// or filesystem issues.
+    pub fn reset_templates_dir(&self) -> Result<(), TemplateManagerError> {
+        self.clean_templates_dir()?;
+        self.ensure_templates_dir()?;
+        Ok(())
+    }
+
     /// Get the path to a template file, creating it from embedded resources if it doesn't exist
     ///
     /// # Errors
@@ -472,5 +488,50 @@ mod tests {
         // Clean should not fail on non-existent directory
         let result = manager.clean_templates_dir();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn it_should_reset_templates_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let templates_path = temp_dir.path().join("test_templates");
+
+        let manager = TemplateManager::new(&templates_path);
+
+        // Initially the directory should not exist
+        assert!(!templates_path.exists());
+
+        // First, create the directory and some templates
+        manager.ensure_templates_dir().unwrap();
+        let template_path = manager.get_template_path("ansible/ansible.cfg").unwrap();
+        assert!(template_path.exists());
+        assert!(templates_path.exists());
+
+        // Now use the combined method
+        manager.reset_templates_dir().unwrap();
+
+        // Directory should exist but templates should be gone
+        assert!(templates_path.exists());
+        assert!(templates_path.is_dir());
+        // Old template file should be gone (directory was cleaned)
+        assert!(!template_path.exists());
+    }
+
+    #[test]
+    fn it_should_reset_templates_directory_on_nonexistent_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let templates_path = temp_dir.path().join("nonexistent_templates");
+
+        let manager = TemplateManager::new(&templates_path);
+
+        // Directory should not exist initially
+        assert!(!templates_path.exists());
+
+        // Combined method should work on non-existent directory
+        let result = manager.reset_templates_dir();
+        assert!(result.is_ok());
+
+        // Directory should now exist
+        assert!(templates_path.exists());
+        assert!(templates_path.is_dir());
     }
 }

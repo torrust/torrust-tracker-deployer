@@ -82,12 +82,8 @@ impl TestEnvironment {
         // Create services using the configuration
         let services = Services::new(&config);
 
-        // Clean templates directory to ensure we use fresh templates from embedded resources
-        if verbose {
-            println!("🧹 Cleaning templates directory to ensure fresh embedded templates...");
-        }
-        services.template_manager.clean_templates_dir()?;
-        services.template_manager.ensure_templates_dir()?;
+        // Clean and prepare templates directory
+        Self::clean_and_prepare_templates(&services, verbose)?;
 
         if verbose {
             println!(
@@ -106,6 +102,19 @@ impl TestEnvironment {
             services,
             temp_dir: Some(temp_dir),
         })
+    }
+
+    /// Clean and prepare templates directory to ensure fresh embedded templates
+    fn clean_and_prepare_templates(services: &Services, verbose: bool) -> Result<()> {
+        // Clean templates directory to ensure we use fresh templates from embedded resources
+        if verbose {
+            println!("🧹 Cleaning templates directory to ensure fresh embedded templates...");
+        }
+        services
+            .template_manager
+            .reset_templates_dir()
+            .map_err(|e| anyhow::anyhow!(e))?;
+        Ok(())
     }
 
     /// Stage 1: Render provision templates (`OpenTofu`) to build/tofu/ directory
