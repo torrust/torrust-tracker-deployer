@@ -1,13 +1,13 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Instant;
 use tempfile::TempDir;
 use tracing_subscriber::fmt;
 
 // Import command execution system
-use torrust_tracker_deploy::command::CommandExecutor;
+use torrust_tracker_deploy::ansible::AnsibleClient;
 use torrust_tracker_deploy::lxd::LxdClient;
 use torrust_tracker_deploy::opentofu::OpenTofuClient;
 use torrust_tracker_deploy::ssh::SshClient;
@@ -48,10 +48,10 @@ struct TestEnvironment {
     verbose: bool,
     ssh_key_path: PathBuf,
     template_manager: TemplateManager,
-    command_executor: CommandExecutor,
     opentofu_client: OpenTofuClient,
     ssh_client: SshClient,
     lxd_client: LxdClient,
+    ansible_client: AnsibleClient,
     #[allow(dead_code)] // Kept to maintain temp directory lifetime
     temp_dir: Option<tempfile::TempDir>,
     #[allow(dead_code)] // Used for cleanup but not directly accessed
@@ -65,9 +65,6 @@ impl TestEnvironment {
 
         // Create template manager
         let template_manager = TemplateManager::new(templates_dir);
-
-        // Create command executor with verbosity setting
-        let command_executor = CommandExecutor::new(verbose);
 
         // Clean templates directory to ensure we use fresh templates from embedded resources
         if verbose {
@@ -105,6 +102,9 @@ impl TestEnvironment {
         // Create LXD client for container management
         let lxd_client = LxdClient::new(verbose);
 
+        // Create Ansible client pointing to build/ansible directory
+        let ansible_client = AnsibleClient::new(project_root.join("build/ansible"), verbose);
+
         if verbose {
             println!(
                 "🔑 SSH key copied to temporary location: {}",
@@ -124,10 +124,10 @@ impl TestEnvironment {
             verbose,
             ssh_key_path: temp_ssh_key,
             template_manager,
-            command_executor,
             opentofu_client,
             ssh_client,
             lxd_client,
+            ansible_client,
             temp_dir: Some(temp_dir),
             original_inventory: None,
         })
@@ -257,10 +257,15 @@ impl TestEnvironment {
         Ok(())
     }
 
-    fn run_command(&self, cmd: &str, args: &[&str], working_dir: Option<&Path>) -> Result<String> {
-        self.command_executor
-            .run_command(cmd, args, working_dir)
-            .map_err(anyhow::Error::from)
+    fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
+        println!("🎭 Stage 4: Running Ansible playbook: {playbook}");
+
+        self.ansible_client
+            .run_playbook(playbook)
+            .context(format!("Failed to run Ansible playbook: {playbook}"))?;
+
+        println!("✅ Stage 4: Ansible playbook executed successfully");
+        Ok(())
     }
 
     fn provision_infrastructure(&self) -> Result<String> {
@@ -300,24 +305,6 @@ impl TestEnvironment {
                 anyhow::anyhow!("Instance 'torrust-vm' not found or has no IP address")
             })?;
         Ok(ip.to_string())
-    }
-
-    fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
-        println!("🎭 Stage 4: Running Ansible playbook: {playbook}");
-
-        let ansible_dir = self.build_dir.join("ansible");
-        let playbook_path = format!("{playbook}.yml");
-
-        let mut args = vec!["ansible-playbook", &playbook_path];
-        if self.verbose {
-            args.push("-vvv");
-        }
-
-        self.run_command("ansible-playbook", &[&playbook_path], Some(&ansible_dir))
-            .context(format!("Failed to run Ansible playbook: {playbook}"))?;
-
-        println!("✅ Stage 4: Ansible playbook executed successfully");
-        Ok(())
     }
 
     fn cleanup(&self) {

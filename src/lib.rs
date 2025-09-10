@@ -20,6 +20,7 @@
 //! Linting functionality has been moved to its own package: packages/linting
 
 pub mod actions;
+pub mod ansible;
 pub mod command;
 pub mod lxd;
 pub mod opentofu;
