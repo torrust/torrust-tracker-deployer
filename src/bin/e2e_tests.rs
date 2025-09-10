@@ -283,7 +283,50 @@ impl Drop for TestEnvironment {
     }
 }
 
-async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
+async fn validate_deployment(env: &TestEnvironment, instance_ip: &str) -> Result<()> {
+    println!("🔍 Starting deployment validation...");
+
+    // Validate cloud-init completion
+    println!("   Validating cloud-init completion...");
+    let cloud_init_validator = CloudInitValidator::new(
+        &env.config.ssh_key_path,
+        &env.config.ssh_username,
+        env.config.verbose,
+    );
+    cloud_init_validator
+        .execute(instance_ip)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    // Validate Docker installation
+    println!("   Validating Docker installation...");
+    let docker_validator = DockerValidator::new(
+        &env.config.ssh_key_path,
+        &env.config.ssh_username,
+        env.config.verbose,
+    );
+    docker_validator
+        .execute(instance_ip)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    // Validate Docker Compose installation
+    println!("   Validating Docker Compose installation...");
+    let docker_compose_validator = DockerComposeValidator::new(
+        &env.config.ssh_key_path,
+        &env.config.ssh_username,
+        env.config.verbose,
+    );
+    docker_compose_validator
+        .execute(instance_ip)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    println!("✅ All deployment validations passed!");
+    Ok(())
+}
+
+async fn run_full_deployment_test(env: &TestEnvironment) -> Result<String> {
     println!("🧪 Starting full deployment E2E test with template-based workflow");
     println!("   This will test the complete 4-stage template system:");
     println!("   Stage 1: Render provision templates to build/");
@@ -312,56 +355,28 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<()> {
     println!("📋 Step 1: Waiting for cloud-init completion...");
     env.run_ansible_playbook("wait-cloud-init")?;
 
-    // Validate cloud-init completion
-    let cloud_init_validator = CloudInitValidator::new(
-        &env.config.ssh_key_path,
-        &env.config.ssh_username,
-        env.config.verbose,
-    );
-    cloud_init_validator
-        .execute(&instance_ip)
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
-
     // Run the install-docker playbook
     // NOTE: We skip the update-apt-cache playbook in E2E tests to avoid CI network issues
     // The install-docker playbook now assumes the cache is already updated or will handle stale cache gracefully
     println!("📋 Step 2: Installing Docker...");
     env.run_ansible_playbook("install-docker")?;
 
-    // 7. Validate Docker installation
-    let docker_validator = DockerValidator::new(
-        &env.config.ssh_key_path,
-        &env.config.ssh_username,
-        env.config.verbose,
-    );
-    docker_validator
-        .execute(&instance_ip)
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
-
-    // 8. Run the install-docker-compose playbook
+    // Run the install-docker-compose playbook
     println!("📋 Step 3: Installing Docker Compose...");
     env.run_ansible_playbook("install-docker-compose")?;
 
-    // 9. Validate Docker Compose installation
-    let docker_compose_validator = DockerComposeValidator::new(
-        &env.config.ssh_key_path,
-        &env.config.ssh_username,
-        env.config.verbose,
-    );
-    docker_compose_validator
-        .execute(&instance_ip)
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
+    println!("✅ Deployment stages completed successfully!");
+    println!("   ✅ Infrastructure provisioned with OpenTofu");
+    println!("   ✅ Configuration rendered with Ansible templates");
+    println!("   ✅ Ansible playbooks executed successfully");
 
     println!("🎉 Full deployment E2E test completed successfully!");
-    println!("   ✅ Cloud-init setup completed");
-    println!("   ✅ Ansible playbooks executed successfully");
     println!(
         "   ℹ️  Docker/Docker Compose installation status varies based on network connectivity"
     );
-    Ok(())
+
+    // Return the instance IP for validation in main
+    Ok(instance_ip)
 }
 
 #[tokio::main]
@@ -380,13 +395,25 @@ async fn main() -> Result<()> {
 
     let result = run_full_deployment_test(&env).await;
 
+    // Handle deployment results and run validation if deployment succeeded
+    let validation_result = match result {
+        Ok(instance_ip) => {
+            println!();
+            validate_deployment(&env, &instance_ip).await
+        }
+        Err(deployment_err) => {
+            println!("❌ Deployment failed: {deployment_err}");
+            Err(deployment_err)
+        }
+    };
+
     env.cleanup();
 
     let test_duration = test_start.elapsed();
     println!("\n📊 Test execution time: {test_duration:?}");
 
-    // Handle results
-    match result {
+    // Handle final results
+    match validation_result {
         Ok(()) => {
             println!("✅ All tests passed and cleanup completed successfully");
             Ok(())
