@@ -50,21 +50,9 @@ impl TestEnvironment {
         // Create temporary directory for SSH keys
         let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
 
-        // Copy SSH private key from fixtures to temp directory
-        let fixtures_ssh_key = project_root.join("fixtures/testing_rsa");
+        // Setup SSH key
         let temp_ssh_key = temp_dir.path().join("testing_rsa");
-
-        std::fs::copy(&fixtures_ssh_key, &temp_ssh_key)
-            .context("Failed to copy SSH private key to temporary directory")?;
-
-        // Set proper permissions on the SSH key (600)
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&temp_ssh_key)?.permissions();
-            perms.set_mode(0o600);
-            std::fs::set_permissions(&temp_ssh_key, perms)?;
-        }
+        Self::setup_ssh_key(&project_root, &temp_dir, verbose, &temp_ssh_key)?;
 
         // Create configuration
         let config = Config::new(
@@ -86,10 +74,6 @@ impl TestEnvironment {
         Self::clean_and_prepare_templates(&services, verbose)?;
 
         if verbose {
-            println!(
-                "🔑 SSH key copied to temporary location: {}",
-                config.ssh_key_path.display()
-            );
             println!("📁 Temporary directory: {}", temp_dir.path().display());
             println!(
                 "📄 Templates directory: {}",
@@ -102,6 +86,39 @@ impl TestEnvironment {
             services,
             temp_dir: Some(temp_dir),
         })
+    }
+
+    /// Setup SSH key by copying from fixtures to temporary directory with proper permissions
+    fn setup_ssh_key(
+        project_root: &std::path::Path,
+        temp_dir: &TempDir,
+        verbose: bool,
+        ssh_key_path: &std::path::Path,
+    ) -> Result<()> {
+        // Copy SSH private key from fixtures to temp directory
+        let fixtures_ssh_key = project_root.join("fixtures/testing_rsa");
+        let temp_ssh_key = temp_dir.path().join("testing_rsa");
+
+        std::fs::copy(&fixtures_ssh_key, &temp_ssh_key)
+            .context("Failed to copy SSH private key to temporary directory")?;
+
+        // Set proper permissions on the SSH key (600)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&temp_ssh_key)?.permissions();
+            perms.set_mode(0o600);
+            std::fs::set_permissions(&temp_ssh_key, perms)?;
+        }
+
+        if verbose {
+            println!(
+                "🔑 SSH key copied to temporary location: {}",
+                ssh_key_path.display()
+            );
+        }
+
+        Ok(())
     }
 
     /// Clean and prepare templates directory to ensure fresh embedded templates
