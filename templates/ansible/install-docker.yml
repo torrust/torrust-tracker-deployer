@@ -37,7 +37,16 @@
     # NOTE: APT cache update logic has been moved to update-apt-cache.yml
     # Run that playbook first if you need to update the package cache
 
-    # Task 0: Set robust retry/timeout defaults for all environments
+    # Task 0a: Display progress message
+    - name: 🐳 Starting Docker installation with robust network handling
+      ansible.builtin.debug:
+        msg:
+          - "🚀 Starting Docker CE installation on {{ inventory_hostname }}"
+          - "📋 This playbook includes 6 fallback mechanisms for network issues"
+          - "⏱️  Configured with {{ network_retries | default(8) }} retries, {{ network_delay | default(45) }}s delays, {{ network_timeout | default(120) }}s timeouts"
+          - "🔗 Will attempt: get_url → curl → aria2 → embedded key → apt repos → snap"
+
+    # Task 0b: Set robust retry/timeout defaults for all environments
     - name: Set network operation defaults
       ansible.builtin.set_fact:
         network_timeout: 120 # 2 minutes timeout for individual operations
@@ -75,6 +84,13 @@
       ignore_errors: true # Don't fail if aria2 is not available
 
     # Task 2: Add Docker's official GPG key with retries and better error handling
+    - name: 🔑 Starting Docker GPG key installation with fallbacks
+      ansible.builtin.debug:
+        msg:
+          - "🔑 Attempting to download Docker GPG key from download.docker.com"
+          - "🔄 Will try {{ network_retries }} times with {{ network_delay }}s delays if needed"
+          - "⚠️  If download fails, will use embedded GPG key as fallback"
+
     - name: Create keyrings directory
       ansible.builtin.file:
         path: /etc/apt/keyrings
@@ -248,6 +264,16 @@
       register: docker_repo_added
 
     # Task 4: Install Docker packages with retries (only if repository was added)
+    - name: 🐳 Installing Docker packages from official repository
+      ansible.builtin.debug:
+        msg:
+          - "🐳 Installing Docker CE packages from official repository"
+          - "📦 Package: {{ docker_package }}"
+          - "🔄 Will retry up to 3 times if installation fails"
+      when:
+        - ansible_os_family == "Debian"
+        - docker_gpg_final_check.stat.exists
+
     - name: Install Docker packages
       ansible.builtin.apt:
         name:

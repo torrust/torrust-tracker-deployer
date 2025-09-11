@@ -18,7 +18,7 @@ on:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # Increased timeout for better network reliability in CI
+    timeout-minutes: 45 # Increased timeout to account for slower GitHub runners
 
     steps:
       - name: Checkout repository
@@ -59,7 +59,9 @@ jobs:
         run: |
           # Run the E2E test with verbose output for better debugging
           # Use sudo -E and preserve PATH to ensure cargo is accessible
+          echo "🚀 Starting E2E test at $(date)"
           sudo -E env "PATH=$PATH" cargo run --bin e2e-tests -- --verbose
+          echo "✅ E2E test completed at $(date)"
         env:
           # Preserve environment variables for the E2E test
           RUST_LOG: debug

@@ -57,9 +57,11 @@ impl AnsibleClient {
 
         let playbook_file = format!("{playbook}.yml");
 
+        // Use -v flag for verbose output showing task progress
+        // This helps track progress during long-running operations like Docker installation
         self.command_executor.run_command(
             "ansible-playbook",
-            &[&playbook_file],
+            &["-v", &playbook_file],
             Some(&self.working_dir),
         )
     }
