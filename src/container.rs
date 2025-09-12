@@ -40,11 +40,11 @@ impl Services {
         let ansible_client = AnsibleClient::new(config.build_dir.join(&config.ansible_subfolder));
 
         // Create provision template renderer
-        let provision_renderer =
+        let tofu_template_renderer =
             TofuTemplateRenderer::new(template_manager.clone(), config.build_dir.clone());
 
         // Create configuration template renderer
-        let configuration_renderer =
+        let ansible_template_renderer =
             AnsibleTemplateRenderer::new(config.build_dir.clone(), template_manager.clone());
 
         Self {
@@ -55,8 +55,8 @@ impl Services {
 
             // Template related services
             template_manager: template_manager.clone(),
-            tofu_template_renderer: Arc::new(provision_renderer),
-            ansible_template_renderer: Arc::new(configuration_renderer),
+            tofu_template_renderer: Arc::new(tofu_template_renderer),
+            ansible_template_renderer: Arc::new(ansible_template_renderer),
         }
     }
 }
