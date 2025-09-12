@@ -8,7 +8,7 @@ use tracing_subscriber::fmt;
 
 // Import command execution system
 use torrust_tracker_deploy::command_wrappers::ssh::SshClient;
-use torrust_tracker_deploy::config::Config;
+use torrust_tracker_deploy::config::{Config, SshConfig};
 use torrust_tracker_deploy::container::Services;
 // Import template system
 use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
@@ -55,10 +55,10 @@ impl TestEnvironment {
         Self::setup_ssh_key(&project_root, &temp_dir, &temp_ssh_key)?;
 
         // Create configuration
+        let ssh_config = SshConfig::new(temp_ssh_key, "torrust".to_string());
         let config = Config::new(
             keep_env,
-            temp_ssh_key,
-            "torrust".to_string(),
+            ssh_config,
             "ansible".to_string(),
             "tofu/lxd".to_string(),
             templates_dir,
@@ -140,9 +140,14 @@ impl TestEnvironment {
         // Create inventory context with runtime variables
         let inventory_context = {
             let host = AnsibleHost::from(*instance_ip);
-            let ssh_key =
-                SshPrivateKeyFile::new(self.config.ssh_key_path.to_string_lossy().as_ref())
-                    .context("Failed to parse SSH key path")?;
+            let ssh_key = SshPrivateKeyFile::new(
+                self.config
+                    .ssh_config
+                    .ssh_key_path
+                    .to_string_lossy()
+                    .as_ref(),
+            )
+            .context("Failed to parse SSH key path")?;
 
             InventoryContext::builder()
                 .with_host(host)
@@ -281,8 +286,8 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
     // Validate cloud-init completion
     println!("   Validating cloud-init completion...");
     let cloud_init_validator = CloudInitValidator::new(
-        &env.config.ssh_key_path,
-        &env.config.ssh_username,
+        &env.config.ssh_config.ssh_key_path,
+        &env.config.ssh_config.ssh_username,
         *instance_ip,
     );
     cloud_init_validator
@@ -293,8 +298,8 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
     // Validate Docker installation
     println!("   Validating Docker installation...");
     let docker_validator = DockerValidator::new(
-        &env.config.ssh_key_path,
-        &env.config.ssh_username,
+        &env.config.ssh_config.ssh_key_path,
+        &env.config.ssh_config.ssh_username,
         *instance_ip,
     );
     docker_validator
@@ -305,8 +310,8 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
     // Validate Docker Compose installation
     println!("   Validating Docker Compose installation...");
     let docker_compose_validator = DockerComposeValidator::new(
-        &env.config.ssh_key_path,
-        &env.config.ssh_username,
+        &env.config.ssh_config.ssh_key_path,
+        &env.config.ssh_config.ssh_username,
         *instance_ip,
     );
     docker_compose_validator
@@ -335,8 +340,8 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
 
     // Wait for SSH connectivity
     let ssh_client = SshClient::new(
-        &env.config.ssh_key_path,
-        &env.config.ssh_username,
+        &env.config.ssh_config.ssh_key_path,
+        &env.config.ssh_config.ssh_username,
         instance_ip,
     );
     ssh_client

@@ -1,5 +1,44 @@
 use std::path::PathBuf;
 
+/// SSH connection configuration for remote instances.
+///
+/// Contains all SSH-related settings needed to establish connections
+/// to deployed instances during the deployment process.
+pub struct SshConfig {
+    /// Path to the SSH private key file for remote connections.
+    ///
+    /// This key will be used by the SSH client to authenticate with remote
+    /// instances created during deployment. The corresponding public key
+    /// should be authorized on the target instances.
+    pub ssh_key_path: PathBuf,
+
+    /// Username for SSH connections to remote instances.
+    ///
+    /// This username will be used when establishing SSH connections to
+    /// deployed instances. Common values include "ubuntu", "root", or "torrust".
+    pub ssh_username: String,
+}
+
+impl SshConfig {
+    /// Creates a new SSH configuration with the provided parameters.
+    ///
+    /// ```rust
+    /// # use std::path::PathBuf;
+    /// # use torrust_tracker_deploy::config::SshConfig;
+    /// let ssh_config = SshConfig::new(
+    ///     PathBuf::from("/home/user/.ssh/deploy_key"),
+    ///     "ubuntu".to_string(),
+    /// );
+    /// ```
+    #[must_use]
+    pub fn new(ssh_key_path: PathBuf, ssh_username: String) -> Self {
+        Self {
+            ssh_key_path,
+            ssh_username,
+        }
+    }
+}
+
 /// Configuration parameters for deployment environments.
 ///
 /// Centralizes all deployment-related configuration including file paths,
@@ -14,18 +53,11 @@ pub struct Config {
     /// will be left running for manual inspection or reuse.
     pub keep_env: bool,
 
-    /// Path to the SSH private key file for remote connections.
+    /// SSH configuration for remote connections.
     ///
-    /// This key will be used by the SSH client to authenticate with remote
-    /// instances created during deployment. The corresponding public key
-    /// should be authorized on the target instances.
-    pub ssh_key_path: PathBuf,
-
-    /// Username for SSH connections to remote instances.
-    ///
-    /// This username will be used when establishing SSH connections to
-    /// deployed instances. Common values include "ubuntu", "root", or "torrust".
-    pub ssh_username: String,
+    /// Contains SSH key path and username settings for connecting to
+    /// deployed instances during the deployment process.
+    pub ssh_config: SshConfig,
 
     /// Subdirectory name for Ansible-related files within the build directory.
     ///
@@ -74,11 +106,14 @@ impl Config {
     ///
     /// ```rust
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::config::Config;
-    /// let config = Config::new(
-    ///     true,                           // keep environment for debugging
+    /// # use torrust_tracker_deploy::config::{Config, SshConfig};
+    /// let ssh_config = SshConfig::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     "ubuntu".to_string(),
+    /// );
+    /// let config = Config::new(
+    ///     true,                           // keep environment for debugging
+    ///     ssh_config,
     ///     "ansible".to_string(),
     ///     "tofu/lxd".to_string(),
     ///     "templates".to_string(),
@@ -90,8 +125,7 @@ impl Config {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         keep_env: bool,
-        ssh_key_path: PathBuf,
-        ssh_username: String,
+        ssh_config: SshConfig,
         ansible_subfolder: String,
         opentofu_subfolder: String,
         templates_dir: String,
@@ -100,8 +134,7 @@ impl Config {
     ) -> Self {
         Self {
             keep_env,
-            ssh_key_path,
-            ssh_username,
+            ssh_config,
             ansible_subfolder,
             opentofu_subfolder,
             templates_dir,
