@@ -1,11 +1,12 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::str::FromStr;
+use std::net::IpAddr;
 use std::time::Instant;
 use tempfile::TempDir;
 use tracing_subscriber::fmt;
 
 // Import command execution system
+use torrust_tracker_deploy::command_wrappers::ssh::SshClient;
 use torrust_tracker_deploy::config::Config;
 use torrust_tracker_deploy::container::Services;
 // Import template system
@@ -144,10 +145,10 @@ impl TestEnvironment {
     }
 
     /// Stage 3: Render configuration templates (`Ansible`) with runtime variables to build/ansible/
-    async fn render_configuration_templates(&self, instance_ip: &str) -> Result<()> {
+    async fn render_configuration_templates(&self, instance_ip: &IpAddr) -> Result<()> {
         // Create inventory context with runtime variables
         let inventory_context = {
-            let host = AnsibleHost::from_str(instance_ip).context("Failed to parse instance IP")?;
+            let host = AnsibleHost::from(*instance_ip);
             let ssh_key =
                 SshPrivateKeyFile::new(self.config.ssh_key_path.to_string_lossy().as_ref())
                     .context("Failed to parse SSH key path")?;
@@ -179,7 +180,7 @@ impl TestEnvironment {
         Ok(())
     }
 
-    fn provision_infrastructure(&self) -> Result<String> {
+    fn provision_infrastructure(&self) -> Result<IpAddr> {
         println!("🚀 Stage 2: Provisioning test infrastructure...");
 
         // Initialize OpenTofu
@@ -212,7 +213,7 @@ impl TestEnvironment {
             .map_err(anyhow::Error::from)
             .context("Failed to get container info from OpenTofu outputs")?;
 
-        let opentofu_instance_ip = opentofu_instance_info.ip_address.to_string();
+        let opentofu_instance_ip = opentofu_instance_info.ip_address;
 
         // Get the instance IP from LXD client (keeping for comparison/validation)
         let lxd_instance_ip = self
@@ -227,7 +228,7 @@ impl TestEnvironment {
         Ok(opentofu_instance_ip)
     }
 
-    fn get_instance_ip(&self) -> Result<String> {
+    fn get_instance_ip(&self) -> Result<IpAddr> {
         // For E2E tests, we should rely on OpenTofu outputs since they already wait for network
         // This is a secondary validation that the instance is accessible via LXD
 
@@ -244,7 +245,7 @@ impl TestEnvironment {
             anyhow::anyhow!("Instance 'torrust-vm' exists but has no IPv4 address assigned")
         })?;
 
-        Ok(ip.to_string())
+        Ok(ip)
     }
 
     fn cleanup(&self) {
@@ -283,7 +284,7 @@ impl Drop for TestEnvironment {
     }
 }
 
-async fn validate_deployment(env: &TestEnvironment, instance_ip: &str) -> Result<()> {
+async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Result<()> {
     println!("🔍 Starting deployment validation...");
 
     // Validate cloud-init completion
@@ -291,6 +292,7 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &str) -> Result
     let cloud_init_validator = CloudInitValidator::new(
         &env.config.ssh_key_path,
         &env.config.ssh_username,
+        *instance_ip,
         env.config.verbose,
     );
     cloud_init_validator
@@ -303,6 +305,7 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &str) -> Result
     let docker_validator = DockerValidator::new(
         &env.config.ssh_key_path,
         &env.config.ssh_username,
+        *instance_ip,
         env.config.verbose,
     );
     docker_validator
@@ -315,6 +318,7 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &str) -> Result
     let docker_compose_validator = DockerComposeValidator::new(
         &env.config.ssh_key_path,
         &env.config.ssh_username,
+        *instance_ip,
         env.config.verbose,
     );
     docker_compose_validator
@@ -326,7 +330,7 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &str) -> Result
     Ok(())
 }
 
-async fn run_full_deployment_test(env: &TestEnvironment) -> Result<String> {
+async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     println!("🧪 Starting full deployment E2E test with template-based workflow");
     println!("   This will test the complete 4-stage template system:");
     println!("   Stage 1: Render provision templates to build/");
@@ -342,9 +346,14 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<String> {
     let instance_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    env.services
-        .ssh_client
-        .wait_for_connectivity(&instance_ip)
+    let ssh_client = SshClient::new(
+        &env.config.ssh_key_path,
+        &env.config.ssh_username,
+        instance_ip,
+        env.config.verbose,
+    );
+    ssh_client
+        .wait_for_connectivity()
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 

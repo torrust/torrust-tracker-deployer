@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::path::Path;
 use tracing::info;
 
@@ -15,10 +16,11 @@ impl CloudInitValidator {
     /// # Arguments
     /// * `ssh_key_path` - Path to the SSH private key file
     /// * `username` - SSH username to use for connections
+    /// * `host_ip` - IP address of the target host
     /// * `verbose` - Whether to enable verbose SSH output
     #[must_use]
-    pub fn new(ssh_key_path: &Path, username: &str, verbose: bool) -> Self {
-        let ssh_client = SshClient::new(ssh_key_path, username, verbose);
+    pub fn new(ssh_key_path: &Path, username: &str, host_ip: IpAddr, verbose: bool) -> Self {
+        let ssh_client = SshClient::new(ssh_key_path, username, host_ip, verbose);
         Self { ssh_client }
     }
 }
@@ -28,13 +30,13 @@ impl RemoteAction for CloudInitValidator {
         "cloud-init-validation"
     }
 
-    async fn execute(&self, server_ip: &str) -> Result<(), RemoteActionError> {
+    async fn execute(&self, _server_ip: &IpAddr) -> Result<(), RemoteActionError> {
         info!("🔍 Validating cloud-init completion...");
 
         // Check cloud-init status
         let status_output = self
             .ssh_client
-            .execute(server_ip, "cloud-init status")
+            .execute("cloud-init status")
             .map_err(|source| RemoteActionError::SshCommandFailed {
                 action_name: self.name().to_string(),
                 source,
@@ -50,7 +52,7 @@ impl RemoteAction for CloudInitValidator {
         // Check for completion marker file
         let marker_exists = self
             .ssh_client
-            .check_command(server_ip, "test -f /var/lib/cloud/instance/boot-finished")
+            .check_command("test -f /var/lib/cloud/instance/boot-finished")
             .map_err(|source| RemoteActionError::SshCommandFailed {
                 action_name: self.name().to_string(),
                 source,

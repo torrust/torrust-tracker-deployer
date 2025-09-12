@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::path::Path;
 use tracing::{info, warn};
 
@@ -15,10 +16,11 @@ impl DockerValidator {
     /// # Arguments
     /// * `ssh_key_path` - Path to the SSH private key file
     /// * `username` - SSH username to use for connections
+    /// * `host_ip` - IP address of the target host
     /// * `verbose` - Whether to enable verbose SSH output
     #[must_use]
-    pub fn new(ssh_key_path: &Path, username: &str, verbose: bool) -> Self {
-        let ssh_client = SshClient::new(ssh_key_path, username, verbose);
+    pub fn new(ssh_key_path: &Path, username: &str, host_ip: IpAddr, verbose: bool) -> Self {
+        let ssh_client = SshClient::new(ssh_key_path, username, host_ip, verbose);
         Self { ssh_client }
     }
 }
@@ -28,11 +30,11 @@ impl RemoteAction for DockerValidator {
         "docker-validation"
     }
 
-    async fn execute(&self, server_ip: &str) -> Result<(), RemoteActionError> {
+    async fn execute(&self, _server_ip: &IpAddr) -> Result<(), RemoteActionError> {
         info!("🔍 Validating Docker installation...");
 
         // Check Docker version
-        let Ok(docker_version) = self.ssh_client.execute(server_ip, "docker --version") else {
+        let Ok(docker_version) = self.ssh_client.execute("docker --version") else {
             warn!("⚠️  Docker installation validation skipped");
             warn!("   ℹ️  This is expected in CI environments with network limitations");
             warn!("   ℹ️  The playbook ran successfully but Docker installation was skipped");
@@ -46,7 +48,7 @@ impl RemoteAction for DockerValidator {
         // Check Docker daemon status (only if Docker is installed)
         let daemon_active = self
             .ssh_client
-            .check_command(server_ip, "sudo systemctl is-active docker")
+            .check_command("sudo systemctl is-active docker")
             .map_err(|source| RemoteActionError::SshCommandFailed {
                 action_name: self.name().to_string(),
                 source,

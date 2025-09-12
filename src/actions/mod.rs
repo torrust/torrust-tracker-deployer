@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use thiserror::Error;
 
 use crate::command::CommandError;
@@ -58,5 +59,5 @@ pub trait RemoteAction {
     /// # Returns
     /// * `Ok(())` if the action executes successfully
     /// * `Err(RemoteActionError)` if the action fails or encounters an error
-    async fn execute(&self, server_ip: &str) -> Result<(), RemoteActionError>;
+    async fn execute(&self, server_ip: &IpAddr) -> Result<(), RemoteActionError>;
 }

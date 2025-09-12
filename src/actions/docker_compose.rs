@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::path::Path;
 use tracing::{info, warn};
 
@@ -15,10 +16,11 @@ impl DockerComposeValidator {
     /// # Arguments
     /// * `ssh_key_path` - Path to the SSH private key file
     /// * `username` - SSH username to use for connections
+    /// * `host_ip` - IP address of the target host
     /// * `verbose` - Whether to enable verbose SSH output
     #[must_use]
-    pub fn new(ssh_key_path: &Path, username: &str, verbose: bool) -> Self {
-        let ssh_client = SshClient::new(ssh_key_path, username, verbose);
+    pub fn new(ssh_key_path: &Path, username: &str, host_ip: IpAddr, verbose: bool) -> Self {
+        let ssh_client = SshClient::new(ssh_key_path, username, host_ip, verbose);
         Self { ssh_client }
     }
 }
@@ -28,13 +30,13 @@ impl RemoteAction for DockerComposeValidator {
         "docker-compose-validation"
     }
 
-    async fn execute(&self, server_ip: &str) -> Result<(), RemoteActionError> {
+    async fn execute(&self, _server_ip: &IpAddr) -> Result<(), RemoteActionError> {
         info!("🔍 Validating Docker Compose installation...");
 
         // First check if Docker is available (Docker Compose requires Docker)
         let docker_available = self
             .ssh_client
-            .check_command(server_ip, "docker --version")
+            .check_command("docker --version")
             .map_err(|source| RemoteActionError::SshCommandFailed {
                 action_name: self.name().to_string(),
                 source,
@@ -50,7 +52,7 @@ impl RemoteAction for DockerComposeValidator {
         // Check Docker Compose version
         let Ok(compose_version) = self
             .ssh_client
-            .execute(server_ip, "docker-compose --version")
+            .execute("docker-compose --version")
         else {
             warn!(
                 "⚠️  Docker Compose not found, this is expected if Docker installation was skipped"
@@ -71,10 +73,7 @@ impl RemoteAction for DockerComposeValidator {
         // Create a temporary test docker-compose.yml file
         let create_test_success = self
             .ssh_client
-            .check_command(
-                server_ip,
-                &format!("echo '{test_compose_content}' > /tmp/test-docker-compose.yml"),
-            )
+            .check_command(&format!("echo '{test_compose_content}' > /tmp/test-docker-compose.yml"))
             .map_err(|source| RemoteActionError::SshCommandFailed {
                 action_name: self.name().to_string(),
                 source,
@@ -88,10 +87,7 @@ impl RemoteAction for DockerComposeValidator {
         // Validate docker-compose file
         let validate_success = self
             .ssh_client
-            .check_command(
-                server_ip,
-                "cd /tmp && docker-compose -f test-docker-compose.yml config",
-            )
+            .check_command("cd /tmp && docker-compose -f test-docker-compose.yml config")
             .map_err(|source| RemoteActionError::SshCommandFailed {
                 action_name: self.name().to_string(),
                 source,
@@ -106,7 +102,7 @@ impl RemoteAction for DockerComposeValidator {
         // Clean up test file
         drop(
             self.ssh_client
-                .check_command(server_ip, "rm -f /tmp/test-docker-compose.yml"),
+                .check_command("rm -f /tmp/test-docker-compose.yml"),
         );
 
         Ok(())

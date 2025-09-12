@@ -2,7 +2,6 @@ use crate::ansible::AnsibleTemplateRenderer;
 use crate::command_wrappers::ansible::AnsibleClient;
 use crate::command_wrappers::lxd::LxdClient;
 use crate::command_wrappers::opentofu::OpenTofuClient;
-use crate::command_wrappers::ssh::SshClient;
 use crate::config::Config;
 use crate::template::TemplateManager;
 use crate::tofu::TofuTemplateRenderer;
@@ -11,7 +10,6 @@ use crate::tofu::TofuTemplateRenderer;
 pub struct Services {
     // Command wrappers
     pub opentofu_client: OpenTofuClient,
-    pub ssh_client: SshClient,
     pub lxd_client: LxdClient,
     pub ansible_client: AnsibleClient,
 
@@ -27,9 +25,6 @@ impl Services {
     pub fn new(config: &Config) -> Self {
         // Create template manager
         let template_manager = TemplateManager::new(config.templates_dir.clone());
-
-        // Create SSH client with the configured key and username
-        let ssh_client = SshClient::new(&config.ssh_key_path, &config.ssh_username, config.verbose);
 
         // Create OpenTofu client pointing to build/opentofu_subfolder directory
         let opentofu_client = OpenTofuClient::new(
@@ -57,7 +52,6 @@ impl Services {
         Self {
             // Command wrappers
             opentofu_client,
-            ssh_client,
             lxd_client,
             ansible_client,
 
