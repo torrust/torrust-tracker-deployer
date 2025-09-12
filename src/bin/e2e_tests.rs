@@ -379,11 +379,7 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     // Stage 3: Render configuration templates with runtime variables
     let step = RenderAnsibleTemplatesStep::new(
         Arc::clone(&env.services.ansible_template_renderer),
-        env.config
-            .ssh_config
-            .ssh_key_path
-            .to_string_lossy()
-            .to_string(),
+        env.config.ssh_config.ssh_key_path.clone(),
         instance_ip,
     );
     step.execute()

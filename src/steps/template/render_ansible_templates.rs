@@ -1,4 +1,5 @@
 use std::net::IpAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -13,7 +14,7 @@ use crate::template::wrappers::ansible::inventory::{
 /// Simple step that renders `Ansible` templates to the build directory with runtime variables
 pub struct RenderAnsibleTemplatesStep {
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-    ssh_key_path: String,
+    ssh_key_path: PathBuf,
     instance_ip: IpAddr,
 }
 
@@ -21,7 +22,7 @@ impl RenderAnsibleTemplatesStep {
     #[must_use]
     pub fn new(
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-        ssh_key_path: String,
+        ssh_key_path: PathBuf,
         instance_ip: IpAddr,
     ) -> Self {
         Self {
