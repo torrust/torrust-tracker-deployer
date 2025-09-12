@@ -160,24 +160,24 @@ src/
 // Level 1: Commands and their constituent Level 2: Steps
 
 ProvisionCommand:
-├── RenderOpenTofuTemplatesStep      // Template rendering
+├── ✅ RenderOpenTofuTemplatesStep   // Template rendering - COMPLETED
 ├── InitializeInfrastructureStep     // tofu init
+├── PlanInfrastructureStep           // tofu plan
 ├── ApplyInfrastructureStep          // tofu apply
 ├── GetInstanceInfoStep              // Extract IP from tofu outputs
-└── WaitForSSHConnectivityStep       // Validate SSH access
+├── WaitForSSHConnectivityStep       // Validate SSH access
+└── WaitForCloudInitStep             // Wait for cloud-init completion
 
 ConfigureCommand:
-├── RenderAnsibleTemplatesStep       // Template rendering with runtime vars
-├── ExecuteRemoteActionStep(CloudInitValidator)  // Wait for cloud-init
-├── RunAnsiblePlaybookStep("install-docker")     // Docker installation
-├── RunAnsiblePlaybookStep("install-docker-compose") // Docker Compose
+├── ✅ RenderAnsibleTemplatesStep    // Template rendering with runtime vars - COMPLETED
+├── InstallDockerStep                // Docker installation via Ansible
+├── InstallDockerComposeStep         // Docker Compose installation via Ansible
 └── ValidateRemoteServicesStep       // Validate installations
 
 ReleaseCommand:
 ├── GenerateComposeConfigStep        // Create docker-compose.yml
-├── RenderAnsibleTemplatesStep       // Application-specific templates
 ├── TransferFilesStep                // Copy files to remote
-├── RunAnsiblePlaybookStep("deploy-app") // Deploy application
+├── DeployApplicationStep            // Deploy application via Ansible
 └── ValidateDeploymentStep           // Validate deployment
 
 RunCommand:
@@ -186,14 +186,14 @@ RunCommand:
 └── GetServiceStatusStep             // Report service endpoints
 
 TestCommand:
-├── ExecuteRemoteActionStep(DockerValidator)
-├── ExecuteRemoteActionStep(DockerComposeValidator)
-├── ExecuteRemoteActionStep(TrackerValidator)
+├── ValidateDockerInstallationStep   // Validate Docker is working
+├── ValidateDockerComposeInstallationStep // Validate Docker Compose is working
+├── ValidateTrackerStep              // Validate Torrust Tracker functionality
 └── ValidateRemoteServicesStep       // Overall validation
 
 DestroyCommand:
-├── StopServicesStep                 # Graceful service shutdown (if running)
-└── DestroyInfrastructureStep        # tofu destroy
+├── StopServicesStep                 // Graceful service shutdown (if running)
+└── DestroyInfrastructureStep        // tofu destroy
 ```
 
 ## 📋 Implementation Type Hierarchy
@@ -238,6 +238,7 @@ struct RenderAnsibleTemplatesStep { /* ... */ }
 
 // Infrastructure Steps
 struct InitializeInfrastructureStep { /* ... */ }
+struct PlanInfrastructureStep { /* ... */ }
 struct ApplyInfrastructureStep { /* ... */ }
 struct DestroyInfrastructureStep { /* ... */ }
 struct GetInstanceInfoStep { /* ... */ }
@@ -247,8 +248,10 @@ struct WaitForSSHConnectivityStep { /* ... */ }
 struct ValidateNetworkConnectivityStep { /* ... */ }
 
 // Remote Execution Steps
-struct RunAnsiblePlaybookStep { /* ... */ }
-struct ExecuteRemoteActionStep<T: RemoteAction> { /* ... */ }
+struct WaitForCloudInitStep { /* ... */ }
+struct InstallDockerStep { /* ... */ }
+struct InstallDockerComposeStep { /* ... */ }
+struct DeployApplicationStep { /* ... */ }
 struct TransferFilesStep { /* ... */ }
 
 // Application Steps
@@ -261,6 +264,9 @@ struct GetServiceStatusStep { /* ... */ }
 struct ValidateToolsStep { /* ... */ }
 struct ValidateRemoteServicesStep { /* ... */ }
 struct ValidateDeploymentStep { /* ... */ }
+struct ValidateDockerInstallationStep { /* ... */ }
+struct ValidateDockerComposeInstallationStep { /* ... */ }
+struct ValidateTrackerStep { /* ... */ }
 ```
 
 ### Level 3: Remote Action Types (Enhanced)
