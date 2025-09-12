@@ -16,7 +16,9 @@ use torrust_tracker_deploy::actions::{
     CloudInitValidator, DockerComposeValidator, DockerValidator, RemoteAction,
 };
 // Import steps
-use torrust_tracker_deploy::steps::{RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep};
+use torrust_tracker_deploy::steps::{
+    InitializeInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
+};
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -166,15 +168,11 @@ impl TestEnvironment {
             "Provisioning test infrastructure"
         );
 
-        // Initialize OpenTofu
-        info!(
-            stage = "infrastructure_provisioning",
-            operation = "init",
-            "Initializing OpenTofu"
-        );
-        self.services
-            .opentofu_client
-            .init()
+        // Initialize OpenTofu using the step
+        let initialize_step =
+            InitializeInfrastructureStep::new(Arc::clone(&self.services.opentofu_client));
+        initialize_step
+            .execute()
             .map_err(anyhow::Error::from)
             .context("Failed to initialize OpenTofu")?;
 

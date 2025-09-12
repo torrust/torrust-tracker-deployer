@@ -161,7 +161,7 @@ src/
 
 ProvisionCommand:
 ├── ✅ RenderOpenTofuTemplatesStep   // Template rendering - COMPLETED
-├── InitializeInfrastructureStep     // tofu init
+├── ✅ InitializeInfrastructureStep  // tofu init - COMPLETED & INTEGRATED INTO E2E TESTS
 ├── PlanInfrastructureStep           // tofu plan
 ├── ApplyInfrastructureStep          // tofu apply
 ├── GetInstanceInfoStep              // Extract IP from tofu outputs
