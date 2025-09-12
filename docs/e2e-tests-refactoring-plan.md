@@ -1,52 +1,371 @@
-# E2E Tests Module Refactoring Plan
+# E2E Tests Refactoring Plan - Three-Level Architecture
 
-> **📋 Live Documentation**  
-> This document tracks ongoing refactoring efforts for the `src/bin/e2e_tests.rs` module.  
-> **Purpose**: Help developers coordinate improvements and track progress.  
-> **Maintenance**: Remove completed tasks, update current state as changes are implemented.
+> **📋 Architectural Refactoring Plan**  
+> This document outlines the refactoring of `src/bin/e2e_tests.rs` into a production-ready three-level architecture that will serve as the foundation for the Torrust Tracker Deploy console application.
 
-## 🔄 Refactoring Status
+## 🎯 Refactoring Goals
 
-- **Status**: ✅ Significant Progress Made
-- **Last Updated**: September 10, 2025
-- **Completed Tasks**: 8/13 identified improvements
-- **Current Priority**: Configuration Management and Stage Orchestration (Medium Priority)
+- **Extract E2E logic** into production command handlers
+- **Create modular architecture** with clear separation of concerns
+- **Enable console application** with proper CLI subcommand structure
+- **Improve scalability** and maintainability for future development
 
-## 📋 Current State Overview
+## 🏗️ Three-Level Architecture
 
-The `src/bin/e2e_tests.rs` module has undergone significant refactoring since the original plan. Major improvements include:
+The refactoring will implement a clean three-level abstraction:
 
-**✅ Completed Improvements:**
+### Level 1: Commands
 
-- **Command Abstraction**: `CommandExecutor` extracted with proper error handling in `src/command.rs`
-- **Client Libraries**: Dedicated client abstractions for OpenTofu, SSH, Ansible, and LXD in `src/command_wrappers/`
-- **Validation System**: `RemoteAction` trait with specific validators (CloudInit, Docker, DockerCompose) in `src/actions/`
-- **Template Management**: `TemplateManager` integrated with dedicated renderers in `src/template/`, `src/tofu/`, `src/ansible/`
-- **Async Operations**: Converted to async/await pattern for I/O operations
-- **Error Handling Foundation**: Structured error types with `anyhow` integration
-- **Configuration Pattern**: `Config` and `Services` dependency injection pattern established
-- **Code Organization**: Reduced from 735 → 427 lines (42% reduction) while maintaining functionality
+**Direct mapping to console commands** - Top-level operations that users invoke
 
-**❌ Remaining Issues:**
+- Maps to CLI subcommands (`torrust-deploy provision`, `torrust-deploy configure`, etc.)
+- Handles command-line arguments and user interaction
+- Orchestrates multiple steps to achieve command objectives
+- Manages command-specific error handling and reporting
 
-- **God Class Pattern**: `TestEnvironment` still orchestrates everything (427 lines)
-- **Large Methods**: Several methods exceed 50+ lines
-- **Hard-coded Configuration**: All timeouts, paths, and settings still embedded in code
-- **Limited Observability**: Basic println! messages without structured progress tracking
-- **Sequential Execution**: Missed opportunities for parallel operations
+### Level 2: Steps
 
-## 🎯 Remaining Improvement Areas
+**Reusable building blocks** - Modular operations that can be composed into commands
 
-### Current Well-Implemented Architecture
+- Independent, testable units of work
+- Can be reused across multiple commands
+- Handle specific deployment tasks (template rendering, infrastructure operations, etc.)
+- Pass context and state between operations
 
-Before identifying remaining issues, it's worth noting the **4-Stage Execution Framework** is already well-implemented and working effectively:
+### Level 3: Remote Actions
 
-1. **Stage 1**: `render_provision_templates()` - Render OpenTofu templates to build/
-2. **Stage 2**: `provision_infrastructure()` - Initialize and apply OpenTofu configuration
-3. **Stage 3**: `render_configuration_templates()` - Render Ansible templates with runtime variables (instance IP)
-4. **Stage 4**: `run_ansible_playbook()` - Execute Ansible playbooks for configuration management
+**Operations executed on remote servers** - SSH-based actions on provisioned infrastructure
 
-This provides a clean separation of concerns and follows infrastructure-as-code best practices.
+- Already partially implemented in `src/actions/`
+- Validate remote server state and configuration
+- Execute maintenance and setup tasks
+- Can be wrapped into Steps for command composition
+
+## 📁 Proposed Directory Structure
+
+### Current `src/` Structure (To Be Refactored)
+
+```text
+src/
+├── bin/
+│   ├── e2e_tests.rs           # 427 lines - needs refactoring
+│   └── linter.rs              # Keep as-is
+├── command.rs                 # Keep - command execution utilities
+├── config.rs                  # Keep - configuration management
+├── container.rs               # Rename to services.rs
+├── lib.rs                     # Keep - library exports
+├── main.rs                    # Keep - main binary entry point
+├── actions/                   # Keep - Level 3 (Remote Actions)
+│   ├── mod.rs
+│   ├── cloud_init.rs
+│   ├── docker.rs
+│   └── docker_compose.rs
+├── ansible/                   # Keep - template rendering utilities
+│   ├── mod.rs
+│   └── template_renderer.rs
+├── command_wrappers/          # Keep - external tool wrappers
+│   ├── mod.rs
+│   ├── ansible.rs
+│   ├── ssh.rs
+│   ├── lxd/
+│   └── opentofu/
+├── template/                  # Keep - template management
+│   ├── mod.rs
+│   ├── embedded.rs
+│   ├── engine.rs
+│   ├── file_ops.rs
+│   ├── file.rs
+│   └── wrappers/
+└── tofu/                      # Keep - OpenTofu utilities
+    ├── mod.rs
+    └── template_renderer.rs
+```
+
+### New `src/` Structure (After Refactoring)
+
+```text
+src/
+├── bin/
+│   ├── e2e_tests.rs           # Minimal orchestration (~50 lines)
+│   ├── linter.rs              # Keep as-is
+│   └── torrust_deploy.rs      # NEW: Main console application
+├── lib.rs                     # Updated exports
+├── main.rs                    # Keep - delegates to console app
+├──
+├── commands/                  # NEW: Level 1 (Commands)
+│   ├── mod.rs
+│   ├── check.rs               # Tool validation command
+│   ├── create.rs              # Environment creation command
+│   ├── provision.rs           # Infrastructure provisioning command
+│   ├── configure.rs           # System configuration command
+│   ├── release.rs             # Application deployment command
+│   ├── run.rs                 # Service startup command
+│   ├── test.rs                # Validation command
+│   ├── status.rs              # Environment info command
+│   ├── destroy.rs             # Cleanup command
+│   └── context.rs             # Shared deployment context
+├──
+├── steps/                     # NEW: Level 2 (Steps)
+│   ├── mod.rs
+│   ├── template_steps.rs      # Template rendering steps
+│   ├── infrastructure_steps.rs # Infrastructure operations
+│   ├── connectivity_steps.rs  # Network and SSH steps
+│   ├── remote_execution_steps.rs # Remote command execution
+│   ├── validation_steps.rs    # Validation and health checks
+│   └── application_steps.rs   # Application management steps
+├──
+├── actions/                   # Level 3 (Remote Actions) - Enhanced
+│   ├── mod.rs                 # Enhanced trait definition
+│   ├── cloud_init.rs          # Keep - cloud-init validation
+│   ├── docker.rs              # Keep - Docker validation
+│   ├── docker_compose.rs      # Keep - Docker Compose validation
+│   ├── tracker.rs             # NEW: Torrust Tracker validation
+│   ├── database.rs            # NEW: Database connectivity validation
+│   ├── firewall.rs            # NEW: Firewall rules validation
+│   └── service_health.rs      # NEW: Generic service health checks
+├──
+├── core/                      # Renamed and enhanced core utilities
+│   ├── mod.rs
+│   ├── config.rs              # Moved from root - configuration management
+│   ├── services.rs            # Renamed from container.rs - DI container
+│   ├── context.rs             # NEW: Shared execution context
+│   ├── error.rs               # NEW: Comprehensive error types
+│   └── progress.rs            # NEW: Progress reporting system
+├──
+├── command.rs                 # Keep - command execution utilities
+├── command_wrappers/          # Keep - external tool wrappers
+│   ├── mod.rs
+│   ├── ansible.rs
+│   ├── ssh.rs
+│   ├── lxd/
+│   └── opentofu/
+├── template/                  # Keep - template management
+│   ├── mod.rs
+│   ├── embedded.rs
+│   ├── engine.rs
+│   ├── file_ops.rs
+│   ├── file.rs
+│   └── wrappers/
+├── ansible/                   # Keep - Ansible-specific utilities
+│   ├── mod.rs
+│   └── template_renderer.rs
+└── tofu/                      # Keep - OpenTofu-specific utilities
+    ├── mod.rs
+    └── template_renderer.rs
+```
+
+## 🔄 Command to Steps Mapping
+
+```rust
+// Level 1: Commands and their constituent Level 2: Steps
+
+ProvisionCommand:
+├── RenderOpenTofuTemplatesStep      // Template rendering
+├── InitializeInfrastructureStep     // tofu init
+├── ApplyInfrastructureStep          // tofu apply
+├── GetInstanceInfoStep              // Extract IP from tofu outputs
+└── WaitForSSHConnectivityStep       // Validate SSH access
+
+ConfigureCommand:
+├── RenderAnsibleTemplatesStep       // Template rendering with runtime vars
+├── ExecuteRemoteActionStep(CloudInitValidator)  // Wait for cloud-init
+├── RunAnsiblePlaybookStep("install-docker")     // Docker installation
+├── RunAnsiblePlaybookStep("install-docker-compose") // Docker Compose
+└── ValidateRemoteServicesStep       // Validate installations
+
+ReleaseCommand:
+├── GenerateComposeConfigStep        // Create docker-compose.yml
+├── RenderAnsibleTemplatesStep       // Application-specific templates
+├── TransferFilesStep                // Copy files to remote
+├── RunAnsiblePlaybookStep("deploy-app") // Deploy application
+└── ValidateDeploymentStep           // Validate deployment
+
+RunCommand:
+├── StartServicesStep                // docker-compose up
+├── WaitForServicesHealthStep        // Wait for containers to be healthy
+└── GetServiceStatusStep             // Report service endpoints
+
+TestCommand:
+├── ExecuteRemoteActionStep(DockerValidator)
+├── ExecuteRemoteActionStep(DockerComposeValidator)
+├── ExecuteRemoteActionStep(TrackerValidator)
+└── ValidateRemoteServicesStep       // Overall validation
+
+DestroyCommand:
+├── StopServicesStep                 # Graceful service shutdown (if running)
+└── DestroyInfrastructureStep        # tofu destroy
+```
+
+## 📋 Implementation Type Hierarchy
+
+### Level 1: Command Types
+
+```rust
+// Core command trait
+trait Command {
+    async fn execute(&self, context: &DeploymentContext) -> Result<(), CommandError>;
+    fn name(&self) -> &'static str;
+    fn description(&self) -> &'static str;
+}
+
+// Command implementations
+struct ProvisionCommand { /* ... */ }
+struct ConfigureCommand { /* ... */ }
+struct ReleaseCommand { /* ... */ }
+struct RunCommand { /* ... */ }
+struct TestCommand { /* ... */ }
+struct StatusCommand { /* ... */ }
+struct DestroyCommand { /* ... */ }
+struct CheckCommand { /* ... */ }
+struct CreateCommand { /* ... */ }
+```
+
+### Level 2: Step Types
+
+```rust
+// Core step trait
+trait Step {
+    async fn execute(&self, context: &mut DeploymentContext) -> Result<StepOutput, StepError>;
+    fn name(&self) -> &'static str;
+    fn description(&self) -> &'static str;
+    fn requires(&self) -> Vec<&'static str>; // Prerequisites
+}
+
+// Step implementations by category
+// Template Steps
+struct RenderOpenTofuTemplatesStep { /* ... */ }
+struct RenderAnsibleTemplatesStep { /* ... */ }
+
+// Infrastructure Steps
+struct InitializeInfrastructureStep { /* ... */ }
+struct ApplyInfrastructureStep { /* ... */ }
+struct DestroyInfrastructureStep { /* ... */ }
+struct GetInstanceInfoStep { /* ... */ }
+
+// Connectivity Steps
+struct WaitForSSHConnectivityStep { /* ... */ }
+struct ValidateNetworkConnectivityStep { /* ... */ }
+
+// Remote Execution Steps
+struct RunAnsiblePlaybookStep { /* ... */ }
+struct ExecuteRemoteActionStep<T: RemoteAction> { /* ... */ }
+struct TransferFilesStep { /* ... */ }
+
+// Application Steps
+struct GenerateComposeConfigStep { /* ... */ }
+struct StartServicesStep { /* ... */ }
+struct StopServicesStep { /* ... */ }
+struct GetServiceStatusStep { /* ... */ }
+
+// Validation Steps
+struct ValidateToolsStep { /* ... */ }
+struct ValidateRemoteServicesStep { /* ... */ }
+struct ValidateDeploymentStep { /* ... */ }
+```
+
+### Level 3: Remote Action Types (Enhanced)
+
+```rust
+// Enhanced remote action trait (existing)
+trait RemoteAction {
+    async fn execute(&self, server_ip: &IpAddr) -> Result<(), RemoteActionError>;
+    fn name(&self) -> &'static str;
+    fn description(&self) -> &'static str;
+    fn timeout(&self) -> Duration;
+}
+
+// Existing remote actions (keep)
+struct CloudInitValidator { /* ... */ }
+struct DockerValidator { /* ... */ }
+struct DockerComposeValidator { /* ... */ }
+
+// New remote actions
+struct TrackerValidator { /* ... */ }
+struct DatabaseValidator { /* ... */ }
+struct FirewallValidator { /* ... */ }
+struct ServiceHealthValidator { /* ... */ }
+```
+
+## 🔧 Directory Renames and Changes
+
+### Files to Rename
+
+- `src/container.rs` → `src/core/services.rs`
+- `src/config.rs` → `src/core/config.rs`
+
+### Files to Create
+
+- `src/bin/torrust_deploy.rs` - Main console application
+- `src/commands/` - All command implementations
+- `src/steps/` - All step implementations
+- `src/core/context.rs` - Shared execution context
+- `src/core/error.rs` - Comprehensive error types
+- `src/core/progress.rs` - Progress reporting
+- `src/actions/tracker.rs` - Torrust Tracker validation
+- `src/actions/database.rs` - Database validation
+- `src/actions/firewall.rs` - Firewall validation
+- `src/actions/service_health.rs` - Service health checks
+
+### Files to Refactor
+
+- `src/bin/e2e_tests.rs` - Reduce from 427 lines to ~50 lines, use new architecture
+- `src/actions/mod.rs` - Enhanced trait definitions
+- `src/lib.rs` - Updated exports for new structure
+
+## 🚀 Migration Strategy
+
+### Phase 1: Core Infrastructure (Week 1-2)
+
+1. **Create directory structure** and move existing files
+2. **Implement core types** (Command, Step, enhanced RemoteAction traits)
+3. **Create DeploymentContext** for state sharing between components
+4. **Implement basic error and progress systems**
+
+### Phase 2: Extract Commands (Week 3-4)
+
+1. **Implement ProvisionCommand** by extracting logic from E2E tests
+2. **Implement ConfigureCommand** by extracting configuration logic
+3. **Implement DestroyCommand** by extracting cleanup logic
+4. **Create supporting steps** as needed for these commands
+
+### Phase 3: Console Application (Week 5-6)
+
+1. **Create main console application** with CLI framework
+2. **Implement remaining commands** (CheckCommand, StatusCommand, etc.)
+3. **Add application-specific steps** for release and run commands
+4. **Refactor E2E tests** to use new architecture
+
+### Phase 4: Enhanced Features (Week 7-8)
+
+1. **Add multi-environment support**
+2. **Implement state persistence** between command invocations
+3. **Add Torrust Tracker-specific remote actions**
+4. **Complete application deployment pipeline**
+
+## 📊 Expected Benefits
+
+### Code Quality
+
+- **Reduced complexity**: Large monolithic E2E test broken into focused components
+- **Better testability**: Each command and step can be unit tested independently
+- **Clear separation**: Command orchestration, step execution, remote validation are distinct
+- **Reusable components**: Steps can be shared across commands
+
+### Maintainability
+
+- **Modular structure**: Changes to one command don't affect others
+- **Clear interfaces**: Well-defined traits for commands, steps, and remote actions
+- **Easy extension**: Adding new commands/steps/actions follows established patterns
+- **Better error handling**: Comprehensive error types with context
+
+### Production Readiness
+
+- **Console application**: Ready-to-use CLI with proper subcommand structure
+- **State management**: Context passing enables complex workflows
+- **Progress reporting**: User-friendly feedback during long-running operations
+- **Configuration system**: Support for different environments and settings
+
+This architecture transformation will convert the E2E test logic into a production-ready console application while maintaining all existing functionality and enabling future expansion.
 
 ### 1. Stage-Based Execution System Enhancement
 
