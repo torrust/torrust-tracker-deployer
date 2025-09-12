@@ -542,9 +542,9 @@ The current implementation executes most operations sequentially:
 ```rust
 async fn run_parallel_validations(&self, container_ip: &str) -> Result<()> {
     let validators = vec![
-        CloudInitValidator::new(&self.config.ssh_key_path, &self.config.ssh_username, self.config.verbose),
-        DockerValidator::new(&self.config.ssh_key_path, &self.config.ssh_username, self.config.verbose),
-        DockerComposeValidator::new(&self.config.ssh_key_path, &self.config.ssh_username, self.config.verbose),
+        CloudInitValidator::new(&self.config.ssh_key_path, &self.config.ssh_username, container_ip),
+        DockerValidator::new(&self.config.ssh_key_path, &self.config.ssh_username, container_ip),
+        DockerComposeValidator::new(&self.config.ssh_key_path, &self.config.ssh_username, container_ip),
     ];
 
     let validation_tasks: Vec<_> = validators

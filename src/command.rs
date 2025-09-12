@@ -25,16 +25,20 @@ pub enum CommandError {
     },
 }
 
-/// A command executor that can run shell commands with optional verbosity
-pub struct CommandExecutor {
-    verbose: bool,
+/// A command executor that can run shell commands
+pub struct CommandExecutor {}
+
+impl Default for CommandExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CommandExecutor {
     /// Creates a new `CommandExecutor`
     #[must_use]
-    pub fn new(verbose: bool) -> Self {
-        Self { verbose }
+    pub fn new() -> Self {
+        Self {}
     }
 
     /// Runs a command with the given arguments and optional working directory
@@ -67,11 +71,9 @@ impl CommandExecutor {
             command.current_dir(dir);
         }
 
-        if self.verbose {
-            info!("🔧 Running: {}", command_display);
-            if let Some(dir) = working_dir {
-                info!("   Working directory: {}", dir.display());
-            }
+        info!("🔧 Running: {}", command_display);
+        if let Some(dir) = working_dir {
+            info!("   Working directory: {}", dir.display());
         }
 
         let output = command
@@ -110,7 +112,7 @@ mod tests {
 
     #[test]
     fn it_should_execute_simple_command_successfully() {
-        let executor = CommandExecutor::new(false);
+        let executor = CommandExecutor::new();
         let result = executor.run_command("echo", &["hello"], None);
 
         assert!(result.is_ok());
@@ -119,7 +121,7 @@ mod tests {
 
     #[test]
     fn it_should_respect_working_directory() {
-        let executor = CommandExecutor::new(false);
+        let executor = CommandExecutor::new();
         let temp_dir = env::temp_dir();
         let result = executor.run_command("pwd", &[], Some(&temp_dir));
 
@@ -132,7 +134,7 @@ mod tests {
 
     #[test]
     fn it_should_return_error_for_nonexistent_command() {
-        let executor = CommandExecutor::new(false);
+        let executor = CommandExecutor::new();
         let result = executor.run_command("nonexistent_command_xyz123", &[], None);
 
         assert!(result.is_err());
@@ -140,7 +142,7 @@ mod tests {
 
     #[test]
     fn it_should_return_error_for_failing_command() {
-        let executor = CommandExecutor::new(false);
+        let executor = CommandExecutor::new();
         let result = executor.run_command("false", &[], None);
 
         assert!(result.is_err());
@@ -149,14 +151,14 @@ mod tests {
     }
 
     #[test]
-    fn it_should_use_verbose_logging_when_enabled() {
-        // This test verifies that verbose mode uses tracing instead of println
+    fn it_should_use_tracing_for_logging() {
+        // This test verifies that the command executor uses tracing for logging
         // We can't easily test the tracing output in unit tests without a subscriber
-        // but we can verify the executor runs correctly in verbose mode
-        let executor = CommandExecutor::new(true);
-        let result = executor.run_command("echo", &["verbose_test"], None);
+        // but we can verify the executor runs correctly and uses tracing internally
+        let executor = CommandExecutor::new();
+        let result = executor.run_command("echo", &["tracing_test"], None);
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().trim(), "verbose_test");
+        assert_eq!(result.unwrap().trim(), "tracing_test");
     }
 }

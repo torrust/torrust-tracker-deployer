@@ -21,20 +21,23 @@ cargo run --bin e2e-tests
 ### Command Line Options
 
 - `--keep` - Keep the test environment after completion (useful for debugging)
-- `--verbose` - Enable verbose output to see detailed execution steps
+- `--templates-dir` - Specify custom templates directory path
 - `--help` - Show help information
 
 ### Examples
 
 ```bash
-# Run with verbose output
-cargo run --bin e2e-tests -- --verbose
+# Run basic e2e tests
+cargo run --bin e2e-tests
 
 # Keep environment for debugging
 cargo run --bin e2e-tests -- --keep
 
+# Use custom templates directory
+cargo run --bin e2e-tests -- --templates-dir ./custom/templates
+
 # Combine options
-cargo run --bin e2e-tests -- --verbose --keep
+cargo run --bin e2e-tests -- --keep --templates-dir ./custom/templates
 ```
 
 ## 📋 Test Sequence
@@ -158,7 +161,7 @@ GitHub Actions runners sometimes experience intermittent network connectivity pr
 Use the `--keep` flag to inspect the environment after test completion:
 
 ```bash
-cargo run --bin e2e-tests -- --keep --verbose
+cargo run --bin e2e-tests -- --keep
 
 # After test completion, connect to the container:
 lxc exec torrust-vm -- /bin/bash

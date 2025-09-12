@@ -26,7 +26,7 @@
 //! };
 //!
 //! let temp_dir = TempDir::new()?;
-//! let renderer = AnsibleTemplateRenderer::new(temp_dir.path(), true);
+//! let renderer = AnsibleTemplateRenderer::new(temp_dir.path());
 //! let template_manager = TemplateManager::new("/path/to/templates");
 //!
 //! let host = AnsibleHost::from_str("192.168.1.100")?;
@@ -114,7 +114,6 @@ pub enum ConfigurationTemplateError {
 /// require runtime variable substitution (inventory files with IP addresses).
 pub struct AnsibleTemplateRenderer {
     build_dir: PathBuf,
-    verbose: bool,
 }
 
 impl AnsibleTemplateRenderer {
@@ -135,11 +134,9 @@ impl AnsibleTemplateRenderer {
     /// # Arguments
     ///
     /// * `build_dir` - The destination directory where templates will be rendered
-    /// * `verbose` - Whether to enable verbose logging
-    pub fn new<P: AsRef<Path>>(build_dir: P, verbose: bool) -> Self {
+    pub fn new<P: AsRef<Path>>(build_dir: P) -> Self {
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
-            verbose,
         }
     }
 
@@ -149,7 +146,7 @@ impl AnsibleTemplateRenderer {
     /// 1. Creates the build directory structure for `Ansible`
     /// 2. Renders dynamic Tera templates with runtime variables (inventory.yml.tera)
     /// 3. Copies static templates (playbooks, ansible.cfg) from the template manager
-    /// 4. Provides verbose logging if enabled
+    /// 4. Provides debug logging via the tracing crate
     ///
     /// # Arguments
     ///
@@ -185,20 +182,18 @@ impl AnsibleTemplateRenderer {
         self.copy_static_templates(template_manager, &build_ansible_dir)
             .await?;
 
-        if self.verbose {
-            tracing::debug!(
-                "   ✅ Configuration templates rendered to: {}",
-                build_ansible_dir.display()
-            );
-            tracing::debug!(
-                "   ✅ Inventory rendered with IP: {}",
-                inventory_context.ansible_host()
-            );
-            tracing::debug!(
-                "   ✅ Inventory rendered with SSH key: {}",
-                inventory_context.ansible_ssh_private_key_file()
-            );
-        }
+        tracing::debug!(
+            "   ✅ Configuration templates rendered to: {}",
+            build_ansible_dir.display()
+        );
+        tracing::debug!(
+            "   ✅ Inventory rendered with IP: {}",
+            inventory_context.ansible_host()
+        );
+        tracing::debug!(
+            "   ✅ Inventory rendered with SSH key: {}",
+            inventory_context.ansible_ssh_private_key_file()
+        );
 
         tracing::info!("✅ Stage 3 complete: Configuration templates ready");
         Ok(())
@@ -454,20 +449,9 @@ mod tests {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
 
-        let renderer = AnsibleTemplateRenderer::new(&build_path, false);
+        let renderer = AnsibleTemplateRenderer::new(&build_path);
 
         assert_eq!(renderer.build_dir, build_path);
-        assert!(!renderer.verbose);
-    }
-
-    #[tokio::test]
-    async fn it_should_create_renderer_with_verbose_logging() {
-        let temp_dir = TempDir::new().expect("Failed to create temp directory");
-        let build_path = temp_dir.path().join("build");
-
-        let renderer = AnsibleTemplateRenderer::new(&build_path, true);
-
-        assert!(renderer.verbose);
     }
 
     #[tokio::test]
@@ -476,7 +460,7 @@ mod tests {
         let build_path = temp_dir.path().join("build");
         let expected_path = build_path.join("ansible");
 
-        let renderer = AnsibleTemplateRenderer::new(&build_path, false);
+        let renderer = AnsibleTemplateRenderer::new(&build_path);
         let actual_path = renderer.build_ansible_directory();
 
         assert_eq!(actual_path, expected_path);
@@ -500,7 +484,7 @@ mod tests {
     async fn it_should_create_build_directory_successfully() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
-        let renderer = AnsibleTemplateRenderer::new(&build_path, false);
+        let renderer = AnsibleTemplateRenderer::new(&build_path);
 
         let result = renderer.create_build_directory().await;
 
@@ -516,7 +500,7 @@ mod tests {
         // Try to create a directory where we don't have permissions
         // Use a path that's likely to fail on most systems
         let invalid_path = Path::new("/root/invalid/path/that/should/not/exist");
-        let renderer = AnsibleTemplateRenderer::new(invalid_path, false);
+        let renderer = AnsibleTemplateRenderer::new(invalid_path);
 
         let result = renderer.create_build_directory().await;
 

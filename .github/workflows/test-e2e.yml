@@ -57,10 +57,10 @@ jobs:
 
       - name: Run E2E test
         run: |
-          # Run the E2E test with verbose output for better debugging
+          # Run the E2E test with debug logging for better debugging
           # Use sudo -E and preserve PATH to ensure cargo is accessible
           echo "🚀 Starting E2E test at $(date)"
-          sudo -E env "PATH=$PATH" cargo run --bin e2e-tests -- --verbose
+          sudo -E env "PATH=$PATH" cargo run --bin e2e-tests
           echo "✅ E2E test completed at $(date)"
         env:
           # Preserve environment variables for the E2E test

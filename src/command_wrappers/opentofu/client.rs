@@ -47,14 +47,12 @@ impl OpenTofuClient {
     /// Creates a new `OpenTofuClient`
     ///
     /// # Arguments
-    ///
     /// * `working_dir` - Path to the directory containing `OpenTofu` configuration files
-    /// * `verbose` - Whether to log commands being executed
     #[must_use]
-    pub fn new<P: Into<PathBuf>>(working_dir: P, verbose: bool) -> Self {
+    pub fn new<P: Into<PathBuf>>(working_dir: P) -> Self {
         Self {
             working_dir: working_dir.into(),
-            command_executor: CommandExecutor::new(verbose),
+            command_executor: CommandExecutor::new(),
         }
     }
 
@@ -225,22 +223,22 @@ resource "null_resource" "test" {
 
     #[test]
     fn it_should_create_opentofu_client_with_valid_parameters() {
-        let client = OpenTofuClient::new("/path/to/config", false);
+        let client = OpenTofuClient::new("/path/to/config");
 
         assert_eq!(client.working_dir.to_string_lossy(), "/path/to/config");
     }
 
     #[test]
-    fn it_should_create_opentofu_client_with_verbose_enabled() {
-        let client = OpenTofuClient::new("/path/to/config", true);
+    fn it_should_create_opentofu_client_with_working_directory() {
+        let client = OpenTofuClient::new("/path/to/config");
 
         assert_eq!(client.working_dir.to_string_lossy(), "/path/to/config");
-        // Note: verbose is now encapsulated in the CommandExecutor collaborator
+        // Note: logging is now handled by the tracing crate via CommandExecutor
     }
 
     #[test]
     fn it_should_return_working_directory_path() {
-        let client = OpenTofuClient::new("/test/path", false);
+        let client = OpenTofuClient::new("/test/path");
 
         assert_eq!(client.working_dir(), Path::new("/test/path"));
     }
@@ -248,7 +246,7 @@ resource "null_resource" "test" {
     #[test]
     fn it_should_construct_pathbuf_from_string() {
         let path_str = "/some/test/path";
-        let client = OpenTofuClient::new(path_str, false);
+        let client = OpenTofuClient::new(path_str);
 
         assert_eq!(client.working_dir(), Path::new(path_str));
     }
@@ -256,7 +254,7 @@ resource "null_resource" "test" {
     #[test]
     fn it_should_construct_pathbuf_from_path() {
         let path = Path::new("/another/test/path");
-        let client = OpenTofuClient::new(path, true);
+        let client = OpenTofuClient::new(path);
 
         assert_eq!(client.working_dir(), path);
     }
@@ -267,7 +265,7 @@ resource "null_resource" "test" {
     #[test]
     fn it_should_initialize_opentofu_configuration() {
         let temp_dir = create_test_config_dir();
-        let client = OpenTofuClient::new(temp_dir.path(), false);
+        let client = OpenTofuClient::new(temp_dir.path());
 
         // This would fail if OpenTofu is not installed, so we ignore it by default
         match client.init() {
@@ -288,7 +286,7 @@ resource "null_resource" "test" {
     #[test]
     fn it_should_plan_opentofu_configuration() {
         let temp_dir = create_test_config_dir();
-        let client = OpenTofuClient::new(temp_dir.path(), false);
+        let client = OpenTofuClient::new(temp_dir.path());
 
         // Initialize first (this would also be ignored if OpenTofu is not available)
         drop(client.init());

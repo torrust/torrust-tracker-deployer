@@ -49,19 +49,17 @@ impl SshClient {
     /// * `ssh_key_path` - Path to the SSH private key file
     /// * `username` - Username for SSH connections (typically "torrust")
     /// * `host_ip` - IP address of the target host
-    /// * `verbose` - Whether to log commands being executed
     #[must_use]
     pub fn new<P: Into<PathBuf>>(
         ssh_key_path: P,
         username: impl Into<String>,
         host_ip: IpAddr,
-        verbose: bool,
     ) -> Self {
         Self {
             ssh_key_path: ssh_key_path.into(),
             username: username.into(),
             host_ip,
-            command_executor: CommandExecutor::new(verbose),
+            command_executor: CommandExecutor::new(),
         }
     }
 
@@ -248,7 +246,7 @@ mod tests {
     #[test]
     fn it_should_create_ssh_client_with_valid_parameters() {
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let ssh_client = SshClient::new("/path/to/key", "testuser", host_ip, false);
+        let ssh_client = SshClient::new("/path/to/key", "testuser", host_ip);
 
         assert_eq!(ssh_client.ssh_key_path.to_string_lossy(), "/path/to/key");
         assert_eq!(ssh_client.username, "testuser");
@@ -257,13 +255,13 @@ mod tests {
     }
 
     #[test]
-    fn it_should_create_ssh_client_with_verbose_enabled() {
+    fn it_should_create_ssh_client_with_connection_details() {
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let ssh_client = SshClient::new("/path/to/key", "testuser", host_ip, true);
+        let ssh_client = SshClient::new("/path/to/key", "testuser", host_ip);
 
         assert_eq!(ssh_client.ssh_key_path.to_string_lossy(), "/path/to/key");
         assert_eq!(ssh_client.username, "testuser");
         assert_eq!(ssh_client.host_ip, host_ip);
-        // Note: verbose is now encapsulated in the CommandExecutor collaborator
+        // Note: logging is now handled by the tracing crate via CommandExecutor
     }
 }

@@ -51,7 +51,7 @@ These features are fully working in the E2E test environment:
 
 - **`Config` struct**: Centralizes all deployment parameters
 - **Path Management**: Handles SSH keys, templates, build directories
-- **Runtime Parameters**: Verbose mode, cleanup behavior, provider settings
+- **Runtime Parameters**: Cleanup behavior, provider settings, SSH configuration
 
 #### Service Container
 

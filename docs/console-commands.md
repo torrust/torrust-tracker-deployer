@@ -71,7 +71,10 @@ torrust-deploy check [OPTIONS]
 **Options**:
 
 - `--fix` - Attempt to auto-install missing tools
-- `--verbose` - Show detailed validation steps
+
+**Environment Variables**:
+
+- `RUST_LOG=debug` - Show detailed validation steps via tracing
 
 **Example Output**:
 
@@ -141,7 +144,10 @@ torrust-deploy provision <environment> [OPTIONS]
 
 - `--auto-approve` - Skip confirmation prompts
 - `--keep-on-failure` - Don't cleanup on provision failure
-- `--verbose` - Detailed provisioning logs
+
+**Environment Variables**:
+
+- `RUST_LOG=debug` - Detailed provisioning logs via tracing
 
 ---
 
@@ -333,7 +339,8 @@ torrust-deploy destroy <environment> [OPTIONS]
 
 ## Notes
 
-- All commands should support `--verbose` flag for detailed output
+- All commands use the tracing crate for logging (control verbosity with `RUST_LOG` environment variable)
+- Set `RUST_LOG=debug` for detailed output, `RUST_LOG=info` for standard output
 - Configuration should be environment-aware once multi-env support is added
 - Error handling should be consistent across all commands
 - Each command should validate prerequisites before execution

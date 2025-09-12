@@ -20,16 +20,18 @@ pub struct LxdClient {
     command_executor: CommandExecutor,
 }
 
+impl Default for LxdClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LxdClient {
     /// Creates a new `LxdClient`
-    ///
-    /// # Arguments
-    ///
-    /// * `verbose` - Whether to log commands being executed
     #[must_use]
-    pub fn new(verbose: bool) -> Self {
+    pub fn new() -> Self {
         Self {
-            command_executor: CommandExecutor::new(verbose),
+            command_executor: CommandExecutor::new(),
         }
     }
 
@@ -195,22 +197,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_should_create_lxd_client_with_verbose_disabled() {
-        let _client = LxdClient::new(false);
+    fn it_should_create_lxd_client_successfully() {
+        let _client = LxdClient::new();
         // Client should be created successfully
-        // Note: We can't directly test the internal state since CommandExecutor
-        // encapsulates the verbose setting
+        // Note: Logging is handled by the tracing crate via CommandExecutor
     }
 
     #[test]
-    fn it_should_create_lxd_client_with_verbose_enabled() {
-        let _client = LxdClient::new(true);
-        // Client should be created successfully
+    fn it_should_create_lxd_client_with_default_implementation() {
+        let _client = LxdClient::default();
+        // Client should be created successfully using Default trait
     }
 
     #[test]
     fn it_should_return_none_when_instance_not_found() {
-        let _client = LxdClient::new(false);
+        let _client = LxdClient::new();
         // We can't easily test this without mocking CommandExecutor, but the behavior
         // is now that get_instance_ip returns Ok(None) instead of an error when
         // the instance is not found or has no IP address.

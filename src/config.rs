@@ -14,13 +14,6 @@ pub struct Config {
     /// will be left running for manual inspection or reuse.
     pub keep_env: bool,
 
-    /// Enable verbose logging and debug output.
-    ///
-    /// When `true`, all service clients will produce detailed output about
-    /// their operations, including command executions, API calls, and internal state.
-    /// Useful for debugging deployment issues.
-    pub verbose: bool,
-
     /// Path to the SSH private key file for remote connections.
     ///
     /// This key will be used by the SSH client to authenticate with remote
@@ -87,7 +80,6 @@ impl Config {
     /// # use torrust_tracker_deploy::config::Config;
     /// let config = Config::new(
     ///     true,                           // keep environment for debugging
-    ///     false,                          // disable verbose output
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     "ubuntu".to_string(),
     ///     "ansible".to_string(),
@@ -101,7 +93,6 @@ impl Config {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         keep_env: bool,
-        verbose: bool,
         ssh_key_path: PathBuf,
         ssh_username: String,
         ansible_subfolder: String,
@@ -112,7 +103,6 @@ impl Config {
     ) -> Self {
         Self {
             keep_env,
-            verbose,
             ssh_key_path,
             ssh_username,
             ansible_subfolder,

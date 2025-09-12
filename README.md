@@ -121,8 +121,8 @@ cargo run --bin e2e-tests
 # Keep the test environment after completion
 cargo run --bin e2e-tests -- --keep
 
-# Run with verbose output
-cargo run --bin e2e-tests -- --verbose
+# Use custom templates directory
+cargo run --bin e2e-tests -- --templates-dir ./custom/templates
 
 # See all available options
 cargo run --bin e2e-tests -- --help

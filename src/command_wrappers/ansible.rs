@@ -22,12 +22,11 @@ impl AnsibleClient {
     /// # Arguments
     ///
     /// * `working_dir` - Path to the directory containing `Ansible` configuration files
-    /// * `verbose` - Whether to log commands being executed
     #[must_use]
-    pub fn new<P: Into<PathBuf>>(working_dir: P, verbose: bool) -> Self {
+    pub fn new<P: Into<PathBuf>>(working_dir: P) -> Self {
         Self {
             working_dir: working_dir.into(),
-            command_executor: CommandExecutor::new(verbose),
+            command_executor: CommandExecutor::new(),
         }
     }
 
@@ -79,22 +78,22 @@ mod tests {
 
     #[test]
     fn it_should_create_ansible_client_with_valid_parameters() {
-        let client = AnsibleClient::new("/path/to/config", false);
+        let client = AnsibleClient::new("/path/to/config");
 
         assert_eq!(client.working_dir.to_string_lossy(), "/path/to/config");
     }
 
     #[test]
-    fn it_should_create_ansible_client_with_verbose_enabled() {
-        let client = AnsibleClient::new("/path/to/config", true);
+    fn it_should_create_ansible_client_with_working_directory() {
+        let client = AnsibleClient::new("/path/to/config");
 
         assert_eq!(client.working_dir.to_string_lossy(), "/path/to/config");
-        // Note: verbose is now encapsulated in the CommandExecutor collaborator
+        // Note: logging is now handled by the tracing crate via CommandExecutor
     }
 
     #[test]
     fn it_should_return_working_directory_path() {
-        let client = AnsibleClient::new("/test/path", false);
+        let client = AnsibleClient::new("/test/path");
 
         assert_eq!(client.working_dir(), Path::new("/test/path"));
     }
@@ -102,7 +101,7 @@ mod tests {
     #[test]
     fn it_should_construct_pathbuf_from_string() {
         let path_str = "/some/test/path";
-        let client = AnsibleClient::new(path_str, false);
+        let client = AnsibleClient::new(path_str);
 
         assert_eq!(client.working_dir(), Path::new(path_str));
     }
@@ -110,7 +109,7 @@ mod tests {
     #[test]
     fn it_should_construct_pathbuf_from_path() {
         let path = Path::new("/another/test/path");
-        let client = AnsibleClient::new(path, true);
+        let client = AnsibleClient::new(path);
 
         assert_eq!(client.working_dir(), path);
     }
@@ -120,7 +119,7 @@ mod tests {
 
     #[test]
     fn it_should_accept_playbook_name_without_extension() {
-        let client = AnsibleClient::new("/test/path", false);
+        let client = AnsibleClient::new("/test/path");
 
         // This tests the structure - we expect the method to exist and accept a &str
         // The actual execution would fail without Ansible, but we're testing the interface
@@ -153,7 +152,7 @@ mod tests {
 "#;
         fs::write(temp_dir.path().join("test-playbook.yml"), playbook_content).unwrap();
 
-        let client = AnsibleClient::new(temp_dir.path(), false);
+        let client = AnsibleClient::new(temp_dir.path());
 
         // This would fail if Ansible is not installed, so we ignore it by default
         match client.run_playbook("test-playbook") {

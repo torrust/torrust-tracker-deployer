@@ -29,10 +29,6 @@ struct Cli {
     #[arg(long)]
     keep: bool,
 
-    /// Verbose output
-    #[arg(short, long)]
-    verbose: bool,
-
     /// Templates directory path (default: ./data/templates)
     #[arg(long, default_value = "./data/templates")]
     templates_dir: String,
@@ -47,7 +43,7 @@ struct TestEnvironment {
 }
 
 impl TestEnvironment {
-    fn new(keep_env: bool, verbose: bool, templates_dir: String) -> Result<Self> {
+    fn new(keep_env: bool, templates_dir: String) -> Result<Self> {
         // Get project root (current directory when running from root)
         let project_root = std::env::current_dir()?;
 
@@ -56,12 +52,11 @@ impl TestEnvironment {
 
         // Setup SSH key
         let temp_ssh_key = temp_dir.path().join("testing_rsa");
-        Self::setup_ssh_key(&project_root, &temp_dir, verbose, &temp_ssh_key)?;
+        Self::setup_ssh_key(&project_root, &temp_dir, &temp_ssh_key)?;
 
         // Create configuration
         let config = Config::new(
             keep_env,
-            verbose,
             temp_ssh_key,
             "torrust".to_string(),
             "ansible".to_string(),
@@ -75,15 +70,13 @@ impl TestEnvironment {
         let services = Services::new(&config);
 
         // Clean and prepare templates directory
-        Self::clean_and_prepare_templates(&services, verbose)?;
+        Self::clean_and_prepare_templates(&services)?;
 
-        if verbose {
-            println!("📁 Temporary directory: {}", temp_dir.path().display());
-            println!(
-                "📄 Templates directory: {}",
-                services.template_manager.templates_dir().display()
-            );
-        }
+        println!("📁 Temporary directory: {}", temp_dir.path().display());
+        println!(
+            "📄 Templates directory: {}",
+            services.template_manager.templates_dir().display()
+        );
 
         Ok(Self {
             config,
@@ -96,7 +89,6 @@ impl TestEnvironment {
     fn setup_ssh_key(
         project_root: &std::path::Path,
         temp_dir: &TempDir,
-        verbose: bool,
         ssh_key_path: &std::path::Path,
     ) -> Result<()> {
         // Copy SSH private key from fixtures to temp directory
@@ -115,22 +107,18 @@ impl TestEnvironment {
             std::fs::set_permissions(&temp_ssh_key, perms)?;
         }
 
-        if verbose {
-            println!(
-                "🔑 SSH key copied to temporary location: {}",
-                ssh_key_path.display()
-            );
-        }
+        println!(
+            "🔑 SSH key copied to temporary location: {}",
+            ssh_key_path.display()
+        );
 
         Ok(())
     }
 
     /// Clean and prepare templates directory to ensure fresh embedded templates
-    fn clean_and_prepare_templates(services: &Services, verbose: bool) -> Result<()> {
+    fn clean_and_prepare_templates(services: &Services) -> Result<()> {
         // Clean templates directory to ensure we use fresh templates from embedded resources
-        if verbose {
-            println!("🧹 Cleaning templates directory to ensure fresh embedded templates...");
-        }
+        println!("🧹 Cleaning templates directory to ensure fresh embedded templates...");
         services
             .template_manager
             .reset_templates_dir()
@@ -140,9 +128,8 @@ impl TestEnvironment {
 
     /// Stage 1: Render provision templates (`OpenTofu`) to build/tofu/ directory
     async fn render_provision_templates(&self) -> Result<()> {
-        let step = RenderOpenTofuTemplatesStep::new(
-            Arc::clone(&self.services.tofu_template_renderer),
-        );
+        let step =
+            RenderOpenTofuTemplatesStep::new(Arc::clone(&self.services.tofu_template_renderer));
         step.execute()
             .await
             .with_context(|| "Failed to render provision templates")
@@ -297,7 +284,6 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         &env.config.ssh_key_path,
         &env.config.ssh_username,
         *instance_ip,
-        env.config.verbose,
     );
     cloud_init_validator
         .execute(instance_ip)
@@ -310,7 +296,6 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         &env.config.ssh_key_path,
         &env.config.ssh_username,
         *instance_ip,
-        env.config.verbose,
     );
     docker_validator
         .execute(instance_ip)
@@ -323,7 +308,6 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         &env.config.ssh_key_path,
         &env.config.ssh_username,
         *instance_ip,
-        env.config.verbose,
     );
     docker_compose_validator
         .execute(instance_ip)
@@ -354,7 +338,6 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
         &env.config.ssh_key_path,
         &env.config.ssh_username,
         instance_ip,
-        env.config.verbose,
     );
     ssh_client
         .wait_for_connectivity()
@@ -402,7 +385,7 @@ async fn main() -> Result<()> {
     println!("🚀 Torrust Tracker Deploy E2E Tests");
     println!("===========================================");
 
-    let env = TestEnvironment::new(cli.keep, cli.verbose, cli.templates_dir)?;
+    let env = TestEnvironment::new(cli.keep, cli.templates_dir)?;
 
     let test_start = Instant::now();
 

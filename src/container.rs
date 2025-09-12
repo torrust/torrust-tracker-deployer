@@ -30,30 +30,21 @@ impl Services {
         let template_manager = Arc::new(template_manager);
 
         // Create OpenTofu client pointing to build/opentofu_subfolder directory
-        let opentofu_client = OpenTofuClient::new(
-            config.build_dir.join(&config.opentofu_subfolder),
-            config.verbose,
-        );
+        let opentofu_client =
+            OpenTofuClient::new(config.build_dir.join(&config.opentofu_subfolder));
 
         // Create LXD client for instance management
-        let lxd_client = LxdClient::new(config.verbose);
+        let lxd_client = LxdClient::new();
 
         // Create Ansible client pointing to build/ansible_subfolder directory
-        let ansible_client = AnsibleClient::new(
-            config.build_dir.join(&config.ansible_subfolder),
-            config.verbose,
-        );
+        let ansible_client = AnsibleClient::new(config.build_dir.join(&config.ansible_subfolder));
 
         // Create provision template renderer
-        let provision_renderer = TofuTemplateRenderer::new(
-            template_manager.clone(),
-            config.build_dir.clone(),
-            config.verbose,
-        );
+        let provision_renderer =
+            TofuTemplateRenderer::new(template_manager.clone(), config.build_dir.clone());
 
         // Create configuration template renderer
-        let configuration_renderer =
-            AnsibleTemplateRenderer::new(config.build_dir.clone(), config.verbose);
+        let configuration_renderer = AnsibleTemplateRenderer::new(config.build_dir.clone());
 
         Self {
             // Command wrappers

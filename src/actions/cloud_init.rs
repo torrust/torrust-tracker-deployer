@@ -17,10 +17,9 @@ impl CloudInitValidator {
     /// * `ssh_key_path` - Path to the SSH private key file
     /// * `username` - SSH username to use for connections
     /// * `host_ip` - IP address of the target host
-    /// * `verbose` - Whether to enable verbose SSH output
     #[must_use]
-    pub fn new(ssh_key_path: &Path, username: &str, host_ip: IpAddr, verbose: bool) -> Self {
-        let ssh_client = SshClient::new(ssh_key_path, username, host_ip, verbose);
+    pub fn new(ssh_key_path: &Path, username: &str, host_ip: IpAddr) -> Self {
+        let ssh_client = SshClient::new(ssh_key_path, username, host_ip);
         Self { ssh_client }
     }
 }
