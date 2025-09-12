@@ -59,8 +59,6 @@ impl TestEnvironment {
         let config = Config::new(
             keep_env,
             ssh_config,
-            "ansible".to_string(),
-            "tofu/lxd".to_string(),
             templates_dir,
             project_root.clone(),
             project_root.join("build"),

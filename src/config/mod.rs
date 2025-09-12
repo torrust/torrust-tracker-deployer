@@ -67,6 +67,7 @@ impl Config {
     /// Creates a new configuration with the provided parameters.
     ///
     /// Sets `original_inventory` to `None` - this field is populated internally during cleanup operations.
+    /// The `ansible_subfolder` is set to "ansible" and `opentofu_subfolder` is set to "tofu/lxd" internally.
     ///
     /// ```rust
     /// # use std::path::PathBuf;
@@ -78,20 +79,15 @@ impl Config {
     /// let config = Config::new(
     ///     true,                           // keep environment for debugging
     ///     ssh_config,
-    ///     "ansible".to_string(),
-    ///     "tofu/lxd".to_string(),
     ///     "templates".to_string(),
     ///     PathBuf::from("/path/to/project"),
     ///     PathBuf::from("/path/to/project/build"),
     /// );
     /// ```
     #[must_use]
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         keep_env: bool,
         ssh_config: SshConfig,
-        ansible_subfolder: String,
-        opentofu_subfolder: String,
         templates_dir: String,
         project_root: PathBuf,
         build_dir: PathBuf,
@@ -99,8 +95,8 @@ impl Config {
         Self {
             keep_env,
             ssh_config,
-            ansible_subfolder,
-            opentofu_subfolder,
+            ansible_subfolder: "ansible".to_string(),
+            opentofu_subfolder: "tofu/lxd".to_string(),
             templates_dir,
             project_root,
             build_dir,
