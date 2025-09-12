@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::net::IpAddr;
+use std::sync::Arc;
 use std::time::Instant;
 use tempfile::TempDir;
 use tracing_subscriber::fmt;
@@ -139,7 +140,10 @@ impl TestEnvironment {
 
     /// Stage 1: Render provision templates (`OpenTofu`) to build/tofu/ directory
     async fn render_provision_templates(&self) -> Result<()> {
-        let step = RenderOpenTofuTemplatesStep::new(&self.services, self.config.verbose);
+        let step = RenderOpenTofuTemplatesStep::new(
+            Arc::clone(&self.services.tofu_template_renderer),
+            Arc::clone(&self.services.template_manager),
+        );
         step.execute()
             .await
             .with_context(|| "Failed to render provision templates")

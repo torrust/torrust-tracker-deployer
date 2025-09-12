@@ -1,16 +1,26 @@
-use crate::container::Services;
-use crate::tofu::template_renderer::ProvisionTemplateError;
+use std::sync::Arc;
+
+use tracing::info;
+
+use crate::template::TemplateManager;
+use crate::tofu::template_renderer::{ProvisionTemplateError, TofuTemplateRenderer};
 
 /// Simple step that renders `OpenTofu` templates to the build directory
-pub struct RenderOpenTofuTemplatesStep<'a> {
-    services: &'a Services,
-    verbose: bool,
+pub struct RenderOpenTofuTemplatesStep {
+    tofu_template_renderer: Arc<TofuTemplateRenderer>,
+    template_manager: Arc<TemplateManager>,
 }
 
-impl<'a> RenderOpenTofuTemplatesStep<'a> {
+impl RenderOpenTofuTemplatesStep {
     #[must_use]
-    pub fn new(services: &'a Services, verbose: bool) -> Self {
-        Self { services, verbose }
+    pub fn new(
+        tofu_template_renderer: Arc<TofuTemplateRenderer>,
+        template_manager: Arc<TemplateManager>,
+    ) -> Self {
+        Self {
+            tofu_template_renderer,
+            template_manager,
+        }
     }
 
     /// Execute the template rendering step
@@ -20,18 +30,13 @@ impl<'a> RenderOpenTofuTemplatesStep<'a> {
     /// Returns an error if the template rendering fails or if there are issues
     /// with the template manager or renderer.
     pub async fn execute(&self) -> Result<(), ProvisionTemplateError> {
-        if self.verbose {
-            println!("📝 Stage 1: Rendering OpenTofu templates...");
-        }
+        info!("📝 Stage 1: Rendering OpenTofu templates...");
 
-        self.services
-            .tofu_template_renderer
-            .render(&self.services.template_manager)
+        self.tofu_template_renderer
+            .render(&self.template_manager)
             .await?;
 
-        if self.verbose {
-            println!("✅ Stage 1: OpenTofu templates rendered successfully");
-        }
+        info!("✅ Stage 1: OpenTofu templates rendered successfully");
 
         Ok(())
     }
