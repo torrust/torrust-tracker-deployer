@@ -50,7 +50,6 @@ pub struct Config {
     ///
     /// Used for resolving relative paths and locating project resources
     /// such as SSH key fixtures and project-specific configuration files.
-    #[allow(dead_code)] // Still used for SSH key fixtures and cleanup
     pub project_root: PathBuf,
 
     /// Directory where rendered configuration files will be written.
@@ -58,7 +57,6 @@ pub struct Config {
     /// All processed templates and generated configuration files are written
     /// to subdirectories within this build directory. This directory is
     /// typically git-ignored to avoid committing generated files.
-    #[allow(dead_code)] // Will be used in template rendering
     pub build_dir: PathBuf,
 
     /// Original inventory content for restoration during cleanup.
@@ -66,7 +64,6 @@ pub struct Config {
     /// Stores the original Ansible inventory file content so it can be
     /// restored if the deployment process modifies it. Used internally
     /// for cleanup operations.
-    #[allow(dead_code)] // Used for cleanup but not directly accessed
     pub original_inventory: Option<String>,
 }
 
