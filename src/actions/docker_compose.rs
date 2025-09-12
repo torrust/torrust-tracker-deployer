@@ -29,8 +29,12 @@ impl RemoteAction for DockerComposeValidator {
         "docker-compose-validation"
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn execute(&self, _server_ip: &IpAddr) -> Result<(), RemoteActionError> {
-        info!("🔍 Validating Docker Compose installation...");
+        info!(
+            action = "docker_compose_validation",
+            "Validating Docker Compose installation"
+        );
 
         // First check if Docker is available (Docker Compose requires Docker)
         let docker_available =
@@ -42,23 +46,47 @@ impl RemoteAction for DockerComposeValidator {
                 })?;
 
         if !docker_available {
-            warn!("⚠️  Docker Compose validation skipped");
-            warn!("   ℹ️  Docker is not available, so Docker Compose cannot be validated");
-            warn!("   ℹ️  This is expected in CI environments with network limitations");
+            warn!(
+                action = "docker_compose_validation",
+                status = "skipped",
+                reason = "docker_unavailable",
+                "Docker Compose validation skipped"
+            );
+            warn!(
+                action = "docker_compose_validation",
+                note = "dependency_missing",
+                "Docker is not available, so Docker Compose cannot be validated"
+            );
+            warn!(
+                action = "docker_compose_validation",
+                note = "expected_in_ci",
+                "This is expected in CI environments with network limitations"
+            );
             return Ok(()); // Don't fail the test, just skip validation
         }
 
         // Check Docker Compose version
         let Ok(compose_version) = self.ssh_client.execute("docker-compose --version") else {
             warn!(
-                "⚠️  Docker Compose not found, this is expected if Docker installation was skipped"
+                action = "docker_compose_validation",
+                status = "not_found",
+                note = "expected_if_docker_skipped",
+                "Docker Compose not found, this is expected if Docker installation was skipped"
             );
             return Ok(()); // Don't fail, just note the situation
         };
 
         let compose_version = compose_version.trim();
-        info!("✅ Docker Compose installation validated");
-        info!("   ✓ Docker Compose version: {compose_version}");
+        info!(
+            action = "docker_compose_validation",
+            status = "success",
+            "Docker Compose installation validated"
+        );
+        info!(
+            action = "docker_compose_validation",
+            version = compose_version,
+            "Docker Compose version detected"
+        );
 
         // Test basic docker-compose functionality with a simple test file (only if Docker is working)
         let test_compose_content = r"services:
@@ -78,7 +106,12 @@ impl RemoteAction for DockerComposeValidator {
             })?;
 
         if !create_test_success {
-            warn!("   ⚠️  Could not create test docker-compose.yml file");
+            warn!(
+                action = "docker_compose_validation",
+                check = "test_file_creation",
+                status = "failed",
+                "Could not create test docker-compose.yml file"
+            );
             return Ok(()); // Don't fail, just skip the functional test
         }
 
@@ -92,9 +125,19 @@ impl RemoteAction for DockerComposeValidator {
             })?;
 
         if validate_success {
-            info!("   ✓ Docker Compose configuration validation passed");
+            info!(
+                action = "docker_compose_validation",
+                check = "configuration_validation",
+                status = "success",
+                "Docker Compose configuration validation passed"
+            );
         } else {
-            warn!("   ⚠️  Docker Compose configuration validation skipped");
+            warn!(
+                action = "docker_compose_validation",
+                check = "configuration_validation",
+                status = "skipped",
+                "Docker Compose configuration validation skipped"
+            );
         }
 
         // Clean up test file

@@ -30,19 +30,43 @@ impl RemoteAction for DockerValidator {
     }
 
     async fn execute(&self, _server_ip: &IpAddr) -> Result<(), RemoteActionError> {
-        info!("🔍 Validating Docker installation...");
+        info!(
+            action = "docker_validation",
+            "Validating Docker installation"
+        );
 
         // Check Docker version
         let Ok(docker_version) = self.ssh_client.execute("docker --version") else {
-            warn!("⚠️  Docker installation validation skipped");
-            warn!("   ℹ️  This is expected in CI environments with network limitations");
-            warn!("   ℹ️  The playbook ran successfully but Docker installation was skipped");
+            warn!(
+                action = "docker_validation",
+                status = "skipped",
+                reason = "ci_network_limitations",
+                "Docker installation validation skipped"
+            );
+            warn!(
+                action = "docker_validation",
+                note = "expected_in_ci",
+                "This is expected in CI environments with network limitations"
+            );
+            warn!(
+                action = "docker_validation",
+                note = "playbook_success",
+                "The playbook ran successfully but Docker installation was skipped"
+            );
             return Ok(()); // Don't fail the test, just skip validation
         };
 
         let docker_version = docker_version.trim();
-        info!("✅ Docker installation validated");
-        info!("   ✓ Docker version: {docker_version}");
+        info!(
+            action = "docker_validation",
+            status = "success",
+            "Docker installation validated"
+        );
+        info!(
+            action = "docker_validation",
+            version = docker_version,
+            "Docker version detected"
+        );
 
         // Check Docker daemon status (only if Docker is installed)
         let daemon_active = self
@@ -54,9 +78,18 @@ impl RemoteAction for DockerValidator {
             })?;
 
         if daemon_active {
-            info!("   ✓ Docker daemon is active");
+            info!(
+                action = "docker_validation",
+                check = "daemon_active",
+                "Docker daemon is active"
+            );
         } else {
-            warn!("   ⚠️  Docker daemon check skipped (service may not be running)");
+            warn!(
+                action = "docker_validation",
+                check = "daemon_skipped",
+                reason = "service_not_running",
+                "Docker daemon check skipped"
+            );
         }
 
         Ok(())

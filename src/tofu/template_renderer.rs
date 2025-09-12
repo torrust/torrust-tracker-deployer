@@ -119,7 +119,11 @@ impl TofuTemplateRenderer {
     /// - Template copying fails
     /// - Template manager cannot provide required templates
     pub async fn render(&self) -> Result<(), ProvisionTemplateError> {
-        tracing::info!("🏗️  Stage 1: Rendering provision templates to build directory...");
+        tracing::info!(
+            stage = "provision_rendering",
+            template_type = "opentofu",
+            "Rendering provision templates to build directory"
+        );
 
         // Create build directory structure
         let build_tofu_dir = self.create_build_directory().await?;
@@ -132,11 +136,18 @@ impl TofuTemplateRenderer {
             .await?;
 
         tracing::debug!(
-            "   ✅ Provision templates copied to: {}",
-            build_tofu_dir.display()
+            stage = "provision_rendering",
+            template_type = "opentofu",
+            output_dir = %build_tofu_dir.display(),
+            "Provision templates copied"
         );
 
-        tracing::info!("✅ Stage 1 complete: Provision templates ready");
+        tracing::info!(
+            stage = "provision_rendering",
+            template_type = "opentofu",
+            status = "complete",
+            "Provision templates ready"
+        );
         Ok(())
     }
 

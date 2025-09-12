@@ -196,7 +196,11 @@ impl SshClient {
     /// This function will return an error if:
     /// * SSH connectivity cannot be established after 30 attempts (60 seconds total)
     pub async fn wait_for_connectivity(&self) -> Result<(), SshError> {
-        info!("🔌 Waiting for SSH connectivity to {}", self.host_ip);
+        info!(
+            operation = "ssh_connectivity",
+            host_ip = %self.host_ip,
+            "Waiting for SSH connectivity"
+        );
 
         let max_attempts = 30;
         let timeout_seconds = 60;
@@ -207,17 +211,23 @@ impl SshClient {
 
             match result {
                 Ok(true) => {
-                    info!("✅ SSH connectivity established to {}", self.host_ip);
+                    info!(
+                        operation = "ssh_connectivity",
+                        host_ip = %self.host_ip,
+                        status = "success",
+                        "SSH connectivity established"
+                    );
                     return Ok(());
                 }
                 Ok(false) => {
                     // Connection failed, continue trying
                     if (attempt + 1) % 5 == 0 {
                         info!(
-                            "   Still waiting for SSH to {}... (attempt {}/{})",
-                            self.host_ip,
-                            attempt + 1,
-                            max_attempts
+                            operation = "ssh_connectivity",
+                            host_ip = %self.host_ip,
+                            attempt = attempt + 1,
+                            max_attempts = max_attempts,
+                            "Still waiting for SSH connectivity"
                         );
                     }
 

@@ -170,7 +170,11 @@ impl AnsibleTemplateRenderer {
         template_manager: &TemplateManager,
         inventory_context: &InventoryContext,
     ) -> Result<(), ConfigurationTemplateError> {
-        tracing::info!("🎭 Stage 3: Rendering configuration templates with variables...");
+        tracing::info!(
+            stage = "configuration_rendering",
+            template_type = "ansible",
+            "Rendering configuration templates with variables"
+        );
 
         // Create build directory structure
         let build_ansible_dir = self.create_build_directory().await?;
@@ -183,19 +187,30 @@ impl AnsibleTemplateRenderer {
             .await?;
 
         tracing::debug!(
-            "   ✅ Configuration templates rendered to: {}",
-            build_ansible_dir.display()
+            stage = "configuration_rendering",
+            template_type = "ansible",
+            output_dir = %build_ansible_dir.display(),
+            "Configuration templates rendered"
         );
         tracing::debug!(
-            "   ✅ Inventory rendered with IP: {}",
-            inventory_context.ansible_host()
+            stage = "configuration_rendering",
+            template_type = "ansible_inventory",
+            ansible_host = %inventory_context.ansible_host(),
+            "Inventory rendered with IP"
         );
         tracing::debug!(
-            "   ✅ Inventory rendered with SSH key: {}",
-            inventory_context.ansible_ssh_private_key_file()
+            stage = "configuration_rendering",
+            template_type = "ansible_inventory",
+            ssh_key = %inventory_context.ansible_ssh_private_key_file(),
+            "Inventory rendered with SSH key"
         );
 
-        tracing::info!("✅ Stage 3 complete: Configuration templates ready");
+        tracing::info!(
+            stage = "configuration_rendering",
+            template_type = "ansible",
+            status = "complete",
+            "Configuration templates ready"
+        );
         Ok(())
     }
 

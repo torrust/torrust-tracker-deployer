@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tempfile::TempDir;
 use tracing::{error, info, warn};
-use tracing_subscriber::fmt;
+use tracing_subscriber::EnvFilter;
 
 // Import command execution system
 use torrust_tracker_deploy::command_wrappers::ssh::SshClient;
@@ -71,10 +71,15 @@ impl TestEnvironment {
         // Clean and prepare templates directory
         Self::clean_and_prepare_templates(&services)?;
 
-        info!("📁 Temporary directory: {}", temp_dir.path().display());
         info!(
-            "📄 Templates directory: {}",
-            services.template_manager.templates_dir().display()
+            environment = "temporary_directory",
+            path = %temp_dir.path().display(),
+            "Temporary directory created"
+        );
+        info!(
+            environment = "templates_directory",
+            path = %services.template_manager.templates_dir().display(),
+            "Templates directory configured"
         );
 
         Ok(Self {
@@ -88,7 +93,7 @@ impl TestEnvironment {
     fn setup_ssh_key(
         project_root: &std::path::Path,
         temp_dir: &TempDir,
-        ssh_key_path: &std::path::Path,
+        _ssh_key_path: &std::path::Path,
     ) -> Result<()> {
         // Copy SSH private key from fixtures to temp directory
         let fixtures_ssh_key = project_root.join("fixtures/testing_rsa");
@@ -107,8 +112,9 @@ impl TestEnvironment {
         }
 
         info!(
-            "🔑 SSH key copied to temporary location: {}",
-            ssh_key_path.display()
+            operation = "ssh_key_setup",
+            location = %temp_ssh_key.display(),
+            "SSH key copied to temporary location"
         );
 
         Ok(())
@@ -117,7 +123,10 @@ impl TestEnvironment {
     /// Clean and prepare templates directory to ensure fresh embedded templates
     fn clean_and_prepare_templates(services: &Services) -> Result<()> {
         // Clean templates directory to ensure we use fresh templates from embedded resources
-        info!("🧹 Cleaning templates directory to ensure fresh embedded templates...");
+        info!(
+            operation = "clean_templates",
+            "Cleaning templates directory to ensure fresh embedded templates"
+        );
         services
             .template_manager
             .reset_templates_dir()
@@ -164,22 +173,38 @@ impl TestEnvironment {
     }
 
     fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
-        info!("🎭 Stage 4: Running Ansible playbook: {playbook}");
+        info!(
+            stage = "ansible_execution",
+            playbook = playbook,
+            "Running Ansible playbook"
+        );
 
         self.services
             .ansible_client
             .run_playbook(playbook)
             .context(format!("Failed to run Ansible playbook: {playbook}"))?;
 
-        info!("✅ Stage 4: Ansible playbook executed successfully");
+        info!(
+            stage = "ansible_execution",
+            playbook = playbook,
+            status = "success",
+            "Ansible playbook executed successfully"
+        );
         Ok(())
     }
 
     fn provision_infrastructure(&self) -> Result<IpAddr> {
-        info!("🚀 Stage 2: Provisioning test infrastructure...");
+        info!(
+            stage = "infrastructure_provisioning",
+            "Provisioning test infrastructure"
+        );
 
         // Initialize OpenTofu
-        info!("   Initializing OpenTofu...");
+        info!(
+            stage = "infrastructure_provisioning",
+            operation = "init",
+            "Initializing OpenTofu"
+        );
         self.services
             .opentofu_client
             .init()
@@ -187,7 +212,11 @@ impl TestEnvironment {
             .context("Failed to initialize OpenTofu")?;
 
         // Apply infrastructure
-        info!("   Applying infrastructure...");
+        info!(
+            stage = "infrastructure_provisioning",
+            operation = "apply",
+            "Applying infrastructure"
+        );
         self.services
             .opentofu_client
             .apply(true) // auto_approve = true
@@ -215,9 +244,13 @@ impl TestEnvironment {
             .get_instance_ip()
             .context("Failed to get instance IP from LXD client")?;
 
-        info!("✅ Stage 2 complete: Infrastructure provisioned");
-        info!("   Instance IP from OpenTofu: {opentofu_instance_ip}");
-        info!("   Instance IP from LXD client: {lxd_instance_ip}");
+        info!(
+            stage = "infrastructure_provisioning",
+            status = "complete",
+            opentofu_ip = %opentofu_instance_ip,
+            lxd_ip = %lxd_instance_ip,
+            "Infrastructure provisioned successfully"
+        );
 
         // Return the IP from OpenTofu as it's our preferred source
         Ok(opentofu_instance_ip)
@@ -245,13 +278,17 @@ impl TestEnvironment {
 
     fn cleanup(&self) {
         if self.config.keep_env {
-            info!("🔒 Keeping test environment as requested");
-            info!("   Instance: torrust-vm");
-            info!("   Connect with: lxc exec torrust-vm -- /bin/bash");
+            info!(
+                operation = "cleanup",
+                action = "keep_environment",
+                instance = "torrust-vm",
+                connect_command = "lxc exec torrust-vm -- /bin/bash",
+                "Keeping test environment as requested"
+            );
             return;
         }
 
-        info!("🧹 Cleaning up test environment...");
+        info!(operation = "cleanup", "Cleaning up test environment");
 
         // Destroy infrastructure using OpenTofuClient
         let result = self
@@ -261,8 +298,17 @@ impl TestEnvironment {
             .map_err(anyhow::Error::from);
 
         match result {
-            Ok(_) => info!("✅ Test environment cleaned up successfully"),
-            Err(e) => warn!("⚠️  Warning: Cleanup failed: {e}"),
+            Ok(_) => info!(
+                operation = "cleanup",
+                status = "success",
+                "Test environment cleaned up successfully"
+            ),
+            Err(e) => warn!(
+                operation = "cleanup",
+                status = "failed",
+                error = %e,
+                "Cleanup failed"
+            ),
         }
     }
 }
@@ -280,10 +326,14 @@ impl Drop for TestEnvironment {
 }
 
 async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Result<()> {
-    info!("🔍 Starting deployment validation...");
+    info!(stage = "validation", "Starting deployment validation");
 
     // Validate cloud-init completion
-    info!("   Validating cloud-init completion...");
+    info!(
+        stage = "validation",
+        component = "cloud_init",
+        "Validating cloud-init completion"
+    );
     let cloud_init_validator = CloudInitValidator::new(
         &env.config.ssh_config.ssh_key_path,
         &env.config.ssh_config.ssh_username,
@@ -295,7 +345,11 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         .map_err(|e| anyhow::anyhow!(e))?;
 
     // Validate Docker installation
-    info!("   Validating Docker installation...");
+    info!(
+        stage = "validation",
+        component = "docker",
+        "Validating Docker installation"
+    );
     let docker_validator = DockerValidator::new(
         &env.config.ssh_config.ssh_key_path,
         &env.config.ssh_config.ssh_username,
@@ -307,7 +361,11 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         .map_err(|e| anyhow::anyhow!(e))?;
 
     // Validate Docker Compose installation
-    info!("   Validating Docker Compose installation...");
+    info!(
+        stage = "validation",
+        component = "docker_compose",
+        "Validating Docker Compose installation"
+    );
     let docker_compose_validator = DockerComposeValidator::new(
         &env.config.ssh_config.ssh_key_path,
         &env.config.ssh_config.ssh_username,
@@ -318,18 +376,21 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 
-    info!("✅ All deployment validations passed!");
+    info!(
+        stage = "validation",
+        status = "success",
+        "All deployment validations passed"
+    );
     Ok(())
 }
 
 async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
-    info!("🧪 Starting full deployment E2E test with template-based workflow");
-    info!("   This will test the complete 4-stage template system:");
-    info!("   Stage 1: Render provision templates to build/");
-    info!("   Stage 2: Provision VM with OpenTofu from build/");
-    info!("   Stage 3: Render configuration templates with variables");
-    info!("   Stage 4: Run Ansible playbooks from build/");
-    info!("");
+    info!(
+        test_type = "full_deployment",
+        workflow = "template_based",
+        stages = 4,
+        "Starting full deployment E2E test"
+    );
 
     // Stage 1: Render provision templates to build/tofu/
     env.render_provision_templates().await?;
@@ -352,26 +413,39 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     env.render_configuration_templates(&instance_ip).await?;
 
     // Stage 4: Run Ansible playbooks from build directory
-    info!("📋 Step 1: Waiting for cloud-init completion...");
+    info!(
+        step = 1,
+        action = "wait_cloud_init",
+        "Waiting for cloud-init completion"
+    );
     env.run_ansible_playbook("wait-cloud-init")?;
 
     // Run the install-docker playbook
     // NOTE: We skip the update-apt-cache playbook in E2E tests to avoid CI network issues
     // The install-docker playbook now assumes the cache is already updated or will handle stale cache gracefully
-    info!("📋 Step 2: Installing Docker...");
+    info!(step = 2, action = "install_docker", "Installing Docker");
     env.run_ansible_playbook("install-docker")?;
 
     // Run the install-docker-compose playbook
-    info!("📋 Step 3: Installing Docker Compose...");
+    info!(
+        step = 3,
+        action = "install_docker_compose",
+        "Installing Docker Compose"
+    );
     env.run_ansible_playbook("install-docker-compose")?;
 
-    info!("✅ Deployment stages completed successfully!");
-    info!("   ✅ Infrastructure provisioned with OpenTofu");
-    info!("   ✅ Configuration rendered with Ansible templates");
-    info!("   ✅ Ansible playbooks executed successfully");
+    info!(
+        stage = "deployment",
+        status = "success",
+        "Deployment stages completed successfully"
+    );
 
-    info!("🎉 Full deployment E2E test completed successfully!");
-    info!("   ℹ️  Docker/Docker Compose installation status varies based on network connectivity");
+    info!(
+        test_type = "full_deployment",
+        status = "success",
+        note = "Docker/Docker Compose installation status varies based on network connectivity",
+        "Full deployment E2E test completed successfully"
+    );
 
     // Return the instance IP for validation in main
     Ok(instance_ip)
@@ -379,13 +453,20 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing subscriber to display logs from OpenTofuClient
-    fmt::init();
+    // Initialize tracing subscriber with proper configuration for structured logging
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .init();
 
     let cli = Cli::parse();
 
-    info!("🚀 Torrust Tracker Deploy E2E Tests");
-    info!("===========================================");
+    info!(
+        application = "torrust_tracker_deploy",
+        test_suite = "e2e_tests",
+        "Starting E2E tests"
+    );
 
     let env = TestEnvironment::new(cli.keep, cli.templates_dir)?;
 
@@ -395,12 +476,14 @@ async fn main() -> Result<()> {
 
     // Handle deployment results and run validation if deployment succeeded
     let validation_result = match result {
-        Ok(instance_ip) => {
-            info!("");
-            validate_deployment(&env, &instance_ip).await
-        }
+        Ok(instance_ip) => validate_deployment(&env, &instance_ip).await,
         Err(deployment_err) => {
-            error!("❌ Deployment failed: {deployment_err}");
+            error!(
+                stage = "deployment",
+                status = "failed",
+                error = %deployment_err,
+                "Deployment failed"
+            );
             Err(deployment_err)
         }
     };
@@ -408,16 +491,30 @@ async fn main() -> Result<()> {
     env.cleanup();
 
     let test_duration = test_start.elapsed();
-    info!("📊 Test execution time: {test_duration:?}");
+    info!(
+        performance = "test_execution",
+        duration_secs = test_duration.as_secs_f64(),
+        duration = ?test_duration,
+        "Test execution completed"
+    );
 
     // Handle final results
     match validation_result {
         Ok(()) => {
-            info!("✅ All tests passed and cleanup completed successfully");
+            info!(
+                test_suite = "e2e_tests",
+                status = "success",
+                "All tests passed and cleanup completed successfully"
+            );
             Ok(())
         }
         Err(test_err) => {
-            error!("❌ Test failed: {test_err}");
+            error!(
+                test_suite = "e2e_tests",
+                status = "failed",
+                error = %test_err,
+                "Test failed"
+            );
             Err(test_err)
         }
     }

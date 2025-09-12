@@ -71,9 +71,17 @@ impl CommandExecutor {
             command.current_dir(dir);
         }
 
-        info!("🔧 Running: {}", command_display);
+        info!(
+            operation = "command_execution",
+            command = %command_display,
+            "Running command"
+        );
         if let Some(dir) = working_dir {
-            info!("   Working directory: {}", dir.display());
+            info!(
+                operation = "command_execution",
+                working_directory = %dir.display(),
+                "Working directory set"
+            );
         }
 
         let output = command

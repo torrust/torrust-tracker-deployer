@@ -30,7 +30,10 @@ impl RemoteAction for CloudInitValidator {
     }
 
     async fn execute(&self, _server_ip: &IpAddr) -> Result<(), RemoteActionError> {
-        info!("🔍 Validating cloud-init completion...");
+        info!(
+            action = "cloud_init_validation",
+            "Validating cloud-init completion"
+        );
 
         // Check cloud-init status
         let status_output = self
@@ -64,9 +67,21 @@ impl RemoteAction for CloudInitValidator {
             });
         }
 
-        info!("✅ Cloud-init validation passed");
-        info!("   ✓ Cloud-init status is 'done'");
-        info!("   ✓ Completion marker file exists");
+        info!(
+            action = "cloud_init_validation",
+            status = "success",
+            "Cloud-init validation passed"
+        );
+        info!(
+            action = "cloud_init_validation",
+            check = "status_done",
+            "Cloud-init status is 'done'"
+        );
+        info!(
+            action = "cloud_init_validation",
+            check = "completion_marker",
+            "Completion marker file exists"
+        );
 
         Ok(())
     }

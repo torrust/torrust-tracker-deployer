@@ -24,11 +24,20 @@ impl RenderOpenTofuTemplatesStep {
     /// Returns an error if the template rendering fails or if there are issues
     /// with the template manager or renderer.
     pub async fn execute(&self) -> Result<(), ProvisionTemplateError> {
-        info!("📝 Stage 1: Rendering OpenTofu templates...");
+        info!(
+            step = "render_opentofu_templates",
+            stage = 1,
+            "Rendering OpenTofu templates"
+        );
 
         self.tofu_template_renderer.render().await?;
 
-        info!("✅ Stage 1: OpenTofu templates rendered successfully");
+        info!(
+            step = "render_opentofu_templates",
+            stage = 1,
+            status = "success",
+            "OpenTofu templates rendered successfully"
+        );
 
         Ok(())
     }
