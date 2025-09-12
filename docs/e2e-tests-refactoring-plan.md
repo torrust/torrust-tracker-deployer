@@ -162,7 +162,7 @@ src/
 ProvisionCommand:
 ├── ✅ RenderOpenTofuTemplatesStep   // Template rendering - COMPLETED
 ├── ✅ InitializeInfrastructureStep  // tofu init - COMPLETED & INTEGRATED INTO E2E TESTS
-├── PlanInfrastructureStep           // tofu plan
+├── ✅ PlanInfrastructureStep        // tofu plan - COMPLETED & INTEGRATED INTO E2E TESTS
 ├── ✅ ApplyInfrastructureStep       // tofu apply - COMPLETED & INTEGRATED INTO E2E TESTS
 ├── GetInstanceInfoStep              // Extract IP from tofu outputs
 ├── WaitForSSHConnectivityStep       // Validate SSH access
