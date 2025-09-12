@@ -62,15 +62,7 @@ impl RenderAnsibleTemplatesStep {
         );
 
         // Create inventory context with runtime variables
-        let inventory_context = {
-            let host = AnsibleHost::from(self.instance_ip);
-            let ssh_key = SshPrivateKeyFile::new(&self.ssh_key_path)?;
-
-            InventoryContext::builder()
-                .with_host(host)
-                .with_ssh_priv_key_path(ssh_key)
-                .build()?
-        };
+        let inventory_context = self.create_inventory_context()?;
 
         // Use the configuration renderer to handle all template rendering
         self.ansible_template_renderer
@@ -85,5 +77,23 @@ impl RenderAnsibleTemplatesStep {
         );
 
         Ok(())
+    }
+
+    /// Create inventory context with runtime variables from instance data
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - SSH key path parsing fails
+    /// - Inventory context creation fails
+    fn create_inventory_context(&self) -> Result<InventoryContext, RenderAnsibleTemplatesError> {
+        let host = AnsibleHost::from(self.instance_ip);
+        let ssh_key = SshPrivateKeyFile::new(&self.ssh_key_path)?;
+
+        InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build()
+            .map_err(RenderAnsibleTemplatesError::from)
     }
 }
