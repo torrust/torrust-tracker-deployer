@@ -1,3 +1,3 @@
 pub mod template;
 
-pub use template::RenderOpenTofuTemplatesStep;
+pub use template::{RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep};

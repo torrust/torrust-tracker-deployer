@@ -11,16 +11,12 @@ use tracing_subscriber::EnvFilter;
 use torrust_tracker_deploy::command_wrappers::ssh::SshClient;
 use torrust_tracker_deploy::config::{Config, SshConfig};
 use torrust_tracker_deploy::container::Services;
-// Import template system
-use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
-    AnsibleHost, InventoryContext, SshPrivateKeyFile,
-};
 // Import remote actions
 use torrust_tracker_deploy::actions::{
     CloudInitValidator, DockerComposeValidator, DockerValidator, RemoteAction,
 };
 // Import steps
-use torrust_tracker_deploy::steps::RenderOpenTofuTemplatesStep;
+use torrust_tracker_deploy::steps::{RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep};
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -141,35 +137,6 @@ impl TestEnvironment {
         step.execute()
             .await
             .with_context(|| "Failed to render provision templates")
-    }
-
-    /// Stage 3: Render configuration templates (`Ansible`) with runtime variables to build/ansible/
-    async fn render_configuration_templates(&self, instance_ip: &IpAddr) -> Result<()> {
-        // Create inventory context with runtime variables
-        let inventory_context = {
-            let host = AnsibleHost::from(*instance_ip);
-            let ssh_key = SshPrivateKeyFile::new(
-                self.config
-                    .ssh_config
-                    .ssh_key_path
-                    .to_string_lossy()
-                    .as_ref(),
-            )
-            .context("Failed to parse SSH key path")?;
-
-            InventoryContext::builder()
-                .with_host(host)
-                .with_ssh_priv_key_path(ssh_key)
-                .build()
-                .context("Failed to create InventoryContext")?
-        };
-
-        // Use the configuration renderer to handle all template rendering
-        self.services
-            .ansible_template_renderer
-            .render(&self.services.template_manager, &inventory_context)
-            .await
-            .map_err(|e| anyhow::anyhow!(e))
     }
 
     fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
@@ -410,7 +377,19 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
         .map_err(|e| anyhow::anyhow!(e))?;
 
     // Stage 3: Render configuration templates with runtime variables
-    env.render_configuration_templates(&instance_ip).await?;
+    let step = RenderAnsibleTemplatesStep::new(
+        Arc::clone(&env.services.ansible_template_renderer),
+        Arc::clone(&env.services.template_manager),
+        env.config
+            .ssh_config
+            .ssh_key_path
+            .to_string_lossy()
+            .to_string(),
+        instance_ip,
+    );
+    step.execute()
+        .await
+        .with_context(|| "Failed to render configuration templates")?;
 
     // Stage 4: Run Ansible playbooks from build directory
     info!(
