@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::ansible::AnsibleTemplateRenderer;
 use crate::command_wrappers::ansible::AnsibleClient;
 use crate::command_wrappers::lxd::LxdClient;
@@ -9,14 +11,14 @@ use crate::tofu::TofuTemplateRenderer;
 /// Service clients and renderers for performing actions
 pub struct Services {
     // Command wrappers
-    pub opentofu_client: OpenTofuClient,
-    pub lxd_client: LxdClient,
-    pub ansible_client: AnsibleClient,
+    pub opentofu_client: Arc<OpenTofuClient>,
+    pub lxd_client: Arc<LxdClient>,
+    pub ansible_client: Arc<AnsibleClient>,
 
     // Template related services
-    pub template_manager: TemplateManager,
-    pub tofu_template_renderer: TofuTemplateRenderer,
-    pub ansible_template_renderer: AnsibleTemplateRenderer,
+    pub template_manager: Arc<TemplateManager>,
+    pub tofu_template_renderer: Arc<TofuTemplateRenderer>,
+    pub ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
 }
 
 impl Services {
@@ -51,14 +53,14 @@ impl Services {
 
         Self {
             // Command wrappers
-            opentofu_client,
-            lxd_client,
-            ansible_client,
+            opentofu_client: Arc::new(opentofu_client),
+            lxd_client: Arc::new(lxd_client),
+            ansible_client: Arc::new(ansible_client),
 
             // Template related services
-            template_manager,
-            tofu_template_renderer: provision_renderer,
-            ansible_template_renderer: configuration_renderer,
+            template_manager: Arc::new(template_manager),
+            tofu_template_renderer: Arc::new(provision_renderer),
+            ansible_template_renderer: Arc::new(configuration_renderer),
         }
     }
 }
