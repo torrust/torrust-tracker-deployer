@@ -1,3 +1,5 @@
 pub mod template;
 
-pub use template::{RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep};
+pub use template::{
+    RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
+};
