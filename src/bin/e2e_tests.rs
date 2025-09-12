@@ -17,7 +17,8 @@ use torrust_tracker_deploy::actions::{
 };
 // Import steps
 use torrust_tracker_deploy::steps::{
-    InitializeInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
+    ApplyInfrastructureStep, InitializeInfrastructureStep, RenderAnsibleTemplatesStep,
+    RenderOpenTofuTemplatesStep,
 };
 
 #[derive(Parser)]
@@ -176,15 +177,10 @@ impl TestEnvironment {
             .map_err(anyhow::Error::from)
             .context("Failed to initialize OpenTofu")?;
 
-        // Apply infrastructure
-        info!(
-            stage = "infrastructure_provisioning",
-            operation = "apply",
-            "Applying infrastructure"
-        );
-        self.services
-            .opentofu_client
-            .apply(true) // auto_approve = true
+        // Apply infrastructure using the step
+        let apply_step = ApplyInfrastructureStep::new(Arc::clone(&self.services.opentofu_client));
+        apply_step
+            .execute()
             .map_err(anyhow::Error::from)
             .context("Failed to apply OpenTofu configuration")?;
 
