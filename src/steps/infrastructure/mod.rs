@@ -1,7 +1,7 @@
-pub mod apply_infrastructure;
-pub mod initialize_infrastructure;
-pub mod plan_infrastructure;
+pub mod apply;
+pub mod initialize;
+pub mod plan;
 
-pub use apply_infrastructure::ApplyInfrastructureStep;
-pub use initialize_infrastructure::InitializeInfrastructureStep;
-pub use plan_infrastructure::PlanInfrastructureStep;
+pub use apply::ApplyInfrastructureStep;
+pub use initialize::InitializeInfrastructureStep;
+pub use plan::PlanInfrastructureStep;
