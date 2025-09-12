@@ -17,6 +17,8 @@ use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
 use torrust_tracker_deploy::actions::{
     CloudInitValidator, DockerComposeValidator, DockerValidator, RemoteAction,
 };
+// Import steps
+use torrust_tracker_deploy::steps::RenderOpenTofuTemplatesStep;
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -137,11 +139,10 @@ impl TestEnvironment {
 
     /// Stage 1: Render provision templates (`OpenTofu`) to build/tofu/ directory
     async fn render_provision_templates(&self) -> Result<()> {
-        self.services
-            .tofu_template_renderer
-            .render(&self.services.template_manager)
+        let step = RenderOpenTofuTemplatesStep::new(&self.services, self.config.verbose);
+        step.execute()
             .await
-            .map_err(|e| anyhow::anyhow!(e))
+            .with_context(|| "Failed to render provision templates")
     }
 
     /// Stage 3: Render configuration templates (`Ansible`) with runtime variables to build/ansible/

@@ -34,13 +34,13 @@ impl RemoteAction for DockerComposeValidator {
         info!("🔍 Validating Docker Compose installation...");
 
         // First check if Docker is available (Docker Compose requires Docker)
-        let docker_available = self
-            .ssh_client
-            .check_command("docker --version")
-            .map_err(|source| RemoteActionError::SshCommandFailed {
-                action_name: self.name().to_string(),
-                source,
-            })?;
+        let docker_available =
+            self.ssh_client
+                .check_command("docker --version")
+                .map_err(|source| RemoteActionError::SshCommandFailed {
+                    action_name: self.name().to_string(),
+                    source,
+                })?;
 
         if !docker_available {
             warn!("⚠️  Docker Compose validation skipped");
@@ -50,10 +50,7 @@ impl RemoteAction for DockerComposeValidator {
         }
 
         // Check Docker Compose version
-        let Ok(compose_version) = self
-            .ssh_client
-            .execute("docker-compose --version")
-        else {
+        let Ok(compose_version) = self.ssh_client.execute("docker-compose --version") else {
             warn!(
                 "⚠️  Docker Compose not found, this is expected if Docker installation was skipped"
             );
@@ -73,7 +70,9 @@ impl RemoteAction for DockerComposeValidator {
         // Create a temporary test docker-compose.yml file
         let create_test_success = self
             .ssh_client
-            .check_command(&format!("echo '{test_compose_content}' > /tmp/test-docker-compose.yml"))
+            .check_command(&format!(
+                "echo '{test_compose_content}' > /tmp/test-docker-compose.yml"
+            ))
             .map_err(|source| RemoteActionError::SshCommandFailed {
                 action_name: self.name().to_string(),
                 source,
