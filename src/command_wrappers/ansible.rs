@@ -161,7 +161,7 @@ mod tests {
             }
             Err(_) => {
                 // Expected if Ansible is not installed
-                println!("Ansible not available for testing");
+                tracing::warn!("Ansible not available for testing");
             }
         }
     }

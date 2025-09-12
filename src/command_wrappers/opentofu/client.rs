@@ -277,7 +277,7 @@ resource "null_resource" "test" {
             }
             Err(_) => {
                 // Expected if OpenTofu is not installed
-                println!("OpenTofu not available for testing");
+                tracing::warn!("OpenTofu not available for testing");
             }
         }
     }
@@ -298,7 +298,7 @@ resource "null_resource" "test" {
             }
             Err(_) => {
                 // Expected if OpenTofu is not installed
-                println!("OpenTofu not available for testing");
+                tracing::warn!("OpenTofu not available for testing");
             }
         }
     }
