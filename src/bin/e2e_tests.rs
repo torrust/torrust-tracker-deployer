@@ -17,8 +17,8 @@ use torrust_tracker_deploy::actions::{
 };
 // Import steps
 use torrust_tracker_deploy::steps::{
-    ApplyInfrastructureStep, InitializeInfrastructureStep, PlanInfrastructureStep,
-    RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
+    ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
+    PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
 };
 
 #[derive(Parser)]
@@ -191,17 +191,11 @@ impl TestEnvironment {
             .map_err(anyhow::Error::from)
             .context("Failed to apply OpenTofu configuration")?;
 
-        // Get the instance IP from OpenTofu outputs
-        // NOTE: We prefer OpenTofu outputs over provider-specific methods because:
-        // - If we add more providers (different than LXD) in the future, we have two options:
-        //   1. Use the method that each provider provides to get the IP
-        //   2. Use OpenTofu for all of them, so the OpenTofu output has a contract with this app.
-        //      It has to return always the instance info we expect.
-        // Using OpenTofu outputs provides a consistent interface across all providers.
-        let opentofu_instance_info = self
-            .services
-            .opentofu_client
-            .get_instance_info()
+        // Get instance info using the step
+        let get_instance_info_step =
+            GetInstanceInfoStep::new(Arc::clone(&self.services.opentofu_client));
+        let opentofu_instance_info = get_instance_info_step
+            .execute()
             .map_err(anyhow::Error::from)
             .context("Failed to get container info from OpenTofu outputs")?;
 

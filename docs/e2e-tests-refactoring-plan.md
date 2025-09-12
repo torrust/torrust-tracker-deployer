@@ -164,7 +164,7 @@ ProvisionCommand:
 ├── ✅ InitializeInfrastructureStep  // tofu init - COMPLETED
 ├── ✅ PlanInfrastructureStep        // tofu plan - COMPLETED
 ├── ✅ ApplyInfrastructureStep       // tofu apply - COMPLETED
-├── GetInstanceInfoStep              // Extract IP from tofu outputs
+├── ✅ GetInstanceInfoStep           // Extract IP from tofu outputs - COMPLETED
 ├── WaitForSSHConnectivityStep       // Validate SSH access
 └── WaitForCloudInitStep             // Wait for cloud-init completion
 

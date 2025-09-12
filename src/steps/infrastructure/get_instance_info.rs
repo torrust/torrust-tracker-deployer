@@ -1,0 +1,79 @@
+use std::sync::Arc;
+
+use tracing::info;
+
+use crate::command_wrappers::opentofu::client::{InstanceInfo, OpenTofuClient, OpenTofuError};
+
+/// Simple step that retrieves instance information from `OpenTofu` outputs
+///
+/// This step gets the instance IP from `OpenTofu` outputs rather than provider-specific methods
+/// to provide a consistent interface across all providers. If we add more providers in the future,
+/// the `OpenTofu` output provides a contract that always returns the expected instance info.
+pub struct GetInstanceInfoStep {
+    opentofu_client: Arc<OpenTofuClient>,
+}
+
+impl GetInstanceInfoStep {
+    #[must_use]
+    pub fn new(opentofu_client: Arc<OpenTofuClient>) -> Self {
+        Self { opentofu_client }
+    }
+
+    /// Execute the get instance info step
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * The `OpenTofu` output command fails
+    /// * The output cannot be parsed as JSON
+    /// * The `instance_info` section is missing or malformed
+    /// * The working directory does not exist or is not accessible
+    pub fn execute(&self) -> Result<InstanceInfo, OpenTofuError> {
+        info!(
+            step = "get_instance_info",
+            stage = 2,
+            "Getting instance information from OpenTofu outputs"
+        );
+
+        // Get the instance IP from OpenTofu outputs
+        // NOTE: We prefer OpenTofu outputs over provider-specific methods because:
+        // - If we add more providers (different than LXD) in the future, we have two options:
+        //   1. Use the method that each provider provides to get the IP
+        //   2. Use OpenTofu for all of them, so the OpenTofu output has a contract with this app.
+        //      It has to return always the instance info we expect.
+        // Using OpenTofu outputs provides a consistent interface across all providers.
+        let opentofu_instance_info = self.opentofu_client.get_instance_info()?;
+
+        info!(
+            step = "get_instance_info",
+            stage = 2,
+            status = "success",
+            ip_address = %opentofu_instance_info.ip_address,
+            instance_name = %opentofu_instance_info.name,
+            "Instance information retrieved successfully from OpenTofu outputs"
+        );
+
+        // Log output for debugging if needed
+        tracing::debug!(instance_info = ?opentofu_instance_info, "OpenTofu instance info");
+
+        Ok(opentofu_instance_info)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::command_wrappers::opentofu::client::OpenTofuClient;
+
+    use super::*;
+
+    #[test]
+    fn it_should_create_get_instance_info_step() {
+        let opentofu_client = Arc::new(OpenTofuClient::new("/tmp"));
+
+        let _step = GetInstanceInfoStep::new(opentofu_client);
+
+        // If we reach this point, the step was created successfully
+    }
+}
