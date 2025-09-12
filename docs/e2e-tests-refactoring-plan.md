@@ -160,7 +160,7 @@ src/
 // Level 1: Commands and their constituent Level 2: Steps
 
 ProvisionCommand:
-├── ✅ RenderOpenTofuTemplatesStep   // Template rendering - COMPLETED
+├── ✅ RenderOpenTofuTemplatesStep   // Template rendering - COMPLETED & INTEGRATED INTO E2E TESTS
 ├── ✅ InitializeInfrastructureStep  // tofu init - COMPLETED & INTEGRATED INTO E2E TESTS
 ├── ✅ PlanInfrastructureStep        // tofu plan - COMPLETED & INTEGRATED INTO E2E TESTS
 ├── ✅ ApplyInfrastructureStep       // tofu apply - COMPLETED & INTEGRATED INTO E2E TESTS
@@ -169,7 +169,7 @@ ProvisionCommand:
 └── WaitForCloudInitStep             // Wait for cloud-init completion
 
 ConfigureCommand:
-├── ✅ RenderAnsibleTemplatesStep    // Template rendering with runtime vars - COMPLETED
+├── ✅ RenderAnsibleTemplatesStep    // Template rendering with runtime vars - COMPLETED & INTEGRATED INTO E2E TESTS
 ├── InstallDockerStep                // Docker installation via Ansible
 ├── InstallDockerComposeStep         // Docker Compose installation via Ansible
 └── ValidateRemoteServicesStep       // Validate installations
