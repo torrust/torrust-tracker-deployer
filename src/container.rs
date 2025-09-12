@@ -27,6 +27,7 @@ impl Services {
     pub fn new(config: &Config) -> Self {
         // Create template manager
         let template_manager = TemplateManager::new(config.templates_dir.clone());
+        let template_manager = Arc::new(template_manager);
 
         // Create OpenTofu client pointing to build/opentofu_subfolder directory
         let opentofu_client = OpenTofuClient::new(
@@ -44,8 +45,11 @@ impl Services {
         );
 
         // Create provision template renderer
-        let provision_renderer =
-            TofuTemplateRenderer::new(config.build_dir.clone(), config.verbose);
+        let provision_renderer = TofuTemplateRenderer::new(
+            template_manager.clone(),
+            config.build_dir.clone(),
+            config.verbose,
+        );
 
         // Create configuration template renderer
         let configuration_renderer =
@@ -58,7 +62,7 @@ impl Services {
             ansible_client: Arc::new(ansible_client),
 
             // Template related services
-            template_manager: Arc::new(template_manager),
+            template_manager: template_manager.clone(),
             tofu_template_renderer: Arc::new(provision_renderer),
             ansible_template_renderer: Arc::new(configuration_renderer),
         }

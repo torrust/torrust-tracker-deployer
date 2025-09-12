@@ -39,6 +39,7 @@
 //!     extensible for other providers (Multipass, Docker, etc.) following the strategy pattern.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use thiserror::Error;
 
 use crate::template::{TemplateManager, TemplateManagerError};
@@ -76,6 +77,7 @@ pub enum ProvisionTemplateError {
 /// This collaborator is responsible for preparing `OpenTofu` templates for deployment stages.
 /// It copies static templates from the template manager to the specified build directory.
 pub struct TofuTemplateRenderer {
+    template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
     verbose: bool,
 }
@@ -91,10 +93,16 @@ impl TofuTemplateRenderer {
     ///
     /// # Arguments
     ///
+    /// * `template_manager` - The template manager to source templates from
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `verbose` - Whether to enable verbose logging
-    pub fn new<P: AsRef<Path>>(build_dir: P, verbose: bool) -> Self {
+    pub fn new<P: AsRef<Path>>(
+        template_manager: Arc<TemplateManager>,
+        build_dir: P,
+        verbose: bool,
+    ) -> Self {
         Self {
+            template_manager,
             build_dir: build_dir.as_ref().to_path_buf(),
             verbose,
         }
@@ -107,10 +115,6 @@ impl TofuTemplateRenderer {
     /// 2. Copies static templates (main.tf, cloud-init.yml) from the template manager
     /// 3. Provides verbose logging if enabled
     ///
-    /// # Arguments
-    ///
-    /// * `template_manager` - The template manager to source templates from
-    ///
     /// # Returns
     ///
     /// * `Result<(), ProvisionTemplateError>` - Success or error from the template rendering operation
@@ -121,10 +125,7 @@ impl TofuTemplateRenderer {
     /// - Directory creation fails
     /// - Template copying fails
     /// - Template manager cannot provide required templates
-    pub async fn render(
-        &self,
-        template_manager: &TemplateManager,
-    ) -> Result<(), ProvisionTemplateError> {
+    pub async fn render(&self) -> Result<(), ProvisionTemplateError> {
         tracing::info!("🏗️  Stage 1: Rendering provision templates to build directory...");
 
         // Create build directory structure
@@ -134,7 +135,7 @@ impl TofuTemplateRenderer {
         let template_files = vec!["main.tf", "cloud-init.yml"];
 
         // Copy all template files
-        self.copy_templates(template_manager, &template_files, &build_tofu_dir)
+        self.copy_templates(&template_files, &build_tofu_dir)
             .await?;
 
         if self.verbose {
@@ -194,7 +195,6 @@ impl TofuTemplateRenderer {
     ///
     /// # Arguments
     ///
-    /// * `template_manager` - The template manager to source templates from
     /// * `file_names` - List of file names to copy (without path prefix)
     /// * `destination_dir` - The directory where files will be copied
     ///
@@ -209,7 +209,6 @@ impl TofuTemplateRenderer {
     /// - File copying fails for any of the specified files
     async fn copy_templates(
         &self,
-        template_manager: &TemplateManager,
         file_names: &[&str],
         destination_dir: &Path,
     ) -> Result<(), ProvisionTemplateError> {
@@ -222,13 +221,13 @@ impl TofuTemplateRenderer {
         for file_name in file_names {
             let template_path = Self::build_template_path(file_name);
 
-            let source_path =
-                template_manager
-                    .get_template_path(&template_path)
-                    .map_err(|source| ProvisionTemplateError::TemplatePathFailed {
-                        file_name: (*file_name).to_string(),
-                        source,
-                    })?;
+            let source_path = self
+                .template_manager
+                .get_template_path(&template_path)
+                .map_err(|source| ProvisionTemplateError::TemplatePathFailed {
+                    file_name: (*file_name).to_string(),
+                    source,
+                })?;
 
             let dest_path = destination_dir.join(file_name);
 
@@ -261,8 +260,9 @@ mod tests {
     async fn it_should_create_renderer_with_build_directory() {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = TofuTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, false);
 
         assert_eq!(renderer.build_dir, build_path);
         assert!(!renderer.verbose);
@@ -272,8 +272,9 @@ mod tests {
     async fn it_should_create_renderer_with_verbose_logging() {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = TofuTemplateRenderer::new(&build_path, true);
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, true);
 
         assert!(renderer.verbose);
     }
@@ -283,8 +284,9 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
         let expected_path = build_path.join("tofu/lxd");
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = TofuTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, false);
         let actual_path = renderer.build_opentofu_directory();
 
         assert_eq!(actual_path, expected_path);
@@ -318,8 +320,9 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
         let expected_path = build_path.join("tofu/lxd");
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = TofuTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, false);
         let created_path = renderer
             .create_build_directory()
             .await
@@ -351,7 +354,8 @@ mod tests {
             .unwrap();
 
         let build_path = readonly_path.join("build");
-        let renderer = TofuTemplateRenderer::new(&build_path, false);
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, false);
 
         let result = renderer.create_build_directory().await;
 
@@ -379,13 +383,13 @@ mod tests {
         let build_path = temp_dir.path().join("build");
 
         // Create a template manager with empty templates directory
-        let template_manager = TemplateManager::new(temp_dir.path());
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = TofuTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, false);
 
         // Try to copy a non-existent template
         let result = renderer
-            .copy_templates(&template_manager, &["nonexistent.tf"], &build_path)
+            .copy_templates(&["nonexistent.tf"], &build_path)
             .await;
 
         assert!(result.is_err(), "Should fail when template is not found");
@@ -420,7 +424,7 @@ mod tests {
             .unwrap();
 
         // Create template manager and ensure it has the template we need
-        let template_manager = TemplateManager::new(temp_dir.path());
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         template_manager
             .ensure_templates_dir()
             .expect("Failed to ensure templates dir");
@@ -434,11 +438,9 @@ mod tests {
             .await
             .expect("Failed to write test template");
 
-        let renderer = TofuTemplateRenderer::new(temp_dir.path(), false);
+        let renderer = TofuTemplateRenderer::new(template_manager, temp_dir.path(), false);
 
-        let result = renderer
-            .copy_templates(&template_manager, &["test.tf"], &build_path)
-            .await;
+        let result = renderer.copy_templates(&["test.tf"], &build_path).await;
 
         assert!(result.is_err(), "Should fail when file copy is denied");
         match result.unwrap_err() {
@@ -510,7 +512,8 @@ mod tests {
             .expect("Failed to create existing directory");
         assert!(tofu_path.exists(), "Directory should already exist");
 
-        let renderer = TofuTemplateRenderer::new(&build_path, false);
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, false);
         let created_path = renderer
             .create_build_directory()
             .await
@@ -525,14 +528,12 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
 
-        let template_manager = TemplateManager::new(temp_dir.path());
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = TofuTemplateRenderer::new(&build_path, false);
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, false);
 
         // Should succeed with empty array
-        let result = renderer
-            .copy_templates(&template_manager, &[], &build_path)
-            .await;
+        let result = renderer.copy_templates(&[], &build_path).await;
 
         assert!(result.is_ok(), "Should handle empty template files array");
     }
@@ -545,7 +546,7 @@ mod tests {
             .await
             .expect("Failed to create build directory");
 
-        let template_manager = TemplateManager::new(temp_dir.path());
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         template_manager
             .ensure_templates_dir()
             .expect("Failed to ensure templates dir");
@@ -559,11 +560,11 @@ mod tests {
             .await
             .expect("Failed to write test template");
 
-        let renderer = TofuTemplateRenderer::new(temp_dir.path(), false);
+        let renderer = TofuTemplateRenderer::new(template_manager, temp_dir.path(), false);
 
         // Copy the same file twice - should succeed (overwrite)
         let result = renderer
-            .copy_templates(&template_manager, &["main.tf", "main.tf"], &build_path)
+            .copy_templates(&["main.tf", "main.tf"], &build_path)
             .await;
 
         assert!(
@@ -583,7 +584,7 @@ mod tests {
         let build_path1 = temp_dir.path().join("build1");
         let build_path2 = temp_dir.path().join("build2");
 
-        let template_manager = TemplateManager::new(temp_dir.path());
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         template_manager
             .ensure_templates_dir()
             .expect("Failed to ensure templates dir");
@@ -600,8 +601,8 @@ mod tests {
             .await
             .expect("Failed to write test template 2");
 
-        let renderer1 = TofuTemplateRenderer::new(&build_path1, false);
-        let renderer2 = TofuTemplateRenderer::new(&build_path2, false);
+        let renderer1 = TofuTemplateRenderer::new(template_manager.clone(), &build_path1, false);
+        let renderer2 = TofuTemplateRenderer::new(template_manager, &build_path2, false);
 
         tokio::fs::create_dir_all(&build_path1)
             .await
@@ -612,8 +613,8 @@ mod tests {
 
         // Run both operations concurrently
         let (result1, result2) = tokio::join!(
-            renderer1.copy_templates(&template_manager, &["test1.tf"], &build_path1),
-            renderer2.copy_templates(&template_manager, &["test2.tf"], &build_path2)
+            renderer1.copy_templates(&["test1.tf"], &build_path1),
+            renderer2.copy_templates(&["test2.tf"], &build_path2)
         );
 
         assert!(result1.is_ok(), "First concurrent operation should succeed");
@@ -639,7 +640,7 @@ mod tests {
             .await
             .expect("Failed to create build directory");
 
-        let template_manager = TemplateManager::new(temp_dir.path());
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         template_manager
             .ensure_templates_dir()
             .expect("Failed to ensure templates dir");
@@ -653,11 +654,11 @@ mod tests {
             .await
             .expect("Failed to write existing template");
 
-        let renderer = TofuTemplateRenderer::new(temp_dir.path(), false);
+        let renderer = TofuTemplateRenderer::new(template_manager, temp_dir.path(), false);
 
         // Try to copy both existing and non-existing files
         let result = renderer
-            .copy_templates(&template_manager, &["exists.tf", "missing.tf"], &build_path)
+            .copy_templates(&["exists.tf", "missing.tf"], &build_path)
             .await;
 
         // Should fail on the missing template
@@ -684,7 +685,7 @@ mod tests {
             .await
             .expect("Failed to create build directory");
 
-        let template_manager = TemplateManager::new(temp_dir.path());
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         template_manager
             .ensure_templates_dir()
             .expect("Failed to ensure templates dir");
@@ -705,12 +706,10 @@ mod tests {
             file_names.push(file_name);
         }
 
-        let renderer = TofuTemplateRenderer::new(temp_dir.path(), false);
+        let renderer = TofuTemplateRenderer::new(template_manager, temp_dir.path(), false);
 
         let file_refs: Vec<&str> = file_names.iter().map(std::string::String::as_str).collect();
-        let result = renderer
-            .copy_templates(&template_manager, &file_refs, &build_path)
-            .await;
+        let result = renderer.copy_templates(&file_refs, &build_path).await;
 
         assert!(result.is_ok(), "Should handle large number of files");
 

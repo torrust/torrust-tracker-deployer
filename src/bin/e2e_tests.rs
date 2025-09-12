@@ -142,7 +142,6 @@ impl TestEnvironment {
     async fn render_provision_templates(&self) -> Result<()> {
         let step = RenderOpenTofuTemplatesStep::new(
             Arc::clone(&self.services.tofu_template_renderer),
-            Arc::clone(&self.services.template_manager),
         );
         step.execute()
             .await
