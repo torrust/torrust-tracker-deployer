@@ -16,6 +16,7 @@
 //!
 //! ```rust
 //! # use std::str::FromStr;
+//! # use std::sync::Arc;
 //! # use tempfile::TempDir;
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,8 +27,8 @@
 //! };
 //!
 //! let temp_dir = TempDir::new()?;
-//! let renderer = AnsibleTemplateRenderer::new(temp_dir.path());
-//! let template_manager = TemplateManager::new("/path/to/templates");
+//! let template_manager = Arc::new(TemplateManager::new("/path/to/templates"));
+//! let renderer = AnsibleTemplateRenderer::new(temp_dir.path(), template_manager);
 //!
 //! let host = AnsibleHost::from_str("192.168.1.100")?;
 //! let ssh_key = SshPrivateKeyFile::new("/path/to/ssh/key")?;
@@ -37,12 +38,13 @@
 //!     .build()?;
 //!
 //! // Note: This would require actual template files to work
-//! // renderer.render(&template_manager, &inventory_context).await?;
+//! // renderer.render(&inventory_context).await?;
 //! # Ok(())
 //! # }
 //! ```
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use thiserror::Error;
 
 use crate::template::file::File;
@@ -114,6 +116,7 @@ pub enum ConfigurationTemplateError {
 /// require runtime variable substitution (inventory files with IP addresses).
 pub struct AnsibleTemplateRenderer {
     build_dir: PathBuf,
+    template_manager: Arc<TemplateManager>,
 }
 
 impl AnsibleTemplateRenderer {
@@ -134,9 +137,11 @@ impl AnsibleTemplateRenderer {
     /// # Arguments
     ///
     /// * `build_dir` - The destination directory where templates will be rendered
-    pub fn new<P: AsRef<Path>>(build_dir: P) -> Self {
+    /// * `template_manager` - The template manager to source templates from
+    pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: Arc<TemplateManager>) -> Self {
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
+            template_manager,
         }
     }
 
@@ -150,7 +155,6 @@ impl AnsibleTemplateRenderer {
     ///
     /// # Arguments
     ///
-    /// * `template_manager` - The template manager to source templates from
     /// * `inventory_context` - Runtime context for inventory template rendering (IP, SSH keys)
     ///
     /// # Returns
@@ -167,7 +171,6 @@ impl AnsibleTemplateRenderer {
     /// - Runtime variable substitution fails
     pub async fn render(
         &self,
-        template_manager: &TemplateManager,
         inventory_context: &InventoryContext,
     ) -> Result<(), ConfigurationTemplateError> {
         tracing::info!(
@@ -180,10 +183,14 @@ impl AnsibleTemplateRenderer {
         let build_ansible_dir = self.create_build_directory().await?;
 
         // Render dynamic inventory template with runtime variables
-        Self::render_inventory_template(template_manager, inventory_context, &build_ansible_dir)?;
+        Self::render_inventory_template(
+            &self.template_manager,
+            inventory_context,
+            &build_ansible_dir,
+        )?;
 
         // Copy static Ansible files (config and playbooks)
-        self.copy_static_templates(template_manager, &build_ansible_dir)
+        self.copy_static_templates(&self.template_manager, &build_ansible_dir)
             .await?;
 
         tracing::debug!(
@@ -459,12 +466,20 @@ mod tests {
             .expect("Valid inventory context")
     }
 
+    /// Helper to create a test template manager for testing
+    #[allow(dead_code)]
+    fn create_test_template_manager() -> Arc<TemplateManager> {
+        // Create a temporary directory for templates in tests
+        Arc::new(TemplateManager::new("/tmp/test/templates"))
+    }
+
     #[tokio::test]
     async fn it_should_create_renderer_with_build_directory() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
+        let template_manager = create_test_template_manager();
 
-        let renderer = AnsibleTemplateRenderer::new(&build_path);
+        let renderer = AnsibleTemplateRenderer::new(&build_path, template_manager);
 
         assert_eq!(renderer.build_dir, build_path);
     }
@@ -474,8 +489,9 @@ mod tests {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
         let expected_path = build_path.join("ansible");
+        let template_manager = create_test_template_manager();
 
-        let renderer = AnsibleTemplateRenderer::new(&build_path);
+        let renderer = AnsibleTemplateRenderer::new(&build_path, template_manager);
         let actual_path = renderer.build_ansible_directory();
 
         assert_eq!(actual_path, expected_path);
@@ -499,7 +515,8 @@ mod tests {
     async fn it_should_create_build_directory_successfully() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
-        let renderer = AnsibleTemplateRenderer::new(&build_path);
+        let template_manager = create_test_template_manager();
+        let renderer = AnsibleTemplateRenderer::new(&build_path, template_manager);
 
         let result = renderer.create_build_directory().await;
 
@@ -515,7 +532,8 @@ mod tests {
         // Try to create a directory where we don't have permissions
         // Use a path that's likely to fail on most systems
         let invalid_path = Path::new("/root/invalid/path/that/should/not/exist");
-        let renderer = AnsibleTemplateRenderer::new(invalid_path);
+        let template_manager = create_test_template_manager();
+        let renderer = AnsibleTemplateRenderer::new(invalid_path, template_manager);
 
         let result = renderer.create_build_directory().await;
 

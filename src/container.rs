@@ -44,7 +44,8 @@ impl Services {
             TofuTemplateRenderer::new(template_manager.clone(), config.build_dir.clone());
 
         // Create configuration template renderer
-        let configuration_renderer = AnsibleTemplateRenderer::new(config.build_dir.clone());
+        let configuration_renderer =
+            AnsibleTemplateRenderer::new(config.build_dir.clone(), template_manager.clone());
 
         Self {
             // Command wrappers

@@ -4,16 +4,15 @@ use std::sync::Arc;
 use anyhow::Context;
 use tracing::info;
 
-use crate::ansible::template_renderer::{AnsibleTemplateRenderer, ConfigurationTemplateError};
+use crate::ansible::template_renderer::ConfigurationTemplateError;
+use crate::ansible::AnsibleTemplateRenderer;
 use crate::template::wrappers::ansible::inventory::{
     AnsibleHost, InventoryContext, SshPrivateKeyFile,
 };
-use crate::template::TemplateManager;
 
 /// Simple step that renders `Ansible` templates to the build directory with runtime variables
 pub struct RenderAnsibleTemplatesStep {
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-    template_manager: Arc<TemplateManager>,
     ssh_key_path: String,
     instance_ip: IpAddr,
 }
@@ -22,13 +21,11 @@ impl RenderAnsibleTemplatesStep {
     #[must_use]
     pub fn new(
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-        template_manager: Arc<TemplateManager>,
         ssh_key_path: String,
         instance_ip: IpAddr,
     ) -> Self {
         Self {
             ansible_template_renderer,
-            template_manager,
             ssh_key_path,
             instance_ip,
         }
@@ -62,7 +59,7 @@ impl RenderAnsibleTemplatesStep {
 
         // Use the configuration renderer to handle all template rendering
         self.ansible_template_renderer
-            .render(&self.template_manager, &inventory_context)
+            .render(&inventory_context)
             .await
             .map_err(|e: ConfigurationTemplateError| anyhow::anyhow!(e))?;
 
