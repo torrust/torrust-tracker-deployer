@@ -11,15 +11,13 @@ use tracing_subscriber::EnvFilter;
 use torrust_tracker_deploy::config::{Config, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 // Import remote actions
-use torrust_tracker_deploy::actions::{
-    CloudInitValidator, DockerComposeValidator, DockerValidator, RemoteAction,
-};
+use torrust_tracker_deploy::actions::{CloudInitValidator, DockerComposeValidator, RemoteAction};
 // Import steps
 use torrust_tracker_deploy::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     InstallDockerComposeStep, InstallDockerStep, PlanInfrastructureStep,
-    RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep, WaitForCloudInitStep,
-    WaitForSSHConnectivityStep,
+    RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep, ValidateDockerInstallationStep,
+    WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
 
 #[derive(Parser)]
@@ -59,7 +57,7 @@ impl TestEnvironment {
         // Create SSH credentials (no host IP needed yet)
         let ssh_credentials =
             SshCredentials::new(temp_ssh_key, temp_ssh_pub_key, "torrust".to_string());
-        
+
         // Create main configuration
         let config = Config::new(
             keep_env,
@@ -296,15 +294,10 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         .map_err(|e| anyhow::anyhow!(e))?;
 
     // Validate Docker installation
-    info!(
-        stage = "validation",
-        component = "docker",
-        "Validating Docker installation"
-    );
-    let docker_ssh_connection = env.config.ssh_config.clone().with_host(*instance_ip);
-    let docker_validator = DockerValidator::new(docker_ssh_connection);
-    docker_validator
-        .execute(instance_ip)
+    let validate_docker_step =
+        ValidateDockerInstallationStep::new(env.config.ssh_config.clone(), *instance_ip);
+    validate_docker_step
+        .execute()
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 

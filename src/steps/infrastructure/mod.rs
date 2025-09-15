@@ -4,6 +4,7 @@ pub mod initialize;
 pub mod install_docker;
 pub mod install_docker_compose;
 pub mod plan;
+pub mod validate_docker_installation;
 pub mod wait_cloud_init;
 pub mod wait_ssh_connectivity;
 
@@ -13,5 +14,6 @@ pub use initialize::InitializeInfrastructureStep;
 pub use install_docker::InstallDockerStep;
 pub use install_docker_compose::InstallDockerComposeStep;
 pub use plan::PlanInfrastructureStep;
+pub use validate_docker_installation::ValidateDockerInstallationStep;
 pub use wait_cloud_init::WaitForCloudInitStep;
 pub use wait_ssh_connectivity::WaitForSSHConnectivityStep;

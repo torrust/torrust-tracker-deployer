@@ -56,7 +56,7 @@ mod tests {
     fn it_should_create_install_docker_compose_step() {
         let ansible_client = Arc::new(AnsibleClient::new(PathBuf::from("test_inventory.yml")));
         let step = InstallDockerComposeStep::new(ansible_client);
-        
+
         // Test that the step can be created successfully
         assert_eq!(
             std::mem::size_of_val(&step),

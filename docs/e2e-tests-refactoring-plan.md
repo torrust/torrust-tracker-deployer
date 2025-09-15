@@ -186,7 +186,7 @@ RunCommand:
 └── GetServiceStatusStep             // Report service endpoints
 
 TestCommand:
-├── ValidateDockerInstallationStep   // Validate Docker is working
+├── ✅ ValidateDockerInstallationStep   // Validate Docker is working - COMPLETED
 ├── ValidateDockerComposeInstallationStep // Validate Docker Compose is working
 ├── ValidateTrackerStep              // Validate Torrust Tracker functionality
 └── ValidateRemoteServicesStep       // Overall validation
