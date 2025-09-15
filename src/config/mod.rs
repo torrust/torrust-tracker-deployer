@@ -21,7 +21,7 @@ pub struct Config {
     /// Contains SSH key paths and username settings that will be used
     /// when connecting to deployed instances. The host IP will be determined
     /// later when instances are provisioned.
-    pub ssh_config: SshCredentials,
+    pub ssh_credentials: SshCredentials,
 
     /// Subdirectory name for Ansible-related files within the build directory.
     ///
@@ -96,7 +96,7 @@ impl Config {
     ) -> Self {
         Self {
             keep_env,
-            ssh_config,
+            ssh_credentials: ssh_config,
             ansible_subfolder: "ansible".to_string(),
             opentofu_subfolder: "tofu/lxd".to_string(),
             templates_dir,

@@ -281,7 +281,7 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
 
     // Validate cloud-init completion
     let validate_cloud_init_step =
-        ValidateCloudInitCompletionStep::new(env.config.ssh_config.clone(), *instance_ip);
+        ValidateCloudInitCompletionStep::new(env.config.ssh_credentials.clone(), *instance_ip);
     validate_cloud_init_step
         .execute()
         .await
@@ -289,15 +289,17 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
 
     // Validate Docker installation
     let validate_docker_step =
-        ValidateDockerInstallationStep::new(env.config.ssh_config.clone(), *instance_ip);
+        ValidateDockerInstallationStep::new(env.config.ssh_credentials.clone(), *instance_ip);
     validate_docker_step
         .execute()
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 
     // Validate Docker Compose installation
-    let validate_docker_compose_step =
-        ValidateDockerComposeInstallationStep::new(env.config.ssh_config.clone(), *instance_ip);
+    let validate_docker_compose_step = ValidateDockerComposeInstallationStep::new(
+        env.config.ssh_credentials.clone(),
+        *instance_ip,
+    );
     validate_docker_compose_step
         .execute()
         .await
@@ -326,7 +328,7 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     let instance_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    let wait_ssh_connection = env.config.ssh_config.clone().with_host(instance_ip);
+    let wait_ssh_connection = env.config.ssh_credentials.clone().with_host(instance_ip);
     let wait_ssh_step = WaitForSSHConnectivityStep::new(wait_ssh_connection);
     wait_ssh_step
         .execute()
@@ -336,7 +338,7 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     // Stage 3: Render configuration templates with runtime variables
     let step = RenderAnsibleTemplatesStep::new(
         Arc::clone(&env.services.ansible_template_renderer),
-        env.config.ssh_config.ssh_priv_key_path.clone(),
+        env.config.ssh_credentials.ssh_priv_key_path.clone(),
         instance_ip,
     );
     step.execute()
