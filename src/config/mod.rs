@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 pub mod ssh;
-pub use ssh::SshConfig;
+pub use ssh::{SshConnection, SshCredentials};
 
 /// Configuration parameters for deployment environments.
 ///
@@ -17,11 +17,12 @@ pub struct Config {
     /// will be left running for manual inspection or reuse.
     pub keep_env: bool,
 
-    /// SSH configuration for remote connections.
+    /// SSH credentials for remote connections.
     ///
-    /// Contains SSH key path and username settings for connecting to
-    /// deployed instances during the deployment process.
-    pub ssh_config: SshConfig,
+    /// Contains SSH key paths and username settings that will be used
+    /// when connecting to deployed instances. The host IP will be determined
+    /// later when instances are provisioned.
+    pub ssh_config: SshCredentials,
 
     /// Subdirectory name for Ansible-related files within the build directory.
     ///
@@ -72,16 +73,15 @@ impl Config {
     /// ```rust
     /// # use std::net::{IpAddr, Ipv4Addr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::config::{Config, SshConfig};
-    /// let ssh_config = SshConfig::new(
+    /// # use torrust_tracker_deploy::config::{Config, SshCredentials};
+    /// let ssh_credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
     ///     "ubuntu".to_string(),
-    ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
     /// );
     /// let config = Config::new(
     ///     true,                           // keep environment for debugging
-    ///     ssh_config,
+    ///     ssh_credentials,
     ///     "templates".to_string(),
     ///     PathBuf::from("/path/to/project"),
     ///     PathBuf::from("/path/to/project/build"),
@@ -90,7 +90,7 @@ impl Config {
     #[must_use]
     pub fn new(
         keep_env: bool,
-        ssh_config: SshConfig,
+        ssh_config: SshCredentials,
         templates_dir: String,
         project_root: PathBuf,
         build_dir: PathBuf,

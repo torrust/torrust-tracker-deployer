@@ -3,7 +3,7 @@ use tracing::{info, warn};
 
 use crate::actions::{RemoteAction, RemoteActionError};
 use crate::command_wrappers::ssh::SshClient;
-use crate::config::ssh::SshConfig;
+use crate::config::ssh::SshConnection;
 
 /// Action that validates Docker Compose installation and basic functionality on the server
 pub struct DockerComposeValidator {
@@ -14,10 +14,10 @@ impl DockerComposeValidator {
     /// Create a new `DockerComposeValidator` with the specified SSH configuration
     ///
     /// # Arguments
-    /// * `ssh_config` - SSH configuration containing key path, username, host IP, etc.
+    /// * `ssh_connection` - SSH connection configuration containing credentials and host IP
     #[must_use]
-    pub fn new(ssh_config: SshConfig) -> Self {
-        let ssh_client = SshClient::new(ssh_config);
+    pub fn new(ssh_connection: SshConnection) -> Self {
+        let ssh_client = SshClient::new(ssh_connection);
         Self { ssh_client }
     }
 }

@@ -3,7 +3,7 @@ use tracing::info;
 
 use crate::actions::{RemoteAction, RemoteActionError};
 use crate::command_wrappers::ssh::SshClient;
-use crate::config::ssh::SshConfig;
+use crate::config::ssh::SshConnection;
 
 /// Action that checks if cloud-init has completed successfully on the server
 pub struct CloudInitValidator {
@@ -14,10 +14,10 @@ impl CloudInitValidator {
     /// Create a new `CloudInitValidator` with the specified SSH configuration
     ///
     /// # Arguments
-    /// * `ssh_config` - SSH configuration containing key path, username, host IP, etc.
+    /// * `ssh_connection` - SSH connection configuration containing credentials and host IP
     #[must_use]
-    pub fn new(ssh_config: SshConfig) -> Self {
-        let ssh_client = SshClient::new(ssh_config);
+    pub fn new(ssh_connection: SshConnection) -> Self {
+        let ssh_client = SshClient::new(ssh_connection);
         Self { ssh_client }
     }
 }

@@ -8,7 +8,7 @@ use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
 // Import command execution system
-use torrust_tracker_deploy::config::{Config, SshConfig};
+use torrust_tracker_deploy::config::{Config, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 // Import remote actions
 use torrust_tracker_deploy::actions::{
@@ -56,18 +56,14 @@ impl TestEnvironment {
         let temp_ssh_pub_key = temp_dir.path().join("testing_rsa.pub");
         Self::setup_ssh_key(&project_root, &temp_dir, &temp_ssh_key)?;
 
-        // Create configuration
-        // Note: Using placeholder IP since this config is used as a template - actual host IP will be set per connection
-        let placeholder_ip = "0.0.0.0".parse().expect("Valid IP address");
-        let ssh_config = SshConfig::new(
-            temp_ssh_key,
-            temp_ssh_pub_key,
-            "torrust".to_string(),
-            placeholder_ip,
-        );
+        // Create SSH credentials (no host IP needed yet)
+        let ssh_credentials =
+            SshCredentials::new(temp_ssh_key, temp_ssh_pub_key, "torrust".to_string());
+        
+        // Create main configuration
         let config = Config::new(
             keep_env,
-            ssh_config,
+            ssh_credentials,
             templates_dir,
             project_root.clone(),
             project_root.join("build"),
@@ -292,13 +288,8 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         component = "cloud_init",
         "Validating cloud-init completion"
     );
-    let cloud_init_ssh_config = SshConfig::new(
-        env.config.ssh_config.ssh_priv_key_path.clone(),
-        env.config.ssh_config.ssh_pub_key_path.clone(),
-        env.config.ssh_config.ssh_username.clone(),
-        *instance_ip,
-    );
-    let cloud_init_validator = CloudInitValidator::new(cloud_init_ssh_config);
+    let cloud_init_ssh_connection = env.config.ssh_config.clone().with_host(*instance_ip);
+    let cloud_init_validator = CloudInitValidator::new(cloud_init_ssh_connection);
     cloud_init_validator
         .execute(instance_ip)
         .await
@@ -310,13 +301,8 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         component = "docker",
         "Validating Docker installation"
     );
-    let docker_ssh_config = SshConfig::new(
-        env.config.ssh_config.ssh_priv_key_path.clone(),
-        env.config.ssh_config.ssh_pub_key_path.clone(),
-        env.config.ssh_config.ssh_username.clone(),
-        *instance_ip,
-    );
-    let docker_validator = DockerValidator::new(docker_ssh_config);
+    let docker_ssh_connection = env.config.ssh_config.clone().with_host(*instance_ip);
+    let docker_validator = DockerValidator::new(docker_ssh_connection);
     docker_validator
         .execute(instance_ip)
         .await
@@ -328,13 +314,8 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         component = "docker_compose",
         "Validating Docker Compose installation"
     );
-    let docker_compose_ssh_config = SshConfig::new(
-        env.config.ssh_config.ssh_priv_key_path.clone(),
-        env.config.ssh_config.ssh_pub_key_path.clone(),
-        env.config.ssh_config.ssh_username.clone(),
-        *instance_ip,
-    );
-    let docker_compose_validator = DockerComposeValidator::new(docker_compose_ssh_config);
+    let docker_compose_ssh_connection = env.config.ssh_config.clone().with_host(*instance_ip);
+    let docker_compose_validator = DockerComposeValidator::new(docker_compose_ssh_connection);
     docker_compose_validator
         .execute(instance_ip)
         .await
@@ -363,13 +344,8 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     let instance_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    let wait_ssh_config = SshConfig::new(
-        env.config.ssh_config.ssh_priv_key_path.clone(),
-        env.config.ssh_config.ssh_pub_key_path.clone(),
-        env.config.ssh_config.ssh_username.clone(),
-        instance_ip,
-    );
-    let wait_ssh_step = WaitForSSHConnectivityStep::new(wait_ssh_config);
+    let wait_ssh_connection = env.config.ssh_config.clone().with_host(instance_ip);
+    let wait_ssh_step = WaitForSSHConnectivityStep::new(wait_ssh_connection);
     wait_ssh_step
         .execute()
         .await
