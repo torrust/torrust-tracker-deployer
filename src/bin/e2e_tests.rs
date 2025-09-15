@@ -8,15 +8,13 @@ use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
 // Import command execution system
+use torrust_tracker_deploy::commands::ProvisionCommand;
 use torrust_tracker_deploy::config::{Config, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 // Import steps
 use torrust_tracker_deploy::steps::{
-    ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
-    InstallDockerComposeStep, InstallDockerStep, PlanInfrastructureStep,
-    RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep, ValidateCloudInitCompletionStep,
+    InstallDockerComposeStep, InstallDockerStep, ValidateCloudInitCompletionStep,
     ValidateDockerComposeInstallationStep, ValidateDockerInstallationStep, WaitForCloudInitStep,
-    WaitForSSHConnectivityStep,
 };
 
 #[derive(Parser)]
@@ -143,52 +141,26 @@ impl TestEnvironment {
         Ok(())
     }
 
-    /// Stage 1: Render provision templates (`OpenTofu`) to build/tofu/ directory
-    async fn render_provision_templates(&self) -> Result<()> {
-        let step =
-            RenderOpenTofuTemplatesStep::new(Arc::clone(&self.services.tofu_template_renderer));
-        step.execute()
-            .await
-            .with_context(|| "Failed to render provision templates")
-    }
-
-    fn provision_infrastructure(&self) -> Result<IpAddr> {
+    async fn provision_infrastructure(&self) -> Result<IpAddr> {
         info!(
             stage = "infrastructure_provisioning",
             "Provisioning test infrastructure"
         );
 
-        // Initialize OpenTofu using the step
-        let initialize_step =
-            InitializeInfrastructureStep::new(Arc::clone(&self.services.opentofu_client));
-        initialize_step
-            .execute()
-            .map_err(anyhow::Error::from)
-            .context("Failed to initialize OpenTofu")?;
+        // Use the new ProvisionCommand to handle all infrastructure provisioning steps
+        let provision_command = ProvisionCommand::new(
+            Arc::clone(&self.services.tofu_template_renderer),
+            Arc::clone(&self.services.ansible_template_renderer),
+            Arc::clone(&self.services.ansible_client),
+            Arc::clone(&self.services.opentofu_client),
+            self.config.ssh_credentials.clone(),
+        );
 
-        // Plan infrastructure using the step
-        let plan_step = PlanInfrastructureStep::new(Arc::clone(&self.services.opentofu_client));
-        plan_step
+        let opentofu_instance_ip = provision_command
             .execute()
+            .await
             .map_err(anyhow::Error::from)
-            .context("Failed to plan OpenTofu configuration")?;
-
-        // Apply infrastructure using the step
-        let apply_step = ApplyInfrastructureStep::new(Arc::clone(&self.services.opentofu_client));
-        apply_step
-            .execute()
-            .map_err(anyhow::Error::from)
-            .context("Failed to apply OpenTofu configuration")?;
-
-        // Get instance info using the step
-        let get_instance_info_step =
-            GetInstanceInfoStep::new(Arc::clone(&self.services.opentofu_client));
-        let opentofu_instance_info = get_instance_info_step
-            .execute()
-            .map_err(anyhow::Error::from)
-            .context("Failed to get container info from OpenTofu outputs")?;
-
-        let opentofu_instance_ip = opentofu_instance_info.ip_address;
+            .context("Failed to provision infrastructure")?;
 
         // Get the instance IP from LXD client (keeping for comparison/validation)
         let lxd_instance_ip = self
@@ -318,41 +290,21 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     info!(
         test_type = "full_deployment",
         workflow = "template_based",
-        stages = 4,
+        stages = 3,
         "Starting full deployment E2E test"
     );
 
-    // Stage 1: Render provision templates to build/tofu/
-    env.render_provision_templates().await?;
+    // Stage 1: Provision infrastructure (includes template rendering, infrastructure creation, SSH wait, and Ansible template rendering)
+    let instance_ip = env.provision_infrastructure().await?;
 
-    // Stage 2: Provision infrastructure from build directory
-    let instance_ip = env.provision_infrastructure()?;
-
-    // Wait for SSH connectivity
-    let wait_ssh_connection = env.config.ssh_credentials.clone().with_host(instance_ip);
-    let wait_ssh_step = WaitForSSHConnectivityStep::new(wait_ssh_connection);
-    wait_ssh_step
-        .execute()
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
-
-    // Stage 3: Render configuration templates with runtime variables
-    let step = RenderAnsibleTemplatesStep::new(
-        Arc::clone(&env.services.ansible_template_renderer),
-        env.config.ssh_credentials.ssh_priv_key_path.clone(),
-        instance_ip,
-    );
-    step.execute()
-        .await
-        .with_context(|| "Failed to render configuration templates")?;
-
-    // Stage 4: Run Ansible playbooks from build directory
+    // Stage 2: Wait for cloud-init completion (now that Ansible inventory has correct IP)
     let wait_cloud_init_step = WaitForCloudInitStep::new(env.services.ansible_client.clone());
     wait_cloud_init_step
         .execute()
         .map_err(|e| anyhow::anyhow!(e))
         .with_context(|| "Failed to wait for cloud-init completion")?;
 
+    // Stage 3: Run Ansible playbooks from build directory
     // Install Docker using the step
     let install_docker_step = InstallDockerStep::new(env.services.ansible_client.clone());
     install_docker_step

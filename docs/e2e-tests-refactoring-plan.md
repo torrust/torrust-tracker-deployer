@@ -165,11 +165,11 @@ ProvisionCommand:
 ├── ✅ PlanInfrastructureStep        // tofu plan - COMPLETED
 ├── ✅ ApplyInfrastructureStep       // tofu apply - COMPLETED
 ├── ✅ GetInstanceInfoStep           // Extract IP from tofu outputs - COMPLETED
+├── ✅ RenderAnsibleTemplatesStep    // Template rendering with runtime IP - COMPLETED
 ├── ✅ WaitForSSHConnectivityStep    // Validate SSH access - COMPLETED
 └── ✅ WaitForCloudInitStep          // Wait for cloud-init completion - COMPLETED
 
 ConfigureCommand:
-├── ✅ RenderAnsibleTemplatesStep    // Template rendering with runtime vars - COMPLETED
 ├── ✅ InstallDockerStep             // Docker installation via Ansible - COMPLETED
 ├── ✅ InstallDockerComposeStep      // Docker Compose installation via Ansible - COMPLETED
 └── ValidateRemoteServicesStep       // Validate installations

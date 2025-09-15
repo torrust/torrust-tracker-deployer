@@ -33,6 +33,7 @@ pub mod actions;
 pub mod ansible;
 pub mod command;
 pub mod command_wrappers;
+pub mod commands;
 pub mod config;
 pub mod container;
 pub mod steps;
