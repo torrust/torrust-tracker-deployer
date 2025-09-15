@@ -8,7 +8,6 @@ use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
 // Import command execution system
-use torrust_tracker_deploy::command_wrappers::ssh::SshClient;
 use torrust_tracker_deploy::config::{Config, SshConfig};
 use torrust_tracker_deploy::container::Services;
 // Import remote actions
@@ -19,6 +18,7 @@ use torrust_tracker_deploy::actions::{
 use torrust_tracker_deploy::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
+    WaitForSSHConnectivityStep,
 };
 
 #[derive(Parser)]
@@ -361,13 +361,13 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     let instance_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    let ssh_client = SshClient::new(
-        &env.config.ssh_config.ssh_key_path,
-        &env.config.ssh_config.ssh_username,
+    let wait_ssh_step = WaitForSSHConnectivityStep::new(
+        env.config.ssh_config.ssh_key_path.clone(),
+        env.config.ssh_config.ssh_username.clone(),
         instance_ip,
     );
-    ssh_client
-        .wait_for_connectivity()
+    wait_ssh_step
+        .execute()
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 
