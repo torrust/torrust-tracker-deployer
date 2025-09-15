@@ -16,9 +16,10 @@ use torrust_tracker_deploy::actions::{
 };
 // Import steps
 use torrust_tracker_deploy::steps::{
-    ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep, InstallDockerStep,
-    PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
-    WaitForCloudInitStep, WaitForSSHConnectivityStep,
+    ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
+    InstallDockerComposeStep, InstallDockerStep, PlanInfrastructureStep,
+    RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep, WaitForCloudInitStep,
+    WaitForSSHConnectivityStep,
 };
 
 #[derive(Parser)]
@@ -156,27 +157,6 @@ impl TestEnvironment {
         step.execute()
             .await
             .with_context(|| "Failed to render provision templates")
-    }
-
-    fn run_ansible_playbook(&self, playbook: &str) -> Result<()> {
-        info!(
-            stage = "ansible_execution",
-            playbook = playbook,
-            "Running Ansible playbook"
-        );
-
-        self.services
-            .ansible_client
-            .run_playbook(playbook)
-            .context(format!("Failed to run Ansible playbook: {playbook}"))?;
-
-        info!(
-            stage = "ansible_execution",
-            playbook = playbook,
-            status = "success",
-            "Ansible playbook executed successfully"
-        );
-        Ok(())
     }
 
     fn provision_infrastructure(&self) -> Result<IpAddr> {
@@ -425,7 +405,10 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
         action = "install_docker_compose",
         "Installing Docker Compose"
     );
-    env.run_ansible_playbook("install-docker-compose")?;
+    InstallDockerComposeStep::new(Arc::clone(&env.services.ansible_client))
+        .execute()
+        .map_err(anyhow::Error::from)
+        .with_context(|| "Failed to install Docker Compose")?;
 
     info!(
         stage = "deployment",
