@@ -186,6 +186,7 @@ RunCommand:
 └── GetServiceStatusStep             // Report service endpoints
 
 TestCommand:
+├── ✅ ValidateCloudInitCompletionStep  // Validate cloud-init completion - COMPLETED
 ├── ✅ ValidateDockerInstallationStep   // Validate Docker is working - COMPLETED
 ├── ✅ ValidateDockerComposeInstallationStep // Validate Docker Compose is working - COMPLETED
 ├── ValidateTrackerStep              // Validate Torrust Tracker functionality

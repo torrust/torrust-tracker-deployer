@@ -10,14 +10,13 @@ use tracing_subscriber::EnvFilter;
 // Import command execution system
 use torrust_tracker_deploy::config::{Config, SshCredentials};
 use torrust_tracker_deploy::container::Services;
-// Import remote actions
-use torrust_tracker_deploy::actions::{CloudInitValidator, RemoteAction};
 // Import steps
 use torrust_tracker_deploy::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     InstallDockerComposeStep, InstallDockerStep, PlanInfrastructureStep,
-    RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep, ValidateDockerComposeInstallationStep,
-    ValidateDockerInstallationStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
+    RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep, ValidateCloudInitCompletionStep,
+    ValidateDockerComposeInstallationStep, ValidateDockerInstallationStep, WaitForCloudInitStep,
+    WaitForSSHConnectivityStep,
 };
 
 #[derive(Parser)]
@@ -281,15 +280,10 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
     info!(stage = "validation", "Starting deployment validation");
 
     // Validate cloud-init completion
-    info!(
-        stage = "validation",
-        component = "cloud_init",
-        "Validating cloud-init completion"
-    );
-    let cloud_init_ssh_connection = env.config.ssh_config.clone().with_host(*instance_ip);
-    let cloud_init_validator = CloudInitValidator::new(cloud_init_ssh_connection);
-    cloud_init_validator
-        .execute(instance_ip)
+    let validate_cloud_init_step =
+        ValidateCloudInitCompletionStep::new(env.config.ssh_config.clone(), *instance_ip);
+    validate_cloud_init_step
+        .execute()
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 
