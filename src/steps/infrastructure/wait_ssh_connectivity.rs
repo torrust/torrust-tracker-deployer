@@ -41,7 +41,7 @@ impl WaitForSSHConnectivityStep {
 
         // Create SSH client
         let ssh_client = SshClient::new(
-            &self.ssh_config.ssh_key_path,
+            &self.ssh_config.ssh_priv_key_path,
             &self.ssh_config.ssh_username,
             self.instance_ip,
         );
@@ -70,13 +70,13 @@ mod tests {
 
     #[test]
     fn it_should_create_wait_ssh_connectivity_step() {
-        let ssh_config = SshConfig::new("/tmp/test_key".into(), "testuser".to_string());
+        let ssh_config = SshConfig::new("/tmp/test_key".into(), "/tmp/test_key.pub".into(), "testuser".to_string());
         let instance_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
 
         let step = WaitForSSHConnectivityStep::new(ssh_config, instance_ip);
 
         assert_eq!(
-            step.ssh_config.ssh_key_path.to_string_lossy(),
+            step.ssh_config.ssh_priv_key_path.to_string_lossy(),
             "/tmp/test_key"
         );
         assert_eq!(step.ssh_config.ssh_username, "testuser");
@@ -85,13 +85,13 @@ mod tests {
 
     #[test]
     fn it_should_create_step_with_ipv6_address() {
-        let ssh_config = SshConfig::new("/home/user/.ssh/id_rsa".into(), "torrust".to_string());
+        let ssh_config = SshConfig::new("/home/user/.ssh/id_rsa".into(), "/home/user/.ssh/id_rsa.pub".into(), "torrust".to_string());
         let instance_ip = "::1".parse::<IpAddr>().unwrap();
 
         let step = WaitForSSHConnectivityStep::new(ssh_config, instance_ip);
 
         assert_eq!(
-            step.ssh_config.ssh_key_path.to_string_lossy(),
+            step.ssh_config.ssh_priv_key_path.to_string_lossy(),
             "/home/user/.ssh/id_rsa"
         );
         assert_eq!(step.ssh_config.ssh_username, "torrust");
@@ -100,13 +100,13 @@ mod tests {
 
     #[test]
     fn it_should_store_step_parameters_correctly() {
-        let ssh_config = SshConfig::new("/path/to/ssh/key".into(), "admin".to_string());
+        let ssh_config = SshConfig::new("/path/to/ssh/key".into(), "/path/to/ssh/key.pub".into(), "admin".to_string());
         let instance_ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1));
 
         let step = WaitForSSHConnectivityStep::new(ssh_config, instance_ip);
 
         assert_eq!(
-            step.ssh_config.ssh_key_path.to_string_lossy(),
+            step.ssh_config.ssh_priv_key_path.to_string_lossy(),
             "/path/to/ssh/key"
         );
         assert_eq!(step.ssh_config.ssh_username, "admin");

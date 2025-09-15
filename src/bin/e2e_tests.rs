@@ -52,10 +52,11 @@ impl TestEnvironment {
 
         // Setup SSH key
         let temp_ssh_key = temp_dir.path().join("testing_rsa");
+        let temp_ssh_pub_key = temp_dir.path().join("testing_rsa.pub");
         Self::setup_ssh_key(&project_root, &temp_dir, &temp_ssh_key)?;
 
         // Create configuration
-        let ssh_config = SshConfig::new(temp_ssh_key, "torrust".to_string());
+        let ssh_config = SshConfig::new(temp_ssh_key, temp_ssh_pub_key, "torrust".to_string());
         let config = Config::new(
             keep_env,
             ssh_config,
@@ -101,6 +102,13 @@ impl TestEnvironment {
         std::fs::copy(&fixtures_ssh_key, &temp_ssh_key)
             .context("Failed to copy SSH private key to temporary directory")?;
 
+        // Copy SSH public key from fixtures to temp directory
+        let fixtures_ssh_pub_key = project_root.join("fixtures/testing_rsa.pub");
+        let temp_ssh_pub_key = temp_dir.path().join("testing_rsa.pub");
+
+        std::fs::copy(&fixtures_ssh_pub_key, &temp_ssh_pub_key)
+            .context("Failed to copy SSH public key to temporary directory")?;
+
         // Set proper permissions on the SSH key (600)
         #[cfg(unix)]
         {
@@ -112,8 +120,9 @@ impl TestEnvironment {
 
         info!(
             operation = "ssh_key_setup",
-            location = %temp_ssh_key.display(),
-            "SSH key copied to temporary location"
+            private_location = %temp_ssh_key.display(),
+            public_location = %temp_ssh_pub_key.display(),
+            "SSH keys copied to temporary location"
         );
 
         Ok(())
@@ -297,7 +306,7 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         "Validating cloud-init completion"
     );
     let cloud_init_validator = CloudInitValidator::new(
-        &env.config.ssh_config.ssh_key_path,
+        &env.config.ssh_config.ssh_priv_key_path,
         &env.config.ssh_config.ssh_username,
         *instance_ip,
     );
@@ -313,7 +322,7 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         "Validating Docker installation"
     );
     let docker_validator = DockerValidator::new(
-        &env.config.ssh_config.ssh_key_path,
+        &env.config.ssh_config.ssh_priv_key_path,
         &env.config.ssh_config.ssh_username,
         *instance_ip,
     );
@@ -329,7 +338,7 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         "Validating Docker Compose installation"
     );
     let docker_compose_validator = DockerComposeValidator::new(
-        &env.config.ssh_config.ssh_key_path,
+        &env.config.ssh_config.ssh_priv_key_path,
         &env.config.ssh_config.ssh_username,
         *instance_ip,
     );
@@ -370,7 +379,7 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     // Stage 3: Render configuration templates with runtime variables
     let step = RenderAnsibleTemplatesStep::new(
         Arc::clone(&env.services.ansible_template_renderer),
-        env.config.ssh_config.ssh_key_path.clone(),
+        env.config.ssh_config.ssh_priv_key_path.clone(),
         instance_ip,
     );
     step.execute()

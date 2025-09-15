@@ -74,6 +74,7 @@ impl Config {
     /// # use torrust_tracker_deploy::config::{Config, SshConfig};
     /// let ssh_config = SshConfig::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
+    ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
     ///     "ubuntu".to_string(),
     /// );
     /// let config = Config::new(
