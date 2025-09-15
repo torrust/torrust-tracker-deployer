@@ -3,7 +3,7 @@ pub mod template;
 
 pub use infrastructure::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
-    PlanInfrastructureStep, WaitForSSHConnectivityStep,
+    PlanInfrastructureStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
 pub use template::{
     RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,

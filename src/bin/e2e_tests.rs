@@ -18,7 +18,7 @@ use torrust_tracker_deploy::actions::{
 use torrust_tracker_deploy::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
-    WaitForSSHConnectivityStep,
+    WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
 
 #[derive(Parser)]
@@ -406,12 +406,11 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
         .with_context(|| "Failed to render configuration templates")?;
 
     // Stage 4: Run Ansible playbooks from build directory
-    info!(
-        step = 1,
-        action = "wait_cloud_init",
-        "Waiting for cloud-init completion"
-    );
-    env.run_ansible_playbook("wait-cloud-init")?;
+    let wait_cloud_init_step = WaitForCloudInitStep::new(env.services.ansible_client.clone());
+    wait_cloud_init_step
+        .execute()
+        .map_err(|e| anyhow::anyhow!(e))
+        .with_context(|| "Failed to wait for cloud-init completion")?;
 
     // Run the install-docker playbook
     // NOTE: We skip the update-apt-cache playbook in E2E tests to avoid CI network issues

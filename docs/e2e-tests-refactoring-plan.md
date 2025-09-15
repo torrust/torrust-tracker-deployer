@@ -165,8 +165,8 @@ ProvisionCommand:
 ├── ✅ PlanInfrastructureStep        // tofu plan - COMPLETED
 ├── ✅ ApplyInfrastructureStep       // tofu apply - COMPLETED
 ├── ✅ GetInstanceInfoStep           // Extract IP from tofu outputs - COMPLETED
-├── WaitForSSHConnectivityStep       // Validate SSH access
-└── WaitForCloudInitStep             // Wait for cloud-init completion
+├── ✅ WaitForSSHConnectivityStep    // Validate SSH access - COMPLETED
+└── ✅ WaitForCloudInitStep          // Wait for cloud-init completion - COMPLETED
 
 ConfigureCommand:
 ├── ✅ RenderAnsibleTemplatesStep    // Template rendering with runtime vars - COMPLETED
