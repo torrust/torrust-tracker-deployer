@@ -4,6 +4,7 @@ use std::path::PathBuf;
 ///
 /// Contains all SSH-related settings needed to establish connections
 /// to deployed instances during the deployment process.
+#[derive(Clone)]
 pub struct SshConfig {
     /// Path to the SSH private key file for remote connections.
     ///

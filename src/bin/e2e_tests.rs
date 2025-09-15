@@ -361,11 +361,7 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     let instance_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    let wait_ssh_step = WaitForSSHConnectivityStep::new(
-        env.config.ssh_config.ssh_key_path.clone(),
-        env.config.ssh_config.ssh_username.clone(),
-        instance_ip,
-    );
+    let wait_ssh_step = WaitForSSHConnectivityStep::new(env.config.ssh_config.clone(), instance_ip);
     wait_ssh_step
         .execute()
         .await
