@@ -1,11 +1,10 @@
-use std::net::IpAddr;
-use std::path::PathBuf;
 use std::time::Duration;
 use thiserror::Error;
 
 use tracing::info;
 
 use crate::command::{CommandError, CommandExecutor};
+use crate::config::ssh::SshConfig;
 
 /// Errors that can occur during SSH operations
 #[derive(Error, Debug)]
@@ -36,9 +35,7 @@ pub enum SshError {
 ///
 /// Uses `CommandExecutor` as a collaborator for actual command execution.
 pub struct SshClient {
-    ssh_key_path: PathBuf,
-    username: String,
-    host_ip: IpAddr,
+    ssh_config: SshConfig,
     command_executor: CommandExecutor,
 }
 
@@ -46,19 +43,11 @@ impl SshClient {
     /// Creates a new `SshClient`
     ///
     /// # Arguments
-    /// * `ssh_key_path` - Path to the SSH private key file
-    /// * `username` - Username for SSH connections (typically "torrust")
-    /// * `host_ip` - IP address of the target host
+    /// * `ssh_config` - SSH configuration containing key path, username, host IP, etc.
     #[must_use]
-    pub fn new<P: Into<PathBuf>>(
-        ssh_key_path: P,
-        username: impl Into<String>,
-        host_ip: IpAddr,
-    ) -> Self {
+    pub fn new(ssh_config: SshConfig) -> Self {
         Self {
-            ssh_key_path: ssh_key_path.into(),
-            username: username.into(),
-            host_ip,
+            ssh_config,
             command_executor: CommandExecutor::new(),
         }
     }
@@ -67,7 +56,10 @@ impl SshClient {
     fn build_ssh_args(&self, remote_command: &str, additional_options: &[&str]) -> Vec<String> {
         let mut args = vec![
             "-i".to_string(),
-            self.ssh_key_path.to_string_lossy().to_string(),
+            self.ssh_config
+                .ssh_priv_key_path
+                .to_string_lossy()
+                .to_string(),
             "-o".to_string(),
             "StrictHostKeyChecking=no".to_string(),
             "-o".to_string(),
@@ -80,7 +72,10 @@ impl SshClient {
             args.push((*option).to_string());
         }
 
-        args.push(format!("{}@{}", self.username, self.host_ip));
+        args.push(format!(
+            "{}@{}",
+            self.ssh_config.ssh_username, self.ssh_config.host_ip
+        ));
         args.push(remote_command.to_string());
 
         args
@@ -198,7 +193,7 @@ impl SshClient {
     pub async fn wait_for_connectivity(&self) -> Result<(), SshError> {
         info!(
             operation = "ssh_connectivity",
-            host_ip = %self.host_ip,
+            host_ip = %self.ssh_config.host_ip,
             "Waiting for SSH connectivity"
         );
 
@@ -213,7 +208,7 @@ impl SshClient {
                 Ok(true) => {
                     info!(
                         operation = "ssh_connectivity",
-                        host_ip = %self.host_ip,
+                        host_ip = %self.ssh_config.host_ip,
                         status = "success",
                         "SSH connectivity established"
                     );
@@ -224,7 +219,7 @@ impl SshClient {
                     if (attempt + 1) % 5 == 0 {
                         info!(
                             operation = "ssh_connectivity",
-                            host_ip = %self.host_ip,
+                            host_ip = %self.ssh_config.host_ip,
                             attempt = attempt + 1,
                             max_attempts = max_attempts,
                             "Still waiting for SSH connectivity"
@@ -241,7 +236,7 @@ impl SshClient {
         }
 
         Err(SshError::ConnectivityTimeout {
-            host_ip: self.host_ip.to_string(),
+            host_ip: self.ssh_config.host_ip.to_string(),
             attempts: max_attempts,
             timeout_seconds,
         })
@@ -252,26 +247,45 @@ impl SshClient {
 mod tests {
     use super::*;
     use std::net::{IpAddr, Ipv4Addr};
+    use std::path::PathBuf;
 
     #[test]
     fn it_should_create_ssh_client_with_valid_parameters() {
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let ssh_client = SshClient::new("/path/to/key", "testuser", host_ip);
+        let ssh_config = SshConfig::new(
+            PathBuf::from("/path/to/key"),
+            PathBuf::from("/path/to/key.pub"),
+            "testuser".to_string(),
+            host_ip,
+        );
+        let ssh_client = SshClient::new(ssh_config);
 
-        assert_eq!(ssh_client.ssh_key_path.to_string_lossy(), "/path/to/key");
-        assert_eq!(ssh_client.username, "testuser");
-        assert_eq!(ssh_client.host_ip, host_ip);
+        assert_eq!(
+            ssh_client.ssh_config.ssh_priv_key_path.to_string_lossy(),
+            "/path/to/key"
+        );
+        assert_eq!(ssh_client.ssh_config.ssh_username, "testuser");
+        assert_eq!(ssh_client.ssh_config.host_ip, host_ip);
         // Note: verbose is now encapsulated in the CommandExecutor collaborator
     }
 
     #[test]
     fn it_should_create_ssh_client_with_connection_details() {
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let ssh_client = SshClient::new("/path/to/key", "testuser", host_ip);
+        let ssh_config = SshConfig::new(
+            PathBuf::from("/path/to/key"),
+            PathBuf::from("/path/to/key.pub"),
+            "testuser".to_string(),
+            host_ip,
+        );
+        let ssh_client = SshClient::new(ssh_config);
 
-        assert_eq!(ssh_client.ssh_key_path.to_string_lossy(), "/path/to/key");
-        assert_eq!(ssh_client.username, "testuser");
-        assert_eq!(ssh_client.host_ip, host_ip);
+        assert_eq!(
+            ssh_client.ssh_config.ssh_priv_key_path.to_string_lossy(),
+            "/path/to/key"
+        );
+        assert_eq!(ssh_client.ssh_config.ssh_username, "testuser");
+        assert_eq!(ssh_client.ssh_config.host_ip, host_ip);
         // Note: logging is now handled by the tracing crate via CommandExecutor
     }
 }

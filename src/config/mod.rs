@@ -70,12 +70,14 @@ impl Config {
     /// The `ansible_subfolder` is set to "ansible" and `opentofu_subfolder` is set to "tofu/lxd" internally.
     ///
     /// ```rust
+    /// # use std::net::{IpAddr, Ipv4Addr};
     /// # use std::path::PathBuf;
     /// # use torrust_tracker_deploy::config::{Config, SshConfig};
     /// let ssh_config = SshConfig::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
     ///     "ubuntu".to_string(),
+    ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
     /// );
     /// let config = Config::new(
     ///     true,                           // keep environment for debugging

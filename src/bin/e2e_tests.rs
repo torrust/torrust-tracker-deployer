@@ -56,7 +56,14 @@ impl TestEnvironment {
         Self::setup_ssh_key(&project_root, &temp_dir, &temp_ssh_key)?;
 
         // Create configuration
-        let ssh_config = SshConfig::new(temp_ssh_key, temp_ssh_pub_key, "torrust".to_string());
+        // Note: Using placeholder IP since this config is used as a template - actual host IP will be set per connection
+        let placeholder_ip = "0.0.0.0".parse().expect("Valid IP address");
+        let ssh_config = SshConfig::new(
+            temp_ssh_key,
+            temp_ssh_pub_key,
+            "torrust".to_string(),
+            placeholder_ip,
+        );
         let config = Config::new(
             keep_env,
             ssh_config,
@@ -305,11 +312,13 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         component = "cloud_init",
         "Validating cloud-init completion"
     );
-    let cloud_init_validator = CloudInitValidator::new(
-        &env.config.ssh_config.ssh_priv_key_path,
-        &env.config.ssh_config.ssh_username,
+    let cloud_init_ssh_config = SshConfig::new(
+        env.config.ssh_config.ssh_priv_key_path.clone(),
+        env.config.ssh_config.ssh_pub_key_path.clone(),
+        env.config.ssh_config.ssh_username.clone(),
         *instance_ip,
     );
+    let cloud_init_validator = CloudInitValidator::new(cloud_init_ssh_config);
     cloud_init_validator
         .execute(instance_ip)
         .await
@@ -321,11 +330,13 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         component = "docker",
         "Validating Docker installation"
     );
-    let docker_validator = DockerValidator::new(
-        &env.config.ssh_config.ssh_priv_key_path,
-        &env.config.ssh_config.ssh_username,
+    let docker_ssh_config = SshConfig::new(
+        env.config.ssh_config.ssh_priv_key_path.clone(),
+        env.config.ssh_config.ssh_pub_key_path.clone(),
+        env.config.ssh_config.ssh_username.clone(),
         *instance_ip,
     );
+    let docker_validator = DockerValidator::new(docker_ssh_config);
     docker_validator
         .execute(instance_ip)
         .await
@@ -337,11 +348,13 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         component = "docker_compose",
         "Validating Docker Compose installation"
     );
-    let docker_compose_validator = DockerComposeValidator::new(
-        &env.config.ssh_config.ssh_priv_key_path,
-        &env.config.ssh_config.ssh_username,
+    let docker_compose_ssh_config = SshConfig::new(
+        env.config.ssh_config.ssh_priv_key_path.clone(),
+        env.config.ssh_config.ssh_pub_key_path.clone(),
+        env.config.ssh_config.ssh_username.clone(),
         *instance_ip,
     );
+    let docker_compose_validator = DockerComposeValidator::new(docker_compose_ssh_config);
     docker_compose_validator
         .execute(instance_ip)
         .await
@@ -370,7 +383,13 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     let instance_ip = env.provision_infrastructure()?;
 
     // Wait for SSH connectivity
-    let wait_ssh_step = WaitForSSHConnectivityStep::new(env.config.ssh_config.clone(), instance_ip);
+    let wait_ssh_config = SshConfig::new(
+        env.config.ssh_config.ssh_priv_key_path.clone(),
+        env.config.ssh_config.ssh_pub_key_path.clone(),
+        env.config.ssh_config.ssh_username.clone(),
+        instance_ip,
+    );
+    let wait_ssh_step = WaitForSSHConnectivityStep::new(wait_ssh_config);
     wait_ssh_step
         .execute()
         .await

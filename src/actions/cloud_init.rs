@@ -1,9 +1,9 @@
 use std::net::IpAddr;
-use std::path::Path;
 use tracing::info;
 
 use crate::actions::{RemoteAction, RemoteActionError};
 use crate::command_wrappers::ssh::SshClient;
+use crate::config::ssh::SshConfig;
 
 /// Action that checks if cloud-init has completed successfully on the server
 pub struct CloudInitValidator {
@@ -11,15 +11,13 @@ pub struct CloudInitValidator {
 }
 
 impl CloudInitValidator {
-    /// Create a new `CloudInitValidator` with the specified SSH key
+    /// Create a new `CloudInitValidator` with the specified SSH configuration
     ///
     /// # Arguments
-    /// * `ssh_key_path` - Path to the SSH private key file
-    /// * `username` - SSH username to use for connections
-    /// * `host_ip` - IP address of the target host
+    /// * `ssh_config` - SSH configuration containing key path, username, host IP, etc.
     #[must_use]
-    pub fn new(ssh_key_path: &Path, username: &str, host_ip: IpAddr) -> Self {
-        let ssh_client = SshClient::new(ssh_key_path, username, host_ip);
+    pub fn new(ssh_config: SshConfig) -> Self {
+        let ssh_client = SshClient::new(ssh_config);
         Self { ssh_client }
     }
 }
