@@ -16,7 +16,7 @@ use torrust_tracker_deploy::actions::{
 };
 // Import steps
 use torrust_tracker_deploy::steps::{
-    ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
+    ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep, InstallDockerStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
     WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
@@ -412,11 +412,12 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
         .map_err(|e| anyhow::anyhow!(e))
         .with_context(|| "Failed to wait for cloud-init completion")?;
 
-    // Run the install-docker playbook
-    // NOTE: We skip the update-apt-cache playbook in E2E tests to avoid CI network issues
-    // The install-docker playbook now assumes the cache is already updated or will handle stale cache gracefully
-    info!(step = 2, action = "install_docker", "Installing Docker");
-    env.run_ansible_playbook("install-docker")?;
+    // Install Docker using the step
+    let install_docker_step = InstallDockerStep::new(env.services.ansible_client.clone());
+    install_docker_step
+        .execute()
+        .map_err(|e| anyhow::anyhow!(e))
+        .with_context(|| "Failed to install Docker")?;
 
     // Run the install-docker-compose playbook
     info!(
