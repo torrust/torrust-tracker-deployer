@@ -11,13 +11,13 @@ use tracing_subscriber::EnvFilter;
 use torrust_tracker_deploy::config::{Config, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 // Import remote actions
-use torrust_tracker_deploy::actions::{CloudInitValidator, DockerComposeValidator, RemoteAction};
+use torrust_tracker_deploy::actions::{CloudInitValidator, RemoteAction};
 // Import steps
 use torrust_tracker_deploy::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     InstallDockerComposeStep, InstallDockerStep, PlanInfrastructureStep,
-    RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep, ValidateDockerInstallationStep,
-    WaitForCloudInitStep, WaitForSSHConnectivityStep,
+    RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep, ValidateDockerComposeInstallationStep,
+    ValidateDockerInstallationStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
 
 #[derive(Parser)]
@@ -302,15 +302,10 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
         .map_err(|e| anyhow::anyhow!(e))?;
 
     // Validate Docker Compose installation
-    info!(
-        stage = "validation",
-        component = "docker_compose",
-        "Validating Docker Compose installation"
-    );
-    let docker_compose_ssh_connection = env.config.ssh_config.clone().with_host(*instance_ip);
-    let docker_compose_validator = DockerComposeValidator::new(docker_compose_ssh_connection);
-    docker_compose_validator
-        .execute(instance_ip)
+    let validate_docker_compose_step =
+        ValidateDockerComposeInstallationStep::new(env.config.ssh_config.clone(), *instance_ip);
+    validate_docker_compose_step
+        .execute()
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 

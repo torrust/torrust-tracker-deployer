@@ -187,7 +187,7 @@ RunCommand:
 
 TestCommand:
 ├── ✅ ValidateDockerInstallationStep   // Validate Docker is working - COMPLETED
-├── ValidateDockerComposeInstallationStep // Validate Docker Compose is working
+├── ✅ ValidateDockerComposeInstallationStep // Validate Docker Compose is working - COMPLETED
 ├── ValidateTrackerStep              // Validate Torrust Tracker functionality
 └── ValidateRemoteServicesStep       // Overall validation
 
