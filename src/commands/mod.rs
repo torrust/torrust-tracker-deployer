@@ -1,3 +1,5 @@
+pub mod configure;
 pub mod provision;
 
-pub use provision::{ProvisionCommand, ProvisionCommandError};
+pub use configure::ConfigureCommand;
+pub use provision::ProvisionCommand;

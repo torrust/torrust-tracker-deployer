@@ -8,13 +8,13 @@ use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
 // Import command execution system
-use torrust_tracker_deploy::commands::ProvisionCommand;
+use torrust_tracker_deploy::commands::{ConfigureCommand, ProvisionCommand};
 use torrust_tracker_deploy::config::{Config, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 // Import steps
 use torrust_tracker_deploy::steps::{
-    InstallDockerComposeStep, InstallDockerStep, ValidateCloudInitCompletionStep,
-    ValidateDockerComposeInstallationStep, ValidateDockerInstallationStep, WaitForCloudInitStep,
+    ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
+    ValidateDockerInstallationStep,
 };
 
 #[derive(Parser)]
@@ -179,6 +179,28 @@ impl TestEnvironment {
         Ok(opentofu_instance_ip)
     }
 
+    fn configure_infrastructure(&self) -> Result<()> {
+        info!(
+            stage = "infrastructure_configuration",
+            "Configuring test infrastructure"
+        );
+
+        // Use the new ConfigureCommand to handle all infrastructure configuration steps
+        let configure_command = ConfigureCommand::new(Arc::clone(&self.services.ansible_client));
+
+        configure_command
+            .execute()
+            .map_err(anyhow::Error::from)
+            .context("Failed to configure infrastructure")?;
+
+        info!(
+            stage = "infrastructure_configuration",
+            status = "complete",
+            "Infrastructure configuration completed successfully"
+        );
+
+        Ok(())
+    }
     fn get_instance_ip(&self) -> Result<IpAddr> {
         // For E2E tests, we should rely on OpenTofu outputs since they already wait for network
         // This is a secondary validation that the instance is accessible via LXD
@@ -297,31 +319,8 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     // Stage 1: Provision infrastructure (includes template rendering, infrastructure creation, SSH wait, and Ansible template rendering)
     let instance_ip = env.provision_infrastructure().await?;
 
-    // Stage 2: Wait for cloud-init completion (now that Ansible inventory has correct IP)
-    let wait_cloud_init_step = WaitForCloudInitStep::new(env.services.ansible_client.clone());
-    wait_cloud_init_step
-        .execute()
-        .map_err(|e| anyhow::anyhow!(e))
-        .with_context(|| "Failed to wait for cloud-init completion")?;
-
-    // Stage 3: Run Ansible playbooks from build directory
-    // Install Docker using the step
-    let install_docker_step = InstallDockerStep::new(env.services.ansible_client.clone());
-    install_docker_step
-        .execute()
-        .map_err(|e| anyhow::anyhow!(e))
-        .with_context(|| "Failed to install Docker")?;
-
-    // Run the install-docker-compose playbook
-    info!(
-        step = 3,
-        action = "install_docker_compose",
-        "Installing Docker Compose"
-    );
-    InstallDockerComposeStep::new(Arc::clone(&env.services.ansible_client))
-        .execute()
-        .map_err(anyhow::Error::from)
-        .with_context(|| "Failed to install Docker Compose")?;
+    // Stage 2: Configure infrastructure (wait for cloud-init and install Docker/Docker Compose)
+    env.configure_infrastructure()?;
 
     info!(
         stage = "deployment",
