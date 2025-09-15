@@ -280,16 +280,18 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
     info!(stage = "validation", "Starting deployment validation");
 
     // Validate cloud-init completion
-    let validate_cloud_init_step =
-        ValidateCloudInitCompletionStep::new(env.config.ssh_credentials.clone(), *instance_ip);
+    let validate_cloud_init_step = ValidateCloudInitCompletionStep::new(
+        env.config.ssh_credentials.clone().with_host(*instance_ip),
+    );
     validate_cloud_init_step
         .execute()
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 
     // Validate Docker installation
-    let validate_docker_step =
-        ValidateDockerInstallationStep::new(env.config.ssh_credentials.clone(), *instance_ip);
+    let validate_docker_step = ValidateDockerInstallationStep::new(
+        env.config.ssh_credentials.clone().with_host(*instance_ip),
+    );
     validate_docker_step
         .execute()
         .await
@@ -297,8 +299,7 @@ async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Res
 
     // Validate Docker Compose installation
     let validate_docker_compose_step = ValidateDockerComposeInstallationStep::new(
-        env.config.ssh_credentials.clone(),
-        *instance_ip,
+        env.config.ssh_credentials.clone().with_host(*instance_ip),
     );
     validate_docker_compose_step
         .execute()

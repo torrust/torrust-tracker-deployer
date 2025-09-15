@@ -1,22 +1,17 @@
-use std::net::IpAddr;
 use tracing::info;
 
 use crate::actions::{CloudInitValidator, RemoteAction, RemoteActionError};
-use crate::command_wrappers::ssh::SshCredentials;
+use crate::command_wrappers::ssh::SshConnection;
 
 /// Step that validates cloud-init completion on a remote host
 pub struct ValidateCloudInitCompletionStep {
-    ssh_credentials: SshCredentials,
-    host_ip: IpAddr,
+    ssh_connection: SshConnection,
 }
 
 impl ValidateCloudInitCompletionStep {
     #[must_use]
-    pub fn new(ssh_credentials: SshCredentials, host_ip: IpAddr) -> Self {
-        Self {
-            ssh_credentials,
-            host_ip,
-        }
+    pub fn new(ssh_connection: SshConnection) -> Self {
+        Self { ssh_connection }
     }
 
     /// Execute the cloud-init completion validation step
@@ -43,10 +38,11 @@ impl ValidateCloudInitCompletionStep {
             "Validating cloud-init completion"
         );
 
-        let cloud_init_ssh_connection = self.ssh_credentials.clone().with_host(self.host_ip);
-        let cloud_init_validator = CloudInitValidator::new(cloud_init_ssh_connection);
+        let cloud_init_validator = CloudInitValidator::new(self.ssh_connection.clone());
 
-        cloud_init_validator.execute(&self.host_ip).await?;
+        cloud_init_validator
+            .execute(&self.ssh_connection.host_ip)
+            .await?;
 
         Ok(())
     }
@@ -56,6 +52,8 @@ impl ValidateCloudInitCompletionStep {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr};
     use std::path::PathBuf;
+
+    use crate::command_wrappers::ssh::SshCredentials;
 
     use super::*;
 
@@ -67,10 +65,11 @@ mod tests {
             "test_user".to_string(),
         );
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let ssh_connection = ssh_credentials.with_host(host_ip);
 
-        let step = ValidateCloudInitCompletionStep::new(ssh_credentials, host_ip);
+        let step = ValidateCloudInitCompletionStep::new(ssh_connection);
 
         // Test that the step can be created successfully
-        assert_eq!(step.host_ip, host_ip);
+        assert_eq!(step.ssh_connection.host_ip, host_ip);
     }
 }
