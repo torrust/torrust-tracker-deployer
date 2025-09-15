@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
-pub mod ssh;
-pub use ssh::{SshConnection, SshCredentials};
+pub use crate::command_wrappers::ssh::{SshConnection, SshCredentials};
 
 /// Configuration parameters for deployment environments.
 ///

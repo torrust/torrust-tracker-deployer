@@ -1,29 +1,10 @@
 use std::time::Duration;
-use thiserror::Error;
 
 use tracing::info;
 
 use crate::command::{CommandError, CommandExecutor};
-use crate::config::ssh::SshConnection;
 
-/// Errors that can occur during SSH operations
-#[derive(Error, Debug)]
-pub enum SshError {
-    /// SSH connectivity could not be established within the timeout period
-    #[error("SSH connectivity to '{host_ip}' could not be established after {attempts} attempts ({timeout_seconds} seconds)")]
-    ConnectivityTimeout {
-        host_ip: String,
-        attempts: u32,
-        timeout_seconds: u32,
-    },
-
-    /// Underlying command execution failed
-    #[error("SSH command execution failed: {source}")]
-    CommandFailed {
-        #[source]
-        source: CommandError,
-    },
-}
+use super::{SshConnection, SshError};
 
 /// A specialized SSH client with predefined security settings
 ///
@@ -246,8 +227,8 @@ impl SshClient {
 
 #[cfg(test)]
 mod tests {
+    use super::super::SshCredentials;
     use super::*;
-    use crate::config::ssh::SshCredentials;
     use std::net::{IpAddr, Ipv4Addr};
     use std::path::PathBuf;
 

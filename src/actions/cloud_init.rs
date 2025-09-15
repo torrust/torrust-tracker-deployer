@@ -3,7 +3,7 @@ use tracing::info;
 
 use crate::actions::{RemoteAction, RemoteActionError};
 use crate::command_wrappers::ssh::SshClient;
-use crate::config::ssh::SshConnection;
+use crate::command_wrappers::ssh::SshConnection;
 
 /// Action that checks if cloud-init has completed successfully on the server
 pub struct CloudInitValidator {
