@@ -42,25 +42,17 @@ async fn main() -> Result<()> {
 
     let test_start = Instant::now();
 
-    let result = run_full_deployment_test(&env).await;
+    let deployment_result = run_full_deployment_test(&env).await;
 
-    // Handle deployment results and run validation if deployment succeeded
-    let validation_result = match result {
-        Ok(instance_ip) => validate_deployment(&env, &instance_ip).await,
-        Err(deployment_err) => {
-            error!(
-                stage = "deployment",
-                status = "failed",
-                error = %deployment_err,
-                "Deployment failed"
-            );
-            Err(deployment_err)
-        }
+    let validation_result = match &deployment_result {
+        Ok(instance_ip) => validate_deployment(&env, instance_ip).await,
+        Err(_) => Ok(()), // Skip validation if deployment failed
     };
 
     cleanup_infrastructure(&env);
 
     let test_duration = test_start.elapsed();
+    
     info!(
         performance = "test_execution",
         duration_secs = test_duration.as_secs_f64(),
@@ -68,9 +60,9 @@ async fn main() -> Result<()> {
         "Test execution completed"
     );
 
-    // Handle final results
-    match validation_result {
-        Ok(()) => {
+    // Handle all 4 combinations of deployment and validation results
+    match (deployment_result, validation_result) {
+        (Ok(_), Ok(())) => {
             info!(
                 test_suite = "e2e_tests",
                 status = "success",
@@ -78,14 +70,35 @@ async fn main() -> Result<()> {
             );
             Ok(())
         }
-        Err(test_err) => {
+        (Ok(_), Err(validation_err)) => {
             error!(
                 test_suite = "e2e_tests",
+                stage = "validation",
                 status = "failed",
-                error = %test_err,
-                "Test failed"
+                error = %validation_err,
+                "Deployment succeeded but validation failed"
             );
-            Err(test_err)
+            Err(validation_err)
+        }
+        (Err(deployment_err), Ok(())) => {
+            error!(
+                test_suite = "e2e_tests",
+                stage = "deployment",
+                status = "failed",
+                error = %deployment_err,
+                "Deployment failed"
+            );
+            Err(deployment_err)
+        }
+        (Err(deployment_err), Err(_)) => {
+            error!(
+                test_suite = "e2e_tests",
+                stage = "deployment",
+                status = "failed",
+                error = %deployment_err,
+                "Deployment failed (validation skipped)"
+            );
+            Err(deployment_err)
         }
     }
 }
