@@ -18,6 +18,7 @@ journalctl
 keyrings
 larstobi
 lxdbr
+myenv
 newgrp
 newtype
 noconfirm
