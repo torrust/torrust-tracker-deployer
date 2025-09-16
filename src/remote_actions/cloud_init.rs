@@ -1,5 +1,5 @@
 use std::net::IpAddr;
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command_wrappers::ssh::SshClient;
 use crate::command_wrappers::ssh::SshConnection;
@@ -27,7 +27,16 @@ impl RemoteAction for CloudInitValidator {
         "cloud-init-validation"
     }
 
-    async fn execute(&self, _server_ip: &IpAddr) -> Result<(), RemoteActionError> {
+    #[instrument(
+        name = "cloud_init_validation",
+        skip(self),
+        fields(
+            action_type = "validation",
+            component = "cloud_init",
+            server_ip = %server_ip
+        )
+    )]
+    async fn execute(&self, server_ip: &IpAddr) -> Result<(), RemoteActionError> {
         info!(
             action = "cloud_init_validation",
             "Validating cloud-init completion"

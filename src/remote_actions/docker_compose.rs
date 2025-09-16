@@ -1,5 +1,5 @@
 use std::net::IpAddr;
-use tracing::{info, warn};
+use tracing::{info, instrument, warn};
 
 use crate::command_wrappers::ssh::SshClient;
 use crate::command_wrappers::ssh::SshConnection;
@@ -28,7 +28,16 @@ impl RemoteAction for DockerComposeValidator {
     }
 
     #[allow(clippy::too_many_lines)]
-    async fn execute(&self, _server_ip: &IpAddr) -> Result<(), RemoteActionError> {
+    #[instrument(
+        name = "docker_compose_validation",
+        skip(self),
+        fields(
+            action_type = "validation",
+            component = "docker_compose",
+            server_ip = %server_ip
+        )
+    )]
+    async fn execute(&self, server_ip: &IpAddr) -> Result<(), RemoteActionError> {
         info!(
             action = "docker_compose_validation",
             "Validating Docker Compose installation"
