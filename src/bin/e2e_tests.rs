@@ -28,12 +28,7 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing subscriber with proper configuration for structured logging
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .init();
+    init_tracing();
 
     let cli = Cli::parse();
 
@@ -93,6 +88,15 @@ async fn main() -> Result<()> {
             Err(test_err)
         }
     }
+}
+
+/// Initialize tracing subscriber with proper configuration for structured logging
+fn init_tracing() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .init();
 }
 
 async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
