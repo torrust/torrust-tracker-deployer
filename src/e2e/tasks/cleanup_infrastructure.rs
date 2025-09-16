@@ -1,3 +1,24 @@
+//! Infrastructure cleanup task for E2E testing
+//!
+//! This module provides functionality to clean up test infrastructure after E2E
+//! testing is complete. It handles the destruction of provisioned resources while
+//! respecting configuration flags for environment preservation.
+//!
+//! ## Key Features
+//!
+//! - Conditional cleanup based on `keep_env` configuration flag
+//! - Infrastructure destruction via `OpenTofu` destroy operations
+//! - Resource cleanup logging and error handling
+//! - Support for preserving environments for debugging and inspection
+//!
+//! ## Cleanup Behavior
+//!
+//! - If `keep_env` is true: Environment is preserved with connection instructions
+//! - If `keep_env` is false: All infrastructure resources are destroyed
+//! - Failures are logged as warnings but don't fail the overall process
+//!
+//! This allows for both automated cleanup and manual inspection workflows.
+
 use tracing::{info, warn};
 
 use crate::e2e::environment::TestEnvironment;

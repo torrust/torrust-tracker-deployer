@@ -1,3 +1,23 @@
+//! Ansible template rendering step
+//!
+//! This module provides the `RenderAnsibleTemplatesStep` which handles rendering
+//! of Ansible configuration templates with runtime variables like IP addresses
+//! and SSH keys. This step prepares Ansible inventory and playbook files for
+//! configuration management operations.
+//!
+//! ## Key Features
+//!
+//! - Dynamic template rendering with runtime variables (IP addresses, SSH keys)
+//! - Ansible inventory generation with host information
+//! - SSH key path processing and validation
+//! - Comprehensive error handling with detailed context
+//!
+//! ## Usage Context
+//!
+//! This step is executed after infrastructure provisioning when instance IP
+//! addresses are known, allowing for the generation of dynamic Ansible
+//! configurations for remote host management.
+
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;

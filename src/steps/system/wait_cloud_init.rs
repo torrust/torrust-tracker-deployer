@@ -1,3 +1,21 @@
+//! Cloud-init completion waiting step
+//!
+//! This module provides the `WaitForCloudInitStep` which ensures that cloud-init
+//! has completed on remote instances before proceeding with further configuration.
+//! This is crucial for ensuring instances are fully initialized before deployment.
+//!
+//! ## Key Features
+//!
+//! - Waits for cloud-init completion via Ansible playbook execution
+//! - Provides timeout handling for cloud-init processes
+//! - Integration with the deployment step system
+//! - Comprehensive error handling and logging
+//!
+//! ## Usage Context
+//!
+//! This step is typically used early in the deployment workflow after
+//! infrastructure provisioning to ensure instances are ready for configuration.
+
 use std::sync::Arc;
 use tracing::{info, instrument};
 

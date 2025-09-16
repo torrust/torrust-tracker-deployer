@@ -1,3 +1,20 @@
+//! SSH key setup task for E2E testing
+//!
+//! This module provides functionality to set up SSH keys for E2E testing by copying
+//! test keys from the fixtures directory to a temporary location with proper permissions.
+//!
+//! ## Key Operations
+//!
+//! - Copy SSH private and public keys from fixtures to temporary directory
+//! - Set correct file permissions (600 for private key, 644 for public key)
+//! - Ensure SSH keys are properly configured for test automation
+//!
+//! ## Security Considerations
+//!
+//! The SSH keys used are test-only keys from the fixtures directory and should
+//! never be used in production environments. Proper file permissions are enforced
+//! to prevent SSH client warnings and ensure secure key handling.
+
 use anyhow::{Context, Result};
 use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;

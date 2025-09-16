@@ -1,3 +1,27 @@
+//! Infrastructure provisioning task for E2E testing
+//!
+//! This module provides the E2E testing task for provisioning infrastructure using
+//! `OpenTofu`. It orchestrates the complete provisioning workflow through the
+//! `ProvisionCommand` and returns the IP address of the provisioned instance.
+//!
+//! ## Key Operations
+//!
+//! - Execute infrastructure provisioning via `ProvisionCommand`
+//! - Initialize and apply `OpenTofu` configurations
+//! - Render dynamic templates with runtime variables
+//! - Retrieve instance IP addresses from `OpenTofu` outputs
+//! - Prepare infrastructure for configuration phase
+//!
+//! ## Return Value
+//!
+//! Returns the IP address of the provisioned instance, which is essential
+//! for subsequent E2E testing phases (configuration, validation, etc.).
+//!
+//! ## Integration
+//!
+//! This task is a critical early step in the E2E testing workflow, providing
+//! the foundation infrastructure for all subsequent testing operations.
+
 use anyhow::{Context, Result};
 use std::net::IpAddr;
 use std::sync::Arc;

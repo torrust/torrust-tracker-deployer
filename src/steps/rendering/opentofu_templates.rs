@@ -1,3 +1,22 @@
+//! `OpenTofu` template rendering step
+//!
+//! This module provides the `RenderOpenTofuTemplatesStep` which handles rendering
+//! of `OpenTofu` configuration templates to the build directory. This step prepares
+//! infrastructure configuration files for `OpenTofu` operations.
+//!
+//! ## Key Features
+//!
+//! - Static template rendering for `OpenTofu` configurations
+//! - Integration with the `TofuTemplateRenderer` for file generation
+//! - Build directory preparation for infrastructure operations
+//! - Comprehensive error handling for template processing
+//!
+//! ## Usage Context
+//!
+//! This step is typically executed early in the deployment workflow, before
+//! infrastructure provisioning, to prepare the `OpenTofu` configuration files
+//! needed for infrastructure operations.
+
 use std::sync::Arc;
 
 use tracing::{info, instrument};

@@ -1,3 +1,29 @@
+//! Embedded template management system
+//!
+//! This module provides the `TemplateManager` which handles embedded template
+//! resources and their extraction to the filesystem for use by the deployment
+//! system. It uses `rust-embed` to bundle templates within the binary.
+//!
+//! ## Key Features
+//!
+//! - Embedded template resource management using `rust-embed`
+//! - Template extraction to filesystem for processing
+//! - Directory structure creation and management
+//! - Template cleanup and reset functionality for testing
+//! - Comprehensive error handling with detailed context
+//!
+//! ## Template Organization
+//!
+//! Templates are organized in the source tree under `templates/` and embedded
+//! into the binary at compile time. The manager can extract these templates
+//! to a working directory for use by template engines and deployment tools.
+//!
+//! ## Usage Scenarios
+//!
+//! - Initial template setup for deployment operations
+//! - Template refresh for testing environments
+//! - Development and debugging support with accessible template files
+
 use rust_embed::RustEmbed;
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -1,3 +1,27 @@
+//! Docker Compose validation remote action
+//!
+//! This module provides the `DockerComposeValidator` which checks Docker Compose
+//! installation and basic functionality on remote instances to ensure the
+//! container orchestration tool is properly configured and operational.
+//!
+//! ## Key Features
+//!
+//! - Docker Compose installation verification
+//! - Version checking and compatibility validation
+//! - Basic functionality testing (e.g., docker-compose version command)
+//! - Comprehensive error reporting for Docker Compose issues
+//!
+//! ## Validation Process
+//!
+//! The validator performs multiple checks:
+//! - Docker Compose binary availability and version
+//! - Integration with Docker engine
+//! - Basic command execution functionality
+//! - Service orchestration capabilities
+//!
+//! This ensures that subsequent deployment steps can rely on a working
+//! Docker Compose environment for container orchestration.
+
 use std::net::IpAddr;
 use tracing::{info, instrument, warn};
 

@@ -1,3 +1,25 @@
+//! SSH wrapper module for secure remote operations
+//!
+//! This module provides comprehensive SSH functionality for secure remote command
+//! execution and connectivity management. It includes credential management,
+//! connection configuration, and client implementation with proper error handling.
+//!
+//! ## Module Components
+//!
+//! - `client` - SSH client implementation for remote command execution
+//! - `connection` - SSH connection configuration and management
+//! - `credentials` - SSH authentication credentials and key management
+//!
+//! ## Key Features
+//!
+//! - Private key authentication with configurable credentials
+//! - Connection timeout and retry mechanisms
+//! - Secure remote command execution with error handling
+//! - Integration with deployment automation workflows
+//!
+//! The SSH wrapper is designed for automated deployment scenarios where
+//! secure remote access is essential for configuration and management tasks.
+
 pub mod client;
 pub mod connection;
 pub mod credentials;

@@ -1,3 +1,26 @@
+//! Deployment validation task for E2E testing
+//!
+//! This module provides comprehensive deployment validation functionality for E2E
+//! testing. It verifies that deployed infrastructure is working correctly by
+//! running a series of validation checks through the `TestCommand`.
+//!
+//! ## Validation Areas
+//!
+//! - Infrastructure service validation (Docker, Docker Compose)
+//! - System initialization validation (cloud-init completion)
+//! - Network connectivity and SSH access verification
+//! - Application deployment readiness checks
+//!
+//! ## Key Features
+//!
+//! - Comprehensive validation via `TestCommand` orchestration
+//! - Async execution for efficient testing workflows
+//! - Detailed logging and error reporting
+//! - Integration with E2E testing pipeline
+//!
+//! This task ensures that the complete deployment workflow has resulted in a
+//! functional environment ready for application deployment.
+
 use anyhow::{Context, Result};
 use std::net::IpAddr;
 use tracing::info;

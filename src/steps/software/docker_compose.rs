@@ -1,3 +1,26 @@
+//! Docker Compose installation step
+//!
+//! This module provides the `InstallDockerComposeStep` which handles Docker Compose
+//! installation on remote hosts via Ansible playbooks. This step ensures that
+//! the container orchestration tool is properly installed and configured.
+//!
+//! ## Key Features
+//!
+//! - Docker Compose installation via Ansible playbook execution
+//! - Version management and compatibility checking
+//! - Integration with existing Docker installations
+//! - Integration with the step-based deployment architecture
+//!
+//! ## Installation Process
+//!
+//! The step executes the "install-docker-compose" Ansible playbook which handles:
+//! - Docker Compose binary download and installation
+//! - Executable permissions and path configuration
+//! - Version verification and compatibility checking
+//!
+//! This step typically runs after Docker engine installation to provide
+//! complete container orchestration capabilities.
+
 use std::sync::Arc;
 use tracing::{info, instrument};
 

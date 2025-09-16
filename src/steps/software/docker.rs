@@ -1,3 +1,24 @@
+//! Docker installation step
+//!
+//! This module provides the `InstallDockerStep` which handles Docker engine
+//! installation on remote hosts via Ansible playbooks. This step ensures that
+//! the container runtime is properly installed and configured.
+//!
+//! ## Key Features
+//!
+//! - Docker engine installation via Ansible playbook execution
+//! - Automatic package cache updates before installation
+//! - Service configuration and startup management
+//! - Integration with the step-based deployment architecture
+//!
+//! ## Installation Process
+//!
+//! The step executes the "install-docker" Ansible playbook which handles:
+//! - System package cache updates
+//! - Docker engine package installation
+//! - Docker service enablement and startup
+//! - User permission configuration for Docker access
+
 use std::sync::Arc;
 use tracing::{info, instrument};
 
