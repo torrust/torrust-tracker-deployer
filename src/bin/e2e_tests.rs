@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     cleanup_infrastructure(&env);
 
     let test_duration = test_start.elapsed();
-    
+
     info!(
         performance = "test_execution",
         duration_secs = test_duration.as_secs_f64(),

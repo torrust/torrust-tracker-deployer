@@ -1,23 +1,27 @@
+/*!
+ * Infrastructure Steps
+ *
+ * This module contains steps that manage infrastructure lifecycle using `OpenTofu`.
+ * These steps handle VM/container creation, modification, and destruction.
+ *
+ * Current steps:
+ * - `OpenTofu` initialization (tofu init)
+ * - Infrastructure planning (tofu plan)
+ * - Infrastructure provisioning (tofu apply)
+ * - Infrastructure information retrieval
+ *
+ * Future steps may include:
+ * - Infrastructure destruction (tofu destroy)
+ * - Infrastructure state management
+ * - Multi-provider support
+ */
+
 pub mod apply;
 pub mod get_instance_info;
 pub mod initialize;
-pub mod install_docker;
-pub mod install_docker_compose;
 pub mod plan;
-pub mod validate_cloud_init_completion;
-pub mod validate_docker_compose_installation;
-pub mod validate_docker_installation;
-pub mod wait_cloud_init;
-pub mod wait_ssh_connectivity;
 
 pub use apply::ApplyInfrastructureStep;
 pub use get_instance_info::GetInstanceInfoStep;
 pub use initialize::InitializeInfrastructureStep;
-pub use install_docker::InstallDockerStep;
-pub use install_docker_compose::InstallDockerComposeStep;
 pub use plan::PlanInfrastructureStep;
-pub use validate_cloud_init_completion::ValidateCloudInitCompletionStep;
-pub use validate_docker_compose_installation::ValidateDockerComposeInstallationStep;
-pub use validate_docker_installation::ValidateDockerInstallationStep;
-pub use wait_cloud_init::WaitForCloudInitStep;
-pub use wait_ssh_connectivity::WaitForSSHConnectivityStep;
