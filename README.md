@@ -284,7 +284,6 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 ├── target/                 # 🦀 Rust build artifacts (git-ignored)
 ├── Cargo.toml             # Rust workspace configuration
 ├── Cargo.lock             # Rust dependency lock file
-├── main.tf                # Root OpenTofu configuration
 ├── cspell.json            # Spell checking configuration
 ├── project-words.txt      # Custom dictionary for spell checking
 ├── .markdownlint.json     # Markdown linting configuration
