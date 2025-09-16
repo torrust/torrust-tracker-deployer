@@ -157,16 +157,10 @@ impl TestEnvironment {
             .map_err(anyhow::Error::from)
             .context("Failed to provision infrastructure")?;
 
-        // Get the instance IP from LXD client (keeping for comparison/validation)
-        let lxd_instance_ip = self
-            .get_instance_ip()
-            .context("Failed to get instance IP from LXD client")?;
-
         info!(
             stage = "infrastructure_provisioning",
             status = "complete",
             opentofu_ip = %opentofu_instance_ip,
-            lxd_ip = %lxd_instance_ip,
             "Infrastructure provisioned successfully"
         );
 
@@ -195,25 +189,6 @@ impl TestEnvironment {
         );
 
         Ok(())
-    }
-    fn get_instance_ip(&self) -> Result<IpAddr> {
-        // For E2E tests, we should rely on OpenTofu outputs since they already wait for network
-        // This is a secondary validation that the instance is accessible via LXD
-
-        // First, check if the instance exists
-        let instance = self
-            .services
-            .lxd_client
-            .get_instance_by_name("torrust-vm")
-            .context("Failed to query LXD for instance information")?
-            .ok_or_else(|| anyhow::anyhow!("Instance 'torrust-vm' was not found in LXD"))?;
-
-        // Then, check if the instance has an IP address
-        let ip = instance.ip_address.ok_or_else(|| {
-            anyhow::anyhow!("Instance 'torrust-vm' exists but has no IPv4 address assigned")
-        })?;
-
-        Ok(ip)
     }
 
     fn cleanup(&self) {
