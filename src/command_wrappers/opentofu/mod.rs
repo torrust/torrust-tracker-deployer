@@ -7,6 +7,38 @@ pub mod json_parser;
 pub use client::{InstanceInfo, OpenTofuClient, OpenTofuError};
 pub use json_parser::ParseError;
 
+/// Errors that can occur during emergency destroy operations
+#[derive(Debug)]
+pub enum EmergencyDestroyError {
+    /// Command execution failed (e.g., tofu binary not found)
+    CommandExecution { source: std::io::Error },
+
+    /// `OpenTofu` destroy operation failed with error output
+    DestroyFailed { stderr: String },
+}
+
+impl std::fmt::Display for EmergencyDestroyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CommandExecution { source } => {
+                write!(f, "Failed to execute OpenTofu destroy command: {source}")
+            }
+            Self::DestroyFailed { stderr } => {
+                write!(f, "OpenTofu destroy failed: {stderr}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for EmergencyDestroyError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::CommandExecution { source } => Some(source),
+            Self::DestroyFailed { .. } => None,
+        }
+    }
+}
+
 /// Emergency destroy operation for cleanup scenarios
 ///
 /// This function performs a destructive `OpenTofu` destroy operation without prompting.
@@ -19,13 +51,13 @@ pub use json_parser::ParseError;
 ///
 /// # Returns
 ///
-/// * `Result<(), Box<dyn std::error::Error>>` - Success or error from the destroy operation
+/// * `Result<(), EmergencyDestroyError>` - Success or concrete error from the destroy operation
 ///
 /// # Errors
 ///
 /// Returns an error if the `OpenTofu` destroy command fails or if there are issues
 /// with command execution.
-pub fn emergency_destroy<P: AsRef<Path>>(working_dir: P) -> Result<(), Box<dyn std::error::Error>> {
+pub fn emergency_destroy<P: AsRef<Path>>(working_dir: P) -> Result<(), EmergencyDestroyError> {
     use std::process::Command;
 
     tracing::debug!(
@@ -36,14 +68,15 @@ pub fn emergency_destroy<P: AsRef<Path>>(working_dir: P) -> Result<(), Box<dyn s
     let output = Command::new("tofu")
         .args(["destroy", "-auto-approve"])
         .current_dir(&working_dir)
-        .output()?;
+        .output()
+        .map_err(|source| EmergencyDestroyError::CommandExecution { source })?;
 
     if output.status.success() {
         tracing::debug!("Emergency destroy: `OpenTofu` destroy completed successfully");
         Ok(())
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         tracing::error!("Emergency destroy: `OpenTofu` destroy failed: {stderr}");
-        Err(format!("`OpenTofu` destroy failed: {stderr}").into())
+        Err(EmergencyDestroyError::DestroyFailed { stderr })
     }
 }

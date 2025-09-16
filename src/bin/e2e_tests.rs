@@ -7,9 +7,10 @@ use tracing::{error, info};
 // Import E2E testing infrastructure
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
 use torrust_tracker_deploy::e2e::tasks::{
+    cleanup_infrastructure::cleanup_infrastructure,
     configure_infrastructure::configure_infrastructure,
-    provision_infrastructure::{cleanup_infrastructure, provision_infrastructure},
-    validate_deployment::validate_deployment,
+    preflight_cleanup::cleanup_lingering_resources,
+    provision_infrastructure::provision_infrastructure, validate_deployment::validate_deployment,
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
 
@@ -34,8 +35,26 @@ struct Cli {
     log_format: LogFormat,
 }
 
+/// Main entry point for E2E tests.
+///
+/// Runs the full deployment workflow: provision infrastructure, configure services,
+/// validate deployment, and cleanup resources.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Pre-flight cleanup fails
+/// - Infrastructure provisioning fails  
+/// - Service configuration fails
+/// - Deployment validation fails
+/// - Resource cleanup fails (when enabled)
+///
+/// # Panics
+///
+/// May panic during the match statement if unexpected error combinations occur
+/// that are not handled by the current error handling logic.
 #[tokio::main]
-async fn main() -> Result<()> {
+pub async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging based on the chosen format
@@ -49,6 +68,9 @@ async fn main() -> Result<()> {
     );
 
     let env = TestEnvironment::new(cli.keep, cli.templates_dir)?;
+
+    // Perform pre-flight cleanup to remove any lingering resources from interrupted tests
+    cleanup_lingering_resources(&env)?;
 
     let test_start = Instant::now();
 

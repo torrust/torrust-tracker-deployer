@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::net::IpAddr;
 use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::commands::ProvisionCommand;
 use crate::e2e::environment::TestEnvironment;
@@ -40,40 +40,4 @@ pub async fn provision_infrastructure(env: &TestEnvironment) -> Result<IpAddr> {
 
     // Return the IP from OpenTofu as it's our preferred source
     Ok(opentofu_instance_ip)
-}
-
-pub fn cleanup_infrastructure(env: &TestEnvironment) {
-    if env.config.keep_env {
-        info!(
-            operation = "cleanup",
-            action = "keep_environment",
-            instance = "torrust-vm",
-            connect_command = "lxc exec torrust-vm -- /bin/bash",
-            "Keeping test environment as requested"
-        );
-        return;
-    }
-
-    info!(operation = "cleanup", "Cleaning up test environment");
-
-    // Destroy infrastructure using OpenTofuClient
-    let result = env
-        .services
-        .opentofu_client
-        .destroy(true) // auto_approve = true
-        .map_err(anyhow::Error::from);
-
-    match result {
-        Ok(_) => info!(
-            operation = "cleanup",
-            status = "success",
-            "Test environment cleaned up successfully"
-        ),
-        Err(e) => warn!(
-            operation = "cleanup",
-            status = "failed",
-            error = %e,
-            "Cleanup failed"
-        ),
-    }
 }
