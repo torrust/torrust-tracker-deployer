@@ -267,7 +267,8 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 
 - **[🤝 Contributing Guide](docs/contributing/README.md)** - Git workflow, commit process, and linting conventions
 - **[📖 Documentation Organization Guide](docs/documentation.md)** - How documentation is organized and where to contribute
-- **[📖 OpenTofu Setup Guide](docs/tech-stack/opentofu.md)** - Installation, common commands, and best practices
+- **[� Structured Logging Implementation Plan](docs/structured-logging-implementation-plan.md)** - Implementation plan for hierarchical logging with tracing spans
+- **[�📖 OpenTofu Setup Guide](docs/tech-stack/opentofu.md)** - Installation, common commands, and best practices
 - **[📖 Ansible Setup Guide](docs/tech-stack/ansible.md)** - Installation, configuration, and project usage
 - **[📖 VM Providers Comparison](docs/vm-providers.md)** - Detailed comparison and decision rationale
 

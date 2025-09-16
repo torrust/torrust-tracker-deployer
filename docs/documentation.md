@@ -108,6 +108,7 @@ docs/
 **Examples**:
 
 - `vm-providers.md` - Comparison of VM providers for this project
+- `structured-logging-implementation-plan.md` - Implementation plan for hierarchical logging with tracing spans
 - Project-specific usage patterns and workflows
 
 ### 📁 Configuration Documentation (`templates/*/README.md`)
