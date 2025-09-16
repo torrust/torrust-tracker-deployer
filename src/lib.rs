@@ -36,6 +36,7 @@ pub mod commands;
 pub mod config;
 pub mod container;
 pub mod e2e;
+pub mod logging;
 pub mod remote_actions;
 pub mod steps;
 pub mod template;

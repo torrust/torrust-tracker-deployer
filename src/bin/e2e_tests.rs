@@ -3,7 +3,6 @@ use clap::Parser;
 use std::net::IpAddr;
 use std::time::Instant;
 use tracing::{error, info};
-use tracing_subscriber::EnvFilter;
 
 // Import E2E testing infrastructure
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
@@ -12,6 +11,7 @@ use torrust_tracker_deploy::e2e::tasks::{
     provision_infrastructure::{cleanup_infrastructure, provision_infrastructure},
     validate_deployment::validate_deployment,
 };
+use torrust_tracker_deploy::logging::{self, LogFormat};
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -24,17 +24,27 @@ struct Cli {
     /// Templates directory path (default: ./data/templates)
     #[arg(long, default_value = "./data/templates")]
     templates_dir: String,
+
+    /// Logging format to use
+    #[arg(
+        long,
+        default_value = "pretty",
+        help = "Logging format: pretty, json, or compact"
+    )]
+    log_format: LogFormat,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    init_tracing();
-
     let cli = Cli::parse();
+
+    // Initialize logging based on the chosen format
+    logging::init_with_format(&cli.log_format);
 
     info!(
         application = "torrust_tracker_deploy",
         test_suite = "e2e_tests",
+        log_format = ?cli.log_format,
         "Starting E2E tests"
     );
 
@@ -98,15 +108,6 @@ async fn main() -> Result<()> {
             Err(deployment_err)
         }
     }
-}
-
-/// Initialize tracing subscriber with proper configuration for structured logging
-fn init_tracing() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .init();
 }
 
 async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {

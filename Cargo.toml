@@ -37,4 +37,4 @@ tera = "1.0"
 thiserror = "1.0"
 torrust-linting = { path = "packages/linting" }
 tracing = { version = "0.1", features = [ "attributes" ] }
-tracing-subscriber = "0.3"
+tracing-subscriber = { version = "0.3", features = [ "env-filter", "json", "fmt" ] }
