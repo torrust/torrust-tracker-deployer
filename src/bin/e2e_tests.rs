@@ -44,7 +44,7 @@ impl TestEnvironment {
         // Setup SSH key
         let temp_ssh_key = temp_dir.path().join("testing_rsa");
         let temp_ssh_pub_key = temp_dir.path().join("testing_rsa.pub");
-        Self::setup_ssh_key(&project_root, &temp_dir, &temp_ssh_key)?;
+        setup_ssh_key(&project_root, &temp_dir)?;
 
         // Create SSH credentials (no host IP needed yet)
         let ssh_credentials =
@@ -63,13 +63,14 @@ impl TestEnvironment {
         let services = Services::new(&config);
 
         // Clean and prepare templates directory
-        Self::clean_and_prepare_templates(&services)?;
+        clean_and_prepare_templates(&services)?;
 
         info!(
             environment = "temporary_directory",
             path = %temp_dir.path().display(),
             "Temporary directory created"
         );
+
         info!(
             environment = "templates_directory",
             path = %services.template_manager.templates_dir().display(),
@@ -82,150 +83,6 @@ impl TestEnvironment {
             temp_dir: Some(temp_dir),
         })
     }
-
-    /// Setup SSH key by copying from fixtures to temporary directory with proper permissions
-    fn setup_ssh_key(
-        project_root: &std::path::Path,
-        temp_dir: &TempDir,
-        _ssh_key_path: &std::path::Path,
-    ) -> Result<()> {
-        // Copy SSH private key from fixtures to temp directory
-        let fixtures_ssh_key = project_root.join("fixtures/testing_rsa");
-        let temp_ssh_key = temp_dir.path().join("testing_rsa");
-
-        std::fs::copy(&fixtures_ssh_key, &temp_ssh_key)
-            .context("Failed to copy SSH private key to temporary directory")?;
-
-        // Copy SSH public key from fixtures to temp directory
-        let fixtures_ssh_pub_key = project_root.join("fixtures/testing_rsa.pub");
-        let temp_ssh_pub_key = temp_dir.path().join("testing_rsa.pub");
-
-        std::fs::copy(&fixtures_ssh_pub_key, &temp_ssh_pub_key)
-            .context("Failed to copy SSH public key to temporary directory")?;
-
-        // Set proper permissions on the SSH key (600)
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&temp_ssh_key)?.permissions();
-            perms.set_mode(0o600);
-            std::fs::set_permissions(&temp_ssh_key, perms)?;
-        }
-
-        info!(
-            operation = "ssh_key_setup",
-            private_location = %temp_ssh_key.display(),
-            public_location = %temp_ssh_pub_key.display(),
-            "SSH keys copied to temporary location"
-        );
-
-        Ok(())
-    }
-
-    /// Clean and prepare templates directory to ensure fresh embedded templates
-    fn clean_and_prepare_templates(services: &Services) -> Result<()> {
-        // Clean templates directory to ensure we use fresh templates from embedded resources
-        info!(
-            operation = "clean_templates",
-            "Cleaning templates directory to ensure fresh embedded templates"
-        );
-        services
-            .template_manager
-            .reset_templates_dir()
-            .map_err(|e| anyhow::anyhow!(e))?;
-        Ok(())
-    }
-
-    async fn provision_infrastructure(&self) -> Result<IpAddr> {
-        info!(
-            stage = "infrastructure_provisioning",
-            "Provisioning test infrastructure"
-        );
-
-        // Use the new ProvisionCommand to handle all infrastructure provisioning steps
-        let provision_command = ProvisionCommand::new(
-            Arc::clone(&self.services.tofu_template_renderer),
-            Arc::clone(&self.services.ansible_template_renderer),
-            Arc::clone(&self.services.ansible_client),
-            Arc::clone(&self.services.opentofu_client),
-            self.config.ssh_credentials.clone(),
-        );
-
-        let opentofu_instance_ip = provision_command
-            .execute()
-            .await
-            .map_err(anyhow::Error::from)
-            .context("Failed to provision infrastructure")?;
-
-        info!(
-            stage = "infrastructure_provisioning",
-            status = "complete",
-            opentofu_ip = %opentofu_instance_ip,
-            "Infrastructure provisioned successfully"
-        );
-
-        // Return the IP from OpenTofu as it's our preferred source
-        Ok(opentofu_instance_ip)
-    }
-
-    fn configure_infrastructure(&self) -> Result<()> {
-        info!(
-            stage = "infrastructure_configuration",
-            "Configuring test infrastructure"
-        );
-
-        // Use the new ConfigureCommand to handle all infrastructure configuration steps
-        let configure_command = ConfigureCommand::new(Arc::clone(&self.services.ansible_client));
-
-        configure_command
-            .execute()
-            .map_err(anyhow::Error::from)
-            .context("Failed to configure infrastructure")?;
-
-        info!(
-            stage = "infrastructure_configuration",
-            status = "complete",
-            "Infrastructure configuration completed successfully"
-        );
-
-        Ok(())
-    }
-
-    fn cleanup(&self) {
-        if self.config.keep_env {
-            info!(
-                operation = "cleanup",
-                action = "keep_environment",
-                instance = "torrust-vm",
-                connect_command = "lxc exec torrust-vm -- /bin/bash",
-                "Keeping test environment as requested"
-            );
-            return;
-        }
-
-        info!(operation = "cleanup", "Cleaning up test environment");
-
-        // Destroy infrastructure using OpenTofuClient
-        let result = self
-            .services
-            .opentofu_client
-            .destroy(true) // auto_approve = true
-            .map_err(anyhow::Error::from);
-
-        match result {
-            Ok(_) => info!(
-                operation = "cleanup",
-                status = "success",
-                "Test environment cleaned up successfully"
-            ),
-            Err(e) => warn!(
-                operation = "cleanup",
-                status = "failed",
-                error = %e,
-                "Cleanup failed"
-            ),
-        }
-    }
 }
 
 impl Drop for TestEnvironment {
@@ -237,6 +94,147 @@ impl Drop for TestEnvironment {
 
             drop(torrust_tracker_deploy::command_wrappers::opentofu::emergency_destroy(&tofu_dir));
         }
+    }
+}
+
+/// Setup SSH key by copying from fixtures to temporary directory with proper permissions
+fn setup_ssh_key(project_root: &std::path::Path, temp_dir: &TempDir) -> Result<()> {
+    // Copy SSH private key from fixtures to temp directory
+    let fixtures_ssh_key = project_root.join("fixtures/testing_rsa");
+    let temp_ssh_key = temp_dir.path().join("testing_rsa");
+
+    std::fs::copy(&fixtures_ssh_key, &temp_ssh_key)
+        .context("Failed to copy SSH private key to temporary directory")?;
+
+    // Copy SSH public key from fixtures to temp directory
+    let fixtures_ssh_pub_key = project_root.join("fixtures/testing_rsa.pub");
+    let temp_ssh_pub_key = temp_dir.path().join("testing_rsa.pub");
+
+    std::fs::copy(&fixtures_ssh_pub_key, &temp_ssh_pub_key)
+        .context("Failed to copy SSH public key to temporary directory")?;
+
+    // Set proper permissions on the SSH key (600)
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&temp_ssh_key)?.permissions();
+        perms.set_mode(0o600);
+        std::fs::set_permissions(&temp_ssh_key, perms)?;
+    }
+
+    info!(
+        operation = "ssh_key_setup",
+        private_location = %temp_ssh_key.display(),
+        public_location = %temp_ssh_pub_key.display(),
+        "SSH keys copied to temporary location"
+    );
+
+    Ok(())
+}
+
+/// Clean and prepare templates directory to ensure fresh embedded templates
+fn clean_and_prepare_templates(services: &Services) -> Result<()> {
+    // Clean templates directory to ensure we use fresh templates from embedded resources
+    info!(
+        operation = "clean_templates",
+        "Cleaning templates directory to ensure fresh embedded templates"
+    );
+
+    services
+        .template_manager
+        .reset_templates_dir()
+        .map_err(|e| anyhow::anyhow!(e))?;
+    Ok(())
+}
+
+async fn provision_infrastructure(env: &TestEnvironment) -> Result<IpAddr> {
+    info!(
+        stage = "infrastructure_provisioning",
+        "Provisioning test infrastructure"
+    );
+
+    // Use the new ProvisionCommand to handle all infrastructure provisioning steps
+    let provision_command = ProvisionCommand::new(
+        Arc::clone(&env.services.tofu_template_renderer),
+        Arc::clone(&env.services.ansible_template_renderer),
+        Arc::clone(&env.services.ansible_client),
+        Arc::clone(&env.services.opentofu_client),
+        env.config.ssh_credentials.clone(),
+    );
+
+    let opentofu_instance_ip = provision_command
+        .execute()
+        .await
+        .map_err(anyhow::Error::from)
+        .context("Failed to provision infrastructure")?;
+
+    info!(
+        stage = "infrastructure_provisioning",
+        status = "complete",
+        opentofu_ip = %opentofu_instance_ip,
+        "Infrastructure provisioned successfully"
+    );
+
+    // Return the IP from OpenTofu as it's our preferred source
+    Ok(opentofu_instance_ip)
+}
+
+fn configure_infrastructure(env: &TestEnvironment) -> Result<()> {
+    info!(
+        stage = "infrastructure_configuration",
+        "Configuring test infrastructure"
+    );
+
+    // Use the new ConfigureCommand to handle all infrastructure configuration steps
+    let configure_command = ConfigureCommand::new(Arc::clone(&env.services.ansible_client));
+
+    configure_command
+        .execute()
+        .map_err(anyhow::Error::from)
+        .context("Failed to configure infrastructure")?;
+
+    info!(
+        stage = "infrastructure_configuration",
+        status = "complete",
+        "Infrastructure configuration completed successfully"
+    );
+
+    Ok(())
+}
+
+fn cleanup_infrastructure(env: &TestEnvironment) {
+    if env.config.keep_env {
+        info!(
+            operation = "cleanup",
+            action = "keep_environment",
+            instance = "torrust-vm",
+            connect_command = "lxc exec torrust-vm -- /bin/bash",
+            "Keeping test environment as requested"
+        );
+        return;
+    }
+
+    info!(operation = "cleanup", "Cleaning up test environment");
+
+    // Destroy infrastructure using OpenTofuClient
+    let result = env
+        .services
+        .opentofu_client
+        .destroy(true) // auto_approve = true
+        .map_err(anyhow::Error::from);
+
+    match result {
+        Ok(_) => info!(
+            operation = "cleanup",
+            status = "success",
+            "Test environment cleaned up successfully"
+        ),
+        Err(e) => warn!(
+            operation = "cleanup",
+            status = "failed",
+            error = %e,
+            "Cleanup failed"
+        ),
     }
 }
 
@@ -269,10 +267,10 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     );
 
     // Stage 1: Provision infrastructure (includes template rendering, infrastructure creation, SSH wait, and Ansible template rendering)
-    let instance_ip = env.provision_infrastructure().await?;
+    let instance_ip = provision_infrastructure(env).await?;
 
     // Stage 2: Configure infrastructure (wait for cloud-init and install Docker/Docker Compose)
-    env.configure_infrastructure()?;
+    configure_infrastructure(env)?;
 
     info!(
         stage = "deployment",
@@ -328,7 +326,7 @@ async fn main() -> Result<()> {
         }
     };
 
-    env.cleanup();
+    cleanup_infrastructure(&env);
 
     let test_duration = test_start.elapsed();
     info!(
