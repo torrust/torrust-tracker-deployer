@@ -8,14 +8,9 @@ use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
 // Import command execution system
-use torrust_tracker_deploy::commands::{ConfigureCommand, ProvisionCommand};
+use torrust_tracker_deploy::commands::{ConfigureCommand, ProvisionCommand, TestCommand};
 use torrust_tracker_deploy::config::{Config, SshCredentials};
 use torrust_tracker_deploy::container::Services;
-// Import steps
-use torrust_tracker_deploy::steps::{
-    ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
-    ValidateDockerInstallationStep,
-};
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -273,32 +268,14 @@ impl Drop for TestEnvironment {
 async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Result<()> {
     info!(stage = "validation", "Starting deployment validation");
 
-    // Validate cloud-init completion
-    let validate_cloud_init_step = ValidateCloudInitCompletionStep::new(
-        env.config.ssh_credentials.clone().with_host(*instance_ip),
-    );
-    validate_cloud_init_step
-        .execute()
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
+    // Use the new TestCommand to handle all infrastructure validation steps
+    let test_command = TestCommand::new(env.config.ssh_credentials.clone(), *instance_ip);
 
-    // Validate Docker installation
-    let validate_docker_step = ValidateDockerInstallationStep::new(
-        env.config.ssh_credentials.clone().with_host(*instance_ip),
-    );
-    validate_docker_step
+    test_command
         .execute()
         .await
-        .map_err(|e| anyhow::anyhow!(e))?;
-
-    // Validate Docker Compose installation
-    let validate_docker_compose_step = ValidateDockerComposeInstallationStep::new(
-        env.config.ssh_credentials.clone().with_host(*instance_ip),
-    );
-    validate_docker_compose_step
-        .execute()
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
+        .map_err(anyhow::Error::from)
+        .context("Failed to validate deployment")?;
 
     info!(
         stage = "validation",
