@@ -36,6 +36,7 @@ pub mod command_wrappers;
 pub mod commands;
 pub mod config;
 pub mod container;
+pub mod e2e;
 pub mod steps;
 pub mod template;
 pub mod tofu;
