@@ -33,6 +33,7 @@ prereq
 println
 publickey
 pytest
+RAII
 resolv
 runcmd
 RUSTDOCFLAGS
