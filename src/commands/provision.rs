@@ -1,3 +1,17 @@
+//! Infrastructure provisioning command
+//!
+//! This module contains the `ProvisionCommand` which orchestrates the complete infrastructure
+//! provisioning workflow including:
+//!
+//! - Template rendering for `OpenTofu` configuration
+//! - Infrastructure planning and application via `OpenTofu`
+//! - Instance information retrieval
+//! - Ansible template rendering with dynamic VM data
+//! - System readiness validation (cloud-init, SSH connectivity)
+//!
+//! The command handles the complex interaction between different deployment tools
+//! and ensures proper sequencing of provisioning steps.
+
 use std::net::IpAddr;
 use std::sync::Arc;
 

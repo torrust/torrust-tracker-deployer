@@ -1,3 +1,18 @@
+//! SSH credentials management for remote authentication
+//!
+//! This module provides the `SshCredentials` struct which manages SSH authentication
+//! information including private/public key paths and username configuration.
+//!
+//! ## Key Features
+//!
+//! - SSH key pair management (private and public keys)
+//! - Username configuration for remote connections
+//! - Integration with SSH connection establishment
+//! - Support for creating SSH connections with target IP addresses
+//!
+//! The credentials are typically configured at startup and used throughout
+//! the deployment process for secure remote access to provisioned instances.
+
 use std::net::IpAddr;
 use std::path::PathBuf;
 

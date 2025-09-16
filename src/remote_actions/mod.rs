@@ -1,3 +1,26 @@
+//! Remote actions module (Level 3 of Three-Level Architecture)
+//!
+//! This module provides the lowest-level operations in the three-level architecture,
+//! containing leaf-level actions that directly interact with remote systems via SSH.
+//! These actions are the building blocks used by steps (Level 2) and commands (Level 1).
+//!
+//! ## Available Remote Actions
+//!
+//! - `cloud_init` - Cloud-init status checking and validation
+//! - `docker` - Docker installation and service management
+//! - `docker_compose` - Docker Compose installation and validation
+//!
+//! ## Architecture Pattern
+//!
+//! Remote actions follow a consistent pattern:
+//! - Take SSH connection and required parameters
+//! - Execute specific remote operations via SSH
+//! - Provide structured error handling with action context
+//! - Return typed results for use by higher-level components
+//!
+//! These actions are designed to be atomic, testable, and reusable across
+//! different deployment scenarios.
+
 use std::net::IpAddr;
 use thiserror::Error;
 

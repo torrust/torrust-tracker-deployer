@@ -1,3 +1,26 @@
+//! Docker installation and validation remote action
+//!
+//! This module provides the `DockerValidator` which checks Docker installation
+//! and daemon status on remote instances to ensure the container runtime is
+//! properly configured and operational.
+//!
+//! ## Key Features
+//!
+//! - Docker daemon status validation
+//! - Docker version checking and compatibility verification
+//! - Service availability testing
+//! - Comprehensive error reporting for Docker issues
+//!
+//! ## Validation Process
+//!
+//! The validator checks multiple aspects of Docker installation:
+//! - Docker binary availability and version
+//! - Docker daemon running status
+//! - Basic Docker functionality (e.g., hello-world container)
+//!
+//! This ensures that subsequent deployment steps can rely on a working
+//! Docker environment.
+
 use std::net::IpAddr;
 use tracing::{info, instrument, warn};
 

@@ -1,3 +1,25 @@
+//! Test environment management for E2E testing
+//!
+//! This module provides the `TestEnvironment` which manages the complete setup
+//! and configuration of test environments for end-to-end deployment testing.
+//!
+//! ## Key Features
+//!
+//! - Temporary directory and SSH key management
+//! - Service container initialization with test configuration
+//! - Template preparation and cleanup for test isolation
+//! - Comprehensive error handling for environment setup failures
+//!
+//! ## Environment Lifecycle
+//!
+//! 1. **Setup** - Create temporary directories, SSH keys, clean templates
+//! 2. **Configuration** - Initialize services with test-specific settings
+//! 3. **Usage** - Provide services for test execution
+//! 4. **Cleanup** - Automatic cleanup via RAII (`TempDir`)
+//!
+//! The environment ensures each test runs in isolation with its own
+//! temporary resources and configuration.
+
 use tempfile::TempDir;
 use tracing::info;
 

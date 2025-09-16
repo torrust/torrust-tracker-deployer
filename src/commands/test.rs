@@ -1,3 +1,17 @@
+//! Infrastructure testing and validation command
+//!
+//! This module contains the `TestCommand` which validates deployed infrastructure
+//! by running various checks to ensure services are properly installed and configured.
+//!
+//! ## Validation Steps
+//!
+//! - Cloud-init completion verification
+//! - Docker installation validation
+//! - Docker Compose installation validation
+//!
+//! The command provides comprehensive error reporting and logging to help
+//! diagnose deployment issues.
+
 use std::net::IpAddr;
 use tracing::{error, info, instrument};
 

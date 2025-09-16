@@ -1,3 +1,19 @@
+//! LXD instance name validation and management
+//!
+//! This module provides the `InstanceName` type which ensures LXD instance names
+//! follow the strict naming requirements imposed by LXD for security and
+//! compatibility reasons.
+//!
+//! ## Naming Requirements
+//!
+//! - Length: 1-63 characters
+//! - Characters: ASCII letters, numbers, and dashes only
+//! - Cannot start with digit or dash
+//! - Cannot end with dash
+//!
+//! These restrictions ensure compatibility with DNS records, file systems,
+//! security profiles, and host names across different environments.
+
 use std::fmt;
 use std::str::FromStr;
 

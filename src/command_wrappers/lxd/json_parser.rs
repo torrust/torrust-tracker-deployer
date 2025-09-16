@@ -1,3 +1,18 @@
+//! JSON parsing utilities for LXD command output
+//!
+//! This module provides the `LxdJsonParser` which handles parsing of complex JSON
+//! responses from LXD commands and converts them into structured Rust types.
+//!
+//! ## Key Features
+//!
+//! - Parsing LXD list command JSON output into instance information
+//! - IP address extraction from LXD network configuration
+//! - Error handling for malformed or unexpected JSON structures
+//! - Type-safe conversion from JSON to Rust structs
+//!
+//! The parser encapsulates all JSON handling logic and provides a clean interface
+//! for converting LXD command output into usable data structures.
+
 use std::net::IpAddr;
 
 use anyhow::{anyhow, Context, Result};

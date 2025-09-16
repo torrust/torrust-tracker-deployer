@@ -1,3 +1,19 @@
+//! JSON parsing utilities for `OpenTofu` command output
+//!
+//! This module provides the `OpenTofuJsonParser` which handles parsing of complex JSON
+//! responses from `OpenTofu` commands and converts them into structured Rust types.
+//!
+//! ## Key Features
+//!
+//! - Parsing `OpenTofu` output command JSON into instance information
+//! - IP address extraction from Terraform state outputs
+//! - Error handling for malformed or unexpected JSON structures
+//! - Type-safe conversion from JSON to Rust structs
+//! - Support for complex nested JSON structures from Terraform state
+//!
+//! The parser encapsulates all JSON handling logic and provides a clean interface
+//! for converting `OpenTofu` command output into usable data structures.
+
 use std::net::IpAddr;
 use std::str::FromStr;
 

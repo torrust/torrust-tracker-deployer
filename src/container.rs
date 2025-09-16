@@ -1,3 +1,15 @@
+//! Dependency injection container for deployment services
+//!
+//! This module provides the `Services` struct that acts as a dependency injection container,
+//! holding all the service clients and template renderers needed for deployment operations.
+//! It centralizes service construction and makes them easily accessible throughout the application.
+//!
+//! ## Services Included
+//!
+//! - **Command clients**: `OpenTofu`, LXD, Ansible clients for external tool interaction
+//! - **Template services**: Template manager and specialized renderers for different tools
+//! - **Configuration**: Centralized configuration management
+
 use std::sync::Arc;
 
 use crate::ansible::AnsibleTemplateRenderer;

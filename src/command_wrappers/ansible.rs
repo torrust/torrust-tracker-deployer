@@ -1,3 +1,18 @@
+//! Ansible command wrapper for configuration management
+//!
+//! This module provides the `AnsibleClient` which wraps Ansible command-line tools
+//! to provide a Rust-native interface for configuration management operations.
+//!
+//! ## Key Features
+//!
+//! - Playbook execution with inventory management
+//! - Ad-hoc command execution on remote hosts
+//! - Working directory management for Ansible projects
+//! - Comprehensive error handling and logging
+//!
+//! The client handles the complexity of Ansible command construction and provides
+//! a clean API for common configuration management tasks.
+
 use std::path::{Path, PathBuf};
 
 use tracing::info;

@@ -1,3 +1,13 @@
+//! Main binary entry point for Torrust Tracker Deploy
+//!
+//! This binary provides a simple information display about the deployment infrastructure.
+//! For actual deployment functionality, use the dedicated binary tools:
+//! - `e2e-tests` - Run end-to-end deployment tests
+//! - `linter` - Run project linting checks
+//!
+//! The main deployment workflow is handled through the library's command system
+//! rather than this binary entry point.
+
 fn main() {
     println!("🏗️  Torrust Tracker Deploy");
     println!("=========================");

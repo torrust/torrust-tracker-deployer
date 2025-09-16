@@ -1,3 +1,18 @@
+//! Template preparation task for E2E testing
+//!
+//! This module provides functionality to clean and prepare the templates directory
+//! for testing, ensuring that tests use fresh embedded templates rather than any
+//! potentially modified or corrupted templates from previous test runs.
+//!
+//! ## Key Operations
+//!
+//! - Reset templates directory to clean state
+//! - Extract fresh embedded templates
+//! - Ensure test isolation by removing previous template modifications
+//!
+//! This task is typically executed early in the E2E test workflow to guarantee
+//! consistent starting conditions for all tests.
+
 use anyhow::Result;
 use tracing::info;
 

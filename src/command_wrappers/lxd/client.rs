@@ -1,3 +1,19 @@
+//! LXD client for container and VM instance management
+//!
+//! This module provides the `LxdClient` which wraps LXD command-line tools to provide
+//! a Rust-native interface for managing LXD containers and virtual machines.
+//!
+//! ## Key Features
+//!
+//! - Instance lifecycle management (list, inspect, control)
+//! - IP address retrieval and network information
+//! - JSON output parsing for structured data access
+//! - Integration with the command execution framework
+//! - Support for both containers and virtual machines
+//!
+//! The client abstracts the complexity of LXD command-line interaction and provides
+//! type-safe APIs for common instance management tasks.
+
 use std::net::IpAddr;
 
 use anyhow::{Context, Result};

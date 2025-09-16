@@ -1,3 +1,19 @@
+//! Configuration management for deployment settings
+//!
+//! This module provides the `Config` struct which centralizes all deployment-related
+//! configuration including file paths, service connections, SSH credentials,
+//! and runtime behavior settings.
+//!
+//! ## Key Configuration Areas
+//!
+//! - SSH credentials and connection settings
+//! - File system paths for templates and build outputs
+//! - Deployment behavior flags (cleanup, verbosity, etc.)
+//! - Tool-specific configuration (Ansible, `OpenTofu`)
+//!
+//! The configuration is typically created once at deployment start and passed
+//! throughout the system to ensure consistent settings across all components.
+
 use std::path::PathBuf;
 
 pub use crate::command_wrappers::ssh::{SshConnection, SshCredentials};

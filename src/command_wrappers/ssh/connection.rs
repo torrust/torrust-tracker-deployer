@@ -1,3 +1,18 @@
+//! SSH connection configuration and management
+//!
+//! This module provides the `SshConnection` struct which encapsulates all the information
+//! needed to establish an SSH connection to a remote host, including credentials and
+//! target host information.
+//!
+//! ## Key Components
+//!
+//! - Connection configuration combining credentials and target host
+//! - IP address management for remote instances
+//! - Integration with SSH credentials for authentication
+//!
+//! The connection configuration is used by SSH clients to establish secure
+//! connections for remote command execution.
+
 use std::net::IpAddr;
 use std::path::PathBuf;
 

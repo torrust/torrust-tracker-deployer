@@ -1,3 +1,19 @@
+//! End-to-End Testing Binary for Torrust Tracker Deploy
+//!
+//! This binary orchestrates complete end-to-end testing of the deployment infrastructure.
+//! It provisions test environments, validates deployments, and cleans up resources.
+//!
+//! ## Test Workflow
+//!
+//! 1. **Preflight cleanup** - Remove any lingering test resources
+//! 2. **Infrastructure provisioning** - Create VMs/containers using `OpenTofu`
+//! 3. **Configuration** - Apply Ansible playbooks
+//! 4. **Validation** - Verify deployments are working correctly
+//! 5. **Cleanup** - Remove test resources
+//!
+//! The test suite supports different VM providers (LXD, Multipass) and includes
+//! comprehensive logging and error reporting.
+
 use anyhow::Result;
 use clap::Parser;
 use std::net::IpAddr;

@@ -1,3 +1,22 @@
+//! Cloud-init validation remote action
+//!
+//! This module provides the `CloudInitValidator` which checks whether cloud-init
+//! has completed successfully on remote instances. This is crucial for ensuring
+//! that instances are fully initialized before attempting further configuration.
+//!
+//! ## Key Features
+//!
+//! - Remote cloud-init status checking via SSH
+//! - Validation of cloud-init completion status
+//! - Comprehensive error reporting for initialization failures
+//! - Integration with the remote action framework
+//!
+//! ## Usage Context
+//!
+//! This action is typically used early in the deployment workflow to verify
+//! that newly provisioned instances have completed their initial setup process
+//! before proceeding with software installation or configuration.
+
 use std::net::IpAddr;
 use tracing::{info, instrument};
 

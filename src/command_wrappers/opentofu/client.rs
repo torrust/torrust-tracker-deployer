@@ -1,3 +1,24 @@
+//! `OpenTofu` client for infrastructure management
+//!
+//! This module provides the `OpenTofuClient` which wraps `OpenTofu` command-line tools
+//! to provide a Rust-native interface for infrastructure provisioning and management.
+//!
+//! ## Key Features
+//!
+//! - Full `OpenTofu` workflow support (init, plan, apply, destroy)
+//! - Instance information extraction from Terraform state
+//! - JSON output parsing for structured data access
+//! - Working directory management for Terraform projects
+//! - Comprehensive error handling for all operations
+//!
+//! ## Supported Operations
+//!
+//! - `init` - Initialize Terraform working directory
+//! - `plan` - Create execution plan showing changes
+//! - `apply` - Apply infrastructure changes
+//! - `destroy` - Destroy managed infrastructure
+//! - `output` - Extract output values from state
+
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 

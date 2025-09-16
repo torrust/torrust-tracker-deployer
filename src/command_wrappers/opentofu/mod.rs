@@ -1,3 +1,21 @@
+//! `OpenTofu` infrastructure management wrapper
+//!
+//! This module provides a comprehensive interface for managing infrastructure using
+//! `OpenTofu` (the open-source Terraform fork), including plan, apply, destroy operations
+//! and JSON output parsing for instance information.
+//!
+//! ## Module Structure
+//!
+//! - `client` - Main `OpenTofuClient` for executing `OpenTofu` commands
+//! - `json_parser` - JSON output parsing for `OpenTofu` state and plan information
+//!
+//! ## Key Features
+//!
+//! - Full infrastructure lifecycle management (init, plan, apply, destroy)
+//! - State management and instance information extraction
+//! - Emergency cleanup operations for testing scenarios
+//! - Comprehensive error handling with detailed context
+
 use std::path::Path;
 
 pub mod client;

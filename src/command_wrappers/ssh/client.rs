@@ -1,3 +1,19 @@
+//! SSH client implementation for secure remote command execution
+//!
+//! This module provides the `SshClient` which handles SSH connections and remote
+//! command execution with predefined security settings optimized for automation.
+//!
+//! ## Key Features
+//!
+//! - Private key authentication with configurable credentials
+//! - Automated host key management (disabled strict checking for automation)
+//! - Connection timeout and retry mechanisms
+//! - Comprehensive error handling for network and authentication issues
+//! - Integration with the command execution framework
+//!
+//! The client is designed for automated deployment scenarios where security
+//! is important but strict host key checking would interfere with automation.
+
 use std::time::Duration;
 
 use tracing::info;
