@@ -1,7 +1,7 @@
 use tracing::info;
 
-use crate::actions::{DockerValidator, RemoteAction, RemoteActionError};
 use crate::command_wrappers::ssh::SshConnection;
+use crate::remote_actions::{DockerValidator, RemoteAction, RemoteActionError};
 
 /// Step that validates Docker installation on a remote host
 pub struct ValidateDockerInstallationStep {

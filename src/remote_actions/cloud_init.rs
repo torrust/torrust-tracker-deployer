@@ -1,9 +1,9 @@
 use std::net::IpAddr;
 use tracing::info;
 
-use crate::actions::{RemoteAction, RemoteActionError};
 use crate::command_wrappers::ssh::SshClient;
 use crate::command_wrappers::ssh::SshConnection;
+use crate::remote_actions::{RemoteAction, RemoteActionError};
 
 /// Action that checks if cloud-init has completed successfully on the server
 pub struct CloudInitValidator {

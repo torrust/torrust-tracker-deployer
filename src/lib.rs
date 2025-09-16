@@ -29,7 +29,6 @@
 //!
 //! Linting functionality has been moved to its own package: packages/linting
 
-pub mod actions;
 pub mod ansible;
 pub mod command;
 pub mod command_wrappers;
@@ -37,6 +36,7 @@ pub mod commands;
 pub mod config;
 pub mod container;
 pub mod e2e;
+pub mod remote_actions;
 pub mod steps;
 pub mod template;
 pub mod tofu;

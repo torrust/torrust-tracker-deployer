@@ -1,7 +1,7 @@
 use tracing::info;
 
-use crate::actions::{CloudInitValidator, RemoteAction, RemoteActionError};
 use crate::command_wrappers::ssh::SshConnection;
+use crate::remote_actions::{CloudInitValidator, RemoteAction, RemoteActionError};
 
 /// Step that validates cloud-init completion on a remote host
 pub struct ValidateCloudInitCompletionStep {
