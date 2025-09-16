@@ -25,7 +25,7 @@ This repository uses LXD containers for virtualization:
 - **Best for**: CI/CD environments, fast provisioning, local development
 - **Requirements**: No special virtualization needed
 
-**[📖 See detailed documentation →](templates/tofu/lxd/README.md)**
+**[📖 See detailed documentation →](docs/tofu-lxd-configuration.md)**
 
 ## � Provider Comparison
 
@@ -229,46 +229,78 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 ## 📁 Repository Structure
 
 ```text
-├── src/                      # Rust application source code
-│   ├── main.rs              # Main application binary
-│   └── bin/
-│       └── e2e_tests.rs     # E2E tests binary
-├── docs/                     # Detailed documentation
-│   ├── tech-stack/          # Generic technology documentation
+├── .github/                  # CI/CD workflows and GitHub configuration
+│   └── workflows/           # GitHub Actions workflow files
+├── .vscode/                 # VS Code workspace configuration
+├── build/                   # 📁 Generated runtime configs (git-ignored)
+│   ├── tofu/                # 🏗️ Runtime OpenTofu configs
+│   └── ansible/             # 🤖 Runtime Ansible configs
+├── data/                    # Data files and templates
+│   └── templates/           # Template sources for generation
+│       ├── ansible/         # Ansible template sources
+│       └── tofu/            # OpenTofu template sources
+├── docs/                    # 📖 Detailed documentation
+│   ├── tech-stack/          # Technology-specific documentation
 │   │   ├── opentofu.md      # OpenTofu installation and usage
 │   │   ├── ansible.md       # Ansible installation and usage
 │   │   └── lxd.md          # LXD system containers
 │   ├── decisions/           # Architecture Decision Records (ADRs)
-│   │   └── meson-removal.md # Decision to remove Meson build system
-│   ├── documentation.md     # Documentation organization guide
-│   └── vm-providers.md      # Provider comparison for this project
+│   ├── contributing/        # Contributing guidelines and conventions
+│   │   ├── README.md        # Main contributing guide
+│   │   ├── branching.md     # Git branching conventions
+│   │   ├── commit-process.md # Commit process and pre-commit checks
+│   │   └── testing.md       # Testing conventions
+│   ├── research/            # Research and analysis documents
+│   └── *.md                 # Various documentation files
+├── examples/                # Example configurations and usage
+├── fixtures/                # Test fixtures and sample data
+│   ├── testing_rsa*         # SSH key pair for testing
+│   └── opentofu/           # OpenTofu test fixtures
+├── packages/                # Rust workspace packages
+│   └── linting/            # Linting utilities package
+│       └── src/            # Linting implementation source code
+├── scripts/                 # Development and utility scripts
+│   └── setup/              # Installation scripts for dependencies
+├── src/                     # 🦀 Main Rust application source code
+│   ├── main.rs             # Main application binary entry point
+│   ├── lib.rs              # Library root module
+│   ├── bin/                # Binary executables
+│   │   ├── linter.rs       # Unified linting command interface
+│   │   └── e2e_tests.rs    # End-to-end testing binary
+│   ├── ansible/            # Ansible integration modules
+│   ├── command_wrappers/   # External command wrapper modules
+│   ├── commands/           # CLI command implementations
+│   ├── config/             # Configuration handling
+│   ├── e2e/                # End-to-end testing infrastructure
+│   ├── remote_actions/     # Remote system management actions
+│   ├── steps/              # Deployment step implementations
+│   ├── template/           # Template processing and rendering
+│   └── tofu/               # OpenTofu integration modules
 ├── templates/               # 📁 Template configurations (git-tracked)
-│   ├── tofu/                # 🏗️ OpenTofu/Terraform templates
-│   │   └── lxd/             # LXD container template configuration
-│   └── ansible/             # 🤖 Ansible playbook templates
-├── build/                   # 📁 Generated runtime configs (git-ignored)
-│   ├── tofu/                # 🏗️ Runtime OpenTofu configs
-│   └── ansible/             # 🤖 Runtime Ansible configs
-├── scripts/                  # Development and utility scripts
-│   └── setup/               # Setup scripts for dependencies
-├── src/                     # Rust source code
-│   ├── bin/                 # Binary executables
-│   │   ├── linter.rs        # Unified linting command interface
-│   │   └── e2e_tests.rs     # End-to-end testing binary
-│   └── linting/             # Linting module and implementations
-├── .github/workflows/       # CI/CD workflows
-├── Cargo.toml              # Rust project configuration
-├── README.md               # This file - project overview
-├── target/                 # Rust build artifacts (ignored)
-└── .gitignore              # Git ignore rules
+│   ├── tofu/               # 🏗️ OpenTofu/Terraform templates
+│   │   └── lxd/            # LXD container template configuration
+│   └── ansible/            # 🤖 Ansible playbook templates
+├── tests/                  # Integration and system tests
+├── target/                 # 🦀 Rust build artifacts (git-ignored)
+├── Cargo.toml             # Rust workspace configuration
+├── Cargo.lock             # Rust dependency lock file
+├── main.tf                # Root OpenTofu configuration
+├── cspell.json            # Spell checking configuration
+├── project-words.txt      # Custom dictionary for spell checking
+├── .markdownlint.json     # Markdown linting configuration
+├── .taplo.toml            # TOML formatting configuration
+├── .yamllint-ci.yml       # YAML linting configuration for CI
+├── README.md              # This file - project overview
+├── LICENSE                # Project license
+└── .gitignore             # Git ignore rules
 ```
 
 ## 📚 Documentation
 
 - **[🤝 Contributing Guide](docs/contributing/README.md)** - Git workflow, commit process, and linting conventions
 - **[📖 Documentation Organization Guide](docs/documentation.md)** - How documentation is organized and where to contribute
-- **[� Structured Logging Implementation Plan](docs/structured-logging-implementation-plan.md)** - Implementation plan for hierarchical logging with tracing spans
-- **[�📖 OpenTofu Setup Guide](docs/tech-stack/opentofu.md)** - Installation, common commands, and best practices
+- **[📋 Structured Logging Implementation Plan](docs/structured-logging-implementation-plan.md)** - Implementation plan for hierarchical logging with tracing spans
+- **[📖 OpenTofu Setup Guide](docs/tech-stack/opentofu.md)** - Installation, common commands, and best practices
 - **[📖 Ansible Setup Guide](docs/tech-stack/ansible.md)** - Installation, configuration, and project usage
 - **[📖 VM Providers Comparison](docs/vm-providers.md)** - Detailed comparison and decision rationale
 
