@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command::CommandError;
 use crate::command_wrappers::ansible::AnsibleClient;
@@ -26,6 +26,15 @@ impl InstallDockerComposeStep {
     /// * The Ansible client fails to execute the playbook
     /// * Docker Compose installation fails
     /// * The playbook execution fails for any other reason
+    #[instrument(
+        name = "install_docker_compose",
+        skip_all,
+        fields(
+            step_type = "software",
+            component = "docker_compose",
+            method = "ansible"
+        )
+    )]
     pub fn execute(&self) -> Result<(), CommandError> {
         info!(
             step = "install_docker_compose",

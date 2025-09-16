@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::tofu::template_renderer::{ProvisionTemplateError, TofuTemplateRenderer};
 
@@ -23,6 +23,11 @@ impl RenderOpenTofuTemplatesStep {
     ///
     /// Returns an error if the template rendering fails or if there are issues
     /// with the template manager or renderer.
+    #[instrument(
+        name = "render_opentofu_templates",
+        skip_all,
+        fields(step_type = "rendering", template_type = "opentofu")
+    )]
     pub async fn execute(&self) -> Result<(), ProvisionTemplateError> {
         info!(
             step = "render_opentofu_templates",

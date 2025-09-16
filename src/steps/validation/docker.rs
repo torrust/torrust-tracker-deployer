@@ -1,4 +1,4 @@
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command_wrappers::ssh::SshConnection;
 use crate::remote_actions::{DockerValidator, RemoteAction, RemoteActionError};
@@ -31,6 +31,11 @@ impl ValidateDockerInstallationStep {
     /// - In CI environments with network limitations, Docker installation
     ///   validation may be skipped gracefully
     /// - The validation checks both Docker version and daemon status
+    #[instrument(
+        name = "validate_docker",
+        skip_all,
+        fields(step_type = "validation", component = "docker")
+    )]
     pub async fn execute(&self) -> Result<(), RemoteActionError> {
         info!(component = "docker", "Validating Docker installation");
 

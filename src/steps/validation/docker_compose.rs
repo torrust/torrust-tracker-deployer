@@ -1,4 +1,4 @@
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command_wrappers::ssh::SshConnection;
 use crate::remote_actions::{DockerComposeValidator, RemoteAction, RemoteActionError};
@@ -31,6 +31,11 @@ impl ValidateDockerComposeInstallationStep {
     /// - In CI environments with network limitations, Docker Compose installation
     ///   validation may be skipped gracefully
     /// - The validation checks Docker Compose version and availability
+    #[instrument(
+        name = "validate_docker_compose",
+        skip_all,
+        fields(step_type = "validation", component = "docker_compose")
+    )]
     pub async fn execute(&self) -> Result<(), RemoteActionError> {
         info!(
             component = "docker_compose",

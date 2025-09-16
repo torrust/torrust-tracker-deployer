@@ -1,4 +1,4 @@
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command_wrappers::ssh::{SshClient, SshConnection, SshError};
 
@@ -24,6 +24,11 @@ impl WaitForSSHConnectivityStep {
     /// * SSH connectivity cannot be established within the timeout period
     /// * The SSH client fails to initialize
     /// * The SSH command execution fails
+    #[instrument(
+        name = "wait_ssh_connectivity",
+        skip_all,
+        fields(step_type = "connectivity", protocol = "ssh")
+    )]
     pub async fn execute(&self) -> Result<(), SshError> {
         info!(
             step = "wait_ssh_connectivity",

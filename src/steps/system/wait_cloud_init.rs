@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command::CommandError;
 use crate::command_wrappers::ansible::AnsibleClient;
@@ -26,6 +26,11 @@ impl WaitForCloudInitStep {
     /// * The Ansible client fails to execute the playbook
     /// * Cloud-init has not completed within the timeout period
     /// * The playbook execution fails for any other reason
+    #[instrument(
+        name = "wait_cloud_init",
+        skip_all,
+        fields(step_type = "system", component = "cloud_init")
+    )]
     pub fn execute(&self) -> Result<(), CommandError> {
         info!(
             step = "wait_cloud_init",

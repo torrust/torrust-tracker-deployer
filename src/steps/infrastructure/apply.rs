@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command::CommandError;
 use crate::command_wrappers::opentofu::client::OpenTofuClient;
@@ -34,6 +34,15 @@ impl ApplyInfrastructureStep {
     /// * The `OpenTofu` apply fails
     /// * The working directory does not exist or is not accessible
     /// * The `OpenTofu` command execution fails
+    #[instrument(
+        name = "apply_infrastructure",
+        skip_all,
+        fields(
+            step_type = "infrastructure",
+            operation = "apply",
+            auto_approve = %self.auto_approve
+        )
+    )]
     pub fn execute(&self) -> Result<(), CommandError> {
         info!(
             step = "apply_infrastructure",

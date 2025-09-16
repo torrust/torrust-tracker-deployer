@@ -1,4 +1,4 @@
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command_wrappers::ssh::SshConnection;
 use crate::remote_actions::{CloudInitValidator, RemoteAction, RemoteActionError};
@@ -31,6 +31,11 @@ impl ValidateCloudInitCompletionStep {
     /// - This validation ensures that all cloud-init modules have completed
     /// - Critical for ensuring the system is ready for further configuration
     /// - Checks both cloud-init status and completion markers
+    #[instrument(
+        name = "validate_cloud_init",
+        skip_all,
+        fields(step_type = "validation", component = "cloud_init")
+    )]
     pub async fn execute(&self) -> Result<(), RemoteActionError> {
         info!(component = "cloud_init", "Validating cloud-init completion");
 

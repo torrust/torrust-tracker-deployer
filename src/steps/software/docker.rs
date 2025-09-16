@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command::CommandError;
 use crate::command_wrappers::ansible::AnsibleClient;
@@ -32,6 +32,11 @@ impl InstallDockerStep {
     /// - The install-docker playbook assumes the apt cache is already updated
     ///   or will handle stale cache gracefully
     /// - We skip the update-apt-cache playbook in E2E tests to avoid CI network issues
+    #[instrument(
+        name = "install_docker",
+        skip_all,
+        fields(step_type = "software", component = "docker", method = "ansible")
+    )]
     pub fn execute(&self) -> Result<(), CommandError> {
         info!(
             step = "install_docker",

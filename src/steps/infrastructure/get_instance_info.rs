@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command_wrappers::opentofu::client::{InstanceInfo, OpenTofuClient, OpenTofuError};
 
@@ -28,6 +28,11 @@ impl GetInstanceInfoStep {
     /// * The output cannot be parsed as JSON
     /// * The `instance_info` section is missing or malformed
     /// * The working directory does not exist or is not accessible
+    #[instrument(
+        name = "get_instance_info",
+        skip_all,
+        fields(step_type = "infrastructure", operation = "info")
+    )]
     pub fn execute(&self) -> Result<InstanceInfo, OpenTofuError> {
         info!(
             step = "get_instance_info",

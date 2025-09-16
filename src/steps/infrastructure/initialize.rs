@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command::CommandError;
 use crate::command_wrappers::opentofu::client::OpenTofuClient;
@@ -24,6 +24,11 @@ impl InitializeInfrastructureStep {
     /// * The `OpenTofu` initialization fails
     /// * The working directory does not exist or is not accessible
     /// * The `OpenTofu` command execution fails
+    #[instrument(
+        name = "initialize_infrastructure",
+        skip_all,
+        fields(step_type = "infrastructure", operation = "init")
+    )]
     pub fn execute(&self) -> Result<(), CommandError> {
         info!(
             step = "initialize_infrastructure",

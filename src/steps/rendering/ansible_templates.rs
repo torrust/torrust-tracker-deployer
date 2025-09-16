@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use thiserror::Error;
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::ansible::template_renderer::ConfigurationTemplateError;
 use crate::ansible::AnsibleTemplateRenderer;
@@ -54,6 +54,11 @@ impl RenderAnsibleTemplatesStep {
     ///
     /// Returns an error if the template rendering fails or if there are issues
     /// with the template manager or renderer.
+    #[instrument(
+        name = "render_ansible_templates",
+        skip_all,
+        fields(step_type = "rendering", template_type = "ansible")
+    )]
     pub async fn execute(&self) -> Result<(), RenderAnsibleTemplatesError> {
         info!(
             step = "render_ansible_templates",
