@@ -96,7 +96,7 @@ These features are fully working in the E2E test environment:
 
 ### 4. State Management
 
-- **Deployment States**: Track progression through deployment stages
+- **Deployment States**: Track progression through deployment workflow
 - **State Persistence**: Save/load state between command invocations
 - **State Validation**: Ensure commands are run in correct sequence
 - **Error Recovery**: Handle partial deployments and failures

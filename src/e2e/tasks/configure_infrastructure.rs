@@ -13,10 +13,7 @@ use crate::e2e::environment::TestEnvironment;
 /// - `ConfigureCommand` execution fails
 /// - Infrastructure configuration fails
 pub fn configure_infrastructure(env: &TestEnvironment) -> Result<()> {
-    info!(
-        stage = "infrastructure_configuration",
-        "Configuring test infrastructure"
-    );
+    info!("Configuring test infrastructure");
 
     // Use the new ConfigureCommand to handle all infrastructure configuration steps
     let configure_command = ConfigureCommand::new(Arc::clone(&env.services.ansible_client));
@@ -27,7 +24,6 @@ pub fn configure_infrastructure(env: &TestEnvironment) -> Result<()> {
         .context("Failed to configure infrastructure")?;
 
     info!(
-        stage = "infrastructure_configuration",
         status = "complete",
         "Infrastructure configuration completed successfully"
     );

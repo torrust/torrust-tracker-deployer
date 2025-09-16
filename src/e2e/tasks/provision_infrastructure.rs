@@ -15,10 +15,7 @@ use crate::e2e::environment::TestEnvironment;
 /// - Infrastructure provisioning fails
 /// - IP address cannot be obtained from `OpenTofu` outputs
 pub async fn provision_infrastructure(env: &TestEnvironment) -> Result<IpAddr> {
-    info!(
-        stage = "infrastructure_provisioning",
-        "Provisioning test infrastructure"
-    );
+    info!("Provisioning test infrastructure");
 
     // Use the new ProvisionCommand to handle all infrastructure provisioning steps
     let provision_command = ProvisionCommand::new(
@@ -36,7 +33,6 @@ pub async fn provision_infrastructure(env: &TestEnvironment) -> Result<IpAddr> {
         .context("Failed to provision infrastructure")?;
 
     info!(
-        stage = "infrastructure_provisioning",
         status = "complete",
         opentofu_ip = %opentofu_instance_ip,
         "Infrastructure provisioned successfully"

@@ -1,6 +1,6 @@
 //! # Ansible Template Renderer
 //!
-//! This module handles `Ansible` template rendering for deployment stages.
+//! This module handles `Ansible` template rendering for deployment workflows.
 //! It manages the creation of build directories, copying static template files (playbooks and configs),
 //! and processing dynamic Tera templates with runtime variables (like inventory.yml.tera).
 //!
@@ -111,7 +111,7 @@ pub enum ConfigurationTemplateError {
 
 /// Renders `Ansible` configuration templates to a build directory
 ///
-/// This collaborator is responsible for preparing `Ansible` templates for deployment stages.
+/// This collaborator is responsible for preparing `Ansible` templates for deployment workflows.
 /// It handles both static files (playbooks, configuration) and dynamic Tera templates that
 /// require runtime variable substitution (inventory files with IP addresses).
 pub struct AnsibleTemplateRenderer {
@@ -174,7 +174,6 @@ impl AnsibleTemplateRenderer {
         inventory_context: &InventoryContext,
     ) -> Result<(), ConfigurationTemplateError> {
         tracing::info!(
-            stage = "configuration_rendering",
             template_type = "ansible",
             "Rendering configuration templates with variables"
         );
@@ -194,26 +193,22 @@ impl AnsibleTemplateRenderer {
             .await?;
 
         tracing::debug!(
-            stage = "configuration_rendering",
             template_type = "ansible",
             output_dir = %build_ansible_dir.display(),
             "Configuration templates rendered"
         );
         tracing::debug!(
-            stage = "configuration_rendering",
             template_type = "ansible_inventory",
             ansible_host = %inventory_context.ansible_host(),
             "Inventory rendered with IP"
         );
         tracing::debug!(
-            stage = "configuration_rendering",
             template_type = "ansible_inventory",
             ssh_key = %inventory_context.ansible_ssh_private_key_file(),
             "Inventory rendered with SSH key"
         );
 
         tracing::info!(
-            stage = "configuration_rendering",
             template_type = "ansible",
             status = "complete",
             "Configuration templates ready"

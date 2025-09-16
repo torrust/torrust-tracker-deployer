@@ -57,7 +57,6 @@ impl RenderAnsibleTemplatesStep {
     pub async fn execute(&self) -> Result<(), RenderAnsibleTemplatesError> {
         info!(
             step = "render_ansible_templates",
-            stage = 3,
             "Rendering Ansible templates with runtime variables"
         );
 
@@ -71,7 +70,6 @@ impl RenderAnsibleTemplatesStep {
 
         info!(
             step = "render_ansible_templates",
-            stage = 3,
             status = "success",
             "Ansible templates rendered successfully"
         );

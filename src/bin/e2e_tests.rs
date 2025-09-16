@@ -73,7 +73,6 @@ async fn main() -> Result<()> {
         (Ok(_), Err(validation_err)) => {
             error!(
                 test_suite = "e2e_tests",
-                stage = "validation",
                 status = "failed",
                 error = %validation_err,
                 "Deployment succeeded but validation failed"
@@ -83,7 +82,6 @@ async fn main() -> Result<()> {
         (Err(deployment_err), Ok(())) => {
             error!(
                 test_suite = "e2e_tests",
-                stage = "deployment",
                 status = "failed",
                 error = %deployment_err,
                 "Deployment failed"
@@ -93,7 +91,6 @@ async fn main() -> Result<()> {
         (Err(deployment_err), Err(_)) => {
             error!(
                 test_suite = "e2e_tests",
-                stage = "deployment",
                 status = "failed",
                 error = %deployment_err,
                 "Deployment failed (validation skipped)"
@@ -116,21 +113,14 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
     info!(
         test_type = "full_deployment",
         workflow = "template_based",
-        stages = 3,
         "Starting full deployment E2E test"
     );
 
-    // Stage 1: Provision infrastructure (includes template rendering, infrastructure creation, SSH wait, and Ansible template rendering)
     let instance_ip = provision_infrastructure(env).await?;
 
-    // Stage 2: Configure infrastructure (wait for cloud-init and install Docker/Docker Compose)
     configure_infrastructure(env)?;
 
-    info!(
-        stage = "deployment",
-        status = "success",
-        "Deployment stages completed successfully"
-    );
+    info!(status = "success", "Deployment completed successfully");
 
     info!(
         test_type = "full_deployment",

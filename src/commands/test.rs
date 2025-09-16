@@ -53,7 +53,6 @@ impl TestCommand {
     pub async fn execute(&self) -> Result<(), TestCommandError> {
         info!(
             command = "test",
-            stage = "starting",
             instance_ip = %self.instance_ip,
             "Starting complete infrastructure testing workflow"
         );
@@ -74,7 +73,6 @@ impl TestCommand {
 
         info!(
             command = "test",
-            stage = "completed",
             instance_ip = %self.instance_ip,
             "Infrastructure testing workflow completed successfully"
         );

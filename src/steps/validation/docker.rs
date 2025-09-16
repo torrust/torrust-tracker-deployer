@@ -33,7 +33,6 @@ impl ValidateDockerInstallationStep {
     /// - The validation checks both Docker version and daemon status
     pub async fn execute(&self) -> Result<(), RemoteActionError> {
         info!(
-            stage = "validation",
             component = "docker",
             "Validating Docker installation"
         );

@@ -1,8 +1,8 @@
 //! Template rendering system for configuration files
 //!
 //! This module provides template rendering using Tera.
-//! It supports staged template resolution where different templates are resolved
-//! at different lifecycle stages (e.g., static `OpenTofu` templates first, then
+//! It supports sequential template resolution where different templates are resolved
+//! at different points in the deployment workflow (e.g., static `OpenTofu` templates first, then
 //! dynamic Ansible templates after VMs are provisioned and their IP addresses known).
 //!
 //! ## Module Structure

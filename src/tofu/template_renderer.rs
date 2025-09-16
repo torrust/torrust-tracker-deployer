@@ -1,6 +1,6 @@
 //! # `OpenTofu` Template Renderer
 //!
-//! This module handles `OpenTofu` template rendering for deployment stages.
+//! This module handles `OpenTofu` template rendering for deployment workflows.
 //! It manages the creation of build directories, copying template files, and processing them with
 //! variable substitution.
 //!
@@ -74,7 +74,7 @@ pub enum ProvisionTemplateError {
 
 /// Renders `OpenTofu` provision templates to a build directory
 ///
-/// This collaborator is responsible for preparing `OpenTofu` templates for deployment stages.
+/// This collaborator is responsible for preparing `OpenTofu` templates for deployment workflows.
 /// It copies static templates from the template manager to the specified build directory.
 pub struct TofuTemplateRenderer {
     template_manager: Arc<TemplateManager>,
@@ -120,7 +120,6 @@ impl TofuTemplateRenderer {
     /// - Template manager cannot provide required templates
     pub async fn render(&self) -> Result<(), ProvisionTemplateError> {
         tracing::info!(
-            stage = "provision_rendering",
             template_type = "opentofu",
             "Rendering provision templates to build directory"
         );
@@ -128,7 +127,7 @@ impl TofuTemplateRenderer {
         // Create build directory structure
         let build_tofu_dir = self.create_build_directory().await?;
 
-        // List of templates to copy for the provision stage
+        // List of templates to copy
         let template_files = vec!["main.tf", "cloud-init.yml"];
 
         // Copy all template files
@@ -136,14 +135,12 @@ impl TofuTemplateRenderer {
             .await?;
 
         tracing::debug!(
-            stage = "provision_rendering",
             template_type = "opentofu",
             output_dir = %build_tofu_dir.display(),
             "Provision templates copied"
         );
 
         tracing::info!(
-            stage = "provision_rendering",
             template_type = "opentofu",
             status = "complete",
             "Provision templates ready"

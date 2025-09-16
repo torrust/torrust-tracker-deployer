@@ -33,7 +33,6 @@ impl ValidateCloudInitCompletionStep {
     /// - Checks both cloud-init status and completion markers
     pub async fn execute(&self) -> Result<(), RemoteActionError> {
         info!(
-            stage = "validation",
             component = "cloud_init",
             "Validating cloud-init completion"
         );

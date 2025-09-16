@@ -31,7 +31,6 @@ impl GetInstanceInfoStep {
     pub fn execute(&self) -> Result<InstanceInfo, OpenTofuError> {
         info!(
             step = "get_instance_info",
-            stage = 2,
             "Getting instance information from OpenTofu outputs"
         );
 
@@ -46,7 +45,6 @@ impl GetInstanceInfoStep {
 
         info!(
             step = "get_instance_info",
-            stage = 2,
             status = "success",
             ip_address = %opentofu_instance_info.ip_address,
             instance_name = %opentofu_instance_info.name,

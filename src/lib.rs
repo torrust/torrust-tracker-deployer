@@ -20,7 +20,7 @@
 //!   - `lxd` - LXD container management utilities
 //!
 //! ## Template Renderers
-//! - `ansible` - Ansible template rendering utilities for deployment stages
+//! - `ansible` - Ansible template rendering utilities for deployment workflows
 //! - `tofu` - `OpenTofu` template rendering utilities for infrastructure provisioning
 //!
 //! ## Configuration

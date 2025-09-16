@@ -37,7 +37,6 @@ impl ApplyInfrastructureStep {
     pub fn execute(&self) -> Result<(), CommandError> {
         info!(
             step = "apply_infrastructure",
-            stage = 2,
             auto_approve = self.auto_approve,
             "Applying OpenTofu infrastructure"
         );
@@ -47,7 +46,6 @@ impl ApplyInfrastructureStep {
 
         info!(
             step = "apply_infrastructure",
-            stage = 2,
             status = "success",
             "OpenTofu infrastructure applied successfully"
         );

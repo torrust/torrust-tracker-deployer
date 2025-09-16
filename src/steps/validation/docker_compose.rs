@@ -33,7 +33,6 @@ impl ValidateDockerComposeInstallationStep {
     /// - The validation checks Docker Compose version and availability
     pub async fn execute(&self) -> Result<(), RemoteActionError> {
         info!(
-            stage = "validation",
             component = "docker_compose",
             "Validating Docker Compose installation"
         );

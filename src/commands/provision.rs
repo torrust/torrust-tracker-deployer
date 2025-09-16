@@ -108,7 +108,6 @@ impl ProvisionCommand {
     pub async fn execute(&self) -> Result<IpAddr, ProvisionCommandError> {
         info!(
             command = "provision",
-            stage = "starting",
             "Starting complete infrastructure provisioning workflow"
         );
 
@@ -139,7 +138,6 @@ impl ProvisionCommand {
 
         info!(
             command = "provision",
-            stage = "completed",
             instance_ip = %instance_ip,
             "Infrastructure provisioning completed successfully"
         );

@@ -27,7 +27,6 @@ impl InitializeInfrastructureStep {
     pub fn execute(&self) -> Result<(), CommandError> {
         info!(
             step = "initialize_infrastructure",
-            stage = 2,
             "Initializing OpenTofu infrastructure"
         );
 
@@ -36,7 +35,6 @@ impl InitializeInfrastructureStep {
 
         info!(
             step = "initialize_infrastructure",
-            stage = 2,
             status = "success",
             "OpenTofu infrastructure initialized successfully"
         );

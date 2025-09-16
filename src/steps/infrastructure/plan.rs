@@ -27,7 +27,6 @@ impl PlanInfrastructureStep {
     pub fn execute(&self) -> Result<(), CommandError> {
         info!(
             step = "plan_infrastructure",
-            stage = 2,
             "Planning OpenTofu infrastructure"
         );
 
@@ -36,7 +35,6 @@ impl PlanInfrastructureStep {
 
         info!(
             step = "plan_infrastructure",
-            stage = 2,
             status = "success",
             "OpenTofu infrastructure planned successfully"
         );

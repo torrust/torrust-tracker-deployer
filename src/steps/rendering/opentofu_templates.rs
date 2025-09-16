@@ -26,7 +26,6 @@ impl RenderOpenTofuTemplatesStep {
     pub async fn execute(&self) -> Result<(), ProvisionTemplateError> {
         info!(
             step = "render_opentofu_templates",
-            stage = 1,
             "Rendering OpenTofu templates"
         );
 
@@ -34,7 +33,6 @@ impl RenderOpenTofuTemplatesStep {
 
         info!(
             step = "render_opentofu_templates",
-            stage = 1,
             status = "success",
             "OpenTofu templates rendered successfully"
         );

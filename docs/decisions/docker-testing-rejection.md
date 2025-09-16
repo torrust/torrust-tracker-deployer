@@ -157,7 +157,7 @@ Despite Docker's speed advantage, the performance difference is not significant 
 **Approach**: Mock Docker daemon and systemd services in Docker containers
 **Rejection Reason**: Testing mocks instead of real services provides false confidence
 
-### 2. Staged Testing Pipeline
+### 2. Sequential Testing Pipeline
 
 **Approach**: Basic tests in Docker, comprehensive tests in LXD
 **Rejection Reason**: Dual infrastructure complexity outweighs benefits; inconsistent results between environments

@@ -41,7 +41,6 @@ impl ConfigureCommand {
     pub fn execute(&self) -> Result<(), ConfigureCommandError> {
         info!(
             command = "configure",
-            stage = "starting",
             "Starting complete infrastructure configuration workflow"
         );
 
@@ -51,7 +50,6 @@ impl ConfigureCommand {
 
         info!(
             command = "configure",
-            stage = "completed",
             "Infrastructure configuration completed successfully"
         );
 
