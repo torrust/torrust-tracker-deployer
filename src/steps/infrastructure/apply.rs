@@ -1,3 +1,26 @@
+//! `OpenTofu` infrastructure application step
+//!
+//! This module provides the `ApplyInfrastructureStep` which handles `OpenTofu`
+//! application by executing `tofu apply`. This step applies the planned
+//! infrastructure changes to provision or modify resources.
+//!
+//! ## Key Features
+//!
+//! - Infrastructure provisioning and resource creation
+//! - Configurable auto-approval for automation scenarios
+//! - Progress tracking and status reporting
+//! - Integration with `OpenTofuClient` for command execution
+//!
+//! ## Application Process
+//!
+//! The step executes `tofu apply` which:
+//! - Applies planned changes to create/modify/destroy resources
+//! - Manages resource dependencies and ordering
+//! - Updates infrastructure state with actual resource information
+//! - Provides detailed progress and completion status
+//!
+//! This step is where actual infrastructure provisioning occurs.
+
 use std::sync::Arc;
 
 use tracing::{info, instrument};

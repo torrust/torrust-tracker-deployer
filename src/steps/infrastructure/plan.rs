@@ -1,3 +1,26 @@
+//! `OpenTofu` infrastructure planning step
+//!
+//! This module provides the `PlanInfrastructureStep` which handles `OpenTofu`
+//! planning by executing `tofu plan`. This step creates an execution plan
+//! showing what changes will be made to the infrastructure.
+//!
+//! ## Key Features
+//!
+//! - Infrastructure change planning and preview
+//! - Resource dependency analysis and ordering
+//! - Plan validation and error detection
+//! - Integration with `OpenTofuClient` for command execution
+//!
+//! ## Planning Process
+//!
+//! The step executes `tofu plan` which:
+//! - Analyzes current state vs desired configuration
+//! - Determines what resources need to be created, modified, or destroyed
+//! - Validates configuration and dependencies
+//! - Provides a preview of changes before application
+//!
+//! This step is crucial for validating infrastructure changes before applying them.
+
 use std::sync::Arc;
 
 use tracing::{info, instrument};

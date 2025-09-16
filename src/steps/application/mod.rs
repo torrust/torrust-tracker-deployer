@@ -1,20 +1,22 @@
-/*!
- * Application Steps
- *
- * This module contains steps that manage application deployment and lifecycle.
- * These steps handle application-specific operations like deployment, service management,
- * and application configuration.
- *
- * Current steps:
- * - (None yet - to be implemented)
- *
- * Future steps will include:
- * - Docker Compose configuration generation
- * - Application file transfer
- * - Application deployment
- * - Service startup and shutdown
- * - Service status monitoring
- */
+//! Application deployment and lifecycle steps
+//!
+//! This module contains steps that manage application deployment and lifecycle
+//! operations. These steps handle application-specific operations like deployment,
+//! service management, configuration, and application health monitoring.
+//!
+//! ## Future Steps
+//!
+//! This module is prepared for future application deployment steps such as:
+//! - Application container deployment
+//! - Service configuration and startup
+//! - Application health checks and validation
+//! - Application lifecycle management
+//!
+//! ## Integration
+//!
+//! Application steps will integrate with the existing infrastructure and
+//! software installation steps to provide complete deployment workflows
+//! from infrastructure provisioning to application operation.
 
 // Future modules to be added:
 // pub mod compose_config;

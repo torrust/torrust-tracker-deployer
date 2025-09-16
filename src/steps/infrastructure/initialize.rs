@@ -1,3 +1,26 @@
+//! `OpenTofu` infrastructure initialization step
+//!
+//! This module provides the `InitializeInfrastructureStep` which handles `OpenTofu`
+//! initialization by executing `tofu init`. This step prepares the working directory
+//! for infrastructure operations by downloading providers and initializing state.
+//!
+//! ## Key Features
+//!
+//! - `OpenTofu` working directory initialization
+//! - Provider plugin downloading and installation
+//! - Backend configuration and state initialization
+//! - Integration with `OpenTofuClient` for command execution
+//!
+//! ## Initialization Process
+//!
+//! The step executes `tofu init` which performs:
+//! - Provider plugin resolution and download
+//! - Backend initialization (local or remote state)
+//! - Module downloading if applicable
+//! - Working directory setup for subsequent operations
+//!
+//! This is typically the first step in any infrastructure provisioning workflow.
+
 use std::sync::Arc;
 
 use tracing::{info, instrument};

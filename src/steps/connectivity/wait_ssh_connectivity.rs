@@ -1,3 +1,23 @@
+//! SSH connectivity waiting step
+//!
+//! This module provides the `WaitForSSHConnectivityStep` which waits for SSH
+//! connectivity to be established with remote instances. This step ensures
+//! that network connectivity is available before attempting remote operations.
+//!
+//! ## Key Features
+//!
+//! - SSH connectivity establishment with retry mechanisms
+//! - Configurable timeout and retry intervals
+//! - Network readiness verification for remote instances
+//! - Integration with SSH client connection management
+//!
+//! ## Wait Process
+//!
+//! The step repeatedly attempts SSH connections to the target host until
+//! successful connection is established or timeout is reached. This is
+//! essential for ensuring newly provisioned instances are network-ready
+//! before proceeding with configuration operations.
+
 use tracing::{info, instrument};
 
 use crate::command_wrappers::ssh::{SshClient, SshConnection, SshError};

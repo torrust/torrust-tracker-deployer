@@ -1,3 +1,22 @@
+//! Docker installation validation step
+//!
+//! This module provides the `ValidateDockerInstallationStep` which validates that
+//! Docker is properly installed and operational on remote hosts. This step ensures
+//! the container runtime is ready for application deployment.
+//!
+//! ## Key Features
+//!
+//! - Docker installation verification via remote validation
+//! - Docker daemon status and functionality checking
+//! - Version compatibility verification
+//! - Integration with SSH-based remote actions
+//!
+//! ## Validation Process
+//!
+//! The step uses the `DockerValidator` remote action to perform comprehensive
+//! checks including Docker version, daemon status, and basic functionality
+//! to ensure the container environment is properly configured.
+
 use tracing::{info, instrument};
 
 use crate::command_wrappers::ssh::SshConnection;

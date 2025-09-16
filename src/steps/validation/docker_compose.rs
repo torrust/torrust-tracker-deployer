@@ -1,3 +1,23 @@
+//! Docker Compose installation validation step
+//!
+//! This module provides the `ValidateDockerComposeInstallationStep` which validates
+//! that Docker Compose is properly installed and operational on remote hosts.
+//! This step ensures the container orchestration tool is ready for deployment.
+//!
+//! ## Key Features
+//!
+//! - Docker Compose installation verification via remote validation
+//! - Version compatibility checking and functionality testing
+//! - Integration with Docker engine validation
+//! - Integration with SSH-based remote actions
+//!
+//! ## Validation Process
+//!
+//! The step uses the `DockerComposeValidator` remote action to perform
+//! comprehensive checks including version verification, basic functionality
+//! testing, and integration with the Docker engine to ensure complete
+//! container orchestration capabilities.
+
 use tracing::{info, instrument};
 
 use crate::command_wrappers::ssh::SshConnection;

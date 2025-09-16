@@ -1,3 +1,27 @@
+//! Instance information retrieval step
+//!
+//! This module provides the `GetInstanceInfoStep` which retrieves instance
+//! information from `OpenTofu` outputs. This step extracts essential instance
+//! data like IP addresses and metadata from the infrastructure state.
+//!
+//! ## Key Features
+//!
+//! - Instance information extraction from `OpenTofu` state outputs
+//! - Provider-agnostic interface through standardized outputs
+//! - JSON parsing and data validation
+//! - Integration with `OpenTofuClient` for state queries
+//!
+//! ## Information Retrieval
+//!
+//! The step uses `tofu output` to retrieve instance information including:
+//! - IP addresses for network connectivity
+//! - Instance names and identifiers
+//! - Status and configuration metadata
+//! - Provider-specific details as needed
+//!
+//! This provides a consistent interface for accessing instance information
+//! regardless of the underlying infrastructure provider.
+
 use std::sync::Arc;
 
 use tracing::{info, instrument};

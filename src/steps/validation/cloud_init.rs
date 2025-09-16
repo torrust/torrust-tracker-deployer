@@ -1,3 +1,23 @@
+//! Cloud-init completion validation step
+//!
+//! This module provides the `ValidateCloudInitCompletionStep` which validates
+//! that cloud-init has completed successfully on remote instances. This step
+//! ensures instances are fully initialized before proceeding with deployment.
+//!
+//! ## Key Features
+//!
+//! - Cloud-init completion status verification via remote validation
+//! - System initialization readiness checking
+//! - Integration with SSH-based remote actions
+//! - Comprehensive error handling for initialization failures
+//!
+//! ## Validation Process
+//!
+//! The step uses the `CloudInitValidator` remote action to check cloud-init
+//! status and ensure all system initialization tasks have completed successfully,
+//! providing confidence that the instance is ready for configuration and
+//! software installation.
+
 use tracing::{info, instrument};
 
 use crate::command_wrappers::ssh::SshConnection;
