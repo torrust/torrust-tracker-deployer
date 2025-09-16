@@ -1,5 +1,5 @@
 use std::net::IpAddr;
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 
 use crate::command::CommandError;
 use crate::command_wrappers::ssh::credentials::SshCredentials;
@@ -50,6 +50,7 @@ impl TestCommand {
     /// * Cloud-init completion validation fails
     /// * Docker installation validation fails
     /// * Docker Compose installation validation fails
+    #[instrument(name = "test_command", skip_all, fields(command_type = "test"))]
     pub async fn execute(&self) -> Result<(), TestCommandError> {
         info!(
             command = "test",

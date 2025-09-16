@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 use std::sync::Arc;
 
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::ansible::AnsibleTemplateRenderer;
 use crate::command::CommandError;
@@ -105,6 +105,11 @@ impl ProvisionCommand {
     /// * Unable to retrieve instance information
     /// * SSH connectivity cannot be established
     /// * Cloud-init does not complete successfully
+    #[instrument(
+        name = "provision_command",
+        skip_all,
+        fields(command_type = "provision")
+    )]
     pub async fn execute(&self) -> Result<IpAddr, ProvisionCommandError> {
         info!(
             command = "provision",

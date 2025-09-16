@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::command::CommandError;
 use crate::command_wrappers::ansible::AnsibleClient;
@@ -38,6 +38,11 @@ impl ConfigureCommand {
     /// Returns an error if any step in the configuration workflow fails:
     /// * Docker installation fails
     /// * Docker Compose installation fails
+    #[instrument(
+        name = "configure_command",
+        skip_all,
+        fields(command_type = "configure")
+    )]
     pub fn execute(&self) -> Result<(), ConfigureCommandError> {
         info!(
             command = "configure",
