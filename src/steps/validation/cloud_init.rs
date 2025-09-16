@@ -32,10 +32,7 @@ impl ValidateCloudInitCompletionStep {
     /// - Critical for ensuring the system is ready for further configuration
     /// - Checks both cloud-init status and completion markers
     pub async fn execute(&self) -> Result<(), RemoteActionError> {
-        info!(
-            component = "cloud_init",
-            "Validating cloud-init completion"
-        );
+        info!(component = "cloud_init", "Validating cloud-init completion");
 
         let cloud_init_validator = CloudInitValidator::new(self.ssh_connection.clone());
 

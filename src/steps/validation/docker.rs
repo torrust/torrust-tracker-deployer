@@ -32,10 +32,7 @@ impl ValidateDockerInstallationStep {
     ///   validation may be skipped gracefully
     /// - The validation checks both Docker version and daemon status
     pub async fn execute(&self) -> Result<(), RemoteActionError> {
-        info!(
-            component = "docker",
-            "Validating Docker installation"
-        );
+        info!(component = "docker", "Validating Docker installation");
 
         let docker_validator = DockerValidator::new(self.ssh_connection.clone());
 
