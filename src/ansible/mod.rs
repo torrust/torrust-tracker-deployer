@@ -6,8 +6,6 @@
 //! The main component is `AnsibleTemplateRenderer` which handles the generation
 //! of Ansible configuration files with dynamic content like VM IP addresses and SSH keys.
 
-pub mod inventory_template_renderer;
-pub mod template_renderer;
+pub mod template;
 
-pub use inventory_template_renderer::InventoryTemplateRenderer;
-pub use template_renderer::AnsibleTemplateRenderer;
+pub use template::{AnsibleTemplateRenderer, InventoryTemplateRenderer};

@@ -24,7 +24,7 @@ use std::sync::Arc;
 use thiserror::Error;
 use tracing::{info, instrument};
 
-use crate::ansible::template_renderer::ConfigurationTemplateError;
+use crate::ansible::template::renderer::ConfigurationTemplateError;
 use crate::ansible::AnsibleTemplateRenderer;
 use crate::command_wrappers::ssh::credentials::SshCredentials;
 use crate::template::wrappers::ansible::inventory::{

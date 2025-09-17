@@ -20,7 +20,7 @@
 //! # use tempfile::TempDir;
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! use torrust_tracker_deploy::ansible::AnsibleTemplateRenderer;
+//! use torrust_tracker_deploy::ansible::template::{AnsibleTemplateRenderer};
 //! use torrust_tracker_deploy::template::TemplateManager;
 //! use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
 //!     InventoryContext, AnsibleHost, SshPrivateKeyFile
@@ -47,11 +47,13 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
 
-use crate::ansible::{
-    inventory_template_renderer::InventoryTemplateError, InventoryTemplateRenderer,
-};
+use crate::ansible::template::renderer::inventory::InventoryTemplateError;
 use crate::template::wrappers::ansible::inventory::InventoryContext;
 use crate::template::{FileOperationError, TemplateManager, TemplateManagerError};
+
+pub mod inventory;
+
+pub use inventory::InventoryTemplateRenderer;
 
 /// Errors that can occur during configuration template rendering
 #[derive(Error, Debug)]
@@ -142,6 +144,7 @@ impl AnsibleTemplateRenderer {
     ///
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `template_manager` - The template manager to source templates from
+    #[must_use]
     pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: Arc<TemplateManager>) -> Self {
         let inventory_renderer = InventoryTemplateRenderer::new(template_manager.clone());
 
