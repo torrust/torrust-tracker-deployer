@@ -206,6 +206,99 @@ impl LxdClient {
 
         LxdJsonParser::parse_instances_json(&output)
     }
+
+    /// Delete an LXD instance
+    ///
+    /// # Arguments
+    ///
+    /// * `instance_name` - Name of the instance to delete
+    /// * `force` - Whether to force deletion (stop running instances)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Instance deleted successfully or didn't exist
+    /// * `Err(anyhow::Error)` - Error describing what went wrong
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// * The LXD command fails with an unexpected error
+    /// * LXD is not installed or accessible
+    pub fn delete_instance(&self, instance_name: &str, force: bool) -> Result<()> {
+        info!("Deleting LXD instance: {}", instance_name);
+
+        let mut args = vec!["delete", instance_name];
+        if force {
+            args.push("--force");
+        }
+
+        let result = self.command_executor.run_command("lxc", &args, None);
+
+        match result {
+            Ok(_) => {
+                info!("LXD instance '{}' deleted successfully", instance_name);
+                Ok(())
+            }
+            Err(e) => {
+                let error_msg = e.to_string();
+                // Instance not found is not an error for cleanup operations
+                if error_msg.contains("not found") || error_msg.contains("does not exist") {
+                    info!(
+                        "LXD instance '{}' doesn't exist, skipping deletion",
+                        instance_name
+                    );
+                    Ok(())
+                } else {
+                    Err(anyhow::Error::from(e)
+                        .context(format!("Failed to delete LXD instance '{instance_name}'")))
+                }
+            }
+        }
+    }
+
+    /// Delete an LXD profile
+    ///
+    /// # Arguments
+    ///
+    /// * `profile_name` - Name of the profile to delete
+    ///
+    /// # Returns
+    /// * `Ok(())` - Profile deleted successfully or didn't exist
+    /// * `Err(anyhow::Error)` - Error describing what went wrong
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// * The LXD command fails with an unexpected error
+    /// * LXD is not installed or accessible
+    /// * Profile is in use by existing instances
+    pub fn delete_profile(&self, profile_name: &str) -> Result<()> {
+        info!("Deleting LXD profile: {}", profile_name);
+
+        let args = vec!["profile", "delete", profile_name];
+
+        let result = self.command_executor.run_command("lxc", &args, None);
+
+        match result {
+            Ok(_) => {
+                info!("LXD profile '{}' deleted successfully", profile_name);
+                Ok(())
+            }
+            Err(e) => {
+                let error_msg = e.to_string();
+                // Profile not found is not an error for cleanup operations
+                if error_msg.contains("not found") || error_msg.contains("does not exist") {
+                    info!(
+                        "LXD profile '{}' doesn't exist, skipping deletion",
+                        profile_name
+                    );
+                    Ok(())
+                } else {
+                    Err(anyhow::Error::from(e)
+                        .context(format!("Failed to delete LXD profile '{profile_name}'")))
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]

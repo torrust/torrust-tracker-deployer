@@ -90,28 +90,6 @@ This refactor aims to eliminate hardcoded "torrust-vm" instance names throughout
 - **Status**: Template wrapper ready, needs integration into workflow
 - **Validation**: E2E tests should show dynamic instance naming
 
-## 🐛 Known Issues
-
-### Build Directory Cleanup Issue
-
-**Problem**: E2E tests do not clean the `build/` directory between runs, causing stale template files to persist.
-
-**Impact**:
-
-- Template changes not reflected in E2E test runs (e.g., `instance_name` vs `container_name`)
-- Inconsistent behavior between fresh and cached environments
-- Blocks validation of template parameterization changes
-
-**Status**: Issue documented in `docs/issues/build-directory-not-cleaned-between-e2e-runs.md`
-
-**Solutions Available**:
-
-1. Clean in `TofuTemplateRenderer.create_build_directory()` (recommended)
-2. Clean in E2E preflight cleanup
-3. Clean in `RenderOpenTofuTemplatesStep`
-
-**Priority**: High - Must be fixed to continue refactor validation
-
 ### Phase 3: Context Integration
 
 #### Step 3: Add instance_name to TofuContext
