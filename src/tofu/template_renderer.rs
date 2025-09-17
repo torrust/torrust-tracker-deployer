@@ -43,9 +43,10 @@ use std::sync::Arc;
 use thiserror::Error;
 
 use crate::command_wrappers::ssh::credentials::SshCredentials;
-use crate::template::file::File;
-use crate::template::wrappers::tofu::lxd::cloud_init::{CloudInitContext, CloudInitTemplate};
 use crate::template::{TemplateManager, TemplateManagerError};
+use crate::tofu::cloud_init_template_renderer::{
+    CloudInitTemplateError, CloudInitTemplateRenderer,
+};
 
 /// Errors that can occur during provision template rendering
 #[derive(Error, Debug)]
@@ -73,6 +74,13 @@ pub enum ProvisionTemplateError {
         #[source]
         source: std::io::Error,
     },
+
+    /// Failed to render cloud-init template using collaborator
+    #[error("Failed to render cloud-init template: {source}")]
+    CloudInitRenderingFailed {
+        #[source]
+        source: CloudInitTemplateError,
+    },
 }
 
 /// Renders `OpenTofu` provision templates to a build directory
@@ -83,6 +91,7 @@ pub struct TofuTemplateRenderer {
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
     ssh_credentials: SshCredentials,
+    cloud_init_renderer: CloudInitTemplateRenderer,
 }
 
 impl TofuTemplateRenderer {
@@ -104,10 +113,13 @@ impl TofuTemplateRenderer {
         build_dir: P,
         ssh_credentials: SshCredentials,
     ) -> Self {
+        let cloud_init_renderer = CloudInitTemplateRenderer::new(template_manager.clone());
+
         Self {
             template_manager,
             build_dir: build_dir.as_ref().to_path_buf(),
             ssh_credentials,
+            cloud_init_renderer,
         }
     }
 
@@ -265,9 +277,9 @@ impl TofuTemplateRenderer {
         Ok(())
     }
 
-    /// Renders Tera templates with runtime variables
+    /// Renders Tera templates with runtime variables using collaborators
     ///
-    /// This method handles cloud-init.yml.tera template rendering with SSH public key injection.
+    /// This method delegates cloud-init.yml.tera template rendering to the `CloudInitTemplateRenderer` collaborator.
     ///
     /// # Arguments
     ///
@@ -276,106 +288,20 @@ impl TofuTemplateRenderer {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - Template file cannot be read
-    /// - SSH public key file cannot be read
-    /// - Template rendering fails
-    /// - File writing fails
+    /// - `CloudInitTemplateRenderer` fails to render the template
     async fn render_tera_templates(
         &self,
         destination_dir: &Path,
     ) -> Result<(), ProvisionTemplateError> {
-        tracing::debug!("Rendering Tera templates with runtime variables");
+        tracing::debug!("Rendering Tera templates with runtime variables using collaborators");
 
-        // Render cloud-init.yml.tera template
-        self.render_cloud_init_template(destination_dir).await?;
+        // Use collaborator to render cloud-init.yml.tera template
+        self.cloud_init_renderer
+            .render(&self.ssh_credentials, destination_dir)
+            .await
+            .map_err(|source| ProvisionTemplateError::CloudInitRenderingFailed { source })?;
 
         tracing::debug!("All Tera templates rendered successfully");
-        Ok(())
-    }
-
-    /// Renders the cloud-init.yml.tera template with SSH public key
-    ///
-    /// # Arguments
-    ///
-    /// * `destination_dir` - The directory where the rendered template should be written
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if template loading, context creation, or rendering fails
-    async fn render_cloud_init_template(
-        &self,
-        destination_dir: &Path,
-    ) -> Result<(), ProvisionTemplateError> {
-        let template_path = Self::build_template_path("cloud-init.yml.tera");
-
-        let source_path = self
-            .template_manager
-            .get_template_path(&template_path)
-            .map_err(|source| ProvisionTemplateError::TemplatePathFailed {
-                file_name: "cloud-init.yml.tera".to_string(),
-                source,
-            })?;
-
-        // Read template content
-        let template_content = tokio::fs::read_to_string(&source_path)
-            .await
-            .map_err(|source| ProvisionTemplateError::FileCopyFailed {
-                file_name: "cloud-init.yml.tera".to_string(),
-                source,
-            })?;
-
-        let template_file = File::new("cloud-init.yml.tera", template_content).map_err(|_| {
-            ProvisionTemplateError::FileCopyFailed {
-                file_name: "cloud-init.yml.tera".to_string(),
-                source: std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "Invalid template file",
-                ),
-            }
-        })?;
-
-        // Create context with SSH public key
-        let cloud_init_context = CloudInitContext::builder()
-            .with_ssh_public_key_from_file(&self.ssh_credentials.ssh_pub_key_path)
-            .map_err(|_| ProvisionTemplateError::FileCopyFailed {
-                file_name: "ssh_pub_key".to_string(),
-                source: std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    "SSH public key file not found",
-                ),
-            })?
-            .build()
-            .map_err(|_| ProvisionTemplateError::FileCopyFailed {
-                file_name: "cloud_init_context".to_string(),
-                source: std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "Failed to build cloud-init context",
-                ),
-            })?;
-
-        // Create and render template
-        let cloud_init_template = CloudInitTemplate::new(&template_file, cloud_init_context)
-            .map_err(|_| ProvisionTemplateError::FileCopyFailed {
-                file_name: "cloud-init.yml.tera".to_string(),
-                source: std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "Template rendering failed",
-                ),
-            })?;
-
-        // Write rendered template to destination
-        let dest_path = destination_dir.join("cloud-init.yml");
-        cloud_init_template.render(&dest_path).map_err(|_| {
-            ProvisionTemplateError::FileCopyFailed {
-                file_name: "cloud-init.yml".to_string(),
-                source: std::io::Error::new(
-                    std::io::ErrorKind::PermissionDenied,
-                    "Failed to write rendered template",
-                ),
-            }
-        })?;
-
-        tracing::debug!("Successfully rendered cloud-init.yml template");
         Ok(())
     }
 }
