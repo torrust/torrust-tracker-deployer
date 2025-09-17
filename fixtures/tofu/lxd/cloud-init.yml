@@ -1,0 +1,26 @@
+#cloud-config
+# Static cloud-init configuration for LXD provisioning tests
+# This is used by GitHub Actions workflow to test LXD container provisioning
+# No SSH keys needed as we don't connect via SSH in the test workflow
+
+# Commented out for faster container creation during CI testing
+# package_update: true
+# package_upgrade: true
+
+# packages:
+#   - curl
+#   - wget
+#   - git
+#   - htop
+#   - vim
+
+users:
+  - name: torrust
+    groups: sudo
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+
+runcmd:
+  - echo "Container provisioned successfully" > /tmp/provision_complete
+  - systemctl enable ssh
+  - systemctl start ssh

@@ -1,3 +1,22 @@
+# LXD Container Provisioning Test Workflow
+#
+# This workflow tests that LXD container provisioning works correctly in GitHub Actions runners.
+# It's a continuous integration test to ensure our OpenTofu LXD provider configuration is valid
+# and can successfully create containers in shared CI environments.
+#
+# PURPOSE:
+# - Validates OpenTofu configuration syntax and LXD provider integration
+# - Tests container creation, initialization, and basic functionality
+# - Ensures cloud-init scripts work properly in containerized environments
+# - Provides confidence that LXD provisioning works in CI/CD pipelines
+#
+# SCOPE:
+# - Uses static configuration fixtures (no dynamic templating) to avoid application coupling
+# - Tests infrastructure provisioning only (no application deployment)
+# - Focuses on LXD container lifecycle management and basic system validation
+#
+# This is NOT a full end-to-end test but a focused infrastructure validation workflow.
+
 name: Test LXD Container Provisioning
 
 # NOTE: This workflow uses CI-specific approaches like 'sudo chmod 666' on the LXD socket
@@ -45,9 +64,11 @@ jobs:
         run: |
           # Build the template system and render the static templates
           cargo build --release
-          # For this workflow, we need static templates only (no runtime variables)
+          # For this workflow, we use static fixtures without variables for testing
           mkdir -p build
           cp -r templates/* build/
+          # Override the dynamic cloud-init template with static fixture
+          cp fixtures/tofu/lxd/cloud-init.yml build/tofu/lxd/cloud-init.yml
 
       - name: Verify installations
         run: |
