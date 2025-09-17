@@ -58,8 +58,8 @@ impl PlanInfrastructureStep {
             "Planning OpenTofu infrastructure"
         );
 
-        // Execute tofu plan command
-        let output = self.opentofu_client.plan()?;
+        // Execute tofu plan command with variables file
+        let output = self.opentofu_client.plan(&["-var-file=variables.tfvars"])?;
 
         info!(
             step = "plan_infrastructure",

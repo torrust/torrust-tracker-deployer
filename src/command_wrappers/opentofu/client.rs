@@ -124,6 +124,10 @@ impl OpenTofuClient {
 
     /// Plan infrastructure changes
     ///
+    /// # Arguments
+    ///
+    /// * `extra_args` - Additional arguments to pass to the tofu plan command (e.g., "-var-file=variables.tfvars")
+    ///
     /// # Returns
     ///
     /// * `Ok(String)` - The stdout output if the command succeeds
@@ -134,14 +138,17 @@ impl OpenTofuClient {
     /// This function will return an error if:
     /// * The `OpenTofu` plan fails
     /// * The configuration is not initialized
-    pub fn plan(&self) -> Result<String, CommandError> {
+    pub fn plan(&self, extra_args: &[&str]) -> Result<String, CommandError> {
         info!(
             "Planning infrastructure changes in directory: {}",
             self.working_dir.display()
         );
 
+        let mut args = vec!["plan"];
+        args.extend_from_slice(extra_args);
+
         self.command_executor
-            .run_command("tofu", &["plan"], Some(&self.working_dir))
+            .run_command("tofu", &args, Some(&self.working_dir))
     }
 
     /// Apply infrastructure changes
@@ -149,6 +156,7 @@ impl OpenTofuClient {
     /// # Arguments
     ///
     /// * `auto_approve` - Whether to automatically approve the changes without interactive confirmation
+    /// * `extra_args` - Additional arguments to pass to the tofu apply command (e.g., "-var-file=variables.tfvars")
     ///
     /// # Returns
     ///
@@ -160,13 +168,14 @@ impl OpenTofuClient {
     /// This function will return an error if:
     /// * The `OpenTofu` apply fails
     /// * The configuration is not initialized
-    pub fn apply(&self, auto_approve: bool) -> Result<String, CommandError> {
+    pub fn apply(&self, auto_approve: bool, extra_args: &[&str]) -> Result<String, CommandError> {
         info!(
             "Applying infrastructure changes in directory: {}",
             self.working_dir.display()
         );
 
         let mut args = vec!["apply"];
+        args.extend_from_slice(extra_args);
         if auto_approve {
             args.push("-auto-approve");
         }
@@ -180,6 +189,7 @@ impl OpenTofuClient {
     /// # Arguments
     ///
     /// * `auto_approve` - Whether to automatically approve the destruction without interactive confirmation
+    /// * `extra_args` - Additional arguments to pass to the tofu destroy command (e.g., "-var-file=variables.tfvars")
     ///
     /// # Returns
     ///
@@ -191,13 +201,14 @@ impl OpenTofuClient {
     /// This function will return an error if:
     /// * The `OpenTofu` destroy fails
     /// * The configuration is not initialized
-    pub fn destroy(&self, auto_approve: bool) -> Result<String, CommandError> {
+    pub fn destroy(&self, auto_approve: bool, extra_args: &[&str]) -> Result<String, CommandError> {
         info!(
             "Destroying infrastructure in directory: {}",
             self.working_dir.display()
         );
 
         let mut args = vec!["destroy"];
+        args.extend_from_slice(extra_args);
         if auto_approve {
             args.push("-auto-approve");
         }
@@ -336,7 +347,7 @@ resource "null_resource" "test" {
         drop(client.init());
 
         // This would fail if OpenTofu is not installed, so we ignore it by default
-        match client.plan() {
+        match client.plan(&[]) {
             Ok(_output) => {
                 // Plan succeeded
             }

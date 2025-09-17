@@ -2,9 +2,90 @@
 
 ## Overview
 
-This refactor aims to eliminate the hardcoded "torrust-vm" instance name throughout the codebase and make it configurable from the top-level main function in `src/bin/e2e_tests.rs`.
+This refactor aims t## 🔄 Design Updates
 
-## Motivation
+### Variable Naming Convention
+
+- **Variable name**: `instance_name` (not `container_name`) - since we're provisioning VM instances
+- **Scope**: Focus on instance name parameterization only
+- **Static variables**: Keep `image` and other variables static for now (not Tera templated)
+
+## 🎯 Implementation Plan
+
+### Phase 1: Foundation - OpenTofu Variables Infrastructure
+
+**Goal**: Establish OpenTofu variables file pattern and integration
+
+#### Step 1a: Create OpenTofu variables template ✅
+
+- Create `templates/tofu/lxd/variables.tfvars` template file to define `instance_name` variable
+- Update `TofuTemplateRenderer` to include this file in static template copying
+- Keep `image` variable static (not templated)
+- **Status**: Static variables file created with hardcoded "torrust-vm" value
+- **Validation**: Unit tests + linters + e2e tests must pass
+
+#### Step 1b: Update OpenTofu client for variables file
+
+- Modify OpenTofu client to pass `-var-file` parameter to `tofu` commands
+- Update unit tests for `TofuClient`
+- **Validation**: All OpenTofu commands work with variables file
+
+### Phase 2: Template Parameterization
+
+**Goal**: Convert static variables to dynamic Tera templates
+
+#### Step 2a: Convert variables.tfvars to Tera template
+
+- Transform static `variables.tfvars` into `variables.tfvars.tera` template with `{{instance_name}}` placeholder
+- Update `TofuTemplateRenderer` to render it with context
+- **Validation**: Rendered file contains correct instance name value
+
+#### Step 2b: Update main.tf to use variables
+
+- Modify `templates/tofu/lxd/main.tf.tera` to use `var.instance_name` instead of hardcoded "torrust-vm"
+- Ensure proper OpenTofu variable reference syntax
+- **Validation**: Infrastructure deploys with custom instance names
+
+### Phase 3: Context Integration
+
+#### Step 3: Add instance_name to TofuContext
+
+- Add `instance_name` field to `TofuContext` struct in `src/tofu/template/context.rs`
+- Provide default value "torrust-vm" for backward compatibility
+- **Validation**: Context serialization and template rendering work
+
+### Phase 4: E2E Integration
+
+#### Step 4: Update E2E tests infrastructure context
+
+- Modify `src/e2e/tasks/provision_infrastructure.rs` to pass custom `instance_name` in `TofuContext`
+- Start with default value for validation
+- **Validation**: E2E tests pass with parameterized context
+
+#### Step 5: Add parameterization to e2e_tests.rs main
+
+- Modify `src/bin/e2e_tests.rs` main function to accept instance name parameter
+- Pass it through to E2E tasks
+- Implement CLI argument parsing
+- **Validation**: CLI accepts custom instance names
+
+### Phase 5: Complete Migration
+
+#### Step 6: Update remaining hardcoded references
+
+- Replace remaining 54 hardcoded "torrust-vm" occurrences across codebase with parameterized values
+- Update tests and documentation
+- **Validation**: All hardcoded references eliminated
+
+#### Final validation and documentation
+
+- Run comprehensive tests
+- Update documentation to reflect parameterization capabilities
+- **Validation**: All hardcoded references are eliminated
+
+## 🔍 Analysis of Current "torrust-vm" Usage
+
+This refactor addresses a comprehensive parameterization of the h
 
 Currently, the instance name "torrust-vm" is hardcoded in multiple places across the codebase, including:
 

@@ -154,7 +154,7 @@ impl TofuTemplateRenderer {
         let build_tofu_dir = self.create_build_directory().await?;
 
         // List of static templates to copy directly
-        let static_template_files = vec!["main.tf"];
+        let static_template_files = vec!["main.tf", "variables.tfvars"];
 
         // Copy static template files
         self.copy_templates(&static_template_files, &build_tofu_dir)

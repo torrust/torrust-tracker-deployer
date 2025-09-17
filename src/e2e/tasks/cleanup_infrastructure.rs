@@ -53,11 +53,11 @@ pub fn cleanup_infrastructure(env: &TestEnvironment) {
 
     info!(operation = "cleanup", "Cleaning up test environment");
 
-    // Destroy infrastructure using OpenTofuClient
+    // Destroy infrastructure using OpenTofuClient with variables file
     let result = env
         .services
         .opentofu_client
-        .destroy(true) // auto_approve = true
+        .destroy(true, &["-var-file=variables.tfvars"]) // auto_approve = true
         .map_err(anyhow::Error::from);
 
     match result {

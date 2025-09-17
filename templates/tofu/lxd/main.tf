@@ -14,8 +14,8 @@ provider "lxd" {
 }
 
 # Variables
-variable "container_name" {
-  description = "Name of the LXD container"
+variable "instance_name" {
+  description = "Name of the LXD instance"
   type        = string
   default     = "torrust-vm"
 }
@@ -58,7 +58,7 @@ resource "lxd_profile" "torrust_profile" {
 
 # Create the LXD virtual machine
 resource "lxd_instance" "torrust_vm" {
-  name      = var.container_name
+  name      = var.instance_name
   image     = var.image
   type      = "virtual-machine"
   profiles  = [lxd_profile.torrust_profile.name]
@@ -90,20 +90,20 @@ output "instance_info" {
 output "connection_commands" {
   description = "Commands to connect to the container"
   value = [
-    "lxc exec ${var.container_name} -- /bin/bash",
-    "lxc exec ${var.container_name} -- whoami",
-    "lxc exec ${var.container_name} -- systemctl status",
-    "lxc list ${var.container_name}"
+    "lxc exec ${var.instance_name} -- /bin/bash",
+    "lxc exec ${var.instance_name} -- whoami",
+    "lxc exec ${var.instance_name} -- systemctl status",
+    "lxc list ${var.instance_name}"
   ]
 }
 
 output "test_commands" {
   description = "Commands to test the container functionality"
   value = [
-    "lxc exec ${var.container_name} -- cat /etc/os-release",
-    "lxc exec ${var.container_name} -- df -h",
-    "lxc exec ${var.container_name} -- free -h",
-    "lxc exec ${var.container_name} -- systemctl list-units --type=service --state=running",
-    "lxc exec ${var.container_name} -- cloud-init status"
+    "lxc exec ${var.instance_name} -- cat /etc/os-release",
+    "lxc exec ${var.instance_name} -- df -h",
+    "lxc exec ${var.instance_name} -- free -h",
+    "lxc exec ${var.instance_name} -- systemctl list-units --type=service --state=running",
+    "lxc exec ${var.instance_name} -- cloud-init status"
   ]
 }

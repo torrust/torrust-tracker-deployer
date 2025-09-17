@@ -73,8 +73,10 @@ impl ApplyInfrastructureStep {
             "Applying OpenTofu infrastructure"
         );
 
-        // Execute tofu apply command
-        let output = self.opentofu_client.apply(self.auto_approve)?;
+        // Execute tofu apply command with variables file
+        let output = self
+            .opentofu_client
+            .apply(self.auto_approve, &["-var-file=variables.tfvars"])?;
 
         info!(
             step = "apply_infrastructure",
