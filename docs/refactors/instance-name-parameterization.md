@@ -74,6 +74,81 @@ Start from low-level infrastructure details and work up to higher abstractions:
 5. Top-level main function
 6. Workflows (excluding `.github/workflows/test-lxd-provision.yml` - independent test for GitHub runners contract)
 
+## Detailed Refactor Plan
+
+### Phase 1: Infrastructure Foundation
+
+**Goal**: Create OpenTofu variables file strategy and update low-level templates
+
+**Step 1a**: Create OpenTofu variables template
+
+- Create `templates/tofu/lxd/variables.tfvars.tera` with instance name parameter
+- Update `src/tofu/template/renderer/mod.rs` to render this new template
+- **Validation**: Run linters, unit tests, e2e tests
+
+**Step 1b**: Update OpenTofu client to use variables file
+
+- Modify OpenTofu client to pass `-var-file` parameter
+- Update relevant tests in `src/command_wrappers/opentofu/json_parser.rs`
+- **Validation**: Run linters, unit tests, e2e tests
+
+### Phase 2: Template System Updates
+
+**Goal**: Update template rendering to accept instance name parameter
+
+**Step 2a**: Update Tera template context
+
+- Modify template renderer to accept instance_name parameter
+- Update `templates/ansible/inventory.yml.tera` to use template variable instead of hardcoded name
+- **Validation**: Run linters, unit tests, e2e tests
+
+**Step 2b**: Update template integration tests
+
+- Update `tests/template_integration.rs` to use parameterized name
+- Update `src/template/file.rs` test expectations
+- **Validation**: Run linters, unit tests, e2e tests
+
+### Phase 3: E2E Infrastructure
+
+**Goal**: Update E2E test system to accept parameterized instance names
+
+**Step 3a**: Update E2E task implementations
+
+- Modify `src/e2e/tasks/cleanup_infrastructure.rs` to use parameter
+- Update `src/ansible/template/renderer/inventory.rs` tests
+- **Validation**: Run linters, unit tests, e2e tests
+
+**Step 3b**: Connect parameter flow from main function
+
+- Add constant in `src/bin/e2e_tests.rs`
+- Pass instance name through TestEnvironment
+- Update environment setup
+- **Validation**: Run linters, unit tests, e2e tests
+
+### Phase 4: Workflow Updates
+
+**Goal**: Update CI/CD workflows to be environment-flexible
+
+**Step 4a**: Update GitHub workflows
+
+- Update `.github/workflows/test-e2e.yml` to use environment variables or be more generic
+- **Validation**: Run linters, check workflow syntax
+
+### Phase 5: Documentation Updates
+
+**Goal**: Update documentation to reflect parameterized approach
+
+**Step 5a**: Update primary documentation
+
+- Update `README.md` with parameterized examples
+- Update `docs/e2e-testing.md` with new approach
+- **Validation**: Run markdown linter
+
+**Step 5b**: Update configuration documentation
+
+- Update `docs/tofu-lxd-configuration.md` with variable-based approach
+- **Validation**: Run markdown linter
+
 ## Success Criteria
 
 - [ ] Instance name defined once in `src/bin/e2e_tests.rs`
