@@ -28,6 +28,7 @@ nslookup
 nullglob
 oneline
 pacman
+parameterizing
 pathbuf
 pipefail
 prereq

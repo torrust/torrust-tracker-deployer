@@ -2,7 +2,35 @@
 
 ## Overview
 
-This refactor aims t## 🔄 Design Updates
+This refactor aims to eliminate hardcoded "torrust-vm" instance names throughout the codebase and replace them with parameterized values. The goal is to enable dynamic instance naming for different environments and support running multiple instances simultaneously.
+
+## 📊 Progress Status
+
+### ✅ Completed Phases
+
+- **Phase 1**: Foundation - OpenTofu Variables Infrastructure
+
+  - ✅ Step 1a: Created OpenTofu variables template (`variables.tfvars`)
+  - ✅ Step 1b: Updated OpenTofu client for variables file support
+
+- **Phase 2**: Template Parameterization
+  - ✅ Step 2a: Converted variables.tfvars to Tera template with `{{instance_name}}` placeholder
+  - ✅ Step 2b: Created template wrapper infrastructure (`VariablesTemplate`, `VariablesContext`)
+
+### 🔄 Current Phase
+
+- **Phase 2c**: Integrate Variables Template Rendering (In Progress)
+  - 🔄 Add `VariablesTemplate` rendering to `RenderOpenTofuTemplatesStep`
+  - 🔄 Pass `instance_name` context from provision workflow
+  - 🔄 Replace static `variables.tfvars` with dynamic rendering
+
+### 📋 Remaining Phases
+
+- **Phase 3**: Context Integration - Add instance_name to workflow context
+- **Phase 4**: E2E Integration - Update E2E tests infrastructure context
+- **Phase 5**: Complete Migration - Update remaining hardcoded references
+
+## 🔄 Design Updates
 
 ### Variable Naming Convention
 
@@ -18,33 +46,71 @@ This refactor aims t## 🔄 Design Updates
 
 #### Step 1a: Create OpenTofu variables template ✅
 
-- Create `templates/tofu/lxd/variables.tfvars` template file to define `instance_name` variable
-- Update `TofuTemplateRenderer` to include this file in static template copying
-- Keep `image` variable static (not templated)
+- ✅ Create `templates/tofu/lxd/variables.tfvars` template file to define `instance_name` variable
+- ✅ Update `TofuTemplateRenderer` to include this file in static template copying
+- ✅ Keep `image` variable static (not templated)
 - **Status**: Static variables file created with hardcoded "torrust-vm" value
-- **Validation**: Unit tests + linters + e2e tests must pass
+- **Validation**: ✅ Unit tests + linters + e2e tests passed
 
-#### Step 1b: Update OpenTofu client for variables file
+#### Step 1b: Update OpenTofu client for variables file ✅
 
-- Modify OpenTofu client to pass `-var-file` parameter to `tofu` commands
-- Update unit tests for `TofuClient`
-- **Validation**: All OpenTofu commands work with variables file
+- ✅ Modify OpenTofu client to pass `-var-file` parameter to `tofu` commands
+- ✅ Update unit tests for `TofuClient`
+- **Status**: OpenTofu client accepts `extra_args` parameter for `-var-file=variables.tfvars`
+- **Validation**: ✅ All OpenTofu commands work with variables file
 
-### Phase 2: Template Parameterization
+### Phase 2: Template Parameterization ✅
 
 **Goal**: Convert static variables to dynamic Tera templates
 
-#### Step 2a: Convert variables.tfvars to Tera template
+#### Step 2a: Convert variables.tfvars to Tera template ✅
 
-- Transform static `variables.tfvars` into `variables.tfvars.tera` template with `{{instance_name}}` placeholder
-- Update `TofuTemplateRenderer` to render it with context
-- **Validation**: Rendered file contains correct instance name value
+- ✅ Transform static `variables.tfvars` into `variables.tfvars.tera` template with `{{instance_name}}` placeholder
+- ✅ Update `TofuTemplateRenderer` to render it with context
+- **Status**: Template created with Tera placeholder for dynamic rendering
+- **Validation**: ✅ Rendered file contains correct instance name value
 
-#### Step 2b: Update main.tf to use variables
+#### Step 2b: Create template wrapper for variables rendering ✅
 
-- Modify `templates/tofu/lxd/main.tf.tera` to use `var.instance_name` instead of hardcoded "torrust-vm"
-- Ensure proper OpenTofu variable reference syntax
-- **Validation**: Infrastructure deploys with custom instance names
+- ✅ Create `VariablesTemplate` and `VariablesContext` following cloud-init pattern
+- ✅ Add `.tfvars` extension support to template engine
+- ✅ Implement comprehensive template validation and rendering
+- **Status**: Template wrapper infrastructure complete with 14 new unit tests
+- **Validation**: ✅ Template rendering works, all tests pass
+
+### Phase 2c: Integrate Variables Template Rendering (In Progress) 🔄
+
+**Goal**: Add variables template rendering to infrastructure workflow
+
+#### Step 2c: Add variables rendering to workflow
+
+- 🔄 Add `VariablesTemplate` rendering to `RenderOpenTofuTemplatesStep`
+- 🔄 Pass `instance_name` context from provision workflow
+- 🔄 Replace static `variables.tfvars` with dynamic rendering
+- **Status**: Template wrapper ready, needs integration into workflow
+- **Validation**: E2E tests should show dynamic instance naming
+
+## 🐛 Known Issues
+
+### Build Directory Cleanup Issue
+
+**Problem**: E2E tests do not clean the `build/` directory between runs, causing stale template files to persist.
+
+**Impact**:
+
+- Template changes not reflected in E2E test runs (e.g., `instance_name` vs `container_name`)
+- Inconsistent behavior between fresh and cached environments
+- Blocks validation of template parameterization changes
+
+**Status**: Issue documented in `docs/issues/build-directory-not-cleaned-between-e2e-runs.md`
+
+**Solutions Available**:
+
+1. Clean in `TofuTemplateRenderer.create_build_directory()` (recommended)
+2. Clean in E2E preflight cleanup
+3. Clean in `RenderOpenTofuTemplatesStep`
+
+**Priority**: High - Must be fixed to continue refactor validation
 
 ### Phase 3: Context Integration
 

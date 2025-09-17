@@ -39,6 +39,7 @@ pub enum Format {
     Yml,
     Toml,
     Tf,
+    Tfvars,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,6 +49,7 @@ pub enum Extension {
     Yml,
     Toml,
     Tf,
+    Tfvars,
 }
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq)]
@@ -98,6 +100,7 @@ impl TryFrom<&str> for Extension {
             "yml" => Ok(Extension::Yml),
             "toml" => Ok(Extension::Toml),
             "tf" => Ok(Extension::Tf),
+            "tfvars" => Ok(Extension::Tfvars),
             _ => Err(extension.to_string()),
         }
     }
@@ -111,6 +114,7 @@ impl Display for Extension {
             Extension::Yml => write!(f, "yml"),
             Extension::Toml => write!(f, "toml"),
             Extension::Tf => write!(f, "tf"),
+            Extension::Tfvars => write!(f, "tfvars"),
         }
     }
 }
@@ -237,6 +241,7 @@ impl File {
                     Extension::Yml | Extension::Yaml => Format::Yml,
                     Extension::Toml => Format::Toml,
                     Extension::Tf => Format::Tf,
+                    Extension::Tfvars => Format::Tfvars,
                     Extension::Tera => {
                         return Err(Error::InvalidInnerExtension {
                             path: path.to_string(),
@@ -262,6 +267,7 @@ impl File {
                 Extension::Yml | Extension::Yaml => Format::Yml,
                 Extension::Toml => Format::Toml,
                 Extension::Tf => Format::Tf,
+                Extension::Tfvars => Format::Tfvars,
                 Extension::Tera => {
                     // Single .tera extension without inner extension - not allowed
                     return Err(Error::MissingInnerExtension {

@@ -1,0 +1,8 @@
+# OpenTofu Variables File
+# This file provides runtime variable values for the LXD infrastructure deployment
+
+# VM instance name - injected dynamically from runtime context
+instance_name = "{{ instance_name }}"
+
+# LXD image to use for the container
+image = "ubuntu:24.04"
