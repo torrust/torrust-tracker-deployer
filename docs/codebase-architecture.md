@@ -129,7 +129,9 @@ Command wrappers provide clean abstractions for integrating with external deploy
 Provides integration with `Ansible` for configuration management and software installation on remote systems.
 
 - ✅ `src/ansible/mod.rs` - Ansible playbook integration and coordination
-- ✅ `src/ansible/template_renderer.rs` - Ansible-specific template rendering
+- ✅ `src/ansible/template/mod.rs` - Ansible template functionality module
+- ✅ `src/ansible/template/renderer/mod.rs` - Ansible template rendering coordination
+- ✅ `src/ansible/template/renderer/inventory.rs` - Ansible inventory template rendering
 
 **Command Wrappers:**
 
@@ -286,7 +288,9 @@ Template wrappers provide specialized rendering logic for different tool configu
 Specialized integration for `OpenTofu` template processing, handling infrastructure-as-code template rendering with proper variable substitution.
 
 - ✅ `src/tofu/mod.rs` - OpenTofu integration module
-- ✅ `src/tofu/template_renderer.rs` - OpenTofu template rendering
+- ✅ `src/tofu/template/mod.rs` - OpenTofu template functionality module
+- ✅ `src/tofu/template/renderer/mod.rs` - OpenTofu template rendering coordination
+- ✅ `src/tofu/template/renderer/cloud_init.rs` - Cloud-init template rendering for OpenTofu
 
 ## � Architecture Flow
 
@@ -328,9 +332,47 @@ The typical deployment flow follows this pattern:
 - **Progress reporting**: User-friendly feedback during long-running operations
 - **Configuration system**: Support for different environments and settings
 
-## 📊 Module Statistics
+## � Recent Architecture Improvements
 
-- **Total Modules**: 79 Rust files
+### Hierarchical Module Organization (September 2024)
+
+Recent refactoring efforts have improved the module organization for both `Ansible` and `OpenTofu` integrations:
+
+**Before:**
+```
+src/ansible/template_renderer.rs
+src/tofu/template_renderer.rs
+src/tofu/cloud_init_template_renderer.rs
+```
+
+**After:**
+```
+src/ansible/template/
+├── mod.rs
+└── renderer/
+    ├── mod.rs (AnsibleTemplateRenderer)
+    └── inventory.rs (InventoryTemplateRenderer)
+
+src/tofu/template/
+├── mod.rs
+└── renderer/
+    ├── mod.rs (TofuTemplateRenderer)
+    └── cloud_init.rs (CloudInitTemplateRenderer)
+```
+
+**Benefits of the New Structure:**
+
+- **Eliminated Redundant Naming**: Removed `_template_renderer` suffixes from file names
+- **Logical Hierarchy**: Clear `template/renderer/` organization pattern
+- **Better Separation**: Specialized renderers properly grouped by functionality
+- **Consistent Pattern**: Same organizational approach across both modules
+- **Improved Maintainability**: Easier to locate and modify specific template renderers
+
+This refactoring maintains full backward compatibility while providing a cleaner, more maintainable codebase structure.
+
+## �📊 Module Statistics
+
+- **Total Modules**: 85 Rust files
 - **Architecture Levels**: 3 (Commands → Steps → Remote Actions)
 - **External Tool Integrations**: 4 (`OpenTofu`, `Ansible`, `LXD`, `SSH`)
 - **Step Categories**: 7 (Infrastructure, System, Software, Validation, Connectivity, Application, Rendering)
@@ -344,3 +386,4 @@ The typical deployment flow follows this pattern:
 - **Template-Driven Configuration**: Flexible configuration management through templates
 
 
+````
