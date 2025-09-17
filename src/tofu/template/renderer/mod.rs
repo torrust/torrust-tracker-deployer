@@ -44,6 +44,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
 
+#[allow(unused_imports)]
+use crate::command_wrappers::lxd::instance::InstanceName;
 use crate::command_wrappers::ssh::credentials::SshCredentials;
 use crate::template::wrappers::tofu::lxd::variables::{
     VariablesContextBuilder, VariablesTemplate, VariablesTemplateError,
@@ -104,7 +106,7 @@ pub struct TofuTemplateRenderer {
     build_dir: PathBuf,
     ssh_credentials: SshCredentials,
     cloud_init_renderer: CloudInitTemplateRenderer,
-    instance_name: String,
+    instance_name: InstanceName,
 }
 
 impl TofuTemplateRenderer {
@@ -126,7 +128,7 @@ impl TofuTemplateRenderer {
         template_manager: Arc<TemplateManager>,
         build_dir: P,
         ssh_credentials: SshCredentials,
-        instance_name: String,
+        instance_name: InstanceName,
     ) -> Self {
         let cloud_init_renderer = CloudInitTemplateRenderer::new(template_manager.clone());
 
@@ -406,7 +408,9 @@ mod tests {
     use std::fs;
 
     /// Test instance name for unit tests
-    const TEST_INSTANCE_NAME: &str = "test-instance";
+    fn test_instance_name() -> InstanceName {
+        InstanceName::new("test-instance".to_string()).expect("Valid test instance name")
+    }
 
     /// Helper function to create dummy SSH credentials for testing
     fn create_dummy_ssh_credentials(temp_dir: &Path) -> SshCredentials {
@@ -435,7 +439,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
 
         assert_eq!(renderer.build_dir, build_path);
@@ -453,7 +457,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
         let actual_path = renderer.build_opentofu_directory();
 
@@ -495,7 +499,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
         let created_path = renderer
             .create_build_directory()
@@ -534,7 +538,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
 
         let result = renderer.create_build_directory().await;
@@ -570,7 +574,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
 
         // Try to copy a non-existent template
@@ -629,7 +633,7 @@ mod tests {
             template_manager,
             temp_dir.path(),
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
 
         let result = renderer.copy_templates(&["test.tf"], &build_path).await;
@@ -710,7 +714,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
         let created_path = renderer
             .create_build_directory()
@@ -733,7 +737,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
 
         // Should succeed with empty array
@@ -769,7 +773,7 @@ mod tests {
             template_manager,
             temp_dir.path(),
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
 
         // Copy the same file twice - should succeed (overwrite)
@@ -816,14 +820,14 @@ mod tests {
             template_manager.clone(),
             &build_path1,
             ssh_credentials1,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
         let ssh_credentials2 = create_dummy_ssh_credentials(temp_dir.path());
         let renderer2 = TofuTemplateRenderer::new(
             template_manager,
             &build_path2,
             ssh_credentials2,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
 
         tokio::fs::create_dir_all(&build_path1)
@@ -881,7 +885,7 @@ mod tests {
             template_manager,
             temp_dir.path(),
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
 
         // Try to copy both existing and non-existing files
@@ -939,7 +943,7 @@ mod tests {
             template_manager,
             temp_dir.path(),
             ssh_credentials,
-            TEST_INSTANCE_NAME.to_string(),
+            test_instance_name(),
         );
 
         let file_refs: Vec<&str> = file_names.iter().map(std::string::String::as_str).collect();

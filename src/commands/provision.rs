@@ -20,6 +20,8 @@ use tracing::{info, instrument};
 use crate::ansible::AnsibleTemplateRenderer;
 use crate::command::CommandError;
 use crate::command_wrappers::ansible::AnsibleClient;
+#[allow(unused_imports)]
+use crate::command_wrappers::lxd::InstanceName;
 use crate::command_wrappers::opentofu::client::{InstanceInfo, OpenTofuError};
 use crate::command_wrappers::ssh::{credentials::SshCredentials, SshError};
 use crate::steps::{
@@ -196,7 +198,7 @@ mod tests {
             template_manager.clone(),
             temp_dir.path(),
             ssh_credentials.clone(),
-            "torrust-vm".to_string(), // TODO: Make this configurable in Phase 3
+            InstanceName::new("torrust-vm".to_string()).expect("Valid hardcoded instance name"), // TODO: Make this configurable in Phase 3
         ));
 
         let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(

@@ -6,7 +6,8 @@
 use std::fmt;
 use tracing::{info, warn};
 
-use crate::command_wrappers::lxd::client::LxdClient;
+#[allow(unused_imports)]
+use crate::command_wrappers::lxd::{client::LxdClient, InstanceName};
 use crate::command_wrappers::opentofu::{self, EmergencyDestroyError};
 use crate::e2e::environment::TestEnvironment;
 
@@ -275,7 +276,10 @@ fn cleanup_lxd_resources(_env: &TestEnvironment) {
     let lxd_client = LxdClient::new();
 
     // Clean up test instance if it exists
-    match lxd_client.delete_instance("torrust-vm", true) {
+    match lxd_client.delete_instance(
+        &InstanceName::new("torrust-vm".to_string()).expect("Valid hardcoded instance name"),
+        true,
+    ) {
         Ok(()) => {
             info!(
                 operation = "lxd_resources_cleanup",

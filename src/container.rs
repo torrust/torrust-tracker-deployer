@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use crate::ansible::AnsibleTemplateRenderer;
 use crate::command_wrappers::ansible::AnsibleClient;
-use crate::command_wrappers::lxd::LxdClient;
+use crate::command_wrappers::lxd::{InstanceName, LxdClient};
 use crate::command_wrappers::opentofu::OpenTofuClient;
 use crate::config::Config;
 use crate::template::TemplateManager;
@@ -35,6 +35,11 @@ pub struct Services {
 
 impl Services {
     /// Create a new services container using the provided configuration
+    ///
+    /// # Panics
+    ///
+    /// Panics if the hardcoded "torrust-vm" instance name is invalid (should never happen
+    /// as it's a known valid name). This will be made configurable in Phase 3.
     #[must_use]
     pub fn new(config: &Config) -> Self {
         // Create template manager
@@ -56,7 +61,7 @@ impl Services {
             template_manager.clone(),
             config.build_dir.clone(),
             config.ssh_credentials.clone(),
-            "torrust-vm".to_string(), // TODO: Make this configurable in Phase 3
+            InstanceName::new("torrust-vm".to_string()).expect("Valid hardcoded instance name"), // TODO: Make this configurable in Phase 3
         );
 
         // Create configuration template renderer

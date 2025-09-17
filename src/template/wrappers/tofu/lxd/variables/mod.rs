@@ -80,7 +80,7 @@ impl VariablesTemplate {
     /// Get the instance name value
     #[must_use]
     pub fn instance_name(&self) -> &str {
-        &self.context.instance_name
+        self.context.instance_name.as_str()
     }
 
     /// Render the template to a file at the specified output path
@@ -109,11 +109,12 @@ impl VariablesTemplate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::command_wrappers::lxd::instance::InstanceName;
     use tempfile::NamedTempFile;
 
     fn create_test_context() -> VariablesContext {
         VariablesContext::builder()
-            .with_instance_name("test-instance".to_string())
+            .with_instance_name(InstanceName::new("test-instance".to_string()).unwrap())
             .build()
             .unwrap()
     }
@@ -200,7 +201,10 @@ image = "ubuntu:24.04""#;
         let context = create_test_context();
         let variables_template = VariablesTemplate::new(&template_file, context).unwrap();
 
-        assert_eq!(variables_template.context().instance_name, "test-instance");
+        assert_eq!(
+            variables_template.context().instance_name.as_str(),
+            "test-instance"
+        );
     }
 
     #[test]
@@ -256,11 +260,14 @@ image = "ubuntu:24.04""#;
         let template_file =
             File::new("variables.tfvars.tera", "{{ instance_name }}".to_string()).unwrap();
         let context = VariablesContext::builder()
-            .with_instance_name("dynamic-vm".to_string())
+            .with_instance_name(InstanceName::new("dynamic-vm".to_string()).unwrap())
             .build()
             .unwrap();
 
         let variables_template = VariablesTemplate::new(&template_file, context).unwrap();
-        assert_eq!(variables_template.context().instance_name, "dynamic-vm");
+        assert_eq!(
+            variables_template.context().instance_name.as_str(),
+            "dynamic-vm"
+        );
     }
 }

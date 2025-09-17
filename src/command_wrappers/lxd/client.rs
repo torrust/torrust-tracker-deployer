@@ -21,7 +21,8 @@ use tracing::info;
 
 use crate::command::CommandExecutor;
 
-use super::instance::InstanceInfo;
+#[allow(unused_imports)]
+use super::instance::{InstanceInfo, InstanceName};
 use super::json_parser::LxdJsonParser;
 
 /// A specialized LXD client for instance management.
@@ -67,7 +68,7 @@ impl LxdClient {
     /// This function will return an error if:
     /// * LXD command execution fails
     /// * JSON parsing fails
-    pub fn get_instance_ip(&self, instance_name: &str) -> Result<Option<IpAddr>> {
+    pub fn get_instance_ip(&self, instance_name: &InstanceName) -> Result<Option<IpAddr>> {
         info!("Getting IP address for instance: {}", instance_name);
 
         let Some(instance) = self.get_instance_by_name(instance_name)? else {
@@ -108,7 +109,7 @@ impl LxdClient {
     /// * JSON parsing fails
     pub fn wait_for_instance_ip(
         &self,
-        instance_name: &str,
+        instance_name: &InstanceName,
         timeout_seconds: u64,
         poll_interval_seconds: u64,
     ) -> Result<IpAddr> {
@@ -162,14 +163,17 @@ impl LxdClient {
     /// This function will return an error if:
     /// * LXD command execution fails
     /// * JSON parsing fails
-    pub fn get_instance_by_name(&self, instance_name: &str) -> Result<Option<InstanceInfo>> {
+    pub fn get_instance_by_name(
+        &self,
+        instance_name: &InstanceName,
+    ) -> Result<Option<InstanceInfo>> {
         info!("Getting instance by name: {}", instance_name);
 
         let instances = self.list(Some(instance_name))?;
 
         Ok(instances
             .into_iter()
-            .find(|inst| inst.name.as_str() == instance_name))
+            .find(|inst| inst.name.as_str() == instance_name.as_str()))
     }
 
     /// List instances in JSON format
@@ -188,13 +192,13 @@ impl LxdClient {
     /// * The LXD command fails
     /// * LXD is not installed or accessible
     /// * JSON parsing fails
-    fn list(&self, instance_name: Option<&str>) -> Result<Vec<InstanceInfo>> {
+    fn list(&self, instance_name: Option<&InstanceName>) -> Result<Vec<InstanceInfo>> {
         info!("Listing LXD instances");
 
         let mut args = vec!["list", "--format=json"];
 
         if let Some(name) = instance_name {
-            args.push(name);
+            args.push(name.as_str());
             info!("Filtering by instance name: {}", name);
         }
 
@@ -223,10 +227,10 @@ impl LxdClient {
     /// This function will return an error if:
     /// * The LXD command fails with an unexpected error
     /// * LXD is not installed or accessible
-    pub fn delete_instance(&self, instance_name: &str, force: bool) -> Result<()> {
+    pub fn delete_instance(&self, instance_name: &InstanceName, force: bool) -> Result<()> {
         info!("Deleting LXD instance: {}", instance_name);
 
-        let mut args = vec!["delete", instance_name];
+        let mut args = vec!["delete", instance_name.as_str()];
         if force {
             args.push("--force");
         }

@@ -14,15 +14,19 @@
 //!
 //! ```rust
 //! use torrust_tracker_deploy::template::wrappers::tofu::lxd::variables::VariablesContext;
+//! use torrust_tracker_deploy::command_wrappers::lxd::instance::InstanceName;
 //!
 //! let context = VariablesContext::builder()
-//!     .with_instance_name("my-test-vm".to_string())
+//!     .with_instance_name(InstanceName::new("my-test-vm".to_string()).unwrap())
 //!     .build()
 //!     .unwrap();
 //! ```
 
 use serde::Serialize;
 use thiserror::Error;
+
+#[allow(unused_imports)]
+use crate::command_wrappers::lxd::instance::InstanceName;
 
 /// Errors that can occur when building the variables context
 #[derive(Error, Debug)]
@@ -39,7 +43,7 @@ pub enum VariablesContextError {
 #[derive(Debug, Clone, Serialize)]
 pub struct VariablesContext {
     /// The name of the VM/container instance to be created
-    pub instance_name: String,
+    pub instance_name: InstanceName,
 }
 
 /// Builder for creating `VariablesContext` instances
@@ -48,7 +52,7 @@ pub struct VariablesContext {
 /// to ensure all required fields are provided.
 #[derive(Debug, Default)]
 pub struct VariablesContextBuilder {
-    instance_name: Option<String>,
+    instance_name: Option<InstanceName>,
 }
 
 impl VariablesContextBuilder {
@@ -64,7 +68,7 @@ impl VariablesContextBuilder {
     ///
     /// * `instance_name` - The name to assign to the created instance
     #[must_use]
-    pub fn with_instance_name(mut self, instance_name: String) -> Self {
+    pub fn with_instance_name(mut self, instance_name: InstanceName) -> Self {
         self.instance_name = Some(instance_name);
         self
     }
@@ -103,17 +107,17 @@ mod tests {
     #[test]
     fn it_should_create_variables_context_with_instance_name() {
         let context = VariablesContext::builder()
-            .with_instance_name("test-vm".to_string())
+            .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .build()
             .unwrap();
 
-        assert_eq!(context.instance_name, "test-vm");
+        assert_eq!(context.instance_name.as_str(), "test-vm");
     }
 
     #[test]
     fn it_should_serialize_to_json() {
         let context = VariablesContext::builder()
-            .with_instance_name("test-vm".to_string())
+            .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .build()
             .unwrap();
 
@@ -125,12 +129,12 @@ mod tests {
     #[test]
     fn it_should_build_context_with_builder_pattern() {
         let result = VariablesContext::builder()
-            .with_instance_name("my-instance".to_string())
+            .with_instance_name(InstanceName::new("my-instance".to_string()).unwrap())
             .build();
 
         assert!(result.is_ok());
         let context = result.unwrap();
-        assert_eq!(context.instance_name, "my-instance");
+        assert_eq!(context.instance_name.as_str(), "my-instance");
     }
 
     #[test]

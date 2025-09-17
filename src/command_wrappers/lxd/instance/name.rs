@@ -18,6 +18,8 @@ use std::fmt;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
+#[allow(unused_imports)]
+use serde::Serialize;
 
 /// A validated LXD instance name following LXD naming requirements.
 ///
@@ -29,7 +31,7 @@ use anyhow::{anyhow, Result};
 ///
 /// These requirements ensure that the instance name can be used in DNS records,
 /// on the file system, in various security profiles and as the host name.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct InstanceName(String);
 
 impl InstanceName {
