@@ -25,7 +25,8 @@ use crate::command_wrappers::ssh::{credentials::SshCredentials, SshError};
 use crate::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep,
-    RenderOpenTofuTemplatesStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
+    RenderOpenTofuTemplatesStep, ValidateInfrastructureStep, WaitForCloudInitStep,
+    WaitForSSHConnectivityStep,
 };
 use crate::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 
@@ -55,12 +56,13 @@ pub enum ProvisionCommandError {
 /// This command handles all steps required to provision infrastructure:
 /// 1. Render `OpenTofu` templates
 /// 2. Initialize `OpenTofu`
-/// 3. Plan infrastructure
-/// 4. Apply infrastructure
-/// 5. Get instance information
-/// 6. Render `Ansible` templates (with runtime IP address)
-/// 7. Wait for SSH connectivity
-/// 8. Wait for cloud-init completion
+/// 3. Validate configuration syntax and consistency
+/// 4. Plan infrastructure
+/// 5. Apply infrastructure
+/// 6. Get instance information
+/// 7. Render `Ansible` templates (with runtime IP address)
+/// 8. Wait for SSH connectivity
+/// 9. Wait for cloud-init completion
 pub struct ProvisionCommand {
     tofu_template_renderer: Arc<TofuTemplateRenderer>,
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
@@ -92,6 +94,7 @@ impl ProvisionCommand {
     ///
     /// This method handles the `OpenTofu` workflow:
     /// - Initialize `OpenTofu` configuration
+    /// - Validate configuration syntax and consistency
     /// - Plan the infrastructure changes
     /// - Apply the infrastructure changes
     ///
@@ -100,6 +103,7 @@ impl ProvisionCommand {
     /// Returns an error if any `OpenTofu` operation fails
     fn create_instance(&self) -> Result<(), ProvisionCommandError> {
         InitializeInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
+        ValidateInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
         PlanInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
         ApplyInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
         Ok(())

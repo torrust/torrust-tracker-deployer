@@ -30,7 +30,7 @@ pub mod validation;
 pub use connectivity::WaitForSSHConnectivityStep;
 pub use infrastructure::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
-    PlanInfrastructureStep,
+    PlanInfrastructureStep, ValidateInfrastructureStep,
 };
 pub use rendering::{
     RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,

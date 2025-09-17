@@ -99,6 +99,29 @@ impl OpenTofuClient {
             .run_command("tofu", &["init"], Some(&self.working_dir))
     }
 
+    /// Validate configuration syntax and consistency
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(String)` - The stdout output if the command succeeds
+    /// * `Err(CommandError)` - Error describing what went wrong
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// * The `OpenTofu` validate fails due to syntax or consistency errors
+    /// * The configuration is not initialized
+    /// * The working directory does not exist or is not accessible
+    pub fn validate(&self) -> Result<String, CommandError> {
+        info!(
+            "Validating OpenTofu configuration in directory: {}",
+            self.working_dir.display()
+        );
+
+        self.command_executor
+            .run_command("tofu", &["validate"], Some(&self.working_dir))
+    }
+
     /// Plan infrastructure changes
     ///
     /// # Returns
