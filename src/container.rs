@@ -52,8 +52,11 @@ impl Services {
         let ansible_client = AnsibleClient::new(config.build_dir.join(&config.ansible_subfolder));
 
         // Create provision template renderer
-        let tofu_template_renderer =
-            TofuTemplateRenderer::new(template_manager.clone(), config.build_dir.clone());
+        let tofu_template_renderer = TofuTemplateRenderer::new(
+            template_manager.clone(),
+            config.build_dir.clone(),
+            config.ssh_credentials.clone(),
+        );
 
         // Create configuration template renderer
         let ansible_template_renderer =

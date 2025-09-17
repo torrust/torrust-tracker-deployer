@@ -42,6 +42,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
 
+use crate::command_wrappers::ssh::credentials::SshCredentials;
+use crate::template::file::File;
+use crate::template::wrappers::tofu::lxd::cloud_init::{CloudInitContext, CloudInitTemplate};
 use crate::template::{TemplateManager, TemplateManagerError};
 
 /// Errors that can occur during provision template rendering
@@ -75,10 +78,11 @@ pub enum ProvisionTemplateError {
 /// Renders `OpenTofu` provision templates to a build directory
 ///
 /// This collaborator is responsible for preparing `OpenTofu` templates for deployment workflows.
-/// It copies static templates from the template manager to the specified build directory.
+/// It copies static templates and renders Tera templates with runtime variables from the template manager to the specified build directory.
 pub struct TofuTemplateRenderer {
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
+    ssh_credentials: SshCredentials,
 }
 
 impl TofuTemplateRenderer {
@@ -94,10 +98,16 @@ impl TofuTemplateRenderer {
     ///
     /// * `template_manager` - The template manager to source templates from
     /// * `build_dir` - The destination directory where templates will be rendered
-    pub fn new<P: AsRef<Path>>(template_manager: Arc<TemplateManager>, build_dir: P) -> Self {
+    /// * `ssh_credentials` - The SSH credentials for injecting public key into cloud-init
+    pub fn new<P: AsRef<Path>>(
+        template_manager: Arc<TemplateManager>,
+        build_dir: P,
+        ssh_credentials: SshCredentials,
+    ) -> Self {
         Self {
             template_manager,
             build_dir: build_dir.as_ref().to_path_buf(),
+            ssh_credentials,
         }
     }
 
@@ -105,8 +115,9 @@ impl TofuTemplateRenderer {
     ///
     /// This method:
     /// 1. Creates the build directory structure for `OpenTofu`
-    /// 2. Copies static templates (main.tf, cloud-init.yml) from the template manager
-    /// 3. Provides debug logging via the tracing crate
+    /// 2. Copies static templates (main.tf) from the template manager
+    /// 3. Renders Tera templates (cloud-init.yml.tera) with runtime variables
+    /// 4. Provides debug logging via the tracing crate
     ///
     /// # Returns
     ///
@@ -118,6 +129,7 @@ impl TofuTemplateRenderer {
     /// - Directory creation fails
     /// - Template copying fails
     /// - Template manager cannot provide required templates
+    /// - Tera template rendering fails
     pub async fn render(&self) -> Result<(), ProvisionTemplateError> {
         tracing::info!(
             template_type = "opentofu",
@@ -127,17 +139,20 @@ impl TofuTemplateRenderer {
         // Create build directory structure
         let build_tofu_dir = self.create_build_directory().await?;
 
-        // List of templates to copy
-        let template_files = vec!["main.tf", "cloud-init.yml"];
+        // List of static templates to copy directly
+        let static_template_files = vec!["main.tf"];
 
-        // Copy all template files
-        self.copy_templates(&template_files, &build_tofu_dir)
+        // Copy static template files
+        self.copy_templates(&static_template_files, &build_tofu_dir)
             .await?;
+
+        // Render Tera templates with runtime variables
+        self.render_tera_templates(&build_tofu_dir).await?;
 
         tracing::debug!(
             template_type = "opentofu",
             output_dir = %build_tofu_dir.display(),
-            "Provision templates copied"
+            "Provision templates copied and rendered"
         );
 
         tracing::info!(
@@ -249,19 +264,151 @@ impl TofuTemplateRenderer {
         tracing::debug!("All template files copied successfully");
         Ok(())
     }
+
+    /// Renders Tera templates with runtime variables
+    ///
+    /// This method handles cloud-init.yml.tera template rendering with SSH public key injection.
+    ///
+    /// # Arguments
+    ///
+    /// * `destination_dir` - The directory where rendered templates should be written
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Template file cannot be read
+    /// - SSH public key file cannot be read
+    /// - Template rendering fails
+    /// - File writing fails
+    async fn render_tera_templates(
+        &self,
+        destination_dir: &Path,
+    ) -> Result<(), ProvisionTemplateError> {
+        tracing::debug!("Rendering Tera templates with runtime variables");
+
+        // Render cloud-init.yml.tera template
+        self.render_cloud_init_template(destination_dir).await?;
+
+        tracing::debug!("All Tera templates rendered successfully");
+        Ok(())
+    }
+
+    /// Renders the cloud-init.yml.tera template with SSH public key
+    ///
+    /// # Arguments
+    ///
+    /// * `destination_dir` - The directory where the rendered template should be written
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if template loading, context creation, or rendering fails
+    async fn render_cloud_init_template(
+        &self,
+        destination_dir: &Path,
+    ) -> Result<(), ProvisionTemplateError> {
+        let template_path = Self::build_template_path("cloud-init.yml.tera");
+
+        let source_path = self
+            .template_manager
+            .get_template_path(&template_path)
+            .map_err(|source| ProvisionTemplateError::TemplatePathFailed {
+                file_name: "cloud-init.yml.tera".to_string(),
+                source,
+            })?;
+
+        // Read template content
+        let template_content = tokio::fs::read_to_string(&source_path)
+            .await
+            .map_err(|source| ProvisionTemplateError::FileCopyFailed {
+                file_name: "cloud-init.yml.tera".to_string(),
+                source,
+            })?;
+
+        let template_file = File::new("cloud-init.yml.tera", template_content).map_err(|_| {
+            ProvisionTemplateError::FileCopyFailed {
+                file_name: "cloud-init.yml.tera".to_string(),
+                source: std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid template file",
+                ),
+            }
+        })?;
+
+        // Create context with SSH public key
+        let cloud_init_context = CloudInitContext::builder()
+            .with_ssh_public_key_from_file(&self.ssh_credentials.ssh_pub_key_path)
+            .map_err(|_| ProvisionTemplateError::FileCopyFailed {
+                file_name: "ssh_pub_key".to_string(),
+                source: std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "SSH public key file not found",
+                ),
+            })?
+            .build()
+            .map_err(|_| ProvisionTemplateError::FileCopyFailed {
+                file_name: "cloud_init_context".to_string(),
+                source: std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Failed to build cloud-init context",
+                ),
+            })?;
+
+        // Create and render template
+        let cloud_init_template = CloudInitTemplate::new(&template_file, cloud_init_context)
+            .map_err(|_| ProvisionTemplateError::FileCopyFailed {
+                file_name: "cloud-init.yml.tera".to_string(),
+                source: std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Template rendering failed",
+                ),
+            })?;
+
+        // Write rendered template to destination
+        let dest_path = destination_dir.join("cloud-init.yml");
+        cloud_init_template.render(&dest_path).map_err(|_| {
+            ProvisionTemplateError::FileCopyFailed {
+                file_name: "cloud-init.yml".to_string(),
+                source: std::io::Error::new(
+                    std::io::ErrorKind::PermissionDenied,
+                    "Failed to write rendered template",
+                ),
+            }
+        })?;
+
+        tracing::debug!("Successfully rendered cloud-init.yml template");
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+
+    /// Helper function to create dummy SSH credentials for testing
+    fn create_dummy_ssh_credentials(temp_dir: &Path) -> SshCredentials {
+        let ssh_priv_key_path = temp_dir.join("test_key");
+        let ssh_pub_key_path = temp_dir.join("test_key.pub");
+
+        // Create dummy key files
+        fs::write(&ssh_priv_key_path, "dummy_private_key").expect("Failed to write private key");
+        fs::write(
+            &ssh_pub_key_path,
+            "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com",
+        )
+        .expect("Failed to write public key");
+
+        SshCredentials::new(ssh_priv_key_path, ssh_pub_key_path, "testuser".to_string())
+    }
 
     #[tokio::test]
     async fn it_should_create_renderer_with_build_directory() {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
         let build_path = temp_dir.path().join("build");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path);
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
 
         assert_eq!(renderer.build_dir, build_path);
     }
@@ -272,8 +419,9 @@ mod tests {
         let build_path = temp_dir.path().join("build");
         let expected_path = build_path.join("tofu/lxd");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path);
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
         let actual_path = renderer.build_opentofu_directory();
 
         assert_eq!(actual_path, expected_path);
@@ -309,7 +457,8 @@ mod tests {
         let expected_path = build_path.join("tofu/lxd");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path);
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
         let created_path = renderer
             .create_build_directory()
             .await
@@ -342,7 +491,8 @@ mod tests {
 
         let build_path = readonly_path.join("build");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path);
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
 
         let result = renderer.create_build_directory().await;
 
@@ -372,7 +522,8 @@ mod tests {
         // Create a template manager with empty templates directory
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path);
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
 
         // Try to copy a non-existent template
         let result = renderer
@@ -425,7 +576,9 @@ mod tests {
             .await
             .expect("Failed to write test template");
 
-        let renderer = TofuTemplateRenderer::new(template_manager, temp_dir.path());
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer =
+            TofuTemplateRenderer::new(template_manager, temp_dir.path(), ssh_credentials);
 
         let result = renderer.copy_templates(&["test.tf"], &build_path).await;
 
@@ -500,7 +653,8 @@ mod tests {
         assert!(tofu_path.exists(), "Directory should already exist");
 
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path);
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
         let created_path = renderer
             .create_build_directory()
             .await
@@ -517,7 +671,8 @@ mod tests {
 
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path);
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
 
         // Should succeed with empty array
         let result = renderer.copy_templates(&[], &build_path).await;
@@ -547,7 +702,9 @@ mod tests {
             .await
             .expect("Failed to write test template");
 
-        let renderer = TofuTemplateRenderer::new(template_manager, temp_dir.path());
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer =
+            TofuTemplateRenderer::new(template_manager, temp_dir.path(), ssh_credentials);
 
         // Copy the same file twice - should succeed (overwrite)
         let result = renderer
@@ -588,8 +745,11 @@ mod tests {
             .await
             .expect("Failed to write test template 2");
 
-        let renderer1 = TofuTemplateRenderer::new(template_manager.clone(), &build_path1);
-        let renderer2 = TofuTemplateRenderer::new(template_manager, &build_path2);
+        let ssh_credentials1 = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer1 =
+            TofuTemplateRenderer::new(template_manager.clone(), &build_path1, ssh_credentials1);
+        let ssh_credentials2 = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer2 = TofuTemplateRenderer::new(template_manager, &build_path2, ssh_credentials2);
 
         tokio::fs::create_dir_all(&build_path1)
             .await
@@ -641,7 +801,9 @@ mod tests {
             .await
             .expect("Failed to write existing template");
 
-        let renderer = TofuTemplateRenderer::new(template_manager, temp_dir.path());
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer =
+            TofuTemplateRenderer::new(template_manager, temp_dir.path(), ssh_credentials);
 
         // Try to copy both existing and non-existing files
         let result = renderer
@@ -693,7 +855,9 @@ mod tests {
             file_names.push(file_name);
         }
 
-        let renderer = TofuTemplateRenderer::new(template_manager, temp_dir.path());
+        let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
+        let renderer =
+            TofuTemplateRenderer::new(template_manager, temp_dir.path(), ssh_credentials);
 
         let file_refs: Vec<&str> = file_names.iter().map(std::string::String::as_str).collect();
         let result = renderer.copy_templates(&file_refs, &build_path).await;

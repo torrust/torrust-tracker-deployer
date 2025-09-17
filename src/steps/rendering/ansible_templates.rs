@@ -19,7 +19,6 @@
 //! configurations for remote host management.
 
 use std::net::IpAddr;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use thiserror::Error;
@@ -27,6 +26,7 @@ use tracing::{info, instrument};
 
 use crate::ansible::template_renderer::ConfigurationTemplateError;
 use crate::ansible::AnsibleTemplateRenderer;
+use crate::command_wrappers::ssh::credentials::SshCredentials;
 use crate::template::wrappers::ansible::inventory::{
     AnsibleHost, InventoryContext, InventoryContextError, SshPrivateKeyFile, SshPrivateKeyFileError,
 };
@@ -50,7 +50,7 @@ pub enum RenderAnsibleTemplatesError {
 /// Simple step that renders `Ansible` templates to the build directory with runtime variables
 pub struct RenderAnsibleTemplatesStep {
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-    ssh_key_path: PathBuf,
+    ssh_credentials: SshCredentials,
     instance_ip: IpAddr,
 }
 
@@ -58,12 +58,12 @@ impl RenderAnsibleTemplatesStep {
     #[must_use]
     pub fn new(
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-        ssh_key_path: PathBuf,
+        ssh_credentials: SshCredentials,
         instance_ip: IpAddr,
     ) -> Self {
         Self {
             ansible_template_renderer,
-            ssh_key_path,
+            ssh_credentials,
             instance_ip,
         }
     }
@@ -111,7 +111,7 @@ impl RenderAnsibleTemplatesStep {
     /// - Inventory context creation fails
     fn create_inventory_context(&self) -> Result<InventoryContext, RenderAnsibleTemplatesError> {
         let host = AnsibleHost::from(self.instance_ip);
-        let ssh_key = SshPrivateKeyFile::new(&self.ssh_key_path)?;
+        let ssh_key = SshPrivateKeyFile::new(&self.ssh_credentials.ssh_priv_key_path)?;
 
         InventoryContext::builder()
             .with_host(host)

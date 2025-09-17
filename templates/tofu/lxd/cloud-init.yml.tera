@@ -1,0 +1,27 @@
+#cloud-config
+# cloud-init template for LXD containers with dynamic SSH key injection
+# This template uses Tera templating to inject the SSH public key from SshConfig.ssh_pub_key_path
+# Commented out for faster VM creation during development
+# package_update: true
+# package_upgrade: true
+
+# packages:
+#   - curl
+#   - wget
+#   - git
+#   - htop
+#   - vim
+
+users:
+  - name: torrust
+    groups: sudo
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys:
+      # SSH public key injected from SshConfig.ssh_pub_key_path
+      - {{ ssh_public_key }}
+
+runcmd:
+  - echo "VM provisioned successfully" > /tmp/provision_complete
+  - systemctl enable ssh
+  - systemctl start ssh

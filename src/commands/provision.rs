@@ -142,7 +142,7 @@ impl ProvisionCommand {
 
         RenderAnsibleTemplatesStep::new(
             Arc::clone(&self.ansible_template_renderer),
-            self.ssh_credentials.ssh_priv_key_path.clone(),
+            self.ssh_credentials.clone(),
             instance_ip,
         )
         .execute()
@@ -182,9 +182,16 @@ mod tests {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let template_manager = Arc::new(crate::template::TemplateManager::new(temp_dir.path()));
 
+        let ssh_credentials = SshCredentials::new(
+            "dummy_key".into(),
+            "dummy_key.pub".into(),
+            "testuser".to_string(),
+        );
+
         let tofu_renderer = Arc::new(TofuTemplateRenderer::new(
             template_manager.clone(),
             temp_dir.path(),
+            ssh_credentials.clone(),
         ));
 
         let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(
