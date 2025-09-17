@@ -28,7 +28,7 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
    - **With issue branch**: `{type}: [#{issue}] {description}` (when branch name starts with `{issue-number}-`)
    - **Without issue branch**: `{type}: {description}` (when working on main or branch without issue number prefix)
 
-3. **Before committing**: Always run these verifications - all must pass before using `git add` or `git commit`:
+3. **Before committing**: Always run these verifications - all must pass before staging files or creating commits, regardless of the tool or method used:
 
    ```bash
    # Run cargo machete
@@ -40,6 +40,14 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
    # Run e2e tests
    cargo run --bin e2e-tests
    ```
+
+   This applies to **any** method of committing:
+
+   - Terminal: `git add`, `git commit`, `git commit -am`, `cd ../ && git add ...`, `git add . && git commit -m "..."`
+   - VS Code: Git panel, Source Control view, commit shortcuts
+   - IDEs: IntelliJ, CLion, RustRover git integration
+   - Git clients: GitHub Desktop, GitKraken, etc.
+   - CI/CD: Any automated commits or merges
 
 ## 🧪 Build & Test
 
