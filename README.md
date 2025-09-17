@@ -255,7 +255,7 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 ├── examples/                # Example configurations and usage
 ├── fixtures/                # Test fixtures and sample data
 │   ├── testing_rsa*         # SSH key pair for testing
-│   └── opentofu/           # OpenTofu test fixtures
+│   └── tofu/               # OpenTofu test fixtures
 ├── packages/                # Rust workspace packages
 │   └── linting/            # Linting utilities package
 │       └── src/            # Linting implementation source code
