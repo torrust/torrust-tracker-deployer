@@ -47,8 +47,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
 
-use crate::template::file::File;
-use crate::template::wrappers::ansible::inventory::{InventoryContext, InventoryTemplate};
+use crate::ansible::{
+    inventory_template_renderer::InventoryTemplateError, InventoryTemplateRenderer,
+};
+use crate::template::wrappers::ansible::inventory::InventoryContext;
 use crate::template::{FileOperationError, TemplateManager, TemplateManagerError};
 
 /// Errors that can occur during configuration template rendering
@@ -107,6 +109,13 @@ pub enum ConfigurationTemplateError {
         #[source]
         source: FileOperationError,
     },
+
+    /// Failed to render inventory template using collaborator
+    #[error("Failed to render inventory template: {source}")]
+    InventoryRenderingFailed {
+        #[source]
+        source: InventoryTemplateError,
+    },
 }
 
 /// Renders `Ansible` configuration templates to a build directory
@@ -117,6 +126,7 @@ pub enum ConfigurationTemplateError {
 pub struct AnsibleTemplateRenderer {
     build_dir: PathBuf,
     template_manager: Arc<TemplateManager>,
+    inventory_renderer: InventoryTemplateRenderer,
 }
 
 impl AnsibleTemplateRenderer {
@@ -126,12 +136,6 @@ impl AnsibleTemplateRenderer {
     /// Default template path prefix for `Ansible` templates
     const ANSIBLE_TEMPLATE_PATH: &'static str = "ansible";
 
-    /// Name of the dynamic inventory template file
-    const INVENTORY_TEMPLATE_FILE: &'static str = "inventory.yml.tera";
-
-    /// Name of the rendered inventory output file
-    const INVENTORY_OUTPUT_FILE: &'static str = "inventory.yml";
-
     /// Creates a new configuration template renderer
     ///
     /// # Arguments
@@ -139,9 +143,12 @@ impl AnsibleTemplateRenderer {
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `template_manager` - The template manager to source templates from
     pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: Arc<TemplateManager>) -> Self {
+        let inventory_renderer = InventoryTemplateRenderer::new(template_manager.clone());
+
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
             template_manager,
+            inventory_renderer,
         }
     }
 
@@ -181,12 +188,10 @@ impl AnsibleTemplateRenderer {
         // Create build directory structure
         let build_ansible_dir = self.create_build_directory().await?;
 
-        // Render dynamic inventory template with runtime variables
-        Self::render_inventory_template(
-            &self.template_manager,
-            inventory_context,
-            &build_ansible_dir,
-        )?;
+        // Render dynamic inventory template with runtime variables using collaborator
+        self.inventory_renderer
+            .render(inventory_context, &build_ansible_dir)
+            .map_err(|source| ConfigurationTemplateError::InventoryRenderingFailed { source })?;
 
         // Copy static Ansible files (config and playbooks)
         self.copy_static_templates(&self.template_manager, &build_ansible_dir)
@@ -197,11 +202,13 @@ impl AnsibleTemplateRenderer {
             output_dir = %build_ansible_dir.display(),
             "Configuration templates rendered"
         );
+
         tracing::debug!(
             template_type = "ansible_inventory",
             ansible_host = %inventory_context.ansible_host(),
             "Inventory rendered with IP"
         );
+
         tracing::debug!(
             template_type = "ansible_inventory",
             ssh_key = %inventory_context.ansible_ssh_private_key_file(),
@@ -258,84 +265,6 @@ impl AnsibleTemplateRenderer {
                 },
             )?;
         Ok(build_ansible_dir)
-    }
-
-    /// Renders the dynamic inventory template with runtime variables
-    ///
-    /// This method handles the complex case of Tera template rendering where variables
-    /// like IP addresses and SSH key paths are substituted at runtime after infrastructure
-    /// provisioning is complete.
-    ///
-    /// # Arguments
-    ///
-    /// * `template_manager` - Source of template files
-    /// * `inventory_context` - Runtime context with IP and SSH key information
-    /// * `destination_dir` - Directory where the rendered inventory file will be written
-    ///
-    /// # Returns
-    ///
-    /// * `Result<(), ConfigurationTemplateError>` - Success or error from template rendering
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - Template file cannot be read
-    /// - Template content is invalid
-    /// - Variable substitution fails
-    /// - Output file cannot be written
-    fn render_inventory_template(
-        template_manager: &TemplateManager,
-        inventory_context: &InventoryContext,
-        destination_dir: &Path,
-    ) -> Result<(), ConfigurationTemplateError> {
-        tracing::debug!("Rendering dynamic inventory template with runtime variables");
-
-        // Get the inventory template path
-        let inventory_template_path = template_manager
-            .get_template_path(&Self::build_template_path(Self::INVENTORY_TEMPLATE_FILE))
-            .map_err(|source| ConfigurationTemplateError::TemplatePathFailed {
-                file_name: Self::INVENTORY_TEMPLATE_FILE.to_string(),
-                source,
-            })?;
-
-        // Read template content
-        let inventory_template_content = std::fs::read_to_string(&inventory_template_path)
-            .map_err(
-                |source| ConfigurationTemplateError::TeraTemplateReadFailed {
-                    file_name: Self::INVENTORY_TEMPLATE_FILE.to_string(),
-                    source,
-                },
-            )?;
-
-        // Create File object for template processing
-        let inventory_template_file =
-            File::new(Self::INVENTORY_TEMPLATE_FILE, inventory_template_content).map_err(
-                |source| ConfigurationTemplateError::FileCreationFailed {
-                    file_name: Self::INVENTORY_TEMPLATE_FILE.to_string(),
-                    source,
-                },
-            )?;
-
-        // Create InventoryTemplate with runtime context
-        let inventory_template =
-            InventoryTemplate::new(&inventory_template_file, inventory_context.clone()).map_err(
-                |source| ConfigurationTemplateError::InventoryTemplateCreationFailed { source },
-            )?;
-
-        // Render to output file
-        let inventory_output_path = destination_dir.join(Self::INVENTORY_OUTPUT_FILE);
-        inventory_template
-            .render(&inventory_output_path)
-            .map_err(
-                |source| ConfigurationTemplateError::InventoryTemplateRenderFailed { source },
-            )?;
-
-        tracing::debug!(
-            "Successfully rendered inventory template to {}",
-            inventory_output_path.display()
-        );
-
-        Ok(())
     }
 
     /// Copies static Ansible template files that don't require variable substitution
@@ -543,14 +472,6 @@ mod tests {
 
     #[tokio::test]
     async fn it_should_have_correct_template_file_constants() {
-        assert_eq!(
-            AnsibleTemplateRenderer::INVENTORY_TEMPLATE_FILE,
-            "inventory.yml.tera"
-        );
-        assert_eq!(
-            AnsibleTemplateRenderer::INVENTORY_OUTPUT_FILE,
-            "inventory.yml"
-        );
         assert_eq!(AnsibleTemplateRenderer::ANSIBLE_BUILD_PATH, "ansible");
         assert_eq!(AnsibleTemplateRenderer::ANSIBLE_TEMPLATE_PATH, "ansible");
     }
