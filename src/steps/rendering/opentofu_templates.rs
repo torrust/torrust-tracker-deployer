@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
-use crate::tofu::template_renderer::{ProvisionTemplateError, TofuTemplateRenderer};
+use crate::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 
 /// Simple step that renders `OpenTofu` templates to the build directory
 pub struct RenderOpenTofuTemplatesStep {

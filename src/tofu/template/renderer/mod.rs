@@ -38,13 +38,15 @@
 //! 10. **Extract provider-specific logic** - Separate LXD-specific logic to make it more
 //!     extensible for other providers (Multipass, Docker, etc.) following the strategy pattern.
 
+pub mod cloud_init;
+
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
 
 use crate::command_wrappers::ssh::credentials::SshCredentials;
 use crate::template::{TemplateManager, TemplateManagerError};
-use crate::tofu::cloud_init_template_renderer::{
+use crate::tofu::template::renderer::cloud_init::{
     CloudInitTemplateError, CloudInitTemplateRenderer,
 };
 

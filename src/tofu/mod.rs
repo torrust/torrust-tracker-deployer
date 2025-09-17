@@ -12,8 +12,6 @@
 //!
 //! The module complements the `OpenTofu` command wrapper by providing the template
 
-pub mod cloud_init_template_renderer;
-pub mod template_renderer;
+pub mod template;
 
-pub use cloud_init_template_renderer::CloudInitTemplateRenderer;
-pub use template_renderer::TofuTemplateRenderer;
+pub use template::{CloudInitTemplateRenderer, ProvisionTemplateError, TofuTemplateRenderer};

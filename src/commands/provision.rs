@@ -27,7 +27,7 @@ use crate::steps::{
     PlanInfrastructureStep, RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep,
     RenderOpenTofuTemplatesStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
-use crate::tofu::{template_renderer::ProvisionTemplateError, TofuTemplateRenderer};
+use crate::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 
 /// Comprehensive error type for the `ProvisionCommand`
 #[derive(Debug, thiserror::Error)]
