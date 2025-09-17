@@ -51,6 +51,60 @@ and CI environments. The workflow runs on every push and pull request.
 - **YAML**: `.yamllint-ci.yml` - Controls line length, indentation, etc.
 - **TOML**: `.taplo.toml` - Controls formatting, indentation, array handling, etc.
 
+## Rust Code Style Guidelines
+
+### Error Enums
+
+Error enum variants should be separated by blank lines for better readability.
+
+❌ **Incorrect** - No line breaks between variants:
+
+```rust
+/// Errors that can occur when creating a `CloudInitContext`
+#[derive(Error, Debug, Clone)]
+pub enum CloudInitContextError {
+    #[error("SSH public key is required but not provided")]
+    MissingSshPublicKey,
+    #[error("Failed to read SSH public key from file: {0}")]
+    SshPublicKeyReadError(String),
+}
+```
+
+✅ **Correct** - Line breaks between variants:
+
+```rust
+/// Errors that can occur when creating a `CloudInitContext`
+#[derive(Error, Debug, Clone)]
+pub enum CloudInitContextError {
+    #[error("SSH public key is required but not provided")]
+    MissingSshPublicKey,
+
+    #[error("Failed to read SSH public key from file: {0}")]
+    SshPublicKeyReadError(String),
+}
+```
+
+### Documentation Comments
+
+Documentation sections like `# Errors`, `# Panics`, `# Examples`, etc. should have a blank line after the heading.
+
+❌ **Incorrect** - No blank line after heading:
+
+```rust
+/// # Errors
+/// Returns an error if the file cannot be read
+pub fn name() { /* ... */ }
+```
+
+✅ **Correct** - Blank line after heading:
+
+```rust
+/// # Errors
+///
+/// Returns an error if the file cannot be read
+pub fn name() { /* ... */ }
+```
+
 ## Benefits
 
 ✅ **Consistent formatting** across all team members  
