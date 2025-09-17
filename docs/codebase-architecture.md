@@ -1,52 +1,6 @@
 # Codebase Architecture Overview
 
-This document provides a comprehensive overview of the Rust codebase architecture, organizing all 79 modules by their functional responsibilities and relationships within## 🔄 Architecture Flow & Command Orchestration
-
-## Deployment Flow Pattern
-
-The typical deployment flow follows this pattern:
-
-1. **Commands** receive user input and orchestrate the deployment process
-2. **Steps** execute specific deployment operations in sequence:
-   - **Rendering** - Generate configuration files from templates
-   - **Infrastructure** - Provision and manage infrastructure resources
-   - **Connectivity** - Establish and verify network connections
-   - **System** - Configure system-level settings
-   - **Software** - Install and configure required software
-   - **Validation** - Verify successful installation and configuration
-   - **Application** - Deploy and manage applications
-3. **Remote Actions** perform low-level operations on remote systems
-4. **Command Wrappers** provide integration with external tools
-5. **Template System** manages configuration generation throughout the process
-
-### Command Orchestration Example
-
-Commands orchestrate multiple steps to achieve their objectives. Here's how `ProvisionCommand` works:
-
-````rust
-impl ProvisionCommand {
-    pub async fn execute(&mut self) -> Result<(), ProvisionCommandError> {
-        // Execute steps in sequence
-        self.render_opentofu_templates().await?;
-        self.initialize_infrastructure().await?;
-        self.plan_infrastructure().await?;
-        self.apply_infrastructure().await?;
-        let instance_info = self.get_instance_info().await?;
-        self.render_ansible_templates(&instance_info.ip_address).await?;
-        self.wait_for_ssh_connectivity(&instance_info.ip_address).await?;
-        self.wait_for_cloud_init(&instance_info.ip_address).await?;
-
-        Ok(())
-    }
-
-    // Each method delegates to corresponding Step structs
-    async fn render_opentofu_templates(&self) -> Result<(), ProvisionTemplateError> {
-        RenderOpenTofuTemplatesStep::new(&self.tofu_renderer, &self.config)
-            .execute().await
-    }
-    // ... other step delegations
-}
-``` deployment architecture.
+This document provides a comprehensive overview of the Rust codebase architecture, organizing all modules by their functional responsibilities and relationships within the deployment architecture.
 
 ## 🏗️ Three-Level Architecture Pattern
 
@@ -85,7 +39,57 @@ This architecture is supported by:
 
 - **Command Wrappers** - Integration with external tools (`OpenTofu`, `Ansible`, `LXD`, `SSH`)
 - **Template System** - Configuration template rendering and management
-- **E2E Framework** - End-to-end testing and validation infrastructure## 📚 Module Documentation
+- **E2E Framework** - End-to-end testing and validation infrastructure
+
+## 🔄 Architecture Flow & Command Orchestration
+
+## Deployment Flow Pattern
+
+The typical deployment flow follows this pattern:
+
+1. **Commands** receive user input and orchestrate the deployment process
+2. **Steps** execute specific deployment operations in sequence:
+   - **Rendering** - Generate configuration files from templates
+   - **Infrastructure** - Provision and manage infrastructure resources
+   - **Connectivity** - Establish and verify network connections
+   - **System** - Configure system-level settings
+   - **Software** - Install and configure required software
+   - **Validation** - Verify successful installation and configuration
+   - **Application** - Deploy and manage applications
+3. **Remote Actions** perform low-level operations on remote systems
+4. **Command Wrappers** provide integration with external tools
+5. **Template System** manages configuration generation throughout the process
+
+### Command Orchestration Example
+
+Commands orchestrate multiple steps to achieve their objectives. Here's how `ProvisionCommand` works:
+
+```rust
+impl ProvisionCommand {
+    pub async fn execute(&mut self) -> Result<(), ProvisionCommandError> {
+        // Execute steps in sequence
+        self.render_opentofu_templates().await?;
+        self.initialize_infrastructure().await?;
+        self.plan_infrastructure().await?;
+        self.apply_infrastructure().await?;
+        let instance_info = self.get_instance_info().await?;
+        self.render_ansible_templates(&instance_info.ip_address).await?;
+        self.wait_for_ssh_connectivity(&instance_info.ip_address).await?;
+        self.wait_for_cloud_init(&instance_info.ip_address).await?;
+
+        Ok(())
+    }
+
+    // Each method delegates to corresponding Step structs
+    async fn render_opentofu_templates(&self) -> Result<(), ProvisionTemplateError> {
+        RenderOpenTofuTemplatesStep::new(&self.tofu_renderer, &self.config)
+            .execute().await
+    }
+    // ... other step delegations
+}
+```
+
+## 📚 Module Documentation
 
 All modules include comprehensive `//!` documentation with:
 
@@ -190,6 +194,8 @@ Individual task modules that compose complete end-to-end test scenarios, validat
 - ✅ `src/e2e/tasks/cleanup_infrastructure.rs` - Infrastructure cleanup and resource deallocation
 - ✅ `src/e2e/tasks/validate_deployment.rs` - Complete deployment validation and health checks
 - ✅ `src/e2e/tasks/provision_infrastructure.rs` - Infrastructure provisioning validation
+- ✅ `src/e2e/tasks/clean_and_prepare_templates.rs` - Template cleanup and preparation for testing
+- ✅ `src/e2e/tasks/preflight_cleanup.rs` - Pre-test environment cleanup and initialization
 
 ### Level 2: Granular Deployment Steps
 
@@ -204,6 +210,7 @@ Manage the infrastructure lifecycle using `OpenTofu`, from planning and initiali
 - ✅ `src/steps/infrastructure/apply.rs` - Apply infrastructure changes and provision resources
 - ✅ `src/steps/infrastructure/get_instance_info.rs` - Retrieve provisioned instance information
 - ✅ `src/steps/infrastructure/plan.rs` - Generate and validate infrastructure execution plans
+- ✅ `src/steps/infrastructure/validate.rs` - Validate infrastructure configuration and state
 
 **System-Level Steps:**
 
@@ -281,7 +288,8 @@ Template wrappers provide specialized rendering logic for different tool configu
 - ✅ `src/template/wrappers/ansible/mod.rs` - Ansible template wrappers
 - ✅ `src/template/wrappers/ansible/inventory/mod.rs` - Ansible inventory templates
 - ✅ `src/template/wrappers/ansible/inventory/context/mod.rs` - Inventory context management
-- ✅ `src/template/wrappers/opentofu/mod.rs` - OpenTofu template wrappers
+- ✅ `src/template/wrappers/tofu/mod.rs` - OpenTofu template wrappers
+- ✅ `src/template/wrappers/tofu/lxd/mod.rs` - LXD-specific OpenTofu template wrappers
 
 **Tofu Integration:**
 
@@ -292,7 +300,7 @@ Specialized integration for `OpenTofu` template processing, handling infrastruct
 - ✅ `src/tofu/template/renderer/mod.rs` - OpenTofu template rendering coordination
 - ✅ `src/tofu/template/renderer/cloud_init.rs` - Cloud-init template rendering for OpenTofu
 
-## � Architecture Flow
+## 🔄 Architecture Flow
 
 The typical deployment flow follows this pattern:
 
@@ -332,21 +340,23 @@ The typical deployment flow follows this pattern:
 - **Progress reporting**: User-friendly feedback during long-running operations
 - **Configuration system**: Support for different environments and settings
 
-## � Recent Architecture Improvements
+## 🚀 Recent Architecture Improvements
 
 ### Hierarchical Module Organization (September 2024)
 
 Recent refactoring efforts have improved the module organization for both `Ansible` and `OpenTofu` integrations:
 
 **Before:**
-```
+
+```text
 src/ansible/template_renderer.rs
 src/tofu/template_renderer.rs
 src/tofu/cloud_init_template_renderer.rs
 ```
 
 **After:**
-```
+
+```text
 src/ansible/template/
 ├── mod.rs
 └── renderer/
@@ -370,9 +380,9 @@ src/tofu/template/
 
 This refactoring maintains full backward compatibility while providing a cleaner, more maintainable codebase structure.
 
-## �📊 Module Statistics
+## 📊 Module Statistics
 
-- **Total Modules**: 85 Rust files
+- **Total Modules**: 86 Rust files
 - **Architecture Levels**: 3 (Commands → Steps → Remote Actions)
 - **External Tool Integrations**: 4 (`OpenTofu`, `Ansible`, `LXD`, `SSH`)
 - **Step Categories**: 7 (Infrastructure, System, Software, Validation, Connectivity, Application, Rendering)
@@ -384,6 +394,3 @@ This refactoring maintains full backward compatibility while providing a cleaner
 - **Testability**: E2E framework enables comprehensive testing of deployment scenarios
 - **External Tool Integration**: Clean abstraction layers for third-party tools
 - **Template-Driven Configuration**: Flexible configuration management through templates
-
-
-````
