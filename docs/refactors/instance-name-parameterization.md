@@ -16,13 +16,14 @@ This refactor aims to eliminate hardcoded "torrust-vm" instance names throughout
 - **Phase 2**: Template Parameterization
   - ✅ Step 2a: Converted variables.tfvars to Tera template with `{{instance_name}}` placeholder
   - ✅ Step 2b: Created template wrapper infrastructure (`VariablesTemplate`, `VariablesContext`)
+  - ✅ Step 2c: Integrated Variables Template Rendering into workflow
 
 ### 🔄 Current Phase
 
-- **Phase 2c**: Integrate Variables Template Rendering (In Progress)
-  - 🔄 Add `VariablesTemplate` rendering to `RenderOpenTofuTemplatesStep`
+- **Phase 3**: Context Integration - Add instance_name to workflow context (Next Priority)
+  - 🔄 Add `instance_name` field to `TofuContext` struct
   - 🔄 Pass `instance_name` context from provision workflow
-  - 🔄 Replace static `variables.tfvars` with dynamic rendering
+  - 🔄 Replace hardcoded "torrust-vm" values with dynamic context
 
 ### 📋 Remaining Phases
 
@@ -82,13 +83,18 @@ This refactor aims to eliminate hardcoded "torrust-vm" instance names throughout
 
 **Goal**: Add variables template rendering to infrastructure workflow
 
-#### Step 2c: Add variables rendering to workflow
+#### Step 2c: Integrate Variables Template Rendering into workflow ✅
 
-- 🔄 Add `VariablesTemplate` rendering to `RenderOpenTofuTemplatesStep`
-- 🔄 Pass `instance_name` context from provision workflow
-- 🔄 Replace static `variables.tfvars` with dynamic rendering
-- **Status**: Template wrapper ready, needs integration into workflow
-- **Validation**: E2E tests should show dynamic instance naming
+- ✅ Added `VariablesTemplate` imports to `TofuTemplateRenderer`
+- ✅ Added `instance_name` field to `TofuTemplateRenderer` struct
+- ✅ Updated `TofuTemplateRenderer::new()` to accept `instance_name` parameter
+- ✅ Created `render_variables_template()` method for dynamic rendering
+- ✅ Updated `render_tera_templates()` to call variables template rendering
+- ✅ Removed `variables.tfvars` from static template files list
+- ✅ Added hardcoded "torrust-vm" values for backward compatibility
+- ✅ Updated all test constructors to include `instance_name` parameter
+- **Status**: Variables template now dynamically renders with `instance_name = "torrust-vm"`
+- **Validation**: ✅ All linters + unit tests + e2e tests passed
 
 ### Phase 3: Context Integration
 

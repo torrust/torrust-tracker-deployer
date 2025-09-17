@@ -56,6 +56,7 @@ impl Services {
             template_manager.clone(),
             config.build_dir.clone(),
             config.ssh_credentials.clone(),
+            "torrust-vm".to_string(), // TODO: Make this configurable in Phase 3
         );
 
         // Create configuration template renderer

@@ -196,6 +196,7 @@ mod tests {
             template_manager.clone(),
             temp_dir.path(),
             ssh_credentials.clone(),
+            "torrust-vm".to_string(), // TODO: Make this configurable in Phase 3
         ));
 
         let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(

@@ -45,6 +45,9 @@ use std::sync::Arc;
 use thiserror::Error;
 
 use crate::command_wrappers::ssh::credentials::SshCredentials;
+use crate::template::wrappers::tofu::lxd::variables::{
+    VariablesContextBuilder, VariablesTemplate, VariablesTemplateError,
+};
 use crate::template::{TemplateManager, TemplateManagerError};
 use crate::tofu::template::renderer::cloud_init::{
     CloudInitTemplateError, CloudInitTemplateRenderer,
@@ -83,6 +86,13 @@ pub enum ProvisionTemplateError {
         #[source]
         source: CloudInitTemplateError,
     },
+
+    /// Failed to render variables template using collaborator
+    #[error("Failed to render variables template: {source}")]
+    VariablesRenderingFailed {
+        #[source]
+        source: VariablesTemplateError,
+    },
 }
 
 /// Renders `OpenTofu` provision templates to a build directory
@@ -94,6 +104,7 @@ pub struct TofuTemplateRenderer {
     build_dir: PathBuf,
     ssh_credentials: SshCredentials,
     cloud_init_renderer: CloudInitTemplateRenderer,
+    instance_name: String,
 }
 
 impl TofuTemplateRenderer {
@@ -110,10 +121,12 @@ impl TofuTemplateRenderer {
     /// * `template_manager` - The template manager to source templates from
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `ssh_credentials` - The SSH credentials for injecting public key into cloud-init
+    /// * `instance_name` - The name of the instance to be created (for template rendering)
     pub fn new<P: AsRef<Path>>(
         template_manager: Arc<TemplateManager>,
         build_dir: P,
         ssh_credentials: SshCredentials,
+        instance_name: String,
     ) -> Self {
         let cloud_init_renderer = CloudInitTemplateRenderer::new(template_manager.clone());
 
@@ -122,6 +135,7 @@ impl TofuTemplateRenderer {
             build_dir: build_dir.as_ref().to_path_buf(),
             ssh_credentials,
             cloud_init_renderer,
+            instance_name,
         }
     }
 
@@ -154,7 +168,8 @@ impl TofuTemplateRenderer {
         let build_tofu_dir = self.create_build_directory().await?;
 
         // List of static templates to copy directly
-        let static_template_files = vec!["main.tf", "variables.tfvars"];
+        // Note: variables.tfvars is now dynamically rendered via VariablesTemplate
+        let static_template_files = vec!["main.tf"];
 
         // Copy static template files
         self.copy_templates(&static_template_files, &build_tofu_dir)
@@ -281,7 +296,9 @@ impl TofuTemplateRenderer {
 
     /// Renders Tera templates with runtime variables using collaborators
     ///
-    /// This method delegates cloud-init.yml.tera template rendering to the `CloudInitTemplateRenderer` collaborator.
+    /// This method delegates template rendering to specialized collaborators:
+    /// - cloud-init.yml.tera template rendering to the `CloudInitTemplateRenderer` collaborator
+    /// - variables.tfvars.tera template rendering using the `VariablesTemplate`
     ///
     /// # Arguments
     ///
@@ -291,6 +308,7 @@ impl TofuTemplateRenderer {
     ///
     /// Returns an error if:
     /// - `CloudInitTemplateRenderer` fails to render the template
+    /// - `VariablesTemplate` fails to render the variables template
     async fn render_tera_templates(
         &self,
         destination_dir: &Path,
@@ -303,7 +321,81 @@ impl TofuTemplateRenderer {
             .await
             .map_err(|source| ProvisionTemplateError::CloudInitRenderingFailed { source })?;
 
+        // Render variables.tfvars.tera template with instance name
+        self.render_variables_template(destination_dir).await?;
+
         tracing::debug!("All Tera templates rendered successfully");
+        Ok(())
+    }
+
+    /// Renders the variables.tfvars.tera template with the instance name context
+    ///
+    /// # Arguments
+    ///
+    /// * `destination_dir` - The directory where the rendered variables.tfvars file will be written
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Template manager cannot provide the variables.tfvars.tera template
+    /// - Variables template rendering fails
+    /// - File writing fails
+    async fn render_variables_template(
+        &self,
+        destination_dir: &Path,
+    ) -> Result<(), ProvisionTemplateError> {
+        tracing::debug!("Rendering variables.tfvars.tera template with instance name context");
+
+        // Get the variables.tfvars.tera template from the template manager
+        let template_path = Self::build_template_path("variables.tfvars.tera");
+        let template_file_path = self
+            .template_manager
+            .get_template_path(&template_path)
+            .map_err(|source| ProvisionTemplateError::TemplatePathFailed {
+                file_name: "variables.tfvars.tera".to_string(),
+                source,
+            })?;
+
+        // Read the template file content
+        let template_content = tokio::fs::read_to_string(&template_file_path)
+            .await
+            .map_err(|source| ProvisionTemplateError::FileCopyFailed {
+                file_name: "variables.tfvars.tera".to_string(),
+                source,
+            })?;
+
+        // Create template file wrapper
+        let template_file =
+            crate::template::file::File::new("variables.tfvars.tera", template_content).map_err(
+                |err| ProvisionTemplateError::FileCopyFailed {
+                    file_name: "variables.tfvars.tera".to_string(),
+                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string()),
+                },
+            )?;
+
+        // Build context for template rendering
+        let context = VariablesContextBuilder::new()
+            .with_instance_name(self.instance_name.clone())
+            .build()
+            .map_err(|err| ProvisionTemplateError::VariablesRenderingFailed {
+                source: VariablesTemplateError::TemplateEngineError {
+                    source: crate::template::TemplateEngineError::ContextSerialization {
+                        source: tera::Error::msg(err.to_string()),
+                    },
+                },
+            })?;
+
+        // Create and render the variables template
+        let variables_template = VariablesTemplate::new(&template_file, context)
+            .map_err(|source| ProvisionTemplateError::VariablesRenderingFailed { source })?;
+
+        // Write the rendered template to the destination directory
+        let output_path = destination_dir.join("variables.tfvars");
+        variables_template
+            .render(&output_path)
+            .map_err(|source| ProvisionTemplateError::VariablesRenderingFailed { source })?;
+
+        tracing::debug!("Variables template rendered successfully");
         Ok(())
     }
 }
@@ -312,6 +404,9 @@ impl TofuTemplateRenderer {
 mod tests {
     use super::*;
     use std::fs;
+
+    /// Test instance name for unit tests
+    const TEST_INSTANCE_NAME: &str = "test-instance";
 
     /// Helper function to create dummy SSH credentials for testing
     fn create_dummy_ssh_credentials(temp_dir: &Path) -> SshCredentials {
@@ -336,7 +431,12 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            &build_path,
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
 
         assert_eq!(renderer.build_dir, build_path);
     }
@@ -349,7 +449,12 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            &build_path,
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
         let actual_path = renderer.build_opentofu_directory();
 
         assert_eq!(actual_path, expected_path);
@@ -386,7 +491,12 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            &build_path,
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
         let created_path = renderer
             .create_build_directory()
             .await
@@ -420,7 +530,12 @@ mod tests {
         let build_path = readonly_path.join("build");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            &build_path,
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
 
         let result = renderer.create_build_directory().await;
 
@@ -451,7 +566,12 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            &build_path,
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
 
         // Try to copy a non-existent template
         let result = renderer
@@ -505,8 +625,12 @@ mod tests {
             .expect("Failed to write test template");
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer =
-            TofuTemplateRenderer::new(template_manager, temp_dir.path(), ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            temp_dir.path(),
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
 
         let result = renderer.copy_templates(&["test.tf"], &build_path).await;
 
@@ -582,7 +706,12 @@ mod tests {
 
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            &build_path,
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
         let created_path = renderer
             .create_build_directory()
             .await
@@ -600,7 +729,12 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(template_manager, &build_path, ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            &build_path,
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
 
         // Should succeed with empty array
         let result = renderer.copy_templates(&[], &build_path).await;
@@ -631,8 +765,12 @@ mod tests {
             .expect("Failed to write test template");
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer =
-            TofuTemplateRenderer::new(template_manager, temp_dir.path(), ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            temp_dir.path(),
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
 
         // Copy the same file twice - should succeed (overwrite)
         let result = renderer
@@ -674,10 +812,19 @@ mod tests {
             .expect("Failed to write test template 2");
 
         let ssh_credentials1 = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer1 =
-            TofuTemplateRenderer::new(template_manager.clone(), &build_path1, ssh_credentials1);
+        let renderer1 = TofuTemplateRenderer::new(
+            template_manager.clone(),
+            &build_path1,
+            ssh_credentials1,
+            TEST_INSTANCE_NAME.to_string(),
+        );
         let ssh_credentials2 = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer2 = TofuTemplateRenderer::new(template_manager, &build_path2, ssh_credentials2);
+        let renderer2 = TofuTemplateRenderer::new(
+            template_manager,
+            &build_path2,
+            ssh_credentials2,
+            TEST_INSTANCE_NAME.to_string(),
+        );
 
         tokio::fs::create_dir_all(&build_path1)
             .await
@@ -730,8 +877,12 @@ mod tests {
             .expect("Failed to write existing template");
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer =
-            TofuTemplateRenderer::new(template_manager, temp_dir.path(), ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            temp_dir.path(),
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
 
         // Try to copy both existing and non-existing files
         let result = renderer
@@ -784,8 +935,12 @@ mod tests {
         }
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer =
-            TofuTemplateRenderer::new(template_manager, temp_dir.path(), ssh_credentials);
+        let renderer = TofuTemplateRenderer::new(
+            template_manager,
+            temp_dir.path(),
+            ssh_credentials,
+            TEST_INSTANCE_NAME.to_string(),
+        );
 
         let file_refs: Vec<&str> = file_names.iter().map(std::string::String::as_str).collect();
         let result = renderer.copy_templates(&file_refs, &build_path).await;
