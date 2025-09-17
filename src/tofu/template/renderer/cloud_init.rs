@@ -107,9 +107,6 @@ impl CloudInitTemplateRenderer {
     /// Output file name for rendered cloud-init configuration
     const CLOUD_INIT_OUTPUT_FILE: &'static str = "cloud-init.yml";
 
-    /// Default template path prefix for `OpenTofu` templates
-    const OPENTOFU_TEMPLATE_PATH: &'static str = "tofu/lxd";
-
     /// Creates a new cloud-init template renderer
     ///
     /// # Arguments
@@ -210,7 +207,7 @@ impl CloudInitTemplateRenderer {
     ///
     /// * `String` - The complete template path for the cloud-init template
     fn build_template_path(file_name: &str) -> String {
-        format!("{}/{file_name}", Self::OPENTOFU_TEMPLATE_PATH)
+        format!("tofu/lxd/{file_name}")
     }
 }
 
