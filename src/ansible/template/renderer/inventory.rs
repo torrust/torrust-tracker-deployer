@@ -96,9 +96,6 @@ impl InventoryTemplateRenderer {
     /// Output filename for the rendered inventory file
     const INVENTORY_OUTPUT_FILE: &'static str = "inventory.yml";
 
-    /// Template path prefix for Ansible templates
-    const ANSIBLE_TEMPLATE_PATH: &'static str = "ansible";
-
     /// Creates a new inventory template renderer
     ///
     /// # Arguments
@@ -192,11 +189,7 @@ impl InventoryTemplateRenderer {
     ///
     /// * `String` - The complete template path for inventory.yml.tera
     fn build_template_path() -> String {
-        format!(
-            "{}/{}",
-            Self::ANSIBLE_TEMPLATE_PATH,
-            Self::INVENTORY_TEMPLATE_FILE
-        )
+        format!("ansible/{}", Self::INVENTORY_TEMPLATE_FILE)
     }
 }
 
