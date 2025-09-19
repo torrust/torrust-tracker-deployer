@@ -5,6 +5,8 @@
 **Session Type**: Interactive Q&A  
 **Purpose**: Deep dive into MVVM pattern concepts to better understand its applicability to the Torrust Tracker Deploy project
 
+**Note**: This session documents the learning phase of MVVM research. The exploratory conclusions here suggested potential benefits for CLI applications. However, subsequent detailed architectural analysis (see `application-mvvm-analysis.md`) determined that MVVM is not suitable for this specific application's domain and requirements.
+
 ---
 
 ## 🎯 Learning Objectives
