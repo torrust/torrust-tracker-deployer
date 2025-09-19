@@ -6,8 +6,7 @@
 use std::fmt;
 use tracing::{info, warn};
 
-#[allow(unused_imports)]
-use crate::command_wrappers::lxd::{client::LxdClient, InstanceName};
+use crate::command_wrappers::lxd::client::LxdClient;
 use crate::command_wrappers::opentofu::{self, EmergencyDestroyError};
 use crate::e2e::environment::TestEnvironment;
 
@@ -267,7 +266,7 @@ fn cleanup_opentofu_infrastructure(env: &TestEnvironment) -> Result<(), Prefligh
 /// # Arguments
 ///
 /// * `env` - The test environment containing configuration paths
-fn cleanup_lxd_resources(_env: &TestEnvironment) {
+fn cleanup_lxd_resources(env: &TestEnvironment) {
     info!(
         operation = "lxd_resources_cleanup",
         "Cleaning existing LXD resources that might conflict with new test runs"
@@ -277,14 +276,14 @@ fn cleanup_lxd_resources(_env: &TestEnvironment) {
 
     // Clean up test instance if it exists
     match lxd_client.delete_instance(
-        &InstanceName::new("torrust-vm".to_string()).expect("Valid hardcoded instance name"),
+        &env.config.instance_name, // Phase 3: Use instance_name from config instead of hardcoded value
         true,
     ) {
         Ok(()) => {
             info!(
                 operation = "lxd_resources_cleanup",
                 resource = "instance",
-                name = "torrust-vm",
+                name = %env.config.instance_name.as_str(),
                 status = "success",
                 "LXD instance cleanup completed successfully"
             );
@@ -293,7 +292,7 @@ fn cleanup_lxd_resources(_env: &TestEnvironment) {
             warn!(
                 operation = "lxd_resources_cleanup",
                 resource = "instance",
-                name = "torrust-vm",
+                name = %env.config.instance_name.as_str(),
                 error = %e,
                 "Failed to clean LXD instance"
             );

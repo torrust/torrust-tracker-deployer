@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use crate::ansible::AnsibleTemplateRenderer;
 use crate::command_wrappers::ansible::AnsibleClient;
-use crate::command_wrappers::lxd::{InstanceName, LxdClient};
+use crate::command_wrappers::lxd::LxdClient;
 use crate::command_wrappers::opentofu::OpenTofuClient;
 use crate::config::Config;
 use crate::template::TemplateManager;
@@ -61,7 +61,7 @@ impl Services {
             template_manager.clone(),
             config.build_dir.clone(),
             config.ssh_credentials.clone(),
-            InstanceName::new("torrust-vm".to_string()).expect("Valid hardcoded instance name"), // TODO: Make this configurable in Phase 3
+            config.instance_name.clone(), // Phase 3: Use instance_name from config instead of hardcoded value
         );
 
         // Create configuration template renderer

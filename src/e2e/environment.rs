@@ -23,7 +23,7 @@
 use tempfile::TempDir;
 use tracing::info;
 
-use crate::config::{Config, SshCredentials};
+use crate::config::{Config, InstanceName, SshCredentials};
 use crate::container::Services;
 
 use super::tasks::clean_and_prepare_templates::clean_and_prepare_templates;
@@ -108,11 +108,18 @@ impl TestEnvironment {
     /// - Temporary directory creation fails
     /// - SSH key setup fails
     /// - Templates directory is invalid
+    ///
+    /// # Panics
+    ///
+    /// Panics if the hardcoded "torrust-vm" instance name is invalid (should never happen
+    /// as it's a known valid name). This will be made configurable in Phase 4.
     pub fn new(
         keep_env: bool,
         templates_dir: impl Into<std::path::PathBuf>,
     ) -> Result<Self, TestEnvironmentError> {
-        Self::with_ssh_user(keep_env, templates_dir, DEFAULT_SSH_USER)
+        let instance_name =
+            InstanceName::new("torrust-vm".to_string()).expect("Valid hardcoded instance name"); // TODO: Make this configurable in Phase 4
+        Self::with_ssh_user(keep_env, templates_dir, DEFAULT_SSH_USER, instance_name)
     }
 
     /// Creates a new test environment with a custom SSH user
@@ -125,6 +132,7 @@ impl TestEnvironment {
     /// * `keep_env` - Whether to keep the environment after tests complete
     /// * `templates_dir` - Path to the templates directory
     /// * `ssh_user` - SSH username to use for connections
+    /// * `instance_name` - Name for the instance to be deployed
     ///
     /// # Errors
     ///
@@ -137,6 +145,7 @@ impl TestEnvironment {
         keep_env: bool,
         templates_dir: impl Into<std::path::PathBuf>,
         ssh_user: &str,
+        instance_name: InstanceName,
     ) -> Result<Self, TestEnvironmentError> {
         let templates_dir = templates_dir.into();
         Self::validate_inputs(&templates_dir)?;
@@ -144,7 +153,13 @@ impl TestEnvironment {
         let project_root = Self::get_project_root()?;
         let temp_dir = Self::create_temp_directory()?;
         let ssh_credentials = Self::setup_ssh_credentials(&project_root, &temp_dir, ssh_user)?;
-        let config = Self::create_config(keep_env, ssh_credentials, &templates_dir, &project_root);
+        let config = Self::create_config(
+            keep_env,
+            ssh_credentials,
+            instance_name,
+            &templates_dir,
+            &project_root,
+        );
         let services = Services::new(&config);
 
         Ok(Self {
@@ -174,6 +189,13 @@ impl TestEnvironment {
     /// This is a convenience method that combines `with_ssh_user()` and `init()`.
     /// Use this when you want the full setup in one call.
     ///
+    /// # Arguments
+    ///
+    /// * `keep_env` - Whether to keep the environment after tests complete
+    /// * `templates_dir` - Path to the templates directory
+    /// * `ssh_user` - SSH username to use for connections
+    /// * `instance_name` - Name for the instance to be deployed
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -183,8 +205,9 @@ impl TestEnvironment {
         keep_env: bool,
         templates_dir: impl Into<std::path::PathBuf>,
         ssh_user: &str,
+        instance_name: InstanceName,
     ) -> Result<Self, TestEnvironmentError> {
-        let env = Self::with_ssh_user(keep_env, templates_dir, ssh_user)?;
+        let env = Self::with_ssh_user(keep_env, templates_dir, ssh_user, instance_name)?;
         env.init()?;
         Ok(env)
     }
@@ -238,12 +261,14 @@ impl TestEnvironment {
     fn create_config(
         keep_env: bool,
         ssh_credentials: SshCredentials,
+        instance_name: InstanceName,
         templates_dir: &std::path::Path,
         project_root: &std::path::Path,
     ) -> Config {
         Config::new(
             keep_env,
             ssh_credentials,
+            instance_name,
             templates_dir.to_string_lossy().to_string(),
             project_root.to_path_buf(),
             project_root.join("build"),
