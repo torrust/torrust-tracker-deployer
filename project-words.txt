@@ -49,6 +49,7 @@ shellcheck
 Silverlight
 smorimoto
 subshell
+substates
 swappability
 sysfs
 Taplo
