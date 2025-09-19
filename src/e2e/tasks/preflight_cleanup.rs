@@ -86,6 +86,9 @@ pub fn cleanup_lingering_resources(env: &TestEnvironment) -> Result<(), Prefligh
     // Clean the build directory to ensure fresh template state for E2E tests
     cleanup_build_directory(env)?;
 
+    // Clean the templates directory to ensure fresh embedded template extraction for E2E tests
+    cleanup_templates_directory(env)?;
+
     // Clean any existing OpenTofu infrastructure from previous test runs
     cleanup_opentofu_infrastructure(env)?;
 
@@ -164,6 +167,78 @@ fn cleanup_build_directory(env: &TestEnvironment) -> Result<(), PreflightCleanup
                 details: format!(
                     "Failed to clean build directory '{}': {}",
                     build_dir.display(),
+                    e
+                ),
+            })
+        }
+    }
+}
+
+/// Cleans the templates directory to ensure fresh embedded template extraction for E2E tests
+///
+/// This function removes the templates directory if it exists, ensuring that
+/// E2E tests start with fresh embedded templates and don't use stale cached template files.
+/// This is critical for testing template changes and instance name parameterization.
+///
+/// # Safety
+///
+/// This function is only intended for E2E test environments and should never
+/// be called in production code paths. It's designed to provide test isolation
+/// by ensuring fresh template extraction for each test run.
+///
+/// # Arguments
+///
+/// * `env` - The test environment containing configuration paths
+///
+/// # Returns
+///
+/// Returns `Ok(())` if cleanup succeeds or if the templates directory doesn't exist.
+///
+/// # Errors
+///
+/// Returns a `PreflightCleanupError::ResourceConflicts` error if the templates directory
+/// cannot be removed due to permission issues or file locks.
+fn cleanup_templates_directory(env: &TestEnvironment) -> Result<(), PreflightCleanupError> {
+    let templates_dir = std::path::Path::new(&env.config.templates_dir);
+
+    if !templates_dir.exists() {
+        info!(
+            operation = "templates_directory_cleanup",
+            status = "clean",
+            path = %templates_dir.display(),
+            "Templates directory doesn't exist, skipping cleanup"
+        );
+        return Ok(());
+    }
+
+    info!(
+        operation = "templates_directory_cleanup",
+        path = %templates_dir.display(),
+        "Cleaning templates directory to ensure fresh embedded template extraction"
+    );
+
+    match std::fs::remove_dir_all(templates_dir) {
+        Ok(()) => {
+            info!(
+                operation = "templates_directory_cleanup",
+                status = "success",
+                path = %templates_dir.display(),
+                "Templates directory cleaned successfully"
+            );
+            Ok(())
+        }
+        Err(e) => {
+            warn!(
+                operation = "templates_directory_cleanup",
+                status = "failed",
+                path = %templates_dir.display(),
+                error = %e,
+                "Failed to clean templates directory"
+            );
+            Err(PreflightCleanupError::ResourceConflicts {
+                details: format!(
+                    "Failed to clean templates directory '{}': {}",
+                    templates_dir.display(),
                     e
                 ),
             })

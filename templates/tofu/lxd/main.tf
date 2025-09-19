@@ -17,7 +17,7 @@ provider "lxd" {
 variable "instance_name" {
   description = "Name of the LXD instance"
   type        = string
-  default     = "torrust-vm"
+  default     = "torrust-tracker-vm"
 }
 
 variable "image" {
