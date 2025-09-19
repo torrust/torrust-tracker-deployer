@@ -13,6 +13,7 @@ endfor
 endraw
 eprintln
 getent
+Gossman
 Hostnames
 journalctl
 keyrings
@@ -48,6 +49,7 @@ shellcheck
 Silverlight
 smorimoto
 subshell
+swappability
 sysfs
 Taplo
 Tera
