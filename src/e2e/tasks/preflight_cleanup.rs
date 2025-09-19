@@ -67,10 +67,12 @@ impl std::error::Error for PreflightCleanupError {
 /// # Examples
 ///
 /// ```no_run
+/// use torrust_tracker_deploy::config::InstanceName;
 /// use torrust_tracker_deploy::e2e::{environment::TestEnvironment, tasks::preflight_cleanup};
 ///
 /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let env = TestEnvironment::new(false, "./templates")?;
+/// let instance_name = InstanceName::new("torrust-vm".to_string())?;
+/// let env = TestEnvironment::new(false, "./templates", instance_name)?;
 /// preflight_cleanup::cleanup_lingering_resources(&env)?;
 /// # Ok(())
 /// # }

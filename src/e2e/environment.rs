@@ -82,6 +82,12 @@ impl TestEnvironment {
     /// This is a convenience method that combines `new()` and `init()`.
     /// Use this when you want the full setup in one call.
     ///
+    /// # Arguments
+    ///
+    /// * `keep_env` - Whether to keep the environment after tests complete
+    /// * `templates_dir` - Path to the templates directory
+    /// * `instance_name` - Name for the instance to be deployed
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -90,8 +96,9 @@ impl TestEnvironment {
     pub fn new_and_init(
         keep_env: bool,
         templates_dir: impl Into<std::path::PathBuf>,
+        instance_name: InstanceName,
     ) -> Result<Self, TestEnvironmentError> {
-        let env = Self::new(keep_env, templates_dir)?;
+        let env = Self::new(keep_env, templates_dir, instance_name)?;
         env.init()?;
         Ok(env)
     }
@@ -100,6 +107,12 @@ impl TestEnvironment {
     ///
     /// This method only performs basic construction without side effects.
     /// Call `init()` to perform environment initialization.
+    ///
+    /// # Arguments
+    ///
+    /// * `keep_env` - Whether to keep the environment after tests complete
+    /// * `templates_dir` - Path to the templates directory
+    /// * `instance_name` - Name for the instance to be deployed
     ///
     /// # Errors
     ///
@@ -111,14 +124,13 @@ impl TestEnvironment {
     ///
     /// # Panics
     ///
-    /// Panics if the hardcoded "torrust-vm" instance name is invalid (should never happen
-    /// as it's a known valid name). This will be made configurable in Phase 4.
+    /// Panics if the provided `instance_name` is invalid (contains invalid characters
+    /// or is empty). This should not happen with well-formed instance names.
     pub fn new(
         keep_env: bool,
         templates_dir: impl Into<std::path::PathBuf>,
+        instance_name: InstanceName,
     ) -> Result<Self, TestEnvironmentError> {
-        let instance_name =
-            InstanceName::new("torrust-vm".to_string()).expect("Valid hardcoded instance name"); // TODO: Make this configurable in Phase 4
         Self::with_ssh_user(keep_env, templates_dir, DEFAULT_SSH_USER, instance_name)
     }
 

@@ -21,6 +21,7 @@ use std::time::Instant;
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
+use torrust_tracker_deploy::config::InstanceName;
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
 use torrust_tracker_deploy::e2e::tasks::{
     cleanup_infrastructure::cleanup_infrastructure,
@@ -83,7 +84,11 @@ pub async fn main() -> Result<()> {
         "Starting E2E tests"
     );
 
-    let env = TestEnvironment::new(cli.keep, cli.templates_dir)?;
+    // Instance name for the test environment - not user configurable for now
+    let instance_name =
+        InstanceName::new("torrust-vm".to_string()).expect("Valid hardcoded instance name");
+
+    let env = TestEnvironment::new(cli.keep, cli.templates_dir, instance_name)?;
 
     // Perform pre-flight cleanup to remove any lingering resources from interrupted tests
     cleanup_lingering_resources(&env)?;

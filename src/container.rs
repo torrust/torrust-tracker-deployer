@@ -35,11 +35,6 @@ pub struct Services {
 
 impl Services {
     /// Create a new services container using the provided configuration
-    ///
-    /// # Panics
-    ///
-    /// Panics if the hardcoded "torrust-vm" instance name is invalid (should never happen
-    /// as it's a known valid name). This will be made configurable in Phase 3.
     #[must_use]
     pub fn new(config: &Config) -> Self {
         // Create template manager

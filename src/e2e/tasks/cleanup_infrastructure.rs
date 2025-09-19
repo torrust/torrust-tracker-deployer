@@ -41,11 +41,12 @@ use crate::e2e::environment::TestEnvironment;
 /// - Does not return errors - failures are logged as warnings
 pub fn cleanup_infrastructure(env: &TestEnvironment) {
     if env.config.keep_env {
+        let instance_name = &env.config.instance_name;
         info!(
             operation = "cleanup",
             action = "keep_environment",
-            instance = "torrust-vm",
-            connect_command = "lxc exec torrust-vm -- /bin/bash",
+            instance = %instance_name,
+            connect_command = format!("lxc exec {} -- /bin/bash", instance_name),
             "Keeping test environment as requested"
         );
         return;
