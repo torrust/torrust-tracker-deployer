@@ -18,6 +18,7 @@ journalctl
 keyrings
 larstobi
 lxdbr
+MVVM
 myenv
 newgrp
 newtype
@@ -44,6 +45,7 @@ rustup
 secureboot
 serde
 shellcheck
+Silverlight
 smorimoto
 subshell
 sysfs
