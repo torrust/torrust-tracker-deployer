@@ -148,7 +148,7 @@ With this foundation, the team can now:
 
 ## 📁 Related Documentation
 
-- `mvvm-learning-session.md` - Complete Q&A transcript with detailed examples
+- `../sessions/mvvm-learning-session.md` - Complete Q&A transcript with detailed examples
 - `README.md` - Research overview and methodology
 - `mvvm-pattern-overview.md` - (To be created) Comprehensive pattern study
 - `application-mvvm-analysis.md` - (To be created) Pattern fit analysis

@@ -170,8 +170,8 @@ Sometimes the best architectural decision is recognizing when you already have t
 
 ## 📚 Reference Materials
 
-- Main analysis document: `application-analysis-session.md`
-- Previous MVVM research: `mvvm-learning-session.md`
+- Main analysis document: `../sessions/application-analysis-session.md`
+- Previous MVVM research: `../sessions/mvvm-learning-session.md`
 - Architecture documentation: `../../codebase-architecture.md`
 
 ---
