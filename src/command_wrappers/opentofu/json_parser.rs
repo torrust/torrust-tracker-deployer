@@ -127,7 +127,7 @@ mod tests {
                 "value": {
                     "image": "ubuntu:24.04",
                     "ip_address": "10.140.190.68",
-                    "name": "torrust-vm",
+                    "name": "torrust-tracker-vm",
                     "status": "Running"
                 }
             }
@@ -140,7 +140,7 @@ mod tests {
             result.ip_address,
             IpAddr::from_str("10.140.190.68").unwrap()
         );
-        assert_eq!(result.name, "torrust-vm");
+        assert_eq!(result.name, "torrust-tracker-vm");
         assert_eq!(result.status, "Running");
     }
 
@@ -179,7 +179,7 @@ mod tests {
                 "value": {
                     "image": "ubuntu:24.04",
                     "ip_address": "10.140.190.68",
-                    "name": "torrust-vm"
+                    "name": "torrust-tracker-vm"
                 }
             }
         }"#;
@@ -199,7 +199,7 @@ mod tests {
                 "value": {
                     "image": 123,
                     "ip_address": "10.140.190.68",
-                    "name": "torrust-vm",
+                    "name": "torrust-tracker-vm",
                     "status": "Running"
                 }
             }
@@ -222,7 +222,7 @@ mod tests {
                 "value": {
                     "image": "ubuntu:24.04",
                     "ip_address": "invalid-ip-address",
-                    "name": "torrust-vm",
+                    "name": "torrust-tracker-vm",
                     "status": "Running"
                 }
             }

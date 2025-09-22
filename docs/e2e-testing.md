@@ -117,8 +117,8 @@ If tests fail and leave resources behind, you can manually clean up:
 lxc list
 
 # Stop and delete the test container
-lxc stop torrust-vm
-lxc delete torrust-vm
+lxc stop torrust-tracker-vm
+lxc delete torrust-tracker-vm
 
 # Or use OpenTofu to clean up
 cd build/tofu/lxd
@@ -164,7 +164,7 @@ Use the `--keep` flag to inspect the environment after test completion:
 cargo run --bin e2e-tests -- --keep
 
 # After test completion, connect to the container:
-lxc exec torrust-vm -- /bin/bash
+lxc exec torrust-tracker-vm -- /bin/bash
 ```
 
 ## 🏗️ Architecture

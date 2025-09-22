@@ -162,11 +162,10 @@ ansible-playbook install-docker-compose.yml
 #### 3. Verify Deployment
 
 ```bash
-# Check VM status
-lxc list torrust-vm
+lxc list torrust-tracker-vm
 
-# Connect to VM
-lxc exec torrust-vm -- /bin/bash
+# Access the container directly
+lxc exec torrust-tracker-vm -- /bin/bash
 
 # Test SSH connection
 ssh -i ~/.ssh/testing_rsa torrust@<VM_IP>

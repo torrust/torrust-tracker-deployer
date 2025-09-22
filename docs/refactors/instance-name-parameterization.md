@@ -2,7 +2,7 @@
 
 ## Overview
 
-This refactor aims to eliminate hardcoded "torrust-vm" instance names throughout the codebase and replace them with parameterized values. The goal is to enable dynamic instance naming for different environments and support running multiple instances simultaneously.
+This refactor aims to eliminate hardcoded "torrust-tracker-vm" instance names throughout the codebase and replace them with parameterized values. The goal is to enable dynamic instance naming for different environments and support running multiple instances simultaneously.
 
 ## 📊 Progress Status
 
@@ -45,7 +45,7 @@ This refactor aims to eliminate hardcoded "torrust-vm" instance names throughout
 All planned phases for instance name parameterization have been successfully implemented. The refactor is complete with the following achievements:
 
 - **Instance names are now configurable** through the `Config` struct and E2E test environment
-- **Hardcoded "torrust-vm" values eliminated** from key infrastructure components
+- **Hardcoded "torrust-tracker-vm" values eliminated** from key infrastructure components
 - **Template system supports dynamic instance naming** via Tera templating
 - **E2E tests can use custom instance names** while maintaining backward compatibility
 - **All quality gates passed**: linters, unit tests, and e2e tests successful
@@ -71,7 +71,7 @@ All planned phases for instance name parameterization have been successfully imp
 - ✅ Create `templates/tofu/lxd/variables.tfvars` template file to define `instance_name` variable
 - ✅ Update `TofuTemplateRenderer` to include this file in static template copying
 - ✅ Keep `image` variable static (not templated)
-- **Status**: Static variables file created with hardcoded "torrust-vm" value
+- **Status**: Static variables file created with hardcoded "torrust-tracker-vm" value
 - **Validation**: ✅ Unit tests + linters + e2e tests passed
 
 #### Step 1b: Update OpenTofu client for variables file ✅
@@ -112,9 +112,9 @@ All planned phases for instance name parameterization have been successfully imp
 - ✅ Created `render_variables_template()` method for dynamic rendering
 - ✅ Updated `render_tera_templates()` to call variables template rendering
 - ✅ Removed `variables.tfvars` from static template files list
-- ✅ Added hardcoded "torrust-vm" values for backward compatibility
+- ✅ Added hardcoded "torrust-tracker-vm" values for backward compatibility
 - ✅ Updated all test constructors to include `instance_name` parameter
-- **Status**: Variables template now dynamically renders with `instance_name = "torrust-vm"`
+- **Status**: Variables template now dynamically renders with `instance_name = "torrust-tracker-vm"`
 - **Validation**: ✅ All linters + unit tests + e2e tests passed
 
 ### Phase 3: Context Integration ✅
@@ -137,7 +137,7 @@ Instead of the originally planned `TofuContext` approach, we implemented instanc
 - ✅ Added `instance_name` parameter to `TestEnvironment::with_ssh_user()` in `src/e2e/environment.rs`
 - ✅ Updated `TestEnvironment::with_ssh_user_and_init()` to accept `instance_name` parameter
 - ✅ Updated `create_config()` helper function to accept `instance_name` parameter
-- ✅ Maintained backward compatibility with existing `new()` functions using hardcoded "torrust-vm"
+- ✅ Maintained backward compatibility with existing `new()` functions using hardcoded "torrust-tracker-vm"
 - **Status**: E2E test infrastructure can now create environments with custom instance names
 - **Validation**: ✅ All linters + unit tests + e2e tests passed
 
@@ -147,7 +147,7 @@ Instead of the originally planned `TofuContext` approach, we implemented instanc
 
 - ✅ Updated `TestEnvironment::new()` method in `src/e2e/environment.rs` to accept `instance_name: &str` parameter
 - ✅ Updated `TestEnvironment::new_and_init()` method to accept `instance_name` parameter
-- ✅ Added `instance_name` variable in `main()` function of `src/bin/e2e_tests.rs` with hardcoded "torrust-vm" value
+- ✅ Added `instance_name` variable in `main()` function of `src/bin/e2e_tests.rs` with hardcoded "torrust-tracker-vm" value
 - ✅ Updated method call to pass `instance_name` from main to `TestEnvironment::new()`
 - ✅ Added proper documentation with `# Panics` section for clippy compliance
 - ✅ Updated documentation example in `src/e2e/tasks/preflight_cleanup.rs` to use new signature
@@ -169,7 +169,7 @@ The implementation evolved from the original plan due to codebase changes:
 
 ### 🎯 Outcomes
 
-- **Hardcoded Instances Eliminated**: Key hardcoded "torrust-vm" strings removed from infrastructure provisioning
+- **Hardcoded Instances Eliminated**: Key hardcoded "torrust-tracker-vm" strings removed from infrastructure provisioning
 - **Dynamic Instance Naming**: Instance names can now be configured at runtime through the Config struct
 - **Test Environment Flexibility**: E2E tests can create environments with custom instance names
 - **Configuration Centralization**: All instance name handling flows through the `Config` struct
@@ -187,14 +187,14 @@ The implementation evolved from the original plan due to codebase changes:
 **Results**:
 
 - Instance names configurable through `Config` struct and E2E main function
-- All hardcoded "torrust-vm" references eliminated from core infrastructure
+- All hardcoded "torrust-tracker-vm" references eliminated from core infrastructure
 - All tests passing (linters, 259 unit tests, e2e deployment tests)
 - Zero unused dependencies
 - Full backward compatibility maintained
 
-## 🔍 Analysis of Current "torrust-vm" Usage
+## 🔍 Analysis of Current "torrust-tracker-vm" Usage
 
-Currently, the instance name "torrust-vm" is hardcoded in multiple places across the codebase, including:
+Currently, the instance name "torrust-tracker-vm" is hardcoded in multiple places across the codebase, including:
 
 - Infrastructure configuration files (OpenTofu templates)
 - Rust code literals and variables
@@ -207,9 +207,9 @@ This creates several issues:
 - Hard to customize instance names for different environments
 - Tight coupling between configuration and implementation
 
-## Summary of "torrust-vm" Usage Analysis
+## Summary of "torrust-tracker-vm" Usage Analysis
 
-Based on a comprehensive search through the codebase, **61 occurrences** of "torrust-vm" were found across 4 main categories:
+Based on a comprehensive search through the codebase, **61 occurrences** of "torrust-tracker-vm" were found across 4 main categories:
 
 ### 1. Configuration Files (2 files, 7 occurrences)
 
@@ -340,7 +340,7 @@ Start from low-level infrastructure details and work up to higher abstractions:
 ## Success Criteria
 
 - [ ] Instance name defined once in `src/bin/e2e_tests.rs`
-- [ ] All hardcoded "torrust-vm" references eliminated
+- [ ] All hardcoded "torrust-tracker-vm" references eliminated
 - [ ] OpenTofu uses variables file for parameterization
 - [ ] All tests (unit, linting, e2e) pass at each step
 - [ ] No regression in functionality

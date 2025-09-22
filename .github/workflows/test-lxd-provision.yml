@@ -109,7 +109,7 @@ jobs:
           timeout=300
           elapsed=0
           while [ $elapsed -lt $timeout ]; do
-            if lxc exec torrust-vm -- test -f /tmp/provision_complete 2>/dev/null; then
+            if lxc exec torrust-tracker-vm -- test -f /tmp/provision_complete 2>/dev/null; then
               echo "Container provisioning completed successfully!"
               break
             fi
@@ -127,35 +127,35 @@ jobs:
         run: |
           # Test basic connectivity
           lxc list
-          lxc info torrust-vm
+          lxc info torrust-tracker-vm
 
           # Test command execution
-          lxc exec torrust-vm -- whoami
+          lxc exec torrust-tracker-vm -- whoami
 
           # Test system information with error handling
           echo "Getting system information..."
-          lxc exec torrust-vm -- cat /etc/os-release || echo "os-release failed"
+          lxc exec torrust-tracker-vm -- cat /etc/os-release || echo "os-release failed"
           sleep 1
 
-          lxc exec torrust-vm -- df -h || echo "df failed"
+          lxc exec torrust-tracker-vm -- df -h || echo "df failed"
           sleep 1
 
-          lxc exec torrust-vm -- free -h || echo "free failed"
+          lxc exec torrust-tracker-vm -- free -h || echo "free failed"
           sleep 1
 
           # Test cloud-init functionality
           echo "Testing cloud-init..."
-          lxc exec torrust-vm -- cloud-init status || echo "cloud-init status failed"
+          lxc exec torrust-tracker-vm -- cloud-init status || echo "cloud-init status failed"
           sleep 1
 
           # Test user creation
           echo "Testing user creation..."
-          lxc exec torrust-vm -- id torrust || echo "torrust user not found"
+          lxc exec torrust-tracker-vm -- id torrust || echo "torrust user not found"
           sleep 1
 
           # Test systemd services
           echo "Testing systemd..."
-          lxc exec torrust-vm -- systemctl status ssh || echo "ssh service check failed"
+          lxc exec torrust-tracker-vm -- systemctl status ssh || echo "ssh service check failed"
 
       - name: Get container outputs
         working-directory: build/tofu/lxd
@@ -169,7 +169,7 @@ jobs:
           # Use tofu without sudo since socket permissions are set up
           # NOTE: For local development, use "sg lxd -c 'tofu destroy'" instead
           tofu destroy -auto-approve || true
-          lxc delete torrust-vm --force || true
+          lxc delete torrust-tracker-vm --force || true
 
       - name: Final verification
         if: always()

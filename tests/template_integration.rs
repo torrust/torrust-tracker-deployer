@@ -66,7 +66,7 @@ mod integration_tests {
 
         // Verify it's valid YAML structure
         assert!(file_content.contains("all:"));
-        assert!(file_content.contains("torrust-vm:"));
+        assert!(file_content.contains("torrust-tracker-vm:"));
         assert!(file_content.contains("ansible_user: torrust"));
 
         println!("✅ Real inventory template rendered successfully");

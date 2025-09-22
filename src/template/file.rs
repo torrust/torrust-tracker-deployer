@@ -435,7 +435,7 @@ mod tests {
         let content = "# Ansible Inventory File (YAML format)
 all:
   hosts:
-    torrust-vm:
+    torrust-tracker-vm:
       ansible_host: {{ vm_ip }}
       ansible_user: {{ vm_user }}
       ansible_ssh_private_key_file: {{ ssh_private_key_path }}

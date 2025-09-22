@@ -198,7 +198,8 @@ mod tests {
             template_manager.clone(),
             temp_dir.path(),
             ssh_credentials.clone(),
-            InstanceName::new("torrust-vm".to_string()).expect("Valid hardcoded instance name"), // TODO: Make this configurable in Phase 3
+            InstanceName::new("torrust-tracker-vm".to_string())
+                .expect("Valid hardcoded instance name"), // TODO: Make this configurable in Phase 3
         ));
 
         let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(

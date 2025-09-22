@@ -1,11 +1,12 @@
-# Ansible Inventory File (YAML format)
+# Ansible Inventory File (YAML f      # 🔗 DISCOVERY: Find current IP with: lxc list torrust-tracker-vm
+      # 🔗 AUTOMATION: Could be retrieved via: lxc list torrust-tracker-vm -f json | jq -r '.[0].state.network.eth0.addresses[0].address'mat)
 # This file defines the hosts (servers/VMs) that Ansible will manage
 # and how to connect to them
 #
 # 🔗 COMPLETE OPENTOFU INTEGRATION WORKFLOW:
 #
 # 1. OpenTofu Provisioning (config/tofu/lxd/main.tf):
-#    - Creates LXD container named "torrust-vm" (variable: container_name)
+#    - Creates LXD container named "torrust-tracker-vm" (variable: container_name)
 #    - Applies cloud-init configuration from cloud-init.yml
 #    - Assigns dynamic IP address via lxdbr0 network
 #
@@ -23,10 +24,10 @@
 all:
   # 'hosts' section defines individual machines
   hosts:
-    # Host name: 'torrust-vm' (this is how we refer to this host in playbooks)
-    # 🔗 OPENTOFU: This name matches var.container_name in config/tofu/lxd/main.tf
+    # Host name: 'torrust-tracker-vm' (this is how we refer to this host in playbooks)
+    # 🔗 OPENTOFU: This name matches var.instance_name in config/tofu/lxd/main.tf
     # 🔗 OPENTOFU: This is the actual LXD container name created by OpenTofu
-    torrust-vm:
+    torrust-tracker-vm:
       # The actual IP address or hostname to connect to
       # ⚠️  IMPORTANT: This IP comes from the VM provisioned by OpenTofu
       # 🔗 OPENTOFU: IP assigned by lxd_instance.torrust_vm via lxdbr0 network

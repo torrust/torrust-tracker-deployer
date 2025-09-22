@@ -224,7 +224,7 @@ mod tests {
 
         let template_content = r#"all:
   hosts:
-    torrust-vm:
+    torrust-tracker-vm:
       ansible_host: {{ ansible_host }}
       ansible_user: torrust
       ansible_connection: ssh
@@ -314,7 +314,7 @@ mod tests {
         // Template requires {{ non_existent_field }} which won't be in context
         let template_content = r"all:
   hosts:
-    torrust-vm:
+    torrust-tracker-vm:
       ansible_host: {{ ansible_host }}
       ansible_user: torrust
       missing_field: {{ non_existent_field }}

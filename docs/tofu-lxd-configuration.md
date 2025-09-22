@@ -162,7 +162,7 @@ Before provisioning, you may want to customize:
 
 1. **SSH Key**: Edit the `cloud-init.yml` file and replace the SSH key with your actual public key
 2. **Container Specifications**: Adjust resource limits in `main.tf`
-3. **Container Name**: Change the instance name from "torrust-vm" to your preferred name
+3. **Container Name**: Change the instance name from "torrust-tracker-vm" to your preferred name
 4. **Packages**: Modify the packages list in `cloud-init.yml` to include additional software
 
 ## Provisioning
@@ -210,7 +210,7 @@ To provision the container:
    instance_info = {
      "image" = "ubuntu:22.04"
      "ip_address" = "10.140.190.155"
-     "name" = "torrust-vm"
+     "name" = "torrust-tracker-vm"
      "status" = "Running"
    }
    ```
@@ -223,41 +223,39 @@ To provision the container:
 
 6. **Access the container**:
 
-   ```bash
-   # Direct shell access
-   lxc exec torrust-vm -- /bin/bash
+````bash
+# Direct shell access
+lxc exec torrust-tracker-vm -- /bin/bash
 
-   # If you have LXD permission issues, use:
-   sg lxd -c "lxc exec torrust-vm -- /bin/bash"
+# Or if you need to use the lxd group:
+sg lxd -c "lxc exec torrust-tracker-vm -- /bin/bash"
 
-   # SSH access (if you configured your SSH key and networking)
-   ssh torrust@<container-ip-address>
-   ```
+# SSH access (if you configured your SSH key and networking)
+ssh torrust@<container-ip-address>
+```## Managing the Container
 
-## Managing the Container
-
-After provisioning, you can manage the `torrust-vm` container using standard LXD commands:
+After provisioning, you can manage the `torrust-tracker-vm` container using standard LXD commands:
 
 ### Access the Container
 
 ```bash
 # Direct shell access
-lxc exec torrust-vm -- /bin/bash
+lxc exec torrust-tracker-vm -- /bin/bash
 
-# If you have LXD permission issues, use:
-sg lxd -c "lxc exec torrust-vm -- /bin/bash"
+# Or if you need to use the lxd group:
+sg lxd -c "lxc exec torrust-tracker-vm -- /bin/bash"
 
 # SSH access (if you configured your SSH key and networking)
 ssh torrust@<container-ip-address>
-```
+````
 
 ### Check Container Status
 
 ```bash
 # Check the status of our specific container
-lxc info torrust-vm
+lxc info torrust-tracker-vm
 
-# List all containers (including torrust-vm)
+# List all containers (including torrust-tracker-vm)
 lxc list
 ```
 
@@ -265,39 +263,39 @@ lxc list
 
 ```bash
 # Stop the container
-lxc stop torrust-vm
+lxc stop torrust-tracker-vm
 
 # Start the container
-lxc start torrust-vm
+lxc start torrust-tracker-vm
 
 # Restart the container
-lxc restart torrust-vm
+lxc restart torrust-tracker-vm
 ```
 
 ### Common Operations
 
 ```bash
 # Check if cloud-init provisioning completed
-lxc exec torrust-vm -- cat /tmp/provision_complete
+lxc exec torrust-tracker-vm -- cat /tmp/provision_complete
 
 # Check system information
-lxc exec torrust-vm -- lsb_release -a
+lxc exec torrust-tracker-vm -- lsb_release -a
 
 # Check systemd services (works in LXD system containers!)
-lxc exec torrust-vm -- systemctl status ssh
+lxc exec torrust-tracker-vm -- systemctl status ssh
 
 # Install additional packages (if needed during development)
-lxc exec torrust-vm -- sudo apt update
-lxc exec torrust-vm -- sudo apt install -y git curl wget htop vim
+lxc exec torrust-tracker-vm -- sudo apt update
+lxc exec torrust-tracker-vm -- sudo apt install -y git curl wget htop vim
 
 # Check available disk space
-lxc exec torrust-vm -- df -h
+lxc exec torrust-tracker-vm -- df -h
 
 # Check running processes
-lxc exec torrust-vm -- ps aux
+lxc exec torrust-tracker-vm -- ps aux
 
 # Check cloud-init status
-lxc exec torrust-vm -- cloud-init status
+lxc exec torrust-tracker-vm -- cloud-init status
 ```
 
 For more LXD commands and troubleshooting, see the [LXD documentation](../../docs/tech-stack/lxd.md).
