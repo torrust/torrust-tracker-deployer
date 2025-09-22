@@ -79,19 +79,11 @@ pub struct Config {
     /// to subdirectories within this build directory. This directory is
     /// typically git-ignored to avoid committing generated files.
     pub build_dir: PathBuf,
-
-    /// Original inventory content for restoration during cleanup.
-    ///
-    /// Stores the original Ansible inventory file content so it can be
-    /// restored if the deployment process modifies it. Used internally
-    /// for cleanup operations.
-    pub original_inventory: Option<String>,
 }
 
 impl Config {
     /// Creates a new configuration with the provided parameters.
     ///
-    /// Sets `original_inventory` to `None` - this field is populated internally during cleanup operations.
     /// The `ansible_subfolder` is set to "ansible" and `opentofu_subfolder` is set to "tofu/lxd" internally.
     ///
     /// ```rust
@@ -131,7 +123,6 @@ impl Config {
             templates_dir,
             project_root,
             build_dir,
-            original_inventory: None,
         }
     }
 }
