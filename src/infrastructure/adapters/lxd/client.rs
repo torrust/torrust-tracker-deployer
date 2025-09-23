@@ -137,9 +137,7 @@ impl LxdClient {
 
             if start_time.elapsed() >= timeout {
                 return Err(anyhow::anyhow!(
-                    "Timeout waiting for instance '{}' to get IP address after {:?}",
-                    instance_name,
-                    timeout
+                    "Timeout waiting for instance '{instance_name}' to get IP address after {timeout:?}"
                 ));
             }
 
