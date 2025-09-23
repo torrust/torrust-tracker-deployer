@@ -168,14 +168,28 @@ Split the E2E testing into two independent test suites:
 - [Virtualization Support Research](https://github.com/josecelano/github-actions-virtualization-support) - Comprehensive virtualization tools testing
 - [Docker-in-VM Testing](https://github.com/josecelano/test-docker-install-inside-vm-in-runner) - Specific network connectivity issue documentation
 
-#### B.2: Create Docker configuration
+#### B.2: Create Docker configuration ✅ COMPLETED
 
-- [ ] **Task**: Create `docker/test-ubuntu/Dockerfile`
-  - Ubuntu 24.04 base image
-  - Cloud-init installation (if feasible) or alternative init system
-  - SSH server configuration for Ansible connectivity
-  - Network configuration for container accessibility
-  - Required system dependencies
+- [x] **Task**: Create `docker/provisioned-instance/Dockerfile`
+  - Ubuntu 24.04 base image ✅
+  - Supervisor for process management (replaced systemd) ✅
+  - SSH server configuration for Ansible connectivity ✅
+  - Password authentication with SSH key support ✅
+  - Network configuration for container accessibility ✅
+  - Required system dependencies ✅
+
+**Architecture Decision**: Named `provisioned-instance` to represent the deployment phase state:
+
+- **Current**: `docker/provisioned-instance/` - Post-provision, pre-configuration state
+- **Future**: `docker/configured-instance/` - Post-configuration state
+- **Future**: `docker/released-instance/` - Post-application deployment state
+
+**Implementation Notes**:
+
+- Used supervisor instead of systemd for container-friendly process management
+- Password authentication (`torrust:torrust123`) for initial access
+- E2E tests copy SSH public key during setup phase
+- No privileged mode required
 
 #### B.3: Create configuration-only binary
 

@@ -2,85 +2,137 @@
 
 ## Overview
 
-This document outlines the testing strategy for Ansible playbooks in the Torrust Tracker Deploy project. Based on comprehensive research comparing Docker containers vs LXD containers, we have established an LXD-exclusive approach for all Ansible testing.
+This document outlines the testing strategy for Ansible playbooks in the Torrust Tracker Deploy project. Based on comprehensive research and the implementation of **E2E Test Split Architecture**, we have established a **phase-specific testing approach** that uses both LXD containers and Docker containers optimally for different deployment phases.
 
 ## Updated Strategy (September 2025)
 
-After extensive research and testing (documented in [docker-vs-lxd-ansible-testing.md](docker-vs-lxd-ansible-testing.md)), we have adopted a **single-platform LXD strategy** that prioritizes:
+After extensive research, testing, and architecture evolution, we have adopted a **phase-specific testing strategy** that prioritizes:
 
-- **Completeness**: Full infrastructure and application testing capabilities
-- **Realism**: Production-equivalent environment behavior
-- **Efficiency**: VM reuse for multiple playbook executions
-- **Sequential Testing**: Playbooks executed in deployment order
+- **Phase Separation**: Different deployment phases tested with optimal technologies
+- **Completeness**: Full coverage from infrastructure provisioning to application deployment
+- **Efficiency**: Fast feedback loops where possible, comprehensive testing where necessary
+- **Production Parity**: Test environments that accurately reflect production behavior
 
-## Requirements
+## E2E Test Split Architecture
 
-- Test playbooks like `wait-cloud-init.yml` that require cloud-init execution
-- Support for infrastructure playbooks (Docker installation, firewall setup, etc.)
-- Support for application deployment playbooks (Docker Compose stacks)
-- Test playbook dependencies and integration scenarios in deployment order
-- Each playbook should validate its own pre-conditions and post-conditions
-- Reuse provisioned VMs for efficiency across multiple playbook tests
+### Architecture Overview
 
-## Current Strategy: LXD-Only Approach
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    Ansible Testing Strategy                    │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐              ┌─────────────────────────────┐ │
+│  │ Provision Phase │              │ Configuration Phase         │ │
+│  │                 │              │                             │ │
+│  │ 🖥️  LXD VMs     │              │ 🐳 Docker Containers       │ │
+│  │ 🏗️  OpenTofu    │              │ 📋 Ansible Playbooks       │ │
+│  │ ☁️  Cloud-init   │              │ 🔧 provisioned-instance    │ │
+│  │                 │              │                             │ │
+│  │ Tests:          │              │ Tests:                      │ │
+│  │ • VM creation   │              │ • install-docker.yml        │ │
+│  │ • SSH access    │              │ • install-docker-compose    │ │
+│  │ • User setup    │              │ • update-apt-cache.yml      │ │
+│  │ • Cloud-init ✓  │              │ • Service configuration     │ │
+│  └─────────────────┘              └─────────────────────────────┘ │
+│         ~20-30s                           ~3-5s per playbook      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Requirements by Deployment Phase
+
+### Provision Phase Testing (LXD VMs)
+
+- ✅ Test VM provisioning and infrastructure creation
+- ✅ Validate cloud-init execution and completion
+- ✅ Verify SSH access and user setup
+- ✅ Confirm network connectivity and basic system state
+- ✅ Test OpenTofu infrastructure management
+
+### Configuration Phase Testing (Docker Containers)
+
+- ✅ Test Ansible playbooks like `install-docker.yml`, `install-docker-compose.yml`
+- ✅ Validate software installation and system configuration
+- ✅ Support Docker-in-Docker scenarios for application deployment
+- ✅ Test service management and configuration
+- ✅ Verify package downloads and dependency installation
+
+## Current Strategy: Phase-Specific Testing Approach
 
 ### Core Decision
 
-**Use LXD containers exclusively** for all Ansible playbook testing based on research findings that demonstrate:
+**Use optimal technology per deployment phase** based on research findings and E2E test split architecture:
 
-1. ✅ **Complete functionality**: Supports all required features (systemd, Docker daemon, networking)
-2. ✅ **Real testing**: Can validate actual service deployment and functionality
-3. ✅ **Production equivalence**: Behaves like actual cloud VMs
-4. ✅ **Reasonable performance**: ~17s setup + ~5s per playbook is acceptable
-5. ✅ **Consistent workflow**: Single testing approach reduces complexity
-6. ✅ **CI/CD ready**: Proven to work in GitHub Actions
+1. **Provision Phase**: **LXD VMs** for complete infrastructure testing
 
-### Testing Workflow
+   - ✅ Full VM provisioning and cloud-init testing
+   - ✅ Real networking and system-level capabilities
+   - ✅ Production-equivalent environment behavior
+   - ⏱️ ~20-30s setup time (acceptable for comprehensive testing)
 
-#### 1. VM Provisioning and Reuse
+2. **Configuration Phase**: **Docker Containers** for fast Ansible testing
+   - ✅ Fast feedback loops (~3-5s setup time)
+   - ✅ Docker-in-Docker support for application deployment
+   - ✅ Sufficient system capabilities for software installation
+   - ✅ Reliable GitHub Actions compatibility
 
-```bash
-# Provision LXD container once
-cd build/tofu/lxd
-tofu apply -auto-approve  # ~17.6s initial setup
+### Testing Workflows
 
-# Reuse the same VM for multiple playbook tests
-cd ../../ansible
-```
-
-#### 2. Sequential Playbook Execution
-
-Execute playbooks in the order they would run during actual deployment:
+#### 1. Provision Phase Testing (e2e-provision-tests)
 
 ```bash
-# Infrastructure Setup (in dependency order)
-time ansible-playbook wait-cloud-init.yml           # ~2.5s
-time ansible-playbook install-docker.yml            # ~27.7s
-time ansible-playbook install-docker-compose.yml    # ~5.6s
-time ansible-playbook setup-firewall.yml            # ~3.5s
+# Test infrastructure provisioning with LXD VMs
+cargo run --bin e2e-provision-tests
 
-# Application Deployment
-time ansible-playbook deploy-docker-stack.yml       # ~22.6s
+# What this tests:
+# - VM creation via OpenTofu + LXD
+# - Cloud-init completion and user setup
+# - SSH access and connectivity
+# - Basic system state validation
+# Time: ~20-30 seconds
 ```
 
-#### 3. VM Cleanup (When Needed)
+#### 2. Configuration Phase Testing (e2e-config-tests)
 
 ```bash
-cd build/tofu/lxd
-tofu destroy -auto-approve  # Clean slate for next test cycle
+# Test software installation with Docker containers
+cargo run --bin e2e-config-tests
+
+# What this tests:
+# - Container creation (provisioned-instance state)
+# - Ansible playbook execution:
+#   - install-docker.yml
+#   - install-docker-compose.yml
+#   - update-apt-cache.yml
+# - Service configuration and validation
+# Time: ~10-15 seconds total
 ```
 
-### Benefits of This Approach
+#### 3. Parallel Execution
 
-- **Realistic Testing**: Full systemd, cloud-init, and Docker daemon support
-- **Dependency Validation**: Tests actual playbook execution chains
-- **Performance Efficiency**: VM reuse eliminates repeated provisioning overhead
-- **Integration Testing**: Validates that playbooks work together as intended
-- **Production Parity**: Matches actual cloud deployment environment
+Both test suites can run independently and in parallel:
+
+```bash
+# Run both test phases simultaneously
+cargo run --bin e2e-provision-tests &
+cargo run --bin e2e-config-tests &
+wait
+```
+
+### Benefits of Phase-Specific Approach
+
+- **Optimal Performance**: Fast feedback for configuration changes (~3-5s), comprehensive testing for infrastructure (~20-30s)
+- **Better Isolation**: Infrastructure issues don't block configuration testing and vice versa
+- **Parallel Execution**: Both phases can run simultaneously, reducing total test time
+- **Technology Fit**: Each phase uses the most appropriate technology for its requirements
+- **Easier Debugging**: Clear separation makes it easier to identify whether issues are infrastructure or configuration related
+- **CI/CD Optimized**: Docker containers avoid GitHub Actions networking issues while LXD provides complete VM testing
 
 ## Previously Evaluated Alternatives
 
-> **Note**: The following alternatives were extensively researched but determined to be insufficient for our comprehensive testing needs. See [Decision Record: Rejecting Docker for Ansible Testing](../decisions/docker-testing-rejection.md) for detailed analysis.
+> **Note**: The following alternatives were extensively researched and informed our final **phase-specific approach**. See decision records:
+>
+> - [Docker Testing Rejection](../decisions/docker-testing-rejection.md) - Original rejection (now partially superseded)
+> - [Docker Testing Revision](../decisions/docker-testing-revision.md) - Updated decision for configuration phase
 
 ### 1. Molecule with Docker Driver
 
@@ -187,48 +239,73 @@ tofu destroy -auto-approve  # Clean slate for next test cycle
 
 ## Selected Strategy
 
-### LXD-Only Testing Strategy
+### Phase-Specific Testing Architecture
 
-Based on comprehensive research and performance testing, we have implemented a **single-platform LXD strategy** that provides:
+Based on comprehensive research, performance testing, and E2E test split implementation, we have adopted a **phase-specific testing strategy** that provides:
 
 #### Core Components
 
-1. **Single VM Reuse**: Provision one LXD container and reuse for multiple playbook tests
-2. **Sequential Execution**: Run playbooks in deployment order to test real integration scenarios
-3. **Complete Environment**: Full systemd, cloud-init, Docker daemon, and networking support
-4. **Production Parity**: LXD containers behave identically to cloud VMs
+1. **Provision Phase (LXD VMs)**:
+
+   - Complete infrastructure provisioning testing
+   - Cloud-init and VM lifecycle validation
+   - OpenTofu infrastructure management testing
+   - Production-equivalent environment behavior
+
+2. **Configuration Phase (Docker Containers)**:
+
+   - Fast Ansible playbook testing
+   - Software installation and configuration validation
+   - Docker-in-Docker capability for application deployment
+   - Efficient CI/CD pipeline integration
+
+3. **Container Architecture**: `docker/provisioned-instance/`
+   - Ubuntu 24.04 LTS base (matches production VMs)
+   - SSH server via supervisor (not systemd)
+   - Password + SSH key authentication support
+   - Ready state for configuration phase testing
 
 #### Implementation Details
 
-**Base Infrastructure**:
+**Provision Phase Testing**:
 
 - Ubuntu 24.04 LXD containers with cloud-init support
+- OpenTofu infrastructure management
 - SSH access using fixtures/testing_rsa keys
-- OpenTofu for consistent VM provisioning
+- VM creation and basic system validation
 
-**Test Execution Pattern**:
+**Configuration Phase Testing**:
+
+- `docker/provisioned-instance/` container simulation
+- Ansible connectivity via SSH (password + key auth)
+- Docker container lifecycle management
+- Software installation and service configuration
+
+**Test Execution Patterns**:
 
 ```bash
-# One-time setup
-cd build/tofu/lxd && tofu apply -auto-approve
+# Provision phase (runs independently)
+cargo run --bin e2e-provision-tests
+# - VM creation ~20-30s
+# - Cloud-init validation
+# - SSH connectivity verification
+# - Cleanup and resource management
 
-# Sequential playbook testing (reusing same VM)
-cd ../../ansible
-ansible-playbook wait-cloud-init.yml
-ansible-playbook install-docker.yml
-ansible-playbook install-docker-compose.yml
-ansible-playbook setup-firewall.yml
-ansible-playbook deploy-docker-stack.yml
-
-# Cleanup when needed
-cd ../tofu/lxd && tofu destroy -auto-approve
+# Configuration phase (runs independently)
+cargo run --bin e2e-config-tests
+# - Container creation ~2-3s
+# - SSH key setup via password auth
+# - Ansible playbook execution
+# - Software installation validation
+# - Container cleanup
 ```
 
 **Performance Metrics**:
 
-- Initial VM provisioning: ~17.6 seconds
-- Playbook execution: ~3-28 seconds per playbook
-- Total integration test cycle: ~60-80 seconds (all playbooks)
+- Provision phase: ~20-30 seconds (comprehensive infrastructure testing)
+- Configuration phase: ~10-15 seconds (fast configuration validation)
+- **Total parallel execution**: ~20-30 seconds (both phases simultaneously)
+- **Significant improvement**: 50-60% faster than sequential LXD-only approach
 
 #### Built-in Validation Requirements
 
@@ -241,35 +318,62 @@ Each playbook must include:
 
 ## Rationale for LXD-Only Approach
 
-## Rationale for LXD-Only Approach
+## Rationale for Phase-Specific Approach
 
-This strategy addresses our specific needs while avoiding the limitations discovered in alternative approaches:
+This strategy addresses our specific needs by leveraging the best aspects of both technologies while avoiding their limitations:
 
-- **Complete Testing Coverage**: Unlike Docker containers, LXD supports full systemd services, Docker daemon operations, and complex networking scenarios
-- **Production Equivalence**: LXD containers behave identically to cloud VMs, ensuring test results accurately predict production behavior
-- **Efficient Resource Usage**: VM reuse eliminates the overhead of repeated provisioning while maintaining test isolation through playbook idempotency
-- **Simplified Workflow**: Single testing platform reduces complexity and maintenance overhead
-- **Real Integration Testing**: Sequential playbook execution validates actual deployment scenarios and dependencies
+### Why LXD for Provision Phase
+
+- **Complete VM Testing**: Full cloud-init, networking, and system-level capability testing
+- **Production Equivalence**: LXD containers behave identically to cloud VMs
+- **Infrastructure Focus**: Tests actual VM provisioning and infrastructure management
+- **OpenTofu Integration**: Natural fit for infrastructure-as-code testing
+
+### Why Docker for Configuration Phase
+
+- **Fast Feedback**: ~3-5s setup enables rapid configuration development cycles
+- **Docker-in-Docker**: Proven capability for application deployment testing (research validated)
+- **CI/CD Optimized**: Avoids GitHub Actions networking issues encountered with LXD
+- **Sufficient Capabilities**: Meets all requirements for software installation and configuration testing
+
+### Combined Benefits
+
+- **Optimal Performance**: Fast where possible, comprehensive where necessary
+- **Better Test Isolation**: Infrastructure and configuration issues don't interfere with each other
+- **Parallel Execution**: Significant time savings through concurrent test execution
+- **Technology Appropriateness**: Each phase uses the most suitable technology
+- **Easier Maintenance**: Clear separation of concerns reduces complexity
 
 ## Implementation Status
 
-### Completed
+### Completed ✅
 
-- ✅ LXD infrastructure setup with OpenTofu
-- ✅ SSH key management using fixtures/ directory
-- ✅ Performance benchmarking and optimization
-- ✅ Basic playbook testing (install-docker.yml, setup-firewall.yml)
-- ✅ Application deployment testing (deploy-docker-stack.yml)
+- ✅ **Provision Phase Testing**: `e2e-provision-tests` binary with LXD VM testing
+- ✅ **Docker Container Infrastructure**: `docker/provisioned-instance/` configuration
+- ✅ **SSH Authentication**: Password + SSH key support for container connectivity
+- ✅ **Supervisor Integration**: Container-friendly process management
+- ✅ **Performance Benchmarking**: Validated phase-specific approach benefits
+- ✅ **Decision Documentation**: Comprehensive decision records and architecture docs
 
-### In Progress
+### In Progress 🔄
 
-- 🔄 Standardizing playbook validation patterns
-- 🔄 Creating comprehensive test scenarios
-- 🔄 Documentation of best practices
+- 🔄 **Configuration Phase Testing**: `e2e-config-tests` binary implementation (Phase B.3)
+- 🔄 **Container Lifecycle Management**: Integration with test binary
+- 🔄 **Ansible Playbook Integration**: Testing install-docker.yml, install-docker-compose.yml
+- 🔄 **GitHub Actions Workflow**: CI/CD pipeline for configuration testing
 
-### Next Steps
+### Next Steps 📋
 
-1. **Enhance Existing Playbooks**: Add pre/post-condition validation to all playbooks
-2. **Create Test Scenarios**: Develop standard test cases for different playbook types
-3. **CI/CD Integration**: Implement automated testing in GitHub Actions
-4. **Monitoring and Metrics**: Track test performance and reliability over time
+1. **Complete Phase B.3**: Implement `e2e-config-tests` binary with Docker container integration
+2. **Playbook Validation**: Add comprehensive pre/post-condition checking to all playbooks
+3. **CI/CD Integration**: Implement parallel test execution in GitHub Actions
+4. **Future Container Phases**: Design `configured-instance`, `released-instance` containers
+5. **Monitoring and Metrics**: Track test performance and reliability over time
+
+## Related Documentation
+
+- [E2E Tests Split Plan](../refactors/split-e2e-tests-provision-vs-configuration.md)
+- [Docker Testing Revision Decision](../decisions/docker-testing-revision.md)
+- [Docker Phase Architecture](../decisions/docker-phase-architecture.md)
+- [Docker Configuration Testing Research](./e2e-docker-config-testing.md)
+- [Original Docker Testing Rejection](../decisions/docker-testing-rejection.md) (partially superseded)

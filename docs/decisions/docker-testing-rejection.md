@@ -1,9 +1,14 @@
 # Decision Record: Rejecting Docker Containers for Ansible Testing
 
 **Date**: September 2, 2025  
-**Status**: Accepted  
+**Status**: ⚠️ **Partially Superseded** (September 23, 2025)  
 **Decision Makers**: Infrastructure Team  
-**Related Research**: [Docker vs LXD Ansible Testing Research](../research/docker-vs-lxd-ansible-testing.md)
+**Related Research**: [Docker vs LXD Ansible Testing Research](../research/docker-vs-lxd-ansible-testing.md)  
+**Superseded By**: [Docker Testing Revision](./docker-testing-revision.md)
+
+> **⚠️ Status Update**: This decision has been **partially superseded** by the E2E test split architecture.  
+> Docker containers are now used for **configuration phase testing** while LXD VMs remain for **provisioning phase testing**.  
+> See: [Docker Testing Revision](./docker-testing-revision.md)
 
 ## Context and Problem Statement
 

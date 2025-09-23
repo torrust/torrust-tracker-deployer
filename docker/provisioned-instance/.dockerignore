@@ -1,0 +1,44 @@
+# Docker ignore file for E2E test container builds
+# Exclude unnecessary files to optimize build context
+
+# Target directory (Rust build artifacts)
+target/
+**/target/
+
+# Build directory (generated configurations)
+build/
+
+# Git directory
+.git/
+
+# VS Code directory
+.vscode/
+
+# Documentation (except what's needed)
+docs/
+!docs/research/e2e-docker-config-testing.md
+!docs/refactors/split-e2e-tests-provision-vs-configuration.md
+
+# Examples and fixtures (except SSH keys)
+examples/
+fixtures/
+!fixtures/testing_rsa.pub
+
+# Lock files
+*.lock
+
+# Temporary files
+*.tmp
+*.temp
+
+# Log files
+*.log
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~

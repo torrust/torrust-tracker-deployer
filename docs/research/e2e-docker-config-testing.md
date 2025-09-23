@@ -126,7 +126,7 @@ Since cloud-init is VM-specific, containers need alternative initialization:
 
 ### Phase B.1 Deliverables
 
-1. **Docker Configuration**: Create `docker/test-ubuntu/Dockerfile`
+1. **Docker Configuration**: Create `docker/provisioned-instance/Dockerfile`
 2. **Container Setup**: Ubuntu 24.04 with SSH, systemd, sudo user
 3. **Integration Strategy**: Document testcontainers vs direct Docker approach
 4. **Network Requirements**: Document Ansible connectivity requirements
