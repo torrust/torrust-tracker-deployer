@@ -1,33 +1,23 @@
-# Domain-Driven Module Organization Refactor
+# Layer-Based Architecture Reorganization
 
-**Date**: September 17, 2025  
-**Status**: Future Proposal - Deferred  
+**Date**: September 23, 2025  
+**Status**: In Progress  
 **Type**: Code Organization Refactoring  
-**Decision**: Wait for system evolution before implementation
+**Decision**: Implement simplified layer-based architecture with single bounded context
 
-## 🚫 Implementation Decision
+## 🎯 Updated Strategy
 
-**Decision Date**: September 17, 2025
+**Decision Date**: September 23, 2025
 
-After careful consideration, we have decided to **defer this refactoring** for the following reasons:
+We are implementing a **simplified layer-based architecture** approach focusing on DDD layers but with a **single bounded context** to start. This addresses the immediate naming confusion between command-related modules while establishing a foundation for future domain-driven organization.
 
-1. **System Still Evolving**: The codebase is not yet large enough to justify the effort
-2. **More Commands Coming**: Need to implement additional commands to better understand patterns
-3. **Wait and See Approach**: Let the system grow organically to validate the proposed structure
-4. **Risk vs Benefit**: Current organization is working well, refactoring effort may not be justified yet
-5. **Future Reevaluation**: Will revisit this proposal when we have more commands and functionality
+## 📋 Rationale for Simplified Approach
 
-This document remains as a **reference proposal** for future consideration when the system has grown significantly.
-
-## 🔄 Reevaluation Criteria
-
-This proposal should be reconsidered when:
-
-- [ ] We have implemented 5+ additional commands
-- [ ] The codebase reaches 150+ Rust files
-- [ ] New contributor feedback indicates navigation difficulties
-- [ ] Cross-module dependencies become problematic
-- [ ] Domain boundaries become clearer through usage patterns
+1. **Immediate Problem**: Resolve naming confusion between `command.rs`, `command_wrappers`, and `commands`
+2. **Layer Clarity**: Establish clear Infrastructure and Application layer separation
+3. **Incremental Progress**: Take first step toward DDD without over-architecting
+4. **Single Context**: Avoid premature bounded context separation until patterns emerge
+5. **Foundation Building**: Create structure that can evolve into full DDD when needed
 
 ## 🎯 Original Objective
 
@@ -59,18 +49,11 @@ The project already demonstrates several best practices:
 - **External Tool Integrations**: 4 (OpenTofu, Ansible, LXD, SSH)
 - **Step Categories**: 7 (Infrastructure, System, Software, Validation, Connectivity, Application, Rendering)
 
-## 🏗️ Proposed Organization
+## 🏗️ New Simplified Structure
 
-### Design Principles
+### Phase 1: Layer-Based Organization (Current Implementation)
 
-1. **Domain-Driven Structure**: Organize by deployment domains rather than technical patterns
-2. **Workflow Alignment**: Structure mirrors actual deployment workflow
-3. **Bounded Contexts**: Clear ownership and responsibility per domain
-4. **Discoverability**: Intuitive navigation for new contributors
-5. **Minimal Cross-Dependencies**: Related functionality co-located
-6. **Single Responsibility**: Each module has one clear purpose
-
-### New Structure
+We start with a clean layer-based architecture using DDD layers but within a single bounded context:
 
 ```text
 src/
@@ -79,299 +62,140 @@ src/
 ├── bin/
 │   ├── e2e_tests.rs
 │   └── linter.rs
-├── core/                           # Core application infrastructure
+├── infrastructure/                 # Infrastructure Layer (DDD)
 │   ├── mod.rs
-│   ├── config/
-│   ├── logging.rs
-│   ├── container.rs
-│   └── command.rs
-├── domains/                        # Domain-driven organization
-│   ├── mod.rs
-│   ├── infrastructure/             # Everything related to infrastructure
-│   │   ├── mod.rs
-│   │   ├── provisioning/           # Current: commands/provision + steps/infrastructure
-│   │   │   ├── mod.rs
-│   │   │   ├── commands.rs
-│   │   │   ├── initialize.rs
-│   │   │   ├── plan.rs
-│   │   │   ├── apply.rs
-│   │   │   └── instance_info.rs
-│   │   ├── templates/              # Current: steps/rendering + tofu/template
-│   │   │   ├── mod.rs
-│   │   │   ├── opentofu.rs
-│   │   │   └── cloud_init.rs
-│   │   └── validation.rs           # Current: steps/validation (infra parts)
-│   ├── configuration/              # Everything related to system configuration
-│   │   ├── mod.rs
-│   │   ├── management/             # Current: commands/configure + parts of steps
-│   │   │   ├── mod.rs
-│   │   │   ├── commands.rs
-│   │   │   └── orchestration.rs
-│   │   ├── templates/              # Current: ansible/template + template/wrappers/ansible
-│   │   │   ├── mod.rs
-│   │   │   ├── inventory.rs
-│   │   │   └── playbooks.rs
-│   │   ├── connectivity/           # Current: steps/connectivity
-│   │   │   ├── mod.rs
-│   │   │   └── ssh_wait.rs
-│   │   └── system/                 # Current: steps/system
-│   │       ├── mod.rs
-│   │       └── cloud_init.rs
-│   ├── software/                   # Everything related to software management
-│   │   ├── mod.rs
-│   │   ├── installation/           # Current: steps/software
-│   │   │   ├── mod.rs
-│   │   │   ├── docker.rs
-│   │   │   └── docker_compose.rs
-│   │   └── validation/             # Current: steps/validation (software parts)
-│   │       ├── mod.rs
-│   │       ├── docker.rs
-│   │       └── docker_compose.rs
-│   ├── application/                # Future application deployment domain
-│   │   ├── mod.rs
-│   │   ├── deployment/             # Current: steps/application (future)
-│   │   └── lifecycle/
-│   └── testing/                    # Everything related to testing and validation
+│   ├── executor.rs                 # Current: command.rs - low-level command execution
+│   └── adapters/                   # Current: command_wrappers/ - external tool adapters
 │       ├── mod.rs
-│       ├── commands/               # Current: commands/test
-│       ├── e2e/                    # Current: e2e/
-│       └── validation/             # Cross-cutting validation concerns
-├── integrations/                   # External tool integrations
+│       ├── ansible.rs
+│       ├── lxd/
+│       ├── opentofu/
+│       └── ssh/
+├── application/                    # Application Layer (DDD)
 │   ├── mod.rs
-│   ├── ansible/                    # Current: command_wrappers/ansible + ansible/
-│   │   ├── mod.rs
-│   │   ├── client.rs
-│   │   └── templates.rs
-│   ├── opentofu/                   # Current: command_wrappers/opentofu + tofu/
-│   │   ├── mod.rs
-│   │   ├── client.rs
-│   │   └── json_parser.rs
-│   ├── lxd/                        # Current: command_wrappers/lxd
-│   │   ├── mod.rs
-│   │   ├── client.rs
-│   │   ├── instance/
-│   │   └── json_parser.rs
-│   └── ssh/                        # Current: command_wrappers/ssh
+│   └── commands/                   # Current: commands/ - high-level application commands
 │       ├── mod.rs
-│       ├── client.rs
-│       ├── connection.rs
-│       └── credentials.rs
-├── remote_operations/              # Current: remote_actions (more descriptive name)
-│   ├── mod.rs
-│   ├── cloud_init.rs
-│   ├── docker.rs
-│   └── docker_compose.rs
-└── shared/                         # Shared utilities and templates
-    ├── mod.rs
-    ├── templates/                  # Current: template/ (core engine)
-    │   ├── mod.rs
-    │   ├── engine.rs
-    │   ├── file.rs
-    │   ├── file_ops.rs
-    │   └── embedded.rs
-    └── command_execution/          # Current: command.rs utilities
-        └── mod.rs
+│       ├── configure.rs
+│       ├── provision.rs
+│       └── test.rs
+├── domain/                         # Domain Layer (kept minimal for now)
+│   └── mod.rs
+└── [other existing modules remain unchanged...]
+    ├── steps/
+    ├── remote_actions/
+    ├── template/
+    ├── config/
+    ├── e2e/
+    ├── ansible/
+    └── tofu/
 ```
 
-### Module Mapping
+### Benefits of This Approach
 
-| Current Location             | New Location                                                           | Rationale                              |
-| ---------------------------- | ---------------------------------------------------------------------- | -------------------------------------- |
-| `src/commands/provision.rs`  | `src/domains/infrastructure/provisioning/commands.rs`                  | Infrastructure domain ownership        |
-| `src/commands/configure.rs`  | `src/domains/configuration/management/commands.rs`                     | Configuration domain ownership         |
-| `src/commands/test.rs`       | `src/domains/testing/commands/`                                        | Testing domain ownership               |
-| `src/steps/infrastructure/*` | `src/domains/infrastructure/provisioning/`                             | Co-locate with infrastructure commands |
-| `src/steps/software/*`       | `src/domains/software/installation/`                                   | Software domain ownership              |
-| `src/steps/validation/*`     | Split between respective domains                                       | Domain-specific validation             |
-| `src/command_wrappers/*`     | `src/integrations/`                                                    | Clear external tool separation         |
-| `src/ansible/*`              | `src/integrations/ansible/` + `src/domains/configuration/templates/`   | Split client vs templates              |
-| `src/tofu/*`                 | `src/integrations/opentofu/` + `src/domains/infrastructure/templates/` | Split client vs templates              |
-| `src/template/*`             | `src/shared/templates/`                                                | Shared utility                         |
-| `src/remote_actions/*`       | `src/remote_operations/`                                               | More descriptive name                  |
+1. **Immediate Naming Clarity**: No more confusion between command execution, tool adapters, and application commands
+2. **Layer Separation**: Clear Infrastructure vs Application layer boundaries
+3. **DDD Foundation**: Establishes architectural layers for future DDD evolution
+4. **Minimal Disruption**: Most modules remain unchanged, only reorganizing the problematic areas
+5. **Incremental Evolution**: Can add domain organization later without major restructuring
 
-## 📈 Benefits
+### Module Mapping for Phase 1
 
-### For New Contributors
+| Current Location        | New Location                     | Rationale                          |
+| ----------------------- | -------------------------------- | ---------------------------------- |
+| `src/command.rs`        | `src/infrastructure/executor.rs` | Low-level infrastructure concern   |
+| `src/command_wrappers/` | `src/infrastructure/adapters/`   | External tool integration adapters |
+| `src/commands/`         | `src/application/commands/`      | High-level application commands    |
 
-1. **Intuitive Navigation**: Working on infrastructure? Look in `domains/infrastructure/`
-2. **Clear Boundaries**: Each domain has obvious ownership and scope
-3. **Workflow Understanding**: Structure matches deployment process
-4. **Reduced Context Switching**: Related functionality co-located
+### Future Evolution Path (Phase 2+)
 
-### For Maintainers
+Once this layer foundation is established and patterns become clearer, we can evolve toward full DDD:
 
-1. **Reduced Cross-Dependencies**: Domain boundaries reduce scattered imports
-2. **Clearer Architecture**: Separation of business logic from external integrations
-3. **Easier Testing**: Domain-specific test organization
-4. **Future Scalability**: Easy to add new domains without restructuring
+- Move domain-specific logic from `steps/` into `domain/` modules
+- Organize domain modules by bounded contexts (infrastructure, configuration, software, etc.)
+- Refactor remaining modules to align with domain boundaries
+- Maintain clear separation between layers
 
-### For the Codebase
+## 📈 Benefits of Simplified Approach
 
-1. **Better Cohesion**: Related functionality grouped together
-2. **Looser Coupling**: Clear interfaces between domains
-3. **Improved Discoverability**: Less time searching for relevant code
-4. **Domain Expertise**: Contributors can focus on specific domains
+### Immediate Benefits
+
+1. **Naming Clarity**: Resolves confusion between command execution, tool adapters, and application commands
+2. **Layer Separation**: Clear Infrastructure vs Application boundaries following DDD principles
+3. **Reduced Complexity**: Focuses on high-impact reorganization without over-architecting
+4. **Easy Navigation**: Contributors know where to find infrastructure vs application logic
+5. **Minimal Disruption**: Most existing code remains unchanged
+
+### Foundation for Future Growth
+
+1. **DDD Ready**: Establishes layer foundation for domain-driven evolution
+2. **Scalable Structure**: Easy to add domain modules when patterns become clear
+3. **Clean Architecture**: Proper separation of concerns across architectural layers
+4. **Incremental Approach**: Can evolve into full bounded contexts gradually
 
 ## 🚧 Implementation Plan
 
-### Phase 1: Foundation Setup
+### Phase 1: Layer-Based Architecture Foundation
 
 **Estimated Time**: 2-3 hours
 
-- [ ] **1.1** Create new directory structure
+- [ ] **1.1** Create layer directories
 
-  - [ ] Create `src/core/` directory
-  - [ ] Create `src/domains/` with subdirectories
-  - [ ] Create `src/integrations/` with subdirectories
-  - [ ] Create `src/remote_operations/` directory
-  - [ ] Create `src/shared/` directory
+  - [ ] Create `src/infrastructure/` directory
+  - [ ] Create `src/infrastructure/adapters/` directory
+  - [ ] Create `src/application/` directory
+  - [ ] Create `src/application/commands/` directory
+  - [ ] Create `src/domain/` directory (minimal, for future use)
 
-- [ ] **1.2** Move core infrastructure files
+- [ ] **1.2** Move infrastructure layer files
 
-  - [ ] Move `src/config/` → `src/core/config/`
-  - [ ] Move `src/logging.rs` → `src/core/logging.rs`
-  - [ ] Move `src/container.rs` → `src/core/container.rs`
-  - [ ] Move `src/command.rs` → `src/core/command.rs`
-  - [ ] Update `src/core/mod.rs` with re-exports
+  - [ ] Move `src/command.rs` → `src/infrastructure/executor.rs`
+  - [ ] Move `src/command_wrappers/` → `src/infrastructure/adapters/`
+  - [ ] Update `src/infrastructure/mod.rs` with re-exports
 
-- [ ] **1.3** Move shared utilities
-  - [ ] Move `src/template/` → `src/shared/templates/`
-  - [ ] Move command execution utilities → `src/shared/command_execution/`
-  - [ ] Update `src/shared/mod.rs` with re-exports
+- [ ] **1.3** Move application layer files
 
-### Phase 2: External Integrations
+  - [ ] Move `src/commands/` → `src/application/commands/`
+  - [ ] Update `src/application/mod.rs` with re-exports
 
-**Estimated Time**: 3-4 hours
+- [ ] **1.4** Update imports and references
 
-- [ ] **2.1** Move external tool wrappers
-
-  - [ ] Move `src/command_wrappers/ansible.rs` → `src/integrations/ansible/client.rs`
-  - [ ] Move `src/command_wrappers/opentofu/` → `src/integrations/opentofu/`
-  - [ ] Move `src/command_wrappers/lxd/` → `src/integrations/lxd/`
-  - [ ] Move `src/command_wrappers/ssh/` → `src/integrations/ssh/`
-  - [ ] Update `src/integrations/mod.rs` with re-exports
-
-- [ ] **2.2** Consolidate template integrations
-  - [ ] Move `src/ansible/template/` → `src/integrations/ansible/templates.rs`
-  - [ ] Move `src/tofu/template/` → `src/integrations/opentofu/templates.rs`
-  - [ ] Merge template functionality with clients
-
-### Phase 3: Domain Organization
-
-**Estimated Time**: 4-5 hours
-
-- [ ] **3.1** Infrastructure domain
-
-  - [ ] Move `src/commands/provision.rs` → `src/domains/infrastructure/provisioning/commands.rs`
-  - [ ] Move `src/steps/infrastructure/` → `src/domains/infrastructure/provisioning/`
-  - [ ] Move rendering steps → `src/domains/infrastructure/templates/`
-  - [ ] Extract infrastructure validation → `src/domains/infrastructure/validation.rs`
-  - [ ] Update `src/domains/infrastructure/mod.rs`
-
-- [ ] **3.2** Configuration domain
-
-  - [ ] Move `src/commands/configure.rs` → `src/domains/configuration/management/commands.rs`
-  - [ ] Move `src/steps/connectivity/` → `src/domains/configuration/connectivity/`
-  - [ ] Move `src/steps/system/` → `src/domains/configuration/system/`
-  - [ ] Move Ansible templates → `src/domains/configuration/templates/`
-  - [ ] Update `src/domains/configuration/mod.rs`
-
-- [ ] **3.3** Software domain
-  - [ ] Move `src/steps/software/` → `src/domains/software/installation/`
-  - [ ] Extract software validation → `src/domains/software/validation/`
-  - [ ] Update `src/domains/software/mod.rs`
-
-### Phase 4: Testing Domain
-
-**Estimated Time**: 2-3 hours
-
-- [ ] **4.1** Testing consolidation
-  - [ ] Move `src/commands/test.rs` → `src/domains/testing/commands/`
-  - [ ] Move `src/e2e/` → `src/domains/testing/e2e/`
-  - [ ] Organize cross-cutting validation → `src/domains/testing/validation/`
-  - [ ] Update `src/domains/testing/mod.rs`
-
-### Phase 5: Remote Operations & Cleanup
-
-**Estimated Time**: 2-3 hours
-
-- [ ] **5.1** Remote operations
-
-  - [ ] Move `src/remote_actions/` → `src/remote_operations/`
-  - [ ] Update module name references
-  - [ ] Update `src/remote_operations/mod.rs`
-
-- [ ] **5.2** Update imports and references
-  - [ ] Update all `use crate::` statements throughout codebase
+  - [ ] Update all `use crate::command` → `use crate::infrastructure::executor`
+  - [ ] Update all `use crate::command_wrappers` → `use crate::infrastructure::adapters`
+  - [ ] Update all `use crate::commands` → `use crate::application::commands`
   - [ ] Update `src/lib.rs` with new module structure
-  - [ ] Update documentation references
 
-### Phase 6: Validation & Testing
-
-**Estimated Time**: 2-3 hours
-
-- [ ] **6.1** Compilation and testing
+- [ ] **1.5** Validation and testing
 
   - [ ] Run `cargo build` and fix compilation errors
   - [ ] Run `cargo test` and fix test issues
   - [ ] Run `cargo run --bin linter all` and fix linting issues
   - [ ] Run `cargo run --bin e2e-tests` for integration verification
 
-- [ ] **6.2** Documentation updates
-  - [ ] Update `docs/codebase-architecture.md` with new structure
-  - [ ] Update module documentation (`//!` comments) with new organization
-  - [ ] Update README.md if needed
+### Future Phases (Deferred)
 
-### Phase 7: Final Verification
-
-**Estimated Time**: 1-2 hours
-
-- [ ] **7.1** Complete testing
-
-  - [ ] Verify all functionality works as before
-  - [ ] Check that all pre-commit checks pass
-  - [ ] Validate E2E tests pass completely
-
-- [ ] **7.2** Documentation finalization
-  - [ ] Mark refactoring as complete
-  - [ ] Document any lessons learned or additional improvements
+**Phase 2+**: Domain organization within layers, bounded contexts, and full DDD structure - to be planned when patterns become clearer and system grows.
 
 ## 📊 Progress Tracking
 
-### Overall Progress: **DEFERRED** - Not Implementing
+### Phase 1 Progress: **In Progress**
 
-| Phase                                | Status      | Completion | Notes                        |
-| ------------------------------------ | ----------- | ---------- | ---------------------------- |
-| Phase 1: Foundation Setup            | ❌ Deferred | N/A        | Waiting for system evolution |
-| Phase 2: External Integrations       | ❌ Deferred | N/A        | Waiting for system evolution |
-| Phase 3: Domain Organization         | ❌ Deferred | N/A        | Waiting for system evolution |
-| Phase 4: Testing Domain              | ❌ Deferred | N/A        | Waiting for system evolution |
-| Phase 5: Remote Operations & Cleanup | ❌ Deferred | N/A        | Waiting for system evolution |
-| Phase 6: Validation & Testing        | ❌ Deferred | N/A        | Waiting for system evolution |
-| Phase 7: Final Verification          | ❌ Deferred | N/A        | Waiting for system evolution |
+| Step                           | Status         | Completion | Notes               |
+| ------------------------------ | -------------- | ---------- | ------------------- |
+| 1.1: Create layer directories  | ⏳ Not Started | 0%         | Ready to start      |
+| 1.2: Move infrastructure files | ⏳ Not Started | 0%         | Depends on 1.1      |
+| 1.3: Move application files    | ⏳ Not Started | 0%         | Depends on 1.1      |
+| 1.4: Update imports/references | ⏳ Not Started | 0%         | Depends on 1.2, 1.3 |
+| 1.5: Validation and testing    | ⏳ Not Started | 0%         | Final validation    |
 
-**Legend**: ⏳ Not Started | 🔄 In Progress | ✅ Complete | ❌ Deferred
+**Legend**: ⏳ Not Started | 🔄 In Progress | ✅ Complete
 
-## 🔄 Current Status: **DEFERRED**
+## 🔄 Current Status: **Starting Implementation**
 
-**Decision**: This refactoring has been **postponed** until the system grows and evolves further.
+**Decision**: Beginning with simplified layer-based architecture approach.
 
-**Rationale**:
+**Next Steps**:
 
-1. The current codebase size (86 files) does not yet justify the refactoring effort
-2. Need to implement more commands to better understand emerging patterns
-3. Current organization is working well for the existing functionality
-4. Will revisit when we have clear evidence that the reorganization provides significant value
-
-## 📝 Historical Context
-
-- **Proposal Created**: September 17, 2025
-- **Analysis Completed**: Full current state analysis and proposed structure documented
-- **Implementation Plan**: Complete 7-phase plan with 15-20 hour estimate
-- **Decision**: Defer implementation pending system evolution
-
-This document serves as a **reference architecture proposal** for future consideration when the codebase has grown significantly and patterns have emerged more clearly.
-
----
-
-**Status**: Proposal archived for future consideration.
+1. Commit this updated plan
+2. Implement Phase 1 reorganization
+3. Validate all functionality remains intact
+4. Plan future domain-driven evolution based on emerging patterns
