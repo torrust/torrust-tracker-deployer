@@ -22,16 +22,16 @@ pub fn is_command_available(command: &str) -> bool {
 ///
 /// Returns an error if npm is not available or if the installation fails.
 pub fn install_npm_tool(tool: &str) -> Result<()> {
-    info!("Installing {}...", tool);
+    info!("Installing {tool}...");
 
     let output = Command::new("npm").args(["install", "-g", tool]).output()?;
 
     if output.status.success() {
-        info!("{} installed successfully", tool);
+        info!("{tool} installed successfully");
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        error!("Failed to install {}: {}", tool, stderr);
-        Err(anyhow::anyhow!("Failed to install {}", tool))
+        error!("Failed to install {tool}: {stderr}");
+        Err(anyhow::anyhow!("Failed to install {tool}"))
     }
 }
