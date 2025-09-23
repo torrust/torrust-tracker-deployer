@@ -511,6 +511,7 @@ mod tests {
     }
 
     // Error Handling Tests
+    #[cfg(unix)]
     #[tokio::test]
     async fn it_should_fail_when_directory_creation_denied() {
         // Create a read-only directory to simulate permission denied
@@ -593,6 +594,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn it_should_fail_when_file_copy_permission_denied() {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");

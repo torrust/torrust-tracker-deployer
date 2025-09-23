@@ -388,6 +388,7 @@ mod tests {
         ));
     }
 
+    #[cfg(unix)]
     #[test]
     fn it_should_fail_when_output_directory_is_readonly() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");

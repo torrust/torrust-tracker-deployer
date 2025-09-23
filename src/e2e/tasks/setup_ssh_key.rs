@@ -16,6 +16,7 @@
 //! to prevent SSH client warnings and ensure secure key handling.
 
 use anyhow::{Context, Result};
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;
 use tracing::info;
