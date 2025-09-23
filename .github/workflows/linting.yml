@@ -11,6 +11,9 @@ jobs:
   linting:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      matrix:
+        toolchain: [stable, nightly]
 
     steps:
       - name: Update
@@ -27,11 +30,8 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          toolchain: ${{ matrix.toolchain }}
           components: clippy, rustfmt
 
-      - name: Build Rust linter
-        run: cargo build --release --bin linter
-
       - name: Run all linters
-        run: ./target/release/linter all
+        run: cargo run --bin linter all
