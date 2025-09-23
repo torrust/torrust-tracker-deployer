@@ -52,6 +52,13 @@ jobs:
           ansible --version
           cargo --version
 
+      - name: Set SSH key permissions
+        run: |
+          # SSH requires private key files to have restrictive permissions (0600)
+          # Git checkout doesn't preserve file permissions, so we need to set them manually
+          chmod 600 fixtures/testing_rsa
+          ls -la fixtures/testing_rsa
+
       - name: Build E2E configuration tests binary
         run: |
           cargo build --bin e2e-config-tests --release
