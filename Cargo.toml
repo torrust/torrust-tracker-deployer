@@ -21,6 +21,10 @@ name = "e2e-tests"
 path = "src/bin/e2e_tests.rs"
 
 [[bin]]
+name = "e2e-provision-tests"
+path = "src/bin/e2e_provision_tests.rs"
+
+[[bin]]
 name = "linter"
 path = "src/bin/linter.rs"
 
