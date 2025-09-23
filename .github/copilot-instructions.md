@@ -33,10 +33,8 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
    ```bash
    # Run cargo machete
    cargo machete
-   # Run linters (recommended - tests both stable & nightly)
+   # Run linters
    ./scripts/lint.sh
-   # Or run linters with single toolchain
-   cargo run --bin linter all
    # Run tests
    cargo test
    # Run e2e tests
@@ -53,13 +51,11 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 
 ## 🧪 Build & Test
 
+- **Lint**: `./scripts/lint.sh` (comprehensive - tests stable & nightly toolchains)
+- **Dependencies**: `cargo machete` (mandatory before commits - no unused dependencies)
 - **Build**: `cargo build`
 - **Test**: `cargo test`
 - **Unit Tests**: When writing unit tests, follow conventions described in [`docs/contributing/testing.md`](../docs/contributing/testing.md)
-- **Lint**: `./scripts/lint.sh` (comprehensive - tests stable & nightly toolchains)
-  - Alternative: `cargo run --bin linter all` (single toolchain)
-  - Options: `./scripts/lint.sh --stable` or `./scripts/lint.sh --nightly`
-- **Dependencies**: `cargo machete` (mandatory before commits - no unused dependencies)
-- **E2E**: `cargo run --bin e2e-tests`
+- **E2E Tests**: `cargo e2e-provision && cargo e2e-config`
 
 Follow the project conventions and ensure all checks pass.

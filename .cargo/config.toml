@@ -1,7 +1,8 @@
 [alias]
-linter = "run --bin linter all"
+lint = "run --bin linter all"
 e2e = "run --bin e2e-tests"
 e2e-provision = "run --bin e2e-provision-tests"
+e2e-config = "run --bin e2e-config-tests"
 cov = "llvm-cov"
 cov-lcov = "llvm-cov --lcov --output-path=./.coverage/lcov.info"
 cov-codecov = "llvm-cov --codecov --output-path=./.coverage/codecov.json"
