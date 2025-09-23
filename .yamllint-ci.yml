@@ -10,5 +10,7 @@ rules:
     allowed-values: ["true", "false", "yes", "no", "on", "off"] # Allow cloud-init and GitHub Actions common values
 
 # Ignore cloud-init files for comment spacing since #cloud-config is a special directive
+# Ignore build directory with generated files
 ignore: |
   **/cloud-init.yml
+  build/**

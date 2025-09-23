@@ -6,15 +6,15 @@
 //!
 //! ## Key Features
 //!
-//! - Docker Compose installation verification
+//! - Docker Compose plugin installation verification
 //! - Version checking and compatibility validation
-//! - Basic functionality testing (e.g., docker-compose version command)
+//! - Basic functionality testing (e.g., docker compose version command)
 //! - Comprehensive error reporting for Docker Compose issues
 //!
 //! ## Validation Process
 //!
 //! The validator performs multiple checks:
-//! - Docker Compose binary availability and version
+//! - Docker Compose plugin availability and version (using modern plugin syntax)
 //! - Integration with Docker engine
 //! - Basic command execution functionality
 //! - Service orchestration capabilities
@@ -67,45 +67,14 @@ impl RemoteAction for DockerComposeValidator {
             "Validating Docker Compose installation"
         );
 
-        // First check if Docker is available (Docker Compose requires Docker)
-        let docker_available =
+        // Check Docker Compose version (using modern plugin syntax)
+        let compose_version =
             self.ssh_client
-                .check_command("docker --version")
+                .execute("docker compose version")
                 .map_err(|source| RemoteActionError::SshCommandFailed {
                     action_name: self.name().to_string(),
                     source,
                 })?;
-
-        if !docker_available {
-            warn!(
-                action = "docker_compose_validation",
-                status = "skipped",
-                reason = "docker_unavailable",
-                "Docker Compose validation skipped"
-            );
-            warn!(
-                action = "docker_compose_validation",
-                note = "dependency_missing",
-                "Docker is not available, so Docker Compose cannot be validated"
-            );
-            warn!(
-                action = "docker_compose_validation",
-                note = "expected_in_ci",
-                "This is expected in CI environments with network limitations"
-            );
-            return Ok(()); // Don't fail the test, just skip validation
-        }
-
-        // Check Docker Compose version
-        let Ok(compose_version) = self.ssh_client.execute("docker-compose --version") else {
-            warn!(
-                action = "docker_compose_validation",
-                status = "not_found",
-                note = "expected_if_docker_skipped",
-                "Docker Compose not found, this is expected if Docker installation was skipped"
-            );
-            return Ok(()); // Don't fail, just note the situation
-        };
 
         let compose_version = compose_version.trim();
         info!(
@@ -146,10 +115,10 @@ impl RemoteAction for DockerComposeValidator {
             return Ok(()); // Don't fail, just skip the functional test
         }
 
-        // Validate docker-compose file
+        // Validate docker-compose file (using modern plugin syntax)
         let validate_success = self
             .ssh_client
-            .check_command("cd /tmp && docker-compose -f test-docker-compose.yml config")
+            .check_command("cd /tmp && docker compose -f test-docker-compose.yml config")
             .map_err(|source| RemoteActionError::SshCommandFailed {
                 action_name: self.name().to_string(),
                 source,

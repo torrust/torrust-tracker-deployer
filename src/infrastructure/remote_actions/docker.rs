@@ -66,25 +66,13 @@ impl RemoteAction for DockerValidator {
         );
 
         // Check Docker version
-        let Ok(docker_version) = self.ssh_client.execute("docker --version") else {
-            warn!(
-                action = "docker_validation",
-                status = "skipped",
-                reason = "ci_network_limitations",
-                "Docker installation validation skipped"
-            );
-            warn!(
-                action = "docker_validation",
-                note = "expected_in_ci",
-                "This is expected in CI environments with network limitations"
-            );
-            warn!(
-                action = "docker_validation",
-                note = "playbook_success",
-                "The playbook ran successfully but Docker installation was skipped"
-            );
-            return Ok(()); // Don't fail the test, just skip validation
-        };
+        let docker_version = self
+            .ssh_client
+            .execute("docker --version")
+            .map_err(|source| RemoteActionError::SshCommandFailed {
+                action_name: self.name().to_string(),
+                source,
+            })?;
 
         let docker_version = docker_version.trim();
         info!(

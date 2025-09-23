@@ -57,10 +57,15 @@ pub async fn provision_docker_infrastructure(
 
     // Step 1: Render Ansible templates with container connection details
     info!("Rendering Ansible templates for container");
-    RenderAnsibleTemplatesStep::new(ansible_template_renderer, ssh_credentials, container_ip)
-        .execute()
-        .await
-        .context("Failed to render Ansible templates for container")?;
+    RenderAnsibleTemplatesStep::new(
+        ansible_template_renderer,
+        ssh_credentials,
+        container_ip,
+        ssh_port,
+    )
+    .execute()
+    .await
+    .context("Failed to render Ansible templates for container")?;
 
     // Note: SSH connectivity check is skipped for Docker containers since
     // the container setup process already ensures SSH is ready and accessible

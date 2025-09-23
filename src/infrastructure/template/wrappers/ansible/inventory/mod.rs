@@ -15,7 +15,8 @@ use std::path::Path;
 use std::str::FromStr;
 
 pub use context::{
-    AnsibleHost, AnsibleHostError, InventoryContext, InventoryContextBuilder, InventoryContextError,
+    AnsibleHost, AnsibleHostError, AnsiblePort, AnsiblePortError, InventoryContext,
+    InventoryContextBuilder, InventoryContextError,
 };
 pub use context::{SshPrivateKeyFile, SshPrivateKeyFileError};
 
@@ -87,9 +88,11 @@ mod tests {
     fn create_inventory_context(host_ip: &str, ssh_key_path: &str) -> InventoryContext {
         let host = AnsibleHost::from_str(host_ip).unwrap();
         let ssh_key = SshPrivateKeyFile::new(ssh_key_path).unwrap();
+        let ssh_port = AnsiblePort::new(22).unwrap(); // Use standard SSH port for tests
         InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(ssh_port)
             .build()
             .unwrap()
     }

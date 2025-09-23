@@ -150,6 +150,7 @@ impl ProvisionCommand {
             Arc::clone(&self.ansible_template_renderer),
             self.ssh_credentials.clone(),
             instance_ip,
+            22, // Default SSH port for VMs
         )
         .execute()
         .await?;

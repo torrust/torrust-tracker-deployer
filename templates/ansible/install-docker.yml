@@ -1,460 +1,75 @@
 ---
-# Ansible Playbook: Install Docker
-# This playbook installs Docker CE on Ubuntu/Debian systems with robust error handling
-#
-# ⚠️  IMPORTANT: APT cache update logic has been moved to update-apt-cache.yml
-# Run the update-apt-cache.yml playbook first if you need to update the package cache.
-# This separation helps avoid CI issues with network-sensitive operations.
-#
-# 🔧 ROBUSTNESS: This playbook includes fallback mechanisms for network issues:
-# - Retries with backoff for network operations
-# - Fallback to system repositories if Docker repo setup fails
-# - Graceful handling of CI environment limitations
-# - Based on known GitHub Actions network issues: https://github.com/actions/runner-images/issues/2890
-#
-# 🔗 RELATIONSHIP WITH INFRASTRUCTURE:
-# 1. This playbook runs after VM provisioning (OpenTofu) and cloud-init completion
-# 2. It prepares the VM for running containerized applications
-# 3. Can be used as part of a larger deployment pipeline for Torrust applications
-# 4. Assumes APT cache is already updated (via update-apt-cache.yml or manually)
-# 5. Will skip Docker installation gracefully if network issues prevent repository access
+# Simplified Docker Installation Playbook for E2E Testing
+# Based on successful Docker-in-Docker installation from:
+# https://github.com/josecelano/test-docker-install-inside-vm-in-runner/blob/main/.github/workflows/test-docker-runtime-install.yml
 
-# Define which hosts this playbook will run on
-- name: Install Docker
-  hosts: all # Run on all hosts defined in inventory.yml
-  gather_facts: true # Collect system information to determine OS and version
-  become: true # Use sudo/root privileges for system-level operations
+- name: Install Docker (Simplified for E2E)
+  hosts: all
+  gather_facts: true
+  become: true
 
-  # Variables that can be customized
   vars:
-    docker_edition: ce # Community Edition
-    docker_package: "docker-{{ docker_edition }}"
-    # Map architecture to Docker repository format
-    docker_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+    # Simple installation approach
+    use_simple_install: true
 
-  # List of tasks to execute in order
   tasks:
-    # NOTE: APT cache update logic has been moved to update-apt-cache.yml
-    # Run that playbook first if you need to update the package cache
-
-    # Task 0a: Display progress message
-    - name: 🐳 Starting Docker installation with robust network handling
+    - name: 🐳 Starting simplified Docker installation
       ansible.builtin.debug:
-        msg:
-          - "🚀 Starting Docker CE installation on {{ inventory_hostname }}"
-          - "📋 This playbook includes 6 fallback mechanisms for network issues"
-          - "⏱️  Configured with {{ network_retries | default(8) }} retries, {{ network_delay | default(45) }}s delays, {{ network_timeout | default(120) }}s timeouts"
-          - "🔗 Will attempt: get_url → curl → aria2 → embedded key → apt repos → snap"
+        msg: "🚀 Installing Docker CE via Ubuntu repositories on {{ inventory_hostname }}"
 
-    # Task 0b: Set robust retry/timeout defaults for all environments
-    - name: Set network operation defaults
-      ansible.builtin.set_fact:
-        network_timeout: 120 # 2 minutes timeout for individual operations
-        network_retries: 8 # High number of retries for flaky networks
-        network_delay: 45 # 45 seconds between retries
-
-    # Task 1: Install required packages for Docker repository with retries
-    - name: Install required packages for Docker repository
+    - name: Update apt cache
       ansible.builtin.apt:
-        name:
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - gnupg
-          - lsb-release
-        state: present
-        force_apt_get: true
-        update_cache: false # Skip cache update - assume it was done separately
-      register: prereq_packages
-      retries: 3
-      delay: 10
-      until: prereq_packages is succeeded
+        update_cache: true
+        cache_valid_time: 3600
       when: ansible_os_family == "Debian"
 
-    # Task 1b: Try to install aria2 (optional - better download utility for flaky networks)
-    - name: Install aria2 (optional - enhanced download utility)
-      ansible.builtin.apt:
-        name:
-          - aria2
-        state: present
-        force_apt_get: true
-        update_cache: false
-      register: aria2_install
-      when: ansible_os_family == "Debian"
-      ignore_errors: true # Don't fail if aria2 is not available
-
-    # Task 2: Add Docker's official GPG key with retries and better error handling
-    - name: 🔑 Starting Docker GPG key installation with fallbacks
-      ansible.builtin.debug:
-        msg:
-          - "🔑 Attempting to download Docker GPG key from download.docker.com"
-          - "🔄 Will try {{ network_retries }} times with {{ network_delay }}s delays if needed"
-          - "⚠️  If download fails, will use embedded GPG key as fallback"
-
-    - name: Create keyrings directory
-      ansible.builtin.file:
-        path: /etc/apt/keyrings
-        state: directory
-        mode: "0755"
-      when: ansible_os_family == "Debian"
-
-    - name: Add Docker's official GPG key (with robust retry/timeout settings)
-      ansible.builtin.get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/keyrings/docker.asc
-        mode: "0644"
-        timeout: "{{ network_timeout }}"
-        force: true
-      register: docker_gpg_key
-      retries: "{{ network_retries }}"
-      delay: "{{ network_delay }}"
-      until: docker_gpg_key is succeeded
-      when: ansible_os_family == "Debian"
-      ignore_errors: true
-
-    # Fallback: Use curl to download GPG key if get_url fails
-    - name: Fallback - Download Docker GPG key with curl (high retry/timeout)
-      ansible.builtin.shell: |
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
-          --connect-timeout {{ network_timeout }} \
-          --max-time {{ network_timeout * 2 }} \
-          --retry {{ network_retries }} \
-          --retry-delay {{ network_delay }} \
-          --retry-connrefused \
-          -o /etc/apt/keyrings/docker.asc
-        chmod 644 /etc/apt/keyrings/docker.asc
-      register: docker_gpg_curl
-      when:
-        - ansible_os_family == "Debian"
-        - docker_gpg_key is failed
-      retries: "{{ network_retries // 2 }}"
-      delay: "{{ network_delay }}"
-      until: docker_gpg_curl.rc == 0
-      ignore_errors: true
-
-    # Enhanced fallback: Use aria2 for more robust downloading (if available)
-    - name: Enhanced fallback - Download Docker GPG key with aria2 (network-resilient)
-      ansible.builtin.shell: |
-        aria2c --file-allocation=none \
-          --retry-wait={{ network_delay }} \
-          --max-tries={{ network_retries }} \
-          --max-connection-per-server=1 \
-          --split=1 \
-          --timeout={{ network_timeout }} \
-          --connect-timeout={{ network_timeout // 2 }} \
-          --dir=/etc/apt/keyrings \
-          --out=docker.asc \
-          --user-agent="aria2/1.36.0" \
-          https://download.docker.com/linux/ubuntu/gpg
-        chmod 644 /etc/apt/keyrings/docker.asc
-      register: docker_gpg_aria2
-      when:
-        - ansible_os_family == "Debian"
-        - docker_gpg_key is failed
-        - docker_gpg_curl is failed
-        - aria2_install is succeeded # Only try aria2 if it was successfully installed
-      retries: 3
-      delay: "{{ network_delay }}"
-      until: docker_gpg_aria2.rc == 0
-      ignore_errors: true
-
-    # Ultimate fallback: Use embedded GPG key (no network required)
-    - name: Ultimate fallback - Create Docker GPG key from embedded content (offline)
-      ansible.builtin.copy:
-        content: |
-          -----BEGIN PGP PUBLIC KEY BLOCK-----
-
-          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
-          YT90qFF93M3v01BbxP+EIY2/9tiIPbrd
-          =0YYh
-          -----END PGP PUBLIC KEY BLOCK-----
-        dest: /etc/apt/keyrings/docker.asc
-        mode: "0644"
-      register: docker_gpg_embedded
-      when:
-        - ansible_os_family == "Debian"
-        - docker_gpg_key is failed
-        - docker_gpg_curl is failed
-        - docker_gpg_aria2 is failed
-      ignore_errors: true
-
-    # Final check: Verify if Docker GPG key exists after all attempts
-    - name: Check if Docker GPG key exists (after all fallback attempts)
-      ansible.builtin.stat:
-        path: /etc/apt/keyrings/docker.asc
-      register: docker_gpg_final_check
-      when: ansible_os_family == "Debian"
-
-    - name: Warning about Docker GPG key failure
-      ansible.builtin.debug:
-        msg: |
-          ⚠️  WARNING: Could not download Docker GPG key due to network issues.
-          This may be due to network connectivity issues or firewall restrictions.
-          Using embedded GPG key as fallback to continue installation.
-      when:
-        - ansible_os_family == "Debian"
-        - not docker_gpg_final_check.stat.exists
-
-    # Task 3: Add Docker repository (only if GPG key exists)
-    - name: Add Docker repository
-      ansible.builtin.apt_repository:
-        repo: "deb [arch={{ docker_arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
-        state: present
-        filename: docker
-        update_cache: true # Need to update cache after adding new repository
-      when:
-        - ansible_os_family == "Debian"
-        - docker_gpg_final_check.stat.exists
-      register: docker_repo_added
-
-    # Task 4: Install Docker packages with retries (only if repository was added)
-    - name: 🐳 Installing Docker packages from official repository
-      ansible.builtin.debug:
-        msg:
-          - "🐳 Installing Docker CE packages from official repository"
-          - "📦 Package: {{ docker_package }}"
-          - "🔄 Will retry up to 3 times if installation fails"
-      when:
-        - ansible_os_family == "Debian"
-        - docker_gpg_final_check.stat.exists
-
-    - name: Install Docker packages
-      ansible.builtin.apt:
-        name:
-          - "{{ docker_package }}"
-          - "{{ docker_package }}-cli"
-          - containerd.io
-          - docker-buildx-plugin
-        state: present
-        force_apt_get: true
-        update_cache: false # Skip cache update - assume repository was updated separately
-      register: docker_install
-      retries: 3
-      delay: 10
-      until: docker_install is succeeded
-      when:
-        - ansible_os_family == "Debian"
-        - docker_gpg_final_check.stat.exists
-        - docker_repo_added is succeeded
-
-    # Alternative: Try to install Docker from default repositories if GPG/repo setup failed
-    - name: Fallback - Install Docker from default repositories
+    - name: Install Docker from Ubuntu repositories
       ansible.builtin.apt:
         name:
           - docker.io
-          - docker-compose
         state: present
-        force_apt_get: true
-        update_cache: false
-      register: docker_fallback_install
-      when:
-        - ansible_os_family == "Debian"
-        - not docker_gpg_final_check.stat.exists
-      ignore_errors: true
+      when: ansible_os_family == "Debian"
+      register: docker_install
 
-    # Snap fallback: Install Docker via snap (more likely to work in minimal containers)
-    - name: Ultimate fallback - Install Docker via snap (container-friendly)
-      ansible.builtin.snap:
-        name: docker
-        state: present
-      register: docker_snap_install
-      when:
-        - ansible_os_family == "Debian"
-        - not docker_gpg_final_check.stat.exists
-        - docker_fallback_install is failed
-      ignore_errors: true
-
-    # Task 4.5: Detect if we're running in a container environment
-    - name: Check if running in a container environment
-      ansible.builtin.stat:
-        path: /.dockerenv
-      register: dockerenv_check
-
-    - name: Check for container environment via systemd
-      ansible.builtin.shell: |
-        if [ -f /proc/1/cgroup ]; then
-          grep -q docker /proc/1/cgroup || grep -q container /proc/1/cgroup
-        else
-          false
-        fi
-      register: container_check
-      failed_when: false
-      changed_when: false
-
-    - name: Set container environment fact
-      ansible.builtin.set_fact:
-        is_container_env: "{{ dockerenv_check.stat.exists or container_check.rc == 0 }}"
-
-    # Task 5: Start and enable Docker service (if Docker was installed and not in container)
     - name: Start and enable Docker service
       ansible.builtin.systemd:
         name: docker
         state: started
         enabled: true
-      when:
-        - docker_install is succeeded or docker_fallback_install is succeeded
-        - not is_container_env
+      when: docker_install is succeeded
+      ignore_errors: true # Ignore in container environments where systemd might not work
 
-    - name: Skip Docker service start in container environment
-      ansible.builtin.debug:
-        msg: "🐳 Skipping Docker service start - detected container environment (systemd not available)"
-      when:
-        - docker_install is succeeded or docker_fallback_install is succeeded
-        - is_container_env
-
-    # Task 5b: Start snap Docker service (if installed via snap and not in container)
-    - name: Start and enable snap Docker service
-      ansible.builtin.systemd:
-        name: snap.docker.dockerd
-        state: started
-        enabled: true
-      when:
-        - docker_snap_install is succeeded
-        - not is_container_env
-      ignore_errors: true
-
-    - name: Skip snap Docker service start in container environment
-      ansible.builtin.debug:
-        msg: "🐳 Skipping snap Docker service start - detected container environment (systemd not available)"
-      when:
-        - docker_snap_install is succeeded
-        - is_container_env
-
-    # Task 6: Add user to docker group (for non-root Docker usage) (if Docker was installed)
     - name: Add user to docker group
       ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
+      when: docker_install is succeeded
       register: user_added_to_docker_group
-      when: docker_install is succeeded or docker_fallback_install is succeeded or docker_snap_install is succeeded
 
-    # Task 7: Verify Docker installation (if Docker was installed)
-    - name: Verify Docker installation
-      ansible.builtin.command: docker --version
-      register: docker_version
-      changed_when: false
-      when: docker_install is succeeded or docker_fallback_install is succeeded or docker_snap_install is succeeded
+    - name: Activate docker group membership immediately
+      ansible.builtin.shell: |
+        newgrp docker << 'EOF'
+        docker --version
+        EOF
+      when: user_added_to_docker_group is changed
       ignore_errors: true
 
-    # Task 8: Display Docker version (if Docker was installed)
-    - name: Display Docker version
-      ansible.builtin.debug:
-        msg: "{{ docker_version.stdout }}"
-      when:
-        - docker_version is defined
-        - docker_version is succeeded
-
-    # Task 9: Display Docker installation failure message
-    - name: Display Docker installation status
-      ansible.builtin.debug:
-        msg: |
-          ⚠️  Docker installation failed after trying multiple methods:
-          1. Official Docker repository (get_url) - {{ 'FAILED' if docker_gpg_key is failed else 'SKIPPED' }}
-          2. Curl download fallback - {{ 'FAILED' if docker_gpg_curl is failed else 'SKIPPED' }}
-          3. Aria2 download fallback - {{ 'FAILED' if docker_gpg_aria2 is failed else 'SKIPPED' if aria2_install is succeeded else 'NOT_AVAILABLE' }}
-          4. Embedded GPG key fallback - {{ 'FAILED' if docker_gpg_embedded is failed else 'SKIPPED' }}
-          5. Default apt repositories - {{ 'FAILED' if docker_fallback_install is failed else 'SKIPPED' }}
-          6. Snap installation - {{ 'FAILED' if docker_snap_install is failed else 'SKIPPED' }}
-
-          This may be due to network connectivity or repository access issues.
-          All available fallback methods have been attempted.
-      when:
-        - docker_install is skipped or docker_install is failed
-        - docker_fallback_install is skipped or docker_fallback_install is failed
-        - docker_snap_install is skipped or docker_snap_install is failed
-
-    # Task 10: Test Docker with hello-world (optional verification) (if Docker was installed)
-    - name: Test Docker with hello-world container
-      ansible.builtin.command: docker run --rm hello-world
+    - name: Test Docker installation
+      ansible.builtin.shell: docker --version
       register: docker_test
       changed_when: false
-      ignore_errors: true # Don't fail the playbook if this test fails
-      when:
-        - docker_version is defined
-        - docker_version is succeeded
 
-    # Task 11: Display Docker test result (if Docker test ran)
-    - name: Display Docker test result
+    - name: Display installation result
       ansible.builtin.debug:
-        msg: "{{ docker_test.stdout }}"
-      when:
-        - docker_test is defined
-        - docker_test is succeeded
+        msg: "✅ Docker installed successfully: {{ docker_test.stdout }}"
+      when: docker_test is succeeded
 
-    # Task 12: Warning about group membership (if user was added to Docker group)
-    - name: Important notice about Docker group membership
+    - name: Installation summary
       ansible.builtin.debug:
         msg: |
-          ⚠️  IMPORTANT: User '{{ ansible_user }}' has been added to the 'docker' group.
-          You may need to log out and log back in (or restart the session) for this change to take effect.
-          Alternatively, you can use 'newgrp docker' to activate the group membership in the current session.
-
-          NOTE: If you need to update the APT cache, run the update-apt-cache.yml playbook first.
-          This playbook uses robust retry/timeout settings optimized for unreliable networks.
-      when: user_added_to_docker_group is changed
-
-  # Handlers section - tasks that run when triggered by other tasks
-  handlers:
-    # Handler: Restart Docker service if needed (skip in container environments)
-    - name: restart docker
-      ansible.builtin.systemd:
-        name: docker
-        state: restarted
-      when: not (is_container_env | default(false))
+          ✅ Docker installation completed!
+          📦 Installed: docker.io
+          👤 User '{{ ansible_user }}' added to docker group
+          🔧 Group membership activated with newgrp
+          ℹ️  Note: Install Docker Compose separately using install-docker-compose.yml

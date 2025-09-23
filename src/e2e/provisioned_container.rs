@@ -39,7 +39,7 @@ use std::time::Duration;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
     runners::SyncRunner,
-    Container, GenericImage, ImageExt,
+    Container, GenericImage,
 };
 use tracing::info;
 
@@ -91,18 +91,17 @@ impl StoppedProvisionedContainer {
 
         info!("Starting provisioned instance container");
 
-        // Create and start the container with fixed port mapping (22:22)
+        // Create and start the container with automatic port mapping
         let image = GenericImage::new("torrust-provisioned-instance", "latest")
             .with_exposed_port(22.tcp())
             .with_wait_for(WaitFor::message_on_stdout("sshd entered RUNNING state"));
 
-        let container = image
-            .with_mapped_port(22, 22.tcp())
-            .start()
-            .context("Failed to start container")?;
+        let container = image.start().context("Failed to start container")?;
 
-        // Use fixed port 22 since we're mapping 22:22
-        let ssh_port = 22_u16;
+        // Get the actual mapped port from testcontainers
+        let ssh_port = container
+            .get_host_port_ipv4(22.tcp())
+            .context("Failed to get mapped SSH port")?;
 
         info!(
             container_id = %container.id(),

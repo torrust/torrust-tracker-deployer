@@ -1,12 +1,17 @@
-# Ansible Inventory File (YAML f      # 🔗 DISCOVERY: Find current IP with: lxc list torrust-tracker-vm
-      # 🔗 AUTOMATION: Could be retrieved via: lxc list torrust-tracker-vm -f json | jq -r '.[0].state.network.eth0.addresses[0].address'mat)
-# This file defines the hosts (servers/VMs) that Ansible will manage
+# Ansible Inventory File (YAML format)
+# This file defines the hosts (servers/VMs/containers) that Ansible will manage
 # and how to connect to them
 #
-# 🔗 COMPLETE OPENTOFU INTEGRATION WORKFLOW:
+# 🔗 DUAL INFRASTRUCTURE SUPPORT:
+# This template supports two different infrastructure types:
+#
+# A) LXD VIRTUAL MACHINES (Testing & Production/OpenTofu workflow)
+# B) DOCKER CONTAINERS (E2E testing/testcontainers workflow)
+#
+# 🔗 COMPLETE OPENTOFU + LXD VM WORKFLOW:
 #
 # 1. OpenTofu Provisioning (config/tofu/lxd/main.tf):
-#    - Creates LXD container named "torrust-tracker-vm" (variable: container_name)
+#    - Creates LXD VM named "torrust-tracker-vm" (variable: container_name)
 #    - Applies cloud-init configuration from cloud-init.yml
 #    - Assigns dynamic IP address via lxdbr0 network
 #
@@ -19,44 +24,74 @@
 #    - Uses dynamic IP from step 1 (ansible_host)
 #    - Connects as user from step 2 (ansible_user)
 #    - Authenticates with private key matching step 2 (ansible_ssh_private_key_file)
+#    - Uses standard SSH port 22 (ansible_port)
+#
+# 🔗 COMPLETE TESTCONTAINERS + DOCKER WORKFLOW:
+#
+# 1. Testcontainers Provisioning (src/e2e/provisioned_container.rs):
+#    - Creates Docker container with SSH server
+#    - Maps random host port to container port 22 for SSH access
+#    - Assigns container IP via Docker bridge network
+#
+# 2. Container Setup (docker/provisioned-instance/):
+#    - Pre-configured container image with SSH server
+#    - User "torrust" with sudo privileges already configured
+#    - SSH public key pre-installed for authentication
+#    - Cloud-init emulated via completion marker (no actual cloud-init execution)
+#
+# 3. Ansible Connection (this file):
+#    - Uses Docker host IP (127.0.0.1) as ansible_host
+#    - Connects as pre-configured user "torrust" (ansible_user)  
+#    - Authenticates with matching private key (ansible_ssh_private_key_file)
+#    - Uses dynamic mapped port from testcontainers (ansible_port)
 
 # 'all' is the top-level group that contains all hosts
 all:
   # 'hosts' section defines individual machines
   hosts:
     # Host name: 'torrust-tracker-vm' (this is how we refer to this host in playbooks)
-    # 🔗 OPENTOFU: This name matches var.instance_name in config/tofu/lxd/main.tf
-    # 🔗 OPENTOFU: This is the actual LXD container name created by OpenTofu
+    # 🔗 LXD VM: This name matches var.instance_name in config/tofu/lxd/main.tf
+    # 🔗 CONTAINER: This name is used consistently across both LXD VMs and Docker containers
     torrust-tracker-vm:
       # The actual IP address or hostname to connect to
-      # ⚠️  IMPORTANT: This IP comes from the VM provisioned by OpenTofu
-      # 🔗 OPENTOFU: IP assigned by lxd_instance.torrust_vm via lxdbr0 network
-      # 🔗 DISCOVERY: Find current IP with: lxc list torrust-vm
-      # 🔗 AUTOMATION: Could be retrieved via: lxc list torrust-vm -f json | jq -r '.[0].state.network.eth0.addresses[0].address'
+      # ⚠️  IMPORTANT: This IP varies by infrastructure type
+      # 🔗 LXD VM: IP assigned by lxd_instance.torrust_vm via lxdbr0 network
+      # 🔗 CONTAINER: Docker host IP (127.0.0.1) for testcontainers
+      # 🔗 DISCOVERY (LXD): Find current IP with: lxc list torrust-vm
+      # 🔗 AUTOMATION (LXD): lxc list torrust-vm -f json | jq -r '.[0].state.network.eth0.addresses[0].address'
       ansible_host: {{ansible_host}}
 
+      # SSH port to connect to (varies by infrastructure type)
+      # 🔗 LXD VM: Standard SSH port 22 
+      # 🔗 CONTAINER: Dynamic mapped port from testcontainers (e.g., 32768, 32769, etc.)
+      # 🔗 TESTCONTAINERS: Retrieved via container.get_host_port_ipv4(22)
+      ansible_port: {{ansible_port}}
+
       # The username to use when connecting via SSH
-      # 🔗 CLOUD-INIT: This must match the user created in cloud-init
-      # 🔗 EXACT MATCH: config/tofu/lxd/cloud-init.yml -> users[0].name: "torrust"
-      # 🔗 OPENTOFU: OpenTofu provisions the VM with this user via cloud-init
+      # 🔗 LXD VM: This must match the user created in cloud-init
+      # 🔗 CONTAINER: This must match the pre-configured user in the container image
       ansible_user: torrust
 
       # Connection method - we're using SSH
       ansible_connection: ssh
 
       # Path to the private SSH key file
-      # 🔗 CLOUD-INIT: This private key corresponds to the PUBLIC key in cloud-init
-      # 🔗 EXACT MATCH: config/tofu/lxd/cloud-init.yml -> users[0].ssh_authorized_keys[0]
-      # 🔗 KEY PAIR: ~/.ssh/testing_rsa (private) <-> cloud-init public key
-      # 🔗 OPENTOFU: OpenTofu injects the public key, Ansible uses the private key to connect
+      # 🔗 LXD VM: This private key corresponds to the PUBLIC key in cloud-init
+      # 🔗 CONTAINER: This private key corresponds to the PUBLIC key in container image  
+      # 🔗 EXACT MATCH (LXD): config/tofu/lxd/cloud-init.yml -> users[0].ssh_authorized_keys[0]
+      # 🔗 EXACT MATCH (CONTAINER): docker/provisioned-instance/ -> pre-installed public key
+      # 🔗 KEY PAIR: ~/.ssh/testing_rsa (private) <-> public key in infrastructure
       ansible_ssh_private_key_file: {{ansible_ssh_private_key_file}}
 
       # Additional SSH arguments for this host
-      # StrictHostKeyChecking=no skips host key verification (lab use only)
+      # StrictHostKeyChecking=no skips host key verification (lab/testing use only)
+      # ⚠️  SECURITY: Only use this setting in development/testing environments
+      # 🔗 PURPOSE: Avoids SSH fingerprint prompts for dynamic infrastructure
       ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
 
   # 'vars' section defines variables that apply to all hosts in this group
   vars:
     # Tell Ansible which Python interpreter to use on the remote hosts
     # Most modern Linux systems use python3
+    # 🔗 COMPATIBILITY: Works for both LXD VMs and Docker containers
     ansible_python_interpreter: /usr/bin/python3

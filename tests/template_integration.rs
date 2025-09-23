@@ -9,7 +9,7 @@ use std::str::FromStr;
 use tempfile::TempDir;
 use torrust_tracker_deploy::domain::template::file::File;
 use torrust_tracker_deploy::infrastructure::template::wrappers::ansible::inventory::{
-    AnsibleHost, InventoryContext, InventoryTemplate, SshPrivateKeyFile,
+    AnsibleHost, AnsiblePort, InventoryContext, InventoryTemplate, SshPrivateKeyFile,
 };
 
 #[cfg(test)]
@@ -42,9 +42,11 @@ mod integration_tests {
         let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
         let host = AnsibleHost::from_str("192.168.1.100")?;
         let ssh_key = SshPrivateKeyFile::new("/home/user/.ssh/testing_rsa")?;
+        let ssh_port = AnsiblePort::new(22)?;
         let inventory_context = InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(ssh_port)
             .build()?;
         let inventory = InventoryTemplate::new(&template_file, inventory_context)?;
 
@@ -94,9 +96,11 @@ mod integration_tests {
         let template_file = File::new("inventory.yml.tera", template_content.clone()).unwrap();
         let host = AnsibleHost::from_str("127.0.0.1")?;
         let ssh_key = SshPrivateKeyFile::new("/path/to/key")?;
+        let ssh_port = AnsiblePort::new(22)?;
         let inventory_context = InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(ssh_port)
             .build()?;
         let result = InventoryTemplate::new(&template_file, inventory_context);
 
@@ -117,9 +121,11 @@ mod integration_tests {
             File::new("inventory.yml.tera", invalid_content.to_string()).unwrap();
         let host = AnsibleHost::from_str("192.168.1.100")?;
         let ssh_key = SshPrivateKeyFile::new("/path/to/key")?;
+        let ssh_port = AnsiblePort::new(22)?;
         let inventory_context = InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(ssh_port)
             .build()?;
         let result = InventoryTemplate::new(&invalid_template_file, inventory_context.clone());
 
@@ -160,9 +166,11 @@ mod integration_tests {
             let template_file = File::new("inventory.yml.tera", original_content.clone()).unwrap();
             let host = AnsibleHost::from_str(&format!("192.168.1.{i}"))?;
             let ssh_key = SshPrivateKeyFile::new(format!("/home/user{i}/.ssh/key"))?;
+            let ssh_port = AnsiblePort::new(22)?;
             let inventory_context = InventoryContext::builder()
                 .with_host(host)
                 .with_ssh_priv_key_path(ssh_key)
+                .with_ssh_port(ssh_port)
                 .build()?;
             let inventory = InventoryTemplate::new(&template_file, inventory_context)?;
 
@@ -205,9 +213,11 @@ mod integration_tests {
             let host = AnsibleHost::from_str("10.0.0.100")?;
             let ssh_key =
                 SshPrivateKeyFile::new(temp_dir.path().join("ssh_key").to_string_lossy().as_ref())?;
+            let ssh_port = AnsiblePort::new(22)?;
             let inventory_context = InventoryContext::builder()
                 .with_host(host)
                 .with_ssh_priv_key_path(ssh_key)
+                .with_ssh_port(ssh_port)
                 .build()?;
             let inventory = InventoryTemplate::new(&template_file, inventory_context)?;
 

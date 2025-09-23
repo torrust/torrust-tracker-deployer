@@ -9,6 +9,7 @@ containerd
 cpus
 dearmor
 debootstrap
+distutils
 Dockerfiles
 dtolnay
 ehthumbs

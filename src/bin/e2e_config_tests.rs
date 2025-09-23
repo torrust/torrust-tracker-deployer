@@ -25,13 +25,12 @@
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::runtime::Runtime;
 use tracing::{error, info};
 
-use torrust_tracker_deploy::application::commands::{ConfigureCommand, TestCommand};
+use torrust_tracker_deploy::application::commands::ConfigureCommand;
 use torrust_tracker_deploy::config::{Config, InstanceName, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
@@ -289,34 +288,25 @@ async fn run_deployment_validation(
         "Running deployment validation on container"
     );
 
-    // NOTE: Similar to configuration, validation needs container-specific setup.
-    // The TestCommand expects standard SSH credentials but needs to connect to
-    // 127.0.0.1:mapped_port instead of the provisioned instance IP.
-    //
-    // For now, we'll demonstrate the validation workflow structure:
-
+    // Now we can use the proper SSH infrastructure with custom port support
     let credentials_result = create_container_ssh_credentials();
     match credentials_result {
         Ok(ssh_credentials) => {
-            let instance_ip: IpAddr = ssh_host
-                .parse()
-                .context("Failed to parse SSH host as IP address")?;
-            let test_command = TestCommand::new(ssh_credentials, instance_ip);
+            // Create SSH connection with the container's dynamic port
+            let host_ip = ssh_host.parse().context("Failed to parse SSH host as IP")?;
 
-            match test_command.execute().await.map_err(anyhow::Error::from) {
+            match validate_container_deployment_with_port(&ssh_credentials, host_ip, ssh_port).await
+            {
                 Ok(()) => {
                     info!(status = "success", "All deployment validations passed");
                 }
                 Err(e) => {
-                    // Expected failure due to SSH connection issues - log and return error
                     info!(
-                        status = "expected_failure",
+                        status = "failed",
                         error = %e,
-                        note = "TestCommand failed as expected - needs container-specific SSH setup"
+                        "Container deployment validation failed"
                     );
-                    return Err(e.context(
-                        "Validation failed (expected - needs container-specific SSH setup)",
-                    ));
+                    return Err(e.context("Container deployment validation failed"));
                 }
             }
         }
@@ -326,8 +316,8 @@ async fn run_deployment_validation(
     }
 
     info!(
-        status = "structural_complete",
-        "Validation workflow structure implemented"
+        status = "success",
+        "Validation workflow completed successfully"
     );
 
     Ok(())
@@ -372,4 +362,36 @@ fn create_container_ssh_credentials() -> Result<SshCredentials> {
     );
 
     Ok(ssh_credentials)
+}
+
+/// Validate container deployment using SSH infrastructure with custom port
+async fn validate_container_deployment_with_port(
+    ssh_credentials: &SshCredentials,
+    host_ip: std::net::IpAddr,
+    ssh_port: u16,
+) -> Result<()> {
+    use torrust_tracker_deploy::infrastructure::remote_actions::{
+        DockerComposeValidator, DockerValidator, RemoteAction,
+    };
+
+    // Create SSH connection with the container's dynamic port using the new port support
+    let ssh_connection = ssh_credentials
+        .clone()
+        .with_host_and_port(host_ip, ssh_port);
+
+    // Validate Docker installation
+    let docker_validator = DockerValidator::new(ssh_connection.clone());
+    docker_validator
+        .execute(&host_ip)
+        .await
+        .context("Docker validation failed")?;
+
+    // Validate Docker Compose installation
+    let compose_validator = DockerComposeValidator::new(ssh_connection);
+    compose_validator
+        .execute(&host_ip)
+        .await
+        .context("Docker Compose validation failed")?;
+
+    Ok(())
 }

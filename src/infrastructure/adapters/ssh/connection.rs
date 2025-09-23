@@ -32,6 +32,12 @@ pub struct SshConnection {
     /// This is the IP address of the remote instance that the SSH client
     /// will connect to.
     pub host_ip: IpAddr,
+
+    /// Port number for SSH connections.
+    ///
+    /// Defaults to 22 (standard SSH port) but can be customized for
+    /// containerized environments or non-standard SSH configurations.
+    pub port: u16,
 }
 
 impl SshConnection {
@@ -49,13 +55,60 @@ impl SshConnection {
     /// let connection = SshConnection::new(
     ///     credentials,
     ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+    ///     22,
     /// );
     /// ```
     #[must_use]
-    pub fn new(credentials: SshCredentials, host_ip: IpAddr) -> Self {
+    pub fn new(credentials: SshCredentials, host_ip: IpAddr, port: u16) -> Self {
+        Self::new_with_port(credentials, host_ip, port)
+    }
+
+    /// Creates a new SSH connection configuration with the default port (22).
+    ///
+    /// This is a convenience method for when you want to use the standard SSH port.
+    ///
+    /// ```rust
+    /// # use std::net::{IpAddr, Ipv4Addr};
+    /// # use std::path::PathBuf;
+    /// # use torrust_tracker_deploy::infrastructure::adapters::ssh::{SshCredentials, SshConnection};
+    /// let credentials = SshCredentials::new(
+    ///     PathBuf::from("/home/user/.ssh/deploy_key"),
+    ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
+    ///     "ubuntu".to_string(),
+    /// );
+    /// let connection = SshConnection::with_default_port(
+    ///     credentials,
+    ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+    /// );
+    /// ```
+    #[must_use]
+    pub fn with_default_port(credentials: SshCredentials, host_ip: IpAddr) -> Self {
+        Self::new(credentials, host_ip, 22)
+    }
+
+    /// Creates a new SSH connection configuration with a custom port.
+    ///
+    /// ```rust
+    /// # use std::net::{IpAddr, Ipv4Addr};
+    /// # use std::path::PathBuf;
+    /// # use torrust_tracker_deploy::infrastructure::adapters::ssh::{SshCredentials, SshConnection};
+    /// let credentials = SshCredentials::new(
+    ///     PathBuf::from("/home/user/.ssh/deploy_key"),
+    ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
+    ///     "ubuntu".to_string(),
+    /// );
+    /// let connection = SshConnection::new_with_port(
+    ///     credentials,
+    ///     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+    ///     2222,
+    /// );
+    /// ```
+    #[must_use]
+    pub fn new_with_port(credentials: SshCredentials, host_ip: IpAddr, port: u16) -> Self {
         Self {
             credentials,
             host_ip,
+            port,
         }
     }
 
@@ -75,5 +128,11 @@ impl SshConnection {
     #[must_use]
     pub fn ssh_username(&self) -> &str {
         &self.credentials.ssh_username
+    }
+
+    /// Access the SSH port.
+    #[must_use]
+    pub fn ssh_port(&self) -> u16 {
+        self.port
     }
 }

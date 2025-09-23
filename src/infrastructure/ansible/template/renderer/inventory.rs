@@ -203,7 +203,7 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::infrastructure::template::wrappers::ansible::inventory::{
-        AnsibleHost, SshPrivateKeyFile,
+        AnsibleHost, AnsiblePort, SshPrivateKeyFile,
     };
 
     /// Helper function to create a test inventory context
@@ -213,10 +213,12 @@ mod tests {
 
         let host = AnsibleHost::from_str("192.168.1.100").expect("Failed to create test host");
         let ssh_key = SshPrivateKeyFile::new(ssh_key_path).expect("Failed to create SSH key file");
+        let ssh_port = AnsiblePort::new(22).expect("Failed to create SSH port");
 
         InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(ssh_port)
             .build()
             .expect("Failed to build inventory context")
     }
@@ -230,6 +232,7 @@ mod tests {
   hosts:
     torrust-tracker-vm:
       ansible_host: {{ ansible_host }}
+      ansible_port: {{ ansible_port }}
       ansible_user: torrust
       ansible_connection: ssh
       ansible_ssh_private_key_file: {{ ansible_ssh_private_key_file }}

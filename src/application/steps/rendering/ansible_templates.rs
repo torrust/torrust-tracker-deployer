@@ -28,7 +28,8 @@ use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
 use crate::infrastructure::ansible::template::renderer::ConfigurationTemplateError;
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::template::wrappers::ansible::inventory::{
-    AnsibleHost, InventoryContext, InventoryContextError, SshPrivateKeyFile, SshPrivateKeyFileError,
+    AnsibleHost, AnsiblePort, AnsiblePortError, InventoryContext, InventoryContextError,
+    SshPrivateKeyFile, SshPrivateKeyFileError,
 };
 
 /// Errors that can occur during Ansible template rendering step execution
@@ -37,6 +38,10 @@ pub enum RenderAnsibleTemplatesError {
     /// SSH key path parsing failed
     #[error("SSH key path parsing failed: {0}")]
     SshKeyPathError(#[from] SshPrivateKeyFileError),
+
+    /// SSH port parsing failed
+    #[error("SSH port parsing failed: {0}")]
+    SshPortError(#[from] AnsiblePortError),
 
     /// Inventory context creation failed
     #[error("Inventory context creation failed: {0}")]
@@ -52,6 +57,7 @@ pub struct RenderAnsibleTemplatesStep {
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
     ssh_credentials: SshCredentials,
     instance_ip: IpAddr,
+    ssh_port: u16,
 }
 
 impl RenderAnsibleTemplatesStep {
@@ -60,11 +66,13 @@ impl RenderAnsibleTemplatesStep {
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
         ssh_credentials: SshCredentials,
         instance_ip: IpAddr,
+        ssh_port: u16,
     ) -> Self {
         Self {
             ansible_template_renderer,
             ssh_credentials,
             instance_ip,
+            ssh_port,
         }
     }
 
@@ -112,10 +120,12 @@ impl RenderAnsibleTemplatesStep {
     fn create_inventory_context(&self) -> Result<InventoryContext, RenderAnsibleTemplatesError> {
         let host = AnsibleHost::from(self.instance_ip);
         let ssh_key = SshPrivateKeyFile::new(&self.ssh_credentials.ssh_priv_key_path)?;
+        let ssh_port = AnsiblePort::new(self.ssh_port)?;
 
         InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(ssh_port)
             .build()
             .map_err(RenderAnsibleTemplatesError::from)
     }

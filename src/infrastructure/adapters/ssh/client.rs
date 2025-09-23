@@ -61,6 +61,8 @@ impl SshClient {
             "StrictHostKeyChecking=no".to_string(),
             "-o".to_string(),
             "UserKnownHostsFile=/dev/null".to_string(),
+            "-p".to_string(),
+            self.ssh_connection.ssh_port().to_string(),
         ];
 
         // Add additional SSH options

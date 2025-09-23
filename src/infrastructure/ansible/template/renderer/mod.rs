@@ -23,7 +23,7 @@
 //! use torrust_tracker_deploy::infrastructure::ansible::template::renderer::AnsibleTemplateRenderer;
 //! use torrust_tracker_deploy::domain::template::TemplateManager;
 //! use torrust_tracker_deploy::infrastructure::template::wrappers::ansible::inventory::{
-//!     InventoryContext, AnsibleHost, SshPrivateKeyFile
+//!     InventoryContext, AnsibleHost, AnsiblePort, SshPrivateKeyFile
 //! };
 //!
 //! let temp_dir = TempDir::new()?;
@@ -32,9 +32,11 @@
 //!
 //! let host = AnsibleHost::from_str("192.168.1.100")?;
 //! let ssh_key = SshPrivateKeyFile::new("/path/to/ssh/key")?;
+//! let ssh_port = AnsiblePort::new(22)?;
 //! let inventory_context = InventoryContext::builder()
 //!     .with_host(host)
 //!     .with_ssh_priv_key_path(ssh_key)
+//!     .with_ssh_port(ssh_port)
 //!     .build()?;
 //!
 //! // Note: This would require actual template files to work

@@ -1,4 +1,5 @@
 pub mod ansible_host;
+pub mod ansible_port;
 pub mod ssh_private_key_file;
 
 use serde::Serialize;
@@ -8,6 +9,7 @@ use thiserror::Error;
 use std::str::FromStr;
 
 pub use ansible_host::{AnsibleHost, AnsibleHostError};
+pub use ansible_port::{AnsiblePort, AnsiblePortError};
 pub use ssh_private_key_file::{SshPrivateKeyFile, SshPrivateKeyFileError};
 
 /// Errors that can occur when creating an `InventoryContext`
@@ -19,24 +21,36 @@ pub enum InventoryContextError {
     #[error("Invalid SSH private key file: {0}")]
     InvalidSshPrivateKeyFile(#[from] SshPrivateKeyFileError),
 
+    #[error("Invalid ansible port: {0}")]
+    InvalidAnsiblePort(#[from] AnsiblePortError),
+
     #[error("Missing ansible host - must be set before building")]
     MissingAnsibleHost,
 
+    /// Missing SSH private key file in context
     #[error("Missing SSH private key file - must be set before building")]
     MissingSshPrivateKeyFile,
+
+    /// Missing SSH port in context  
+    #[error("Missing SSH port - must be set before building")]
+    MissingSshPort,
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[allow(clippy::struct_field_names)] // Field names mirror Ansible inventory variables
 pub struct InventoryContext {
     ansible_host: AnsibleHost,
     ansible_ssh_private_key_file: SshPrivateKeyFile,
+    ansible_port: AnsiblePort,
 }
 
 /// Builder for `InventoryContext` with fluent interface
 #[derive(Debug, Default)]
+#[allow(clippy::struct_field_names)] // Field names mirror Ansible inventory variables
 pub struct InventoryContextBuilder {
     ansible_host: Option<AnsibleHost>,
     ansible_ssh_private_key_file: Option<SshPrivateKeyFile>,
+    ansible_port: Option<AnsiblePort>,
 }
 
 impl InventoryContextBuilder {
@@ -53,6 +67,13 @@ impl InventoryContextBuilder {
         self
     }
 
+    /// Sets the SSH port for the builder.
+    #[must_use]
+    pub fn with_ssh_port(mut self, ansible_port: AnsiblePort) -> Self {
+        self.ansible_port = Some(ansible_port);
+        self
+    }
+
     /// Sets the SSH private key file path for the builder.
     #[must_use]
     pub fn with_ssh_priv_key_path(mut self, ssh_private_key_file: SshPrivateKeyFile) -> Self {
@@ -64,7 +85,7 @@ impl InventoryContextBuilder {
     ///
     /// # Errors
     ///
-    /// Returns an error if either `ansible_host` or `ansible_ssh_private_key_file` is missing
+    /// Returns an error if any required field is missing
     pub fn build(self) -> Result<InventoryContext, InventoryContextError> {
         let ansible_host = self
             .ansible_host
@@ -74,9 +95,14 @@ impl InventoryContextBuilder {
             .ansible_ssh_private_key_file
             .ok_or(InventoryContextError::MissingSshPrivateKeyFile)?;
 
+        let ansible_port = self
+            .ansible_port
+            .ok_or(InventoryContextError::MissingSshPort)?;
+
         Ok(InventoryContext {
             ansible_host,
             ansible_ssh_private_key_file,
+            ansible_port,
         })
     }
 }
@@ -91,10 +117,12 @@ impl InventoryContext {
     pub fn new(
         ansible_host: AnsibleHost,
         ansible_ssh_private_key_file: SshPrivateKeyFile,
+        ansible_port: AnsiblePort,
     ) -> Result<Self, InventoryContextError> {
         Ok(Self {
             ansible_host,
             ansible_ssh_private_key_file,
+            ansible_port,
         })
     }
 
@@ -114,6 +142,12 @@ impl InventoryContext {
     #[must_use]
     pub fn ansible_ssh_private_key_file(&self) -> String {
         self.ansible_ssh_private_key_file.as_str()
+    }
+
+    /// Get the ansible port
+    #[must_use]
+    pub fn ansible_port(&self) -> u16 {
+        self.ansible_port.as_u16()
     }
 
     /// Get the ansible host wrapper
@@ -140,6 +174,7 @@ mod tests {
         let context = InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(AnsiblePort::new(22).unwrap())
             .build()
             .unwrap();
 
@@ -159,6 +194,7 @@ mod tests {
         let inventory_context = InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(AnsiblePort::new(22).unwrap())
             .build()
             .unwrap();
 
@@ -167,6 +203,7 @@ mod tests {
             inventory_context.ansible_ssh_private_key_file(),
             "/home/user/.ssh/id_rsa"
         );
+        assert_eq!(inventory_context.ansible_port(), 22);
     }
 
     #[test]
@@ -178,6 +215,7 @@ mod tests {
         let inventory_context = InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(AnsiblePort::new(22).unwrap())
             .build()
             .unwrap();
 
@@ -186,6 +224,7 @@ mod tests {
             inventory_context.ansible_ssh_private_key_file(),
             "/path/to/key"
         );
+        assert_eq!(inventory_context.ansible_port(), 22);
     }
 
     #[test]
@@ -194,6 +233,7 @@ mod tests {
         let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
         let result = InventoryContext::builder()
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(AnsiblePort::new(22).unwrap())
             .build();
 
         assert!(result.is_err());
@@ -205,7 +245,10 @@ mod tests {
     fn it_should_fail_when_builder_missing_ssh_key() {
         // Test that builder fails when SSH key is missing
         let host = AnsibleHost::from_str("192.168.1.100").unwrap();
-        let result = InventoryContext::builder().with_host(host).build();
+        let result = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_port(AnsiblePort::new(22).unwrap())
+            .build();
 
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
@@ -213,17 +256,34 @@ mod tests {
     }
 
     #[test]
+    fn it_should_fail_when_builder_missing_ssh_port() {
+        // Test that builder fails when SSH port is missing
+        let host = AnsibleHost::from_str("192.168.1.100").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
+        let result = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .build();
+
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Missing SSH port"));
+    }
+
+    #[test]
     fn it_should_create_new_inventory_context_with_typed_parameters() {
         // Test the new direct constructor with typed parameters
         let host = AnsibleHost::from_str("192.168.1.50").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/etc/ssh/test_key").unwrap();
+        let ssh_port = AnsiblePort::new(22).unwrap();
 
-        let inventory_context = InventoryContext::new(host, ssh_key).unwrap();
+        let inventory_context = InventoryContext::new(host, ssh_key, ssh_port).unwrap();
 
         assert_eq!(inventory_context.ansible_host(), "192.168.1.50");
         assert_eq!(
             inventory_context.ansible_ssh_private_key_file(),
             "/etc/ssh/test_key"
         );
+        assert_eq!(inventory_context.ansible_port(), 22);
     }
 }
