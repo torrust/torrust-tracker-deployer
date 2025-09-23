@@ -17,20 +17,20 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
-use crate::ansible::AnsibleTemplateRenderer;
-use crate::infrastructure::adapters::ansible::AnsibleClient;
-#[allow(unused_imports)]
-use crate::infrastructure::adapters::lxd::InstanceName;
-use crate::infrastructure::adapters::opentofu::client::{InstanceInfo, OpenTofuError};
-use crate::infrastructure::adapters::ssh::{credentials::SshCredentials, SshError};
-use crate::infrastructure::executor::CommandError;
-use crate::steps::{
+use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep,
     RenderOpenTofuTemplatesStep, ValidateInfrastructureStep, WaitForCloudInitStep,
     WaitForSSHConnectivityStep,
 };
-use crate::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
+use crate::infrastructure::adapters::ansible::AnsibleClient;
+#[allow(unused_imports)]
+use crate::infrastructure::adapters::lxd::InstanceName;
+use crate::infrastructure::adapters::opentofu::client::{InstanceInfo, OpenTofuError};
+use crate::infrastructure::adapters::ssh::{credentials::SshCredentials, SshError};
+use crate::infrastructure::ansible::AnsibleTemplateRenderer;
+use crate::infrastructure::executor::CommandError;
+use crate::infrastructure::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 
 /// Comprehensive error type for the `ProvisionCommand`
 #[derive(Debug, thiserror::Error)]
@@ -186,7 +186,9 @@ mod tests {
         TempDir,
     ) {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let template_manager = Arc::new(crate::template::TemplateManager::new(temp_dir.path()));
+        let template_manager = Arc::new(crate::domain::template::TemplateManager::new(
+            temp_dir.path(),
+        ));
 
         let ssh_credentials = SshCredentials::new(
             "dummy_key".into(),

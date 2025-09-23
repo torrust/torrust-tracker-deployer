@@ -15,13 +15,13 @@
 use std::net::IpAddr;
 use tracing::{error, info, instrument};
 
-use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
-use crate::infrastructure::executor::CommandError;
-use crate::remote_actions::RemoteActionError;
-use crate::steps::{
+use crate::application::steps::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,
 };
+use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
+use crate::infrastructure::executor::CommandError;
+use crate::infrastructure::remote_actions::RemoteActionError;
 
 /// Comprehensive error type for the `TestCommand`
 #[derive(Debug, thiserror::Error)]

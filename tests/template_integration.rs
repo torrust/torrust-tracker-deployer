@@ -7,8 +7,8 @@ use anyhow::Result;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tempfile::TempDir;
-use torrust_tracker_deploy::template::file::File;
-use torrust_tracker_deploy::template::wrappers::ansible::inventory::{
+use torrust_tracker_deploy::domain::template::file::File;
+use torrust_tracker_deploy::infrastructure::template::wrappers::ansible::inventory::{
     AnsibleHost, InventoryContext, InventoryTemplate, SshPrivateKeyFile,
 };
 

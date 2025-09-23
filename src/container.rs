@@ -12,13 +12,13 @@
 
 use std::sync::Arc;
 
-use crate::ansible::AnsibleTemplateRenderer;
 use crate::config::Config;
+use crate::domain::template::TemplateManager;
 use crate::infrastructure::adapters::ansible::AnsibleClient;
 use crate::infrastructure::adapters::lxd::LxdClient;
 use crate::infrastructure::adapters::opentofu::OpenTofuClient;
-use crate::template::TemplateManager;
-use crate::tofu::TofuTemplateRenderer;
+use crate::infrastructure::ansible::AnsibleTemplateRenderer;
+use crate::infrastructure::tofu::TofuTemplateRenderer;
 
 /// Service clients and renderers for performing actions
 pub struct Services {

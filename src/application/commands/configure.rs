@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::infrastructure::adapters::ansible::AnsibleClient;
 use crate::infrastructure::executor::CommandError;
-use crate::steps::{InstallDockerComposeStep, InstallDockerStep};
 
 /// Comprehensive error type for the `ConfigureCommand`
 #[derive(Debug, thiserror::Error)]

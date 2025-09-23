@@ -7,8 +7,10 @@
 //! ## Components
 //!
 //! - `commands` - High-level deployment commands implementing the Command pattern
+//! - `steps` - Workflow orchestration and business process coordination
 
 pub mod commands;
+pub mod steps;
 
 // Re-export command types for convenience
 pub use commands::{ConfigureCommand, ProvisionCommand, TestCommand};
