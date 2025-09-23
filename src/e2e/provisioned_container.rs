@@ -70,7 +70,7 @@ impl StoppedProvisionedContainer {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(anyhow::anyhow!("Docker build failed: {}", stderr));
+            return Err(anyhow::anyhow!("Docker build failed: {stderr}"));
         }
 
         info!("Docker image built successfully");
@@ -179,8 +179,7 @@ impl RunningProvisionedContainer {
                 Ok(())
             }
             Err(e) => Err(anyhow::anyhow!(
-                "Failed to setup SSH keys in container: {}",
-                e
+                "Failed to setup SSH keys in container: {e}"
             )),
         }
     }
