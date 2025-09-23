@@ -8,16 +8,29 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 
 - **Languages**: Rust, Shell scripts, YAML, TOML
 - **Infrastructure**: OpenTofu (Terraform), Ansible
-- **Providers**: LXD containers, Multipass VMs
-- **Tools**: Docker, cloud-init
+- **Virtualization Providers**: LXD VM instances
+- **Tools**: Docker, cloud-init, testcontainers
+- **Linting Tools**: markdownlint, yamllint, shellcheck, clippy, rustfmt, taplo (TOML)
 
 ## 📁 Key Directories
 
 - `src/` - Rust source code and binaries
-- `templates/ansible/` - Ansible playbook templates
-- `templates/tofu/` - OpenTofu/Terraform configuration templates
+- `data/templates/` - Source template files for Ansible and OpenTofu
+- `templates/` - Generated template examples and test fixtures
 - `build/` - Generated runtime configurations (git-ignored)
 - `docs/` - Project documentation
+- `scripts/` - Shell scripts for development tasks
+- `examples/` - Example configurations and usage patterns
+- `fixtures/` - Test data and keys for development
+- `packages/` - Rust workspace packages (linting tools)
+
+## 📄 Key Configuration Files
+
+- `.markdownlint.json` - Markdown linting rules
+- `.yamllint-ci.yml` - YAML linting configuration
+- `.taplo.toml` - TOML formatting and linting
+- `cspell.json` - Spell checking configuration
+- `project-words.txt` - Project-specific dictionary
 
 ## 🔧 Essential Rules
 
@@ -31,14 +44,10 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 3. **Before committing**: Always run these verifications - all must pass before staging files or creating commits, regardless of the tool or method used:
 
    ```bash
-   # Run cargo machete
-   cargo machete
-   # Run linters
-   ./scripts/lint.sh
-   # Run tests
-   cargo test
-   # Run e2e tests
-   cargo run --bin e2e-tests
+   cargo machete               # Run cargo machete (MANDATORY - no unused dependencies)
+   cargo run --bin linter all  # Run linters (comprehensive - stable & nightly toolchains)
+   cargo test                  # Run tests
+   cargo run --bin e2e-tests   # Run e2e tests
    ```
 
    This applies to **any** method of committing:
@@ -51,11 +60,15 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 
 ## 🧪 Build & Test
 
-- **Lint**: `./scripts/lint.sh` (comprehensive - tests stable & nightly toolchains)
+- **Lint**: `cargo run --bin linter all` (comprehensive - tests stable & nightly toolchains)
+  - Individual linters: `cargo run --bin linter {markdown|yaml|toml|clippy|rustfmt|shellcheck}`
+  - Alternative: `./scripts/lint.sh` (wrapper that calls the Rust binary)
 - **Dependencies**: `cargo machete` (mandatory before commits - no unused dependencies)
 - **Build**: `cargo build`
 - **Test**: `cargo test`
 - **Unit Tests**: When writing unit tests, follow conventions described in [`docs/contributing/testing.md`](../docs/contributing/testing.md)
-- **E2E Tests**: `cargo e2e-provision && cargo e2e-config`
+- **E2E Tests**: `cargo run --bin e2e-tests` (unified) or individual tests:
+  - `cargo run --bin e2e-provision-tests` - Infrastructure provisioning
+  - `cargo run --bin e2e-config-tests` - Configuration testing
 
 Follow the project conventions and ensure all checks pass.
