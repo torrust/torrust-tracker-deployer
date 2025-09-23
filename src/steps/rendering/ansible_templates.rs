@@ -26,7 +26,7 @@ use tracing::{info, instrument};
 
 use crate::ansible::template::renderer::ConfigurationTemplateError;
 use crate::ansible::AnsibleTemplateRenderer;
-use crate::command_wrappers::ssh::credentials::SshCredentials;
+use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
 use crate::template::wrappers::ansible::inventory::{
     AnsibleHost, InventoryContext, InventoryContextError, SshPrivateKeyFile, SshPrivateKeyFileError,
 };

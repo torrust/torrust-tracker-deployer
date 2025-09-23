@@ -26,7 +26,9 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
-use crate::command_wrappers::opentofu::client::{InstanceInfo, OpenTofuClient, OpenTofuError};
+use crate::infrastructure::adapters::opentofu::client::{
+    InstanceInfo, OpenTofuClient, OpenTofuError,
+};
 
 /// Simple step that retrieves instance information from `OpenTofu` outputs
 ///
@@ -91,7 +93,7 @@ impl GetInstanceInfoStep {
 mod tests {
     use std::sync::Arc;
 
-    use crate::command_wrappers::opentofu::client::OpenTofuClient;
+    use crate::infrastructure::adapters::opentofu::client::OpenTofuClient;
 
     use super::*;
 

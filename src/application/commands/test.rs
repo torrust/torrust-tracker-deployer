@@ -15,8 +15,8 @@
 use std::net::IpAddr;
 use tracing::{error, info, instrument};
 
-use crate::command::CommandError;
-use crate::command_wrappers::ssh::credentials::SshCredentials;
+use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
+use crate::infrastructure::executor::CommandError;
 use crate::remote_actions::RemoteActionError;
 use crate::steps::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,

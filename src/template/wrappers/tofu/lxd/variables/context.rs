@@ -14,7 +14,7 @@
 //!
 //! ```rust
 //! use torrust_tracker_deploy::template::wrappers::tofu::lxd::variables::VariablesContext;
-//! use torrust_tracker_deploy::command_wrappers::lxd::instance::InstanceName;
+//! use torrust_tracker_deploy::infrastructure::adapters::lxd::instance::InstanceName;
 //!
 //! let context = VariablesContext::builder()
 //!     .with_instance_name(InstanceName::new("my-test-vm".to_string()).unwrap())
@@ -26,7 +26,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 #[allow(unused_imports)]
-use crate::command_wrappers::lxd::instance::InstanceName;
+use crate::infrastructure::adapters::lxd::instance::InstanceName;
 
 /// Errors that can occur when building the variables context
 #[derive(Error, Debug)]

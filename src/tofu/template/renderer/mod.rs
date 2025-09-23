@@ -45,8 +45,8 @@ use std::sync::Arc;
 use thiserror::Error;
 
 #[allow(unused_imports)]
-use crate::command_wrappers::lxd::instance::InstanceName;
-use crate::command_wrappers::ssh::credentials::SshCredentials;
+use crate::infrastructure::adapters::lxd::instance::InstanceName;
+use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
 use crate::template::wrappers::tofu::lxd::variables::{
     VariablesContextBuilder, VariablesTemplate, VariablesTemplateError,
 };

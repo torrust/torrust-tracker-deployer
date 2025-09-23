@@ -27,7 +27,7 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use tracing::info;
 
-use crate::commands::ProvisionCommand;
+use crate::application::commands::ProvisionCommand;
 use crate::e2e::environment::TestEnvironment;
 
 /// Provision infrastructure using `OpenTofu` and prepare for configuration

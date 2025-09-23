@@ -20,7 +20,7 @@ use anyhow::{Context, Result};
 use std::sync::Arc;
 use tracing::info;
 
-use crate::commands::ConfigureCommand;
+use crate::application::commands::ConfigureCommand;
 use crate::e2e::environment::TestEnvironment;
 
 /// Configure infrastructure using Ansible playbooks

@@ -20,8 +20,8 @@
 use std::net::IpAddr;
 use tracing::{info, instrument};
 
-use crate::command_wrappers::ssh::SshClient;
-use crate::command_wrappers::ssh::SshConnection;
+use crate::infrastructure::adapters::ssh::SshClient;
+use crate::infrastructure::adapters::ssh::SshConnection;
 use crate::remote_actions::{RemoteAction, RemoteActionError};
 
 /// Action that checks if cloud-init has completed successfully on the server

@@ -30,7 +30,7 @@ pub use credentials::SshCredentials;
 
 use thiserror::Error;
 
-use crate::command::CommandError;
+use crate::infrastructure::executor::CommandError;
 
 /// Errors that can occur during SSH operations
 #[derive(Error, Debug)]

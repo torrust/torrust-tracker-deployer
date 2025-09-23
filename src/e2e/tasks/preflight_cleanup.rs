@@ -6,9 +6,9 @@
 use std::fmt;
 use tracing::{info, warn};
 
-use crate::command_wrappers::lxd::client::LxdClient;
-use crate::command_wrappers::opentofu::{self, EmergencyDestroyError};
 use crate::e2e::environment::TestEnvironment;
+use crate::infrastructure::adapters::lxd::client::LxdClient;
+use crate::infrastructure::adapters::opentofu::{self, EmergencyDestroyError};
 
 /// Errors that can occur during pre-flight cleanup operations
 #[derive(Debug)]

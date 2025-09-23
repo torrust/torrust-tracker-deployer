@@ -25,7 +25,7 @@ use anyhow::{Context, Result};
 use std::net::IpAddr;
 use tracing::info;
 
-use crate::commands::TestCommand;
+use crate::application::commands::TestCommand;
 use crate::e2e::environment::TestEnvironment;
 
 /// Validate deployment by running infrastructure validation tests

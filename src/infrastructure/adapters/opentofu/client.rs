@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::info;
 
-use crate::command::{CommandError, CommandExecutor};
+use crate::infrastructure::executor::{CommandError, CommandExecutor};
 
 use super::json_parser::{OpenTofuJsonParser, ParseError};
 
@@ -360,7 +360,7 @@ resource "null_resource" "test" {
 
     #[test]
     fn it_should_wrap_parse_error_in_opentofu_error() {
-        use crate::command_wrappers::opentofu::json_parser::OpenTofuJsonParser;
+        use crate::infrastructure::adapters::opentofu::json_parser::OpenTofuJsonParser;
 
         let invalid_json = "not valid json";
 

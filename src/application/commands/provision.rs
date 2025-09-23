@@ -18,12 +18,12 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::ansible::AnsibleTemplateRenderer;
-use crate::command::CommandError;
-use crate::command_wrappers::ansible::AnsibleClient;
+use crate::infrastructure::adapters::ansible::AnsibleClient;
 #[allow(unused_imports)]
-use crate::command_wrappers::lxd::InstanceName;
-use crate::command_wrappers::opentofu::client::{InstanceInfo, OpenTofuError};
-use crate::command_wrappers::ssh::{credentials::SshCredentials, SshError};
+use crate::infrastructure::adapters::lxd::InstanceName;
+use crate::infrastructure::adapters::opentofu::client::{InstanceInfo, OpenTofuError};
+use crate::infrastructure::adapters::ssh::{credentials::SshCredentials, SshError};
+use crate::infrastructure::executor::CommandError;
 use crate::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep,
@@ -69,7 +69,7 @@ pub struct ProvisionCommand {
     tofu_template_renderer: Arc<TofuTemplateRenderer>,
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
     ansible_client: Arc<AnsibleClient>,
-    opentofu_client: Arc<crate::command_wrappers::opentofu::client::OpenTofuClient>,
+    opentofu_client: Arc<crate::infrastructure::adapters::opentofu::client::OpenTofuClient>,
     ssh_credentials: SshCredentials,
 }
 
@@ -80,7 +80,7 @@ impl ProvisionCommand {
         tofu_template_renderer: Arc<TofuTemplateRenderer>,
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
         ansible_client: Arc<AnsibleClient>,
-        opentofu_client: Arc<crate::command_wrappers::opentofu::client::OpenTofuClient>,
+        opentofu_client: Arc<crate::infrastructure::adapters::opentofu::client::OpenTofuClient>,
         ssh_credentials: SshCredentials,
     ) -> Self {
         Self {
@@ -181,7 +181,7 @@ mod tests {
         Arc<TofuTemplateRenderer>,
         Arc<AnsibleTemplateRenderer>,
         Arc<AnsibleClient>,
-        Arc<crate::command_wrappers::opentofu::client::OpenTofuClient>,
+        Arc<crate::infrastructure::adapters::opentofu::client::OpenTofuClient>,
         SshCredentials,
         TempDir,
     ) {
@@ -210,7 +210,7 @@ mod tests {
         let ansible_client = Arc::new(AnsibleClient::new(temp_dir.path()));
 
         let opentofu_client = Arc::new(
-            crate::command_wrappers::opentofu::client::OpenTofuClient::new(temp_dir.path()),
+            crate::infrastructure::adapters::opentofu::client::OpenTofuClient::new(temp_dir.path()),
         );
 
         let ssh_key_path = temp_dir.path().join("test_key");

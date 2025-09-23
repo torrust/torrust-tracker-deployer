@@ -109,7 +109,7 @@ impl VariablesTemplate {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::command_wrappers::lxd::instance::InstanceName;
+    use crate::infrastructure::adapters::lxd::instance::InstanceName;
     use tempfile::NamedTempFile;
 
     fn create_test_context() -> VariablesContext {

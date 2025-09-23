@@ -20,7 +20,7 @@
 
 use tracing::{info, instrument};
 
-use crate::command_wrappers::ssh::{SshClient, SshConnection, SshError};
+use crate::infrastructure::adapters::ssh::{SshClient, SshConnection, SshError};
 
 /// Step that waits for SSH connectivity to be established on a remote host
 pub struct WaitForSSHConnectivityStep {
@@ -78,7 +78,7 @@ impl WaitForSSHConnectivityStep {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr};
 
-    use crate::command_wrappers::ssh::SshCredentials;
+    use crate::infrastructure::adapters::ssh::SshCredentials;
 
     use super::*;
 

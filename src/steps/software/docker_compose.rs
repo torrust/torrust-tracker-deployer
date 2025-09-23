@@ -24,8 +24,8 @@
 use std::sync::Arc;
 use tracing::{info, instrument};
 
-use crate::command::CommandError;
-use crate::command_wrappers::ansible::AnsibleClient;
+use crate::infrastructure::adapters::ansible::AnsibleClient;
+use crate::infrastructure::executor::CommandError;
 
 /// Step that installs Docker Compose on a remote host via Ansible
 pub struct InstallDockerComposeStep {

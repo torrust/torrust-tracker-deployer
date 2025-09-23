@@ -21,7 +21,7 @@
 //! # use std::path::Path;
 //! # use torrust_tracker_deploy::tofu::CloudInitTemplateRenderer;
 //! # use torrust_tracker_deploy::template::TemplateManager;
-//! # use torrust_tracker_deploy::command_wrappers::ssh::credentials::SshCredentials;
+//! # use torrust_tracker_deploy::infrastructure::adapters::ssh::credentials::SshCredentials;
 //! # use std::path::PathBuf;
 //! #
 //! # #[tokio::main]
@@ -44,7 +44,7 @@ use std::path::Path;
 use std::sync::Arc;
 use thiserror::Error;
 
-use crate::command_wrappers::ssh::credentials::SshCredentials;
+use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
 use crate::template::file::File;
 use crate::template::wrappers::tofu::lxd::cloud_init::{CloudInitContext, CloudInitTemplate};
 use crate::template::{TemplateManager, TemplateManagerError};

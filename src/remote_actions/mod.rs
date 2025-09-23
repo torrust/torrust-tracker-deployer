@@ -24,7 +24,7 @@
 use std::net::IpAddr;
 use thiserror::Error;
 
-use crate::command::CommandError;
+use crate::infrastructure::executor::CommandError;
 
 /// Errors that can occur during remote action execution
 #[derive(Error, Debug)]
