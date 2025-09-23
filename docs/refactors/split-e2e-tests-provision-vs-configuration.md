@@ -241,14 +241,36 @@ Split the E2E testing into two independent test suites:
 - Container cleanup: Testcontainers automatically removes containers after test completion
 - All validation steps pass including Docker daemon functionality tests
 
-#### B.5: Create configuration workflow
+#### B.5: Create configuration workflow ✅ COMPLETED
 
-- [ ] **Task**: Create `.github/workflows/test-e2e-config.yml`
-  - Remove LXD/OpenTofu setup steps
-  - Keep Ansible installation
-  - Add Docker setup if needed
-  - Use `cargo run --bin e2e-config-tests`
-  - Configure appropriate timeout limits
+- [x] **Task**: Create `.github/workflows/test-e2e-config.yml`
+  - Remove LXD/OpenTofu setup steps ✅
+  - Keep Ansible installation ✅
+  - Add Docker setup if needed ✅
+  - Use `cargo run --bin e2e-config-tests` ✅
+  - Configure appropriate timeout limits ✅
+
+**Implementation Details:**
+
+- Created `.github/workflows/test-e2e-config.yml` - GitHub Actions workflow for configuration testing
+- Removed LXD and OpenTofu installation steps (not needed for Docker-based testing)
+- Retained Ansible installation via `./scripts/setup/install-ansible.sh`
+- Added Docker setup using `docker/setup-buildx-action@v3`
+- Updated verification steps to check `docker --version` and `ansible --version`
+- Used `cargo run --bin e2e-config-tests` for the E2E configuration test execution
+- Set timeout to 45 minutes for complete software installation testing
+- Implemented Docker container lifecycle management in cleanup steps
+- Updated container image references to match `torrust-provisioned-instance` from Rust code
+- Added comprehensive debugging and cleanup steps for Docker containers
+- Followed GitHub Actions conventions with proper error handling and logging
+
+**Key Achievements:**
+
+- Complete GitHub Actions workflow for Docker-based E2E configuration testing
+- Proper container cleanup using correct image names (`torrust-provisioned-instance`)
+- Removed infrastructure dependencies (LXD/OpenTofu) while keeping configuration tools (Ansible)
+- All YAML linting checks pass with project's `.yamllint-ci.yml` configuration
+- Workflow follows same structure and conventions as provision workflow for consistency
 
 #### B.6: Test and commit configuration workflow
 
