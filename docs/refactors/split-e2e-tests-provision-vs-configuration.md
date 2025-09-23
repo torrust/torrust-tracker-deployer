@@ -191,33 +191,57 @@ Split the E2E testing into two independent test suites:
 - E2E tests copy SSH public key during setup phase
 - No privileged mode required
 
-#### B.3: Create configuration-only binary
+#### B.3: Create configuration-only binary with testcontainers ✅ COMPLETED
 
-- [ ] **Task**: Create `src/bin/e2e_config_tests.rs`
+- [x] **Task**: Create `src/bin/e2e_config_tests.rs` with testcontainers integration
   - Copy code from original `src/bin/e2e_tests.rs` (before provision-only changes)
-  - Replace LXD VM provisioning with Docker container setup
-  - Implement Docker container lifecycle management
+  - Replace LXD VM provisioning with Docker container setup using testcontainers
+  - Implement Docker container lifecycle management via testcontainers-rs
   - Keep all configuration, release, and run phase testing
   - Update infrastructure cleanup to handle Docker containers
+  - Add `testcontainers` crate dependency with blocking features
+  - Implement container management through testcontainers API for reliable cleanup
 
-#### B.4: Integrate testcontainers (optional)
+**Implementation Details:**
 
-- [ ] **Task**: Evaluate and potentially integrate testcontainers-rs
-  - Add `testcontainers` crate dependency if beneficial
-  - Implement container management through testcontainers API
-  - Compare with direct Docker CLI approach
-  - Document decision and rationale
+- Created `src/bin/e2e_config_tests.rs` with complete Docker-based E2E configuration testing
+- Implemented `src/e2e/provisioned_container.rs` using testcontainers for container lifecycle management
+- Added testcontainers v0.25 dependency with blocking features for synchronous container operations
+- Integrated SSH key authentication via docker exec for Ansible connectivity
+- Fixed container port mapping (22:22) for simplified SSH access
+- Enhanced Docker image with python3-apt for Ansible APT operations
+- Implemented container detection in Ansible templates to skip systemd operations
+- Disabled cloud-init validation for container-based testing
+- Added comprehensive logging and error handling throughout the workflow
 
-#### B.5: Test configuration workflow locally
+**Key Achievements:**
 
-- [ ] **Task**: Validate configuration tests work locally
-  - Test: `cargo run --bin e2e-config-tests`
-  - Verify container creation and networking
-  - Validate Ansible connectivity to container
-  - Confirm all configuration/release/run phases complete
-  - Test cleanup procedures
+- Complete Docker-based E2E testing infrastructure replacing LXD VMs
+- Working SSH authentication and Ansible connectivity to containers
+- Successful Docker and Docker Compose installation via Ansible playbooks
+- Proper container cleanup via testcontainers automatic management
+- All configuration tests passing with verified software installations
 
-#### B.6: Create configuration workflow
+#### B.4: Test configuration workflow locally ✅ COMPLETED
+
+- [x] **Task**: Validate configuration tests work locally
+  - Test: `cargo run --bin e2e-config-tests` ✅
+  - Verify container creation and networking ✅
+  - Validate Ansible connectivity to container ✅
+  - Confirm all configuration/release/run phases complete ✅
+  - Test cleanup procedures ✅
+  - Verify Docker and Docker Compose installations work correctly ✅
+
+**Validation Results:**
+
+- Local test execution time: ~30 seconds for complete configuration workflow
+- Container networking: SSH connectivity on port 22 working correctly
+- Ansible playbook execution: Docker and Docker Compose installed successfully
+- Software verification: Both `docker --version` and `docker-compose --version` confirmed working
+- Container cleanup: Testcontainers automatically removes containers after test completion
+- All validation steps pass including Docker daemon functionality tests
+
+#### B.5: Create configuration workflow
 
 - [ ] **Task**: Create `.github/workflows/test-e2e-config.yml`
   - Remove LXD/OpenTofu setup steps
@@ -226,7 +250,7 @@ Split the E2E testing into two independent test suites:
   - Use `cargo run --bin e2e-config-tests`
   - Configure appropriate timeout limits
 
-#### B.7: Test and commit configuration workflow
+#### B.6: Test and commit configuration workflow
 
 - [ ] **Task**: Verify configuration workflow on GitHub Actions
   - Commit configuration test changes

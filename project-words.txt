@@ -76,6 +76,8 @@ Taplo
 Tera
 terraformrc
 tést
+testcontainer
+testcontainers
 testuser
 tfstate
 tfvars

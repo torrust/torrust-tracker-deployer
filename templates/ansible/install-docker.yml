@@ -320,22 +320,61 @@
         - docker_fallback_install is failed
       ignore_errors: true
 
-    # Task 5: Start and enable Docker service (if Docker was installed)
+    # Task 4.5: Detect if we're running in a container environment
+    - name: Check if running in a container environment
+      ansible.builtin.stat:
+        path: /.dockerenv
+      register: dockerenv_check
+
+    - name: Check for container environment via systemd
+      ansible.builtin.shell: |
+        if [ -f /proc/1/cgroup ]; then
+          grep -q docker /proc/1/cgroup || grep -q container /proc/1/cgroup
+        else
+          false
+        fi
+      register: container_check
+      failed_when: false
+      changed_when: false
+
+    - name: Set container environment fact
+      ansible.builtin.set_fact:
+        is_container_env: "{{ dockerenv_check.stat.exists or container_check.rc == 0 }}"
+
+    # Task 5: Start and enable Docker service (if Docker was installed and not in container)
     - name: Start and enable Docker service
       ansible.builtin.systemd:
         name: docker
         state: started
         enabled: true
-      when: docker_install is succeeded or docker_fallback_install is succeeded
+      when:
+        - docker_install is succeeded or docker_fallback_install is succeeded
+        - not is_container_env
 
-    # Task 5b: Start snap Docker service (if installed via snap)
+    - name: Skip Docker service start in container environment
+      ansible.builtin.debug:
+        msg: "🐳 Skipping Docker service start - detected container environment (systemd not available)"
+      when:
+        - docker_install is succeeded or docker_fallback_install is succeeded
+        - is_container_env
+
+    # Task 5b: Start snap Docker service (if installed via snap and not in container)
     - name: Start and enable snap Docker service
       ansible.builtin.systemd:
         name: snap.docker.dockerd
         state: started
         enabled: true
-      when: docker_snap_install is succeeded
+      when:
+        - docker_snap_install is succeeded
+        - not is_container_env
       ignore_errors: true
+
+    - name: Skip snap Docker service start in container environment
+      ansible.builtin.debug:
+        msg: "🐳 Skipping snap Docker service start - detected container environment (systemd not available)"
+      when:
+        - docker_snap_install is succeeded
+        - is_container_env
 
     # Task 6: Add user to docker group (for non-root Docker usage) (if Docker was installed)
     - name: Add user to docker group
@@ -413,8 +452,9 @@
 
   # Handlers section - tasks that run when triggered by other tasks
   handlers:
-    # Handler: Restart Docker service if needed
+    # Handler: Restart Docker service if needed (skip in container environments)
     - name: restart docker
       ansible.builtin.systemd:
         name: docker
         state: restarted
+      when: not (is_container_env | default(false))

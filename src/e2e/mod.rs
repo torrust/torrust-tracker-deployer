@@ -7,6 +7,7 @@
 //! ## Module Structure
 //!
 //! - `environment` - Test environment configuration and management
+//! - `provisioned_container` - Docker container state machine for E2E testing
 //! - `tasks` - High-level testing tasks and workflows
 //!
 //! ## Testing Workflow
@@ -16,4 +17,5 @@
 //! the entire deployment system works correctly.
 
 pub mod environment;
+pub mod provisioned_container;
 pub mod tasks;

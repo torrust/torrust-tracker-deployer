@@ -11,6 +11,7 @@
 //! - `configure_infrastructure` - Infrastructure configuration via Ansible
 //! - `preflight_cleanup` - Pre-test cleanup of lingering resources
 //! - `provision_infrastructure` - Infrastructure provisioning via `OpenTofu`
+//! - `provision_docker_infrastructure` - Docker container provisioning simulation
 //! - `setup_ssh_key` - SSH key generation and setup
 //! - `validate_deployment` - Deployment validation and testing
 //!
@@ -21,6 +22,7 @@ pub mod clean_and_prepare_templates;
 pub mod cleanup_infrastructure;
 pub mod configure_infrastructure;
 pub mod preflight_cleanup;
+pub mod provision_docker_infrastructure;
 pub mod provision_infrastructure;
 pub mod setup_ssh_key;
 pub mod validate_deployment;

@@ -23,6 +23,8 @@ RUN apt-get update && apt-get install -y \
     sudo \
     # Supervisor for process management
     supervisor \
+    # Python APT bindings for Ansible
+    python3-apt \
     # Basic utilities
     curl \
     wget \
