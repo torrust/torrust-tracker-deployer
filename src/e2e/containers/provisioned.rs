@@ -20,30 +20,35 @@
 //!
 //! ```rust,no_run
 //! use torrust_tracker_deploy::e2e::containers::{
-//!     StoppedProvisionedContainer, ProvisionedContainerError
+//!     StoppedProvisionedContainer, ProvisionedContainerError,
+//!     actions::{SshWaitAction, SshKeySetupAction}
 //! };
 //! use torrust_tracker_deploy::infrastructure::adapters::ssh::SshCredentials;
 //! use std::path::PathBuf;
+//! use std::time::Duration;
 //!
-//! fn example() -> Result<(), ProvisionedContainerError> {
+//! fn example() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Start with stopped state
 //!     let stopped = StoppedProvisionedContainer::default();
 //!     
 //!     // Transition to running state
 //!     let running = stopped.start()?;
 //!     
-//!     // Wait for SSH server
-//!     running.wait_for_ssh()?;
+//!     // Get connection details
+//!     let (host, port) = running.ssh_details();
 //!     
-//!     // Setup SSH keys with credentials
+//!     // Wait for SSH server using action directly
+//!     let ssh_wait_action = SshWaitAction::new(Duration::from_secs(30), 10);
+//!     ssh_wait_action.execute(&host, port)?;
+//!     
+//!     // Setup SSH keys with credentials using action directly
 //!     let ssh_credentials = SshCredentials::new(
 //!         PathBuf::from("/path/to/private_key"),
 //!         PathBuf::from("/path/to/public_key.pub"),
 //!         "torrust".to_string(),
 //!     );
-//!     running.setup_ssh_keys(&ssh_credentials)?;
-//!     
-//!     let (host, port) = running.ssh_details();
+//!     let ssh_key_setup_action = SshKeySetupAction::new();
+//!     ssh_key_setup_action.execute(&running, &ssh_credentials)?;
 //!     
 //!     // Transition back to stopped state
 //!     let _stopped = running.stop();
@@ -51,7 +56,6 @@
 //! }
 //! ```
 
-use std::time::Duration;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
     runners::SyncRunner,
@@ -59,11 +63,9 @@ use testcontainers::{
 };
 use tracing::info;
 
-use super::actions::{SshKeySetupAction, SshWaitAction};
 use super::config_builder::ContainerConfigBuilder;
 use super::executor::ContainerExecutor;
 use super::image_builder::ContainerImageBuilder;
-use crate::infrastructure::adapters::ssh::SshCredentials;
 
 /// Default Docker image name for provisioned instances
 const DEFAULT_IMAGE_NAME: &str = "torrust-provisioned-instance";
@@ -104,35 +106,6 @@ pub enum ProvisionedContainerError {
     SshPortMappingFailed {
         #[source]
         source: testcontainers::TestcontainersError,
-    },
-
-    /// Failed to read SSH public key file
-    #[error("Failed to read SSH public key from {path}: {source}")]
-    SshKeyFileRead {
-        path: String,
-        #[source]
-        source: std::io::Error,
-    },
-
-    /// Failed to execute SSH key setup command in container
-    #[error("Failed to setup SSH keys in container: {source}")]
-    SshKeySetupFailed {
-        #[source]
-        source: testcontainers::TestcontainersError,
-    },
-
-    /// SSH key setup action failed
-    #[error("SSH key setup action failed: {source}")]
-    SshKeyActionFailed {
-        #[from]
-        source: super::actions::ssh_key_setup::SshKeySetupError,
-    },
-
-    /// SSH wait action failed
-    #[error("SSH wait action failed: {source}")]
-    SshWaitActionFailed {
-        #[from]
-        source: super::actions::ssh_wait::SshWaitError,
     },
 }
 
@@ -229,38 +202,6 @@ impl RunningProvisionedContainer {
         ("127.0.0.1".to_string(), self.ssh_port)
     }
 
-    /// Wait for SSH server to be ready (only available when running)
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if SSH connectivity cannot be established within
-    /// the timeout period or if SSH connection tests fail.
-    pub fn wait_for_ssh(&self) -> Result<()> {
-        let (host, port) = self.ssh_details();
-        let action = SshWaitAction::new(Duration::from_secs(30), 10);
-        action
-            .execute(&host, port)
-            .map_err(|source| ProvisionedContainerError::SshWaitActionFailed { source })
-    }
-
-    /// Setup SSH key authentication (only available when running)
-    ///
-    /// # Arguments
-    ///
-    /// * `ssh_credentials` - SSH credentials containing the public key path and username
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - SSH public key file cannot be read
-    /// - Docker exec command fails
-    /// - SSH key file operations fail within the container
-    pub fn setup_ssh_keys(&self, ssh_credentials: &SshCredentials) -> Result<()> {
-        let action = SshKeySetupAction::new();
-        action.execute(self, ssh_credentials)?;
-        Ok(())
-    }
-
     /// Get the container ID for logging/debugging
     #[must_use]
     pub fn container_id(&self) -> &str {
@@ -279,7 +220,6 @@ impl RunningProvisionedContainer {
 mod tests {
     use super::*;
     use std::error::Error;
-    use std::path::PathBuf;
 
     #[test]
     fn it_should_create_default_stopped_container() {
@@ -311,19 +251,6 @@ mod tests {
     }
 
     #[test]
-    fn it_should_preserve_error_chain_for_ssh_key_file_read() {
-        let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
-        let error = ProvisionedContainerError::SshKeyFileRead {
-            path: "/path/to/key".to_string(),
-            source: io_error,
-        };
-
-        assert!(error.to_string().contains("Failed to read SSH public key"));
-        assert!(error.to_string().contains("/path/to/key"));
-        assert!(error.source().is_some());
-    }
-
-    #[test]
     fn it_should_convert_docker_build_error_to_provisioned_container_error() {
         use crate::e2e::containers::image_builder::ContainerBuildError;
 
@@ -343,14 +270,4 @@ mod tests {
 
     // Note: Integration tests that actually start containers would require Docker
     // and are better suited for the e2e test binaries
-
-    // Helper function to create mock SSH credentials for testing
-    #[allow(dead_code)]
-    fn create_mock_ssh_credentials() -> SshCredentials {
-        SshCredentials::new(
-            PathBuf::from("/mock/path/to/private_key"),
-            PathBuf::from("/mock/path/to/public_key.pub"),
-            "testuser".to_string(),
-        )
-    }
 }

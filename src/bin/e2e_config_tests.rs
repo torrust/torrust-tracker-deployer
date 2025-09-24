@@ -26,13 +26,14 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
 use tracing::{error, info};
 
 use torrust_tracker_deploy::application::commands::ConfigureCommand;
 use torrust_tracker_deploy::config::{Config, InstanceName, SshCredentials};
 use torrust_tracker_deploy::container::Services;
+use torrust_tracker_deploy::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
 use torrust_tracker_deploy::e2e::containers::StoppedProvisionedContainer;
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
 use torrust_tracker_deploy::e2e::tasks::preflight_cleanup;
@@ -146,17 +147,19 @@ fn run_configuration_tests() -> Result<()> {
         .context("Failed to start provisioned instance container")?;
 
     // Step 2: Wait for SSH server and setup connectivity (only available when running)
-    running_container
-        .wait_for_ssh()
+    let (ssh_host, ssh_port) = running_container.ssh_details();
+    let ssh_wait_action = SshWaitAction::new(Duration::from_secs(30), 10);
+    ssh_wait_action
+        .execute(&ssh_host, ssh_port)
         .context("SSH server failed to start")?;
 
     // Get SSH credentials from test environment and setup keys
     let ssh_credentials = &test_env.config.ssh_credentials;
-    running_container
-        .setup_ssh_keys(ssh_credentials)
+    let ssh_key_setup_action = SshKeySetupAction::new();
+    ssh_key_setup_action
+        .execute(&running_container, ssh_credentials)
         .context("Failed to setup SSH authentication")?;
 
-    let (ssh_host, ssh_port) = running_container.ssh_details();
     info!(
         ssh_host = %ssh_host,
         ssh_port = ssh_port,
