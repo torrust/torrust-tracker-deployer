@@ -9,12 +9,14 @@
 //! - `client` - SSH client implementation for remote command execution
 //! - `connection` - SSH connection configuration and management
 //! - `credentials` - SSH authentication credentials and key management
+//! - `service_checker` - SSH service availability testing without authentication
 //!
 //! ## Key Features
 //!
 //! - Private key authentication with configurable credentials
 //! - Connection timeout and retry mechanisms
 //! - Secure remote command execution with error handling
+//! - SSH service availability checking for connectivity testing
 //! - Integration with deployment automation workflows
 //!
 //! The SSH wrapper is designed for automated deployment scenarios where
@@ -23,10 +25,12 @@
 pub mod client;
 pub mod connection;
 pub mod credentials;
+pub mod service_checker;
 
 pub use client::SshClient;
 pub use connection::SshConnection;
 pub use credentials::SshCredentials;
+pub use service_checker::SshServiceChecker;
 
 use thiserror::Error;
 

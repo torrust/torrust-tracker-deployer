@@ -6,6 +6,8 @@
 use std::time::{Duration, Instant};
 use tracing::{info, warn};
 
+use crate::shared::ssh::SshServiceChecker;
+
 /// Specific error types for SSH wait operations
 #[derive(Debug, thiserror::Error)]
 pub enum SshWaitError {
@@ -152,77 +154,25 @@ impl SshWaitAction {
         })
     }
 
-    /// Test SSH connection by attempting a simple SSH command
+    /// Test SSH connection by checking if SSH service is available
     fn test_ssh_connection(host: &str, port: u16) -> Result<()> {
-        use std::process::Command;
+        let checker = SshServiceChecker::new();
 
-        let output = Command::new("ssh")
-            .args([
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                "-o",
-                "ConnectTimeout=5",
-                "-o",
-                "BatchMode=yes", // Non-interactive mode
-                "-p",
-                &port.to_string(),
-                &format!("test@{host}"),
-                "echo",
-                "test",
-            ])
-            .output()
-            .map_err(|source| SshWaitError::SshConnectionTestFailed {
+        match checker.is_service_available(host, port) {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(SshWaitError::SshConnectionTestFailed {
                 host: host.to_string(),
                 port,
-                source,
-            })?;
-
-        // For SSH connectivity testing, we just need to know if the SSH server
-        // is responding, even if authentication fails
-        match output.status.code() {
-            Some(0) => {
-                // SSH command succeeded (unlikely in this test scenario, but good)
-                Ok(())
-            }
-            Some(255) => {
-                // Exit code 255 can mean either:
-                // 1. Authentication failed (server reachable) - this is OK for connectivity test
-                // 2. Connection refused (server not reachable) - this is what we want to catch
-
-                let stderr = String::from_utf8_lossy(&output.stderr);
-
-                if stderr.contains("Connection refused") || stderr.contains("No route to host") {
-                    // Server is not reachable
-                    Err(SshWaitError::SshConnectionTestFailed {
-                        host: host.to_string(),
-                        port,
-                        source: std::io::Error::new(
-                            std::io::ErrorKind::ConnectionRefused,
-                            "SSH server not reachable",
-                        ),
-                    })
-                } else {
-                    // Server is reachable (auth failed, but that's OK for connectivity test)
-                    Ok(())
-                }
-            }
-            Some(_) => {
-                // Other exit codes indicate server is reachable (auth issues, command issues, etc.)
-                Ok(())
-            }
-            None => {
-                // Process terminated by signal
-                Err(SshWaitError::SshConnectionTestFailed {
-                    host: host.to_string(),
-                    port,
-                    source: std::io::Error::new(
-                        std::io::ErrorKind::Interrupted,
-                        "SSH process terminated by signal",
-                    ),
-                })
-            }
+                source: std::io::Error::new(
+                    std::io::ErrorKind::ConnectionRefused,
+                    "SSH server not reachable",
+                ),
+            }),
+            Err(e) => Err(SshWaitError::SshConnectionTestFailed {
+                host: host.to_string(),
+                port,
+                source: std::io::Error::other(format!("SSH service check failed: {e}")),
+            }),
         }
     }
 }
