@@ -290,19 +290,21 @@ Split the E2E testing into two independent test suites:
   - Update `README.md` workflow badges for both test suites
   - Add troubleshooting guide for each test type
 
-#### C.2: Update legacy workflow
+#### C.2: Remove legacy workflow
 
-- [ ] **Task**: Update or deprecate original E2E workflow
-  - Option 1: Remove `.github/workflows/test-e2e.yml` entirely
-  - Option 2: Convert to meta-workflow that runs both new test suites
-  - Update any CI dependencies or status checks
+- [ ] **Task**: Remove original E2E workflow
+  - Remove `.github/workflows/test-e2e.yml` entirely
+  - Update any CI dependencies or status checks that reference the old workflow
+  - Update workflow status badges in README to point to new split workflows
 
-#### C.3: Cleanup old binary (optional)
+#### C.3: Rename old binary for local development
 
-- [ ] **Task**: Remove or repurpose `src/bin/e2e_tests.rs`
-  - Remove if no longer needed
-  - Or repurpose as meta-test runner for both suites
-  - Update any related documentation
+- [ ] **Task**: Rename `src/bin/e2e_tests.rs` for local use
+  - Rename to `src/bin/e2e_tests_full.rs` (or similar descriptive name)
+  - Update `Cargo.toml` binary configuration to match new name
+  - Add documentation comment explaining it's for local development only
+  - Update any related documentation to clarify this is for local testing
+  - Note: This binary cannot run on GitHub Actions due to network connectivity issues but remains useful for local full deployment testing
 
 #### C.4: Validate complete solution
 
