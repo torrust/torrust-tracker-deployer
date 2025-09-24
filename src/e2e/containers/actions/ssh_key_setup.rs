@@ -100,17 +100,48 @@ impl SshKeySetupAction {
         let user_ssh_dir = format!("/home/{ssh_user}/.ssh");
         let authorized_keys_path = format!("{user_ssh_dir}/authorized_keys");
 
-        // Execute the command to setup SSH keys
+        // Execute each command separately for better error handling
+        Self::create_ssh_directory(container, &user_ssh_dir)?;
+        Self::add_public_key_to_authorized_keys(
+            container,
+            &public_key_content,
+            &authorized_keys_path,
+        )?;
+        Self::set_ssh_directory_permissions(container, &user_ssh_dir)?;
+        Self::set_authorized_keys_permissions(container, &authorized_keys_path)?;
+
+        info!(
+            ssh_user = ssh_user,
+            authorized_keys = authorized_keys_path,
+            "SSH key authentication configured"
+        );
+
+        Ok(())
+    }
+
+    /// Create the SSH directory for the user
+    fn create_ssh_directory<T: ContainerExecutor>(container: &T, user_ssh_dir: &str) -> Result<()> {
+        let command = ExecCommand::new(["sh", "-c", &format!("mkdir -p {user_ssh_dir}")]);
+
+        container
+            .exec(command)
+            .map_err(|source| SshKeySetupError::SshKeySetupFailed { source })?;
+
+        Ok(())
+    }
+
+    /// Add the public key to the `authorized_keys` file
+    fn add_public_key_to_authorized_keys<T: ContainerExecutor>(
+        container: &T,
+        public_key_content: &str,
+        authorized_keys_path: &str,
+    ) -> Result<()> {
         let command = ExecCommand::new([
             "sh",
             "-c",
             &format!(
-                "mkdir -p {} && echo '{}' >> {} && chmod 700 {} && chmod 600 {}",
-                user_ssh_dir,
+                "echo '{}' >> {authorized_keys_path}",
                 public_key_content.trim(),
-                authorized_keys_path,
-                user_ssh_dir,
-                authorized_keys_path
             ),
         ]);
 
@@ -118,11 +149,33 @@ impl SshKeySetupAction {
             .exec(command)
             .map_err(|source| SshKeySetupError::SshKeySetupFailed { source })?;
 
-        info!(
-            ssh_user = ssh_user,
-            authorized_keys = authorized_keys_path,
-            "SSH key authentication configured"
-        );
+        Ok(())
+    }
+
+    /// Set permissions on the SSH directory (700)
+    fn set_ssh_directory_permissions<T: ContainerExecutor>(
+        container: &T,
+        user_ssh_dir: &str,
+    ) -> Result<()> {
+        let command = ExecCommand::new(["sh", "-c", &format!("chmod 700 {user_ssh_dir}")]);
+
+        container
+            .exec(command)
+            .map_err(|source| SshKeySetupError::SshKeySetupFailed { source })?;
+
+        Ok(())
+    }
+
+    /// Set permissions on the `authorized_keys` file (600)
+    fn set_authorized_keys_permissions<T: ContainerExecutor>(
+        container: &T,
+        authorized_keys_path: &str,
+    ) -> Result<()> {
+        let command = ExecCommand::new(["sh", "-c", &format!("chmod 600 {authorized_keys_path}")]);
+
+        container
+            .exec(command)
+            .map_err(|source| SshKeySetupError::SshKeySetupFailed { source })?;
 
         Ok(())
     }
