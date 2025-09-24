@@ -1,6 +1,31 @@
 # Provisioned Container Module Refactoring Plan
 
-## 📋 Overview
+## � MAJOR UPDATE (September 2025)
+
+**Status**: This document has been updated to reflect the current implementation state. Many features initially marked as "not implemented" have actually been completed.
+
+### Key Findings from Code Review
+
+**✅ COMPLETED FEATURES** (that were previously listed as not-implemented):
+
+- **Add Timeout Configurations** - `ContainerTimeouts` struct fully implemented with configurable timeouts
+- **Extract Magic Numbers and Strings** - Constants extracted and configurable parameters implemented
+- **Enhanced Logging** - Structured logging with `tracing` implemented throughout all modules
+- **Robust SSH Connectivity Testing** - `SshWaitAction` with exponential backoff and actual connectivity testing
+
+**🎯 REMAINING HIGH-PRIORITY ITEMS**:
+
+- **Improve Test Coverage** - More comprehensive unit and integration tests needed
+- **Add Health Checks** - Container health monitoring beyond just SSH connectivity
+
+**⚠️ REASSESSED ITEMS**:
+
+- **Container Configuration Options** - Partially implemented; current modular approach may be preferable
+- **Builder Pattern for Container Creation** - Questionable relevance; current modular builders are cleaner
+
+---
+
+## �📋 Overview
 
 This document outlines a comprehensive refactoring plan for the provisioned container module (now located at `src/e2e/containers/provisioned.rs`) to improve maintainability, readability, testability, and reliability. The refactoring follows Rust best practices and the project's established patterns.
 
@@ -317,32 +342,57 @@ pub enum SshWaitError {
 
 ### ✅ 5. Robust SSH Connectivity Testing (Completed)
 
-**Issue Resolved**: SSH readiness check is now implemented with actual connectivity testing instead of simple sleep.
+**Status**: ✅ **COMPLETED**
+
+**Issue Resolved**: SSH readiness check now implemented with actual connectivity testing instead of simple sleep.
 
 **Implementation Completed**:
 
 ```rust
-impl ContainerSshManager for DockerContainerSshManager {
-    async fn wait_for_ssh_ready(&self, timeout: Duration) -> Result<()> {
-        let start_time = Instant::now();
-        let mut backoff = Duration::from_millis(100);
+pub struct SshWaitAction {
+    pub timeout: Duration,
+    pub max_attempts: usize,
+}
 
-        while start_time.elapsed() < timeout {
-            match self.test_ssh_connection().await {
+impl SshWaitAction {
+    pub fn new(timeout: Duration, max_attempts: usize) -> Self {
+        Self { timeout, max_attempts }
+    }
+
+    pub fn execute(&self, host: &str, port: u16) -> Result<()> {
+        let start_time = Instant::now();
+        let mut attempt = 0;
+        let mut backoff = Duration::from_millis(100);
+        let mut last_error_context = "No connection attempts made".to_string();
+
+        while start_time.elapsed() < self.timeout && attempt < self.max_attempts {
+            attempt += 1;
+
+            match test_ssh_connection(host, port) {
                 Ok(_) => {
-                    info!("SSH connection successful after {:?}", start_time.elapsed());
+                    info!(
+                        host = host,
+                        port = port,
+                        attempts = attempt,
+                        duration_ms = start_time.elapsed().as_millis(),
+                        "SSH connectivity established"
+                    );
                     return Ok(());
                 }
-                Err(_) => {
-                    tokio::time::sleep(backoff).await;
+                Err(e) => {
+                    last_error_context = e.to_string();
+                    std::thread::sleep(backoff);
                     backoff = std::cmp::min(backoff * 2, Duration::from_secs(5));
                 }
             }
         }
 
-        Err(ProvisionedContainerError::SshSetupTimeout {
-            container_id: self.container_id().to_string(),
-            timeout_secs: timeout.as_secs(),
+        Err(SshWaitError::SshConnectionTimeout {
+            host: host.to_string(),
+            port,
+            timeout_secs: self.timeout.as_secs(),
+            max_attempts: self.max_attempts,
+            last_error_context,
         })
     }
 }
@@ -350,18 +400,19 @@ impl ContainerSshManager for DockerContainerSshManager {
 
 **Benefits Achieved**:
 
-- ✅ Actual SSH connectivity verification
-- ✅ Exponential backoff for efficiency
-- ✅ Configurable timeouts
-- ✅ Better failure detection
+- ✅ **Actual SSH connectivity verification** - No more sleep-based waiting
+- ✅ **Exponential backoff for efficiency** - Prevents aggressive polling
+- ✅ **Configurable timeouts and retry attempts** - Flexible for different environments
+- ✅ **Better failure detection** - Detailed error context and timing info
+- ✅ **Proper error handling** - Comprehensive error information for debugging
 
 ### ✅ 6. Add Timeout Configurations (Completed)
 
 **Status**: ✅ **COMPLETED**
 
-**Current Issue**: Hardcoded timeouts make the system inflexible.
+**Issue Resolved**: Hardcoded timeouts made the system inflexible.
 
-**Implemented Solution**:
+**Implementation Completed**:
 
 ```rust
 #[derive(Debug, Clone)]
@@ -384,246 +435,294 @@ impl Default for ContainerTimeouts {
 }
 ```
 
+**Benefits Achieved**:
+
+- ✅ Configurable timeouts for all container operations
+- ✅ Sensible defaults with ability to customize
+- ✅ Used throughout provisioned container implementation
+- ✅ Constructor methods like `with_timeouts()` available
+
 ## 📦 Configuration & Constants
 
-### 7. Extract Magic Numbers and Strings
+### ✅ 7. Extract Magic Numbers and Strings (Completed)
 
-**Current Issue**: Hardcoded values scattered throughout the code.
+**Status**: ✅ **COMPLETED**
 
-**Proposed Solution**:
+**Issue Resolved**: Hardcoded values scattered throughout the code.
 
-```rust
-pub mod constants {
-    use std::time::Duration;
-
-    pub const DEFAULT_IMAGE_NAME: &str = "torrust-provisioned-instance";
-    pub const DEFAULT_IMAGE_TAG: &str = "latest";
-    pub const DEFAULT_SSH_PORT: u16 = 22;
-    pub const DEFAULT_DOCKERFILE_PATH: &str = "docker/provisioned-instance/Dockerfile";
-    pub const DEFAULT_SSH_READY_MESSAGE: &str = "sshd entered RUNNING state";
-    pub const DEFAULT_SSH_WAIT_DURATION: Duration = Duration::from_secs(5);
-    pub const MAX_SSH_SETUP_RETRIES: usize = 3;
-}
-```
-
-**Benefits**:
-
-- Centralized configuration
-- Easy to modify behavior
-- Self-documenting code
-- Consistent values across the module
-
-### 8. Container Configuration Options
-
-**Current Issue**: Limited flexibility in container setup.
-
-**Proposed Solution**:
+**Implementation Completed**:
 
 ```rust
-#[derive(Debug, Clone)]
-pub struct ContainerOptions {
-    pub image_name: String,
-    pub image_tag: String,
-    pub dockerfile_path: PathBuf,
-    pub ssh_port: u16,
-    pub environment_vars: HashMap<String, String>,
-    pub volumes: Vec<String>,
-    pub timeouts: ContainerTimeouts,
+// In src/e2e/containers/provisioned.rs
+const DEFAULT_IMAGE_NAME: &str = "torrust-provisioned-instance";
+const DEFAULT_IMAGE_TAG: &str = "latest";
+
+// Timeout configurations in ContainerTimeouts struct
+pub struct ContainerTimeouts {
+    pub docker_build: Duration,     // Default: 300 seconds
+    pub container_start: Duration,  // Default: 60 seconds
+    pub ssh_ready: Duration,        // Default: 30 seconds
+    pub ssh_setup: Duration,        // Default: 15 seconds
 }
 
-impl Default for ContainerOptions {
+// In various modules - configurable parameters with defaults
+impl ContainerImageBuilder {
     fn default() -> Self {
         Self {
-            image_name: constants::DEFAULT_IMAGE_NAME.to_string(),
-            image_tag: constants::DEFAULT_IMAGE_TAG.to_string(),
-            dockerfile_path: PathBuf::from(constants::DEFAULT_DOCKERFILE_PATH),
-            ssh_port: constants::DEFAULT_SSH_PORT,
-            environment_vars: HashMap::new(),
-            volumes: Vec::new(),
-            timeouts: ContainerTimeouts::default(),
+            build_timeout: Duration::from_secs(300), // Default timeout
+            // Other configurable parameters...
         }
     }
 }
 ```
 
+**Benefits Achieved**:
+
+- ✅ Centralized configuration constants
+- ✅ Configurable timeouts replace hardcoded values
+- ✅ Easy to modify behavior across modules
+- ✅ Self-documenting code with meaningful constant names
+- ✅ Consistent values across the entire container system
+
+### 8. Container Configuration Options - ⚠️ PARTIALLY IMPLEMENTED
+
+**Status**: ⚠️ **PARTIALLY IMPLEMENTED** - Timeouts are configurable, but other container options could benefit from consolidation
+
+**Current State**: The system already has configurable timeouts via `ContainerTimeouts` and modular builders for different aspects:
+
+- `ContainerImageBuilder` - Handles image name, tag, dockerfile path, context
+- `ContainerConfigBuilder` - Handles container configuration (ports, wait conditions)
+- `ContainerTimeouts` - Handles all timeout configurations
+
+**Assessment**: The current modular approach provides good separation of concerns. A unified `ContainerOptions` struct may introduce unnecessary coupling.
+
+**Recommendation**: **CONSIDER SKIPPING** - The current modular approach with separate builders for different concerns is cleaner than a monolithic configuration struct. Only implement if there's a clear need to pass around a unified configuration object.
+
 ## 🧪 Testing & Observability
 
-### 9. Improve Test Coverage
+### 9. Improve Test Coverage - 🎯 STILL RELEVANT
 
-**Current Issue**: Limited test coverage, especially for integration scenarios.
+**Status**: 🎯 **STILL RELEVANT** - Test coverage improvements are always beneficial
 
-**Proposed Solution**:
+**Current State**: The container modules have basic unit tests, but could benefit from:
+
+- More comprehensive integration test scenarios
+- Mock-based testing for better isolation
+- Error scenario testing with proper mocking
+- Async test patterns for SSH operations
+
+**Updated Proposed Solution**:
 
 ```rust
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mockall::mock;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
 
-    mock! {
-        ContainerSshManager {}
-        impl ContainerSshManager for ContainerSshManager {
-            fn wait_for_ssh_ready(&self, timeout: Duration) -> Result<()>;
-            fn setup_ssh_keys(&self, credentials: &SshCredentials) -> Result<()>;
-            fn test_ssh_connection(&self) -> Result<()>;
-        }
+    // Integration tests with actual containers (existing approach)
+    #[tokio::test]
+    async fn it_should_start_and_configure_provisioned_container() {
+        let container = StoppedProvisionedContainer::new()
+            .start()
+            .await
+            .expect("Container should start");
+
+        // Test actual SSH connectivity and operations
+        let ssh_credentials = SshCredentials::new("root", &test_ssh_key());
+        container.setup_ssh_keys(&ssh_credentials).await.expect("SSH setup should work");
     }
 
+    // Unit tests for individual components (using current modular architecture)
     #[test]
-    fn it_should_build_docker_image_with_custom_config() { /* ... */ }
+    fn it_should_validate_container_configuration() {
+        let config = ContainerConfigBuilder::new("test-image:latest")
+            .with_exposed_port(22)
+            .with_exposed_port(8080);
 
+        assert!(config.build().exposed_ports().contains(&22));
+    }
+
+    // Error scenario tests
     #[test]
-    fn it_should_handle_ssh_setup_timeout() { /* ... */ }
+    fn it_should_handle_ssh_timeout_gracefully() {
+        let ssh_wait = SshWaitAction::new(Duration::from_millis(1), 1);
+        let result = ssh_wait.execute("unreachable-host", 22);
 
-    #[test]
-    fn it_should_retry_ssh_connection_with_backoff() { /* ... */ }
-
-    #[tokio::test]
-    async fn it_should_wait_for_ssh_with_exponential_backoff() { /* ... */ }
+        assert!(matches!(result, Err(SshWaitError::SshConnectionTimeout { .. })));
+    }
 }
 ```
 
 **Benefits**:
 
-- Better test coverage
-- Mock-based testing for isolation
-- Testing of error scenarios
-- Async test support
+- ✅ **Builds on existing architecture** - Works with current modular design
+- ✅ **Realistic integration tests** - Uses actual containers for end-to-end validation
+- ✅ **Focused unit tests** - Tests individual components in isolation
+- ✅ **Error scenario coverage** - Ensures proper error handling
 
-### 10. Enhanced Logging
+### ✅ 10. Enhanced Logging (Completed)
 
-**Current Issue**: Limited logging context and structure.
+**Status**: ✅ **COMPLETED**
 
-**Proposed Solution**:
+**Issue Resolved**: Limited logging context and structure.
+
+**Implementation Completed**:
 
 ```rust
-use tracing::{info, warn, error, debug, instrument, Span};
+use tracing::{info, warn, error, debug};
 
 impl RunningProvisionedContainer {
-    #[instrument(skip(self, ssh_credentials), fields(container_id = %self.container.id()))]
-    pub async fn setup_ssh_keys(&self, ssh_credentials: &SshCredentials) -> Result<()> {
-        let span = Span::current();
-        span.record("ssh_user", &ssh_credentials.ssh_username);
-        span.record("ssh_port", &self.ssh_port);
-
-        info!("Starting SSH key authentication setup");
+    pub async fn start() -> Result<Self> {
+        info!("Starting provisioned instance container");
 
         // Implementation with structured logging...
 
         info!(
-            setup_duration_ms = start_time.elapsed().as_millis(),
-            "SSH key authentication configured successfully"
+            container_id = %container.id(),
+            ssh_port = ssh_port,
+            startup_duration_ms = start_time.elapsed().as_millis(),
+            "Provisioned container started successfully"
         );
 
-        Ok(())
+        Ok(container)
+    }
+
+    pub fn stop(self) -> Result<()> {
+        info!(container_id = %self.container.id(), "Stopping container");
+        // Implementation...
+    }
+}
+
+impl SshWaitAction {
+    pub fn execute(&self, host: &str, port: u16) -> Result<()> {
+        info!(
+            host = host,
+            port = port,
+            timeout_secs = self.timeout.as_secs(),
+            max_attempts = self.max_attempts,
+            "Starting SSH connectivity check"
+        );
+        // Implementation...
     }
 }
 ```
 
-**Benefits**:
+**Benefits Achieved**:
 
-- Structured logging with context
-- Performance metrics
-- Better debugging information
-- Distributed tracing support
+- ✅ Structured logging with `tracing` throughout all modules
+- ✅ Contextual information (container IDs, ports, timing)
+- ✅ Performance metrics and timing information
+- ✅ Better debugging information for troubleshooting
+- ✅ Consistent logging patterns across all container modules
 
-### 11. Add Health Checks
+### 11. Add Health Checks - 🎯 STILL RELEVANT
 
-**Current Issue**: Limited container health verification.
+**Status**: 🎯 **STILL RELEVANT** - Would provide valuable container monitoring capabilities
 
-**Proposed Solution**:
+**Current State**: SSH connectivity is verified through `SshWaitAction`, but there's no comprehensive health checking beyond SSH availability.
+
+**Updated Proposed Solution**:
 
 ```rust
 pub trait ContainerHealthChecker {
+    async fn check_ssh_connectivity(&self) -> Result<SshHealthStatus>;
     async fn check_system_resources(&self) -> Result<SystemResources>;
     async fn check_required_services(&self) -> Result<Vec<ServiceStatus>>;
-    async fn check_network_connectivity(&self) -> Result<NetworkStatus>;
+    async fn comprehensive_health_check(&self) -> Result<ContainerHealthReport>;
 }
 
 #[derive(Debug)]
-pub struct SystemResources {
-    pub memory_usage_mb: u64,
-    pub disk_usage_mb: u64,
-    pub cpu_usage_percent: f64,
+pub struct ContainerHealthReport {
+    pub ssh_status: SshHealthStatus,
+    pub system_resources: SystemResources,
+    pub services: Vec<ServiceStatus>,
+    pub overall_status: HealthStatus,
 }
 
 #[derive(Debug)]
-pub struct ServiceStatus {
-    pub name: String,
-    pub status: String,
-    pub is_running: bool,
+pub enum HealthStatus {
+    Healthy,
+    Warning { issues: Vec<String> },
+    Unhealthy { critical_issues: Vec<String> },
+}
+
+impl ContainerHealthChecker for RunningProvisionedContainer {
+    async fn comprehensive_health_check(&self) -> Result<ContainerHealthReport> {
+        let ssh_status = self.check_ssh_connectivity().await?;
+        let system_resources = self.check_system_resources().await?;
+        let services = self.check_required_services().await?;
+
+        let overall_status = evaluate_overall_health(&ssh_status, &system_resources, &services);
+
+        Ok(ContainerHealthReport {
+            ssh_status,
+            system_resources,
+            services,
+            overall_status,
+        })
+    }
 }
 ```
 
 **Benefits**:
 
-- Comprehensive health monitoring
-- Early detection of issues
-- Better debugging information
+- ✅ **Comprehensive monitoring** - Beyond just SSH connectivity
+- ✅ **Early issue detection** - Identify problems before they cause failures
+- ✅ **Debugging support** - Detailed health information for troubleshooting
+- ✅ **Extensible design** - Easy to add new health checks as needed
 
 ## 🔄 API & Usability
 
-### 12. Builder Pattern for Container Creation
+### 12. Builder Pattern for Container Creation - ❓ QUESTIONABLE RELEVANCE
 
-**Current Issue**: Limited configurability during container creation.
+**Status**: ❓ **QUESTIONABLE RELEVANCE** - Current modular approach may be preferable
 
-**Proposed Solution**:
+**Current State**: The provisioned container supports some configuration through methods like `with_timeouts()`, and uses separate specialized builders:
+
+- `ContainerImageBuilder` - Focused on image building concerns
+- `ContainerConfigBuilder` - Focused on container configuration
+- `ContainerTimeouts` - Focused on timeout configuration
+
+**Assessment**: The current modular approach provides better separation of concerns than a monolithic builder pattern.
+
+**Alternative Approach** (if builder pattern is still desired):
 
 ```rust
+// Instead of a monolithic builder, enhance the existing configuration methods
 impl StoppedProvisionedContainer {
-    pub fn builder() -> ContainerBuilder {
-        ContainerBuilder::new()
+    pub fn with_custom_image(image_name: &str, tag: &str) -> Self {
+        // Configure with custom image details
+    }
+
+    pub fn with_extended_timeouts() -> Self {
+        // Pre-configured for longer operations
+    }
+
+    pub fn with_debug_config() -> Self {
+        // Pre-configured for debugging scenarios
     }
 }
 
-pub struct ContainerBuilder {
-    options: ContainerOptions,
+// Or use a lightweight configuration struct for common scenarios
+#[derive(Debug)]
+pub struct ContainerPreset {
+    pub timeouts: ContainerTimeouts,
+    pub image_config: (String, String), // name, tag
 }
 
-impl ContainerBuilder {
-    pub fn new() -> Self {
-        Self {
-            options: ContainerOptions::default(),
-        }
-    }
+impl ContainerPreset {
+    pub fn development() -> Self { /* fast timeouts, latest images */ }
+    pub fn ci_testing() -> Self { /* moderate timeouts, stable images */ }
+    pub fn debugging() -> Self { /* long timeouts, debug images */ }
+}
 
-    pub fn with_image(mut self, name: impl Into<String>) -> Self {
-        self.options.image_name = name.into();
-        self
-    }
-
-    pub fn with_tag(mut self, tag: impl Into<String>) -> Self {
-        self.options.image_tag = tag.into();
-        self
-    }
-
-    pub fn with_timeout(mut self, timeout_type: TimeoutType, duration: Duration) -> Self {
-        match timeout_type {
-            TimeoutType::DockerBuild => self.options.timeouts.docker_build = duration,
-            TimeoutType::ContainerStart => self.options.timeouts.container_start = duration,
-            TimeoutType::SshReady => self.options.timeouts.ssh_ready = duration,
-            TimeoutType::SshSetup => self.options.timeouts.ssh_setup = duration,
-        }
-        self
-    }
-
-    pub fn build(self) -> StoppedProvisionedContainer {
-        StoppedProvisionedContainer::with_options(self.options)
-    }
+impl StoppedProvisionedContainer {
+    pub fn with_preset(preset: ContainerPreset) -> Self { /* ... */ }
 }
 ```
 
-**Usage Example**:
-
-```rust
-let container = StoppedProvisionedContainer::builder()
-    .with_image("custom-provisioned-instance")
-    .with_tag("v2.0")
-    .with_timeout(TimeoutType::SshReady, Duration::from_secs(60))
-    .build()
-    .start()
-    .await?;
-```
+**Recommendation**: **CONSIDER ALTERNATIVE** - Focus on presets and configuration methods rather than a complex builder pattern, which fits better with the current architecture.
 
 ## 📋 Implementation Priority
 
@@ -634,40 +733,35 @@ let container = StoppedProvisionedContainer::builder()
 3. ✅ **Documentation Updates** - Updated all references to new module structure
 4. ✅ **Test Validation** - Ensured all tests pass with new structure
 
-### ✅ Phase 1: Foundation (High Priority) - Partially Complete
+## 📋 Updated Implementation Priority
 
-1. ✅ **Extract Container Image Builder** - Implemented independent `ContainerImageBuilder` with builder pattern, explicit configuration, required field validation, comprehensive error handling, and full integration with provisioned container module
-2. ✅ **Improve Error Context** - Enhanced error handling across all container modules with detailed context (container IDs, image details, timing info, SSH context, validation errors) for better debugging experience
-3. Extract Magic Numbers and Strings
-4. Split Large Functions
+### ✅ Phase 0: Module Restructuring (COMPLETED)
 
-### Phase 2: Robustness (High Priority)
+1. ✅ **Module Organization** - Moved `src/e2e/provisioned_container.rs` to `src/e2e/containers/` structure
+2. ✅ **Backward Compatibility** - Added re-exports to maintain existing import paths
+3. ✅ **Documentation Updates** - Updated all references to new module structure
+4. ✅ **Test Validation** - Ensured all tests pass with new structure
 
-1. Robust SSH Connectivity Testing
-2. Add Timeout Configurations
-3. Add Retry Logic
-4. Resource Management
+### ✅ Phase 1: Foundation (COMPLETED)
 
-### Phase 3: API Improvements (Medium Priority)
+1. ✅ **Extract Container Image Builder** - Independent `ContainerImageBuilder` with comprehensive features
+2. ✅ **Extract Container Configuration Builder** - Flexible `ContainerConfigBuilder` for container setup
+3. ✅ **Separate SSH Operations** - Container actions architecture with `SshKeySetupAction` and `SshWaitAction`
+4. ✅ **Improve Error Context** - Enhanced error handling with detailed context across all modules
+5. ✅ **Add Timeout Configurations** - Configurable `ContainerTimeouts` with sensible defaults
+6. ✅ **Extract Magic Numbers and Strings** - Constants and configurable parameters
+7. ✅ **Enhanced Logging** - Structured logging with `tracing` throughout all modules
+8. ✅ **Robust SSH Connectivity Testing** - `SshWaitAction` with exponential backoff
 
-1. Builder Pattern for Container Creation
-2. Container Configuration Builder
-3. Separate SSH Operations
-4. Improve Type Safety
+### 🎯 Phase 2: Remaining Improvements (HIGH PRIORITY)
 
-### Phase 4: Observability (Medium Priority)
+1. **Improve Test Coverage** - Comprehensive unit and integration tests
+2. **Add Health Checks** - Container health monitoring beyond SSH connectivity
 
-1. Enhanced Logging
-2. Add Health Checks
-3. Add Container Inspection Methods
-4. Improve Test Coverage
+### ⚠️ Phase 3: Optional Enhancements (LOW PRIORITY)
 
-### Phase 5: Advanced Features (Low Priority)
-
-1. Async Support
-2. Secure SSH Key Handling
-3. Documentation Improvements
-4. Advanced Monitoring
+1. **Container Configuration Consolidation** - Unified configuration approach (if needed)
+2. **Alternative Builder Pattern** - Configuration presets instead of monolithic builder
 
 ## 🧪 Testing Strategy
 
