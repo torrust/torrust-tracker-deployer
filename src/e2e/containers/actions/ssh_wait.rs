@@ -11,20 +11,33 @@ use tracing::{info, warn};
 pub enum SshWaitError {
     /// SSH connectivity timeout
     #[error(
-        "SSH connection timeout after {timeout_secs}s and {max_attempts} attempts to {host}:{port}"
+        "SSH connection timeout after {timeout_secs}s and {max_attempts} attempts to {host}:{port} (last error: {last_error_context})"
     )]
     SshConnectionTimeout {
         host: String,
         port: u16,
         timeout_secs: u64,
         max_attempts: usize,
+        last_error_context: String,
     },
 
     /// Failed to execute SSH connection test command
-    #[error("Failed to execute SSH connection test: {source}")]
+    #[error("Failed to execute SSH connection test to {host}:{port}: {source}")]
     SshConnectionTestFailed {
+        host: String,
+        port: u16,
         #[source]
         source: std::io::Error,
+    },
+
+    /// SSH connection test command succeeded but with unexpected output
+    #[error(
+        "SSH connection test to {host}:{port} succeeded but returned unexpected output: {output}"
+    )]
+    SshConnectionTestUnexpectedOutput {
+        host: String,
+        port: u16,
+        output: String,
     },
 }
 
@@ -89,6 +102,7 @@ impl SshWaitAction {
         let start_time = Instant::now();
         let mut attempt = 0;
         let mut backoff = Duration::from_millis(100);
+        let mut last_error_context = "No connection attempts made".to_string();
 
         while start_time.elapsed() < self.timeout && attempt < self.max_attempts {
             attempt += 1;
@@ -112,6 +126,7 @@ impl SshWaitAction {
                     return Ok(());
                 }
                 Err(e) => {
+                    last_error_context = format!("Attempt {attempt}: {e}");
                     warn!(
                         attempt = attempt,
                         error = %e,
@@ -133,6 +148,7 @@ impl SshWaitAction {
             port,
             timeout_secs: self.timeout.as_secs(),
             max_attempts: self.max_attempts,
+            last_error_context,
         })
     }
 
@@ -157,7 +173,11 @@ impl SshWaitAction {
                 "test",
             ])
             .output()
-            .map_err(|source| SshWaitError::SshConnectionTestFailed { source })?;
+            .map_err(|source| SshWaitError::SshConnectionTestFailed {
+                host: host.to_string(),
+                port,
+                source,
+            })?;
 
         // For SSH connectivity testing, we just need to know if the SSH server
         // is responding, even if authentication fails
@@ -176,6 +196,8 @@ impl SshWaitAction {
                 if stderr.contains("Connection refused") || stderr.contains("No route to host") {
                     // Server is not reachable
                     Err(SshWaitError::SshConnectionTestFailed {
+                        host: host.to_string(),
+                        port,
                         source: std::io::Error::new(
                             std::io::ErrorKind::ConnectionRefused,
                             "SSH server not reachable",
@@ -193,6 +215,8 @@ impl SshWaitAction {
             None => {
                 // Process terminated by signal
                 Err(SshWaitError::SshConnectionTestFailed {
+                    host: host.to_string(),
+                    port,
                     source: std::io::Error::new(
                         std::io::ErrorKind::Interrupted,
                         "SSH process terminated by signal",
@@ -221,20 +245,27 @@ mod tests {
             port: 22,
             timeout_secs: 30,
             max_attempts: 10,
+            last_error_context: "Attempt 10: Connection refused".to_string(),
         };
         assert!(error.to_string().contains("SSH connection timeout"));
         assert!(error.to_string().contains("localhost"));
         assert!(error.to_string().contains("22"));
+        assert!(error.to_string().contains("Connection refused"));
     }
 
     #[test]
     fn it_should_preserve_error_chain_for_connection_test_failed() {
         let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "ssh command not found");
-        let error = SshWaitError::SshConnectionTestFailed { source: io_error };
+        let error = SshWaitError::SshConnectionTestFailed {
+            host: "testhost".to_string(),
+            port: 2222,
+            source: io_error,
+        };
 
         assert!(error
             .to_string()
             .contains("Failed to execute SSH connection test"));
+        assert!(error.to_string().contains("testhost:2222"));
         assert!(std::error::Error::source(&error).is_some());
     }
 

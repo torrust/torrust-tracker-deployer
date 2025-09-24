@@ -84,33 +84,87 @@ pub enum ProvisionedContainerError {
     },
 
     /// Docker build command execution failed
-    #[error("Failed to execute docker build command: {source}")]
+    #[error(
+        "Failed to execute docker build command for image '{image_name}:{image_tag}': {source}"
+    )]
     DockerBuildExecution {
+        image_name: String,
+        image_tag: String,
         #[source]
         source: std::io::Error,
     },
 
     /// Docker build process failed with non-zero exit code
-    #[error("Docker build failed with stderr: {stderr}")]
-    DockerBuildFailed { stderr: String },
+    #[error("Docker build failed for image '{image_name}:{image_tag}' with stderr: {stderr}")]
+    DockerBuildFailed {
+        image_name: String,
+        image_tag: String,
+        stderr: String,
+    },
 
     /// Container failed to start
-    #[error("Failed to start container: {source}")]
+    #[error("Failed to start container for image '{image_name}:{image_tag}': {source}")]
     ContainerStartFailed {
+        image_name: String,
+        image_tag: String,
         #[source]
         source: testcontainers::TestcontainersError,
     },
 
     /// Failed to get mapped SSH port from container
-    #[error("Failed to get mapped SSH port: {source}")]
+    #[error("Failed to get mapped SSH port {internal_port} from container '{container_id}' (image '{image_name}:{image_tag}'): {source}")]
     SshPortMappingFailed {
+        container_id: String,
+        image_name: String,
+        image_tag: String,
+        internal_port: u16,
         #[source]
         source: testcontainers::TestcontainersError,
+    },
+
+    /// SSH setup timeout
+    #[error("SSH setup timeout after {timeout_secs}s for container '{container_id}' (image '{image_name}:{image_tag}') on port {ssh_port}")]
+    SshSetupTimeout {
+        container_id: String,
+        image_name: String,
+        image_tag: String,
+        ssh_port: u16,
+        timeout_secs: u64,
+    },
+
+    /// SSH key setup failed
+    #[error("SSH key setup failed for container '{container_id}' (image '{image_name}:{image_tag}'): {source}")]
+    SshKeySetupFailed {
+        container_id: String,
+        image_name: String,
+        image_tag: String,
+        #[source]
+        source: super::actions::ssh_key_setup::SshKeySetupError,
+    },
+
+    /// SSH connectivity wait failed
+    #[error("SSH connectivity wait failed for container '{container_id}' (image '{image_name}:{image_tag}') on port {ssh_port}: {source}")]
+    SshWaitFailed {
+        container_id: String,
+        image_name: String,
+        image_tag: String,
+        ssh_port: u16,
+        #[source]
+        source: super::actions::ssh_wait::SshWaitError,
+    },
+
+    /// Container configuration building failed
+    #[error("Container configuration build failed for image '{image_name}:{image_tag}': {source}")]
+    ContainerConfigBuildFailed {
+        image_name: String,
+        image_tag: String,
+        #[source]
+        source: super::config_builder::ContainerConfigError,
     },
 }
 
 /// Result type alias for provisioned container operations
-pub type Result<T> = std::result::Result<T, ProvisionedContainerError>;
+pub type Result<T> = std::result::Result<T, Box<ProvisionedContainerError>>;
 
 /// Container configuration following state machine pattern
 ///
@@ -129,7 +183,9 @@ impl StoppedProvisionedContainer {
             .with_dockerfile(std::path::PathBuf::from(
                 "docker/provisioned-instance/Dockerfile",
             ));
-        builder.build()?;
+        builder.build().map_err(|e| {
+            Box::new(ProvisionedContainerError::DockerImageBuildFailed { source: *e })
+        })?;
         Ok(())
     }
 
@@ -152,16 +208,33 @@ impl StoppedProvisionedContainer {
             ContainerConfigBuilder::new(format!("{DEFAULT_IMAGE_NAME}:{DEFAULT_IMAGE_TAG}"))
                 .with_exposed_port(22)
                 .with_wait_condition(WaitFor::message_on_stdout("sshd entered RUNNING state"))
-                .build();
+                .build()
+                .map_err(|source| {
+                    Box::new(ProvisionedContainerError::ContainerConfigBuildFailed {
+                        image_name: DEFAULT_IMAGE_NAME.to_string(),
+                        image_tag: DEFAULT_IMAGE_TAG.to_string(),
+                        source: *source,
+                    })
+                })?;
 
-        let container = image
-            .start()
-            .map_err(|source| ProvisionedContainerError::ContainerStartFailed { source })?;
+        let container = image.start().map_err(|source| {
+            Box::new(ProvisionedContainerError::ContainerStartFailed {
+                image_name: DEFAULT_IMAGE_NAME.to_string(),
+                image_tag: DEFAULT_IMAGE_TAG.to_string(),
+                source,
+            })
+        })?;
 
         // Get the actual mapped port from testcontainers
-        let ssh_port = container
-            .get_host_port_ipv4(22.tcp())
-            .map_err(|source| ProvisionedContainerError::SshPortMappingFailed { source })?;
+        let ssh_port = container.get_host_port_ipv4(22.tcp()).map_err(|source| {
+            Box::new(ProvisionedContainerError::SshPortMappingFailed {
+                container_id: container.id().to_string(),
+                image_name: DEFAULT_IMAGE_NAME.to_string(),
+                image_tag: DEFAULT_IMAGE_TAG.to_string(),
+                internal_port: 22,
+                source,
+            })
+        })?;
 
         info!(
             container_id = %container.id(),
@@ -233,20 +306,28 @@ mod tests {
     #[test]
     fn it_should_have_proper_error_display_messages() {
         let error = ProvisionedContainerError::DockerBuildFailed {
+            image_name: "test-image".to_string(),
+            image_tag: "test-tag".to_string(),
             stderr: "test error message".to_string(),
         };
         assert!(error.to_string().contains("Docker build failed"));
         assert!(error.to_string().contains("test error message"));
+        assert!(error.to_string().contains("test-image:test-tag"));
     }
 
     #[test]
     fn it_should_preserve_error_chain_for_docker_build_execution() {
         let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "docker not found");
-        let error = ProvisionedContainerError::DockerBuildExecution { source: io_error };
+        let error = ProvisionedContainerError::DockerBuildExecution {
+            image_name: "test-image".to_string(),
+            image_tag: "test-tag".to_string(),
+            source: io_error,
+        };
 
         assert!(error
             .to_string()
             .contains("Failed to execute docker build command"));
+        assert!(error.to_string().contains("test-image:test-tag"));
         assert!(error.source().is_some());
     }
 
@@ -257,6 +338,9 @@ mod tests {
         let docker_build_error = ContainerBuildError::ContainerBuildFailed {
             image_name: "test-image".to_string(),
             tag: "v1.0".to_string(),
+            dockerfile_path: "/path/to/Dockerfile".to_string(),
+            context_path: "/build/context".to_string(),
+            build_duration_secs: 60,
             stderr: "build failed".to_string(),
         };
 

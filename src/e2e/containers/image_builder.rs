@@ -56,20 +56,35 @@ use tracing::info;
 #[derive(Debug, thiserror::Error)]
 pub enum ContainerBuildError {
     /// Container build command execution failed
-    #[error("Failed to execute docker build command for image '{image_name}:{tag}': {source}")]
+    #[error("Failed to execute docker build command for image '{image_name}:{tag}' using dockerfile '{dockerfile_path}' in context '{context_path}': {source}")]
     ContainerBuildExecution {
         image_name: String,
         tag: String,
+        dockerfile_path: String,
+        context_path: String,
         #[source]
         source: std::io::Error,
     },
 
     /// Container build process failed with non-zero exit code
-    #[error("Docker build failed for image '{image_name}:{tag}' with stderr: {stderr}")]
+    #[error("Docker build failed for image '{image_name}:{tag}' using dockerfile '{dockerfile_path}' in context '{context_path}' after {build_duration_secs}s with stderr: {stderr}")]
     ContainerBuildFailed {
         image_name: String,
         tag: String,
+        dockerfile_path: String,
+        context_path: String,
+        build_duration_secs: u64,
         stderr: String,
+    },
+
+    /// Container build process timed out
+    #[error("Docker build timed out after {timeout_secs}s for image '{image_name}:{tag}' using dockerfile '{dockerfile_path}' in context '{context_path}'")]
+    ContainerBuildTimeout {
+        image_name: String,
+        tag: String,
+        dockerfile_path: String,
+        context_path: String,
+        timeout_secs: u64,
     },
 
     /// Required image name was not provided
@@ -79,10 +94,24 @@ pub enum ContainerBuildError {
     /// Required dockerfile path was not provided
     #[error("Dockerfile path is required but was not provided")]
     DockerfilePathRequired,
+
+    /// Dockerfile does not exist at the specified path
+    #[error("Dockerfile not found at path '{dockerfile_path}' (resolved to '{absolute_path}')")]
+    DockerfileNotFound {
+        dockerfile_path: String,
+        absolute_path: String,
+    },
+
+    /// Context path does not exist
+    #[error("Context path not found at '{context_path}' (resolved to '{absolute_path}')")]
+    ContextPathNotFound {
+        context_path: String,
+        absolute_path: String,
+    },
 }
 
 /// Result type alias for container build operations
-pub type Result<T> = std::result::Result<T, ContainerBuildError>;
+pub type Result<T> = std::result::Result<T, Box<ContainerBuildError>>;
 
 /// Builder for constructing and building container images
 ///
@@ -264,13 +293,15 @@ impl ContainerImageBuilder {
         let image_name = self
             .image_name
             .as_ref()
-            .ok_or(ContainerBuildError::ImageNameRequired)?;
+            .ok_or_else(|| Box::new(ContainerBuildError::ImageNameRequired))?;
         let dockerfile_path = self
             .dockerfile_path
             .as_ref()
-            .ok_or(ContainerBuildError::DockerfilePathRequired)?;
+            .ok_or_else(|| Box::new(ContainerBuildError::DockerfilePathRequired))?;
 
         let image_tag = format!("{}:{}", image_name, self.tag);
+        let dockerfile_path_str = dockerfile_path.display().to_string();
+        let context_path_str = self.context_path.display().to_string();
 
         info!(
             image_name = %image_name,
@@ -281,34 +312,45 @@ impl ContainerImageBuilder {
             "Building Docker image"
         );
 
+        let start_time = std::time::Instant::now();
         let output = Command::new("docker")
             .args([
                 "build",
                 "-t",
                 &image_tag,
                 "-f",
-                &dockerfile_path.display().to_string(),
-                &self.context_path.display().to_string(),
+                &dockerfile_path_str,
+                &context_path_str,
             ])
             .output()
-            .map_err(|source| ContainerBuildError::ContainerBuildExecution {
-                image_name: image_name.clone(),
-                tag: self.tag.clone(),
-                source,
+            .map_err(|source| {
+                Box::new(ContainerBuildError::ContainerBuildExecution {
+                    image_name: image_name.clone(),
+                    tag: self.tag.clone(),
+                    dockerfile_path: dockerfile_path_str.clone(),
+                    context_path: context_path_str.clone(),
+                    source,
+                })
             })?;
+
+        let build_duration = start_time.elapsed();
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(ContainerBuildError::ContainerBuildFailed {
+            return Err(Box::new(ContainerBuildError::ContainerBuildFailed {
                 image_name: image_name.clone(),
                 tag: self.tag.clone(),
+                dockerfile_path: dockerfile_path_str,
+                context_path: context_path_str,
+                build_duration_secs: build_duration.as_secs(),
                 stderr: stderr.to_string(),
-            });
+            }));
         }
 
         info!(
             image_name = %image_name,
             tag = %self.tag,
+            build_duration_ms = build_duration.as_millis(),
             "Docker image built successfully"
         );
 
@@ -469,6 +511,9 @@ mod tests {
         let error = ContainerBuildError::ContainerBuildFailed {
             image_name: "test-image".to_string(),
             tag: "v1.0".to_string(),
+            dockerfile_path: "/path/to/Dockerfile".to_string(),
+            context_path: "/build/context".to_string(),
+            build_duration_secs: 120,
             stderr: "build error message".to_string(),
         };
 
@@ -476,6 +521,9 @@ mod tests {
         assert!(message.contains("Docker build failed"));
         assert!(message.contains("test-image:v1.0"));
         assert!(message.contains("build error message"));
+        assert!(message.contains("/path/to/Dockerfile"));
+        assert!(message.contains("/build/context"));
+        assert!(message.contains("120s"));
     }
 
     #[test]
@@ -484,6 +532,8 @@ mod tests {
         let error = ContainerBuildError::ContainerBuildExecution {
             image_name: "test-image".to_string(),
             tag: "v1.0".to_string(),
+            dockerfile_path: "/path/to/Dockerfile".to_string(),
+            context_path: "/build/context".to_string(),
             source: io_error,
         };
 
@@ -491,6 +541,8 @@ mod tests {
             .to_string()
             .contains("Failed to execute docker build command"));
         assert!(error.to_string().contains("test-image:v1.0"));
+        assert!(error.to_string().contains("/path/to/Dockerfile"));
+        assert!(error.to_string().contains("/build/context"));
         assert!(error.source().is_some());
     }
 
@@ -498,34 +550,25 @@ mod tests {
     fn it_should_fail_build_when_image_name_not_provided() {
         let builder = ContainerImageBuilder::new().with_dockerfile(PathBuf::from("Dockerfile"));
 
-        match builder.build() {
-            Err(ContainerBuildError::ImageNameRequired) => {
-                // Expected error
-                assert!(builder
-                    .build()
-                    .unwrap_err()
-                    .to_string()
-                    .contains("Image name is required"));
-            }
-            _ => panic!("Expected ImageNameRequired error"),
-        }
+        let result = builder.build();
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(matches!(*error, ContainerBuildError::ImageNameRequired));
+        assert!(error.to_string().contains("Image name is required"));
     }
 
     #[test]
     fn it_should_fail_build_when_dockerfile_path_not_provided() {
         let builder = ContainerImageBuilder::new().with_name("test-image");
 
-        match builder.build() {
-            Err(ContainerBuildError::DockerfilePathRequired) => {
-                // Expected error
-                assert!(builder
-                    .build()
-                    .unwrap_err()
-                    .to_string()
-                    .contains("Dockerfile path is required"));
-            }
-            _ => panic!("Expected DockerfilePathRequired error"),
-        }
+        let result = builder.build();
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(matches!(
+            *error,
+            ContainerBuildError::DockerfilePathRequired
+        ));
+        assert!(error.to_string().contains("Dockerfile path is required"));
     }
 
     #[test]

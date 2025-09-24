@@ -8,6 +8,7 @@
 //!
 //! - **Builder Pattern**: Fluent API for configuring containers
 //! - **Type Safety**: Compile-time validation of configuration
+//! - **Input Validation**: Runtime validation of image names and ports
 //! - **Flexibility**: Support for ports and wait conditions
 //! - **Testability**: Easy to create different configurations for testing
 //!
@@ -17,10 +18,13 @@
 //! use torrust_tracker_deploy::e2e::containers::config_builder::ContainerConfigBuilder;
 //! use testcontainers::core::WaitFor;
 //!
+//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let config = ContainerConfigBuilder::new("my-app:latest")
 //!     .with_exposed_port(22)
 //!     .with_wait_condition(WaitFor::message_on_stdout("Server started"))
-//!     .build();
+//!     .build()?;
+//! # Ok(())
+//! # }
 //! ```
 
 use testcontainers::{
@@ -28,15 +32,38 @@ use testcontainers::{
     GenericImage,
 };
 
+/// Specific error types for container configuration building
+#[derive(Debug, thiserror::Error)]
+pub enum ContainerConfigError {
+    /// Invalid Docker image name format
+    #[error("Invalid image name '{image_name}': {reason}")]
+    InvalidImageName { image_name: String, reason: String },
+
+    /// Invalid port number
+    #[error("Invalid port number {port}: {reason}")]
+    InvalidPort { port: u16, reason: String },
+
+    /// Empty image name provided
+    #[error("Image name cannot be empty")]
+    EmptyImageName,
+
+    /// Too many wait conditions (potential performance issue)
+    #[error("Too many wait conditions ({count}): maximum {max_allowed} wait conditions are recommended for optimal container startup performance")]
+    TooManyWaitConditions { count: usize, max_allowed: usize },
+}
+
+/// Result type alias for container configuration operations
+pub type Result<T> = std::result::Result<T, Box<ContainerConfigError>>;
+
 /// Flexible container configuration builder
 ///
 /// This struct provides a builder pattern for configuring Docker containers
 /// with explicit configuration options instead of hardcoded values.
 ///
 /// Currently supports the minimal set of features needed by the provisioned container:
-/// - Image name and tag
-/// - Exposed ports
-/// - Wait conditions
+/// - Image name and tag validation
+/// - Exposed ports (with validation)
+/// - Wait conditions (with reasonable limits)
 #[derive(Debug, Clone)]
 pub struct ContainerConfigBuilder {
     /// Docker image name (e.g., "torrust-provisioned-instance:latest")
@@ -88,7 +115,18 @@ impl ContainerConfigBuilder {
     /// ```
     #[must_use]
     pub fn with_exposed_port(mut self, port: u16) -> Self {
-        self.exposed_ports.push(port);
+        if port == 0 {
+            // Note: We'll handle this validation in the build() method to maintain
+            // the current API which doesn't return Result. This is a design choice
+            // to keep the builder pattern simple and ergonomic.
+            tracing::warn!("Port 0 is reserved and will cause issues during container build");
+        }
+
+        if self.exposed_ports.contains(&port) {
+            tracing::warn!("Port {port} is already exposed, skipping duplicate");
+        } else {
+            self.exposed_ports.push(port);
+        }
         self
     }
 
@@ -113,27 +151,78 @@ impl ContainerConfigBuilder {
         self
     }
 
-    /// Build the final `GenericImage` with all configured options
+    /// Build the final `GenericImage` with all configured options and validation
     ///
     /// This method creates a `GenericImage` with all the configuration options
-    /// that were specified using the builder methods.
+    /// that were specified using the builder methods. It also validates the
+    /// configuration to catch common issues early.
     ///
     /// # Returns
     ///
     /// A configured `GenericImage` ready to be used with testcontainers
     ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Image name is empty or invalid
+    /// - Any port number is invalid (e.g., 0)
+    /// - Too many wait conditions (performance concern)
+    ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use torrust_tracker_deploy::e2e::containers::config_builder::ContainerConfigBuilder;
     /// use testcontainers::core::WaitFor;
     ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let image = ContainerConfigBuilder::new("torrust-provisioned-instance:latest")
     ///     .with_exposed_port(22)
     ///     .with_wait_condition(WaitFor::message_on_stdout("sshd entered RUNNING state"))
-    ///     .build();
+    ///     .build()?;
+    /// # Ok(())
+    /// # }
     /// ```
-    pub fn build(self) -> GenericImage {
+    pub fn build(self) -> Result<GenericImage> {
+        const MAX_RECOMMENDED_WAIT_CONDITIONS: usize = 5;
+
+        // Validate image name
+        if self.image.is_empty() {
+            return Err(Box::new(ContainerConfigError::EmptyImageName));
+        }
+
+        if self.image.trim().is_empty() {
+            return Err(Box::new(ContainerConfigError::InvalidImageName {
+                image_name: self.image.clone(),
+                reason: "image name contains only whitespace".to_string(),
+            }));
+        }
+
+        // Basic image name format validation
+        if self.image.contains("//") || self.image.starts_with('/') || self.image.ends_with('/') {
+            return Err(Box::new(ContainerConfigError::InvalidImageName {
+                image_name: self.image.clone(),
+                reason: "image name contains invalid path separators".to_string(),
+            }));
+        }
+
+        // Validate ports
+        for &port in &self.exposed_ports {
+            if port == 0 {
+                return Err(Box::new(ContainerConfigError::InvalidPort {
+                    port,
+                    reason: "port 0 is reserved and cannot be exposed".to_string(),
+                }));
+            }
+        }
+
+        // Check for reasonable number of wait conditions (performance concern)
+        if self.wait_conditions.len() > MAX_RECOMMENDED_WAIT_CONDITIONS {
+            return Err(Box::new(ContainerConfigError::TooManyWaitConditions {
+                count: self.wait_conditions.len(),
+                max_allowed: MAX_RECOMMENDED_WAIT_CONDITIONS,
+            }));
+        }
+
         // Split the image name and tag if present
         let parts: Vec<&str> = self.image.split(':').collect();
         let (image_name, image_tag) = if parts.len() == 2 {
@@ -141,6 +230,14 @@ impl ContainerConfigBuilder {
         } else {
             (self.image.as_str(), "latest")
         };
+
+        // Additional validation for image name part
+        if image_name.is_empty() {
+            return Err(Box::new(ContainerConfigError::InvalidImageName {
+                image_name: self.image.clone(),
+                reason: "image name part is empty".to_string(),
+            }));
+        }
 
         let mut image = GenericImage::new(image_name, image_tag);
 
@@ -154,7 +251,7 @@ impl ContainerConfigBuilder {
             image = image.with_wait_for(condition);
         }
 
-        image
+        Ok(image)
     }
 
     /// Get the configured image name
@@ -261,14 +358,15 @@ mod tests {
     }
 
     #[test]
-    fn it_should_allow_multiple_ports_of_same_number() {
+    fn it_should_deduplicate_same_port_numbers() {
         let builder = ContainerConfigBuilder::new("app:latest")
             .with_exposed_port(8080)
             .with_exposed_port(8080);
 
-        // This should be allowed as you might want to expose the same port multiple times
-        // with different protocols or configurations
-        assert_eq!(builder.exposed_ports().len(), 2);
+        // Duplicate ports should be deduplicated since Docker/testcontainers
+        // doesn't support exposing the same port number multiple times
+        assert_eq!(builder.exposed_ports().len(), 1);
+        assert_eq!(builder.exposed_ports()[0], 8080);
     }
 
     #[test]

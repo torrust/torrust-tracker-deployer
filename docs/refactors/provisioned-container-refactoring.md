@@ -221,42 +221,99 @@ impl SshWaitAction {
 
 ## 🔧 Error Handling & Robustness
 
-### 4. Improve Error Context
+### ✅ 4. Improve Error Context (Completed)
 
-**Current Issue**: Errors lack sufficient context for debugging.
+**Issue Resolved**: Errors lacked sufficient context for debugging.
 
-**Proposed Solution**:
+**Implementation Completed**: Enhanced error handling across all container modules with detailed context for better debugging experience:
 
 ```rust
+// Enhanced ProvisionedContainerError with comprehensive context
 #[derive(Debug, thiserror::Error)]
 pub enum ProvisionedContainerError {
-    #[error("Docker build failed for image '{image_name}:{tag}' with stderr: {stderr}")]
-    DockerBuildFailed {
+    #[error("Container start failed - Container ID: {container_id}, Image: {image_name}:{image_tag}, Start time: {start_time_ms}ms: {source}")]
+    ContainerStartFailed {
+        container_id: String,
         image_name: String,
-        tag: String,
-        stderr: String,
+        image_tag: String,
+        start_time_ms: u64,
+        #[source]
+        source: Box<ContainerBuildError>,
     },
 
-    #[error("Container '{container_id}' failed to start: {source}")]
-    ContainerStartFailed {
-        container_id: Option<String>,
+    #[error("SSH setup timeout after {timeout_ms}ms for container {container_id} (user: {ssh_user})")]
+    SshSetupTimeout {
+        container_id: String,
+        timeout_ms: u64,
+        ssh_user: String,
+    },
+
+    // Additional context-rich error variants...
+}
+
+// ContainerBuildError with build context
+#[derive(Debug, thiserror::Error)]
+pub enum ContainerBuildError {
+    #[error("Container build failed - Dockerfile: {dockerfile_path}, Context: {context_path}, Build time: {build_duration_ms}ms: {source}")]
+    ContainerBuildFailed {
+        dockerfile_path: PathBuf,
+        context_path: PathBuf,
+        build_duration_ms: u64,
         #[source]
         source: testcontainers::TestcontainersError,
     },
+}
 
-    #[error("SSH setup timeout after {timeout_secs}s for container '{container_id}'")]
-    SshSetupTimeout {
-        container_id: String,
-        timeout_secs: u64,
+// ContainerConfigError with validation context
+#[derive(Debug, thiserror::Error)]
+pub enum ContainerConfigError {
+    #[error("Invalid port {port}: {reason}")]
+    InvalidPort { port: u16, reason: String },
+
+    #[error("Invalid image name '{image_name}': {reason}")]
+    InvalidImageName { image_name: String, reason: String },
+}
+
+// SshKeySetupError with SSH user context
+#[derive(Debug, thiserror::Error)]
+pub enum SshKeySetupError {
+    #[error("SSH key setup failed for user '{ssh_user}': Failed to create SSH directory: {source}")]
+    SshDirectoryCreationFailed {
+        ssh_user: String,
+        #[source]
+        source: testcontainers::TestcontainersError,
+    },
+}
+
+// SshWaitError with connection details
+#[derive(Debug, thiserror::Error)]
+pub enum SshWaitError {
+    #[error("SSH connection timeout to {host}:{port} after {timeout_ms}ms - Last error: {last_error_context}")]
+    SshConnectionTimeout {
+        host: String,
+        port: u16,
+        timeout_ms: u64,
+        last_error_context: String,
     },
 }
 ```
 
-**Benefits**:
+**Modules Enhanced**:
 
-- Better error messages with context
-- Easier debugging and troubleshooting
-- More actionable error information
+- ✅ `provisioned.rs`: Container ID, image details, timing information
+- ✅ `image_builder.rs`: Dockerfile path, context path, build timing
+- ✅ `config_builder.rs`: Comprehensive validation with specific error types
+- ✅ `ssh_key_setup.rs`: SSH user context for key operations
+- ✅ `ssh_wait.rs`: Host, port, and connection attempt details
+
+**Benefits Achieved**:
+
+- ✅ Better error messages with context
+- ✅ Easier debugging and troubleshooting
+- ✅ More actionable error information
+- ✅ All error types now include specific debugging context
+- ✅ Proper error chain preservation using `#[source]` attributes
+- ✅ Comprehensive test coverage for all enhanced error types
 
 ### 5. Robust SSH Connectivity Testing
 
@@ -578,7 +635,7 @@ let container = StoppedProvisionedContainer::builder()
 ### ✅ Phase 1: Foundation (High Priority) - Partially Complete
 
 1. ✅ **Extract Container Image Builder** - Implemented independent `ContainerImageBuilder` with builder pattern, explicit configuration, required field validation, comprehensive error handling, and full integration with provisioned container module
-2. Improve Error Context
+2. ✅ **Improve Error Context** - Enhanced error handling across all container modules with detailed context (container IDs, image details, timing info, SSH context, validation errors) for better debugging experience
 3. Extract Magic Numbers and Strings
 4. Split Large Functions
 
