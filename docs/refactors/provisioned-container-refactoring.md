@@ -118,35 +118,47 @@ pub enum DockerBuildError {
 
 **Module Location**: `src/e2e/containers/docker_builder.rs`
 
-### 2. Container Configuration Builder
+### ✅ 2. Container Configuration Builder (Completed)
 
-**Current Issue**: Container configuration is hardcoded and not easily customizable.
+**Issue Resolved**: Container configuration was hardcoded and not easily customizable.
 
-**Proposed Solution**:
+**Implementation Completed**:
 
 ```rust
 pub struct ContainerConfigBuilder {
-    image: String,
-    exposed_ports: Vec<ContainerPort>,
-    environment: HashMap<String, String>,
-    wait_conditions: Vec<WaitFor>,
-    volumes: Vec<String>,
+    image: String,                     // Docker image with tag
+    exposed_ports: Vec<u16>,          // Ports to expose (simplified to u16)
+    wait_conditions: Vec<WaitFor>,    // Wait conditions for readiness
 }
 
 impl ContainerConfigBuilder {
     pub fn new(image: impl Into<String>) -> Self { /* ... */ }
-    pub fn with_exposed_port(mut self, port: impl IntoContainerPort) -> Self { /* ... */ }
-    pub fn with_env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self { /* ... */ }
+    pub fn with_exposed_port(mut self, port: u16) -> Self { /* ... */ }
     pub fn with_wait_condition(mut self, condition: WaitFor) -> Self { /* ... */ }
     pub fn build(self) -> GenericImage { /* ... */ }
 }
+
+// Usage in provisioned container
+let image = ContainerConfigBuilder::new(format!("{}:{}", DEFAULT_IMAGE_NAME, DEFAULT_IMAGE_TAG))
+    .with_exposed_port(22)
+    .with_wait_condition(WaitFor::message_on_stdout("sshd entered RUNNING state"))
+    .build();
 ```
 
-**Benefits**:
+**Benefits Achieved**:
 
-- Explicit configuration
-- Easy to test different configurations
-- Flexibility for different use cases
+- ✅ Explicit configuration with builder pattern
+- ✅ Removed hardcoded container configuration
+- ✅ Easy to test different configurations through builder
+- ✅ Flexibility for provisioned container use case
+- ✅ Full test coverage (9 unit tests)
+- ✅ Integration with existing provisioned container module
+- ✅ Backwards compatibility maintained
+- ✅ Focused only on features actually needed by provisioned container
+
+**Module Location**: `src/e2e/containers/config_builder.rs`
+
+**Key Design Decision**: Simplified to only include features actually used by the provisioned container (image, ports, wait conditions) rather than implementing unused features (environment variables, volumes).
 
 ### 3. Separate SSH Operations
 

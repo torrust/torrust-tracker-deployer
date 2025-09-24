@@ -59,6 +59,7 @@ use testcontainers::{
 };
 use tracing::info;
 
+use super::config_builder::ContainerConfigBuilder;
 use super::docker_builder::DockerImageBuilder;
 use crate::infrastructure::adapters::ssh::SshCredentials;
 
@@ -157,10 +158,12 @@ impl StoppedProvisionedContainer {
 
         info!("Starting provisioned instance container");
 
-        // Create and start the container with automatic port mapping
-        let image = GenericImage::new(DEFAULT_IMAGE_NAME, DEFAULT_IMAGE_TAG)
-            .with_exposed_port(22.tcp())
-            .with_wait_for(WaitFor::message_on_stdout("sshd entered RUNNING state"));
+        // Create and start the container using the configuration builder
+        let image =
+            ContainerConfigBuilder::new(format!("{DEFAULT_IMAGE_NAME}:{DEFAULT_IMAGE_TAG}"))
+                .with_exposed_port(22)
+                .with_wait_condition(WaitFor::message_on_stdout("sshd entered RUNNING state"))
+                .build();
 
         let container = image
             .start()
