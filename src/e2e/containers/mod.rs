@@ -38,7 +38,8 @@ pub mod provisioned;
 
 // Re-export provisioned container types for backward compatibility
 pub use provisioned::{
-    ProvisionedContainerError, Result, RunningProvisionedContainer, StoppedProvisionedContainer,
+    ContainerTimeouts, ProvisionedContainerError, Result, RunningProvisionedContainer,
+    StoppedProvisionedContainer,
 };
 
 // Re-export docker builder for public use

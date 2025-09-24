@@ -56,6 +56,7 @@
 //! }
 //! ```
 
+use std::time::Duration;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
     runners::SyncRunner,
@@ -72,6 +73,33 @@ const DEFAULT_IMAGE_NAME: &str = "torrust-provisioned-instance";
 
 /// Default Docker image tag for provisioned instances  
 const DEFAULT_IMAGE_TAG: &str = "latest";
+
+/// Container timeout configurations for different operations
+///
+/// This struct provides configurable timeouts for various container operations
+/// to make the system more flexible and adaptable to different environments.
+#[derive(Debug, Clone)]
+pub struct ContainerTimeouts {
+    /// Timeout for Docker image build operations
+    pub docker_build: Duration,
+    /// Timeout for container startup operations
+    pub container_start: Duration,
+    /// Timeout for SSH connectivity to become available
+    pub ssh_ready: Duration,
+    /// Timeout for SSH key setup operations
+    pub ssh_setup: Duration,
+}
+
+impl Default for ContainerTimeouts {
+    fn default() -> Self {
+        Self {
+            docker_build: Duration::from_secs(300),   // 5 minutes
+            container_start: Duration::from_secs(60), // 1 minute
+            ssh_ready: Duration::from_secs(30),       // 30 seconds
+            ssh_setup: Duration::from_secs(15),       // 15 seconds
+        }
+    }
+}
 
 /// Specific error types for provisioned container operations
 #[derive(Debug, thiserror::Error)]
@@ -171,18 +199,76 @@ pub type Result<T> = std::result::Result<T, Box<ProvisionedContainerError>>;
 /// Following the pattern from Torrust Tracker `MySQL` driver, where different states
 /// have different capabilities enforced at compile time.
 /// Initial state - container is stopped/not started yet
-#[derive(Debug, Default)]
-pub struct StoppedProvisionedContainer {}
+#[derive(Debug)]
+pub struct StoppedProvisionedContainer {
+    /// Timeout configurations for container operations
+    pub timeouts: ContainerTimeouts,
+}
+
+#[allow(clippy::derivable_impls)]
+impl Default for StoppedProvisionedContainer {
+    fn default() -> Self {
+        Self {
+            timeouts: ContainerTimeouts::default(),
+        }
+    }
+}
 
 impl StoppedProvisionedContainer {
+    /// Create a new stopped container with custom timeout configurations
+    ///
+    /// # Arguments
+    /// * `timeouts` - Custom timeout configuration for container operations
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use torrust_tracker_deploy::e2e::containers::{StoppedProvisionedContainer, ContainerTimeouts};
+    /// use std::time::Duration;
+    ///
+    /// let mut timeouts = ContainerTimeouts::default();
+    /// timeouts.ssh_ready = Duration::from_secs(60);
+    ///
+    /// let container = StoppedProvisionedContainer::with_timeouts(timeouts);
+    /// ```
+    #[must_use]
+    pub fn with_timeouts(timeouts: ContainerTimeouts) -> Self {
+        Self { timeouts }
+    }
+
+    /// Create a new stopped container with custom SSH ready timeout
+    ///
+    /// This is a convenience method for the most commonly customized timeout.
+    ///
+    /// # Arguments
+    /// * `ssh_ready_timeout` - How long to wait for SSH to become available
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use torrust_tracker_deploy::e2e::containers::StoppedProvisionedContainer;
+    /// use std::time::Duration;
+    ///
+    /// let container = StoppedProvisionedContainer::with_ssh_ready_timeout(
+    ///     Duration::from_secs(60)
+    /// );
+    /// ```
+    #[must_use]
+    pub fn with_ssh_ready_timeout(ssh_ready_timeout: Duration) -> Self {
+        let timeouts = ContainerTimeouts {
+            ssh_ready: ssh_ready_timeout,
+            ..ContainerTimeouts::default()
+        };
+        Self { timeouts }
+    }
+
     /// Build the Docker image if needed using the `ContainerImageBuilder`
-    fn build_image() -> Result<()> {
+    fn build_image(docker_build_timeout: Duration) -> Result<()> {
         let builder = ContainerImageBuilder::new()
             .with_name(DEFAULT_IMAGE_NAME)
             .with_tag(DEFAULT_IMAGE_TAG)
             .with_dockerfile(std::path::PathBuf::from(
                 "docker/provisioned-instance/Dockerfile",
-            ));
+            ))
+            .with_build_timeout(docker_build_timeout);
         builder.build().map_err(|e| {
             Box::new(ProvisionedContainerError::DockerImageBuildFailed { source: *e })
         })?;
@@ -199,7 +285,7 @@ impl StoppedProvisionedContainer {
     /// - Container networking setup fails
     pub fn start(self) -> Result<RunningProvisionedContainer> {
         // First build the Docker image if needed
-        Self::build_image()?;
+        Self::build_image(self.timeouts.docker_build)?;
 
         info!("Starting provisioned instance container");
 

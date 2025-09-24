@@ -21,6 +21,7 @@ getent
 Gossman
 Hostnames
 hugepages
+impls
 journalctl
 keygen
 keyrings
