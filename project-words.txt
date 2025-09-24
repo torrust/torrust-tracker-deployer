@@ -52,6 +52,7 @@ println
 publickey
 pytest
 RAII
+Repomix
 resolv
 rpcinterface
 runcmd
