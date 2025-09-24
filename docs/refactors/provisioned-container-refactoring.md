@@ -2,7 +2,35 @@
 
 ## 📋 Overview
 
-This document outlines a comprehensive refactoring plan for the `src/e2e/provisioned_container.rs` module to improve maintainability, readability, testability, and reliability. The refactoring follows Rust best practices and the project's established patterns.
+This document outlines a comprehensive refactoring plan for the provisioned container module (now located at `src/e2e/containers/provisioned.rs`) to improve maintainability, readability, testability, and reliability. The refactoring follows Rust best practices and the project's established patterns.
+
+## ✅ Completed Changes
+
+### Module Restructuring (Phase 0 - Completed)
+
+**What was done**: Reorganized the module structure to better accommodate future container types:
+
+- **Before**: `src/e2e/provisioned_container.rs` (single file)
+- **After**: `src/e2e/containers/` (dedicated module directory)
+  - `src/e2e/containers/mod.rs` - Module root with re-exports
+  - `src/e2e/containers/provisioned.rs` - Provisioned container implementation
+
+**Benefits achieved**:
+
+- Better organization for future container types
+- Cleaner separation of concerns
+- Maintained backward compatibility through re-exports
+- Prepared foundation for extracting collaborators
+
+**Import paths updated**:
+
+```rust
+// Old import path (still works via re-export)
+use torrust_tracker_deploy::e2e::provisioned_container::StoppedProvisionedContainer;
+
+// New preferred import path
+use torrust_tracker_deploy::e2e::containers::StoppedProvisionedContainer;
+```
 
 ## 🎯 Goals
 
@@ -12,6 +40,28 @@ This document outlines a comprehensive refactoring plan for the `src/e2e/provisi
 - Better separation of concerns
 - Add configurability and flexibility
 - Improve observability and debugging capabilities
+
+## 📁 New Module Structure
+
+The refactoring begins with a restructured module organization that will accommodate future container types and collaborators:
+
+```text
+src/e2e/containers/
+├── mod.rs              # Module root with re-exports
+├── provisioned.rs      # Current provisioned container implementation
+└── [future modules]    # Space for additional container types and collaborators
+    ├── docker_builder.rs      # Docker image building (Phase 1)
+    ├── ssh_manager.rs          # SSH operations (Phase 1)
+    ├── health_checker.rs       # Health checking (Phase 4)
+    └── config_builder.rs       # Configuration management (Phase 3)
+```
+
+This structure enables:
+
+- **Separation of concerns** - Each collaborator in its own module
+- **Testability** - Individual components can be tested in isolation
+- **Reusability** - Components can be shared across different container types
+- **Backward compatibility** - Existing imports continue to work via re-exports
 
 ## 🏗️ Architecture & Design Patterns
 
@@ -124,14 +174,14 @@ pub enum ProvisionedContainerError {
         tag: String,
         stderr: String,
     },
-    
+
     #[error("Container '{container_id}' failed to start: {source}")]
     ContainerStartFailed {
         container_id: Option<String>,
         #[source]
         source: testcontainers::TestcontainersError,
     },
-    
+
     #[error("SSH setup timeout after {timeout_secs}s for container '{container_id}'")]
     SshSetupTimeout {
         container_id: String,
@@ -157,7 +207,7 @@ impl ContainerSshManager for DockerContainerSshManager {
     async fn wait_for_ssh_ready(&self, timeout: Duration) -> Result<()> {
         let start_time = Instant::now();
         let mut backoff = Duration::from_millis(100);
-        
+
         while start_time.elapsed() < timeout {
             match self.test_ssh_connection().await {
                 Ok(_) => {
@@ -170,7 +220,7 @@ impl ContainerSshManager for DockerContainerSshManager {
                 }
             }
         }
-        
+
         Err(ProvisionedContainerError::SshSetupTimeout {
             container_id: self.container_id().to_string(),
             timeout_secs: timeout.as_secs(),
@@ -224,7 +274,7 @@ impl Default for ContainerTimeouts {
 ```rust
 pub mod constants {
     use std::time::Duration;
-    
+
     pub const DEFAULT_IMAGE_NAME: &str = "torrust-provisioned-instance";
     pub const DEFAULT_IMAGE_TAG: &str = "latest";
     pub const DEFAULT_SSH_PORT: u16 = 22;
@@ -288,7 +338,7 @@ impl Default for ContainerOptions {
 mod tests {
     use super::*;
     use mockall::mock;
-    
+
     mock! {
         ContainerSshManager {}
         impl ContainerSshManager for ContainerSshManager {
@@ -297,16 +347,16 @@ mod tests {
             fn test_ssh_connection(&self) -> Result<()>;
         }
     }
-    
+
     #[test]
     fn it_should_build_docker_image_with_custom_config() { /* ... */ }
-    
+
     #[test]
     fn it_should_handle_ssh_setup_timeout() { /* ... */ }
-    
+
     #[test]
     fn it_should_retry_ssh_connection_with_backoff() { /* ... */ }
-    
+
     #[tokio::test]
     async fn it_should_wait_for_ssh_with_exponential_backoff() { /* ... */ }
 }
@@ -334,16 +384,16 @@ impl RunningProvisionedContainer {
         let span = Span::current();
         span.record("ssh_user", &ssh_credentials.ssh_username);
         span.record("ssh_port", &self.ssh_port);
-        
+
         info!("Starting SSH key authentication setup");
-        
+
         // Implementation with structured logging...
-        
+
         info!(
             setup_duration_ms = start_time.elapsed().as_millis(),
             "SSH key authentication configured successfully"
         );
-        
+
         Ok(())
     }
 }
@@ -415,17 +465,17 @@ impl ContainerBuilder {
             options: ContainerOptions::default(),
         }
     }
-    
+
     pub fn with_image(mut self, name: impl Into<String>) -> Self {
         self.options.image_name = name.into();
         self
     }
-    
+
     pub fn with_tag(mut self, tag: impl Into<String>) -> Self {
         self.options.image_tag = tag.into();
         self
     }
-    
+
     pub fn with_timeout(mut self, timeout_type: TimeoutType, duration: Duration) -> Self {
         match timeout_type {
             TimeoutType::DockerBuild => self.options.timeouts.docker_build = duration,
@@ -435,7 +485,7 @@ impl ContainerBuilder {
         }
         self
     }
-    
+
     pub fn build(self) -> StoppedProvisionedContainer {
         StoppedProvisionedContainer::with_options(self.options)
     }
@@ -455,6 +505,13 @@ let container = StoppedProvisionedContainer::builder()
 ```
 
 ## 📋 Implementation Priority
+
+### ✅ Phase 0: Module Restructuring (Completed)
+
+1. ✅ **Module Organization** - Moved `src/e2e/provisioned_container.rs` to `src/e2e/containers/` structure
+2. ✅ **Backward Compatibility** - Added re-exports to maintain existing import paths
+3. ✅ **Documentation Updates** - Updated all references to new module structure
+4. ✅ **Test Validation** - Ensured all tests pass with new structure
 
 ### Phase 1: Foundation (High Priority)
 

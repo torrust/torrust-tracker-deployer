@@ -34,7 +34,7 @@ use torrust_tracker_deploy::application::commands::ConfigureCommand;
 use torrust_tracker_deploy::config::{Config, InstanceName, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
-use torrust_tracker_deploy::e2e::provisioned_container::StoppedProvisionedContainer;
+use torrust_tracker_deploy::e2e::containers::StoppedProvisionedContainer;
 use torrust_tracker_deploy::e2e::tasks::preflight_cleanup;
 use torrust_tracker_deploy::e2e::tasks::provision_docker_infrastructure::provision_docker_infrastructure;
 use torrust_tracker_deploy::logging::{self, LogFormat};
@@ -189,7 +189,7 @@ fn run_configuration_tests() -> Result<()> {
 
 /// Run provision simulation to prepare templates for container configuration
 async fn run_provision_simulation(
-    running_container: &torrust_tracker_deploy::e2e::provisioned_container::RunningProvisionedContainer,
+    running_container: &torrust_tracker_deploy::e2e::containers::RunningProvisionedContainer,
 ) -> Result<()> {
     let (ssh_host, ssh_port) = running_container.ssh_details();
 
@@ -224,7 +224,7 @@ async fn run_provision_simulation(
 
 /// Run Ansible configuration tasks on the container
 fn run_ansible_configuration(
-    running_container: &torrust_tracker_deploy::e2e::provisioned_container::RunningProvisionedContainer,
+    running_container: &torrust_tracker_deploy::e2e::containers::RunningProvisionedContainer,
 ) -> Result<()> {
     let (ssh_host, ssh_port) = running_container.ssh_details();
 
@@ -286,7 +286,7 @@ fn run_ansible_configuration(
 
 /// Run deployment validation tests on the container  
 async fn run_deployment_validation(
-    running_container: &torrust_tracker_deploy::e2e::provisioned_container::RunningProvisionedContainer,
+    running_container: &torrust_tracker_deploy::e2e::containers::RunningProvisionedContainer,
 ) -> Result<()> {
     let (ssh_host, ssh_port) = running_container.ssh_details();
 

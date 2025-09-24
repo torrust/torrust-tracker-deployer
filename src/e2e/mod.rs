@@ -7,7 +7,7 @@
 //! ## Module Structure
 //!
 //! - `environment` - Test environment configuration and management
-//! - `provisioned_container` - Docker container state machine for E2E testing
+//! - `containers` - Container management for E2E testing scenarios
 //! - `tasks` - High-level testing tasks and workflows
 //!
 //! ## Testing Workflow
@@ -16,6 +16,11 @@
 //! provisioning, configuration, validation, and cleanup phases to ensure
 //! the entire deployment system works correctly.
 
+pub mod containers;
 pub mod environment;
-pub mod provisioned_container;
 pub mod tasks;
+
+// Re-export provisioned container types for backward compatibility
+pub use containers::{
+    ProvisionedContainerError, RunningProvisionedContainer, StoppedProvisionedContainer,
+};

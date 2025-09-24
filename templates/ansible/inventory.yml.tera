@@ -28,7 +28,7 @@
 #
 # 🔗 COMPLETE TESTCONTAINERS + DOCKER WORKFLOW:
 #
-# 1. Testcontainers Provisioning (src/e2e/provisioned_container.rs):
+# 1. Testcontainers Provisioning (src/e2e/containers/provisioned.rs):
 #    - Creates Docker container with SSH server
 #    - Maps random host port to container port 22 for SSH access
 #    - Assigns container IP via Docker bridge network

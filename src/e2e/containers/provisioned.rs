@@ -19,7 +19,7 @@
 //! ## Usage
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deploy::e2e::provisioned_container::{
+//! use torrust_tracker_deploy::e2e::containers::{
 //!     StoppedProvisionedContainer, ProvisionedContainerError
 //! };
 //! use torrust_tracker_deploy::infrastructure::adapters::ssh::SshCredentials;
