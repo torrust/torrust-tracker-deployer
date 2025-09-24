@@ -17,17 +17,29 @@
       ansible.builtin.debug:
         msg: "🚀 Installing Docker CE via Ubuntu repositories on {{ inventory_hostname }}"
 
-    - name: Update apt cache
+    - name: Force update apt cache for container environment
       ansible.builtin.apt:
         update_cache: true
-        cache_valid_time: 3600
+        force_apt_get: true
       when: ansible_os_family == "Debian"
+
+    - name: Ensure universe repository is available
+      ansible.builtin.shell: |
+        apt-cache policy docker.io || echo "docker.io not found"
+        apt list --installed | grep -E "(universe|multiverse)" | head -5 || echo "No universe/multiverse packages found"
+      register: repo_check
+      changed_when: false
+
+    - name: Display repository check results
+      ansible.builtin.debug:
+        var: repo_check.stdout_lines
 
     - name: Install Docker from Ubuntu repositories
       ansible.builtin.apt:
         name:
           - docker.io
         state: present
+        force_apt_get: true
       when: ansible_os_family == "Debian"
       register: docker_install
 
