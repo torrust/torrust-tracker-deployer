@@ -17,8 +17,8 @@ name = "torrust-tracker-deploy"
 path = "src/main.rs"
 
 [[bin]]
-name = "e2e-tests"
-path = "src/bin/e2e_tests.rs"
+name = "e2e-tests-full"
+path = "src/bin/e2e_tests_full.rs"
 
 [[bin]]
 name = "e2e-config-tests"

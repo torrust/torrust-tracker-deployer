@@ -1,13 +1,19 @@
-//! End-to-End Testing Binary for Torrust Tracker Deploy
+//! Full End-to-End Testing Binary for Torrust Tracker Deploy (LOCAL DEVELOPMENT ONLY)
 //!
-//! This binary orchestrates complete end-to-end testing of the deployment infrastructure.
-//! It provisions test environments, validates deployments, and cleans up resources.
+//! This binary provides complete end-to-end testing by combining infrastructure provisioning
+//! and configuration management in a single LXD VM. It's designed for local development
+//! and comprehensive testing workflows.
+//!
+//! ⚠️ **IMPORTANT**: This binary cannot run on GitHub Actions due to network connectivity
+//! issues within LXD VMs on GitHub runners. For CI environments, use the split test suites:
+//! - `cargo run --bin e2e-provision-tests` - Infrastructure provisioning only
+//! - `cargo run --bin e2e-config-tests` - Configuration and software installation
 //!
 //! ## Test Workflow
 //!
 //! 1. **Preflight cleanup** - Remove any lingering test resources
-//! 2. **Infrastructure provisioning** - Create VMs/containers using `OpenTofu`
-//! 3. **Configuration** - Apply Ansible playbooks
+//! 2. **Infrastructure provisioning** - Create LXD VMs using `OpenTofu`
+//! 3. **Configuration** - Apply Ansible playbooks for software installation
 //! 4. **Validation** - Verify deployments are working correctly
 //! 5. **Cleanup** - Remove test resources
 //!

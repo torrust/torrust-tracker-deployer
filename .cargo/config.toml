@@ -1,6 +1,6 @@
 [alias]
 lint = "run --bin linter all"
-e2e = "run --bin e2e-tests"
+e2e-full = "run --bin e2e-tests-full"
 e2e-provision = "run --bin e2e-provision-tests"
 e2e-config = "run --bin e2e-config-tests"
 cov = "llvm-cov"
