@@ -74,7 +74,7 @@ impl SshClient {
         args.push(format!(
             "{}@{}",
             self.ssh_connection.ssh_username(),
-            self.ssh_connection.host_ip
+            self.ssh_connection.host_ip()
         ));
         args.push(remote_command.to_string());
 
@@ -193,7 +193,7 @@ impl SshClient {
     pub async fn wait_for_connectivity(&self) -> Result<(), SshError> {
         info!(
             operation = "ssh_connectivity",
-            host_ip = %self.ssh_connection.host_ip,
+            host_ip = %self.ssh_connection.host_ip(),
             "Waiting for SSH connectivity"
         );
 
@@ -208,7 +208,7 @@ impl SshClient {
                 Ok(true) => {
                     info!(
                         operation = "ssh_connectivity",
-                        host_ip = %self.ssh_connection.host_ip,
+                        host_ip = %self.ssh_connection.host_ip(),
                         status = "success",
                         "SSH connectivity established"
                     );
@@ -219,7 +219,7 @@ impl SshClient {
                     if (attempt + 1) % 5 == 0 {
                         info!(
                             operation = "ssh_connectivity",
-                            host_ip = %self.ssh_connection.host_ip,
+                            host_ip = %self.ssh_connection.host_ip(),
                             attempt = attempt + 1,
                             max_attempts = max_attempts,
                             "Still waiting for SSH connectivity"
@@ -236,7 +236,7 @@ impl SshClient {
         }
 
         Err(SshError::ConnectivityTimeout {
-            host_ip: self.ssh_connection.host_ip.to_string(),
+            host_ip: self.ssh_connection.host_ip().to_string(),
             attempts: max_attempts,
             timeout_seconds,
         })
@@ -269,7 +269,7 @@ mod tests {
             "/path/to/key"
         );
         assert_eq!(ssh_client.ssh_connection.ssh_username(), "testuser");
-        assert_eq!(ssh_client.ssh_connection.host_ip, host_ip);
+        assert_eq!(ssh_client.ssh_connection.host_ip(), host_ip);
         // Note: verbose is now encapsulated in the CommandExecutor collaborator
     }
 
@@ -292,7 +292,7 @@ mod tests {
             "/path/to/key"
         );
         assert_eq!(ssh_client.ssh_connection.ssh_username(), "testuser");
-        assert_eq!(ssh_client.ssh_connection.host_ip, host_ip);
+        assert_eq!(ssh_client.ssh_connection.host_ip(), host_ip);
         // Note: logging is now handled by the tracing crate via CommandExecutor
     }
 }

@@ -3,6 +3,7 @@
 //! This module provides an action to wait for SSH connectivity to become available.
 //! The action attempts to connect to SSH in a loop with configurable timeout and retry logic.
 
+use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 use tracing::{info, warn};
 
@@ -56,10 +57,12 @@ pub type Result<T> = std::result::Result<T, SshWaitError>;
 /// ```rust,no_run
 /// use torrust_tracker_deploy::e2e::containers::actions::SshWaitAction;
 /// use std::time::Duration;
+/// use std::net::SocketAddr;
 ///
 /// fn wait_for_ssh() -> Result<(), Box<dyn std::error::Error>> {
 ///     let action = SshWaitAction::new(Duration::from_secs(30), 10);
-///     action.execute("127.0.0.1", 22)?;
+///     let socket_addr = SocketAddr::from(([127, 0, 0, 1], 22));
+///     action.execute(socket_addr)?;
 ///     Ok(())
 /// }
 /// ```
@@ -83,8 +86,7 @@ impl SshWaitAction {
     ///
     /// # Arguments
     ///
-    /// * `host` - The host to connect to
-    /// * `port` - The SSH port to connect to
+    /// * `socket_addr` - The socket address (IP and port) to connect to
     ///
     /// # Errors
     ///
@@ -92,10 +94,9 @@ impl SshWaitAction {
     /// - SSH connectivity cannot be established within the timeout
     /// - Max attempts are exceeded
     /// - SSH command execution fails
-    pub fn execute(&self, host: &str, port: u16) -> Result<()> {
+    pub fn execute(&self, socket_addr: SocketAddr) -> Result<()> {
         info!(
-            host = host,
-            port = port,
+            socket_addr = %socket_addr,
             timeout_secs = self.timeout.as_secs(),
             max_attempts = self.max_attempts,
             "Starting SSH connectivity wait"
@@ -116,11 +117,10 @@ impl SshWaitAction {
                 "Attempting SSH connection"
             );
 
-            match Self::test_ssh_connection(host, port) {
+            match Self::test_ssh_connection(socket_addr) {
                 Ok(()) => {
                     info!(
-                        host = host,
-                        port = port,
+                        socket_addr = %socket_addr,
                         attempt = attempt,
                         elapsed = start_time.elapsed().as_secs(),
                         "SSH connection successful"
@@ -146,8 +146,8 @@ impl SshWaitAction {
         }
 
         Err(SshWaitError::SshConnectionTimeout {
-            host: host.to_string(),
-            port,
+            host: socket_addr.ip().to_string(),
+            port: socket_addr.port(),
             timeout_secs: self.timeout.as_secs(),
             max_attempts: self.max_attempts,
             last_error_context,
@@ -155,22 +155,22 @@ impl SshWaitAction {
     }
 
     /// Test SSH connection by checking if SSH service is available
-    fn test_ssh_connection(host: &str, port: u16) -> Result<()> {
+    fn test_ssh_connection(socket_addr: SocketAddr) -> Result<()> {
         let checker = SshServiceChecker::new();
 
-        match checker.is_service_available(host, port) {
+        match checker.is_service_available(socket_addr) {
             Ok(true) => Ok(()),
             Ok(false) => Err(SshWaitError::SshConnectionTestFailed {
-                host: host.to_string(),
-                port,
+                host: socket_addr.ip().to_string(),
+                port: socket_addr.port(),
                 source: std::io::Error::new(
                     std::io::ErrorKind::ConnectionRefused,
                     "SSH server not reachable",
                 ),
             }),
             Err(e) => Err(SshWaitError::SshConnectionTestFailed {
-                host: host.to_string(),
-                port,
+                host: socket_addr.ip().to_string(),
+                port: socket_addr.port(),
                 source: std::io::Error::other(format!("SSH service check failed: {e}")),
             }),
         }
@@ -221,9 +221,12 @@ mod tests {
 
     #[test]
     fn it_should_return_error_for_invalid_max_attempts() {
+        use std::net::{IpAddr, Ipv4Addr};
+
         let action = SshWaitAction::new(Duration::from_secs(1), 0);
         // With 0 max attempts, it should immediately fail
-        let result = action.execute("127.0.0.1", 22);
+        let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 22);
+        let result = action.execute(socket_addr);
         assert!(result.is_err());
     }
 

@@ -26,6 +26,7 @@
 //! use torrust_tracker_deploy::shared::ssh::SshCredentials;
 //! use std::path::PathBuf;
 //! use std::time::Duration;
+//! use std::net::SocketAddr;
 //!
 //! fn example() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Start with stopped state
@@ -35,11 +36,11 @@
 //!     let running = stopped.start()?;
 //!     
 //!     // Get connection details
-//!     let (host, port) = running.ssh_details();
+//!     let socket_addr = running.ssh_details();
 //!     
 //!     // Wait for SSH server using action directly
 //!     let ssh_wait_action = SshWaitAction::new(Duration::from_secs(30), 10);
-//!     ssh_wait_action.execute(&host, port)?;
+//!     ssh_wait_action.execute(socket_addr)?;
 //!     
 //!     // Setup SSH keys with credentials using action directly
 //!     let ssh_credentials = SshCredentials::new(
@@ -56,6 +57,7 @@
 //! }
 //! ```
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
@@ -357,8 +359,8 @@ impl RunningProvisionedContainer {
 
     /// Get the SSH connection details for Ansible
     #[must_use]
-    pub fn ssh_details(&self) -> (String, u16) {
-        ("127.0.0.1".to_string(), self.ssh_port)
+    pub fn ssh_details(&self) -> SocketAddr {
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), self.ssh_port)
     }
 
     /// Get the container ID for logging/debugging

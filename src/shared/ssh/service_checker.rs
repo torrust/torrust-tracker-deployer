@@ -14,11 +14,13 @@
 //! ## Usage
 //!
 //! ```rust,no_run
+//! use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 //! use torrust_tracker_deploy::shared::ssh::SshServiceChecker;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let checker = SshServiceChecker::new();
-//! let is_available = checker.is_service_available("192.168.1.1", 22)?;
+//! let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), 22);
+//! let is_available = checker.is_service_available(socket_addr)?;
 //! if is_available {
 //!     println!("SSH service is available");
 //! } else {
@@ -28,6 +30,7 @@
 //! # }
 //! ```
 
+use std::net::SocketAddr;
 use std::process::Command;
 use tracing::debug;
 
@@ -83,7 +86,7 @@ impl SshServiceChecker {
         Self { connect_timeout }
     }
 
-    /// Check if SSH service is available on the specified host and port
+    /// Check if SSH service is available at the specified socket address
     ///
     /// This method attempts a minimal SSH connection to test service availability.
     /// It distinguishes between:
@@ -91,8 +94,7 @@ impl SshServiceChecker {
     /// - Service available (authentication failures are considered as service available)
     ///
     /// # Arguments
-    /// * `host` - The hostname or IP address to test
-    /// * `port` - The SSH port to test
+    /// * `socket_addr` - The socket address (IP and port) to test
     ///
     /// # Returns
     /// * `Ok(true)` - SSH service is available and accepting connections
@@ -102,13 +104,15 @@ impl SshServiceChecker {
     /// # Errors
     /// Returns an error if the SSH command cannot be executed (e.g., ssh binary not found
     /// or process was terminated by signal).
-    pub fn is_service_available(&self, host: &str, port: u16) -> Result<bool> {
+    pub fn is_service_available(&self, socket_addr: SocketAddr) -> Result<bool> {
         debug!(
-            host = host,
-            port = port,
+            socket_addr = %socket_addr,
             timeout = self.connect_timeout,
             "Testing SSH service availability"
         );
+
+        let host = socket_addr.ip().to_string();
+        let port = socket_addr.port();
 
         let output = Command::new("ssh")
             .args([
@@ -134,8 +138,7 @@ impl SshServiceChecker {
             Some(0) => {
                 // SSH command succeeded - service is definitely available
                 debug!(
-                    host = host,
-                    port = port,
+                    socket_addr = %socket_addr,
                     "SSH service available (command succeeded)"
                 );
                 Ok(true)
@@ -147,8 +150,7 @@ impl SshServiceChecker {
                 if stderr.contains("Connection refused") || stderr.contains("No route to host") {
                     // Service is not available or host is not reachable
                     debug!(
-                        host = host,
-                        port = port,
+                        socket_addr = %socket_addr,
                         error = %stderr.trim(),
                         "SSH service not available"
                     );
@@ -156,8 +158,7 @@ impl SshServiceChecker {
                 } else {
                     // Authentication failed, permission denied, etc. - service is available
                     debug!(
-                        host = host,
-                        port = port,
+                        socket_addr = %socket_addr,
                         error = %stderr.trim(),
                         "SSH service available (authentication failed)"
                     );
@@ -168,8 +169,7 @@ impl SshServiceChecker {
                 // Other non-zero exit codes typically indicate service is available
                 // but there are other issues (auth, command execution, etc.)
                 debug!(
-                    host = host,
-                    port = port,
+                    socket_addr = %socket_addr,
                     exit_code = exit_code,
                     "SSH service available (non-zero exit code)"
                 );

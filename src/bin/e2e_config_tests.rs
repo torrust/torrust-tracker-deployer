@@ -25,6 +25,7 @@
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
@@ -147,10 +148,10 @@ fn run_configuration_tests() -> Result<()> {
         .context("Failed to start provisioned instance container")?;
 
     // Step 2: Wait for SSH server and setup connectivity (only available when running)
-    let (ssh_host, ssh_port) = running_container.ssh_details();
+    let socket_addr = running_container.ssh_details();
     let ssh_wait_action = SshWaitAction::new(Duration::from_secs(30), 10);
     ssh_wait_action
-        .execute(&ssh_host, ssh_port)
+        .execute(socket_addr)
         .context("SSH server failed to start")?;
 
     // Get SSH credentials from test environment and setup keys
@@ -161,8 +162,7 @@ fn run_configuration_tests() -> Result<()> {
         .context("Failed to setup SSH authentication")?;
 
     info!(
-        ssh_host = %ssh_host,
-        ssh_port = ssh_port,
+        socket_addr = %socket_addr,
         ssh_user = %ssh_credentials.ssh_username,
         container_id = %running_container.container_id(),
         "Container ready for Ansible configuration"
@@ -194,11 +194,10 @@ fn run_configuration_tests() -> Result<()> {
 async fn run_provision_simulation(
     running_container: &torrust_tracker_deploy::e2e::containers::RunningProvisionedContainer,
 ) -> Result<()> {
-    let (ssh_host, ssh_port) = running_container.ssh_details();
+    let socket_addr = running_container.ssh_details();
 
     info!(
-        ssh_host = %ssh_host,
-        ssh_port = ssh_port,
+        socket_addr = %socket_addr,
         "Running provision simulation for container"
     );
 
@@ -211,8 +210,7 @@ async fn run_provision_simulation(
     provision_docker_infrastructure(
         Arc::clone(&services.ansible_template_renderer),
         ssh_credentials,
-        ssh_host.parse()?,
-        ssh_port,
+        socket_addr,
     )
     .await
     .context("Failed to complete Docker infrastructure provision simulation")?;
@@ -229,11 +227,10 @@ async fn run_provision_simulation(
 fn run_ansible_configuration(
     running_container: &torrust_tracker_deploy::e2e::containers::RunningProvisionedContainer,
 ) -> Result<()> {
-    let (ssh_host, ssh_port) = running_container.ssh_details();
+    let socket_addr = running_container.ssh_details();
 
     info!(
-        ssh_host = %ssh_host,
-        ssh_port = ssh_port,
+        socket_addr = %socket_addr,
         "Running Ansible configuration on container"
     );
 
@@ -291,11 +288,10 @@ fn run_ansible_configuration(
 async fn run_deployment_validation(
     running_container: &torrust_tracker_deploy::e2e::containers::RunningProvisionedContainer,
 ) -> Result<()> {
-    let (ssh_host, ssh_port) = running_container.ssh_details();
+    let socket_addr = running_container.ssh_details();
 
     info!(
-        ssh_host = %ssh_host,
-        ssh_port = ssh_port,
+        socket_addr = %socket_addr,
         "Running deployment validation on container"
     );
 
@@ -304,10 +300,7 @@ async fn run_deployment_validation(
     match credentials_result {
         Ok(ssh_credentials) => {
             // Create SSH connection with the container's dynamic port
-            let host_ip = ssh_host.parse().context("Failed to parse SSH host as IP")?;
-
-            match validate_container_deployment_with_port(&ssh_credentials, host_ip, ssh_port).await
-            {
+            match validate_container_deployment_with_port(&ssh_credentials, socket_addr).await {
                 Ok(()) => {
                     info!(status = "success", "All deployment validations passed");
                 }
@@ -378,29 +371,30 @@ fn create_container_ssh_credentials() -> Result<SshCredentials> {
 /// Validate container deployment using SSH infrastructure with custom port
 async fn validate_container_deployment_with_port(
     ssh_credentials: &SshCredentials,
-    host_ip: std::net::IpAddr,
-    ssh_port: u16,
+    socket_addr: SocketAddr,
 ) -> Result<()> {
     use torrust_tracker_deploy::infrastructure::remote_actions::{
         DockerComposeValidator, DockerValidator, RemoteAction,
     };
 
+    let ip_addr = socket_addr.ip();
+
     // Create SSH connection with the container's dynamic port using the new port support
     let ssh_connection = ssh_credentials
         .clone()
-        .with_host_and_port(host_ip, ssh_port);
+        .with_host_and_port(ip_addr, socket_addr.port());
 
     // Validate Docker installation
     let docker_validator = DockerValidator::new(ssh_connection.clone());
     docker_validator
-        .execute(&host_ip)
+        .execute(&ip_addr)
         .await
         .context("Docker validation failed")?;
 
     // Validate Docker Compose installation
     let compose_validator = DockerComposeValidator::new(ssh_connection);
     compose_validator
-        .execute(&host_ip)
+        .execute(&ip_addr)
         .await
         .context("Docker Compose validation failed")?;
 

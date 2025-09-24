@@ -67,7 +67,7 @@ impl ValidateDockerComposeInstallationStep {
         let docker_compose_validator = DockerComposeValidator::new(self.ssh_connection.clone());
 
         docker_compose_validator
-            .execute(&self.ssh_connection.host_ip)
+            .execute(&self.ssh_connection.host_ip())
             .await?;
 
         Ok(())
@@ -96,6 +96,6 @@ mod tests {
         let step = ValidateDockerComposeInstallationStep::new(ssh_connection);
 
         // Test that the step can be created successfully
-        assert_eq!(step.ssh_connection.host_ip, host_ip);
+        assert_eq!(step.ssh_connection.host_ip(), host_ip);
     }
 }

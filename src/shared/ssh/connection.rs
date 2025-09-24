@@ -2,49 +2,43 @@
 //!
 //! This module provides the `SshConnection` struct which encapsulates all the information
 //! needed to establish an SSH connection to a remote host, including credentials and
-//! target host information.
+//! target host socket address.
 //!
 //! ## Key Components
 //!
-//! - Connection configuration combining credentials and target host
-//! - IP address management for remote instances
+//! - Connection configuration combining credentials and target host socket address
+//! - Socket address management (IP address and port) for remote instances
 //! - Integration with SSH credentials for authentication
 //!
 //! The connection configuration is used by SSH clients to establish secure
 //! connections for remote command execution.
 
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 
 use super::SshCredentials;
 
 /// SSH connection configuration for a specific remote instance.
 ///
-/// Contains both the SSH credentials and the target host IP address,
+/// Contains both the SSH credentials and the target host socket address,
 /// representing everything needed to establish an SSH connection.
 #[derive(Clone)]
 pub struct SshConnection {
     /// SSH authentication credentials.
     pub credentials: SshCredentials,
 
-    /// IP address of the target host for SSH connections.
+    /// Socket address (IP address and port) of the target host for SSH connections.
     ///
-    /// This is the IP address of the remote instance that the SSH client
-    /// will connect to.
-    pub host_ip: IpAddr,
-
-    /// Port number for SSH connections.
-    ///
-    /// Defaults to 22 (standard SSH port) but can be customized for
-    /// containerized environments or non-standard SSH configurations.
-    pub port: u16,
+    /// This contains both the IP address and port number of the remote instance
+    /// that the SSH client will connect to.
+    pub socket_addr: SocketAddr,
 }
 
 impl SshConnection {
     /// Creates a new SSH connection configuration with the provided parameters.
     ///
     /// ```rust
-    /// # use std::net::{IpAddr, Ipv4Addr};
+    /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     /// # use std::path::PathBuf;
     /// # use torrust_tracker_deploy::shared::ssh::{SshCredentials, SshConnection};
     /// let credentials = SshCredentials::new(
@@ -52,15 +46,18 @@ impl SshConnection {
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
     ///     "ubuntu".to_string(),
     /// );
+    /// let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)), 22);
     /// let connection = SshConnection::new(
     ///     credentials,
-    ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
-    ///     22,
+    ///     socket_addr,
     /// );
     /// ```
     #[must_use]
-    pub fn new(credentials: SshCredentials, host_ip: IpAddr, port: u16) -> Self {
-        Self::new_with_port(credentials, host_ip, port)
+    pub fn new(credentials: SshCredentials, socket_addr: SocketAddr) -> Self {
+        Self {
+            credentials,
+            socket_addr,
+        }
     }
 
     /// Creates a new SSH connection configuration with the default port (22).
@@ -68,7 +65,7 @@ impl SshConnection {
     /// This is a convenience method for when you want to use the standard SSH port.
     ///
     /// ```rust
-    /// # use std::net::{IpAddr, Ipv4Addr};
+    /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     /// # use std::path::PathBuf;
     /// # use torrust_tracker_deploy::shared::ssh::{SshCredentials, SshConnection};
     /// let credentials = SshCredentials::new(
@@ -83,33 +80,8 @@ impl SshConnection {
     /// ```
     #[must_use]
     pub fn with_default_port(credentials: SshCredentials, host_ip: IpAddr) -> Self {
-        Self::new(credentials, host_ip, 22)
-    }
-
-    /// Creates a new SSH connection configuration with a custom port.
-    ///
-    /// ```rust
-    /// # use std::net::{IpAddr, Ipv4Addr};
-    /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::shared::ssh::{SshCredentials, SshConnection};
-    /// let credentials = SshCredentials::new(
-    ///     PathBuf::from("/home/user/.ssh/deploy_key"),
-    ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
-    ///     "ubuntu".to_string(),
-    /// );
-    /// let connection = SshConnection::new_with_port(
-    ///     credentials,
-    ///     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-    ///     2222,
-    /// );
-    /// ```
-    #[must_use]
-    pub fn new_with_port(credentials: SshCredentials, host_ip: IpAddr, port: u16) -> Self {
-        Self {
-            credentials,
-            host_ip,
-            port,
-        }
+        let socket_addr = SocketAddr::new(host_ip, 22);
+        Self::new(credentials, socket_addr)
     }
 
     /// Access the SSH private key path.
@@ -133,6 +105,44 @@ impl SshConnection {
     /// Access the SSH port.
     #[must_use]
     pub fn ssh_port(&self) -> u16 {
-        self.port
+        self.socket_addr.port()
+    }
+
+    /// Access the host IP address.
+    #[must_use]
+    pub fn host_ip(&self) -> IpAddr {
+        self.socket_addr.ip()
+    }
+
+    /// Access the socket address.
+    #[must_use]
+    pub fn socket_addr(&self) -> SocketAddr {
+        self.socket_addr
+    }
+
+    /// Creates a new SSH connection configuration with IP address and port.
+    ///
+    /// This is a convenience method for creating a connection when you have
+    /// separate IP address and port values.
+    ///
+    /// ```rust
+    /// # use std::net::{IpAddr, Ipv4Addr};
+    /// # use std::path::PathBuf;
+    /// # use torrust_tracker_deploy::shared::ssh::{SshCredentials, SshConnection};
+    /// let credentials = SshCredentials::new(
+    ///     PathBuf::from("/home/user/.ssh/deploy_key"),
+    ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
+    ///     "ubuntu".to_string(),
+    /// );
+    /// let connection = SshConnection::with_ip_and_port(
+    ///     credentials,
+    ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+    ///     2222,
+    /// );
+    /// ```
+    #[must_use]
+    pub fn with_ip_and_port(credentials: SshCredentials, host_ip: IpAddr, port: u16) -> Self {
+        let socket_addr = SocketAddr::new(host_ip, port);
+        Self::new(credentials, socket_addr)
     }
 }

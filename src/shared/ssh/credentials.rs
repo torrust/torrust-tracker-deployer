@@ -82,6 +82,6 @@ impl SshCredentials {
     /// Create an SSH connection with a custom port
     #[must_use]
     pub fn with_host_and_port(self, host_ip: IpAddr, port: u16) -> SshConnection {
-        SshConnection::new(self, host_ip, port)
+        SshConnection::with_ip_and_port(self, host_ip, port)
     }
 }

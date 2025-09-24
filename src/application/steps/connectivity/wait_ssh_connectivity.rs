@@ -52,7 +52,7 @@ impl WaitForSSHConnectivityStep {
     pub async fn execute(&self) -> Result<(), SshError> {
         info!(
             step = "wait_ssh_connectivity",
-            instance_ip = %self.ssh_connection.host_ip,
+            instance_ip = %self.ssh_connection.host_ip(),
             username = %self.ssh_connection.ssh_username(),
             "Waiting for SSH connectivity to be established"
         );
@@ -65,7 +65,7 @@ impl WaitForSSHConnectivityStep {
 
         info!(
             step = "wait_ssh_connectivity",
-            instance_ip = %self.ssh_connection.host_ip,
+            instance_ip = %self.ssh_connection.host_ip(),
             status = "success",
             "SSH connectivity successfully established"
         );
@@ -99,7 +99,7 @@ mod tests {
             "/tmp/test_key"
         );
         assert_eq!(step.ssh_connection.ssh_username(), "testuser");
-        assert_eq!(step.ssh_connection.host_ip, instance_ip);
+        assert_eq!(step.ssh_connection.host_ip(), instance_ip);
     }
 
     #[test]
@@ -119,7 +119,7 @@ mod tests {
             "/home/user/.ssh/id_rsa"
         );
         assert_eq!(step.ssh_connection.ssh_username(), "torrust");
-        assert_eq!(step.ssh_connection.host_ip, instance_ip);
+        assert_eq!(step.ssh_connection.host_ip(), instance_ip);
     }
 
     #[test]
@@ -139,6 +139,6 @@ mod tests {
             "/path/to/ssh/key"
         );
         assert_eq!(step.ssh_connection.ssh_username(), "admin");
-        assert_eq!(step.ssh_connection.host_ip, instance_ip);
+        assert_eq!(step.ssh_connection.host_ip(), instance_ip);
     }
 }

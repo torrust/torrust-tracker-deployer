@@ -18,7 +18,7 @@
 //! addresses are known, allowing for the generation of dynamic Ansible
 //! configurations for remote host management.
 
-use std::net::IpAddr;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use thiserror::Error;
@@ -56,8 +56,7 @@ pub enum RenderAnsibleTemplatesError {
 pub struct RenderAnsibleTemplatesStep {
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
     ssh_credentials: SshCredentials,
-    instance_ip: IpAddr,
-    ssh_port: u16,
+    ssh_socket_addr: SocketAddr,
 }
 
 impl RenderAnsibleTemplatesStep {
@@ -65,14 +64,12 @@ impl RenderAnsibleTemplatesStep {
     pub fn new(
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
         ssh_credentials: SshCredentials,
-        instance_ip: IpAddr,
-        ssh_port: u16,
+        ssh_socket_addr: SocketAddr,
     ) -> Self {
         Self {
             ansible_template_renderer,
             ssh_credentials,
-            instance_ip,
-            ssh_port,
+            ssh_socket_addr,
         }
     }
 
@@ -118,9 +115,9 @@ impl RenderAnsibleTemplatesStep {
     /// - SSH key path parsing fails
     /// - Inventory context creation fails
     fn create_inventory_context(&self) -> Result<InventoryContext, RenderAnsibleTemplatesError> {
-        let host = AnsibleHost::from(self.instance_ip);
+        let host = AnsibleHost::from(self.ssh_socket_addr.ip());
         let ssh_key = SshPrivateKeyFile::new(&self.ssh_credentials.ssh_priv_key_path)?;
-        let ssh_port = AnsiblePort::new(self.ssh_port)?;
+        let ssh_port = AnsiblePort::new(self.ssh_socket_addr.port())?;
 
         InventoryContext::builder()
             .with_host(host)

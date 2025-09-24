@@ -28,8 +28,8 @@ use crate::infrastructure::adapters::ansible::AnsibleClient;
 use crate::infrastructure::adapters::lxd::InstanceName;
 use crate::infrastructure::adapters::opentofu::client::{InstanceInfo, OpenTofuError};
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
-use crate::shared::executor::CommandError;
 use crate::infrastructure::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
+use crate::shared::executor::CommandError;
 use crate::shared::ssh::{credentials::SshCredentials, SshError};
 
 /// Comprehensive error type for the `ProvisionCommand`
@@ -146,11 +146,11 @@ impl ProvisionCommand {
             GetInstanceInfoStep::new(Arc::clone(&self.opentofu_client)).execute()?;
         let instance_ip = instance_info.ip_address;
 
+        let socket_addr = std::net::SocketAddr::new(instance_ip, 22); // Default SSH port for VMs
         RenderAnsibleTemplatesStep::new(
             Arc::clone(&self.ansible_template_renderer),
             self.ssh_credentials.clone(),
-            instance_ip,
-            22, // Default SSH port for VMs
+            socket_addr,
         )
         .execute()
         .await?;

@@ -62,7 +62,7 @@ impl ValidateCloudInitCompletionStep {
         let cloud_init_validator = CloudInitValidator::new(self.ssh_connection.clone());
 
         cloud_init_validator
-            .execute(&self.ssh_connection.host_ip)
+            .execute(&self.ssh_connection.host_ip())
             .await?;
 
         Ok(())
@@ -91,6 +91,6 @@ mod tests {
         let step = ValidateCloudInitCompletionStep::new(ssh_connection);
 
         // Test that the step can be created successfully
-        assert_eq!(step.ssh_connection.host_ip, host_ip);
+        assert_eq!(step.ssh_connection.host_ip(), host_ip);
     }
 }

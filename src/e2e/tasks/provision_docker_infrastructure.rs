@@ -15,7 +15,7 @@
 //! skipping `OpenTofu` operations and only performing the post-instance-creation steps
 //! needed for Ansible configuration.
 
-use std::net::IpAddr;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -46,33 +46,25 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 pub async fn provision_docker_infrastructure(
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
     ssh_credentials: SshCredentials,
-    container_ip: IpAddr,
-    ssh_port: u16,
+    socket_addr: SocketAddr,
 ) -> Result<()> {
     info!(
-        container_ip = %container_ip,
-        ssh_port = ssh_port,
+        socket_addr = %socket_addr,
         "Starting Docker infrastructure provisioning simulation"
     );
 
     // Step 1: Render Ansible templates with container connection details
     info!("Rendering Ansible templates for container");
-    RenderAnsibleTemplatesStep::new(
-        ansible_template_renderer,
-        ssh_credentials,
-        container_ip,
-        ssh_port,
-    )
-    .execute()
-    .await
-    .context("Failed to render Ansible templates for container")?;
+    RenderAnsibleTemplatesStep::new(ansible_template_renderer, ssh_credentials, socket_addr)
+        .execute()
+        .await
+        .context("Failed to render Ansible templates for container")?;
 
     // Note: SSH connectivity check is skipped for Docker containers since
     // the container setup process already ensures SSH is ready and accessible
 
     info!(
-        container_ip = %container_ip,
-        ssh_port = ssh_port,
+        socket_addr = %socket_addr,
         "Docker infrastructure provisioning simulation completed successfully"
     );
 

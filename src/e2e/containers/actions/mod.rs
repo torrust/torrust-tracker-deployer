@@ -22,12 +22,12 @@
 //! use torrust_tracker_deploy::e2e::containers::{ContainerExecutor, actions::{SshKeySetupAction, SshWaitAction}};
 //! use torrust_tracker_deploy::shared::ssh::SshCredentials;
 //! use std::time::Duration;
+//! use std::net::SocketAddr;
 //!
 //! fn setup_container_ssh<T: ContainerExecutor>(
 //!     container: &T,
 //!     ssh_credentials: &SshCredentials,
-//!     host: &str,
-//!     port: u16,
+//!     socket_addr: SocketAddr,
 //! ) -> Result<(), Box<dyn std::error::Error>> {
 //!     // Setup SSH keys inside the container
 //!     let ssh_setup = SshKeySetupAction::new();
@@ -35,7 +35,7 @@
 //!     
 //!     // Wait for SSH to be accessible
 //!     let ssh_wait = SshWaitAction::new(Duration::from_secs(30), 10);
-//!     ssh_wait.execute(host, port)?;
+//!     ssh_wait.execute(socket_addr)?;
 //!     
 //!     Ok(())
 //! }
