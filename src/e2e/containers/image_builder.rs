@@ -1,7 +1,7 @@
-//! Docker Image Builder for E2E Testing Containers
+//! Container Image Builder for E2E Testing Containers
 //!
-//! This module provides a builder pattern for constructing and building Docker images
-//! used in E2E testing scenarios. It separates the Docker image building logic from
+//! This module provides a builder pattern for constructing and building container images
+//! used in E2E testing scenarios. It separates the container image building logic from
 //! the container lifecycle management, following the Single Responsibility Principle.
 //!
 //! ## Design
@@ -9,12 +9,12 @@
 //! The builder follows the standard Rust builder pattern with method chaining:
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deploy::e2e::containers::DockerImageBuilder;
+//! use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
 //! use std::path::PathBuf;
 //! use std::time::Duration;
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let builder = DockerImageBuilder::new()
+//! let builder = ContainerImageBuilder::new()
 //!     .with_name("torrust-provisioned-instance")
 //!     .with_tag("latest")
 //!     .with_dockerfile(PathBuf::from("docker/provisioned-instance/Dockerfile"))
@@ -28,9 +28,9 @@
 //!
 //! ## Error Handling
 //!
-//! The module provides specific error types for Docker build operations:
-//! - `DockerBuildExecution` - Command execution failures
-//! - `DockerBuildFailed` - Build process failures with stderr output
+//! The module provides specific error types for container build operations:
+//! - `ContainerBuildExecution` - Command execution failures
+//! - `ContainerBuildFailed` - Build process failures with stderr output
 //! - `ImageNameRequired` - Image name not provided (use `with_name()`)
 //! - `DockerfilePathRequired` - Dockerfile path not provided (use `with_dockerfile()`)
 //!
@@ -52,21 +52,21 @@ use std::process::Command;
 use std::time::Duration;
 use tracing::info;
 
-/// Specific error types for Docker image building operations
+/// Specific error types for container image building operations
 #[derive(Debug, thiserror::Error)]
-pub enum DockerBuildError {
-    /// Docker build command execution failed
+pub enum ContainerBuildError {
+    /// Container build command execution failed
     #[error("Failed to execute docker build command for image '{image_name}:{tag}': {source}")]
-    DockerBuildExecution {
+    ContainerBuildExecution {
         image_name: String,
         tag: String,
         #[source]
         source: std::io::Error,
     },
 
-    /// Docker build process failed with non-zero exit code
+    /// Container build process failed with non-zero exit code
     #[error("Docker build failed for image '{image_name}:{tag}' with stderr: {stderr}")]
-    DockerBuildFailed {
+    ContainerBuildFailed {
         image_name: String,
         tag: String,
         stderr: String,
@@ -81,13 +81,13 @@ pub enum DockerBuildError {
     DockerfilePathRequired,
 }
 
-/// Result type alias for Docker build operations
-pub type Result<T> = std::result::Result<T, DockerBuildError>;
+/// Result type alias for container build operations
+pub type Result<T> = std::result::Result<T, ContainerBuildError>;
 
-/// Builder for constructing and building Docker images
+/// Builder for constructing and building container images
 ///
 /// This builder follows the standard Rust builder pattern, allowing
-/// method chaining to configure Docker image build parameters.
+/// method chaining to configure container image build parameters.
 ///
 /// # Required Values
 ///
@@ -101,7 +101,7 @@ pub type Result<T> = std::result::Result<T, DockerBuildError>;
 /// - **Build context**: "." (current directory)
 /// - **Build timeout**: 300 seconds
 #[derive(Debug, Clone)]
-pub struct DockerImageBuilder {
+pub struct ContainerImageBuilder {
     image_name: Option<String>,
     tag: String,
     dockerfile_path: Option<PathBuf>,
@@ -109,15 +109,15 @@ pub struct DockerImageBuilder {
     build_timeout: Duration,
 }
 
-impl DockerImageBuilder {
-    /// Create a new Docker image builder with default configuration
+impl ContainerImageBuilder {
+    /// Create a new container image builder with default configuration
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::DockerImageBuilder;
+    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
     ///
-    /// let builder = DockerImageBuilder::new();
+    /// let builder = ContainerImageBuilder::new();
     /// ```
     #[must_use]
     pub fn new() -> Self {
@@ -130,18 +130,18 @@ impl DockerImageBuilder {
         }
     }
 
-    /// Set the Docker image name
+    /// Set the container image name
     ///
     /// # Arguments
     ///
-    /// * `name` - The Docker image name
+    /// * `name` - The container image name
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::DockerImageBuilder;
+    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
     ///
-    /// let builder = DockerImageBuilder::new()
+    /// let builder = ContainerImageBuilder::new()
     ///     .with_name("my-custom-image");
     /// ```
     #[must_use]
@@ -150,18 +150,18 @@ impl DockerImageBuilder {
         self
     }
 
-    /// Set the Docker image tag
+    /// Set the container image tag
     ///
     /// # Arguments
     ///
-    /// * `tag` - The Docker image tag
+    /// * `tag` - The container image tag
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::DockerImageBuilder;
+    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
     ///
-    /// let builder = DockerImageBuilder::new()
+    /// let builder = ContainerImageBuilder::new()
     ///     .with_tag("v1.0.0");
     /// ```
     #[must_use]
@@ -179,10 +179,10 @@ impl DockerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::DockerImageBuilder;
+    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
     /// use std::path::PathBuf;
     ///
-    /// let builder = DockerImageBuilder::new()
+    /// let builder = ContainerImageBuilder::new()
     ///     .with_dockerfile(PathBuf::from("custom/Dockerfile"));
     /// ```
     #[must_use]
@@ -200,10 +200,10 @@ impl DockerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::DockerImageBuilder;
+    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
     /// use std::path::PathBuf;
     ///
-    /// let builder = DockerImageBuilder::new()
+    /// let builder = ContainerImageBuilder::new()
     ///     .with_context(PathBuf::from("./app"));
     /// ```
     #[must_use]
@@ -221,10 +221,10 @@ impl DockerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::DockerImageBuilder;
+    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
     /// use std::time::Duration;
     ///
-    /// let builder = DockerImageBuilder::new()
+    /// let builder = ContainerImageBuilder::new()
     ///     .with_build_timeout(Duration::from_secs(600));
     /// ```
     #[must_use]
@@ -233,7 +233,7 @@ impl DockerImageBuilder {
         self
     }
 
-    /// Build the Docker image using the configured parameters
+    /// Build the container image using the configured parameters
     ///
     /// This method executes the `docker build` command with the configured
     /// parameters. It provides detailed error information if the build fails.
@@ -249,11 +249,11 @@ impl DockerImageBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deploy::e2e::containers::DockerImageBuilder;
+    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
     /// use std::path::PathBuf;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let builder = DockerImageBuilder::new()
+    /// let builder = ContainerImageBuilder::new()
     ///     .with_name("my-image")
     ///     .with_dockerfile(PathBuf::from("Dockerfile"));
     /// builder.build()?;
@@ -264,11 +264,11 @@ impl DockerImageBuilder {
         let image_name = self
             .image_name
             .as_ref()
-            .ok_or(DockerBuildError::ImageNameRequired)?;
+            .ok_or(ContainerBuildError::ImageNameRequired)?;
         let dockerfile_path = self
             .dockerfile_path
             .as_ref()
-            .ok_or(DockerBuildError::DockerfilePathRequired)?;
+            .ok_or(ContainerBuildError::DockerfilePathRequired)?;
 
         let image_tag = format!("{}:{}", image_name, self.tag);
 
@@ -291,7 +291,7 @@ impl DockerImageBuilder {
                 &self.context_path.display().to_string(),
             ])
             .output()
-            .map_err(|source| DockerBuildError::DockerBuildExecution {
+            .map_err(|source| ContainerBuildError::ContainerBuildExecution {
                 image_name: image_name.clone(),
                 tag: self.tag.clone(),
                 source,
@@ -299,7 +299,7 @@ impl DockerImageBuilder {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(DockerBuildError::DockerBuildFailed {
+            return Err(ContainerBuildError::ContainerBuildFailed {
                 image_name: image_name.clone(),
                 tag: self.tag.clone(),
                 stderr: stderr.to_string(),
@@ -324,9 +324,9 @@ impl DockerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::DockerImageBuilder;
+    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
     ///
-    /// let builder = DockerImageBuilder::new()
+    /// let builder = ContainerImageBuilder::new()
     ///     .with_name("my-app")
     ///     .with_tag("v1.0");
     ///     
@@ -372,7 +372,7 @@ impl DockerImageBuilder {
     }
 }
 
-impl Default for DockerImageBuilder {
+impl Default for ContainerImageBuilder {
     fn default() -> Self {
         Self::new()
     }
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn it_should_create_builder_with_default_values() {
-        let builder = DockerImageBuilder::new();
+        let builder = ContainerImageBuilder::new();
 
         assert_eq!(builder.image_name(), None);
         assert_eq!(builder.tag(), "latest");
@@ -396,7 +396,7 @@ mod tests {
 
     #[test]
     fn it_should_create_default_builder() {
-        let builder = DockerImageBuilder::default();
+        let builder = ContainerImageBuilder::default();
 
         assert_eq!(builder.image_name(), None);
         assert_eq!(builder.tag(), "latest");
@@ -404,7 +404,7 @@ mod tests {
 
     #[test]
     fn it_should_configure_image_name() {
-        let builder = DockerImageBuilder::new().with_name("custom-image");
+        let builder = ContainerImageBuilder::new().with_name("custom-image");
 
         assert_eq!(builder.image_name(), Some("custom-image"));
         assert_eq!(builder.image_tag(), "custom-image:latest");
@@ -412,7 +412,7 @@ mod tests {
 
     #[test]
     fn it_should_configure_image_tag() {
-        let builder = DockerImageBuilder::new()
+        let builder = ContainerImageBuilder::new()
             .with_name("test-image")
             .with_tag("v1.2.3");
 
@@ -423,7 +423,7 @@ mod tests {
     #[test]
     fn it_should_configure_dockerfile_path() {
         let dockerfile_path = PathBuf::from("custom/Dockerfile");
-        let builder = DockerImageBuilder::new().with_dockerfile(dockerfile_path.clone());
+        let builder = ContainerImageBuilder::new().with_dockerfile(dockerfile_path.clone());
 
         assert_eq!(builder.dockerfile_path(), Some(&dockerfile_path));
     }
@@ -431,7 +431,7 @@ mod tests {
     #[test]
     fn it_should_configure_context_path() {
         let context_path = PathBuf::from("./app");
-        let builder = DockerImageBuilder::new().with_context(context_path.clone());
+        let builder = ContainerImageBuilder::new().with_context(context_path.clone());
 
         assert_eq!(builder.context_path(), &context_path);
     }
@@ -439,14 +439,14 @@ mod tests {
     #[test]
     fn it_should_configure_build_timeout() {
         let timeout = Duration::from_secs(600);
-        let builder = DockerImageBuilder::new().with_build_timeout(timeout);
+        let builder = ContainerImageBuilder::new().with_build_timeout(timeout);
 
         assert_eq!(builder.build_timeout(), timeout);
     }
 
     #[test]
     fn it_should_chain_configuration_methods() {
-        let builder = DockerImageBuilder::new()
+        let builder = ContainerImageBuilder::new()
             .with_name("my-app")
             .with_tag("v2.0")
             .with_dockerfile(PathBuf::from("custom/Dockerfile"))
@@ -466,7 +466,7 @@ mod tests {
 
     #[test]
     fn it_should_have_proper_error_display_messages() {
-        let error = DockerBuildError::DockerBuildFailed {
+        let error = ContainerBuildError::ContainerBuildFailed {
             image_name: "test-image".to_string(),
             tag: "v1.0".to_string(),
             stderr: "build error message".to_string(),
@@ -481,7 +481,7 @@ mod tests {
     #[test]
     fn it_should_preserve_error_chain_for_docker_build_execution() {
         let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "docker not found");
-        let error = DockerBuildError::DockerBuildExecution {
+        let error = ContainerBuildError::ContainerBuildExecution {
             image_name: "test-image".to_string(),
             tag: "v1.0".to_string(),
             source: io_error,
@@ -496,10 +496,10 @@ mod tests {
 
     #[test]
     fn it_should_fail_build_when_image_name_not_provided() {
-        let builder = DockerImageBuilder::new().with_dockerfile(PathBuf::from("Dockerfile"));
+        let builder = ContainerImageBuilder::new().with_dockerfile(PathBuf::from("Dockerfile"));
 
         match builder.build() {
-            Err(DockerBuildError::ImageNameRequired) => {
+            Err(ContainerBuildError::ImageNameRequired) => {
                 // Expected error
                 assert!(builder
                     .build()
@@ -513,10 +513,10 @@ mod tests {
 
     #[test]
     fn it_should_fail_build_when_dockerfile_path_not_provided() {
-        let builder = DockerImageBuilder::new().with_name("test-image");
+        let builder = ContainerImageBuilder::new().with_name("test-image");
 
         match builder.build() {
-            Err(DockerBuildError::DockerfilePathRequired) => {
+            Err(ContainerBuildError::DockerfilePathRequired) => {
                 // Expected error
                 assert!(builder
                     .build()
@@ -531,7 +531,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Image name must be set before calling image_tag()")]
     fn it_should_panic_when_calling_image_tag_without_image_name() {
-        let builder = DockerImageBuilder::new();
+        let builder = ContainerImageBuilder::new();
         drop(builder.image_tag());
     }
 

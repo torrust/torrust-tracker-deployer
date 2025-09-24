@@ -26,14 +26,14 @@
 //! ```rust,no_run
 //! use torrust_tracker_deploy::e2e::containers::{
 //!     StoppedProvisionedContainer, RunningProvisionedContainer, ProvisionedContainerError,
-//!     DockerImageBuilder, ContainerConfigBuilder
+//!     ContainerImageBuilder, ContainerConfigBuilder
 //! };
 //! ```
 
 pub mod actions;
 pub mod config_builder;
-pub mod docker_builder;
 pub mod executor;
+pub mod image_builder;
 pub mod provisioned;
 
 // Re-export provisioned container types for backward compatibility
@@ -42,7 +42,7 @@ pub use provisioned::{
 };
 
 // Re-export docker builder for public use
-pub use docker_builder::{DockerBuildError, DockerImageBuilder};
+pub use image_builder::{ContainerBuildError, ContainerImageBuilder};
 
 // Re-export container config builder for public use
 pub use config_builder::ContainerConfigBuilder;

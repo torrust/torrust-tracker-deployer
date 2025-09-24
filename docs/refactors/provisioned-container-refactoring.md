@@ -50,7 +50,7 @@ src/e2e/containers/
 ├── mod.rs              # Module root with re-exports
 ├── provisioned.rs      # Current provisioned container implementation
 └── [future modules]    # Space for additional container types and collaborators
-    ├── docker_builder.rs      # Docker image building (Phase 1)
+    ├── image_builder.rs      # Container image building (Phase 1)
     ├── ssh_manager.rs          # SSH operations (Phase 1)
     ├── health_checker.rs       # Health checking (Phase 4)
     └── config_builder.rs       # Configuration management (Phase 3)
@@ -72,7 +72,7 @@ This structure enables:
 **Implementation Completed**:
 
 ```rust
-pub struct DockerImageBuilder {
+pub struct ContainerImageBuilder {
     image_name: Option<String>,        // Required field validation
     tag: String,                       // Default: "latest"
     dockerfile_path: Option<PathBuf>,  // Required field validation
@@ -80,7 +80,7 @@ pub struct DockerImageBuilder {
     build_timeout: Duration,           // Default: 300 seconds
 }
 
-impl DockerImageBuilder {
+impl ContainerImageBuilder {
     pub fn new() -> Self { /* ... */ }
     pub fn with_name(mut self, name: impl Into<String>) -> Self { /* ... */ }
     pub fn with_tag(mut self, tag: impl Into<String>) -> Self { /* ... */ }
@@ -116,7 +116,7 @@ pub enum DockerBuildError {
 - ✅ Reusable across different container types
 - ✅ Configurable image parameters with sensible defaults
 
-**Module Location**: `src/e2e/containers/docker_builder.rs`
+**Module Location**: `src/e2e/containers/image_builder.rs`
 
 ### ✅ 2. Container Configuration Builder (Completed)
 
@@ -577,7 +577,7 @@ let container = StoppedProvisionedContainer::builder()
 
 ### ✅ Phase 1: Foundation (High Priority) - Partially Complete
 
-1. ✅ **Extract Docker Image Builder** - Implemented independent `DockerImageBuilder` with builder pattern, explicit configuration, required field validation, comprehensive error handling, and full integration with provisioned container module
+1. ✅ **Extract Container Image Builder** - Implemented independent `ContainerImageBuilder` with builder pattern, explicit configuration, required field validation, comprehensive error handling, and full integration with provisioned container module
 2. Improve Error Context
 3. Extract Magic Numbers and Strings
 4. Split Large Functions

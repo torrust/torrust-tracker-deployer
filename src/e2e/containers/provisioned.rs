@@ -61,8 +61,8 @@ use tracing::info;
 
 use super::actions::{SshKeySetupAction, SshWaitAction};
 use super::config_builder::ContainerConfigBuilder;
-use super::docker_builder::DockerImageBuilder;
 use super::executor::ContainerExecutor;
+use super::image_builder::ContainerImageBuilder;
 use crate::infrastructure::adapters::ssh::SshCredentials;
 
 /// Default Docker image name for provisioned instances
@@ -78,7 +78,7 @@ pub enum ProvisionedContainerError {
     #[error("Docker image build failed: {source}")]
     DockerImageBuildFailed {
         #[from]
-        source: super::docker_builder::DockerBuildError,
+        source: super::image_builder::ContainerBuildError,
     },
 
     /// Docker build command execution failed
@@ -148,9 +148,9 @@ pub type Result<T> = std::result::Result<T, ProvisionedContainerError>;
 pub struct StoppedProvisionedContainer {}
 
 impl StoppedProvisionedContainer {
-    /// Build the Docker image if needed using the `DockerImageBuilder`
-    fn build_docker_image() -> Result<()> {
-        let builder = DockerImageBuilder::new()
+    /// Build the Docker image if needed using the `ContainerImageBuilder`
+    fn build_image() -> Result<()> {
+        let builder = ContainerImageBuilder::new()
             .with_name(DEFAULT_IMAGE_NAME)
             .with_tag(DEFAULT_IMAGE_TAG)
             .with_dockerfile(std::path::PathBuf::from(
@@ -170,7 +170,7 @@ impl StoppedProvisionedContainer {
     /// - Container networking setup fails
     pub fn start(self) -> Result<RunningProvisionedContainer> {
         // First build the Docker image if needed
-        Self::build_docker_image()?;
+        Self::build_image()?;
 
         info!("Starting provisioned instance container");
 
@@ -325,9 +325,9 @@ mod tests {
 
     #[test]
     fn it_should_convert_docker_build_error_to_provisioned_container_error() {
-        use crate::e2e::containers::docker_builder::DockerBuildError;
+        use crate::e2e::containers::image_builder::ContainerBuildError;
 
-        let docker_build_error = DockerBuildError::DockerBuildFailed {
+        let docker_build_error = ContainerBuildError::ContainerBuildFailed {
             image_name: "test-image".to_string(),
             tag: "v1.0".to_string(),
             stderr: "build failed".to_string(),
