@@ -160,36 +160,64 @@ let image = ContainerConfigBuilder::new(format!("{}:{}", DEFAULT_IMAGE_NAME, DEF
 
 **Key Design Decision**: Simplified to only include features actually used by the provisioned container (image, ports, wait conditions) rather than implementing unused features (environment variables, volumes).
 
-### 3. Separate SSH Operations
+### ✅ 3. Separate SSH Operations - Container Actions Architecture (Completed)
 
-**Current Issue**: SSH operations are tightly coupled with container lifecycle.
+**Issue Resolved**: SSH operations were tightly coupled with container lifecycle.
 
-**Proposed Solution**:
+**Implementation Completed**: Implemented a trait-based container actions architecture that decouples container operations from the container state machine.
+
+**Implementation Completed**:
 
 ```rust
-pub trait ContainerSshManager {
-    fn wait_for_ssh_ready(&self, timeout: Duration) -> Result<()>;
-    fn setup_ssh_keys(&self, credentials: &SshCredentials) -> Result<()>;
-    fn test_ssh_connection(&self) -> Result<()>;
+// Trait for containers that can execute commands
+pub trait ContainerExecutor {
+    fn exec(&self, command: testcontainers::core::ExecCommand) -> Result<testcontainers::core::ExecOutput, testcontainers::TestcontainersError>;
 }
 
-pub struct DockerContainerSshManager {
-    container: Arc<Container<GenericImage>>,
-    ssh_port: u16,
-    ssh_timeout: Duration,
+// Container actions module structure - IMPLEMENTED
+src/e2e/containers/actions/
+├── mod.rs                    # Module root with re-exports ✅
+├── ssh_key_setup.rs         # SSH key setup action ✅
+└── ssh_wait.rs              # Wait for SSH connectivity action ✅
+```
+
+**Container Actions Design**:
+
+```rust
+// SSH Key Setup Action
+pub struct SshKeySetupAction;
+
+impl SshKeySetupAction {
+    pub fn execute<T: ContainerExecutor>(
+        &self,
+        container: &T,
+        ssh_credentials: &SshCredentials,
+    ) -> Result<()> {
+        // Implementation using container.exec()
+    }
 }
 
-impl ContainerSshManager for DockerContainerSshManager {
-    // Implementation details...
+// SSH Wait Action (doesn't need container exec - uses external SSH connection)
+pub struct SshWaitAction {
+    pub timeout: Duration,
+    pub max_attempts: usize,
+}
+
+impl SshWaitAction {
+    pub fn execute(&self, host: &str, port: u16) -> Result<()> {
+        // Implementation using actual SSH connection attempts in a loop
+    }
 }
 ```
 
-**Benefits**:
+**Benefits Achieved**:
 
-- Decoupled SSH management
-- Easier to test SSH operations
-- Reusable for different container types
-- Clear separation of concerns
+- ✅ **Decoupled container actions**: Operations are separate from container lifecycle
+- ✅ **Trait-based architecture**: Easy to test and mock for different container types
+- ✅ **Reusable across container types**: Any container implementing `ContainerExecutor` can use these actions
+- ✅ **Clear separation of concerns**: Container manages lifecycle, actions manage operations
+- ✅ **Extensible**: Easy to add new container actions in the future
+- ✅ **Better testability**: Actions can be tested independently of container state
 
 ## 🔧 Error Handling & Robustness
 

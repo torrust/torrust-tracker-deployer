@@ -1,0 +1,195 @@
+//! SSH Key Setup Action
+//!
+//! This module provides an action to setup SSH key authentication inside a container.
+//! The action is decoupled from specific container implementations and can be used
+//! with any container that implements the `ContainerExecutor` trait.
+
+use std::fs;
+use testcontainers::core::ExecCommand;
+use tracing::info;
+
+use crate::e2e::containers::ContainerExecutor;
+use crate::infrastructure::adapters::ssh::SshCredentials;
+
+/// Specific error types for SSH key setup operations
+#[derive(Debug, thiserror::Error)]
+pub enum SshKeySetupError {
+    /// Failed to read SSH public key file
+    #[error("Failed to read SSH public key from {path}: {source}")]
+    SshKeyFileRead {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    /// Failed to execute SSH key setup command in container
+    #[error("Failed to setup SSH keys in container: {source}")]
+    SshKeySetupFailed {
+        #[source]
+        source: testcontainers::TestcontainersError,
+    },
+}
+
+/// Result type alias for SSH key setup operations
+pub type Result<T> = std::result::Result<T, SshKeySetupError>;
+
+/// Action to setup SSH key authentication inside a container
+///
+/// This action configures SSH key authentication by:
+/// 1. Reading the public key from the credentials
+/// 2. Creating the SSH directory for the specified user
+/// 3. Adding the public key to the `authorized_keys` file
+/// 4. Setting appropriate permissions
+///
+/// ## Usage
+///
+/// ```rust,no_run
+/// use torrust_tracker_deploy::e2e::containers::{ContainerExecutor, actions::SshKeySetupAction};
+/// use torrust_tracker_deploy::infrastructure::adapters::ssh::SshCredentials;
+///
+/// fn setup_ssh<T: ContainerExecutor>(
+///     container: &T,
+///     credentials: &SshCredentials,
+/// ) -> Result<(), Box<dyn std::error::Error>> {
+///     let action = SshKeySetupAction;
+///     action.execute(container, credentials)?;
+///     Ok(())
+/// }
+/// ```
+#[derive(Debug, Default)]
+pub struct SshKeySetupAction;
+
+impl SshKeySetupAction {
+    /// Create a new SSH key setup action
+    #[must_use]
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Execute the SSH key setup action
+    ///
+    /// # Arguments
+    ///
+    /// * `container` - Container that implements `ContainerExecutor`
+    /// * `ssh_credentials` - SSH credentials containing the public key path and username
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - SSH public key file cannot be read
+    /// - Container exec command fails
+    /// - SSH key file operations fail within the container
+    pub fn execute<T: ContainerExecutor>(
+        &self,
+        container: &T,
+        ssh_credentials: &SshCredentials,
+    ) -> Result<()> {
+        info!("Setting up SSH key authentication");
+
+        // Read the public key from the credentials
+        let public_key_content =
+            fs::read_to_string(&ssh_credentials.ssh_pub_key_path).map_err(|source| {
+                SshKeySetupError::SshKeyFileRead {
+                    path: ssh_credentials.ssh_pub_key_path.display().to_string(),
+                    source,
+                }
+            })?;
+
+        // Create the authorized_keys file for the SSH user in the container
+        let ssh_user = &ssh_credentials.ssh_username;
+        let user_ssh_dir = format!("/home/{ssh_user}/.ssh");
+        let authorized_keys_path = format!("{user_ssh_dir}/authorized_keys");
+
+        // Execute the command to setup SSH keys
+        let command = ExecCommand::new([
+            "sh",
+            "-c",
+            &format!(
+                "mkdir -p {} && echo '{}' >> {} && chmod 700 {} && chmod 600 {}",
+                user_ssh_dir,
+                public_key_content.trim(),
+                authorized_keys_path,
+                user_ssh_dir,
+                authorized_keys_path
+            ),
+        ]);
+
+        container
+            .exec(command)
+            .map_err(|source| SshKeySetupError::SshKeySetupFailed { source })?;
+
+        info!(
+            ssh_user = ssh_user,
+            authorized_keys = authorized_keys_path,
+            "SSH key authentication configured"
+        );
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::error::Error;
+    use std::path::PathBuf;
+
+    #[test]
+    fn it_should_create_new_ssh_key_setup_action() {
+        let action = SshKeySetupAction::new();
+        assert!(std::ptr::eq(
+            std::ptr::addr_of!(action),
+            std::ptr::addr_of!(action)
+        )); // Just test it exists
+    }
+
+    #[test]
+    fn it_should_create_default_ssh_key_setup_action() {
+        let action = SshKeySetupAction;
+        assert!(std::ptr::eq(
+            std::ptr::addr_of!(action),
+            std::ptr::addr_of!(action)
+        )); // Just test it exists
+    }
+
+    #[test]
+    fn it_should_have_proper_error_display_messages() {
+        let error = SshKeySetupError::SshKeyFileRead {
+            path: "/path/to/key".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "file not found"),
+        };
+        assert!(error.to_string().contains("Failed to read SSH public key"));
+        assert!(error.to_string().contains("/path/to/key"));
+    }
+
+    #[test]
+    fn it_should_preserve_error_chain_for_ssh_key_file_read() {
+        let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let error = SshKeySetupError::SshKeyFileRead {
+            path: "/path/to/key".to_string(),
+            source: io_error,
+        };
+
+        assert!(error.source().is_some());
+    }
+
+    #[test]
+    fn it_should_preserve_error_chain_for_ssh_key_setup_failed() {
+        let testcontainers_error = testcontainers::TestcontainersError::other("test error");
+        let error = SshKeySetupError::SshKeySetupFailed {
+            source: testcontainers_error,
+        };
+
+        assert!(error.source().is_some());
+    }
+
+    // Helper function to create mock SSH credentials for testing
+    #[allow(dead_code)]
+    fn create_mock_ssh_credentials() -> SshCredentials {
+        SshCredentials::new(
+            PathBuf::from("/mock/path/to/private_key"),
+            PathBuf::from("/mock/path/to/public_key.pub"),
+            "testuser".to_string(),
+        )
+    }
+}

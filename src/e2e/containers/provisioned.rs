@@ -59,8 +59,10 @@ use testcontainers::{
 };
 use tracing::info;
 
+use super::actions::{SshKeySetupAction, SshWaitAction};
 use super::config_builder::ContainerConfigBuilder;
 use super::docker_builder::DockerImageBuilder;
+use super::executor::ContainerExecutor;
 use crate::infrastructure::adapters::ssh::SshCredentials;
 
 /// Default Docker image name for provisioned instances
@@ -117,6 +119,20 @@ pub enum ProvisionedContainerError {
     SshKeySetupFailed {
         #[source]
         source: testcontainers::TestcontainersError,
+    },
+
+    /// SSH key setup action failed
+    #[error("SSH key setup action failed: {source}")]
+    SshKeyActionFailed {
+        #[from]
+        source: super::actions::ssh_key_setup::SshKeySetupError,
+    },
+
+    /// SSH wait action failed
+    #[error("SSH wait action failed: {source}")]
+    SshWaitActionFailed {
+        #[from]
+        source: super::actions::ssh_wait::SshWaitError,
     },
 }
 
@@ -190,6 +206,15 @@ pub struct RunningProvisionedContainer {
     ssh_port: u16,
 }
 
+impl ContainerExecutor for RunningProvisionedContainer {
+    fn exec(
+        &self,
+        command: testcontainers::core::ExecCommand,
+    ) -> std::result::Result<(), testcontainers::TestcontainersError> {
+        self.container.exec(command).map(|_| ())
+    }
+}
+
 impl RunningProvisionedContainer {
     pub(crate) fn new(container: Container<GenericImage>, ssh_port: u16) -> Self {
         Self {
@@ -208,17 +233,14 @@ impl RunningProvisionedContainer {
     ///
     /// # Errors
     ///
-    /// Currently always returns Ok, but may return errors in future implementations
-    /// if SSH connectivity checks fail.
+    /// Returns an error if SSH connectivity cannot be established within
+    /// the timeout period or if SSH connection tests fail.
     pub fn wait_for_ssh(&self) -> Result<()> {
-        info!(port = self.ssh_port, "Waiting for SSH server to be ready");
-
-        // Simple wait - in a real implementation, we could ping SSH port
-        std::thread::sleep(Duration::from_secs(5));
-
-        info!("SSH server should be ready");
-
-        Ok(())
+        let (host, port) = self.ssh_details();
+        let action = SshWaitAction::new(Duration::from_secs(30), 10);
+        action
+            .execute(&host, port)
+            .map_err(|source| ProvisionedContainerError::SshWaitActionFailed { source })
     }
 
     /// Setup SSH key authentication (only available when running)
@@ -234,45 +256,9 @@ impl RunningProvisionedContainer {
     /// - Docker exec command fails
     /// - SSH key file operations fail within the container
     pub fn setup_ssh_keys(&self, ssh_credentials: &SshCredentials) -> Result<()> {
-        info!("Setting up SSH key authentication");
-
-        // Read the public key from the credentials
-        let public_key_content = std::fs::read_to_string(&ssh_credentials.ssh_pub_key_path)
-            .map_err(|source| ProvisionedContainerError::SshKeyFileRead {
-                path: ssh_credentials.ssh_pub_key_path.display().to_string(),
-                source,
-            })?;
-
-        // Create the authorized_keys file for the SSH user in the container
-        let ssh_user = &ssh_credentials.ssh_username;
-        let user_ssh_dir = format!("/home/{ssh_user}/.ssh");
-        let authorized_keys_path = format!("{user_ssh_dir}/authorized_keys");
-
-        // Copy the public key into the container's authorized_keys for the specified user
-        let exec_result = self.container.exec(testcontainers::core::ExecCommand::new([
-            "sh",
-            "-c",
-            &format!(
-                "mkdir -p {} && echo '{}' >> {} && chmod 700 {} && chmod 600 {}",
-                user_ssh_dir,
-                public_key_content.trim(),
-                authorized_keys_path,
-                user_ssh_dir,
-                authorized_keys_path
-            ),
-        ]));
-
-        match exec_result {
-            Ok(_) => {
-                info!(
-                    ssh_user = ssh_user,
-                    authorized_keys = authorized_keys_path,
-                    "SSH key authentication configured"
-                );
-                Ok(())
-            }
-            Err(source) => Err(ProvisionedContainerError::SshKeySetupFailed { source }),
-        }
+        let action = SshKeySetupAction::new();
+        action.execute(self, ssh_credentials)?;
+        Ok(())
     }
 
     /// Get the container ID for logging/debugging

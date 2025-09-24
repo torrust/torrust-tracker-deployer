@@ -13,6 +13,11 @@
 //! - **Docker Image Builder** - Configurable builder for Docker images used in testing
 //! - **Container Config Builder** - Flexible builder for container configurations
 //!
+//! ## Container Actions
+//!
+//! - **Container Actions** - Decoupled operations that can be performed on containers
+//!   (SSH setup, connectivity checks, etc.)
+//!
 //! ## Re-exports
 //!
 //! For backward compatibility, this module re-exports the provisioned container
@@ -25,8 +30,10 @@
 //! };
 //! ```
 
+pub mod actions;
 pub mod config_builder;
 pub mod docker_builder;
+pub mod executor;
 pub mod provisioned;
 
 // Re-export provisioned container types for backward compatibility
@@ -39,3 +46,6 @@ pub use docker_builder::{DockerBuildError, DockerImageBuilder};
 
 // Re-export container config builder for public use
 pub use config_builder::ContainerConfigBuilder;
+
+// Re-export executor trait for container actions
+pub use executor::ContainerExecutor;

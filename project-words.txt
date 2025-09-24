@@ -88,6 +88,7 @@ tlsv
 tmpfiles
 tmpfs
 usermod
+usize
 utmp
 writeln
 значение
