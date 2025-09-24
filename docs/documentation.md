@@ -11,6 +11,9 @@ docs/
 │   ├── branching.md     # Branching conventions
 │   ├── commit-process.md # Commit process and pre-commit checks
 │   └── linting.md       # Linting tools and conventions
+├── github-actions-issues/ # GitHub Actions runner issue documentation
+│   ├── README.md        # Issue documentation index
+│   └── docker-apt-cache-issue.md # Docker installation APT cache problems
 ├── tech-stack/          # Generic technology documentation
 │   ├── ansible.md       # Ansible installation, setup, and basic usage
 │   ├── lxd.md          # LXD system containers overview and setup
@@ -41,6 +44,25 @@ docs/
 - `branching.md` - Branch naming conventions
 - `commit-process.md` - Conventional commits and pre-commit checks
 - `linting.md` - Linting tools, configuration, and usage
+
+### 🚀 GitHub Actions Issues (`docs/github-actions-issues/`)
+
+**Purpose**: Documentation of recurring issues and solutions specific to GitHub Actions runners.
+
+**What belongs here**:
+
+- Package installation failures in containerized environments
+- Networking issues specific to GitHub Actions runners
+- Container/VM provisioning problems in CI environments
+- APT cache and repository availability issues
+- Solutions and workarounds for CI-specific problems
+- Debugging techniques for GitHub Actions environments
+
+**Examples**:
+
+- `docker-apt-cache-issue.md` - Docker installation APT cache problems and solutions
+- Network connectivity issues between containers and VMs in GitHub Actions
+- Permission and security context problems in CI environments
 
 ### 🔧 Tech Stack Documentation (`docs/tech-stack/`)
 
@@ -135,19 +157,24 @@ docs/
 
    - If it could be useful in other projects using the same tool
 
-2. **Project-specific documentation** → `docs/`
+2. **GitHub Actions runner issues** → `docs/github-actions-issues/`
+
+   - If documenting CI-specific problems and solutions
+   - When tracking recurring GitHub Actions runner issues
+
+3. **Project-specific documentation** → `docs/`
 
    - If it's specific to how this project works
 
-3. **Configuration documentation** → `templates/*/README.md`
+4. **Configuration documentation** → `templates/*/README.md`
 
    - If it's about a specific configuration or setup
 
-4. **Research and exploration** → `docs/research/`
+5. **Research and exploration** → `docs/research/`
 
    - If it's about investigating or comparing approaches
 
-5. **Architecture decisions** → `docs/decisions/`
+6. **Architecture decisions** → `docs/decisions/`
    - If documenting a significant technical or architectural decision
    - When removing or adding major dependencies
    - For process or workflow changes that affect contributors
