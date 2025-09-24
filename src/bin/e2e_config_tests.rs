@@ -128,8 +128,13 @@ fn run_configuration_tests() -> Result<()> {
     info!("Running preflight cleanup for Docker-based E2E tests");
     let instance_name = InstanceName::new("torrust-tracker-vm".to_string())
         .context("Failed to create instance name")?;
-    let test_env = TestEnvironment::new(false, "./data/templates", instance_name)
-        .context("Failed to create test environment")?;
+    let test_env = TestEnvironment::with_ssh_user_and_init(
+        false,
+        "./data/templates",
+        "torrust",
+        instance_name,
+    )
+    .context("Failed to create test environment")?;
 
     preflight_cleanup::cleanup_lingering_resources_docker(&test_env)
         .context("Failed to complete preflight cleanup")?;
@@ -145,14 +150,17 @@ fn run_configuration_tests() -> Result<()> {
         .wait_for_ssh()
         .context("SSH server failed to start")?;
 
+    // Get SSH credentials from test environment and setup keys
+    let ssh_credentials = &test_env.config.ssh_credentials;
     running_container
-        .setup_ssh_keys()
+        .setup_ssh_keys(ssh_credentials)
         .context("Failed to setup SSH authentication")?;
 
     let (ssh_host, ssh_port) = running_container.ssh_details();
     info!(
         ssh_host = %ssh_host,
         ssh_port = ssh_port,
+        ssh_user = %ssh_credentials.ssh_username,
         container_id = %running_container.container_id(),
         "Container ready for Ansible configuration"
     );

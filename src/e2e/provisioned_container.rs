@@ -10,22 +10,39 @@
 //! - `RunningProvisionedContainer` - Running state, can be queried, configured, and stopped
 //! - State transitions are enforced at compile time through different types
 //!
+//! ## Error Handling
+//!
+//! This module uses explicit error types through [`ProvisionedContainerError`] instead of
+//! generic `anyhow` errors. Each error variant provides specific information about what
+//! went wrong, making it easier to handle different failure modes appropriately.
+//!
 //! ## Usage
 //!
 //! ```rust,no_run
-//! use anyhow::Result;
-//! use torrust_tracker_deploy::e2e::provisioned_container::StoppedProvisionedContainer;
+//! use torrust_tracker_deploy::e2e::provisioned_container::{
+//!     StoppedProvisionedContainer, ProvisionedContainerError
+//! };
+//! use torrust_tracker_deploy::infrastructure::adapters::ssh::SshCredentials;
+//! use std::path::PathBuf;
 //!
-//! fn example() -> Result<()> {
+//! fn example() -> Result<(), ProvisionedContainerError> {
 //!     // Start with stopped state
 //!     let stopped = StoppedProvisionedContainer::default();
 //!     
 //!     // Transition to running state
 //!     let running = stopped.start()?;
 //!     
-//!     // Operations only available when running
+//!     // Wait for SSH server
 //!     running.wait_for_ssh()?;
-//!     running.setup_ssh_keys()?;
+//!     
+//!     // Setup SSH keys with credentials
+//!     let ssh_credentials = SshCredentials::new(
+//!         PathBuf::from("/path/to/private_key"),
+//!         PathBuf::from("/path/to/public_key.pub"),
+//!         "torrust".to_string(),
+//!     );
+//!     running.setup_ssh_keys(&ssh_credentials)?;
+//!     
 //!     let (host, port) = running.ssh_details();
 //!     
 //!     // Transition back to stopped state
@@ -34,7 +51,6 @@
 //! }
 //! ```
 
-use anyhow::{Context, Result};
 use std::time::Duration;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
@@ -42,6 +58,55 @@ use testcontainers::{
     Container, GenericImage,
 };
 use tracing::info;
+
+use crate::infrastructure::adapters::ssh::SshCredentials;
+
+/// Specific error types for provisioned container operations
+#[derive(Debug, thiserror::Error)]
+pub enum ProvisionedContainerError {
+    /// Docker build command execution failed
+    #[error("Failed to execute docker build command: {source}")]
+    DockerBuildExecution {
+        #[source]
+        source: std::io::Error,
+    },
+
+    /// Docker build process failed with non-zero exit code
+    #[error("Docker build failed with stderr: {stderr}")]
+    DockerBuildFailed { stderr: String },
+
+    /// Container failed to start
+    #[error("Failed to start container: {source}")]
+    ContainerStartFailed {
+        #[source]
+        source: testcontainers::TestcontainersError,
+    },
+
+    /// Failed to get mapped SSH port from container
+    #[error("Failed to get mapped SSH port: {source}")]
+    SshPortMappingFailed {
+        #[source]
+        source: testcontainers::TestcontainersError,
+    },
+
+    /// Failed to read SSH public key file
+    #[error("Failed to read SSH public key from {path}: {source}")]
+    SshKeyFileRead {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    /// Failed to execute SSH key setup command in container
+    #[error("Failed to setup SSH keys in container: {source}")]
+    SshKeySetupFailed {
+        #[source]
+        source: testcontainers::TestcontainersError,
+    },
+}
+
+/// Result type alias for provisioned container operations
+pub type Result<T> = std::result::Result<T, ProvisionedContainerError>;
 
 /// Container configuration following state machine pattern
 ///
@@ -66,11 +131,13 @@ impl StoppedProvisionedContainer {
                 ".",
             ])
             .output()
-            .context("Failed to execute docker build command")?;
+            .map_err(|source| ProvisionedContainerError::DockerBuildExecution { source })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(anyhow::anyhow!("Docker build failed: {stderr}"));
+            return Err(ProvisionedContainerError::DockerBuildFailed {
+                stderr: stderr.to_string(),
+            });
         }
 
         info!("Docker image built successfully");
@@ -96,12 +163,14 @@ impl StoppedProvisionedContainer {
             .with_exposed_port(22.tcp())
             .with_wait_for(WaitFor::message_on_stdout("sshd entered RUNNING state"));
 
-        let container = image.start().context("Failed to start container")?;
+        let container = image
+            .start()
+            .map_err(|source| ProvisionedContainerError::ContainerStartFailed { source })?;
 
         // Get the actual mapped port from testcontainers
         let ssh_port = container
             .get_host_port_ipv4(22.tcp())
-            .context("Failed to get mapped SSH port")?;
+            .map_err(|source| ProvisionedContainerError::SshPortMappingFailed { source })?;
 
         info!(
             container_id = %container.id(),
@@ -146,40 +215,61 @@ impl RunningProvisionedContainer {
         std::thread::sleep(Duration::from_secs(5));
 
         info!("SSH server should be ready");
+        
         Ok(())
     }
 
     /// Setup SSH key authentication (only available when running)
     ///
+    /// # Arguments
+    ///
+    /// * `ssh_credentials` - SSH credentials containing the public key path and username
+    ///
     /// # Errors
     ///
     /// Returns an error if:
+    /// - SSH public key file cannot be read
     /// - Docker exec command fails
     /// - SSH key file operations fail within the container
-    pub fn setup_ssh_keys(&self) -> Result<()> {
+    pub fn setup_ssh_keys(&self, ssh_credentials: &SshCredentials) -> Result<()> {
         info!("Setting up SSH key authentication");
 
-        // Read the public key from fixtures
-        let project_root = std::env::current_dir().context("Failed to get current directory")?;
-        let public_key_path = project_root.join("fixtures/testing_rsa.pub");
-        let public_key_content =
-            std::fs::read_to_string(&public_key_path).context("Failed to read SSH public key")?;
+        // Read the public key from the credentials
+        let public_key_content = std::fs::read_to_string(&ssh_credentials.ssh_pub_key_path)
+            .map_err(|source| ProvisionedContainerError::SshKeyFileRead {
+                path: ssh_credentials.ssh_pub_key_path.display().to_string(),
+                source,
+            })?;
 
-        // Copy the public key into the container's authorized_keys
+        // Create the authorized_keys file for the SSH user in the container
+        let ssh_user = &ssh_credentials.ssh_username;
+        let user_ssh_dir = format!("/home/{ssh_user}/.ssh");
+        let authorized_keys_path = format!("{user_ssh_dir}/authorized_keys");
+
+        // Copy the public key into the container's authorized_keys for the specified user
         let exec_result = self.container.exec(testcontainers::core::ExecCommand::new([
             "sh",
             "-c",
-            &format!("echo '{}' >> /home/torrust/.ssh/authorized_keys && chmod 600 /home/torrust/.ssh/authorized_keys", public_key_content.trim()),
+            &format!(
+                "mkdir -p {} && echo '{}' >> {} && chmod 700 {} && chmod 600 {}",
+                user_ssh_dir,
+                public_key_content.trim(),
+                authorized_keys_path,
+                user_ssh_dir,
+                authorized_keys_path
+            ),
         ]));
 
         match exec_result {
             Ok(_) => {
-                info!("SSH key authentication configured");
+                info!(
+                    ssh_user = ssh_user,
+                    authorized_keys = authorized_keys_path,
+                    "SSH key authentication configured"
+                );
                 Ok(())
             }
-            Err(e) => Err(anyhow::anyhow!(
-                "Failed to setup SSH keys in container: {e}"
-            )),
+            Err(source) => Err(ProvisionedContainerError::SshKeySetupFailed { source }),
         }
     }
 
@@ -200,6 +290,8 @@ impl RunningProvisionedContainer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::error::Error;
+    use std::path::PathBuf;
 
     #[test]
     fn it_should_create_default_stopped_container() {
@@ -210,6 +302,49 @@ mod tests {
         )); // Just test it exists
     }
 
+    #[test]
+    fn it_should_have_proper_error_display_messages() {
+        let error = ProvisionedContainerError::DockerBuildFailed {
+            stderr: "test error message".to_string(),
+        };
+        assert!(error.to_string().contains("Docker build failed"));
+        assert!(error.to_string().contains("test error message"));
+    }
+
+    #[test]
+    fn it_should_preserve_error_chain_for_docker_build_execution() {
+        let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "docker not found");
+        let error = ProvisionedContainerError::DockerBuildExecution { source: io_error };
+
+        assert!(error
+            .to_string()
+            .contains("Failed to execute docker build command"));
+        assert!(error.source().is_some());
+    }
+
+    #[test]
+    fn it_should_preserve_error_chain_for_ssh_key_file_read() {
+        let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let error = ProvisionedContainerError::SshKeyFileRead {
+            path: "/path/to/key".to_string(),
+            source: io_error,
+        };
+
+        assert!(error.to_string().contains("Failed to read SSH public key"));
+        assert!(error.to_string().contains("/path/to/key"));
+        assert!(error.source().is_some());
+    }
+
     // Note: Integration tests that actually start containers would require Docker
     // and are better suited for the e2e test binaries
+
+    // Helper function to create mock SSH credentials for testing
+    #[allow(dead_code)]
+    fn create_mock_ssh_credentials() -> SshCredentials {
+        SshCredentials::new(
+            PathBuf::from("/mock/path/to/private_key"),
+            PathBuf::from("/mock/path/to/public_key.pub"),
+            "testuser".to_string(),
+        )
+    }
 }
