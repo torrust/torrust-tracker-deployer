@@ -9,7 +9,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 | ✅ Accepted | 2025-09-10 | [LXD VMs over Containers](./lxd-vm-over-containers.md)                    | Use LXD virtual machines instead of containers for production alignment                   |
 | ✅ Accepted | 2025-09-09 | [Tera Minimal Templating Strategy](./tera-minimal-templating-strategy.md) | Use Tera with minimal variables and templates to avoid complexity and delimiter conflicts |
 | ✅ Accepted | -          | [LXD over Multipass](./lxd-over-multipass.md)                             | Choose LXD containers over Multipass VMs for deployment testing                           |
-| ✅ Accepted | -          | [Docker Testing Rejection](./docker-testing-rejection.md)                 | Reject Docker-based testing approach in favor of native container solutions               |
+| ✅ Resolved | -          | [Docker Testing Evolution](./docker-testing-evolution.md)                 | Evolution from Docker rejection to hybrid approach for split E2E testing                  |
 | ✅ Accepted | -          | [Meson Removal](./meson-removal.md)                                       | Remove Meson build system from the project                                                |
 
 ## ADR Template

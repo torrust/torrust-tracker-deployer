@@ -131,7 +131,7 @@ wait
 
 > **Note**: The following alternatives were extensively researched and informed our final **phase-specific approach**. See decision records:
 >
-> - [Docker Testing Rejection](../decisions/docker-testing-rejection.md) - Original rejection (now partially superseded)
+> - [Docker Testing Evolution](../decisions/docker-testing-evolution.md) - Complete evolution from rejection to acceptance
 > - [Docker Testing Revision](../decisions/docker-testing-revision.md) - Updated decision for configuration phase
 
 ### 1. Molecule with Docker Driver
@@ -376,4 +376,4 @@ This strategy addresses our specific needs by leveraging the best aspects of bot
 - [Docker Testing Revision Decision](../decisions/docker-testing-revision.md)
 - [Docker Phase Architecture](../decisions/docker-phase-architecture.md)
 - [Docker Configuration Testing Research](./e2e-docker-config-testing.md)
-- [Original Docker Testing Rejection](../decisions/docker-testing-rejection.md) (partially superseded)
+- [Docker Testing Evolution](../decisions/docker-testing-evolution.md) - Complete strategy evolution

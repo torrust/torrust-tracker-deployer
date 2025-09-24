@@ -334,7 +334,126 @@ This architecture provides:
 3. **Coverage**: Combined suites provide complete deployment validation
 4. **Debugging**: Clear separation makes issue identification easier
 
-## 📝 Contributing to E2E Tests
+## � Docker Architecture for E2E Testing
+
+The E2E testing system uses a Docker architecture representing different deployment phases, allowing for efficient testing of the configuration, release, and run phases of the deployment pipeline.
+
+### Current Implementation
+
+#### Provisioned Instance (`docker/provisioned-instance/`)
+
+**Purpose**: Represents the state after VM provisioning but before configuration.
+
+**Contents**:
+
+- Ubuntu 24.04 LTS base (matches production VMs)
+- SSH server (via supervisor for container-native process management)
+- `torrust` user with sudo access
+- No application dependencies installed
+- Ready for Ansible configuration
+
+**Usage**: E2E configuration testing - simulates a freshly provisioned VM ready for software installation.
+
+### Future Expansion Architecture
+
+#### Recommended Approach: Multiple Dockerfiles
+
+The planned architecture uses separate directories for each deployment phase:
+
+```text
+docker/
+├── provisioned-instance/          # ✅ Current - post-provision
+│   ├── Dockerfile
+│   ├── supervisord.conf
+│   ├── entrypoint.sh
+│   └── README.md
+├── configured-instance/           # 🔄 Future - post-configure
+│   ├── Dockerfile
+│   ├── docker-compose.yml         # Example: Docker services
+│   └── README.md
+├── released-instance/             # 🔄 Future - post-release
+│   ├── Dockerfile
+│   ├── app-configs/               # Application configurations
+│   └── README.md
+└── running-instance/              # 🔄 Future - post-run
+    ├── Dockerfile
+    ├── service-configs/           # Service validation configs
+    └── README.md
+```
+
+#### Benefits of This Architecture
+
+- **Clear Separation**: Each phase has its own directory and concerns
+- **Independent Evolution**: Each Dockerfile can evolve independently
+- **Easier Maintenance**: Simpler to understand and debug individual phases
+- **Flexible Building**: Can build any phase independently
+- **Better Documentation**: Each directory can have phase-specific docs
+
+#### Usage Example
+
+```bash
+# Build specific phase containers
+docker build -f docker/provisioned-instance/Dockerfile -t torrust-provisioned:latest .
+docker build -f docker/configured-instance/Dockerfile -t torrust-configured:latest .
+docker build -f docker/released-instance/Dockerfile -t torrust-released:latest .
+docker build -f docker/running-instance/Dockerfile -t torrust-running:latest .
+```
+
+### Implementation Strategy
+
+#### Phase 1: ✅ COMPLETED
+
+- [x] `docker/provisioned-instance/` - Base system ready for configuration
+
+#### Phase 2: Future
+
+- [ ] `docker/configured-instance/` - System with Docker, dependencies installed
+  - Build FROM `torrust-provisioned-instance:latest`
+  - Add Ansible playbook execution results
+  - Verify Docker daemon, Docker Compose installation
+
+#### Phase 3: Future
+
+- [ ] `docker/released-instance/` - System with applications deployed
+  - Build FROM `torrust-configured-instance:latest`
+  - Add application artifacts
+  - Add service configurations
+
+#### Phase 4: Future
+
+- [ ] `docker/running-instance/` - System with services started and validated
+  - Build FROM `torrust-released-instance:latest`
+  - Start all services
+  - Run validation checks
+
+### Benefits of Docker Phase Architecture
+
+1. **Test Coverage**: Complete deployment pipeline testing
+2. **Fast Feedback**: Test individual phases quickly (~2-3 seconds vs ~17-30 seconds for LXD)
+3. **Debugging**: Isolate issues to specific deployment phases
+4. **Scalability**: Easy to add new phases or modify existing ones
+5. **Documentation**: Each phase self-documents its purpose and setup
+6. **Reusability**: Containers can be used outside of testing (demos, development)
+7. **CI Reliability**: Avoids GitHub Actions connectivity issues with nested VMs
+
+### Phase-Specific Testing Integration
+
+Each deployment phase has distinct concerns that are tested appropriately:
+
+- **Provisioned Phase**: Base system setup, user management, SSH connectivity
+- **Configured Phase**: Software installation, system configuration, dependency management
+- **Released Phase**: Application deployment, service configuration, artifact management
+- **Running Phase**: Service validation, monitoring setup, operational readiness
+
+This architecture enables:
+
+- **Testing Isolation**: E2E tests can target specific phases independently
+- **Development Workflow**: Teams can work on different phases independently
+- **Issue Isolation**: Phase-specific containers make it easier to isolate problems
+
+The Docker phase architecture complements the split E2E testing strategy by providing fast, reliable containers for configuration testing while maintaining comprehensive coverage of the entire deployment pipeline.
+
+## �📝 Contributing to E2E Tests
 
 When adding new features or making changes:
 

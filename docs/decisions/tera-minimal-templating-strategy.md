@@ -219,7 +219,7 @@ Simple string replacement like `template.replace("{{name}}", value)` cannot hand
 ## Related Decisions
 
 - [LXD over Multipass](./lxd-over-multipass.md) - Infrastructure choice affecting template needs
-- [Docker Testing Rejection](./docker-testing-rejection.md) - Testing approach that reduces template complexity
+- [Docker Testing Evolution](./docker-testing-evolution.md) - Testing approach evolution that influences template complexity
 
 ## References
 

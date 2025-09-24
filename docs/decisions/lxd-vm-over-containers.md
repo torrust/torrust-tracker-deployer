@@ -188,4 +188,4 @@ This decision should be reviewed when:
 
 - [LXD Configuration Analysis](../tofu-lxd-configuration.md) - Complete technical comparison
 - [LXD over Multipass Decision](lxd-over-multipass.md) - Platform selection rationale
-- [Docker Testing Rejection](docker-testing-rejection.md) - Container testing evaluation
+- [Docker Testing Evolution](docker-testing-evolution.md) - Container testing evaluation and evolution

@@ -132,7 +132,7 @@ This decision is validated by:
 
 ## Related Decisions
 
-- [Rejecting Docker Containers for Ansible Testing](docker-testing-rejection.md) - Documents why full VM-like environments are needed
+- [Docker Testing Evolution](docker-testing-evolution.md) - Documents the evolution from rejection to acceptance of Docker containers for configuration testing
 - Future decision may revisit Multipass if official GitHub Actions support is confirmed
 
 ## References
