@@ -59,11 +59,25 @@ use testcontainers::{
 };
 use tracing::info;
 
+use super::docker_builder::DockerImageBuilder;
 use crate::infrastructure::adapters::ssh::SshCredentials;
+
+/// Default Docker image name for provisioned instances
+const DEFAULT_IMAGE_NAME: &str = "torrust-provisioned-instance";
+
+/// Default Docker image tag for provisioned instances  
+const DEFAULT_IMAGE_TAG: &str = "latest";
 
 /// Specific error types for provisioned container operations
 #[derive(Debug, thiserror::Error)]
 pub enum ProvisionedContainerError {
+    /// Docker image builder error
+    #[error("Docker image build failed: {source}")]
+    DockerImageBuildFailed {
+        #[from]
+        source: super::docker_builder::DockerBuildError,
+    },
+
     /// Docker build command execution failed
     #[error("Failed to execute docker build command: {source}")]
     DockerBuildExecution {
@@ -117,30 +131,15 @@ pub type Result<T> = std::result::Result<T, ProvisionedContainerError>;
 pub struct StoppedProvisionedContainer {}
 
 impl StoppedProvisionedContainer {
-    /// Build the Docker image if needed
+    /// Build the Docker image if needed using the `DockerImageBuilder`
     fn build_docker_image() -> Result<()> {
-        info!("Building torrust-provisioned-instance Docker image");
-
-        let output = std::process::Command::new("docker")
-            .args([
-                "build",
-                "-t",
-                "torrust-provisioned-instance:latest",
-                "-f",
+        let builder = DockerImageBuilder::new()
+            .with_name(DEFAULT_IMAGE_NAME)
+            .with_tag(DEFAULT_IMAGE_TAG)
+            .with_dockerfile(std::path::PathBuf::from(
                 "docker/provisioned-instance/Dockerfile",
-                ".",
-            ])
-            .output()
-            .map_err(|source| ProvisionedContainerError::DockerBuildExecution { source })?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(ProvisionedContainerError::DockerBuildFailed {
-                stderr: stderr.to_string(),
-            });
-        }
-
-        info!("Docker image built successfully");
+            ));
+        builder.build()?;
         Ok(())
     }
 
@@ -159,7 +158,7 @@ impl StoppedProvisionedContainer {
         info!("Starting provisioned instance container");
 
         // Create and start the container with automatic port mapping
-        let image = GenericImage::new("torrust-provisioned-instance", "latest")
+        let image = GenericImage::new(DEFAULT_IMAGE_NAME, DEFAULT_IMAGE_TAG)
             .with_exposed_port(22.tcp())
             .with_wait_for(WaitFor::message_on_stdout("sshd entered RUNNING state"));
 
@@ -215,7 +214,7 @@ impl RunningProvisionedContainer {
         std::thread::sleep(Duration::from_secs(5));
 
         info!("SSH server should be ready");
-        
+
         Ok(())
     }
 
@@ -333,6 +332,24 @@ mod tests {
         assert!(error.to_string().contains("Failed to read SSH public key"));
         assert!(error.to_string().contains("/path/to/key"));
         assert!(error.source().is_some());
+    }
+
+    #[test]
+    fn it_should_convert_docker_build_error_to_provisioned_container_error() {
+        use crate::e2e::containers::docker_builder::DockerBuildError;
+
+        let docker_build_error = DockerBuildError::DockerBuildFailed {
+            image_name: "test-image".to_string(),
+            tag: "v1.0".to_string(),
+            stderr: "build failed".to_string(),
+        };
+
+        let provisioned_error: ProvisionedContainerError = docker_build_error.into();
+
+        assert!(provisioned_error
+            .to_string()
+            .contains("Docker image build failed"));
+        assert!(std::error::Error::source(&provisioned_error).is_some());
     }
 
     // Note: Integration tests that actually start containers would require Docker
