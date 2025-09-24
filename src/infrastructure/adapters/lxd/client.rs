@@ -19,7 +19,7 @@ use std::net::IpAddr;
 use anyhow::{Context, Result};
 use tracing::info;
 
-use crate::infrastructure::executor::CommandExecutor;
+use crate::shared::executor::CommandExecutor;
 
 #[allow(unused_imports)]
 use super::instance::{InstanceInfo, InstanceName};

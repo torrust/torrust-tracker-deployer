@@ -20,7 +20,7 @@ use crate::application::steps::{
     ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,
 };
-use crate::infrastructure::executor::CommandError;
+use crate::shared::executor::CommandError;
 use crate::infrastructure::remote_actions::RemoteActionError;
 use crate::shared::ssh::credentials::SshCredentials;
 

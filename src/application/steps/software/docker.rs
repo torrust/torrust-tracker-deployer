@@ -23,7 +23,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::infrastructure::adapters::ansible::AnsibleClient;
-use crate::infrastructure::executor::CommandError;
+use crate::shared::executor::CommandError;
 
 /// Step that installs Docker on a remote host via Ansible
 pub struct InstallDockerStep {

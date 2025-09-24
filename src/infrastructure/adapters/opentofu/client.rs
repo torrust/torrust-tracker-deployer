@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::info;
 
-use crate::infrastructure::executor::{CommandError, CommandExecutor};
+use crate::shared::executor::{CommandError, CommandExecutor};
 
 use super::json_parser::{OpenTofuJsonParser, ParseError};
 

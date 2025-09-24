@@ -28,7 +28,7 @@ use crate::infrastructure::adapters::ansible::AnsibleClient;
 use crate::infrastructure::adapters::lxd::InstanceName;
 use crate::infrastructure::adapters::opentofu::client::{InstanceInfo, OpenTofuError};
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
-use crate::infrastructure::executor::CommandError;
+use crate::shared::executor::CommandError;
 use crate::infrastructure::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 use crate::shared::ssh::{credentials::SshCredentials, SshError};
 

@@ -4,7 +4,7 @@ use tracing::{info, instrument};
 
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::infrastructure::adapters::ansible::AnsibleClient;
-use crate::infrastructure::executor::CommandError;
+use crate::shared::executor::CommandError;
 
 /// Comprehensive error type for the `ConfigureCommand`
 #[derive(Debug, thiserror::Error)]

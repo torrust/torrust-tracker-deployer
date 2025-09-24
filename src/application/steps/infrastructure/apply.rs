@@ -26,7 +26,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::infrastructure::adapters::opentofu::client::OpenTofuClient;
-use crate::infrastructure::executor::CommandError;
+use crate::shared::executor::CommandError;
 
 /// Simple step that applies `OpenTofu` configuration by executing `tofu apply`
 pub struct ApplyInfrastructureStep {
