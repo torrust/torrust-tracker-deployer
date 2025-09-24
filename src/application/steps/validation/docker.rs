@@ -19,8 +19,8 @@
 
 use tracing::{info, instrument};
 
-use crate::infrastructure::adapters::ssh::SshConnection;
 use crate::infrastructure::remote_actions::{DockerValidator, RemoteAction, RemoteActionError};
+use crate::shared::ssh::SshConnection;
 
 /// Step that validates Docker installation on a remote host
 pub struct ValidateDockerInstallationStep {
@@ -73,7 +73,7 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr};
     use std::path::PathBuf;
 
-    use crate::infrastructure::adapters::ssh::SshCredentials;
+    use crate::shared::ssh::SshCredentials;
 
     use super::*;
 

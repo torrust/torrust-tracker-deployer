@@ -46,7 +46,7 @@ impl SshConnection {
     /// ```rust
     /// # use std::net::{IpAddr, Ipv4Addr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::infrastructure::adapters::ssh::{SshCredentials, SshConnection};
+    /// # use torrust_tracker_deploy::shared::ssh::{SshCredentials, SshConnection};
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
@@ -70,7 +70,7 @@ impl SshConnection {
     /// ```rust
     /// # use std::net::{IpAddr, Ipv4Addr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::infrastructure::adapters::ssh::{SshCredentials, SshConnection};
+    /// # use torrust_tracker_deploy::shared::ssh::{SshCredentials, SshConnection};
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
@@ -91,7 +91,7 @@ impl SshConnection {
     /// ```rust
     /// # use std::net::{IpAddr, Ipv4Addr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::infrastructure::adapters::ssh::{SshCredentials, SshConnection};
+    /// # use torrust_tracker_deploy::shared::ssh::{SshCredentials, SshConnection};
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),

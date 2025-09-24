@@ -47,13 +47,13 @@ use thiserror::Error;
 use crate::domain::template::{TemplateManager, TemplateManagerError};
 #[allow(unused_imports)]
 use crate::infrastructure::adapters::lxd::instance::InstanceName;
-use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
 use crate::infrastructure::template::wrappers::tofu::lxd::variables::{
     VariablesContextBuilder, VariablesTemplate, VariablesTemplateError,
 };
 use crate::infrastructure::tofu::template::renderer::cloud_init::{
     CloudInitTemplateError, CloudInitTemplateRenderer,
 };
+use crate::shared::ssh::credentials::SshCredentials;
 
 /// Errors that can occur during provision template rendering
 #[derive(Error, Debug)]

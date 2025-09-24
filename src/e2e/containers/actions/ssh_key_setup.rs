@@ -9,7 +9,7 @@ use testcontainers::core::ExecCommand;
 use tracing::info;
 
 use crate::e2e::containers::ContainerExecutor;
-use crate::infrastructure::adapters::ssh::SshCredentials;
+use crate::shared::ssh::SshCredentials;
 
 /// Specific error types for SSH key setup operations
 #[derive(Debug, thiserror::Error)]
@@ -89,7 +89,7 @@ pub type Result<T> = std::result::Result<T, SshKeySetupError>;
 ///
 /// ```rust,no_run
 /// use torrust_tracker_deploy::e2e::containers::{ContainerExecutor, actions::SshKeySetupAction};
-/// use torrust_tracker_deploy::infrastructure::adapters::ssh::SshCredentials;
+/// use torrust_tracker_deploy::shared::ssh::SshCredentials;
 ///
 /// fn setup_ssh<T: ContainerExecutor>(
 ///     container: &T,

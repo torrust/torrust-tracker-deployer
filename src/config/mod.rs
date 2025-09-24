@@ -17,7 +17,7 @@
 use std::path::PathBuf;
 
 pub use crate::infrastructure::adapters::lxd::InstanceName;
-pub use crate::infrastructure::adapters::ssh::{SshConnection, SshCredentials};
+pub use crate::shared::ssh::{SshConnection, SshCredentials};
 
 /// Configuration parameters for deployment environments.
 ///

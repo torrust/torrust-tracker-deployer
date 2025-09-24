@@ -20,8 +20,8 @@
 
 use tracing::{info, instrument};
 
-use crate::infrastructure::adapters::ssh::SshConnection;
 use crate::infrastructure::remote_actions::{CloudInitValidator, RemoteAction, RemoteActionError};
+use crate::shared::ssh::SshConnection;
 
 /// Step that validates cloud-init completion on a remote host
 pub struct ValidateCloudInitCompletionStep {
@@ -74,7 +74,7 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr};
     use std::path::PathBuf;
 
-    use crate::infrastructure::adapters::ssh::SshCredentials;
+    use crate::shared::ssh::SshCredentials;
 
     use super::*;
 

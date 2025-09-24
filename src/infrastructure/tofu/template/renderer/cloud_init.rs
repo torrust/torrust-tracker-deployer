@@ -21,7 +21,7 @@
 //! # use std::path::Path;
 //! # use torrust_tracker_deploy::infrastructure::tofu::template::renderer::cloud_init::CloudInitTemplateRenderer;
 //! # use torrust_tracker_deploy::domain::template::TemplateManager;
-//! # use torrust_tracker_deploy::infrastructure::adapters::ssh::credentials::SshCredentials;
+//! # use torrust_tracker_deploy::shared::ssh::credentials::SshCredentials;
 //! # use std::path::PathBuf;
 //! #
 //! # #[tokio::main]
@@ -46,10 +46,10 @@ use thiserror::Error;
 
 use crate::domain::template::file::File;
 use crate::domain::template::{TemplateManager, TemplateManagerError};
-use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
 use crate::infrastructure::template::wrappers::tofu::lxd::cloud_init::{
     CloudInitContext, CloudInitTemplate,
 };
+use crate::shared::ssh::credentials::SshCredentials;
 
 /// Errors that can occur during cloud-init template rendering
 #[derive(Error, Debug)]

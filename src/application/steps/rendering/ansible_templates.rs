@@ -24,13 +24,13 @@ use std::sync::Arc;
 use thiserror::Error;
 use tracing::{info, instrument};
 
-use crate::infrastructure::adapters::ssh::credentials::SshCredentials;
 use crate::infrastructure::ansible::template::renderer::ConfigurationTemplateError;
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::template::wrappers::ansible::inventory::{
     AnsibleHost, AnsiblePort, AnsiblePortError, InventoryContext, InventoryContextError,
     SshPrivateKeyFile, SshPrivateKeyFileError,
 };
+use crate::shared::ssh::credentials::SshCredentials;
 
 /// Errors that can occur during Ansible template rendering step execution
 #[derive(Error, Debug)]

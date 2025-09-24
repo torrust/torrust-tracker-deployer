@@ -25,9 +25,9 @@
 use std::net::IpAddr;
 use tracing::{info, instrument, warn};
 
-use crate::infrastructure::adapters::ssh::SshClient;
-use crate::infrastructure::adapters::ssh::SshConnection;
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
+use crate::shared::ssh::SshClient;
+use crate::shared::ssh::SshConnection;
 
 /// Action that validates Docker Compose installation and basic functionality on the server
 pub struct DockerComposeValidator {

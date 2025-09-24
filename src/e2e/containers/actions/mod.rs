@@ -20,7 +20,7 @@
 //!
 //! ```rust,no_run
 //! use torrust_tracker_deploy::e2e::containers::{ContainerExecutor, actions::{SshKeySetupAction, SshWaitAction}};
-//! use torrust_tracker_deploy::infrastructure::adapters::ssh::SshCredentials;
+//! use torrust_tracker_deploy::shared::ssh::SshCredentials;
 //! use std::time::Duration;
 //!
 //! fn setup_container_ssh<T: ContainerExecutor>(

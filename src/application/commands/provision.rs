@@ -27,10 +27,10 @@ use crate::infrastructure::adapters::ansible::AnsibleClient;
 #[allow(unused_imports)]
 use crate::infrastructure::adapters::lxd::InstanceName;
 use crate::infrastructure::adapters::opentofu::client::{InstanceInfo, OpenTofuError};
-use crate::infrastructure::adapters::ssh::{credentials::SshCredentials, SshError};
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::executor::CommandError;
 use crate::infrastructure::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
+use crate::shared::ssh::{credentials::SshCredentials, SshError};
 
 /// Comprehensive error type for the `ProvisionCommand`
 #[derive(Debug, thiserror::Error)]

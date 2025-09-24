@@ -22,6 +22,7 @@
 //! - `container` - Service container for dependency injection
 //! - `e2e` - End-to-end testing utilities
 //! - `logging` - Logging configuration and utilities
+//! - `shared` - Shared modules used across different layers
 
 pub mod application;
 pub mod config;
@@ -30,3 +31,4 @@ pub mod domain;
 pub mod e2e;
 pub mod infrastructure;
 pub mod logging;
+pub mod shared;

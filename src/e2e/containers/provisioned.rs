@@ -23,7 +23,7 @@
 //!     StoppedProvisionedContainer, ProvisionedContainerError,
 //!     actions::{SshWaitAction, SshKeySetupAction}
 //! };
-//! use torrust_tracker_deploy::infrastructure::adapters::ssh::SshCredentials;
+//! use torrust_tracker_deploy::shared::ssh::SshCredentials;
 //! use std::path::PathBuf;
 //! use std::time::Duration;
 //!
