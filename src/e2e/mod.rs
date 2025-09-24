@@ -21,6 +21,4 @@ pub mod environment;
 pub mod tasks;
 
 // Re-export provisioned container types for backward compatibility
-pub use containers::{
-    ProvisionedContainerError, RunningProvisionedContainer, StoppedProvisionedContainer,
-};
+pub use containers::{ContainerError, RunningProvisionedContainer, StoppedProvisionedContainer};

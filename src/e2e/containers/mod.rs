@@ -25,22 +25,27 @@
 //!
 //! ```rust,no_run
 //! use torrust_tracker_deploy::e2e::containers::{
-//!     StoppedProvisionedContainer, RunningProvisionedContainer, ProvisionedContainerError,
+//!     StoppedProvisionedContainer, RunningProvisionedContainer, ContainerError,
 //!     ContainerImageBuilder, ContainerConfigBuilder
 //! };
 //! ```
 
 pub mod actions;
 pub mod config_builder;
+pub mod errors;
 pub mod executor;
 pub mod image_builder;
 pub mod provisioned;
+pub mod timeout;
 
 // Re-export provisioned container types for backward compatibility
-pub use provisioned::{
-    ContainerTimeouts, ProvisionedContainerError, Result, RunningProvisionedContainer,
-    StoppedProvisionedContainer,
-};
+pub use provisioned::{RunningProvisionedContainer, StoppedProvisionedContainer};
+
+// Re-export error types for public use
+pub use errors::{ContainerError, Result};
+
+// Re-export timeout types for public use
+pub use timeout::ContainerTimeouts;
 
 // Re-export docker builder for public use
 pub use image_builder::{ContainerBuildError, ContainerImageBuilder};
