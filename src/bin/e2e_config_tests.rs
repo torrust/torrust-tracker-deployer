@@ -58,7 +58,9 @@ use torrust_tracker_deploy::application::commands::ConfigureCommand;
 use torrust_tracker_deploy::config::{Config, InstanceName, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 use torrust_tracker_deploy::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
-use torrust_tracker_deploy::e2e::containers::StoppedProvisionedContainer;
+use torrust_tracker_deploy::e2e::containers::{
+    RunningProvisionedContainer, StoppedProvisionedContainer,
+};
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
 use torrust_tracker_deploy::e2e::tasks::preflight_cleanup;
 use torrust_tracker_deploy::e2e::tasks::provision_docker_infrastructure::provision_docker_infrastructure;
@@ -151,11 +153,8 @@ pub async fn main() -> Result<()> {
     }
 }
 
-/// Run the complete configuration tests
-async fn run_configuration_tests() -> Result<()> {
-    info!("Starting configuration tests with Docker container");
-
-    // Step 0: Preflight cleanup to ensure fresh state
+/// Setup test environment with preflight cleanup
+fn setup_test_environment() -> Result<TestEnvironment> {
     info!("Running preflight cleanup for Docker-based E2E tests");
     let instance_name = InstanceName::new("torrust-tracker-vm".to_string())
         .context("Failed to create instance name")?;
@@ -170,15 +169,27 @@ async fn run_configuration_tests() -> Result<()> {
     preflight_cleanup::cleanup_lingering_resources_docker(&test_env)
         .context("Failed to complete preflight cleanup")?;
 
-    // Step 1: Setup Docker container - start with stopped state
+    Ok(test_env)
+}
+
+/// Setup Docker container and start it
+async fn setup_docker_container() -> Result<RunningProvisionedContainer> {
+    info!("Setting up Docker container");
     let stopped_container = StoppedProvisionedContainer::default();
     let running_container = stopped_container
         .start()
         .await
         .context("Failed to start provisioned instance container")?;
 
-    // Step 2: Wait for SSH server and setup connectivity (only available when running)
-    let socket_addr = running_container.ssh_details();
+    Ok(running_container)
+}
+
+/// Configure SSH connectivity to the running container
+async fn configure_ssh_connectivity(
+    container: &RunningProvisionedContainer,
+    test_env: &TestEnvironment,
+) -> Result<()> {
+    let socket_addr = container.ssh_details();
     let ssh_wait_action = SshWaitAction::new(Duration::from_secs(30), 10);
     ssh_wait_action
         .execute(socket_addr)
@@ -188,16 +199,32 @@ async fn run_configuration_tests() -> Result<()> {
     let ssh_credentials = &test_env.config.ssh_credentials;
     let ssh_key_setup_action = SshKeySetupAction::new();
     ssh_key_setup_action
-        .execute(&running_container, ssh_credentials)
+        .execute(container, ssh_credentials)
         .await
         .context("Failed to setup SSH authentication")?;
 
     info!(
         socket_addr = %socket_addr,
         ssh_user = %ssh_credentials.ssh_username,
-        container_id = %running_container.container_id(),
+        container_id = %container.container_id(),
         "Container ready for Ansible configuration"
     );
+
+    Ok(())
+}
+
+/// Run the complete configuration tests
+async fn run_configuration_tests() -> Result<()> {
+    info!("Starting configuration tests with Docker container");
+
+    // Step 0: Setup test environment with preflight cleanup
+    let test_env = setup_test_environment()?;
+
+    // Step 1: Setup Docker container - start with stopped state
+    let running_container = setup_docker_container().await?;
+
+    // Step 2: Wait for SSH server and setup connectivity (only available when running)
+    configure_ssh_connectivity(&running_container, &test_env).await?;
 
     // Step 2.5: Run provision simulation to render Ansible templates
     info!("Running provision simulation to prepare container configuration");
@@ -212,11 +239,18 @@ async fn run_configuration_tests() -> Result<()> {
     run_deployment_validation(&running_container).await?;
 
     // Step 5: Cleanup - transition back to stopped state
-    let _stopped_container = running_container.stop();
+    cleanup_container(running_container);
 
     info!("Configuration tests completed successfully");
 
     Ok(())
+}
+
+/// Cleanup container by stopping it
+fn cleanup_container(running_container: RunningProvisionedContainer) {
+    info!("Cleaning up container");
+    let _stopped_container = running_container.stop();
+    info!("Container stopped successfully");
 }
 
 /// Run provision simulation to prepare templates for container configuration
