@@ -5,8 +5,9 @@
 //! with any container that implements the `ContainerExecutor` trait.
 
 use std::fs;
+use std::path::Path;
+
 use testcontainers::core::ExecCommand;
-use tracing::info;
 
 use crate::e2e::containers::ContainerExecutor;
 use crate::shared::ssh::SshCredentials;
@@ -91,12 +92,12 @@ pub type Result<T> = std::result::Result<T, SshKeySetupError>;
 /// use torrust_tracker_deploy::e2e::containers::{ContainerExecutor, actions::SshKeySetupAction};
 /// use torrust_tracker_deploy::shared::ssh::SshCredentials;
 ///
-/// fn setup_ssh<T: ContainerExecutor>(
+/// async fn setup_ssh<T: ContainerExecutor>(
 ///     container: &T,
 ///     credentials: &SshCredentials,
 /// ) -> Result<(), Box<dyn std::error::Error>> {
 ///     let action = SshKeySetupAction;
-///     action.execute(container, credentials)?;
+///     action.execute(container, credentials).await?;
 ///     Ok(())
 /// }
 /// ```
@@ -110,107 +111,97 @@ impl SshKeySetupAction {
         Self
     }
 
-    /// Execute the SSH key setup action
+    /// Execute SSH key setup on a container
+    ///
+    /// Sets up SSH key authentication by:
+    /// 1. Creating the SSH directory (`~/.ssh`)
+    /// 2. Adding the public key to `authorized_keys`
+    /// 3. Setting proper permissions on SSH files
     ///
     /// # Arguments
     ///
     /// * `container` - Container that implements `ContainerExecutor`
-    /// * `ssh_credentials` - SSH credentials containing the public key path and username
+    /// * `credentials` - SSH credentials containing public key path and username
     ///
     /// # Errors
     ///
-    /// Returns an error if:
-    /// - SSH public key file cannot be read
-    /// - Container exec command fails
-    /// - SSH key file operations fail within the container
-    pub fn execute<T: ContainerExecutor>(
+    /// Returns an error if any of the setup commands fail
+    pub async fn execute<T: ContainerExecutor>(
         &self,
         container: &T,
-        ssh_credentials: &SshCredentials,
-    ) -> Result<()> {
-        info!("Setting up SSH key authentication");
-
-        // Read the public key from the credentials
-        let public_key_content =
-            fs::read_to_string(&ssh_credentials.ssh_pub_key_path).map_err(|source| {
-                SshKeySetupError::SshKeyFileRead {
-                    path: ssh_credentials.ssh_pub_key_path.display().to_string(),
-                    ssh_user: ssh_credentials.ssh_username.clone(),
-                    source,
-                }
-            })?;
-
-        // Create the authorized_keys file for the SSH user in the container
-        let ssh_user = &ssh_credentials.ssh_username;
-        let user_ssh_dir = format!("/home/{ssh_user}/.ssh");
-        let authorized_keys_path = format!("{user_ssh_dir}/authorized_keys");
-
-        // Execute each command separately for better error handling
-        Self::create_ssh_directory(container, ssh_user, &user_ssh_dir)?;
+        credentials: &SshCredentials,
+    ) -> std::result::Result<(), SshKeySetupError> {
+        Self::create_ssh_directory(container, &credentials.ssh_username).await?;
         Self::add_public_key_to_authorized_keys(
             container,
-            ssh_user,
-            &public_key_content,
-            &authorized_keys_path,
-        )?;
-        Self::set_ssh_directory_permissions(container, ssh_user, &user_ssh_dir)?;
-        Self::set_authorized_keys_permissions(container, ssh_user, &authorized_keys_path)?;
-
-        info!(
-            ssh_user = ssh_user,
-            authorized_keys = authorized_keys_path,
-            "SSH key authentication configured"
-        );
+            &credentials.ssh_username,
+            &credentials.ssh_pub_key_path,
+        )
+        .await?;
+        Self::set_ssh_directory_permissions(
+            container,
+            &credentials.ssh_username,
+            &format!("/home/{}/.ssh", credentials.ssh_username),
+        )
+        .await?;
+        Self::set_authorized_keys_permissions(
+            container,
+            &credentials.ssh_username,
+            &format!("/home/{}/.ssh/authorized_keys", credentials.ssh_username),
+        )
+        .await?;
 
         Ok(())
     }
 
     /// Create the SSH directory for the user
-    fn create_ssh_directory<T: ContainerExecutor>(
+    async fn create_ssh_directory<T: ContainerExecutor>(
         container: &T,
-        ssh_user: &str,
-        user_ssh_dir: &str,
-    ) -> Result<()> {
-        let command = ExecCommand::new(["sh", "-c", &format!("mkdir -p {user_ssh_dir}")]);
-
-        container
-            .exec(command)
-            .map_err(|source| SshKeySetupError::SshDirectoryCreationFailed {
-                ssh_user: ssh_user.to_string(),
+        username: &str,
+    ) -> std::result::Result<(), SshKeySetupError> {
+        let command = ExecCommand::new(["mkdir", "-p", &format!("/home/{username}/.ssh")]);
+        container.exec(command).await.map_err(|source| {
+            SshKeySetupError::SshDirectoryCreationFailed {
+                ssh_user: username.to_string(),
                 source,
-            })?;
-
+            }
+        })?;
         Ok(())
     }
 
     /// Add the public key to the `authorized_keys` file
-    fn add_public_key_to_authorized_keys<T: ContainerExecutor>(
+    async fn add_public_key_to_authorized_keys<T: ContainerExecutor>(
         container: &T,
-        ssh_user: &str,
-        public_key_content: &str,
-        authorized_keys_path: &str,
-    ) -> Result<()> {
+        username: &str,
+        public_key_path: &Path,
+    ) -> std::result::Result<(), SshKeySetupError> {
+        let public_key = fs::read_to_string(public_key_path).map_err(|source| {
+            SshKeySetupError::SshKeyFileRead {
+                path: public_key_path.to_string_lossy().to_string(),
+                ssh_user: username.to_string(),
+                source,
+            }
+        })?;
+
         let command = ExecCommand::new([
             "sh",
             "-c",
             &format!(
-                "echo '{}' >> {authorized_keys_path}",
-                public_key_content.trim(),
+                "echo '{}' >> /home/{username}/.ssh/authorized_keys",
+                public_key.trim()
             ),
         ]);
-
-        container
-            .exec(command)
-            .map_err(|source| SshKeySetupError::AuthorizedKeysWriteFailed {
-                ssh_user: ssh_user.to_string(),
+        container.exec(command).await.map_err(|source| {
+            SshKeySetupError::AuthorizedKeysWriteFailed {
+                ssh_user: username.to_string(),
                 source,
-            })?;
-
+            }
+        })?;
         Ok(())
     }
 
     /// Set permissions on the SSH directory (700)
-    fn set_ssh_directory_permissions<T: ContainerExecutor>(
+    async fn set_ssh_directory_permissions<T: ContainerExecutor>(
         container: &T,
         ssh_user: &str,
         user_ssh_dir: &str,
@@ -219,6 +210,7 @@ impl SshKeySetupAction {
 
         container
             .exec(command)
+            .await
             .map_err(|source| SshKeySetupError::SshPermissionsFailed {
                 ssh_user: ssh_user.to_string(),
                 source,
@@ -228,7 +220,7 @@ impl SshKeySetupAction {
     }
 
     /// Set permissions on the `authorized_keys` file (600)
-    fn set_authorized_keys_permissions<T: ContainerExecutor>(
+    async fn set_authorized_keys_permissions<T: ContainerExecutor>(
         container: &T,
         ssh_user: &str,
         authorized_keys_path: &str,
@@ -237,6 +229,7 @@ impl SshKeySetupAction {
 
         container
             .exec(command)
+            .await
             .map_err(|source| SshKeySetupError::SshOwnershipFailed {
                 ssh_user: ssh_user.to_string(),
                 source,

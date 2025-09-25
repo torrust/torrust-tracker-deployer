@@ -24,14 +24,14 @@
 //! use std::time::Duration;
 //! use std::net::SocketAddr;
 //!
-//! fn setup_container_ssh<T: ContainerExecutor>(
+//! async fn setup_container_ssh<T: ContainerExecutor>(
 //!     container: &T,
 //!     ssh_credentials: &SshCredentials,
 //!     socket_addr: SocketAddr,
 //! ) -> Result<(), Box<dyn std::error::Error>> {
 //!     // Setup SSH keys inside the container
 //!     let ssh_setup = SshKeySetupAction::new();
-//!     ssh_setup.execute(container, ssh_credentials)?;
+//!     ssh_setup.execute(container, ssh_credentials).await?;
 //!     
 //!     // Wait for SSH to be accessible
 //!     let ssh_wait = SshWaitAction::new(Duration::from_secs(30), 10);

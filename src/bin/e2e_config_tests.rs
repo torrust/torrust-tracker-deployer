@@ -5,6 +5,30 @@
 //! provisioning with Docker container setup to test Ansible configuration in a controlled
 //! environment.
 //!
+//! ## Usage
+//!
+//! Run the E2E configuration tests:
+//!
+//! ```bash
+//! cargo run --bin e2e-config-tests
+//! ```
+//!
+//! Run with custom options:
+//!
+//! ```bash
+//! # Keep test environment after completion
+//! cargo run --bin e2e-config-tests -- --keep
+//!
+//! # Use custom templates directory
+//! cargo run --bin e2e-config-tests -- --templates-dir ./custom/templates
+//!
+//! # Change logging format
+//! cargo run --bin e2e-config-tests -- --log-format json
+//!
+//! # Show help
+//! cargo run --bin e2e-config-tests -- --help
+//! ```
+//!
 //! ## Test Workflow
 //!
 //! 1. **Container setup** - Build and start Docker container using `docker/provisioned-instance`
@@ -28,7 +52,6 @@ use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::runtime::Runtime;
 use tracing::{error, info};
 
 use torrust_tracker_deploy::application::commands::ConfigureCommand;
@@ -74,7 +97,13 @@ struct CliArgs {
 /// - SSH connectivity cannot be established  
 /// - Configuration tests fail
 /// - Container cleanup fails (when enabled)
-pub fn main() -> Result<()> {
+///
+/// # Panics
+///
+/// This function does not panic under normal operation. All error conditions
+/// are handled through the `Result` return type.
+#[tokio::main]
+pub async fn main() -> Result<()> {
     let cli = CliArgs::parse();
 
     // Initialize logging based on the chosen format
@@ -89,7 +118,7 @@ pub fn main() -> Result<()> {
 
     let test_start = Instant::now();
 
-    let test_result = run_configuration_tests();
+    let test_result = run_configuration_tests().await;
 
     let test_duration = test_start.elapsed();
 
@@ -123,7 +152,7 @@ pub fn main() -> Result<()> {
 }
 
 /// Run the complete configuration tests
-fn run_configuration_tests() -> Result<()> {
+async fn run_configuration_tests() -> Result<()> {
     info!("Starting configuration tests with Docker container");
 
     // Step 0: Preflight cleanup to ensure fresh state
@@ -145,6 +174,7 @@ fn run_configuration_tests() -> Result<()> {
     let stopped_container = StoppedProvisionedContainer::default();
     let running_container = stopped_container
         .start()
+        .await
         .context("Failed to start provisioned instance container")?;
 
     // Step 2: Wait for SSH server and setup connectivity (only available when running)
@@ -159,6 +189,7 @@ fn run_configuration_tests() -> Result<()> {
     let ssh_key_setup_action = SshKeySetupAction::new();
     ssh_key_setup_action
         .execute(&running_container, ssh_credentials)
+        .await
         .context("Failed to setup SSH authentication")?;
 
     info!(
@@ -170,8 +201,7 @@ fn run_configuration_tests() -> Result<()> {
 
     // Step 2.5: Run provision simulation to render Ansible templates
     info!("Running provision simulation to prepare container configuration");
-    let rt = Runtime::new().context("Failed to create tokio runtime")?;
-    rt.block_on(run_provision_simulation(&running_container))?;
+    run_provision_simulation(&running_container).await?;
 
     // Step 3: Run configuration tasks (Ansible playbooks)
     info!("Running Ansible configuration tasks");
@@ -179,8 +209,7 @@ fn run_configuration_tests() -> Result<()> {
 
     // Step 4: Validate deployment
     info!("Validating service deployment");
-    let rt = Runtime::new().context("Failed to create tokio runtime")?;
-    rt.block_on(run_deployment_validation(&running_container))?;
+    run_deployment_validation(&running_container).await?;
 
     // Step 5: Cleanup - transition back to stopped state
     let _stopped_container = running_container.stop();

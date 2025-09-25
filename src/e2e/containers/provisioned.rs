@@ -28,12 +28,12 @@
 //! use std::time::Duration;
 //! use std::net::SocketAddr;
 //!
-//! fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Start with stopped state
 //!     let stopped = StoppedProvisionedContainer::default();
 //!     
 //!     // Transition to running state
-//!     let running = stopped.start()?;
+//!     let running = stopped.start().await?;
 //!     
 //!     // Get connection details
 //!     let socket_addr = running.ssh_details();
@@ -49,7 +49,7 @@
 //!         "torrust".to_string(),
 //!     );
 //!     let ssh_key_setup_action = SshKeySetupAction::new();
-//!     ssh_key_setup_action.execute(&running, &ssh_credentials)?;
+//!     ssh_key_setup_action.execute(&running, &ssh_credentials).await?;
 //!     
 //!     // Transition back to stopped state
 //!     let _stopped = running.stop();
@@ -61,8 +61,8 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
-    runners::SyncRunner,
-    Container, GenericImage,
+    runners::AsyncRunner,
+    ContainerAsync, GenericImage,
 };
 use tracing::info;
 
@@ -176,7 +176,7 @@ impl StoppedProvisionedContainer {
     /// - Docker image build fails
     /// - Container fails to start
     /// - Container networking setup fails
-    pub fn start(self) -> Result<RunningProvisionedContainer> {
+    pub async fn start(self) -> Result<RunningProvisionedContainer> {
         // First build the Docker image if needed
         Self::build_image(self.timeouts.docker_build)?;
 
@@ -199,7 +199,7 @@ impl StoppedProvisionedContainer {
                     })
                 })?;
 
-        let container = image.start().map_err(|source| {
+        let container = image.start().await.map_err(|source| {
             Box::new(ContainerError::ContainerRuntime {
                 source: ContainerRuntimeError::StartupFailed {
                     image_name: DEFAULT_IMAGE_NAME.to_string(),
@@ -211,16 +211,19 @@ impl StoppedProvisionedContainer {
         })?;
 
         // Get the actual mapped port from testcontainers
-        let ssh_port = container.get_host_port_ipv4(22.tcp()).map_err(|source| {
-            Box::new(ContainerError::ContainerNetworking {
-                source: ContainerNetworkingError::PortMappingFailed {
-                    container_id: container.id().to_string(),
-                    internal_port: 22,
-                    reason: "Failed to retrieve SSH port mapping from container".to_string(),
-                    source,
-                },
-            })
-        })?;
+        let ssh_port = container
+            .get_host_port_ipv4(22.tcp())
+            .await
+            .map_err(|source| {
+                Box::new(ContainerError::ContainerNetworking {
+                    source: ContainerNetworkingError::PortMappingFailed {
+                        container_id: container.id().to_string(),
+                        internal_port: 22,
+                        reason: "Failed to retrieve SSH port mapping from container".to_string(),
+                        source,
+                    },
+                })
+            })?;
 
         info!(
             container_id = %container.id(),
@@ -234,21 +237,21 @@ impl StoppedProvisionedContainer {
 
 /// Running state - container is started and can be configured
 pub struct RunningProvisionedContainer {
-    container: Container<GenericImage>,
+    container: ContainerAsync<GenericImage>,
     ssh_port: u16,
 }
 
 impl ContainerExecutor for RunningProvisionedContainer {
-    fn exec(
+    async fn exec(
         &self,
         command: testcontainers::core::ExecCommand,
     ) -> std::result::Result<(), testcontainers::TestcontainersError> {
-        self.container.exec(command).map(|_| ())
+        self.container.exec(command).await.map(|_| ())
     }
 }
 
 impl RunningProvisionedContainer {
-    pub(crate) fn new(container: Container<GenericImage>, ssh_port: u16) -> Self {
+    pub(crate) fn new(container: ContainerAsync<GenericImage>, ssh_port: u16) -> Self {
         Self {
             container,
             ssh_port,

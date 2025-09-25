@@ -21,11 +21,12 @@ use testcontainers::TestcontainersError;
 /// use torrust_tracker_deploy::e2e::containers::ContainerExecutor;
 /// use testcontainers::core::ExecCommand;
 ///
-/// fn setup_something<T: ContainerExecutor>(container: &T) -> Result<(), Box<dyn std::error::Error>> {
-///     let result = container.exec(ExecCommand::new(["echo", "hello"]))?;
+/// async fn setup_something<T: ContainerExecutor>(container: &T) -> Result<(), Box<dyn std::error::Error>> {
+///     let result = container.exec(ExecCommand::new(["echo", "hello"])).await?;
 ///     Ok(())
 /// }
 /// ```
+#[allow(async_fn_in_trait)]
 pub trait ContainerExecutor {
     /// Execute a command inside the container
     ///
@@ -48,19 +49,13 @@ pub trait ContainerExecutor {
     /// The command execution may succeed even if the command itself fails
     /// (returns non-zero exit code). The caller should check the exit code
     /// in the returned result if needed.
-    fn exec(&self, command: ExecCommand) -> std::result::Result<(), TestcontainersError>;
+    async fn exec(&self, command: ExecCommand) -> std::result::Result<(), TestcontainersError>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    // Helper function to test that the trait is object-safe
-    #[allow(dead_code)]
-    fn test_trait_object_safety() -> Box<dyn ContainerExecutor> {
-        // This function won't compile if ContainerExecutor is not object-safe
-        panic!("This is just for compile-time checking")
-    }
+    // Note: ContainerExecutor trait is no longer object-safe due to impl Future return type
+    // This is expected since async traits can't be used as trait objects without boxing futures
 
     #[test]
     fn it_should_define_executor_trait_with_exec_method() {
