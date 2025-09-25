@@ -51,13 +51,14 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tracing::{error, info};
 
 use torrust_tracker_deploy::application::commands::ConfigureCommand;
 use torrust_tracker_deploy::config::{Config, InstanceName, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 use torrust_tracker_deploy::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
+use torrust_tracker_deploy::e2e::containers::timeout::ContainerTimeouts;
 use torrust_tracker_deploy::e2e::containers::{
     RunningProvisionedContainer, StoppedProvisionedContainer,
 };
@@ -120,7 +121,11 @@ pub async fn main() -> Result<()> {
 
     let test_start = Instant::now();
 
-    let test_result = run_configuration_tests().await;
+    // Instance name for the test environment - consistent with provision tests
+    let instance_name =
+        InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
+
+    let test_result = run_configuration_tests(cli.templates_dir, instance_name).await;
 
     let test_duration = test_start.elapsed();
 
@@ -154,17 +159,14 @@ pub async fn main() -> Result<()> {
 }
 
 /// Setup test environment with preflight cleanup
-fn setup_test_environment() -> Result<TestEnvironment> {
+fn setup_test_environment(
+    templates_dir: String,
+    instance_name: InstanceName,
+) -> Result<TestEnvironment> {
     info!("Running preflight cleanup for Docker-based E2E tests");
-    let instance_name = InstanceName::new("torrust-tracker-vm".to_string())
-        .context("Failed to create instance name")?;
-    let test_env = TestEnvironment::with_ssh_user_and_init(
-        false,
-        "./data/templates",
-        "torrust",
-        instance_name,
-    )
-    .context("Failed to create test environment")?;
+    let test_env =
+        TestEnvironment::with_ssh_user_and_init(false, templates_dir, "torrust", instance_name)
+            .context("Failed to create test environment")?;
 
     preflight_cleanup::cleanup_lingering_resources_docker(&test_env)
         .context("Failed to complete preflight cleanup")?;
@@ -190,7 +192,8 @@ async fn configure_ssh_connectivity(
     test_env: &TestEnvironment,
 ) -> Result<()> {
     let socket_addr = container.ssh_details();
-    let ssh_wait_action = SshWaitAction::new(Duration::from_secs(30), 10);
+    let timeouts = ContainerTimeouts::default();
+    let ssh_wait_action = SshWaitAction::new(timeouts.ssh_ready, 10);
     ssh_wait_action
         .execute(socket_addr)
         .context("SSH server failed to start")?;
@@ -214,11 +217,11 @@ async fn configure_ssh_connectivity(
 }
 
 /// Run the complete configuration tests
-async fn run_configuration_tests() -> Result<()> {
+async fn run_configuration_tests(templates_dir: String, instance_name: InstanceName) -> Result<()> {
     info!("Starting configuration tests with Docker container");
 
     // Step 0: Setup test environment with preflight cleanup
-    let test_env = setup_test_environment()?;
+    let test_env = setup_test_environment(templates_dir, instance_name)?;
 
     // Step 1: Setup Docker container - start with stopped state
     let running_container = setup_docker_container().await?;
@@ -228,15 +231,15 @@ async fn run_configuration_tests() -> Result<()> {
 
     // Step 2.5: Run provision simulation to render Ansible templates
     info!("Running provision simulation to prepare container configuration");
-    run_provision_simulation(&running_container).await?;
+    run_provision_simulation(&running_container, &test_env).await?;
 
     // Step 3: Run configuration tasks (Ansible playbooks)
     info!("Running Ansible configuration tasks");
-    run_ansible_configuration(&running_container)?;
+    run_ansible_configuration(&running_container, &test_env)?;
 
     // Step 4: Validate deployment
     info!("Validating service deployment");
-    run_deployment_validation(&running_container).await?;
+    run_deployment_validation(&running_container, &test_env).await?;
 
     // Step 5: Cleanup - transition back to stopped state
     cleanup_container(running_container);
@@ -255,7 +258,8 @@ fn cleanup_container(running_container: RunningProvisionedContainer) {
 
 /// Run provision simulation to prepare templates for container configuration
 async fn run_provision_simulation(
-    running_container: &torrust_tracker_deploy::e2e::containers::RunningProvisionedContainer,
+    running_container: &RunningProvisionedContainer,
+    test_env: &TestEnvironment,
 ) -> Result<()> {
     let socket_addr = running_container.ssh_details();
 
@@ -265,8 +269,13 @@ async fn run_provision_simulation(
     );
 
     // Create SSH credentials and configuration for the container
-    let ssh_credentials = create_container_ssh_credentials()?;
-    let config = create_container_config()?;
+    let ssh_credentials =
+        create_container_ssh_credentials(&test_env.config.ssh_credentials.ssh_username)?;
+    let config = create_container_config(
+        &test_env.config.ssh_credentials.ssh_username,
+        test_env.config.instance_name.clone(),
+        test_env.config.templates_dir.clone(),
+    )?;
     let services = Services::new(&config);
 
     // Run the Docker infrastructure provision simulation
@@ -288,7 +297,8 @@ async fn run_provision_simulation(
 
 /// Run Ansible configuration tasks on the container
 fn run_ansible_configuration(
-    running_container: &torrust_tracker_deploy::e2e::containers::RunningProvisionedContainer,
+    running_container: &RunningProvisionedContainer,
+    test_env: &TestEnvironment,
 ) -> Result<()> {
     let socket_addr = running_container.ssh_details();
 
@@ -308,7 +318,12 @@ fn run_ansible_configuration(
     //
     // For now, we'll catch the expected connection error and log it:
 
-    let config = create_container_config().context("Failed to create container configuration")?;
+    let config = create_container_config(
+        &test_env.config.ssh_credentials.ssh_username,
+        test_env.config.instance_name.clone(),
+        test_env.config.templates_dir.clone(),
+    )
+    .context("Failed to create container configuration")?;
 
     let services = Services::new(&config);
     let configure_command = ConfigureCommand::new(Arc::clone(&services.ansible_client));
@@ -343,7 +358,8 @@ fn run_ansible_configuration(
 
 /// Run deployment validation tests on the container  
 async fn run_deployment_validation(
-    running_container: &torrust_tracker_deploy::e2e::containers::RunningProvisionedContainer,
+    running_container: &RunningProvisionedContainer,
+    test_env: &TestEnvironment,
 ) -> Result<()> {
     let socket_addr = running_container.ssh_details();
 
@@ -354,7 +370,8 @@ async fn run_deployment_validation(
 
     // Now we can use the proper SSH infrastructure with custom port support
     let ssh_credentials =
-        create_container_ssh_credentials().context("Failed to create container SSH credentials")?;
+        create_container_ssh_credentials(&test_env.config.ssh_credentials.ssh_username)
+            .context("Failed to create container SSH credentials")?;
 
     // Create SSH connection with the container's dynamic port
     validate_container_deployment_with_port(&ssh_credentials, socket_addr)
@@ -371,23 +388,33 @@ async fn run_deployment_validation(
     Ok(())
 }
 
-/// Create a minimal configuration for container-based testing
-fn create_container_config() -> Result<Config> {
-    // For container testing, we use fixed test SSH keys from fixtures/
+/// Create centralized SSH credentials for test purposes
+///
+/// Uses fixed test SSH keys from fixtures/ directory with provided username.
+/// This factory eliminates code duplication across multiple functions that need
+/// the same test SSH credentials.
+fn create_test_ssh_credentials(ssh_username: &str) -> Result<SshCredentials> {
     let project_root = std::env::current_dir().context("Failed to get current directory")?;
-    let ssh_credentials = SshCredentials::new(
+    Ok(SshCredentials::new(
         project_root.join("fixtures/testing_rsa"),
         project_root.join("fixtures/testing_rsa.pub"),
-        "torrust".to_string(),
-    );
+        ssh_username.to_string(),
+    ))
+}
 
-    let instance_name = InstanceName::new("torrust-tracker-container".to_string())
-        .context("Failed to create instance name")?;
+/// Create a minimal configuration for container-based testing
+fn create_container_config(
+    ssh_username: &str,
+    instance_name: InstanceName,
+    templates_dir: String,
+) -> Result<Config> {
+    // For container testing, we use fixed test SSH keys from fixtures/
+    let ssh_credentials = create_test_ssh_credentials(ssh_username)
+        .context("Failed to create test SSH credentials")?;
 
     let project_root = std::env::current_dir().context("Failed to determine current directory")?;
 
     let build_dir = project_root.join("build");
-    let templates_dir = "data/templates".to_string();
 
     Ok(Config::new(
         false, // Don't keep environment - cleanup after tests
@@ -400,16 +427,9 @@ fn create_container_config() -> Result<Config> {
 }
 
 /// Create SSH credentials for connecting to the container
-fn create_container_ssh_credentials() -> Result<SshCredentials> {
-    // Use the same test SSH keys as the configuration
-    let project_root = std::env::current_dir().context("Failed to get current directory")?;
-    let ssh_credentials = SshCredentials::new(
-        project_root.join("fixtures/testing_rsa"),
-        project_root.join("fixtures/testing_rsa.pub"),
-        "torrust".to_string(),
-    );
-
-    Ok(ssh_credentials)
+fn create_container_ssh_credentials(ssh_username: &str) -> Result<SshCredentials> {
+    // Use the centralized test SSH credentials factory
+    create_test_ssh_credentials(ssh_username)
 }
 
 /// Validate container deployment using SSH infrastructure with custom port
