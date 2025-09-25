@@ -21,7 +21,7 @@
 //! temporary resources and configuration.
 
 use tempfile::TempDir;
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::config::{Config, InstanceName, SshCredentials};
 use crate::container::Services;
@@ -66,6 +66,17 @@ const SSH_PRIVATE_KEY_FILENAME: &str = "testing_rsa";
 /// SSH public key filename for testing
 const SSH_PUBLIC_KEY_FILENAME: &str = "testing_rsa.pub";
 
+/// Type of test environment indicating what infrastructure is used
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TestEnvironmentType {
+    /// Container-based testing using Docker containers via testcontainers crate.
+    /// No manual cleanup needed as containers are automatically destroyed.
+    Container,
+    /// Virtual machine-based testing using LXD VMs provisioned via `OpenTofu`.
+    /// Requires `OpenTofu` resource cleanup when the environment is dropped.
+    VirtualMachine,
+}
+
 /// Main test environment combining configuration and services
 pub struct TestEnvironment {
     pub config: Config,
@@ -74,6 +85,8 @@ pub struct TestEnvironment {
     /// of the test environment to prevent cleanup of SSH key files.
     /// This field is not directly read but must be retained for RAII cleanup.
     temp_dir: Option<tempfile::TempDir>,
+    /// The type of test environment, determining what cleanup is needed.
+    environment_type: TestEnvironmentType,
 }
 
 impl TestEnvironment {
@@ -131,7 +144,13 @@ impl TestEnvironment {
         templates_dir: impl Into<std::path::PathBuf>,
         instance_name: InstanceName,
     ) -> Result<Self, TestEnvironmentError> {
-        Self::with_ssh_user(keep_env, templates_dir, DEFAULT_SSH_USER, instance_name)
+        Self::with_ssh_user(
+            keep_env,
+            templates_dir,
+            DEFAULT_SSH_USER,
+            instance_name,
+            TestEnvironmentType::VirtualMachine,
+        )
     }
 
     /// Creates a new test environment with a custom SSH user
@@ -145,6 +164,7 @@ impl TestEnvironment {
     /// * `templates_dir` - Path to the templates directory
     /// * `ssh_user` - SSH username to use for connections
     /// * `instance_name` - Name for the instance to be deployed
+    /// * `environment_type` - The type of test environment (Container or `VirtualMachine`)
     ///
     /// # Errors
     ///
@@ -158,6 +178,7 @@ impl TestEnvironment {
         templates_dir: impl Into<std::path::PathBuf>,
         ssh_user: &str,
         instance_name: InstanceName,
+        environment_type: TestEnvironmentType,
     ) -> Result<Self, TestEnvironmentError> {
         let templates_dir = templates_dir.into();
         Self::validate_inputs(&templates_dir)?;
@@ -178,6 +199,7 @@ impl TestEnvironment {
             config,
             services,
             temp_dir: Some(temp_dir),
+            environment_type,
         })
     }
 
@@ -207,6 +229,7 @@ impl TestEnvironment {
     /// * `templates_dir` - Path to the templates directory
     /// * `ssh_user` - SSH username to use for connections
     /// * `instance_name` - Name for the instance to be deployed
+    /// * `environment_type` - The type of test environment (Container or `VirtualMachine`)
     ///
     /// # Errors
     ///
@@ -218,8 +241,15 @@ impl TestEnvironment {
         templates_dir: impl Into<std::path::PathBuf>,
         ssh_user: &str,
         instance_name: InstanceName,
+        environment_type: TestEnvironmentType,
     ) -> Result<Self, TestEnvironmentError> {
-        let env = Self::with_ssh_user(keep_env, templates_dir, ssh_user, instance_name)?;
+        let env = Self::with_ssh_user(
+            keep_env,
+            templates_dir,
+            ssh_user,
+            instance_name,
+            environment_type,
+        )?;
         env.init()?;
         Ok(env)
     }
@@ -295,6 +325,17 @@ impl TestEnvironment {
 
     /// Logs environment information
     fn log_environment_info(&self) {
+        // Warn if keep_env is enabled with Container environment type
+        if self.config.keep_env && self.environment_type == TestEnvironmentType::Container {
+            warn!(
+                environment_type = "container",
+                keep_env = true,
+                "keep_env flag is enabled but Container environments are automatically destroyed by testcontainers - the flag will be ignored"
+            );
+            // TODO: Investigate if testcontainers crate supports keeping containers alive after test completion
+            // This would require exploring testcontainers configuration options or lifecycle management
+        }
+
         if let Some(temp_path) = self.temp_dir_path() {
             info!(
                 environment = "temporary_directory",
@@ -340,13 +381,24 @@ impl std::fmt::Debug for TestEnvironment {
 impl Drop for TestEnvironment {
     fn drop(&mut self) {
         if !self.config.keep_env {
-            // Try basic cleanup in case async cleanup failed
-            // Using emergency_destroy for consistent OpenTofu handling
-            let tofu_dir = self.config.build_dir.join(&self.config.opentofu_subfolder);
+            // Only cleanup OpenTofu resources for VirtualMachine environments
+            // Container environments use Docker/testcontainers which handle their own cleanup
+            match self.environment_type {
+                TestEnvironmentType::VirtualMachine => {
+                    // Try basic cleanup in case async cleanup failed
+                    // Using emergency_destroy for consistent OpenTofu handling
+                    let tofu_dir = self.config.build_dir.join(&self.config.opentofu_subfolder);
 
-            if let Err(e) = crate::infrastructure::adapters::opentofu::emergency_destroy(&tofu_dir)
-            {
-                eprintln!("Warning: Failed to cleanup OpenTofu resources during TestEnvironment drop: {e}");
+                    if let Err(e) =
+                        crate::infrastructure::adapters::opentofu::emergency_destroy(&tofu_dir)
+                    {
+                        eprintln!("Warning: Failed to cleanup OpenTofu resources during TestEnvironment drop: {e}");
+                    }
+                }
+                TestEnvironmentType::Container => {
+                    // Container environments are managed by testcontainers
+                    // No OpenTofu cleanup needed
+                }
             }
         }
     }
