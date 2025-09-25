@@ -36,7 +36,7 @@
 //!     let running = stopped.start().await?;
 //!     
 //!     // Get connection details
-//!     let socket_addr = running.ssh_details();
+//!     let socket_addr = running.ssh_socket_addr();
 //!     
 //!     // Wait for SSH server using action directly
 //!     let ssh_wait_action = SshWaitAction::new(Duration::from_secs(30), 10);
@@ -258,9 +258,9 @@ impl RunningProvisionedContainer {
         }
     }
 
-    /// Get the SSH connection details for Ansible
+    /// Get the SSH connection details
     #[must_use]
-    pub fn ssh_details(&self) -> SocketAddr {
+    pub fn ssh_socket_addr(&self) -> SocketAddr {
         SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), self.ssh_port)
     }
 

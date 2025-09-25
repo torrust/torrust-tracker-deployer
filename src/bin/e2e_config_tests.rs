@@ -191,7 +191,7 @@ async fn configure_ssh_connectivity(
     container: &RunningProvisionedContainer,
     test_env: &TestEnvironment,
 ) -> Result<()> {
-    let socket_addr = container.ssh_details();
+    let socket_addr = container.ssh_socket_addr();
     let timeouts = ContainerTimeouts::default();
     let ssh_wait_action = SshWaitAction::new(timeouts.ssh_ready, 10);
     ssh_wait_action
@@ -231,15 +231,15 @@ async fn run_configuration_tests(templates_dir: String, instance_name: InstanceN
 
     // Step 2.5: Run provision simulation to render Ansible templates
     info!("Running provision simulation to prepare container configuration");
-    run_provision_simulation(&running_container, &test_env).await?;
+    run_provision_simulation(running_container.ssh_socket_addr(), &test_env).await?;
 
     // Step 3: Run configuration tasks (Ansible playbooks)
     info!("Running Ansible configuration tasks");
-    run_ansible_configuration(&running_container, &test_env)?;
+    run_ansible_configuration(running_container.ssh_socket_addr(), &test_env)?;
 
     // Step 4: Validate deployment
     info!("Validating service deployment");
-    run_deployment_validation(&running_container, &test_env).await?;
+    run_deployment_validation(running_container.ssh_socket_addr(), &test_env).await?;
 
     // Step 5: Cleanup - transition back to stopped state
     cleanup_container(running_container);
@@ -258,13 +258,11 @@ fn cleanup_container(running_container: RunningProvisionedContainer) {
 
 /// Run provision simulation to prepare templates for container configuration
 async fn run_provision_simulation(
-    running_container: &RunningProvisionedContainer,
+    ssh_service_socket_addr: SocketAddr,
     test_env: &TestEnvironment,
 ) -> Result<()> {
-    let socket_addr = running_container.ssh_details();
-
     info!(
-        socket_addr = %socket_addr,
+        socket_addr = %ssh_service_socket_addr,
         "Running provision simulation for container"
     );
 
@@ -282,7 +280,7 @@ async fn run_provision_simulation(
     provision_docker_infrastructure(
         Arc::clone(&services.ansible_template_renderer),
         ssh_credentials,
-        socket_addr,
+        ssh_service_socket_addr,
     )
     .await
     .context("Failed to complete Docker infrastructure provision simulation")?;
@@ -297,13 +295,11 @@ async fn run_provision_simulation(
 
 /// Run Ansible configuration tasks on the container
 fn run_ansible_configuration(
-    running_container: &RunningProvisionedContainer,
+    ssh_service_socket_addr: SocketAddr,
     test_env: &TestEnvironment,
 ) -> Result<()> {
-    let socket_addr = running_container.ssh_details();
-
     info!(
-        socket_addr = %socket_addr,
+        socket_addr = %ssh_service_socket_addr,
         "Running Ansible configuration on container"
     );
 
@@ -358,13 +354,11 @@ fn run_ansible_configuration(
 
 /// Run deployment validation tests on the container  
 async fn run_deployment_validation(
-    running_container: &RunningProvisionedContainer,
+    ssh_service_socket_addr: SocketAddr,
     test_env: &TestEnvironment,
 ) -> Result<()> {
-    let socket_addr = running_container.ssh_details();
-
     info!(
-        socket_addr = %socket_addr,
+        socket_addr = %ssh_service_socket_addr,
         "Running deployment validation on container"
     );
 
@@ -374,7 +368,7 @@ async fn run_deployment_validation(
             .context("Failed to create container SSH credentials")?;
 
     // Create SSH connection with the container's dynamic port
-    validate_container_deployment_with_port(&ssh_credentials, socket_addr)
+    validate_container_deployment_with_port(&ssh_credentials, ssh_service_socket_addr)
         .await
         .context("Container deployment validation failed")?;
 
