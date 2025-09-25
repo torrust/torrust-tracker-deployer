@@ -308,34 +308,28 @@ fn run_ansible_configuration(
     //
     // For now, we'll catch the expected connection error and log it:
 
-    let config_result = create_container_config();
-    match config_result {
-        Ok(config) => {
-            let services = Services::new(&config);
-            let configure_command = ConfigureCommand::new(Arc::clone(&services.ansible_client));
+    let config = create_container_config().context("Failed to create container configuration")?;
 
-            match configure_command.execute().map_err(anyhow::Error::from) {
-                Ok(()) => {
-                    info!(
-                        status = "complete",
-                        "Container configuration completed successfully"
-                    );
-                }
-                Err(e) => {
-                    // Expected failure due to inventory mismatch - log and return error
-                    info!(
-                        status = "expected_failure",
-                        error = %e,
-                        note = "ConfigureCommand failed as expected - needs container-specific inventory"
-                    );
-                    return Err(e.context(
-                        "Configuration failed (expected - needs container-specific inventory)",
-                    ));
-                }
-            }
+    let services = Services::new(&config);
+    let configure_command = ConfigureCommand::new(Arc::clone(&services.ansible_client));
+
+    match configure_command.execute().map_err(anyhow::Error::from) {
+        Ok(()) => {
+            info!(
+                status = "complete",
+                "Container configuration completed successfully"
+            );
         }
         Err(e) => {
-            return Err(e.context("Failed to create container configuration"));
+            // Expected failure due to inventory mismatch - log and return error
+            info!(
+                status = "expected_failure",
+                error = %e,
+                note = "ConfigureCommand failed as expected - needs container-specific inventory"
+            );
+            return Err(
+                e.context("Configuration failed (expected - needs container-specific inventory)")
+            );
         }
     }
 
@@ -359,28 +353,15 @@ async fn run_deployment_validation(
     );
 
     // Now we can use the proper SSH infrastructure with custom port support
-    let credentials_result = create_container_ssh_credentials();
-    match credentials_result {
-        Ok(ssh_credentials) => {
-            // Create SSH connection with the container's dynamic port
-            match validate_container_deployment_with_port(&ssh_credentials, socket_addr).await {
-                Ok(()) => {
-                    info!(status = "success", "All deployment validations passed");
-                }
-                Err(e) => {
-                    info!(
-                        status = "failed",
-                        error = %e,
-                        "Container deployment validation failed"
-                    );
-                    return Err(e.context("Container deployment validation failed"));
-                }
-            }
-        }
-        Err(e) => {
-            return Err(e.context("Failed to create container SSH credentials"));
-        }
-    }
+    let ssh_credentials =
+        create_container_ssh_credentials().context("Failed to create container SSH credentials")?;
+
+    // Create SSH connection with the container's dynamic port
+    validate_container_deployment_with_port(&ssh_credentials, socket_addr)
+        .await
+        .context("Container deployment validation failed")?;
+
+    info!(status = "success", "All deployment validations passed");
 
     info!(
         status = "success",
