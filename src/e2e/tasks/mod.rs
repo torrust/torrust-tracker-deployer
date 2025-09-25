@@ -4,25 +4,37 @@
 //! workflow. Each task represents a significant phase in the deployment testing process
 //! and can be executed independently or as part of a complete test sequence.
 //!
-//! ## Available Tasks
+//! ## Module Organization
 //!
+//! The tasks are organized by deployment target:
+//!
+//! ### Infrastructure-agnostic tasks (can be used with both containers and VMs):
 //! - `clean_and_prepare_templates` - Template cleanup and preparation
-//! - `cleanup_infrastructure` - Infrastructure resource cleanup
-//! - `configure_infrastructure` - Infrastructure configuration via Ansible
-//! - `preflight_cleanup` - Pre-test cleanup of lingering resources
-//! - `provision_infrastructure` - Infrastructure provisioning via `OpenTofu`
-//! - `provision_docker_infrastructure` - Docker container provisioning simulation
+//! - `configure_infrastructure` - Infrastructure configuration via Ansible  
 //! - `setup_ssh_key` - SSH key generation and setup
 //! - `validate_deployment` - Deployment validation and testing
 //!
-//! These tasks are orchestrated by the E2E test binary to provide comprehensive
+//! ### Container-specific tasks (`container` submodule):
+//! - `provision_docker_infrastructure` - Docker container provisioning simulation
+//! - `preflight_cleanup` - Container-specific preflight cleanup
+//!
+//! ### Virtual machine-specific tasks (`virtual_machine` submodule):
+//! - `provision_infrastructure` - Infrastructure provisioning via `OpenTofu`
+//! - `cleanup_infrastructure` - Infrastructure resource cleanup  
+//! - `preflight_cleanup` - VM-specific preflight cleanup (`OpenTofu` + LXD)
+//!
+//! ### Common functionality:
+//! - `preflight_cleanup_common` - Shared directory cleanup functions
+//! - `preflight_cleanup` - Legacy module with common error types and functions
+//!
+//! These tasks are orchestrated by the E2E test binaries to provide comprehensive
 //! testing coverage of the entire deployment system.
 
 pub mod clean_and_prepare_templates;
-pub mod cleanup_infrastructure;
 pub mod configure_infrastructure;
+pub mod container;
 pub mod preflight_cleanup;
-pub mod provision_docker_infrastructure;
-pub mod provision_infrastructure;
+pub mod preflight_cleanup_common;
 pub mod setup_ssh_key;
 pub mod validate_deployment;
+pub mod virtual_machine;

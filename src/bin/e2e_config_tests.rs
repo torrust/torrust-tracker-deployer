@@ -63,8 +63,8 @@ use torrust_tracker_deploy::e2e::containers::{
     RunningProvisionedContainer, StoppedProvisionedContainer,
 };
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
+use torrust_tracker_deploy::e2e::tasks::container::provision_docker_infrastructure::provision_docker_infrastructure;
 use torrust_tracker_deploy::e2e::tasks::preflight_cleanup;
-use torrust_tracker_deploy::e2e::tasks::provision_docker_infrastructure::provision_docker_infrastructure;
 use torrust_tracker_deploy::logging::{self, LogFormat};
 
 #[derive(Parser)]

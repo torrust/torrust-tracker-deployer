@@ -25,8 +25,11 @@ use tracing::{error, info};
 use torrust_tracker_deploy::config::InstanceName;
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
 use torrust_tracker_deploy::e2e::tasks::{
-    cleanup_infrastructure::cleanup_infrastructure, preflight_cleanup::cleanup_lingering_resources,
-    provision_infrastructure::provision_infrastructure,
+    preflight_cleanup::cleanup_lingering_resources,
+    virtual_machine::{
+        cleanup_infrastructure::cleanup_infrastructure,
+        provision_infrastructure::provision_infrastructure,
+    },
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
 
