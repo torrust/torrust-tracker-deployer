@@ -55,7 +55,7 @@ use std::time::Instant;
 use tracing::{error, info};
 
 use torrust_tracker_deploy::application::commands::ConfigureCommand;
-use torrust_tracker_deploy::config::{Config, InstanceName, SshCredentials};
+use torrust_tracker_deploy::config::{InstanceName, SshCredentials};
 use torrust_tracker_deploy::container::Services;
 use torrust_tracker_deploy::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
 use torrust_tracker_deploy::e2e::containers::timeout::ContainerTimeouts;
@@ -125,7 +125,10 @@ pub async fn main() -> Result<()> {
     let instance_name =
         InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
 
-    let test_result = run_configuration_tests(cli.templates_dir, instance_name).await;
+    // Setup test environment with preflight cleanup
+    let test_env = setup_test_environment(cli.templates_dir, instance_name)?;
+
+    let test_result = run_configuration_tests(&test_env).await;
 
     let test_duration = test_start.elapsed();
 
@@ -217,29 +220,26 @@ async fn configure_ssh_connectivity(
 }
 
 /// Run the complete configuration tests
-async fn run_configuration_tests(templates_dir: String, instance_name: InstanceName) -> Result<()> {
+async fn run_configuration_tests(test_env: &TestEnvironment) -> Result<()> {
     info!("Starting configuration tests with Docker container");
-
-    // Step 0: Setup test environment with preflight cleanup
-    let test_env = setup_test_environment(templates_dir, instance_name)?;
 
     // Step 1: Setup Docker container - start with stopped state
     let running_container = setup_docker_container().await?;
 
     // Step 2: Wait for SSH server and setup connectivity (only available when running)
-    configure_ssh_connectivity(&running_container, &test_env).await?;
+    configure_ssh_connectivity(&running_container, test_env).await?;
 
     // Step 2.5: Run provision simulation to render Ansible templates
     info!("Running provision simulation to prepare container configuration");
-    run_provision_simulation(running_container.ssh_socket_addr(), &test_env).await?;
+    run_provision_simulation(running_container.ssh_socket_addr(), test_env).await?;
 
     // Step 3: Run configuration tasks (Ansible playbooks)
     info!("Running Ansible configuration tasks");
-    run_ansible_configuration(running_container.ssh_socket_addr(), &test_env)?;
+    run_ansible_configuration(running_container.ssh_socket_addr(), test_env)?;
 
     // Step 4: Validate deployment
     info!("Validating service deployment");
-    run_deployment_validation(running_container.ssh_socket_addr(), &test_env).await?;
+    run_deployment_validation(running_container.ssh_socket_addr(), test_env).await?;
 
     // Step 5: Cleanup - transition back to stopped state
     cleanup_container(running_container);
@@ -266,15 +266,10 @@ async fn run_provision_simulation(
         "Running provision simulation for container"
     );
 
-    // Create SSH credentials and configuration for the container
+    // Create SSH credentials and use configuration from test environment
     let ssh_credentials =
         create_container_ssh_credentials(&test_env.config.ssh_credentials.ssh_username)?;
-    let config = create_container_config(
-        &test_env.config.ssh_credentials.ssh_username,
-        test_env.config.instance_name.clone(),
-        test_env.config.templates_dir.clone(),
-    )?;
-    let services = Services::new(&config);
+    let services = Services::new(&test_env.config);
 
     // Run the Docker infrastructure provision simulation
     provision_docker_infrastructure(
@@ -314,14 +309,7 @@ fn run_ansible_configuration(
     //
     // For now, we'll catch the expected connection error and log it:
 
-    let config = create_container_config(
-        &test_env.config.ssh_credentials.ssh_username,
-        test_env.config.instance_name.clone(),
-        test_env.config.templates_dir.clone(),
-    )
-    .context("Failed to create container configuration")?;
-
-    let services = Services::new(&config);
+    let services = Services::new(&test_env.config);
     let configure_command = ConfigureCommand::new(Arc::clone(&services.ansible_client));
 
     match configure_command.execute().map_err(anyhow::Error::from) {
@@ -393,30 +381,6 @@ fn create_test_ssh_credentials(ssh_username: &str) -> Result<SshCredentials> {
         project_root.join("fixtures/testing_rsa"),
         project_root.join("fixtures/testing_rsa.pub"),
         ssh_username.to_string(),
-    ))
-}
-
-/// Create a minimal configuration for container-based testing
-fn create_container_config(
-    ssh_username: &str,
-    instance_name: InstanceName,
-    templates_dir: String,
-) -> Result<Config> {
-    // For container testing, we use fixed test SSH keys from fixtures/
-    let ssh_credentials = create_test_ssh_credentials(ssh_username)
-        .context("Failed to create test SSH credentials")?;
-
-    let project_root = std::env::current_dir().context("Failed to determine current directory")?;
-
-    let build_dir = project_root.join("build");
-
-    Ok(Config::new(
-        false, // Don't keep environment - cleanup after tests
-        ssh_credentials,
-        instance_name,
-        templates_dir,
-        project_root,
-        build_dir,
     ))
 }
 
