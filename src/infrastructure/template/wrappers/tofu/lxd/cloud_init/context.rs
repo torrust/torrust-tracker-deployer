@@ -15,10 +15,13 @@ use crate::shared::Username;
 pub enum CloudInitContextError {
     #[error("SSH public key is required but not provided")]
     MissingSshPublicKey,
+
     #[error("Username is required but not provided")]
     MissingUsername,
+
     #[error("Invalid username: {0}")]
     InvalidUsername(String),
+
     #[error("Failed to read SSH public key from file: {0}")]
     SshPublicKeyReadError(String),
 }

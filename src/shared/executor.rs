@@ -26,6 +26,7 @@ pub enum CommandError {
         #[source]
         source: std::io::Error,
     },
+
     /// The command was started but exited with a non-zero status code
     #[error(
         "Command '{command}' failed with exit code {exit_code}\nStdout: {stdout}\nStderr: {stderr}"

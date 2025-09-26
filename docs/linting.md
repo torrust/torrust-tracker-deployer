@@ -65,6 +65,7 @@ Error enum variants should be separated by blank lines for better readability.
 pub enum CloudInitContextError {
     #[error("SSH public key is required but not provided")]
     MissingSshPublicKey,
+    
     #[error("Failed to read SSH public key from file: {0}")]
     SshPublicKeyReadError(String),
 }
