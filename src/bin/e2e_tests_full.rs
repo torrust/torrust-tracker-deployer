@@ -30,12 +30,12 @@ use tracing::{error, info};
 use torrust_tracker_deploy::config::InstanceName;
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
 use torrust_tracker_deploy::e2e::tasks::{
-    configure_infrastructure::configure_infrastructure,
     preflight_cleanup::cleanup_lingering_resources,
-    validate_deployment::validate_deployment,
+    run_configure_command::configure_infrastructure,
+    run_test_command::validate_deployment,
     virtual_machine::{
         cleanup_infrastructure::cleanup_infrastructure,
-        provision_infrastructure::provision_infrastructure,
+        run_provision_command::provision_infrastructure,
     },
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};

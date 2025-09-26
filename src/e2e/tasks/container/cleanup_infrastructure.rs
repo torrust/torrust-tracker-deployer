@@ -37,7 +37,7 @@ use crate::e2e::containers::RunningProvisionedContainer;
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deploy::e2e::tasks::container::cleanup_docker_container::cleanup_docker_container;
+/// use torrust_tracker_deploy::e2e::tasks::container::cleanup_infrastructure::cleanup_docker_container;
 /// use torrust_tracker_deploy::e2e::containers::StoppedProvisionedContainer;
 ///
 /// #[tokio::main]

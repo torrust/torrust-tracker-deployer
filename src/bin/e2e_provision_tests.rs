@@ -28,7 +28,7 @@ use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
     virtual_machine::{
         cleanup_infrastructure::cleanup_infrastructure,
-        provision_infrastructure::provision_infrastructure,
+        run_provision_command::provision_infrastructure,
     },
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};

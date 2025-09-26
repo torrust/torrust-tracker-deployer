@@ -10,14 +10,13 @@
 //!
 //! ### Infrastructure-agnostic tasks (can be used with both containers and VMs):
 //! - `clean_and_prepare_templates` - Template cleanup and preparation
-//! - `configure_infrastructure` - Infrastructure configuration via Ansible  
-//! - `run_ansible_configuration` - Ansible playbook execution
+//! - `run_configure_command` - Infrastructure configuration via Ansible and playbook execution
 //! - `run_deployment_validation` - Deployment validation and testing
 //! - `setup_ssh_key` - SSH key generation and setup
-//! - `validate_deployment` - Deployment validation and testing
+//! - `run_test_command` - Deployment validation and testing
 //!
 //! ### Container-specific tasks (`container` submodule):
-//! - `cleanup_docker_container` - Docker container cleanup
+//! - `cleanup_infrastructure` - Docker container cleanup
 //! - `configure_ssh_connectivity` - SSH connectivity setup for containers
 //! - `provision_docker_infrastructure` - Docker container provisioning simulation
 //! - `preflight_cleanup` - Container-specific preflight cleanup
@@ -25,7 +24,7 @@
 //! - `setup_docker_container` - Docker container setup and startup
 //!
 //! ### Virtual machine-specific tasks (`virtual_machine` submodule):
-//! - `provision_infrastructure` - Infrastructure provisioning via `OpenTofu`
+//! - `run_provision_command` - Infrastructure provisioning via `OpenTofu`
 //! - `cleanup_infrastructure` - Infrastructure resource cleanup  
 //! - `preflight_cleanup` - VM-specific preflight cleanup (`OpenTofu` + LXD)
 //!
@@ -37,12 +36,11 @@
 //! testing coverage of the entire deployment system.
 
 pub mod clean_and_prepare_templates;
-pub mod configure_infrastructure;
 pub mod container;
 pub mod preflight_cleanup;
 pub mod preflight_cleanup_common;
-pub mod run_ansible_configuration;
+pub mod run_configure_command;
 pub mod run_deployment_validation;
+pub mod run_test_command;
 pub mod setup_ssh_key;
-pub mod validate_deployment;
 pub mod virtual_machine;

@@ -53,13 +53,13 @@ use torrust_tracker_deploy::config::InstanceName;
 use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
 use torrust_tracker_deploy::e2e::tasks::{
     container::{
-        cleanup_docker_container::cleanup_docker_container,
+        cleanup_infrastructure::cleanup_docker_container,
         configure_ssh_connectivity::configure_ssh_connectivity,
         run_provision_simulation::run_provision_simulation,
         setup_docker_container::setup_docker_container,
     },
     preflight_cleanup,
-    run_ansible_configuration::run_ansible_configuration,
+    run_configure_command::run_ansible_configuration,
     run_deployment_validation::run_deployment_validation,
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};

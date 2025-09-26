@@ -26,7 +26,7 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use tracing::{info, warn};
 
 use crate::application::commands::ConfigureCommand;
@@ -61,7 +61,7 @@ use crate::e2e::environment::TestEnvironment;
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deploy::e2e::tasks::run_ansible_configuration::run_ansible_configuration;
+/// use torrust_tracker_deploy::e2e::tasks::run_configure_command::run_ansible_configuration;
 /// use torrust_tracker_deploy::e2e::environment::TestEnvironment;
 /// use torrust_tracker_deploy::config::InstanceName;
 /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -98,7 +98,7 @@ pub fn run_ansible_configuration(
                 info!(
                     socket_addr = %socket_addr,
                     status = "success",
-                    "Ansible configuration completed successfully"
+                    "Configuration completed successfully"
                 );
             } else {
                 warn!(
@@ -125,6 +125,35 @@ pub fn run_ansible_configuration(
         socket_addr = %socket_addr,
         status = "complete",
         "Ansible configuration workflow completed"
+    );
+
+    Ok(())
+}
+
+/// Configure infrastructure using Ansible playbooks (compatibility wrapper)
+///
+/// This is a simplified wrapper around the `ConfigureCommand` for use in full E2E tests.
+/// For more advanced configuration with success/failure handling, use `run_ansible_configuration`.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - `ConfigureCommand` execution fails
+/// - Infrastructure configuration fails
+pub fn configure_infrastructure(env: &TestEnvironment) -> Result<()> {
+    info!("Configuring test infrastructure");
+
+    // Use the new ConfigureCommand to handle all infrastructure configuration steps
+    let configure_command = ConfigureCommand::new(Arc::clone(&env.services.ansible_client));
+
+    configure_command
+        .execute()
+        .map_err(anyhow::Error::from)
+        .context("Failed to configure infrastructure")?;
+
+    info!(
+        status = "complete",
+        "Infrastructure configuration completed successfully"
     );
 
     Ok(())
