@@ -5,9 +5,8 @@
 //! infrastructure resources including `OpenTofu` state and LXD instances.
 
 use crate::e2e::environment::TestEnvironment;
-use crate::e2e::tasks::preflight_cleanup::PreflightCleanupError;
-use crate::e2e::tasks::preflight_cleanup_common::{
-    cleanup_build_directory, cleanup_templates_directory,
+use crate::e2e::tasks::preflight_cleanup::{
+    cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
 };
 use crate::infrastructure::adapters::lxd::client::LxdClient;
 use crate::infrastructure::adapters::opentofu::{self};

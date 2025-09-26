@@ -22,18 +22,13 @@
 //! ### Virtual machine-specific tasks (`virtual_machine` submodule):
 //! - `run_provision_command` - Infrastructure provisioning via `OpenTofu`
 //! - `cleanup_infrastructure` - Infrastructure resource cleanup  
-//! - `preflight_cleanup` - VM-specific preflight cleanup (`OpenTofu` + LXD)
-//!
-//! ### Common functionality:
-//! - `preflight_cleanup_common` - Shared directory cleanup functions
-//! - `preflight_cleanup` - Legacy module with common error types and functions
+//! - `preflight_cleanup` - Shared directory cleanup functions and error types for both VM and container tests
 //!
 //! These tasks are orchestrated by the E2E test binaries to provide comprehensive
 //! testing coverage of the entire deployment system.
 
 pub mod container;
 pub mod preflight_cleanup;
-pub mod preflight_cleanup_common;
 pub mod run_configure_command;
 pub mod run_deployment_validation;
 pub mod run_test_command;
