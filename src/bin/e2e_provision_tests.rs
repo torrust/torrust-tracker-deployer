@@ -28,7 +28,7 @@ use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
     virtual_machine::{
         cleanup_infrastructure::cleanup_infrastructure,
-        run_provision_command::provision_infrastructure,
+        run_provision_command::run_provision_command,
     },
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
@@ -158,7 +158,7 @@ async fn run_provisioning_test(env: &TestEnvironment) -> Result<IpAddr> {
         "Starting infrastructure provisioning E2E test"
     );
 
-    let instance_ip = provision_infrastructure(env).await?;
+    let instance_ip = run_provision_command(env).await?;
 
     info!(
         status = "success",

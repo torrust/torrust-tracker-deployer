@@ -16,8 +16,7 @@ use std::fmt;
 use crate::infrastructure::adapters::opentofu::EmergencyDestroyError;
 
 // Re-export functions from the new modular structure for backward compatibility
-pub use crate::e2e::tasks::container::preflight_cleanup::cleanup_lingering_resources_docker;
-pub use crate::e2e::tasks::virtual_machine::preflight_cleanup::cleanup_lingering_resources;
+pub use crate::e2e::tasks::container::preflight_cleanup::cleanup_lingering_resources;
 
 /// Errors that can occur during pre-flight cleanup operations
 #[derive(Debug)]

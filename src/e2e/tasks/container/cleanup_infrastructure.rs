@@ -37,7 +37,7 @@ use crate::e2e::containers::RunningProvisionedContainer;
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deploy::e2e::tasks::container::cleanup_infrastructure::cleanup_docker_container;
+/// use torrust_tracker_deploy::e2e::tasks::container::cleanup_infrastructure::cleanup_infrastructure;
 /// use torrust_tracker_deploy::e2e::containers::StoppedProvisionedContainer;
 ///
 /// #[tokio::main]
@@ -47,12 +47,12 @@ use crate::e2e::containers::RunningProvisionedContainer;
 ///     
 ///     // ... perform tests ...
 ///     
-///     cleanup_docker_container(running_container);
+///     cleanup_infrastructure(running_container);
 ///     println!("Container cleanup completed");
 ///     Ok(())
 /// }
 /// ```
-pub fn cleanup_docker_container(running_container: RunningProvisionedContainer) {
+pub fn cleanup_infrastructure(running_container: RunningProvisionedContainer) {
     let container_id = running_container.container_id().to_string();
 
     info!(

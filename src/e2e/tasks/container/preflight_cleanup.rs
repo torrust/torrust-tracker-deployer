@@ -30,9 +30,7 @@ use tracing::info;
 /// # Errors
 ///
 /// Returns an error if directory cleanup fails and would prevent new test runs.
-pub fn cleanup_lingering_resources_docker(
-    env: &TestEnvironment,
-) -> Result<(), PreflightCleanupError> {
+pub fn cleanup_lingering_resources(env: &TestEnvironment) -> Result<(), PreflightCleanupError> {
     info!(
         operation = "preflight_cleanup_docker",
         "Starting pre-flight cleanup for Docker-based E2E tests"

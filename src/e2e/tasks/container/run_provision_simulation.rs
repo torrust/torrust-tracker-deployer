@@ -23,31 +23,74 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use tracing::info;
 
+use crate::application::steps::RenderAnsibleTemplatesStep;
 use crate::config::SshCredentials;
 use crate::container::Services;
+use crate::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
+use crate::e2e::containers::timeout::ContainerTimeouts;
+use crate::e2e::containers::{RunningProvisionedContainer, StoppedProvisionedContainer};
 use crate::e2e::environment::TestEnvironment;
-use crate::e2e::tasks::container::provision_docker_infrastructure::provision_docker_infrastructure;
+use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 
-/// Run provision simulation to prepare templates for container-based testing
+/// Create and start a Docker container for E2E testing
 ///
-/// This function simulates the provision phase specifically for Docker containers
-/// by rendering Ansible templates with the container's connection details. Since
-/// Docker handles the infrastructure creation, this task focuses on preparing
-/// the configuration templates that would normally be generated after VM provisioning.
-///
-/// # Arguments
-///
-/// * `socket_addr` - Socket address where the Docker container can be reached
-/// * `ssh_credentials` - SSH credentials for connecting to the container
-/// * `test_env` - Test environment containing configuration and services
+/// This function creates a new Docker container from the provisioned instance image
+/// and starts it, making it ready for SSH connectivity and configuration testing.
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` when provision simulation is completed successfully.
+/// Returns a `RunningProvisionedContainer` that can be used for:
+/// - SSH connectivity testing
+/// - Ansible configuration
+/// - Service validation
+/// - Container cleanup
 ///
 /// # Errors
 ///
 /// Returns an error if:
+/// - Container creation fails
+/// - Container startup fails
+/// - Docker daemon is not available
+async fn create_and_start_container() -> Result<RunningProvisionedContainer> {
+    info!("Creating and starting Docker container for E2E testing");
+
+    let stopped_container = StoppedProvisionedContainer::default();
+    let running_container = stopped_container
+        .start()
+        .await
+        .context("Failed to start provisioned instance container")?;
+
+    info!(
+        container_id = %running_container.container_id(),
+        ssh_socket_addr = %running_container.ssh_socket_addr(),
+        "Docker container setup completed successfully"
+    );
+
+    Ok(running_container)
+}
+
+/// Run provision simulation to prepare templates for container-based testing
+///
+/// This function simulates the provision phase specifically for Docker containers
+/// by setting up the container, establishing SSH connectivity, and rendering
+/// Ansible templates with the container's connection details. Since Docker handles
+/// the infrastructure creation, this task focuses on preparing the configuration
+/// templates that would normally be generated after VM provisioning.
+///
+/// # Arguments
+///
+/// * `test_env` - Test environment containing configuration and services
+///
+/// # Returns
+///
+/// Returns `Ok(RunningProvisionedContainer)` when provision simulation is completed
+/// successfully and the container is ready for further configuration.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Docker container setup fails
+/// - SSH connectivity cannot be established  
 /// - SSH credentials cannot be validated
 /// - Ansible template rendering fails for container configuration
 /// - Container services cannot be initialized
@@ -57,46 +100,42 @@ use crate::e2e::tasks::container::provision_docker_infrastructure::provision_doc
 /// ```rust,no_run
 /// use torrust_tracker_deploy::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
 /// use torrust_tracker_deploy::e2e::environment::TestEnvironment;
-/// use torrust_tracker_deploy::config::{InstanceName, SshCredentials};
-/// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+/// use torrust_tracker_deploy::config::InstanceName;
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
-///     // Container typically runs on 127.0.0.1 with a mapped port
-///     let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 2222);
 ///     let instance_name = InstanceName::new("test-container".to_string())?;
 ///     let test_env = TestEnvironment::new(false, "./templates".to_string(), instance_name)?;
 ///     
-///     let ssh_credentials = SshCredentials::new(
-///         "./id_rsa".into(),
-///         "./id_rsa.pub".into(),
-///         "testuser".to_string()
-///     );
-///     
-///     run_provision_simulation(socket_addr, &ssh_credentials, &test_env).await?;
-///     println!("Container provision simulation completed");
+///     let running_container = run_provision_simulation(&test_env).await?;
+///     println!("Container provision simulation completed: {}", running_container.ssh_socket_addr());
 ///     Ok(())
 /// }
 /// ```
 pub async fn run_provision_simulation(
-    socket_addr: SocketAddr,
-    ssh_credentials: &SshCredentials,
     test_env: &TestEnvironment,
-) -> Result<()> {
-    info!(
-        socket_addr = %socket_addr,
-        ssh_user = %ssh_credentials.ssh_username,
-        "Running provision simulation to prepare container configuration templates"
-    );
+) -> Result<RunningProvisionedContainer> {
+    info!("Running provision simulation to prepare container configuration templates");
 
-    // Initialize services from test environment configuration
+    // Step 1: Setup Docker container
+    let running_container = create_and_start_container().await?;
+    let socket_addr = running_container.ssh_socket_addr();
+
+    // Step 2: Establish SSH connectivity
+    establish_ssh_connectivity(
+        socket_addr,
+        &test_env.config.ssh_credentials,
+        Some(&running_container),
+    )
+    .await?;
+
+    // Step 3: Initialize services from test environment configuration
     let services = Services::new(&test_env.config);
 
-    // Run the container infrastructure provision simulation using existing Docker task
-    // This renders Ansible templates with the container connection details
-    provision_docker_infrastructure(
+    // Step 4: Render Ansible configuration templates with container connection details
+    render_ansible_configuration(
         Arc::clone(&services.ansible_template_renderer),
-        ssh_credentials.clone(),
+        test_env.config.ssh_credentials.clone(),
         socket_addr,
     )
     .await
@@ -104,8 +143,112 @@ pub async fn run_provision_simulation(
 
     info!(
         socket_addr = %socket_addr,
+        container_id = %running_container.container_id(),
         status = "complete",
         "Container provision simulation completed - Ansible templates rendered with container details"
+    );
+
+    Ok(running_container)
+}
+
+/// Render Ansible configuration templates for container-based E2E testing
+///
+/// This function renders Ansible templates with the container's connection details,
+/// preparing the configuration files needed for Ansible playbook execution.
+/// SSH connectivity is assumed to be already established by the container startup process.
+///
+/// # Arguments
+///
+/// * `ansible_template_renderer` - Renderer for creating Ansible inventory and configuration
+/// * `ssh_credentials` - SSH credentials for connecting to the container
+/// * `socket_addr` - Socket address (IP and port) where the container can be reached
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Ansible template rendering fails
+async fn render_ansible_configuration(
+    ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
+    ssh_credentials: SshCredentials,
+    socket_addr: SocketAddr,
+) -> Result<()> {
+    info!(
+        socket_addr = %socket_addr,
+        "Rendering Ansible configuration templates"
+    );
+
+    // Step 1: Render Ansible templates with container connection details
+    info!("Rendering Ansible templates for container");
+    RenderAnsibleTemplatesStep::new(ansible_template_renderer, ssh_credentials, socket_addr)
+        .execute()
+        .await
+        .context("Failed to render Ansible templates for container")?;
+
+    // Note: SSH connectivity check is skipped for Docker containers since
+    // the container setup process already ensures SSH is ready and accessible
+
+    info!(
+        socket_addr = %socket_addr,
+        "Ansible configuration templates rendered successfully"
+    );
+
+    Ok(())
+}
+
+/// Establish SSH connectivity for a running Docker container
+///
+/// This function handles the complete SSH connectivity establishment process for containers:
+/// 1. Waits for SSH server to become available on the container
+/// 2. Sets up SSH key authentication for container access
+/// 3. Validates connectivity is ready for Ansible operations
+///
+/// # Arguments
+///
+/// * `socket_addr` - Socket address (IP and port) where the container's SSH server is running
+/// * `ssh_credentials` - SSH credentials containing keys and username
+/// * `container` - Optional running container reference for key setup
+///
+/// # Returns
+///
+/// Returns `Ok(())` when SSH connectivity is fully established and ready for container operations.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Container SSH server fails to start within timeout
+/// - SSH key setup fails on the container
+/// - Authentication cannot be established with the container
+async fn establish_ssh_connectivity(
+    socket_addr: SocketAddr,
+    ssh_credentials: &SshCredentials,
+    container: Option<&RunningProvisionedContainer>,
+) -> Result<()> {
+    info!(
+        socket_addr = %socket_addr,
+        ssh_user = %ssh_credentials.ssh_username,
+        "Establishing SSH connectivity"
+    );
+
+    // Step 1: Wait for SSH server to become available
+    let timeouts = ContainerTimeouts::default();
+    let ssh_wait_action = SshWaitAction::new(timeouts.ssh_ready, 10);
+    ssh_wait_action
+        .execute(socket_addr)
+        .context("SSH server failed to start")?;
+
+    // Step 2: Setup SSH key authentication (only for containers currently)
+    if let Some(running_container) = container {
+        let ssh_key_setup_action = SshKeySetupAction::new();
+        ssh_key_setup_action
+            .execute(running_container, ssh_credentials)
+            .await
+            .context("Failed to setup SSH authentication")?;
+    }
+
+    info!(
+        socket_addr = %socket_addr,
+        ssh_user = %ssh_credentials.ssh_username,
+        "SSH connectivity established successfully - ready for Ansible operations"
     );
 
     Ok(())

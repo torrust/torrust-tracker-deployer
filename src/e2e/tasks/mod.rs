@@ -17,11 +17,8 @@
 //!
 //! ### Container-specific tasks (`container` submodule):
 //! - `cleanup_infrastructure` - Docker container cleanup
-//! - `configure_ssh_connectivity` - SSH connectivity setup for containers
-//! - `provision_docker_infrastructure` - Docker container provisioning simulation
 //! - `preflight_cleanup` - Container-specific preflight cleanup
 //! - `run_provision_simulation` - Provision simulation for container-based testing
-//! - `setup_docker_container` - Docker container setup and startup
 //!
 //! ### Virtual machine-specific tasks (`virtual_machine` submodule):
 //! - `run_provision_command` - Infrastructure provisioning via `OpenTofu`

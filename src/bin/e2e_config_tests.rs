@@ -47,19 +47,17 @@
 use anyhow::Result;
 use clap::Parser;
 use std::time::Instant;
+use torrust_tracker_deploy::e2e::tasks::run_configure_command::run_configure_command;
 use tracing::{error, info};
 
 use torrust_tracker_deploy::config::InstanceName;
 use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
 use torrust_tracker_deploy::e2e::tasks::{
     container::{
-        cleanup_infrastructure::cleanup_docker_container,
-        configure_ssh_connectivity::configure_ssh_connectivity,
+        cleanup_infrastructure::cleanup_infrastructure,
         run_provision_simulation::run_provision_simulation,
-        setup_docker_container::setup_docker_container,
     },
     preflight_cleanup,
-    run_configure_command::run_ansible_configuration,
     run_deployment_validation::run_deployment_validation,
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
@@ -124,7 +122,7 @@ pub async fn main() -> Result<()> {
         TestEnvironmentType::Container,
     )?;
 
-    preflight_cleanup::cleanup_lingering_resources_docker(&env)?;
+    preflight_cleanup::cleanup_lingering_resources(&env)?;
 
     let test_result = run_configuration_tests(&env).await;
 
@@ -163,30 +161,20 @@ pub async fn main() -> Result<()> {
 async fn run_configuration_tests(test_env: &TestEnvironment) -> Result<()> {
     info!("Starting configuration tests with Docker container");
 
-    // Step 1: Setup Docker container
-    let running_container = setup_docker_container().await?;
+    // Step 1: Run provision simulation (includes container setup and SSH connectivity)
+    let running_container = run_provision_simulation(test_env).await?;
+
+    // Step 2: Run Ansible configuration
+    run_configure_command(test_env)?;
+
+    // Step 3: Run deployment validation
     let socket_addr = running_container.ssh_socket_addr();
-
-    // Step 2: Configure SSH connectivity
-    configure_ssh_connectivity(
-        socket_addr,
-        &test_env.config.ssh_credentials,
-        Some(&running_container),
-    )
-    .await?;
-
-    // Step 3: Run provision simulation
-    run_provision_simulation(socket_addr, &test_env.config.ssh_credentials, test_env).await?;
-
-    // Step 4: Run Ansible configuration (expect failure due to inventory mismatch)
-    run_ansible_configuration(socket_addr, test_env, false)?;
-
-    // Step 5: Run deployment validation
     run_deployment_validation(socket_addr, &test_env.config.ssh_credentials).await?;
 
-    // Step 6: Cleanup container
-    cleanup_docker_container(running_container);
+    // Step 4: Cleanup container
+    cleanup_infrastructure(running_container);
 
     info!("Configuration tests completed successfully");
+
     Ok(())
 }

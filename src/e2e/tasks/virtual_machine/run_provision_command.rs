@@ -38,7 +38,7 @@ use crate::e2e::environment::TestEnvironment;
 /// - `ProvisionCommand` execution fails
 /// - Infrastructure provisioning fails
 /// - IP address cannot be obtained from `OpenTofu` outputs
-pub async fn provision_infrastructure(env: &TestEnvironment) -> Result<IpAddr> {
+pub async fn run_provision_command(env: &TestEnvironment) -> Result<IpAddr> {
     info!("Provisioning test infrastructure");
 
     // Use the new ProvisionCommand to handle all infrastructure provisioning steps

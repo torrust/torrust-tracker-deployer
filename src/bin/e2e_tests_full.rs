@@ -31,11 +31,11 @@ use torrust_tracker_deploy::config::InstanceName;
 use torrust_tracker_deploy::e2e::environment::TestEnvironment;
 use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
-    run_configure_command::configure_infrastructure,
-    run_test_command::validate_deployment,
+    run_configure_command::run_configure_command,
+    run_test_command::run_test_command,
     virtual_machine::{
         cleanup_infrastructure::cleanup_infrastructure,
-        run_provision_command::provision_infrastructure,
+        run_provision_command::run_provision_command,
     },
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
@@ -107,7 +107,7 @@ pub async fn main() -> Result<()> {
     let deployment_result = run_full_deployment_test(&env).await;
 
     let validation_result = match &deployment_result {
-        Ok(instance_ip) => validate_deployment(&env, instance_ip).await,
+        Ok(instance_ip) => run_test_command(&env, instance_ip).await,
         Err(_) => Ok(()), // Skip validation if deployment failed
     };
 
@@ -169,9 +169,9 @@ async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
         "Starting full deployment E2E test"
     );
 
-    let instance_ip = provision_infrastructure(env).await?;
+    let instance_ip = run_provision_command(env).await?;
 
-    configure_infrastructure(env)?;
+    run_configure_command(env)?;
 
     info!(status = "success", "Deployment completed successfully");
 

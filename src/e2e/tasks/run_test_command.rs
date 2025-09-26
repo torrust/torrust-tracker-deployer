@@ -35,7 +35,7 @@ use crate::e2e::environment::TestEnvironment;
 /// Returns an error if:
 /// - `TestCommand` execution fails
 /// - Any validation check fails
-pub async fn validate_deployment(env: &TestEnvironment, instance_ip: &IpAddr) -> Result<()> {
+pub async fn run_test_command(env: &TestEnvironment, instance_ip: &IpAddr) -> Result<()> {
     info!("Starting deployment validation");
 
     // Use the new TestCommand to handle all infrastructure validation steps
