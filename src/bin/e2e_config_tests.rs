@@ -51,6 +51,7 @@ use torrust_tracker_deploy::e2e::tasks::run_configure_command::run_configure_com
 use tracing::{error, info};
 
 use torrust_tracker_deploy::config::InstanceName;
+use torrust_tracker_deploy::domain::Username;
 use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
 use torrust_tracker_deploy::e2e::tasks::{
     container::{
@@ -114,10 +115,12 @@ pub async fn main() -> Result<()> {
     let instance_name =
         InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
 
+    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
+
     let env = TestEnvironment::initialized(
         false,
         cli.templates_dir,
-        "torrust",
+        &ssh_user,
         instance_name,
         TestEnvironmentType::Container,
     )?;

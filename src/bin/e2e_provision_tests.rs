@@ -23,6 +23,7 @@ use tracing::{error, info};
 
 // Import E2E testing infrastructure
 use torrust_tracker_deploy::config::InstanceName;
+use torrust_tracker_deploy::domain::Username;
 use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
 use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
@@ -98,10 +99,12 @@ pub async fn main() -> Result<()> {
     let instance_name =
         InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
 
+    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
+
     let env = TestEnvironment::initialized(
         cli.keep,
         cli.templates_dir,
-        "torrust",
+        &ssh_user,
         instance_name,
         TestEnvironmentType::VirtualMachine,
     )?;

@@ -26,6 +26,7 @@ use tracing::{info, warn};
 
 use crate::config::{Config, InstanceName, SshCredentials};
 use crate::container::Services;
+use crate::domain::Username;
 
 /// Errors that can occur during test environment creation and initialization
 #[derive(Debug, thiserror::Error)]
@@ -109,7 +110,7 @@ impl TestEnvironment {
     pub fn initialized(
         keep_env: bool,
         templates_dir: impl Into<std::path::PathBuf>,
-        ssh_user: &str,
+        ssh_user: &Username,
         instance_name: InstanceName,
         environment_type: TestEnvironmentType,
     ) -> Result<Self, TestEnvironmentError> {
@@ -189,7 +190,7 @@ impl TestEnvironment {
     fn setup_ssh_credentials(
         project_root: &std::path::Path,
         temp_dir: &TempDir,
-        ssh_user: &str,
+        ssh_user: &Username,
     ) -> Result<SshCredentials, TestEnvironmentError> {
         let temp_ssh_key = temp_dir.path().join(SSH_PRIVATE_KEY_FILENAME);
         let temp_ssh_pub_key = temp_dir.path().join(SSH_PUBLIC_KEY_FILENAME);
