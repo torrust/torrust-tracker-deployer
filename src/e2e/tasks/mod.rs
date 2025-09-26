@@ -11,7 +11,6 @@
 //! ### Infrastructure-agnostic tasks (can be used with both containers and VMs):
 //! - `clean_and_prepare_templates` - Template cleanup and preparation
 //! - `configure_infrastructure` - Infrastructure configuration via Ansible  
-//! - `create_test_ssh_credentials` - Helper for creating test SSH credentials
 //! - `run_ansible_configuration` - Ansible playbook execution
 //! - `run_deployment_validation` - Deployment validation and testing
 //! - `setup_ssh_key` - SSH key generation and setup
@@ -40,7 +39,6 @@
 pub mod clean_and_prepare_templates;
 pub mod configure_infrastructure;
 pub mod container;
-pub mod create_test_ssh_credentials;
 pub mod preflight_cleanup;
 pub mod preflight_cleanup_common;
 pub mod run_ansible_configuration;
