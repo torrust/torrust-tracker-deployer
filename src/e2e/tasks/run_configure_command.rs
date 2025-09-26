@@ -17,130 +17,34 @@
 //! - Works with both container and VM-based infrastructure
 //! - Integrates with the existing `ConfigureCommand` workflow
 //!
-//! ## Notes
+//! ## E2E Config Tests Integration
 //!
-//! Currently, this task has limitations when used with containers due to
-//! inventory addressing differences. Container-specific inventory templates
-//! may be needed for full container support.
+//! In E2E config tests, this module works seamlessly with provision simulation.
+//! The provision simulation ensures that Ansible config files are generated with
+//! the correct configuration even without executing the actual provision phase,
+//! allowing the configuration command to run successfully on simulated infrastructure.
 
-use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::application::commands::ConfigureCommand;
-use crate::container::Services;
+
 use crate::e2e::environment::TestEnvironment;
 
-/// Run Ansible configuration on a target instance
+/// Configure infrastructure using Ansible playbooks
 ///
-/// This function executes Ansible playbooks to configure services and applications
-/// on the target instance. It uses the existing `ConfigureCommand` workflow and
-/// handles both successful configurations and expected failures.
-///
-/// # Arguments
-///
-/// * `socket_addr` - Socket address where the target instance can be reached
-/// * `test_env` - Test environment containing configuration and services
-/// * `expect_success` - Whether to expect configuration to succeed (for testing purposes)
-///
-/// # Returns
-///
-/// Returns `Ok(())` when:
-/// - Configuration succeeds (if `expect_success` is true)
-/// - Expected failure occurs (if `expect_success` is false)
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Configuration fails unexpectedly (when `expect_success` is true)
-/// - Services cannot be initialized
-/// - `ConfigureCommand` execution encounters unexpected errors
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use torrust_tracker_deploy::e2e::tasks::run_configure_command::run_ansible_configuration;
-/// use torrust_tracker_deploy::e2e::environment::TestEnvironment;
-/// use torrust_tracker_deploy::config::InstanceName;
-/// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-///
-/// fn main() -> anyhow::Result<()> {
-///     let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 2222);
-///     let instance_name = InstanceName::new("test-instance".to_string())?;
-///     let test_env = TestEnvironment::new(false, "./templates".to_string(), instance_name)?;
-///     
-///     run_ansible_configuration(socket_addr, &test_env, true)?;
-///     println!("Ansible configuration completed successfully");
-///     Ok(())
-/// }
-/// ```
-pub fn run_ansible_configuration(
-    socket_addr: SocketAddr,
-    test_env: &TestEnvironment,
-    expect_success: bool,
-) -> Result<()> {
-    info!(
-        socket_addr = %socket_addr,
-        expect_success = expect_success,
-        "Running Ansible configuration on instance"
-    );
-
-    // Initialize services from test environment configuration
-    let services = Services::new(&test_env.config);
-    let configure_command = ConfigureCommand::new(Arc::clone(&services.ansible_client));
-
-    // Execute configuration command
-    match configure_command.execute().map_err(anyhow::Error::from) {
-        Ok(()) => {
-            if expect_success {
-                info!(
-                    socket_addr = %socket_addr,
-                    status = "success",
-                    "Configuration completed successfully"
-                );
-            } else {
-                warn!(
-                    socket_addr = %socket_addr,
-                    status = "unexpected_success",
-                    "Configuration succeeded when failure was expected"
-                );
-            }
-        }
-        Err(e) => {
-            if expect_success {
-                return Err(e.context("Ansible configuration failed unexpectedly"));
-            }
-            info!(
-                socket_addr = %socket_addr,
-                status = "expected_failure",
-                error = %e,
-                "Configuration failed as expected"
-            );
-        }
-    }
-
-    info!(
-        socket_addr = %socket_addr,
-        status = "complete",
-        "Ansible configuration workflow completed"
-    );
-
-    Ok(())
-}
-
-/// Configure infrastructure using Ansible playbooks (compatibility wrapper)
-///
-/// This is a simplified wrapper around the `ConfigureCommand` for use in full E2E tests.
-/// For more advanced configuration with success/failure handling, use `run_ansible_configuration`.
+/// This function executes Ansible configuration using the `ConfigureCommand` for E2E tests.
+/// It works with both VM and container-based infrastructure, utilizing rendered Ansible
+/// inventories and configuration files generated during the provision simulation phase.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 /// - `ConfigureCommand` execution fails
 /// - Infrastructure configuration fails
-pub fn configure_infrastructure(env: &TestEnvironment) -> Result<()> {
+pub fn run_configure_command(env: &TestEnvironment) -> Result<()> {
     info!("Configuring test infrastructure");
 
     // Use the new ConfigureCommand to handle all infrastructure configuration steps
