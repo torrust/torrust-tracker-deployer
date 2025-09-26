@@ -47,7 +47,7 @@ impl SshConnection {
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
-    ///     "ubuntu".to_string(),
+    ///     Username::new("ubuntu").unwrap(),
     /// );
     /// let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)), 22);
     /// let connection = SshConnection::new(
@@ -74,7 +74,7 @@ impl SshConnection {
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
-    ///     "ubuntu".to_string(),
+    ///     Username::new("ubuntu").unwrap(),
     /// );
     /// let connection = SshConnection::with_default_port(
     ///     credentials,
@@ -102,7 +102,7 @@ impl SshConnection {
     /// Access the SSH username.
     #[must_use]
     pub fn ssh_username(&self) -> &str {
-        &self.credentials.ssh_username
+        self.credentials.ssh_username.as_str()
     }
 
     /// Access the SSH port.

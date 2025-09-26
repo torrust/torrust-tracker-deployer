@@ -111,13 +111,18 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr};
     use tempfile::TempDir;
 
+    use crate::shared::Username;
+
     // Helper function to create mock dependencies for testing
     fn create_mock_dependencies() -> (SshCredentials, IpAddr, TempDir) {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let ssh_key_path = temp_dir.path().join("test_key");
         let ssh_pub_key_path = temp_dir.path().join("test_key.pub");
-        let ssh_credentials =
-            SshCredentials::new(ssh_key_path, ssh_pub_key_path, "test_user".to_string());
+        let ssh_credentials = SshCredentials::new(
+            ssh_key_path,
+            ssh_pub_key_path,
+            Username::new("test_user").unwrap(),
+        );
         let instance_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
 
         (ssh_credentials, instance_ip, temp_dir)

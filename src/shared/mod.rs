@@ -6,6 +6,8 @@
 
 pub mod executor;
 pub mod ssh;
+pub mod username;
 
 // Re-export commonly used types for convenience
 pub use executor::{CommandError, CommandExecutor};
+pub use username::{Username, UsernameError};

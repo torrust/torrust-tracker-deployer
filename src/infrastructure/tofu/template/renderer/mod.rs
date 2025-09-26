@@ -406,6 +406,8 @@ mod tests {
     use super::*;
     use std::fs;
 
+    use crate::shared::Username;
+
     /// Test instance name for unit tests
     fn test_instance_name() -> InstanceName {
         InstanceName::new("test-instance".to_string()).expect("Valid test instance name")
@@ -424,7 +426,11 @@ mod tests {
         )
         .expect("Failed to write public key");
 
-        SshCredentials::new(ssh_priv_key_path, ssh_pub_key_path, "testuser".to_string())
+        SshCredentials::new(
+            ssh_priv_key_path,
+            ssh_pub_key_path,
+            Username::new("testuser").unwrap(),
+        )
     }
 
     #[tokio::test]

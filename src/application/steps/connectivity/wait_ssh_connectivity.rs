@@ -78,7 +78,8 @@ impl WaitForSSHConnectivityStep {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr};
 
-    use crate::shared::ssh::SshCredentials;
+    use crate::shared::ssh::{SshConnection, SshCredentials};
+    use crate::shared::Username;
 
     use super::*;
 
@@ -88,7 +89,7 @@ mod tests {
         let credentials = SshCredentials::new(
             "/tmp/test_key".into(),
             "/tmp/test_key.pub".into(),
-            "testuser".to_string(),
+            Username::new("testuser").unwrap(),
         );
         let ssh_connection = SshConnection::with_default_port(credentials, instance_ip);
 
@@ -108,7 +109,7 @@ mod tests {
         let credentials = SshCredentials::new(
             "/home/user/.ssh/id_rsa".into(),
             "/home/user/.ssh/id_rsa.pub".into(),
-            "torrust".to_string(),
+            Username::new("torrust").unwrap(),
         );
         let ssh_connection = SshConnection::with_default_port(credentials, instance_ip);
 
@@ -128,7 +129,7 @@ mod tests {
         let credentials = SshCredentials::new(
             "/path/to/ssh/key".into(),
             "/path/to/ssh/key.pub".into(),
-            "admin".to_string(),
+            Username::new("admin").unwrap(),
         );
         let ssh_connection = SshConnection::with_default_port(credentials, instance_ip);
 

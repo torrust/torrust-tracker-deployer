@@ -15,6 +15,8 @@
 
 use std::path::PathBuf;
 
+use crate::shared::Username;
+
 /// SSH credentials for remote instance authentication.
 ///
 /// Contains the static SSH authentication information that is known
@@ -39,7 +41,7 @@ pub struct SshCredentials {
     ///
     /// This username will be used when establishing SSH connections to
     /// deployed instances. Common values include "ubuntu", "root", or "torrust".
-    pub ssh_username: String,
+    pub ssh_username: Username,
 }
 
 impl SshCredentials {
@@ -47,18 +49,18 @@ impl SshCredentials {
     ///
     /// ```rust
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::shared::ssh::SshCredentials;
+    /// # use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
-    ///     "ubuntu".to_string(),
+    ///     Username::new("ubuntu").unwrap(),
     /// );
     /// ```
     #[must_use]
     pub fn new(
         ssh_priv_key_path: PathBuf,
         ssh_pub_key_path: PathBuf,
-        ssh_username: String,
+        ssh_username: Username,
     ) -> Self {
         Self {
             ssh_priv_key_path,

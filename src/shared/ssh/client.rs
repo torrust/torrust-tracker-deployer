@@ -250,13 +250,15 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr};
     use std::path::PathBuf;
 
+    use crate::shared::Username;
+
     #[test]
     fn it_should_create_ssh_client_with_valid_parameters() {
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
         let credentials = SshCredentials::new(
             PathBuf::from("/path/to/key"),
             PathBuf::from("/path/to/key.pub"),
-            "testuser".to_string(),
+            Username::new("testuser").unwrap(),
         );
         let ssh_connection = SshConnection::with_default_port(credentials, host_ip);
         let ssh_client = SshClient::new(ssh_connection);
@@ -279,7 +281,7 @@ mod tests {
         let credentials = SshCredentials::new(
             PathBuf::from("/path/to/key"),
             PathBuf::from("/path/to/key.pub"),
-            "testuser".to_string(),
+            Username::new("testuser").unwrap(),
         );
         let ssh_connection = SshConnection::with_default_port(credentials, host_ip);
         let ssh_client = SshClient::new(ssh_connection);

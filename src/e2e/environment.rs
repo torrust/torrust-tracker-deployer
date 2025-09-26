@@ -26,7 +26,7 @@ use tracing::{info, warn};
 
 use crate::config::{Config, InstanceName, SshCredentials};
 use crate::container::Services;
-use crate::domain::Username;
+use crate::shared::Username;
 
 /// Errors that can occur during test environment creation and initialization
 #[derive(Debug, thiserror::Error)]
@@ -233,7 +233,7 @@ impl TestEnvironment {
         Ok(SshCredentials::new(
             temp_ssh_key,
             temp_ssh_pub_key,
-            ssh_user.to_string(),
+            ssh_user.clone(),
         ))
     }
 

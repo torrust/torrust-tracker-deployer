@@ -11,6 +11,7 @@ use testcontainers::core::ExecCommand;
 
 use crate::e2e::containers::ContainerExecutor;
 use crate::shared::ssh::SshCredentials;
+use crate::shared::Username;
 
 /// Specific error types for SSH key setup operations
 #[derive(Debug, thiserror::Error)]
@@ -132,22 +133,28 @@ impl SshKeySetupAction {
         credentials: &SshCredentials,
     ) -> std::result::Result<(), SshKeySetupError> {
         Self::create_ssh_directory(container, &credentials.ssh_username).await?;
+
         Self::add_public_key_to_authorized_keys(
             container,
             &credentials.ssh_username,
             &credentials.ssh_pub_key_path,
         )
         .await?;
+
         Self::set_ssh_directory_permissions(
             container,
-            &credentials.ssh_username,
-            &format!("/home/{}/.ssh", credentials.ssh_username),
+            credentials.ssh_username.as_str(),
+            &format!("/home/{}/.ssh", credentials.ssh_username.as_str()),
         )
         .await?;
+
         Self::set_authorized_keys_permissions(
             container,
-            &credentials.ssh_username,
-            &format!("/home/{}/.ssh/authorized_keys", credentials.ssh_username),
+            credentials.ssh_username.as_str(),
+            &format!(
+                "/home/{}/.ssh/authorized_keys",
+                credentials.ssh_username.as_str()
+            ),
         )
         .await?;
 
@@ -157,9 +164,10 @@ impl SshKeySetupAction {
     /// Create the SSH directory for the user
     async fn create_ssh_directory<T: ContainerExecutor>(
         container: &T,
-        username: &str,
+        username: &Username,
     ) -> std::result::Result<(), SshKeySetupError> {
-        let command = ExecCommand::new(["mkdir", "-p", &format!("/home/{username}/.ssh")]);
+        let command =
+            ExecCommand::new(["mkdir", "-p", &format!("/home/{}/.ssh", username.as_str())]);
         container.exec(command).await.map_err(|source| {
             SshKeySetupError::SshDirectoryCreationFailed {
                 ssh_user: username.to_string(),
@@ -172,7 +180,7 @@ impl SshKeySetupAction {
     /// Add the public key to the `authorized_keys` file
     async fn add_public_key_to_authorized_keys<T: ContainerExecutor>(
         container: &T,
-        username: &str,
+        username: &Username,
         public_key_path: &Path,
     ) -> std::result::Result<(), SshKeySetupError> {
         let public_key = fs::read_to_string(public_key_path).map_err(|source| {
@@ -187,8 +195,9 @@ impl SshKeySetupAction {
             "sh",
             "-c",
             &format!(
-                "echo '{}' >> /home/{username}/.ssh/authorized_keys",
-                public_key.trim()
+                "echo '{}' >> /home/{}/.ssh/authorized_keys",
+                public_key.trim(),
+                username.as_str()
             ),
         ]);
         container.exec(command).await.map_err(|source| {
@@ -302,10 +311,11 @@ mod tests {
     // Helper function to create mock SSH credentials for testing
     #[allow(dead_code)]
     fn create_mock_ssh_credentials() -> SshCredentials {
+        use crate::shared::Username;
         SshCredentials::new(
             PathBuf::from("/mock/path/to/private_key"),
             PathBuf::from("/mock/path/to/public_key.pub"),
-            "testuser".to_string(),
+            Username::new("testuser").unwrap(),
         )
     }
 }

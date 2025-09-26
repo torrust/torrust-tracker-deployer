@@ -178,6 +178,8 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
+    use crate::shared::Username;
+
     // Helper function to create mock dependencies for testing
     fn create_mock_dependencies() -> (
         Arc<TofuTemplateRenderer>,
@@ -195,7 +197,7 @@ mod tests {
         let ssh_credentials = SshCredentials::new(
             "dummy_key".into(),
             "dummy_key.pub".into(),
-            "testuser".to_string(),
+            Username::new("testuser").unwrap(),
         );
 
         let tofu_renderer = Arc::new(TofuTemplateRenderer::new(
@@ -219,8 +221,11 @@ mod tests {
 
         let ssh_key_path = temp_dir.path().join("test_key");
         let ssh_pub_key_path = temp_dir.path().join("test_key.pub");
-        let ssh_credentials =
-            SshCredentials::new(ssh_key_path, ssh_pub_key_path, "test_user".to_string());
+        let ssh_credentials = SshCredentials::new(
+            ssh_key_path,
+            ssh_pub_key_path,
+            Username::new("test_user").unwrap(),
+        );
 
         (
             tofu_renderer,

@@ -74,6 +74,7 @@ mod tests {
     use std::path::PathBuf;
 
     use crate::shared::ssh::SshCredentials;
+    use crate::shared::Username;
 
     use super::*;
 
@@ -82,7 +83,7 @@ mod tests {
         let ssh_credentials = SshCredentials::new(
             PathBuf::from("test_key"),
             PathBuf::from("test_key.pub"),
-            "test_user".to_string(),
+            Username::new("test_user").unwrap(),
         );
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
         let ssh_connection = SshConnection::with_default_port(ssh_credentials, host_ip);

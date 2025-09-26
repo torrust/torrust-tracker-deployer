@@ -90,10 +90,11 @@ impl Config {
     /// # use std::net::{IpAddr, Ipv4Addr};
     /// # use std::path::PathBuf;
     /// # use torrust_tracker_deploy::config::{Config, SshCredentials, InstanceName};
+    /// # use torrust_tracker_deploy::shared::Username;
     /// let ssh_credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
-    ///     "ubuntu".to_string(),
+    ///     Username::new("ubuntu").unwrap(),
     /// );
     /// let instance_name = InstanceName::new("my-instance".to_string()).unwrap();
     /// let config = Config::new(

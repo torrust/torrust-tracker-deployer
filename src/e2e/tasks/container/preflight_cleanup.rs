@@ -79,7 +79,7 @@ fn cleanup_hanging_docker_containers(env: &TestEnvironment) {
     // First, check if the container exists
     let check_result = command_executor.run_command(
         "docker",
-        &["ps", "-aq", "--filter", &format!("name={}", instance_name)],
+        &["ps", "-aq", "--filter", &format!("name={instance_name}")],
         None,
     );
 

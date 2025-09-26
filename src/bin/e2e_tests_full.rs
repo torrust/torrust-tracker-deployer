@@ -28,7 +28,6 @@ use tracing::{error, info};
 
 // Import E2E testing infrastructure
 use torrust_tracker_deploy::config::InstanceName;
-use torrust_tracker_deploy::domain::Username;
 use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
 use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
@@ -40,6 +39,7 @@ use torrust_tracker_deploy::e2e::tasks::{
     },
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
+use torrust_tracker_deploy::shared::Username;
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]

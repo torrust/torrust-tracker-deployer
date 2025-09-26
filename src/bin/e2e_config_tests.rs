@@ -51,7 +51,6 @@ use torrust_tracker_deploy::e2e::tasks::run_configure_command::run_configure_com
 use tracing::{error, info};
 
 use torrust_tracker_deploy::config::InstanceName;
-use torrust_tracker_deploy::domain::Username;
 use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
 use torrust_tracker_deploy::e2e::tasks::{
     container::{
@@ -62,6 +61,7 @@ use torrust_tracker_deploy::e2e::tasks::{
     run_configuration_validation::run_configuration_validation,
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
+use torrust_tracker_deploy::shared::Username;
 
 #[derive(Parser)]
 #[command(name = "e2e-config-tests")]

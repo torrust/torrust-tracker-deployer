@@ -64,7 +64,7 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 /// use torrust_tracker_deploy::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
 /// use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
 /// use torrust_tracker_deploy::config::InstanceName;
-/// use torrust_tracker_deploy::domain::Username;
+/// use torrust_tracker_deploy::shared::Username;
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {

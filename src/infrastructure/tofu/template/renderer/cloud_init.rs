@@ -30,7 +30,7 @@
 //! let ssh_credentials = SshCredentials::new(
 //!     PathBuf::from("fixtures/testing_rsa"),
 //!     PathBuf::from("fixtures/testing_rsa.pub"),
-//!     "username".to_string()
+//!     Username::new("username").unwrap()
 //! );
 //! let renderer = CloudInitTemplateRenderer::new(template_manager);
 //!
@@ -219,6 +219,8 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
+    use crate::shared::Username;
+
     /// Helper function to create mock SSH credentials for testing
     fn create_mock_ssh_credentials(temp_dir: &std::path::Path) -> SshCredentials {
         let ssh_priv_key_path = temp_dir.join("test_key");
@@ -233,7 +235,11 @@ mod tests {
         )
         .expect("Failed to write public key");
 
-        SshCredentials::new(ssh_priv_key_path, ssh_pub_key_path, "test_user".to_string())
+        SshCredentials::new(
+            ssh_priv_key_path,
+            ssh_pub_key_path,
+            Username::new("test_user").unwrap(),
+        )
     }
 
     /// Helper function to create a mock template manager with cloud-init template
@@ -329,7 +335,7 @@ users:
         let ssh_credentials = SshCredentials::new(
             non_existent_key.clone(),
             non_existent_key,
-            "test_user".to_string(),
+            Username::new("test_user").unwrap(),
         );
 
         let output_dir = TempDir::new().expect("Failed to create output dir");
