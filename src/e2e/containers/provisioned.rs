@@ -62,7 +62,7 @@ use std::time::Duration;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
     runners::AsyncRunner,
-    ContainerAsync, GenericImage,
+    ContainerAsync, GenericImage, ImageExt,
 };
 use tracing::info;
 
@@ -170,13 +170,20 @@ impl StoppedProvisionedContainer {
 
     /// Start the container and transition to running state
     ///
+    /// # Arguments
+    ///
+    /// * `container_name` - Optional name for the running container. If provided, the container will be named accordingly.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - Docker image build fails
     /// - Container fails to start
     /// - Container networking setup fails
-    pub async fn start(self) -> Result<RunningProvisionedContainer> {
+    pub async fn start(
+        self,
+        container_name: Option<String>,
+    ) -> Result<RunningProvisionedContainer> {
         // First build the Docker image if needed
         Self::build_image(self.timeouts.docker_build)?;
 
@@ -199,7 +206,14 @@ impl StoppedProvisionedContainer {
                     })
                 })?;
 
-        let container = image.start().await.map_err(|source| {
+        // Start the container with optional container name
+        let container = if let Some(name) = container_name {
+            info!(container_name = %name, "Starting container with custom name");
+            image.with_container_name(name).start().await
+        } else {
+            image.start().await
+        }
+        .map_err(|source| {
             Box::new(ContainerError::ContainerRuntime {
                 source: ContainerRuntimeError::StartupFailed {
                     image_name: DEFAULT_IMAGE_NAME.to_string(),

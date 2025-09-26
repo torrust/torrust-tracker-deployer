@@ -89,7 +89,8 @@ pub async fn run_provision_simulation(
     info!("Running provision simulation to prepare container configuration templates");
 
     // Step 1: Setup Docker container
-    let running_container = create_and_start_container().await?;
+    let running_container =
+        create_and_start_container(test_env.config.instance_name.as_str().to_string()).await?;
 
     let socket_addr = running_container.ssh_socket_addr();
 
@@ -128,6 +129,10 @@ pub async fn run_provision_simulation(
 /// This function creates a new Docker container from the provisioned instance image
 /// and starts it, making it ready for SSH connectivity and configuration testing.
 ///
+/// # Arguments
+///
+/// * `container_name` - Name for the container. The container will be created with this name.
+///
 /// # Returns
 ///
 /// Returns a `RunningProvisionedContainer` that can be used for:
@@ -142,17 +147,18 @@ pub async fn run_provision_simulation(
 /// - Container creation fails
 /// - Container startup fails
 /// - Docker daemon is not available
-async fn create_and_start_container() -> Result<RunningProvisionedContainer> {
-    info!("Creating and starting Docker container for E2E testing");
+async fn create_and_start_container(container_name: String) -> Result<RunningProvisionedContainer> {
+    info!(container_name = %container_name, "Creating and starting Docker container for E2E testing");
 
     let stopped_container = StoppedProvisionedContainer::default();
 
     let running_container = stopped_container
-        .start()
+        .start(Some(container_name.clone()))
         .await
         .context("Failed to start provisioned instance container")?;
 
     info!(
+        container_name = %container_name,
         container_id = %running_container.container_id(),
         ssh_socket_addr = %running_container.ssh_socket_addr(),
         "Docker container setup completed successfully"

@@ -62,12 +62,16 @@ pub type Result<T> = std::result::Result<T, Box<ContainerConfigError>>;
 ///
 /// Currently supports the minimal set of features needed by the provisioned container:
 /// - Image name and tag validation
+/// - Container name customization
 /// - Exposed ports (with validation)
 /// - Wait conditions (with reasonable limits)
 #[derive(Debug, Clone)]
 pub struct ContainerConfigBuilder {
     /// Docker image name (e.g., "torrust-provisioned-instance:latest")
     image: String,
+
+    /// Optional container name for the running container
+    container_name: Option<String>,
 
     /// List of ports to expose from the container (as u16)
     exposed_ports: Vec<u16>,
@@ -93,6 +97,7 @@ impl ContainerConfigBuilder {
     pub fn new(image: impl Into<String>) -> Self {
         Self {
             image: image.into(),
+            container_name: None,
             exposed_ports: Vec::new(),
             wait_conditions: Vec::new(),
         }
@@ -127,6 +132,26 @@ impl ContainerConfigBuilder {
         } else {
             self.exposed_ports.push(port);
         }
+        self
+    }
+
+    /// Set a custom container name for the running container
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Container name to use when starting the container
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use torrust_tracker_deploy::e2e::containers::config_builder::ContainerConfigBuilder;
+    ///
+    /// let builder = ContainerConfigBuilder::new("torrust-provisioned-instance:latest")
+    ///     .with_container_name("my-custom-container-name");
+    /// ```
+    #[must_use]
+    pub fn with_container_name(mut self, name: impl Into<String>) -> Self {
+        self.container_name = Some(name.into());
         self
     }
 
