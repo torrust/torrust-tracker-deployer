@@ -168,8 +168,11 @@ async fn run_configuration_tests(test_env: &TestEnvironment) -> Result<()> {
     run_configure_command(test_env)?;
 
     // Step 3: Run configuration validation
-    let socket_addr = running_container.ssh_socket_addr();
-    run_configuration_validation(socket_addr, &test_env.config.ssh_credentials).await?;
+    run_configuration_validation(
+        running_container.ssh_socket_addr(),
+        &test_env.config.ssh_credentials,
+    )
+    .await?;
 
     // Step 4: Cleanup container
     cleanup_infrastructure(running_container);

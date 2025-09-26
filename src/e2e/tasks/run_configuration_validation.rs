@@ -29,6 +29,78 @@ use crate::infrastructure::remote_actions::{
     DockerComposeValidator, DockerValidator, RemoteAction,
 };
 
+/// Run configuration validation tests on a configured instance
+///
+/// This function performs comprehensive validation of a configured instance,
+/// checking that all required services and components are properly installed
+/// and functioning. It uses SSH to connect to the target instance and run
+/// validation commands.
+///
+/// # Arguments
+///
+/// * `socket_addr` - Socket address where the target instance can be reached
+/// * `ssh_credentials` - SSH credentials for connecting to the instance
+///
+/// # Returns
+///
+/// Returns `Ok(())` when all validation tests pass successfully.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - SSH connection cannot be established
+/// - Docker validation fails (not installed or not working)
+/// - Docker Compose validation fails (not installed or not working)
+/// - Any other validation checks fail
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use torrust_tracker_deploy::e2e::tasks::run_configuration_validation::run_configuration_validation;
+/// use torrust_tracker_deploy::config::SshCredentials;
+/// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+///
+/// #[tokio::main]
+/// async fn main() -> anyhow::Result<()> {
+///     let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 2222);
+///     let ssh_credentials = SshCredentials::new(
+///         "./id_rsa".into(),
+///         "./id_rsa.pub".into(),
+///         "testuser".to_string()
+///     );
+///     
+///     run_configuration_validation(socket_addr, &ssh_credentials).await?;
+///     println!("All configuration validations passed");
+///     Ok(())
+/// }
+/// ```
+pub async fn run_configuration_validation(
+    socket_addr: SocketAddr,
+    ssh_credentials: &SshCredentials,
+) -> Result<()> {
+    info!(
+        socket_addr = %socket_addr,
+        ssh_user = %ssh_credentials.ssh_username,
+        "Running configuration validation tests"
+    );
+
+    let ip_addr = socket_addr.ip();
+
+    // Validate Docker installation
+    validate_docker_installation(ip_addr, ssh_credentials, socket_addr.port()).await?;
+
+    // Validate Docker Compose installation
+    validate_docker_compose_installation(ip_addr, ssh_credentials, socket_addr.port()).await?;
+
+    info!(
+        socket_addr = %socket_addr,
+        status = "success",
+        "All configuration validation tests passed successfully"
+    );
+
+    Ok(())
+}
+
 /// Validate Docker installation on a configured instance
 ///
 /// This function validates that Docker is properly installed and functioning
@@ -100,78 +172,6 @@ async fn validate_docker_compose_installation(
         .execute(&ip_addr)
         .await
         .context("Docker Compose validation failed")?;
-
-    Ok(())
-}
-
-/// Run configuration validation tests on a configured instance
-///
-/// This function performs comprehensive validation of a configured instance,
-/// checking that all required services and components are properly installed
-/// and functioning. It uses SSH to connect to the target instance and run
-/// validation commands.
-///
-/// # Arguments
-///
-/// * `socket_addr` - Socket address where the target instance can be reached
-/// * `ssh_credentials` - SSH credentials for connecting to the instance
-///
-/// # Returns
-///
-/// Returns `Ok(())` when all validation tests pass successfully.
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - SSH connection cannot be established
-/// - Docker validation fails (not installed or not working)
-/// - Docker Compose validation fails (not installed or not working)
-/// - Any other validation checks fail
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use torrust_tracker_deploy::e2e::tasks::run_configuration_validation::run_configuration_validation;
-/// use torrust_tracker_deploy::config::SshCredentials;
-/// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-///
-/// #[tokio::main]
-/// async fn main() -> anyhow::Result<()> {
-///     let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 2222);
-///     let ssh_credentials = SshCredentials::new(
-///         "./id_rsa".into(),
-///         "./id_rsa.pub".into(),
-///         "testuser".to_string()
-///     );
-///     
-///     run_configuration_validation(socket_addr, &ssh_credentials).await?;
-///     println!("All configuration validations passed");
-///     Ok(())
-/// }
-/// ```
-pub async fn run_configuration_validation(
-    socket_addr: SocketAddr,
-    ssh_credentials: &SshCredentials,
-) -> Result<()> {
-    info!(
-        socket_addr = %socket_addr,
-        ssh_user = %ssh_credentials.ssh_username,
-        "Running configuration validation tests"
-    );
-
-    let ip_addr = socket_addr.ip();
-
-    // Validate Docker installation
-    validate_docker_installation(ip_addr, ssh_credentials, socket_addr.port()).await?;
-
-    // Validate Docker Compose installation
-    validate_docker_compose_installation(ip_addr, ssh_credentials, socket_addr.port()).await?;
-
-    info!(
-        socket_addr = %socket_addr,
-        status = "success",
-        "All configuration validation tests passed successfully"
-    );
 
     Ok(())
 }
