@@ -58,6 +58,8 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
    - Git clients: GitHub Desktop, GitKraken, etc.
    - CI/CD: Any automated commits or merges
 
+4. **Before working with Tera templates**: Read [`docs/contributing/templates.md`](../docs/contributing/templates.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
+
 ## 🧪 Build & Test
 
 - **Lint**: `cargo run --bin linter all` (comprehensive - tests stable & nightly toolchains)
