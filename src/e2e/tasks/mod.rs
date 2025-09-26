@@ -9,7 +9,6 @@
 //! The tasks are organized by deployment target:
 //!
 //! ### Infrastructure-agnostic tasks (can be used with both containers and VMs):
-//! - `clean_and_prepare_templates` - Template cleanup and preparation
 //! - `run_configure_command` - Infrastructure configuration via Ansible and playbook execution
 //! - `run_deployment_validation` - Deployment validation and testing
 //! - `setup_ssh_key` - SSH key generation and setup
@@ -32,7 +31,6 @@
 //! These tasks are orchestrated by the E2E test binaries to provide comprehensive
 //! testing coverage of the entire deployment system.
 
-pub mod clean_and_prepare_templates;
 pub mod container;
 pub mod preflight_cleanup;
 pub mod preflight_cleanup_common;

@@ -26,7 +26,6 @@ use tracing::{info, warn};
 use crate::config::{Config, InstanceName, SshCredentials};
 use crate::container::Services;
 
-use super::tasks::clean_and_prepare_templates::clean_and_prepare_templates;
 use super::tasks::setup_ssh_key::setup_ssh_key;
 
 /// Errors that can occur during test environment creation and initialization
@@ -319,8 +318,18 @@ impl TestEnvironment {
 
     /// Prepares the test environment (templates, etc.)
     fn prepare_environment(services: &Services) -> Result<(), TestEnvironmentError> {
-        clean_and_prepare_templates(services)
-            .map_err(|e| TestEnvironmentError::EnvironmentPreparationError { source: e })
+        info!(
+            operation = "clean_templates",
+            "Cleaning templates directory to ensure fresh embedded templates"
+        );
+
+        services
+            .template_manager
+            .reset_templates_dir()
+            .map_err(|e| TestEnvironmentError::EnvironmentPreparationError {
+                source: anyhow::anyhow!(e),
+            })?;
+        Ok(())
     }
 
     /// Logs environment information
