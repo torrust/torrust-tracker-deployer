@@ -9,6 +9,7 @@
 //! - `client` - SSH client implementation for remote command execution
 //! - `connection` - SSH connection configuration and management
 //! - `credentials` - SSH authentication credentials and key management
+//! - `public_key` - SSH public key representation and validation
 //! - `service_checker` - SSH service availability testing without authentication
 //!
 //! ## Key Features
@@ -25,11 +26,13 @@
 pub mod client;
 pub mod connection;
 pub mod credentials;
+pub mod public_key;
 pub mod service_checker;
 
 pub use client::SshClient;
 pub use connection::SshConnection;
 pub use credentials::SshCredentials;
+pub use public_key::SshPublicKey;
 pub use service_checker::SshServiceChecker;
 
 use thiserror::Error;

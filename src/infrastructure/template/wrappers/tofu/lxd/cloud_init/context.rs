@@ -8,6 +8,7 @@ use std::fs;
 use std::path::Path;
 use thiserror::Error;
 
+use crate::shared::ssh::SshPublicKey;
 use crate::shared::Username;
 
 /// Errors that can occur when creating a `CloudInitContext`
@@ -30,7 +31,7 @@ pub enum CloudInitContextError {
 #[derive(Debug, Clone, Serialize)]
 pub struct CloudInitContext {
     /// SSH public key content to be injected into cloud-init configuration
-    pub ssh_public_key: String,
+    pub ssh_public_key: SshPublicKey,
     /// Username to be created in the cloud-init configuration
     pub username: Username,
 }
@@ -38,16 +39,23 @@ pub struct CloudInitContext {
 /// Builder for `CloudInitContext` with fluent interface
 #[derive(Debug, Default)]
 pub struct CloudInitContextBuilder {
-    ssh_public_key: Option<String>,
+    ssh_public_key: Option<SshPublicKey>,
     username: Option<Username>,
 }
 
 impl CloudInitContextBuilder {
     /// Set the SSH public key content directly
-    #[must_use]
-    pub fn with_ssh_public_key(mut self, ssh_public_key: String) -> Self {
-        self.ssh_public_key = Some(ssh_public_key);
-        self
+    ///
+    /// # Errors
+    /// Returns an error if the SSH public key is invalid
+    pub fn with_ssh_public_key<S: Into<String>>(
+        mut self,
+        ssh_public_key: S,
+    ) -> Result<Self, CloudInitContextError> {
+        let key = SshPublicKey::new(ssh_public_key)
+            .map_err(|e| CloudInitContextError::SshPublicKeyReadError(e.to_string()))?;
+        self.ssh_public_key = Some(key);
+        Ok(self)
     }
 
     /// Set the username for the cloud-init configuration
@@ -67,7 +75,7 @@ impl CloudInitContextBuilder {
     /// Set the SSH public key by reading from a file path
     ///
     /// # Errors
-    /// Returns an error if the file cannot be read
+    /// Returns an error if the file cannot be read or the SSH public key is invalid
     pub fn with_ssh_public_key_from_file<P: AsRef<Path>>(
         mut self,
         ssh_public_key_path: P,
@@ -80,8 +88,10 @@ impl CloudInitContextBuilder {
             ))
         })?;
 
-        // Trim any trailing newlines or whitespace from the SSH key
-        self.ssh_public_key = Some(content.trim().to_string());
+        // Trim any trailing newlines or whitespace from the SSH key and create SshPublicKey
+        let key = SshPublicKey::new(content.trim())
+            .map_err(|e| CloudInitContextError::SshPublicKeyReadError(e.to_string()))?;
+        self.ssh_public_key = Some(key);
         Ok(self)
     }
 
@@ -110,14 +120,17 @@ impl CloudInitContext {
     ///
     /// # Errors
     /// Returns an error if the username is invalid according to Linux naming requirements
+    /// or if the SSH public key is invalid
     pub fn new<S: Into<String>>(
-        ssh_public_key: String,
+        ssh_public_key: S,
         username: S,
     ) -> Result<Self, CloudInitContextError> {
+        let key = SshPublicKey::new(ssh_public_key)
+            .map_err(|e| CloudInitContextError::SshPublicKeyReadError(e.to_string()))?;
         let username = Username::new(username)
             .map_err(|e| CloudInitContextError::InvalidUsername(e.to_string()))?;
         Ok(Self {
-            ssh_public_key,
+            ssh_public_key: key,
             username,
         })
     }
@@ -131,7 +144,7 @@ impl CloudInitContext {
     /// Get the SSH public key content
     #[must_use]
     pub fn ssh_public_key(&self) -> &str {
-        &self.ssh_public_key
+        self.ssh_public_key.as_str()
     }
 
     /// Get the username
@@ -151,7 +164,7 @@ mod tests {
     fn it_should_create_cloud_init_context_with_ssh_key() {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let username = "testuser";
-        let context = CloudInitContext::new(ssh_key.to_string(), username).unwrap();
+        let context = CloudInitContext::new(ssh_key, username).unwrap();
 
         assert_eq!(context.ssh_public_key(), ssh_key);
         assert_eq!(context.username(), username);
@@ -162,7 +175,8 @@ mod tests {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let username = "testuser";
         let context = CloudInitContext::builder()
-            .with_ssh_public_key(ssh_key.to_string())
+            .with_ssh_public_key(ssh_key)
+            .unwrap()
             .with_username(username)
             .unwrap()
             .build()
@@ -209,7 +223,8 @@ mod tests {
     fn it_should_fail_when_username_is_missing() {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let result = CloudInitContext::builder()
-            .with_ssh_public_key(ssh_key.to_string())
+            .with_ssh_public_key(ssh_key)
+            .unwrap()
             .build();
 
         assert!(result.is_err());
@@ -235,7 +250,7 @@ mod tests {
     fn it_should_serialize_to_json() {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let username = "testuser";
-        let context = CloudInitContext::new(ssh_key.to_string(), username).unwrap();
+        let context = CloudInitContext::new(ssh_key, username).unwrap();
 
         let json = serde_json::to_value(&context).unwrap();
         assert_eq!(json["ssh_public_key"], ssh_key);
@@ -247,7 +262,7 @@ mod tests {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let invalid_username = "123invalid"; // starts with digit
 
-        let result = CloudInitContext::new(ssh_key.to_string(), invalid_username);
+        let result = CloudInitContext::new(ssh_key, invalid_username);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -261,7 +276,8 @@ mod tests {
         let invalid_username = "@invalid"; // contains @ symbol
 
         let result = CloudInitContext::builder()
-            .with_ssh_public_key(ssh_key.to_string())
+            .with_ssh_public_key(ssh_key)
+            .unwrap()
             .with_username(invalid_username);
 
         assert!(result.is_err());
