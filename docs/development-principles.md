@@ -91,6 +91,8 @@ When users encounter problems or edge cases, the system must provide clear guida
 3. **Error Message Review**: Have error messages reviewed by non-technical users
 4. **Documentation First**: Document edge cases and their handling
 
+For detailed guidance on implementing these principles in error handling, see the [Error Handling Guide](./contributing/error-handling.md).
+
 ### For Code Reviews
 
 - Verify that new code includes appropriate logging

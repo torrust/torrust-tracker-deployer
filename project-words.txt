@@ -8,6 +8,7 @@ cloudinit
 connrefused
 containerd
 cpus
+Crossplane
 dearmor
 debootstrap
 distutils
@@ -56,6 +57,7 @@ pipefail
 prereq
 println
 publickey
+Pulumi
 pytest
 RAII
 Repomix

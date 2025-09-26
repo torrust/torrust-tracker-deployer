@@ -79,6 +79,8 @@ These principles should guide all development decisions, code reviews, and featu
 
 4. **Before working with Tera templates**: Read [`docs/contributing/templates.md`](../docs/contributing/templates.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
 
+5. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](../docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
+
 ## 🧪 Build & Test
 
 - **Lint**: `cargo run --bin linter all` (comprehensive - tests stable & nightly toolchains)
