@@ -20,13 +20,12 @@
 //! The environment ensures each test runs in isolation with its own
 //! temporary resources and configuration.
 
+use anyhow::Context;
 use tempfile::TempDir;
 use tracing::{info, warn};
 
 use crate::config::{Config, InstanceName, SshCredentials};
 use crate::container::Services;
-
-use super::tasks::setup_ssh_key::setup_ssh_key;
 
 /// Errors that can occur during test environment creation and initialization
 #[derive(Debug, thiserror::Error)]
@@ -288,8 +287,40 @@ impl TestEnvironment {
         let temp_ssh_key = temp_dir.path().join(SSH_PRIVATE_KEY_FILENAME);
         let temp_ssh_pub_key = temp_dir.path().join(SSH_PUBLIC_KEY_FILENAME);
 
-        setup_ssh_key(project_root, temp_dir)
+        // Copy SSH private key from fixtures to temp directory
+        let fixtures_ssh_key = project_root.join("fixtures/testing_rsa");
+
+        std::fs::copy(&fixtures_ssh_key, &temp_ssh_key)
+            .context("Failed to copy SSH private key to temporary directory")
             .map_err(|e| TestEnvironmentError::SshKeySetupError { source: e })?;
+
+        // Copy SSH public key from fixtures to temp directory
+        let fixtures_ssh_pub_key = project_root.join("fixtures/testing_rsa.pub");
+
+        std::fs::copy(&fixtures_ssh_pub_key, &temp_ssh_pub_key)
+            .context("Failed to copy SSH public key to temporary directory")
+            .map_err(|e| TestEnvironmentError::SshKeySetupError { source: e })?;
+
+        // Set proper permissions on the SSH key (600)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&temp_ssh_key)
+                .context("Failed to get SSH key metadata")
+                .map_err(|e| TestEnvironmentError::SshKeySetupError { source: e })?
+                .permissions();
+            perms.set_mode(0o600);
+            std::fs::set_permissions(&temp_ssh_key, perms)
+                .context("Failed to set SSH key permissions")
+                .map_err(|e| TestEnvironmentError::SshKeySetupError { source: e })?;
+        }
+
+        info!(
+            operation = "ssh_key_setup",
+            private_location = %temp_ssh_key.display(),
+            public_location = %temp_ssh_pub_key.display(),
+            "SSH keys copied to temporary location"
+        );
 
         Ok(SshCredentials::new(
             temp_ssh_key,

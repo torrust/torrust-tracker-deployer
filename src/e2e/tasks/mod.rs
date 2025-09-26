@@ -11,7 +11,6 @@
 //! ### Infrastructure-agnostic tasks (can be used with both containers and VMs):
 //! - `run_configure_command` - Infrastructure configuration via Ansible and playbook execution
 //! - `run_deployment_validation` - Deployment validation and testing
-//! - `setup_ssh_key` - SSH key generation and setup
 //! - `run_test_command` - Deployment validation and testing
 //!
 //! ### Container-specific tasks (`container` submodule):
@@ -32,5 +31,4 @@ pub mod preflight_cleanup;
 pub mod run_configure_command;
 pub mod run_deployment_validation;
 pub mod run_test_command;
-pub mod setup_ssh_key;
 pub mod virtual_machine;
