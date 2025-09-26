@@ -88,32 +88,6 @@ pub struct TestEnvironment {
 }
 
 impl TestEnvironment {
-    /// Creates and initializes a new test environment in one step
-    ///
-    /// This is a convenience method that combines `new()` and `init()`.
-    /// Use this when you want the full setup in one call.
-    ///
-    /// # Arguments
-    ///
-    /// * `keep_env` - Whether to keep the environment after tests complete
-    /// * `templates_dir` - Path to the templates directory
-    /// * `instance_name` - Name for the instance to be deployed
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - Construction fails (see `new()` for details)
-    /// - Initialization fails (see `init()` for details)  
-    pub fn new_and_init(
-        keep_env: bool,
-        templates_dir: impl Into<std::path::PathBuf>,
-        instance_name: InstanceName,
-    ) -> Result<Self, TestEnvironmentError> {
-        let env = Self::new(keep_env, templates_dir, instance_name)?;
-        env.init()?;
-        Ok(env)
-    }
-
     /// Creates a new test environment with configuration and services
     ///
     /// This method only performs basic construction without side effects.
@@ -151,6 +125,42 @@ impl TestEnvironment {
         )
     }
 
+    /// Creates and initializes a new test environment with custom SSH user in one step
+    ///
+    /// This is a convenience method that combines `with_ssh_user()` and `init()`.
+    /// Use this when you want the full setup in one call.
+    ///
+    /// # Arguments
+    ///
+    /// * `keep_env` - Whether to keep the environment after tests complete
+    /// * `templates_dir` - Path to the templates directory
+    /// * `ssh_user` - SSH username to use for connections
+    /// * `instance_name` - Name for the instance to be deployed
+    /// * `environment_type` - The type of test environment (Container or `VirtualMachine`)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Construction fails (see `with_ssh_user()` for details)
+    /// - Initialization fails (see `init()` for details)
+    pub fn with_ssh_user_and_init(
+        keep_env: bool,
+        templates_dir: impl Into<std::path::PathBuf>,
+        ssh_user: &str,
+        instance_name: InstanceName,
+        environment_type: TestEnvironmentType,
+    ) -> Result<Self, TestEnvironmentError> {
+        let env = Self::with_ssh_user(
+            keep_env,
+            templates_dir,
+            ssh_user,
+            instance_name,
+            environment_type,
+        )?;
+        env.init()?;
+        Ok(env)
+    }
+
     /// Creates a new test environment with a custom SSH user
     ///
     /// This method only performs basic construction without side effects.
@@ -171,7 +181,7 @@ impl TestEnvironment {
     /// - Temporary directory creation fails
     /// - SSH key setup fails
     /// - Templates directory is invalid
-    pub fn with_ssh_user(
+    fn with_ssh_user(
         keep_env: bool,
         templates_dir: impl Into<std::path::PathBuf>,
         ssh_user: &str,
@@ -210,46 +220,10 @@ impl TestEnvironment {
     ///
     /// Returns an error if:
     /// - Template preparation fails
-    pub fn init(&self) -> Result<(), TestEnvironmentError> {
+    fn init(&self) -> Result<(), TestEnvironmentError> {
         Self::prepare_environment(&self.services)?;
         self.log_environment_info();
         Ok(())
-    }
-
-    /// Creates and initializes a new test environment with custom SSH user in one step
-    ///
-    /// This is a convenience method that combines `with_ssh_user()` and `init()`.
-    /// Use this when you want the full setup in one call.
-    ///
-    /// # Arguments
-    ///
-    /// * `keep_env` - Whether to keep the environment after tests complete
-    /// * `templates_dir` - Path to the templates directory
-    /// * `ssh_user` - SSH username to use for connections
-    /// * `instance_name` - Name for the instance to be deployed
-    /// * `environment_type` - The type of test environment (Container or `VirtualMachine`)
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - Construction fails (see `with_ssh_user()` for details)
-    /// - Initialization fails (see `init()` for details)
-    pub fn with_ssh_user_and_init(
-        keep_env: bool,
-        templates_dir: impl Into<std::path::PathBuf>,
-        ssh_user: &str,
-        instance_name: InstanceName,
-        environment_type: TestEnvironmentType,
-    ) -> Result<Self, TestEnvironmentError> {
-        let env = Self::with_ssh_user(
-            keep_env,
-            templates_dir,
-            ssh_user,
-            instance_name,
-            environment_type,
-        )?;
-        env.init()?;
-        Ok(env)
     }
 
     /// Validates input parameters
