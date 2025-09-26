@@ -44,7 +44,7 @@
 //! - `RunningProvisionedContainer` - Running state, can be queried, configured, and stopped
 //! - State transitions are enforced at compile time through different types
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 use std::time::Instant;
 use tracing::{error, info};
@@ -102,7 +102,6 @@ struct CliArgs {
 pub async fn main() -> Result<()> {
     let cli = CliArgs::parse();
 
-    // Initialize logging based on the chosen format
     logging::init_with_format(&cli.log_format);
 
     info!(
@@ -114,14 +113,20 @@ pub async fn main() -> Result<()> {
 
     let test_start = Instant::now();
 
-    // Instance name for the test environment - consistent with provision tests
     let instance_name =
         InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
 
-    // Setup test environment with preflight cleanup
-    let test_env = setup_test_environment(false, cli.templates_dir, instance_name)?;
+    let env = TestEnvironment::with_ssh_user_and_init(
+        false,
+        cli.templates_dir,
+        "torrust",
+        instance_name,
+        TestEnvironmentType::Container,
+    )?;
 
-    let test_result = run_configuration_tests(&test_env).await;
+    preflight_cleanup::cleanup_lingering_resources_docker(&env)?;
+
+    let test_result = run_configuration_tests(&env).await;
 
     let test_duration = test_start.elapsed();
 
@@ -152,28 +157,6 @@ pub async fn main() -> Result<()> {
             Err(error)
         }
     }
-}
-
-/// Setup test environment with preflight cleanup
-fn setup_test_environment(
-    keep_env: bool,
-    templates_dir: String,
-    instance_name: InstanceName,
-) -> Result<TestEnvironment> {
-    info!("Running preflight cleanup for Docker-based E2E tests");
-    let test_env = TestEnvironment::with_ssh_user_and_init(
-        keep_env,
-        templates_dir,
-        "torrust",
-        instance_name,
-        TestEnvironmentType::Container,
-    )
-    .context("Failed to create test environment")?;
-
-    preflight_cleanup::cleanup_lingering_resources_docker(&test_env)
-        .context("Failed to complete preflight cleanup")?;
-
-    Ok(test_env)
 }
 
 /// Run the complete configuration tests using extracted tasks
