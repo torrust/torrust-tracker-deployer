@@ -37,7 +37,7 @@ cargo run --bin linter all
 
 # 4. Run tests
 cargo test
-cargo run --bin e2e-tests
+cargo run --bin e2e-tests-full
 
 # 5. Commit with conventional format (include issue number)
 git add .

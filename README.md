@@ -115,17 +115,17 @@ cargo run --bin linter shellcheck  # Shell script linting
 Use the E2E tests binary to run automated infrastructure tests:
 
 ```bash
-# Run the E2E tests
-cargo run --bin e2e-tests
+# Run the comprehensive E2E tests
+cargo run --bin e2e-tests-full
 
 # Keep the test environment after completion
-cargo run --bin e2e-tests -- --keep
+cargo run --bin e2e-tests-full -- --keep
 
 # Use custom templates directory
-cargo run --bin e2e-tests -- --templates-dir ./custom/templates
+cargo run --bin e2e-tests-full -- --templates-dir ./custom/templates
 
 # See all available options
-cargo run --bin e2e-tests -- --help
+cargo run --bin e2e-tests-full -- --help
 ```
 
 ### Manual Deployment Steps

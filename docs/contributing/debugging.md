@@ -10,7 +10,7 @@ The project uses tracing for logging. You can control the logging level using th
 
 ```bash
 # Run with debug level logging (recommended for debugging)
-RUST_LOG=debug cargo run --bin e2e-tests
+RUST_LOG=debug cargo run --bin e2e-tests-full
 ```
 
 ## 📄 Capturing Output for Analysis
@@ -19,7 +19,7 @@ Since e2e test output can be very long, use `tee` to see output in real-time whi
 
 ```bash
 # See output and save to file simultaneously
-RUST_LOG=debug cargo run --bin e2e-tests 2>&1 | tee debug-output.log
+RUST_LOG=debug cargo run --bin e2e-tests-full 2>&1 | tee debug-output.log
 ```
 
 You can then search the captured output for specific patterns:

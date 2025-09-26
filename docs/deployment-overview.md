@@ -74,7 +74,7 @@ torrust-deploy status           # List all environments (future)
 
 ```bash
 # Simulate current working functionality through E2E tests
-cargo run --bin e2e-tests
+cargo run --bin e2e-tests-full
 
 # This runs equivalent to:
 # provision: Creates LXD container with OpenTofu

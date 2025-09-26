@@ -271,7 +271,7 @@ Once this complete DDD layer foundation is established, we can:
   - [x] Run `cargo build` and fix compilation errors
   - [x] Run `cargo test` and fix test issues (including doc tests)
   - [x] Run `cargo run --bin linter all` and fix linting issues
-  - [x] Run `cargo run --bin e2e-tests` for integration verification
+  - [x] Run `cargo run --bin e2e-tests-full` for integration verification
 
 ### Future Phases (Ready for Implementation)
 

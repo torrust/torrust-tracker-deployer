@@ -272,7 +272,7 @@ cargo run --bin linter all
 
 # Run tests
 cargo test
-cargo run --bin e2e-tests
+cargo run --bin e2e-tests-full
 
 # Check for unused dependencies
 cargo machete
@@ -284,7 +284,7 @@ cargo machete
 # Same commands as pre-refactor
 cargo run --bin linter all
 cargo test
-cargo run --bin e2e-tests
+cargo run --bin e2e-tests-full
 cargo machete
 
 # Additional checks

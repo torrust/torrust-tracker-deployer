@@ -44,10 +44,10 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 3. **Before committing**: Always run these verifications - all must pass before staging files or creating commits, regardless of the tool or method used:
 
    ```bash
-   cargo machete               # Run cargo machete (MANDATORY - no unused dependencies)
-   cargo run --bin linter all  # Run linters (comprehensive - stable & nightly toolchains)
-   cargo test                  # Run tests
-   cargo run --bin e2e-tests   # Run e2e tests
+   cargo machete                    # Run cargo machete (MANDATORY - no unused dependencies)
+   cargo run --bin linter all       # Run linters (comprehensive - stable & nightly toolchains)
+   cargo test                       # Run tests
+   cargo run --bin e2e-tests-full   # Run comprehensive e2e tests
    ```
 
    This applies to **any** method of committing:
@@ -67,8 +67,8 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 - **Build**: `cargo build`
 - **Test**: `cargo test`
 - **Unit Tests**: When writing unit tests, follow conventions described in [`docs/contributing/testing.md`](../docs/contributing/testing.md)
-- **E2E Tests**: `cargo run --bin e2e-tests` (unified) or individual tests:
-  - `cargo run --bin e2e-provision-tests` - Infrastructure provisioning
-  - `cargo run --bin e2e-config-tests` - Configuration testing
+- **E2E Tests**: `cargo run --bin e2e-tests-full` (comprehensive - all tests) or individual tests:
+  - `cargo run --bin e2e-provision-tests` - Infrastructure provisioning tests
+  - `cargo run --bin e2e-config-tests` - Configuration validation tests
 
 Follow the project conventions and ensure all checks pass.
