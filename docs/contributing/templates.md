@@ -61,3 +61,34 @@ instance_name = "{{ instance_name }}"
 2. No spaces between braces and variable name: `{{variable}}` not `{ { variable } }`
 3. Variable names are case-sensitive
 4. Works in any file format (YAML, HCL, etc.)
+
+## 🔧 Troubleshooting
+
+### VS Code Prettier Extension Adding Spaces in Variables
+
+**Problem**: When using VS Code with the Prettier extension, saving `.tera` files automatically adds unwanted spaces inside Tera variables:
+
+- **Before saving**: `{{ username }}` ✅
+- **After saving**: `{ { username } }` ❌
+
+**Cause**: Prettier doesn't understand Tera template syntax and tries to format `.tera` files incorrectly.
+
+**Solution**: Create a `.prettierignore` file in your project root to exclude Tera template files:
+
+```gitignore
+# Ignore Tera template files - they have specific syntax that Prettier doesn't understand
+*.tera
+```
+
+**Alternative Solution**: Disable formatting for `.tera` files in your VS Code settings:
+
+```json
+{
+  "[tera]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": null
+  }
+}
+```
+
+After applying the fix, manually correct any existing formatting issues in your `.tera` files by removing the spaces inside the curly braces.

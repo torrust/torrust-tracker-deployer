@@ -1,0 +1,2 @@
+# Ignore Tera template files - they have specific syntax that Prettier doesn't understand
+*.tera
