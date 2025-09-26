@@ -59,6 +59,7 @@ use crate::shared::ssh::SshConnection;
 /// ```rust,no_run
 /// use torrust_tracker_deploy::e2e::tasks::run_configuration_validation::run_configuration_validation;
 /// use torrust_tracker_deploy::config::SshCredentials;
+/// use torrust_tracker_deploy::shared::username::Username;
 /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 ///
 /// #[tokio::main]
@@ -67,7 +68,7 @@ use crate::shared::ssh::SshConnection;
 ///     let ssh_credentials = SshCredentials::new(
 ///         "./id_rsa".into(),
 ///         "./id_rsa.pub".into(),
-///         "testuser".to_string()
+///         Username::new("testuser").unwrap()
 ///     );
 ///     
 ///     run_configuration_validation(socket_addr, &ssh_credentials).await?;

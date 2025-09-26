@@ -23,7 +23,7 @@
 //!     StoppedProvisionedContainer, ContainerError,
 //!     actions::{SshWaitAction, SshKeySetupAction}
 //! };
-//! use torrust_tracker_deploy::shared::ssh::SshCredentials;
+//! use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
 //! use std::path::PathBuf;
 //! use std::time::Duration;
 //! use std::net::SocketAddr;
@@ -33,7 +33,7 @@
 //!     let stopped = StoppedProvisionedContainer::default();
 //!     
 //!     // Transition to running state
-//!     let running = stopped.start().await?;
+//!     let running = stopped.start(None).await?;
 //!     
 //!     // Get connection details
 //!     let socket_addr = running.ssh_socket_addr();
@@ -46,7 +46,7 @@
 //!     let ssh_credentials = SshCredentials::new(
 //!         PathBuf::from("/path/to/private_key"),
 //!         PathBuf::from("/path/to/public_key.pub"),
-//!         "torrust".to_string(),
+//!         Username::new("torrust").unwrap(),
 //!     );
 //!     let ssh_key_setup_action = SshKeySetupAction::new();
 //!     ssh_key_setup_action.execute(&running, &ssh_credentials).await?;

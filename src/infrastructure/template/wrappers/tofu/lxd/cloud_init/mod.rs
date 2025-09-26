@@ -75,6 +75,8 @@ mod tests {
     fn create_cloud_init_context(ssh_key: &str) -> CloudInitContext {
         CloudInitContext::builder()
             .with_ssh_public_key(ssh_key.to_string())
+            .with_username("testuser")
+            .unwrap()
             .build()
             .unwrap()
     }

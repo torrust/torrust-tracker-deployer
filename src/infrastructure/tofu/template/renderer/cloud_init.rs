@@ -21,7 +21,7 @@
 //! # use std::path::Path;
 //! # use torrust_tracker_deploy::infrastructure::tofu::template::renderer::cloud_init::CloudInitTemplateRenderer;
 //! # use torrust_tracker_deploy::domain::template::TemplateManager;
-//! # use torrust_tracker_deploy::shared::ssh::credentials::SshCredentials;
+//! # use torrust_tracker_deploy::shared::{Username, ssh::credentials::SshCredentials};
 //! # use std::path::PathBuf;
 //! #
 //! # #[tokio::main]
@@ -174,10 +174,12 @@ impl CloudInitTemplateRenderer {
         let template_file = File::new(Self::CLOUD_INIT_TEMPLATE_FILE, template_content)
             .map_err(|_| CloudInitTemplateError::FileCreationFailed)?;
 
-        // Create cloud-init context with SSH public key
+        // Create cloud-init context with SSH public key and username
         let cloud_init_context = CloudInitContext::builder()
             .with_ssh_public_key_from_file(&ssh_credentials.ssh_pub_key_path)
             .map_err(|_| CloudInitTemplateError::SshKeyReadError)?
+            .with_username(ssh_credentials.ssh_username.as_str())
+            .map_err(|_| CloudInitTemplateError::ContextCreationFailed)?
             .build()
             .map_err(|_| CloudInitTemplateError::ContextCreationFailed)?;
 
