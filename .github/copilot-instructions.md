@@ -1,10 +1,29 @@
-# Torrust Tracker Deploy - AI Assistant Instructions
+# ToThis is a deploymThese principles should guide all development decisions, code reviews, and feature implementations.
+
+## 🏗️ Tech Stack infrastructure proof-of-concept for the Torrust ecosystem. It uses OpenTofu (Terraform), Ansible, and Rust to provision and manage deployment environments with LXD containers and Multipass VMs.
+
+## 🎯 Essential Principles
+
+The development of this application is guided by fundamental principles that ensure quality, maintainability, and user experience. For detailed information, see [`docs/development-principles.md`](../docs/development-principles.md). Tracker Deploy - AI Assistant Instructions
 
 ## 📋 Project Overview
 
 This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. It uses OpenTofu (Terraform), Ansible, and Rust to provision and manage deployment environments with LXD containers and Multipass VMs.
 
-## 🏗️ Tech Stack
+## � Essential Principles
+
+The development of this application is guided by fundamental principles that ensure quality, maintainability, and user experience. For detailed information, see [`docs/development-principles.md`](../docs/development-principles.md).
+
+**Core Principles:**
+
+- **Observability**: If it happens, we can see it - even after it happens (includes deep traceability)
+- **Testability**: Every component must be testable in isolation and as part of the whole
+- **User Friendliness**: All errors must be clear, informative, and solution-oriented
+- **Actionability**: The system must always tell users how to continue with detailed instructions
+
+These principles should guide all development decisions, code reviews, and feature implementations.
+
+## �🏗️ Tech Stack
 
 - **Languages**: Rust, Shell scripts, YAML, TOML
 - **Infrastructure**: OpenTofu (Terraform), Ansible
