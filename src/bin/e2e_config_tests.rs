@@ -58,7 +58,6 @@ use torrust_tracker_deploy::e2e::tasks::{
         run_provision_simulation::run_provision_simulation,
         setup_docker_container::setup_docker_container,
     },
-    create_test_ssh_credentials::create_test_ssh_credentials,
     preflight_cleanup,
     run_ansible_configuration::run_ansible_configuration,
     run_deployment_validation::run_deployment_validation,
@@ -186,18 +185,21 @@ async fn run_configuration_tests(test_env: &TestEnvironment) -> Result<()> {
     let socket_addr = running_container.ssh_socket_addr();
 
     // Step 2: Configure SSH connectivity
-    let ssh_credentials =
-        create_test_ssh_credentials(&test_env.config.ssh_credentials.ssh_username)?;
-    configure_ssh_connectivity(socket_addr, &ssh_credentials, Some(&running_container)).await?;
+    configure_ssh_connectivity(
+        socket_addr,
+        &test_env.config.ssh_credentials,
+        Some(&running_container),
+    )
+    .await?;
 
     // Step 3: Run provision simulation
-    run_provision_simulation(socket_addr, &ssh_credentials, test_env).await?;
+    run_provision_simulation(socket_addr, &test_env.config.ssh_credentials, test_env).await?;
 
     // Step 4: Run Ansible configuration (expect failure due to inventory mismatch)
     run_ansible_configuration(socket_addr, test_env, false)?;
 
     // Step 5: Run deployment validation
-    run_deployment_validation(socket_addr, &ssh_credentials).await?;
+    run_deployment_validation(socket_addr, &test_env.config.ssh_credentials).await?;
 
     // Step 6: Cleanup container
     cleanup_docker_container(running_container);
