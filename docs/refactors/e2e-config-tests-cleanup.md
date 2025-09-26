@@ -120,7 +120,7 @@ This refactor plan outlines the improvements needed for `src/bin/e2e_config_test
 
 - **Task**: Replace nested match statements with `?` operator ✅
 - **Pattern**: Convert `match result { Ok(x) => ..., Err(e) => return Err(...) }` to direct `?` usage ✅
-- **Focus**: `run_ansible_configuration()` and `run_deployment_validation()` ✅
+- **Focus**: `run_ansible_configuration()` and `run_configuration_validation()` ✅
 
 **Status**: ✅ COMPLETE - Replaced nested match patterns with `?` operator in both functions, improved readability
 

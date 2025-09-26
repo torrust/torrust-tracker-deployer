@@ -58,7 +58,7 @@ use torrust_tracker_deploy::e2e::tasks::{
         run_provision_simulation::run_provision_simulation,
     },
     preflight_cleanup,
-    run_deployment_validation::run_deployment_validation,
+    run_configuration_validation::run_configuration_validation,
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
 
@@ -167,9 +167,9 @@ async fn run_configuration_tests(test_env: &TestEnvironment) -> Result<()> {
     // Step 2: Run Ansible configuration
     run_configure_command(test_env)?;
 
-    // Step 3: Run deployment validation
+    // Step 3: Run configuration validation
     let socket_addr = running_container.ssh_socket_addr();
-    run_deployment_validation(socket_addr, &test_env.config.ssh_credentials).await?;
+    run_configuration_validation(socket_addr, &test_env.config.ssh_credentials).await?;
 
     // Step 4: Cleanup container
     cleanup_infrastructure(running_container);
