@@ -23,7 +23,7 @@ use tracing::{error, info};
 
 // Import E2E testing infrastructure
 use torrust_tracker_deploy::config::InstanceName;
-use torrust_tracker_deploy::e2e::environment::TestEnvironment;
+use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
 use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
     virtual_machine::{
@@ -98,7 +98,13 @@ pub async fn main() -> Result<()> {
     let instance_name =
         InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
 
-    let env = TestEnvironment::new(cli.keep, cli.templates_dir, instance_name)?;
+    let env = TestEnvironment::initialized(
+        cli.keep,
+        cli.templates_dir,
+        "torrust",
+        instance_name,
+        TestEnvironmentType::VirtualMachine,
+    )?;
 
     // Perform pre-flight cleanup to remove any lingering resources from interrupted tests
     cleanup_lingering_resources(&env)?;

@@ -62,13 +62,19 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 ///
 /// ```rust,no_run
 /// use torrust_tracker_deploy::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
-/// use torrust_tracker_deploy::e2e::environment::TestEnvironment;
+/// use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
 /// use torrust_tracker_deploy::config::InstanceName;
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
 ///     let instance_name = InstanceName::new("test-container".to_string())?;
-///     let test_env = TestEnvironment::new(false, "./templates".to_string(), instance_name)?;
+///     let test_env = TestEnvironment::initialized(
+///         false,
+///         "./templates".to_string(),
+///         "torrust",
+///         instance_name,
+///         TestEnvironmentType::Container
+///     )?;
 ///     
 ///     let running_container = run_provision_simulation(&test_env).await?;
 ///     println!("Container provision simulation completed: {}", running_container.ssh_socket_addr());

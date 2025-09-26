@@ -114,7 +114,7 @@ pub async fn main() -> Result<()> {
     let instance_name =
         InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
 
-    let env = TestEnvironment::with_ssh_user_and_init(
+    let env = TestEnvironment::initialized(
         false,
         cli.templates_dir,
         "torrust",

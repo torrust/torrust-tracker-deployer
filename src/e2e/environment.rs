@@ -55,9 +55,6 @@ pub enum TestEnvironmentError {
     EnvironmentPreparationError { source: anyhow::Error },
 }
 
-/// Default SSH username for test environments
-const DEFAULT_SSH_USER: &str = "torrust";
-
 /// SSH private key filename for testing
 const SSH_PRIVATE_KEY_FILENAME: &str = "testing_rsa";
 
@@ -88,47 +85,10 @@ pub struct TestEnvironment {
 }
 
 impl TestEnvironment {
-    /// Creates a new test environment with configuration and services
+    /// Creates and initializes a new test environment with custom SSH user
     ///
-    /// This method only performs basic construction without side effects.
-    /// Call `init()` to perform environment initialization.
-    ///
-    /// # Arguments
-    ///
-    /// * `keep_env` - Whether to keep the environment after tests complete
-    /// * `templates_dir` - Path to the templates directory
-    /// * `instance_name` - Name for the instance to be deployed
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - Current directory cannot be determined
-    /// - Temporary directory creation fails
-    /// - SSH key setup fails
-    /// - Templates directory is invalid
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided `instance_name` is invalid (contains invalid characters
-    /// or is empty). This should not happen with well-formed instance names.
-    pub fn new(
-        keep_env: bool,
-        templates_dir: impl Into<std::path::PathBuf>,
-        instance_name: InstanceName,
-    ) -> Result<Self, TestEnvironmentError> {
-        Self::with_ssh_user(
-            keep_env,
-            templates_dir,
-            DEFAULT_SSH_USER,
-            instance_name,
-            TestEnvironmentType::VirtualMachine,
-        )
-    }
-
-    /// Creates and initializes a new test environment with custom SSH user in one step
-    ///
-    /// This is a convenience method that combines `with_ssh_user()` and `init()`.
-    /// Use this when you want the full setup in one call.
+    /// This method performs the complete setup including validation, SSH key setup,
+    /// template preparation, and environment initialization in a single call.
     ///
     /// # Arguments
     ///
@@ -141,47 +101,12 @@ impl TestEnvironment {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - Construction fails (see `with_ssh_user()` for details)
-    /// - Initialization fails (see `init()` for details)
-    pub fn with_ssh_user_and_init(
-        keep_env: bool,
-        templates_dir: impl Into<std::path::PathBuf>,
-        ssh_user: &str,
-        instance_name: InstanceName,
-        environment_type: TestEnvironmentType,
-    ) -> Result<Self, TestEnvironmentError> {
-        let env = Self::with_ssh_user(
-            keep_env,
-            templates_dir,
-            ssh_user,
-            instance_name,
-            environment_type,
-        )?;
-        env.init()?;
-        Ok(env)
-    }
-
-    /// Creates a new test environment with a custom SSH user
-    ///
-    /// This method only performs basic construction without side effects.
-    /// Call `init()` to perform environment initialization.
-    ///
-    /// # Arguments
-    ///
-    /// * `keep_env` - Whether to keep the environment after tests complete
-    /// * `templates_dir` - Path to the templates directory
-    /// * `ssh_user` - SSH username to use for connections
-    /// * `instance_name` - Name for the instance to be deployed
-    /// * `environment_type` - The type of test environment (Container or `VirtualMachine`)
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
+    /// - Input validation fails (empty or invalid templates directory)
     /// - Current directory cannot be determined
     /// - Temporary directory creation fails
     /// - SSH key setup fails
-    /// - Templates directory is invalid
-    fn with_ssh_user(
+    /// - Template preparation fails
+    pub fn initialized(
         keep_env: bool,
         templates_dir: impl Into<std::path::PathBuf>,
         ssh_user: &str,
@@ -189,11 +114,14 @@ impl TestEnvironment {
         environment_type: TestEnvironmentType,
     ) -> Result<Self, TestEnvironmentError> {
         let templates_dir = templates_dir.into();
+
         Self::validate_inputs(&templates_dir)?;
 
         let project_root = Self::get_project_root()?;
         let temp_dir = Self::create_temp_directory()?;
+
         let ssh_credentials = Self::setup_ssh_credentials(&project_root, &temp_dir, ssh_user)?;
+
         let config = Self::create_config(
             keep_env,
             ssh_credentials,
@@ -201,20 +129,25 @@ impl TestEnvironment {
             &templates_dir,
             &project_root,
         );
+
         let services = Services::new(&config);
 
-        Ok(Self {
+        let env = Self {
             config,
             services,
             temp_dir: Some(temp_dir),
             environment_type,
-        })
+        };
+
+        env.init()?;
+
+        Ok(env)
     }
 
     /// Initializes the test environment by preparing templates and logging setup
     ///
-    /// This method performs the actual environment setup with side effects.
-    /// Must be called after construction to make the environment ready for use.
+    /// This method performs the final environment setup with side effects.
+    /// It is called internally by `initialized()` as part of the initialization process.
     ///
     /// # Errors
     ///
