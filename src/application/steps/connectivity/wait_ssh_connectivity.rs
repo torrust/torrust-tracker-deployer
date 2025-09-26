@@ -90,7 +90,7 @@ mod tests {
             "/tmp/test_key.pub".into(),
             "testuser".to_string(),
         );
-        let ssh_connection = credentials.with_host(instance_ip);
+        let ssh_connection = SshConnection::with_default_port(credentials, instance_ip);
 
         let step = WaitForSSHConnectivityStep::new(ssh_connection);
 
@@ -110,7 +110,7 @@ mod tests {
             "/home/user/.ssh/id_rsa.pub".into(),
             "torrust".to_string(),
         );
-        let ssh_connection = credentials.with_host(instance_ip);
+        let ssh_connection = SshConnection::with_default_port(credentials, instance_ip);
 
         let step = WaitForSSHConnectivityStep::new(ssh_connection);
 
@@ -130,7 +130,7 @@ mod tests {
             "/path/to/ssh/key.pub".into(),
             "admin".to_string(),
         );
-        let ssh_connection = credentials.with_host(instance_ip);
+        let ssh_connection = SshConnection::with_default_port(credentials, instance_ip);
 
         let step = WaitForSSHConnectivityStep::new(ssh_connection);
 

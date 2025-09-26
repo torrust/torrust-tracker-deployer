@@ -18,6 +18,9 @@ use std::path::PathBuf;
 
 use super::SshCredentials;
 
+/// Default SSH port number.
+const DEFAULT_SSH_PORT: u16 = 22;
+
 /// SSH connection configuration for a specific remote instance.
 ///
 /// Contains both the SSH credentials and the target host socket address,
@@ -53,10 +56,10 @@ impl SshConnection {
     /// );
     /// ```
     #[must_use]
-    pub fn new(credentials: SshCredentials, socket_addr: SocketAddr) -> Self {
+    pub fn new(credentials: SshCredentials, ssh_socket_addr: SocketAddr) -> Self {
         Self {
             credentials,
-            socket_addr,
+            socket_addr: ssh_socket_addr,
         }
     }
 
@@ -80,7 +83,7 @@ impl SshConnection {
     /// ```
     #[must_use]
     pub fn with_default_port(credentials: SshCredentials, host_ip: IpAddr) -> Self {
-        let socket_addr = SocketAddr::new(host_ip, 22);
+        let socket_addr = SocketAddr::new(host_ip, DEFAULT_SSH_PORT);
         Self::new(credentials, socket_addr)
     }
 
@@ -118,31 +121,5 @@ impl SshConnection {
     #[must_use]
     pub fn socket_addr(&self) -> SocketAddr {
         self.socket_addr
-    }
-
-    /// Creates a new SSH connection configuration with IP address and port.
-    ///
-    /// This is a convenience method for creating a connection when you have
-    /// separate IP address and port values.
-    ///
-    /// ```rust
-    /// # use std::net::{IpAddr, Ipv4Addr};
-    /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::shared::ssh::{SshCredentials, SshConnection};
-    /// let credentials = SshCredentials::new(
-    ///     PathBuf::from("/home/user/.ssh/deploy_key"),
-    ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
-    ///     "ubuntu".to_string(),
-    /// );
-    /// let connection = SshConnection::with_ip_and_port(
-    ///     credentials,
-    ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
-    ///     2222,
-    /// );
-    /// ```
-    #[must_use]
-    pub fn with_ip_and_port(credentials: SshCredentials, host_ip: IpAddr, port: u16) -> Self {
-        let socket_addr = SocketAddr::new(host_ip, port);
-        Self::new(credentials, socket_addr)
     }
 }

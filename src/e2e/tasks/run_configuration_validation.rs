@@ -28,6 +28,7 @@ use crate::config::SshCredentials;
 use crate::infrastructure::remote_actions::{
     DockerComposeValidator, DockerValidator, RemoteAction,
 };
+use crate::shared::ssh::SshConnection;
 
 /// Run configuration validation tests on a configured instance
 ///
@@ -127,7 +128,8 @@ async fn validate_docker_installation(
 ) -> Result<()> {
     info!("Validating Docker installation");
 
-    let ssh_connection = ssh_credentials.clone().with_host_and_port(ip_addr, port);
+    let ssh_connection =
+        SshConnection::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
 
     let docker_validator = DockerValidator::new(ssh_connection);
     docker_validator
@@ -165,7 +167,8 @@ async fn validate_docker_compose_installation(
 ) -> Result<()> {
     info!("Validating Docker Compose installation");
 
-    let ssh_connection = ssh_credentials.clone().with_host_and_port(ip_addr, port);
+    let ssh_connection =
+        SshConnection::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
 
     let compose_validator = DockerComposeValidator::new(ssh_connection);
     compose_validator

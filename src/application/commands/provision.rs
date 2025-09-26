@@ -30,7 +30,7 @@ use crate::infrastructure::adapters::opentofu::client::{InstanceInfo, OpenTofuEr
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 use crate::shared::executor::CommandError;
-use crate::shared::ssh::{credentials::SshCredentials, SshError};
+use crate::shared::ssh::{credentials::SshCredentials, SshConnection, SshError};
 
 /// Comprehensive error type for the `ProvisionCommand`
 #[derive(Debug, thiserror::Error)]
@@ -155,7 +155,8 @@ impl ProvisionCommand {
         .execute()
         .await?;
 
-        let ssh_connection = self.ssh_credentials.clone().with_host(instance_ip);
+        let ssh_connection =
+            SshConnection::with_default_port(self.ssh_credentials.clone(), instance_ip);
         WaitForSSHConnectivityStep::new(ssh_connection)
             .execute()
             .await?;

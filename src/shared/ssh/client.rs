@@ -245,7 +245,7 @@ impl SshClient {
 
 #[cfg(test)]
 mod tests {
-    use super::super::SshCredentials;
+    use super::super::{SshConnection, SshCredentials};
     use super::*;
     use std::net::{IpAddr, Ipv4Addr};
     use std::path::PathBuf;
@@ -258,7 +258,7 @@ mod tests {
             PathBuf::from("/path/to/key.pub"),
             "testuser".to_string(),
         );
-        let ssh_connection = credentials.with_host(host_ip);
+        let ssh_connection = SshConnection::with_default_port(credentials, host_ip);
         let ssh_client = SshClient::new(ssh_connection);
 
         assert_eq!(
@@ -281,7 +281,7 @@ mod tests {
             PathBuf::from("/path/to/key.pub"),
             "testuser".to_string(),
         );
-        let ssh_connection = credentials.with_host(host_ip);
+        let ssh_connection = SshConnection::with_default_port(credentials, host_ip);
         let ssh_client = SshClient::new(ssh_connection);
 
         assert_eq!(

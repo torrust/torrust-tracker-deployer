@@ -85,7 +85,7 @@ mod tests {
             "test_user".to_string(),
         );
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let ssh_connection = ssh_credentials.with_host(host_ip);
+        let ssh_connection = SshConnection::with_default_port(ssh_credentials, host_ip);
 
         let step = ValidateDockerInstallationStep::new(ssh_connection);
 

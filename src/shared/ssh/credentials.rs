@@ -13,10 +13,7 @@
 //! The credentials are typically configured at startup and used throughout
 //! the deployment process for secure remote access to provisioned instances.
 
-use std::net::IpAddr;
 use std::path::PathBuf;
-
-use super::SshConnection;
 
 /// SSH credentials for remote instance authentication.
 ///
@@ -68,20 +65,5 @@ impl SshCredentials {
             ssh_pub_key_path,
             ssh_username,
         }
-    }
-
-    /// Promote these credentials to a full SSH connection configuration.
-    ///
-    /// This method creates an `SshConnection` by combining these credentials
-    /// with a specific host IP address.
-    #[must_use]
-    pub fn with_host(self, host_ip: IpAddr) -> SshConnection {
-        SshConnection::with_default_port(self, host_ip)
-    }
-
-    /// Create an SSH connection with a custom port
-    #[must_use]
-    pub fn with_host_and_port(self, host_ip: IpAddr, port: u16) -> SshConnection {
-        SshConnection::with_ip_and_port(self, host_ip, port)
     }
 }

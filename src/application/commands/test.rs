@@ -22,7 +22,7 @@ use crate::application::steps::{
 };
 use crate::infrastructure::remote_actions::RemoteActionError;
 use crate::shared::executor::CommandError;
-use crate::shared::ssh::credentials::SshCredentials;
+use crate::shared::ssh::{credentials::SshCredentials, SshConnection};
 
 /// Comprehensive error type for the `TestCommand`
 #[derive(Debug, thiserror::Error)]
@@ -73,7 +73,8 @@ impl TestCommand {
             "Starting complete infrastructure testing workflow"
         );
 
-        let ssh_connection = self.ssh_credentials.clone().with_host(self.instance_ip);
+        let ssh_connection =
+            SshConnection::with_default_port(self.ssh_credentials.clone(), self.instance_ip);
 
         // TODO: Cloud-init validation disabled for container testing
         // This step fails when testing with Docker containers since they don't have cloud-init installed.
