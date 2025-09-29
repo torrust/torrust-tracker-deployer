@@ -78,7 +78,7 @@ These principles should guide all development decisions, code reviews, and featu
 ## 🧪 Build & Test
 
 - **Lint**: `cargo run --bin linter all` (comprehensive - tests stable & nightly toolchains)
-  - Individual linters: `cargo run --bin linter {markdown|yaml|toml|clippy|rustfmt|shellcheck}`
+  - Individual linters: `cargo run --bin linter {markdown|yaml|toml|cspell|clippy|rustfmt|shellcheck}`
   - Alternative: `./scripts/lint.sh` (wrapper that calls the Rust binary)
 - **Dependencies**: `cargo machete` (mandatory before commits - no unused dependencies)
 - **Build**: `cargo build`

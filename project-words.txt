@@ -3,6 +3,7 @@ architecting
 autorestart
 buildx
 childlogdir
+clippy
 cloneable
 cloudinit
 connrefused
@@ -61,6 +62,7 @@ Pulumi
 pytest
 RAII
 Repomix
+reqwest
 resolv
 rpcinterface
 runcmd
@@ -96,6 +98,8 @@ thiserror
 tlsv
 tmpfiles
 tmpfs
+torrust
+Torrust
 usermod
 usize
 utmp

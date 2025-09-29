@@ -13,6 +13,8 @@
     ],
     "ignorePaths": [
         "target",
+        "data",
+        "build",
         "/project-words.txt"
     ]
 }

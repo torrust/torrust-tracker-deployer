@@ -3,8 +3,8 @@ use clap::{CommandFactory, Parser, Subcommand};
 use tracing::{error, info, Level};
 
 use crate::linters::{
-    run_clippy_linter, run_markdown_linter, run_rustfmt_linter, run_shellcheck_linter,
-    run_toml_linter, run_yaml_linter,
+    run_clippy_linter, run_cspell_linter, run_markdown_linter, run_rustfmt_linter,
+    run_shellcheck_linter, run_toml_linter, run_yaml_linter,
 };
 
 /// Initialize tracing with default configuration
@@ -54,6 +54,10 @@ pub enum Commands {
     /// Run TOML linter using Taplo
     Toml,
 
+    /// Run `CSpell` spell checker
+    #[command(alias = "spell")]
+    Cspell,
+
     /// Run Rust clippy linter
     Clippy,
 
@@ -102,6 +106,15 @@ pub fn run_all_linters() -> Result<()> {
         Ok(()) => {}
         Err(e) => {
             error!("TOML linting failed: {e}");
+            failed = true;
+        }
+    }
+
+    // Run CSpell spell checker
+    match run_cspell_linter() {
+        Ok(()) => {}
+        Err(e) => {
+            error!("Spell checking failed: {e}");
             failed = true;
         }
     }
@@ -157,6 +170,9 @@ pub fn execute_command(command: Option<&Commands>) -> Result<()> {
         Some(Commands::Toml) => {
             run_toml_linter()?;
         }
+        Some(Commands::Cspell) => {
+            run_cspell_linter()?;
+        }
         Some(Commands::Clippy) => {
             run_clippy_linter()?;
         }
@@ -187,6 +203,7 @@ pub fn print_usage_examples() {
     println!("  cargo run --bin linter markdown   # Run markdown linter");
     println!("  cargo run --bin linter yaml       # Run YAML linter");
     println!("  cargo run --bin linter toml       # Run TOML linter");
+    println!("  cargo run --bin linter cspell     # Run CSpell spell checker");
     println!("  cargo run --bin linter clippy     # Run Rust clippy linter");
     println!("  cargo run --bin linter rustfmt    # Run Rust formatter check");
     println!("  cargo run --bin linter shellcheck # Run ShellCheck linter");
