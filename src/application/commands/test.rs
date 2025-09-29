@@ -13,7 +13,7 @@
 //! diagnose deployment issues.
 
 use std::net::IpAddr;
-use tracing::{error, info, instrument};
+use tracing::{info, instrument};
 
 use crate::application::steps::{
     // ValidateCloudInitCompletionStep, // Disabled for container testing - see execute() method
