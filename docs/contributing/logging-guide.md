@@ -1,6 +1,8 @@
 # Structured Logging Guide
 
-This guide explains the structured logging implementation in the Torrust Tracker Deploy project, which uses hierar### JSON Output Format
+This guide explains the structured logging implementation in the Torrust Tracker Deploy project, which uses hierarchical structured logging.
+
+## JSON Output Format
 
 When using `logging::init_json()` or `LogFormat::Json`, logs are output in JSON format suitable for log aggregation:
 

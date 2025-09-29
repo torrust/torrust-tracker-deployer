@@ -293,31 +293,31 @@ lxc exec torrust-tracker-vm -- /bin/bash
 The split E2E testing architecture ensures reliable CI while maintaining comprehensive coverage:
 
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│                        E2E Test Suites                          │
-└─────┬────────────────┬────────────────┬─────────────────────────┘
-      │                │                │
-      │                │                │
-┌─────▼──────┐   ┌─────▼────────┐   ┌───▼──────────────────┐
-│ Provision  │   │Configuration │   │    Full Local        │
-│   Tests    │   │    Tests     │   │      Tests           │
-│            │   │              │   │                      │
-│ LXD VMs    │   │   Docker     │   │ LXD VMs + Docker     │
-│ (CI Safe)  │   │ Containers   │   │ (Local Only)         │
-│            │   │ (CI Safe)    │   │                      │
-└─────┬──────┘   └─────┬────────┘   └───┬──────────────────┘
-      │                │                │
-┌─────▼──────┐   ┌─────▼────────┐   ┌───▼──────────────────┐
-│ OpenTofu/  │   │  Testcon-    │   │ OpenTofu + Ansible   │
-│    LXD     │   │   tainers    │   │    (Full Stack)      │
-│Infrastructure│  │   Docker     │   │                      │
-│   Layer    │   │ Management   │   │                      │
-└────────────┘   └──────────────┘   └──────────────────────┘
-       │                │                        │
-┌──────▼──────┐  ┌──────▼────────┐    ┌─────────▼─────────┐
-│ VM Creation │  │Ansible Playbooks│    │  Complete Stack │
-│ Cloud-init  │  │ Configuration   │    │    Validation   │
-│ Validation  │  │   Validation    │    │                 │
+┌───────────────────────────────────────────────────────────────────┐
+│                        E2E Test Suites                            │
+└─────┬────────────────┬──────────────────┬─────────────────────────┘
+      │                │                  │
+      │                │                  │
+┌─────▼──────┐   ┌─────▼──────────┐   ┌───▼──────────────────┐
+│ Provision  │   │Configuration   │   │    Full Local        │
+│   Tests    │   │    Tests       │   │      Tests           │
+│            │   │                │   │                      │
+│ LXD VMs    │   │   Docker       │   │ LXD VMs + Docker     │
+│ (CI Safe)  │   │ Containers     │   │ (Local Only)         │
+│            │   │ (CI Safe)      │   │                      │
+└─────┬──────┘   └───────┬────────┘   └───┬──────────────────┘
+      │                  │                │
+┌─────▼────────┐   ┌─────▼────────┐   ┌───▼──────────────────┐
+│ OpenTofu/    │   │ Testcontain- │   │ OpenTofu + Ansible   │
+│    LXD       │   │     ers      │   │    (Full Stack)      │
+│Infrastructure│   │   Docker     │   │                      │
+│   Layer      │   │ Management   │   │                      │
+└──────────────┘   └──────────────┘   └──────────────────────┘
+       │                │                         │
+┌──────▼──────┐  ┌──────▼──────────┐    ┌─────────▼─────────┐
+│ VM Creation │  │Ansible Playbooks│    │  Complete Stack   │
+│ Cloud-init  │  │ Configuration   │    │    Validation     │
+│ Validation  │  │   Validation    │    │                   │
 └─────────────┘  └─────────────────┘    └───────────────────┘
 ```
 
