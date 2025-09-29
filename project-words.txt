@@ -78,6 +78,7 @@ resolv
 rgba
 rpcinterface
 runcmd
+rustc
 RUSTDOCFLAGS
 rustflags
 rustup
