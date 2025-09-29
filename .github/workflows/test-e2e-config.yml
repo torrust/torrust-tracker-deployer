@@ -109,8 +109,12 @@ jobs:
         if: always()
         run: |
           echo "Cleaning up test containers..."
-          # Clean up any remaining containers from the test
-          docker ps -aq | xargs -r docker rm -f || echo "No containers to remove"
+          # This is a safety fallback cleanup in case testcontainers cleanup didn't complete
+          # properly (e.g., if the test was abruptly halted). Under normal circumstances,
+          # the testcontainers crate should automatically clean up containers when tests finish.
+
+          # Clean up the specific container created for e2e-config tests
+          docker rm -f torrust-tracker-vm-e2e-config 2>/dev/null || echo "Container torrust-tracker-vm-e2e-config not found or already removed"
 
           # Clean up any test images if needed
           docker images --filter "reference=torrust-provisioned-instance*" -q | xargs -r docker rmi -f || echo "No test images to remove"

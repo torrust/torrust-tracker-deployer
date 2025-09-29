@@ -64,11 +64,26 @@ jobs:
         run: |
           # Build the template system and render the static templates
           cargo build --release
-          # For this workflow, we use static fixtures without variables for testing
-          mkdir -p build
-          cp -r templates/* build/
+
+          # Create a temporary directory for this standalone infrastructure test
+          # This test is independent of the deployment app logic and should not
+          # use the same build directory structure
+          TEMP_DIR="/tmp/lxd-provision-test"
+          echo "Using temporary directory: $TEMP_DIR"
+
+          # Set up LXD test configuration in temp directory
+          mkdir -p "$TEMP_DIR/lxd"
+          cp -r templates/tofu/lxd/* "$TEMP_DIR/lxd/"
+
           # Override the dynamic cloud-init template with static fixture
-          cp fixtures/tofu/lxd/cloud-init.yml build/tofu/lxd/cloud-init.yml
+          cp fixtures/tofu/lxd/cloud-init.yml "$TEMP_DIR/lxd/cloud-init.yml"
+
+          # Create static variables for this infrastructure test
+          cat > "$TEMP_DIR/lxd/variables.tfvars" << EOF
+          instance_name = "torrust-tracker-vm-test"
+          profile_name = "torrust-profile-test"
+          image = "ubuntu:24.04"
+          EOF
 
       - name: Verify installations
         run: |
@@ -82,19 +97,19 @@ jobs:
           lxc list
 
       - name: Initialize OpenTofu
-        working-directory: build/tofu/lxd
+        working-directory: /tmp/lxd-provision-test/lxd
         run: tofu init
 
       - name: Validate OpenTofu configuration
-        working-directory: build/tofu/lxd
+        working-directory: /tmp/lxd-provision-test/lxd
         run: tofu validate
 
       - name: Plan deployment
-        working-directory: build/tofu/lxd
+        working-directory: /tmp/lxd-provision-test/lxd
         run: tofu plan
 
       - name: Apply configuration
-        working-directory: build/tofu/lxd
+        working-directory: /tmp/lxd-provision-test/lxd
         run: |
           # Use tofu without sudo since socket permissions are set up
           # NOTE: For local development, use "sg lxd -c 'tofu apply'" instead
@@ -158,12 +173,12 @@ jobs:
           lxc exec torrust-tracker-vm -- systemctl status ssh || echo "ssh service check failed"
 
       - name: Get container outputs
-        working-directory: build/tofu/lxd
+        working-directory: /tmp/lxd-provision-test/lxd
         run: tofu output
 
       - name: Cleanup
         if: always()
-        working-directory: build/tofu/lxd
+        working-directory: /tmp/lxd-provision-test/lxd
         run: |
           echo "Cleaning up container..."
           # Use tofu without sudo since socket permissions are set up
