@@ -70,11 +70,15 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 /// async fn main() -> anyhow::Result<()> {
 ///     let instance_name = InstanceName::new("test-container".to_string())?;
 ///     let ssh_user = Username::new("torrust")?;
+///     let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
+///     let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
 ///     let test_env = TestEnvironment::initialized(
 ///         false,
 ///         "./templates".to_string(),
 ///         &ssh_user,
 ///         instance_name,
+///         ssh_private_key_path,
+///         ssh_public_key_path,
 ///         TestEnvironmentType::Container
 ///     )?;
 ///     

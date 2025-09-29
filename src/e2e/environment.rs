@@ -97,6 +97,8 @@ impl TestEnvironment {
     /// * `templates_dir` - Path to the templates directory
     /// * `ssh_user` - SSH username to use for connections
     /// * `instance_name` - Name for the instance to be deployed
+    /// * `ssh_private_key_path` - Path to the SSH private key file
+    /// * `ssh_public_key_path` - Path to the SSH public key file
     /// * `environment_type` - The type of test environment (Container or `VirtualMachine`)
     ///
     /// # Errors
@@ -112,16 +114,25 @@ impl TestEnvironment {
         templates_dir: impl Into<std::path::PathBuf>,
         ssh_user: &Username,
         instance_name: InstanceName,
+        ssh_private_key_path: impl Into<std::path::PathBuf>,
+        ssh_public_key_path: impl Into<std::path::PathBuf>,
         environment_type: TestEnvironmentType,
     ) -> Result<Self, TestEnvironmentError> {
         let templates_dir = templates_dir.into();
+        let ssh_private_key_path = ssh_private_key_path.into();
+        let ssh_public_key_path = ssh_public_key_path.into();
 
         Self::validate_inputs(&templates_dir)?;
 
         let project_root = Self::get_project_root()?;
         let temp_dir = Self::create_temp_directory()?;
 
-        let ssh_credentials = Self::setup_ssh_credentials(&project_root, &temp_dir, ssh_user)?;
+        let ssh_credentials = Self::setup_ssh_credentials(
+            &ssh_private_key_path,
+            &ssh_public_key_path,
+            &temp_dir,
+            ssh_user,
+        )?;
 
         let config = Self::create_config(
             keep_env,
@@ -188,24 +199,21 @@ impl TestEnvironment {
 
     /// Sets up SSH credentials with temporary keys
     fn setup_ssh_credentials(
-        project_root: &std::path::Path,
+        ssh_private_key_path: &std::path::Path,
+        ssh_public_key_path: &std::path::Path,
         temp_dir: &TempDir,
         ssh_user: &Username,
     ) -> Result<SshCredentials, TestEnvironmentError> {
         let temp_ssh_key = temp_dir.path().join(SSH_PRIVATE_KEY_FILENAME);
         let temp_ssh_pub_key = temp_dir.path().join(SSH_PUBLIC_KEY_FILENAME);
 
-        // Copy SSH private key from fixtures to temp directory
-        let fixtures_ssh_key = project_root.join("fixtures/testing_rsa");
-
-        std::fs::copy(&fixtures_ssh_key, &temp_ssh_key)
+        // Copy SSH private key from provided path to temp directory
+        std::fs::copy(ssh_private_key_path, &temp_ssh_key)
             .context("Failed to copy SSH private key to temporary directory")
             .map_err(|e| TestEnvironmentError::SshKeySetupError { source: e })?;
 
-        // Copy SSH public key from fixtures to temp directory
-        let fixtures_ssh_pub_key = project_root.join("fixtures/testing_rsa.pub");
-
-        std::fs::copy(&fixtures_ssh_pub_key, &temp_ssh_pub_key)
+        // Copy SSH public key from provided path to temp directory
+        std::fs::copy(ssh_public_key_path, &temp_ssh_pub_key)
             .context("Failed to copy SSH public key to temporary directory")
             .map_err(|e| TestEnvironmentError::SshKeySetupError { source: e })?;
 

@@ -117,11 +117,16 @@ pub async fn main() -> Result<()> {
 
     let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
 
+    let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
+    let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
+
     let env = TestEnvironment::initialized(
         false,
         cli.templates_dir,
         &ssh_user,
         instance_name,
+        ssh_private_key_path,
+        ssh_public_key_path,
         TestEnvironmentType::Container,
     )?;
 
