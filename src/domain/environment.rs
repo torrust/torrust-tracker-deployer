@@ -16,18 +16,21 @@
 //!
 //! ```rust
 //! use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+//! use torrust_tracker_deploy::shared::Username;
 //! use std::path::PathBuf;
 //!
 //! let env_name = EnvironmentName::new("e2e-config".to_string())?;
+//! let ssh_username = Username::new("torrust".to_string())?;
 //! let environment = Environment::new(
 //!     env_name,
+//!     ssh_username,
 //!     PathBuf::from("fixtures/testing_rsa"),
 //!     PathBuf::from("fixtures/testing_rsa.pub"),
 //! );
 //!
 //! // Environment automatically generates paths
-//! assert_eq!(environment.data_dir, PathBuf::from("data/e2e-config"));
-//! assert_eq!(environment.build_dir, PathBuf::from("build/e2e-config"));
+//! assert_eq!(*environment.data_dir(), PathBuf::from("data/e2e-config"));
+//! assert_eq!(*environment.build_dir(), PathBuf::from("build/e2e-config"));
 //! assert_eq!(environment.templates_dir(), PathBuf::from("data/e2e-config/templates"));
 //!
 //! # Ok::<(), Box<dyn std::error::Error>>(())
@@ -35,6 +38,7 @@
 
 use crate::config::InstanceName;
 use crate::domain::EnvironmentName;
+use crate::shared::Username;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -66,22 +70,25 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Environment {
     /// The validated environment name
-    pub name: EnvironmentName,
+    name: EnvironmentName,
 
     /// The instance name for this environment (auto-generated)
-    pub instance_name: InstanceName,
+    instance_name: InstanceName,
+
+    /// SSH username for connecting to instances in this environment
+    ssh_username: Username,
 
     /// Path to the SSH private key for this environment
-    pub ssh_private_key_path: PathBuf,
+    ssh_private_key_path: PathBuf,
 
     /// Path to the SSH public key for this environment
-    pub ssh_public_key_path: PathBuf,
+    ssh_public_key_path: PathBuf,
 
     /// Build directory for this environment (auto-generated)
-    pub build_dir: PathBuf,
+    build_dir: PathBuf,
 
     /// Data directory for this environment (auto-generated)
-    pub data_dir: PathBuf,
+    data_dir: PathBuf,
 }
 
 impl Environment {
@@ -90,6 +97,7 @@ impl Environment {
     /// # Arguments
     ///
     /// * `name` - The validated environment name
+    /// * `ssh_username` - SSH username for connecting to instances
     /// * `ssh_private_key_path` - Path to the SSH private key file
     /// * `ssh_public_key_path` - Path to the SSH public key file
     ///
@@ -102,18 +110,21 @@ impl Environment {
     ///
     /// ```rust
     /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::Username;
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
     /// let environment = Environment::new(
     ///     env_name,
+    ///     ssh_username,
     ///     PathBuf::from("keys/prod_rsa"),
     ///     PathBuf::from("keys/prod_rsa.pub"),
     /// );
     ///
-    /// assert_eq!(environment.instance_name.as_str(), "torrust-tracker-vm-production");
-    /// assert_eq!(environment.data_dir, PathBuf::from("data/production"));
-    /// assert_eq!(environment.build_dir, PathBuf::from("build/production"));
+    /// assert_eq!(environment.instance_name().as_str(), "torrust-tracker-vm-production");
+    /// assert_eq!(*environment.data_dir(), PathBuf::from("data/production"));
+    /// assert_eq!(*environment.build_dir(), PathBuf::from("build/production"));
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -125,6 +136,7 @@ impl Environment {
     #[must_use]
     pub fn new(
         name: EnvironmentName,
+        ssh_username: Username,
         ssh_private_key_path: PathBuf,
         ssh_public_key_path: PathBuf,
     ) -> Self {
@@ -142,11 +154,54 @@ impl Environment {
         Self {
             name,
             instance_name,
+            ssh_username,
             ssh_private_key_path,
             ssh_public_key_path,
             build_dir,
             data_dir,
         }
+    }
+
+    /// Returns the environment name
+    #[must_use]
+    pub fn name(&self) -> &EnvironmentName {
+        &self.name
+    }
+
+    /// Returns the instance name for this environment
+    #[must_use]
+    pub fn instance_name(&self) -> &InstanceName {
+        &self.instance_name
+    }
+
+    /// Returns the SSH username for this environment
+    #[must_use]
+    pub fn ssh_username(&self) -> &Username {
+        &self.ssh_username
+    }
+
+    /// Returns the SSH private key path for this environment
+    #[must_use]
+    pub fn ssh_private_key_path(&self) -> &PathBuf {
+        &self.ssh_private_key_path
+    }
+
+    /// Returns the SSH public key path for this environment
+    #[must_use]
+    pub fn ssh_public_key_path(&self) -> &PathBuf {
+        &self.ssh_public_key_path
+    }
+
+    /// Returns the build directory for this environment
+    #[must_use]
+    pub fn build_dir(&self) -> &PathBuf {
+        &self.build_dir
+    }
+
+    /// Returns the data directory for this environment
+    #[must_use]
+    pub fn data_dir(&self) -> &PathBuf {
+        &self.data_dir
     }
 
     /// Returns the templates directory for this environment
@@ -158,11 +213,14 @@ impl Environment {
     ///
     /// ```rust
     /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::Username;
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("staging".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
     /// let environment = Environment::new(
     ///     env_name,
+    ///     ssh_username,
     ///     PathBuf::from("keys/staging_rsa"),
     ///     PathBuf::from("keys/staging_rsa.pub"),
     /// );
@@ -185,11 +243,14 @@ impl Environment {
     ///
     /// ```rust
     /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::Username;
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("dev".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
     /// let environment = Environment::new(
     ///     env_name,
+    ///     ssh_username,
     ///     PathBuf::from("keys/dev_rsa"),
     ///     PathBuf::from("keys/dev_rsa.pub"),
     /// );
@@ -212,11 +273,14 @@ impl Environment {
     ///
     /// ```rust
     /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::Username;
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("test".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
     /// let environment = Environment::new(
     ///     env_name,
+    ///     ssh_username,
     ///     PathBuf::from("keys/test_rsa"),
     ///     PathBuf::from("keys/test_rsa.pub"),
     /// );
@@ -239,11 +303,14 @@ impl Environment {
     ///
     /// ```rust
     /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::Username;
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("integration".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
     /// let environment = Environment::new(
     ///     env_name,
+    ///     ssh_username,
     ///     PathBuf::from("keys/integration_rsa"),
     ///     PathBuf::from("keys/integration_rsa.pub"),
     /// );
@@ -266,11 +333,14 @@ impl Environment {
     ///
     /// ```rust
     /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::Username;
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("load-test".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
     /// let environment = Environment::new(
     ///     env_name,
+    ///     ssh_username,
     ///     PathBuf::from("keys/load-test-rsa"),
     ///     PathBuf::from("keys/load-test-rsa.pub"),
     /// );
@@ -296,30 +366,33 @@ mod tests {
     #[test]
     fn it_should_create_environment_with_auto_generated_paths() {
         let env_name = EnvironmentName::new("e2e-config".to_string()).unwrap();
+        let ssh_username = Username::new("torrust".to_string()).unwrap();
         let environment = Environment::new(
             env_name.clone(),
+            ssh_username.clone(),
             PathBuf::from("fixtures/testing_rsa"),
             PathBuf::from("fixtures/testing_rsa.pub"),
         );
 
         // Check basic fields
-        assert_eq!(environment.name, env_name);
+        assert_eq!(*environment.name(), env_name);
+        assert_eq!(*environment.ssh_username(), ssh_username);
         assert_eq!(
-            environment.ssh_private_key_path,
+            *environment.ssh_private_key_path(),
             PathBuf::from("fixtures/testing_rsa")
         );
         assert_eq!(
-            environment.ssh_public_key_path,
+            *environment.ssh_public_key_path(),
             PathBuf::from("fixtures/testing_rsa.pub")
         );
 
         // Check auto-generated paths
-        assert_eq!(environment.data_dir, PathBuf::from("data/e2e-config"));
-        assert_eq!(environment.build_dir, PathBuf::from("build/e2e-config"));
+        assert_eq!(*environment.data_dir(), PathBuf::from("data/e2e-config"));
+        assert_eq!(*environment.build_dir(), PathBuf::from("build/e2e-config"));
 
         // Check instance name
         assert_eq!(
-            environment.instance_name.as_str(),
+            environment.instance_name().as_str(),
             "torrust-tracker-vm-e2e-config"
         );
     }
@@ -327,8 +400,10 @@ mod tests {
     #[test]
     fn it_should_generate_correct_template_directories() {
         let env_name = EnvironmentName::new("production".to_string()).unwrap();
+        let ssh_username = Username::new("torrust".to_string()).unwrap();
         let environment = Environment::new(
             env_name,
+            ssh_username,
             PathBuf::from("keys/prod_rsa"),
             PathBuf::from("keys/prod_rsa.pub"),
         );
@@ -350,8 +425,10 @@ mod tests {
     #[test]
     fn it_should_generate_correct_build_directories() {
         let env_name = EnvironmentName::new("staging".to_string()).unwrap();
+        let ssh_username = Username::new("torrust".to_string()).unwrap();
         let environment = Environment::new(
             env_name,
+            ssh_username,
             PathBuf::from("keys/staging_rsa"),
             PathBuf::from("keys/staging_rsa.pub"),
         );
@@ -377,19 +454,21 @@ mod tests {
 
         for (env_name_str, expected_instance_name) in test_cases {
             let env_name = EnvironmentName::new(env_name_str.to_string()).unwrap();
+            let ssh_username = Username::new("torrust".to_string()).unwrap();
             let environment = Environment::new(
                 env_name,
+                ssh_username,
                 PathBuf::from("test_key"),
                 PathBuf::from("test_key.pub"),
             );
 
-            assert_eq!(environment.instance_name.as_str(), expected_instance_name);
+            assert_eq!(environment.instance_name().as_str(), expected_instance_name);
             assert_eq!(
-                environment.data_dir,
+                *environment.data_dir(),
                 PathBuf::from(format!("data/{env_name_str}"))
             );
             assert_eq!(
-                environment.build_dir,
+                *environment.build_dir(),
                 PathBuf::from(format!("build/{env_name_str}"))
             );
         }
@@ -398,8 +477,10 @@ mod tests {
     #[test]
     fn it_should_be_serializable_to_json() {
         let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
+        let ssh_username = Username::new("torrust".to_string()).unwrap();
         let environment = Environment::new(
             env_name,
+            ssh_username,
             PathBuf::from("test_private_key"),
             PathBuf::from("test_public_key"),
         );
@@ -411,21 +492,21 @@ mod tests {
         let deserialized: Environment = serde_json::from_str(&json).unwrap();
 
         // Check that all fields are preserved
-        assert_eq!(deserialized.name.as_str(), "test-env");
+        assert_eq!(deserialized.name().as_str(), "test-env");
         assert_eq!(
-            deserialized.instance_name.as_str(),
+            deserialized.instance_name().as_str(),
             "torrust-tracker-vm-test-env"
         );
         assert_eq!(
-            deserialized.ssh_private_key_path,
+            *deserialized.ssh_private_key_path(),
             PathBuf::from("test_private_key")
         );
         assert_eq!(
-            deserialized.ssh_public_key_path,
+            *deserialized.ssh_public_key_path(),
             PathBuf::from("test_public_key")
         );
-        assert_eq!(deserialized.data_dir, PathBuf::from("data/test-env"));
-        assert_eq!(deserialized.build_dir, PathBuf::from("build/test-env"));
+        assert_eq!(*deserialized.data_dir(), PathBuf::from("data/test-env"));
+        assert_eq!(*deserialized.build_dir(), PathBuf::from("build/test-env"));
     }
 
     #[test]
@@ -434,16 +515,18 @@ mod tests {
 
         for env_name_str in e2e_environments {
             let env_name = EnvironmentName::new(env_name_str.to_string()).unwrap();
+            let ssh_username = Username::new("torrust".to_string()).unwrap();
             let environment = Environment::new(
                 env_name,
+                ssh_username,
                 PathBuf::from("fixtures/testing_rsa"),
                 PathBuf::from("fixtures/testing_rsa.pub"),
             );
 
             // Verify the environment is created successfully
-            assert_eq!(environment.name.as_str(), env_name_str);
+            assert_eq!(environment.name().as_str(), env_name_str);
             assert!(environment
-                .instance_name
+                .instance_name()
                 .as_str()
                 .starts_with("torrust-tracker-vm-"));
             assert!(environment
@@ -460,22 +543,24 @@ mod tests {
     #[test]
     fn it_should_handle_dash_separated_environment_names() {
         let env_name = EnvironmentName::new("feature-user-auth".to_string()).unwrap();
+        let ssh_username = Username::new("torrust".to_string()).unwrap();
         let environment = Environment::new(
             env_name,
+            ssh_username,
             PathBuf::from("keys/feature_rsa"),
             PathBuf::from("keys/feature_rsa.pub"),
         );
 
         assert_eq!(
-            environment.instance_name.as_str(),
+            environment.instance_name().as_str(),
             "torrust-tracker-vm-feature-user-auth"
         );
         assert_eq!(
-            environment.data_dir,
+            *environment.data_dir(),
             PathBuf::from("data/feature-user-auth")
         );
         assert_eq!(
-            environment.build_dir,
+            *environment.build_dir(),
             PathBuf::from("build/feature-user-auth")
         );
         assert_eq!(

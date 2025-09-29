@@ -73,10 +73,6 @@ struct Cli {
     #[arg(long)]
     keep: bool,
 
-    /// Environment name for deployment testing (e.g., "e2e-full", "staging"). This determines the instance name and directory structure.
-    #[arg(long, default_value = "e2e-full")]
-    environment: String,
-
     /// Logging format to use
     #[arg(
         long,
@@ -119,27 +115,25 @@ pub async fn main() -> Result<()> {
         "Starting E2E tests"
     );
 
-    // Create environment entity from CLI input
-    let environment_name = EnvironmentName::new(cli.environment)?;
-    let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
-    let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
+    // Create environment entity for e2e-full testing
+    let environment_name = EnvironmentName::new("e2e-full".to_string())?;
+
+    // Use absolute paths to project root for SSH keys to ensure they can be found by Ansible
+    let project_root = std::env::current_dir().expect("Failed to get current directory");
+    let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
+    let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
+    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
+
     let environment = Environment::new(
         environment_name,
+        ssh_user.clone(),
         ssh_private_key_path.clone(),
         ssh_public_key_path.clone(),
     );
 
-    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
-
-    let test_context = TestContext::initialized(
-        cli.keep,
-        environment.data_dir.to_string_lossy().to_string(),
-        &ssh_user,
-        environment.instance_name.clone(),
-        ssh_private_key_path,
-        ssh_public_key_path,
-        TestContextType::VirtualMachine,
-    )?;
+    let test_context =
+        TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
+            .init()?;
 
     // Perform pre-flight cleanup to remove any lingering resources from interrupted tests
     cleanup_lingering_resources(&test_context)?;

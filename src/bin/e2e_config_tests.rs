@@ -16,9 +16,6 @@
 //! Run with custom options:
 //!
 //! ```bash
-//! # Use specific environment name
-//! cargo run --bin e2e-config-tests -- --environment e2e-staging
-//!
 //! # Change logging format  
 //! cargo run --bin e2e-config-tests -- --log-format json
 //!
@@ -67,10 +64,6 @@ use torrust_tracker_deploy::shared::Username;
 #[command(name = "e2e-config-tests")]
 #[command(about = "E2E configuration tests for Torrust Tracker Deploy using Docker containers")]
 struct CliArgs {
-    /// Environment name for deployment testing (e.g., "e2e-config", "staging"). This determines the instance name and directory structure.
-    #[arg(long, default_value = "e2e-config")]
-    environment: String,
-
     /// Logging format to use
     #[arg(
         long,
@@ -106,39 +99,32 @@ pub async fn main() -> Result<()> {
     info!(
         application = "torrust_tracker_deploy",
         test_suite = "e2e_config_tests",
-        environment = %cli.environment,
         log_format = ?cli.log_format,
         "Starting E2E configuration tests with Docker containers"
     );
 
     let test_start = Instant::now();
 
-    // Create Environment entity from CLI argument
-    let env_name = EnvironmentName::new(&cli.environment)
-        .map_err(|e| anyhow::anyhow!("Invalid environment name '{}': {}", cli.environment, e))?;
+    // Create Environment entity with hardcoded name for this binary
+    let env_name =
+        EnvironmentName::new("e2e-config").expect("Hardcoded environment name should be valid");
 
-    let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
-    let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
+    // Use absolute paths to project root for SSH keys to ensure they can be found by Ansible
+    let project_root = std::env::current_dir().expect("Failed to get current directory");
+    let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
+    let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
+    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
 
     let environment = Environment::new(
         env_name,
+        ssh_user.clone(),
         ssh_private_key_path.clone(),
         ssh_public_key_path.clone(),
     );
 
-    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
-
-    // Extract values from Environment entity for TestContext
-    // TODO: Update TestContext to accept Environment entity directly
-    let test_context = TestContext::initialized(
-        false,
-        environment.templates_dir(),
-        &ssh_user,
-        environment.instance_name.clone(),
-        ssh_private_key_path,
-        ssh_public_key_path,
-        TestContextType::Container,
-    )?;
+    // Create and initialize TestContext
+    let test_context =
+        TestContext::from_environment(false, environment, TestContextType::Container)?.init()?;
 
     preflight_cleanup::cleanup_lingering_resources(&test_context)?;
 

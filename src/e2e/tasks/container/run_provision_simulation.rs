@@ -60,27 +60,30 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 ///
 /// # Example
 ///
-/// ```rust,no_run
-/// use torrust_tracker_deploy::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
-/// use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
-/// use torrust_tracker_deploy::config::InstanceName;
+/// ```rust
+/// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
 /// use torrust_tracker_deploy::shared::Username;
+/// use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
+/// use torrust_tracker_deploy::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
+/// use std::path::PathBuf;
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
-///     let instance_name = InstanceName::new("test-container".to_string())?;
+///     let env_name = EnvironmentName::new("test".to_string())?;
 ///     let ssh_user = Username::new("torrust")?;
 ///     let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
 ///     let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
-///     let test_context = TestContext::initialized(
-///         false,
-///         "./templates".to_string(),
-///         &ssh_user,
-///         instance_name,
+///     let environment = Environment::new(
+///         env_name,
+///         ssh_user,
 ///         ssh_private_key_path,
 ///         ssh_public_key_path,
+///     );
+///     let test_context = TestContext::from_environment(
+///         false,
+///         environment,
 ///         TestContextType::Container
-///     )?;
+///     )?.init()?;
 ///     
 ///     let running_container = run_provision_simulation(&test_context).await?;
 ///     println!("Container provision simulation completed: {}", running_container.ssh_socket_addr());

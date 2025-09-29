@@ -20,13 +20,12 @@
 //! The context ensures each test runs in isolation with its own
 //! temporary resources and configuration.
 
-use anyhow::Context;
 use tempfile::TempDir;
 use tracing::{info, warn};
 
-use crate::config::{Config, InstanceName, SshCredentials};
+use crate::config::{Config, SshCredentials};
 use crate::container::Services;
-use crate::shared::Username;
+use crate::domain::Environment;
 
 /// Errors that can occur during test context creation and initialization
 #[derive(Debug, thiserror::Error)]
@@ -56,12 +55,6 @@ pub enum TestContextError {
     ContextPreparationError { source: anyhow::Error },
 }
 
-/// SSH private key filename for testing
-const SSH_PRIVATE_KEY_FILENAME: &str = "testing_rsa";
-
-/// SSH public key filename for testing
-const SSH_PUBLIC_KEY_FILENAME: &str = "testing_rsa.pub";
-
 /// Type of test context indicating what infrastructure is used
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TestContextType {
@@ -77,6 +70,8 @@ pub enum TestContextType {
 pub struct TestContext {
     pub config: Config,
     pub services: Services,
+    /// The complete environment configuration containing instance name, SSH keys, and paths
+    pub environment: Environment,
     /// Temporary directory for SSH keys. Must be kept alive for the lifetime
     /// of the test context to prevent cleanup of SSH key files.
     /// This field is not directly read but must be retained for RAII cleanup.
@@ -86,20 +81,17 @@ pub struct TestContext {
 }
 
 impl TestContext {
-    /// Creates and initializes a new test environment with custom SSH user
+    /// Creates a new test environment with custom SSH user (private constructor)
     ///
-    /// This method performs the complete setup including validation, SSH key setup,
-    /// template preparation, and environment initialization in a single call.
+    /// This method performs the setup including validation, SSH key setup,
+    /// and configuration creation, but does NOT initialize the environment.
+    /// Callers must explicitly call `.init()` to complete the setup.
     ///
     /// # Arguments
     ///
     /// * `keep_env` - Whether to keep the environment after tests complete
-    /// * `templates_dir` - Path to the templates directory
-    /// * `ssh_user` - SSH username to use for connections
-    /// * `instance_name` - Name for the instance to be deployed
-    /// * `ssh_private_key_path` - Path to the SSH private key file
-    /// * `ssh_public_key_path` - Path to the SSH public key file
-    /// * `environment_type` - The type of test environment (Container or `VirtualMachine`)
+    /// * `environment` - The Environment entity containing all necessary configuration
+    /// * `context_type` - The type of test environment (Container or `VirtualMachine`)
     ///
     /// # Errors
     ///
@@ -108,38 +100,31 @@ impl TestContext {
     /// - Current directory cannot be determined
     /// - Temporary directory creation fails
     /// - SSH key setup fails
-    /// - Template preparation fails
-    pub fn initialized(
+    fn new(
         keep_env: bool,
-        templates_dir: impl Into<std::path::PathBuf>,
-        ssh_user: &Username,
-        instance_name: InstanceName,
-        ssh_private_key_path: impl Into<std::path::PathBuf>,
-        ssh_public_key_path: impl Into<std::path::PathBuf>,
+        environment: Environment,
         context_type: TestContextType,
     ) -> Result<Self, TestContextError> {
-        let templates_dir = templates_dir.into();
-        let ssh_private_key_path = ssh_private_key_path.into();
-        let ssh_public_key_path = ssh_public_key_path.into();
+        let templates_dir = environment.templates_dir();
 
         Self::validate_inputs(&templates_dir)?;
 
         let project_root = Self::get_project_root()?;
         let temp_dir = Self::create_temp_directory()?;
 
-        let ssh_credentials = Self::setup_ssh_credentials(
-            &ssh_private_key_path,
-            &ssh_public_key_path,
-            &temp_dir,
-            ssh_user,
-        )?;
+        let ssh_credentials = SshCredentials::new(
+            environment.ssh_private_key_path().clone(),
+            environment.ssh_public_key_path().clone(),
+            environment.ssh_username().clone(),
+        );
 
-        let config = Self::create_config(
+        let config = Config::new(
             keep_env,
             ssh_credentials,
-            instance_name,
-            &templates_dir,
-            &project_root,
+            environment.instance_name().clone(),
+            environment.templates_dir().to_string_lossy().to_string(),
+            project_root,
+            environment.build_dir().clone(),
         );
 
         let services = Services::new(&config);
@@ -147,28 +132,86 @@ impl TestContext {
         let env = Self {
             config,
             services,
+            environment,
             temp_dir: Some(temp_dir),
             context_type,
         };
 
-        env.init()?;
-
         Ok(env)
+    }
+
+    /// Creates a new test environment from an Environment entity
+    ///
+    /// This method provides a simplified interface that accepts an Environment entity
+    /// containing all the necessary configuration, rather than individual parameters.
+    ///
+    /// **Important**: This method does NOT initialize the environment. You must call
+    /// `.init()` on the returned `TestContext` to complete the setup.
+    ///
+    /// # Arguments
+    ///
+    /// * `keep_env` - Whether to keep the environment after tests complete
+    /// * `environment` - The Environment entity containing instance name, SSH keys, and paths
+    /// * `context_type` - The type of test environment (Container or `VirtualMachine`)
+    ///
+    /// # Returns
+    ///
+    /// A `TestContext` that requires `.init()` to be called before use.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Input validation fails (empty or invalid templates directory)
+    /// - Current directory cannot be determined
+    /// - Temporary directory creation fails
+    /// - SSH key setup fails
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::Username;
+    /// use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
+    /// use std::path::PathBuf;
+    ///
+    /// let env_name = EnvironmentName::new("e2e-test".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
+    /// let environment = Environment::new(
+    ///     env_name,
+    ///     ssh_username,
+    ///     PathBuf::from("fixtures/testing_rsa"),
+    ///     PathBuf::from("fixtures/testing_rsa.pub"),
+    /// );
+    ///
+    /// let test_context = TestContext::from_environment(
+    ///     false,
+    ///     environment,
+    ///     TestContextType::Container,
+    /// )?.init()?;
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn from_environment(
+        keep_env: bool,
+        environment: Environment,
+        context_type: TestContextType,
+    ) -> Result<Self, TestContextError> {
+        Self::new(keep_env, environment, context_type)
     }
 
     /// Initializes the test environment by preparing templates and logging setup
     ///
     /// This method performs the final environment setup with side effects.
-    /// It is called internally by `initialized()` as part of the initialization process.
+    /// It must be called explicitly after creating a `TestContext` to complete the setup.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - Template preparation fails
-    fn init(&self) -> Result<(), TestContextError> {
+    pub fn init(self) -> Result<Self, TestContextError> {
         Self::prepare_environment(&self.services)?;
         self.log_environment_info();
-        Ok(())
+        Ok(self)
     }
 
     /// Validates input parameters
@@ -195,72 +238,6 @@ impl TestContext {
     /// Creates a temporary directory for SSH keys
     fn create_temp_directory() -> Result<TempDir, TestContextError> {
         TempDir::new().map_err(|e| TestContextError::TempDirectoryCreationError { source: e })
-    }
-
-    /// Sets up SSH credentials with temporary keys
-    fn setup_ssh_credentials(
-        ssh_private_key_path: &std::path::Path,
-        ssh_public_key_path: &std::path::Path,
-        temp_dir: &TempDir,
-        ssh_user: &Username,
-    ) -> Result<SshCredentials, TestContextError> {
-        let temp_ssh_key = temp_dir.path().join(SSH_PRIVATE_KEY_FILENAME);
-        let temp_ssh_pub_key = temp_dir.path().join(SSH_PUBLIC_KEY_FILENAME);
-
-        // Copy SSH private key from provided path to temp directory
-        std::fs::copy(ssh_private_key_path, &temp_ssh_key)
-            .context("Failed to copy SSH private key to temporary directory")
-            .map_err(|e| TestContextError::SshKeySetupError { source: e })?;
-
-        // Copy SSH public key from provided path to temp directory
-        std::fs::copy(ssh_public_key_path, &temp_ssh_pub_key)
-            .context("Failed to copy SSH public key to temporary directory")
-            .map_err(|e| TestContextError::SshKeySetupError { source: e })?;
-
-        // Set proper permissions on the SSH key (600)
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&temp_ssh_key)
-                .context("Failed to get SSH key metadata")
-                .map_err(|e| TestContextError::SshKeySetupError { source: e })?
-                .permissions();
-            perms.set_mode(0o600);
-            std::fs::set_permissions(&temp_ssh_key, perms)
-                .context("Failed to set SSH key permissions")
-                .map_err(|e| TestContextError::SshKeySetupError { source: e })?;
-        }
-
-        info!(
-            operation = "ssh_key_setup",
-            private_location = %temp_ssh_key.display(),
-            public_location = %temp_ssh_pub_key.display(),
-            "SSH keys copied to temporary location"
-        );
-
-        Ok(SshCredentials::new(
-            temp_ssh_key,
-            temp_ssh_pub_key,
-            ssh_user.clone(),
-        ))
-    }
-
-    /// Creates the main configuration object
-    fn create_config(
-        keep_env: bool,
-        ssh_credentials: SshCredentials,
-        instance_name: InstanceName,
-        templates_dir: &std::path::Path,
-        project_root: &std::path::Path,
-    ) -> Config {
-        Config::new(
-            keep_env,
-            ssh_credentials,
-            instance_name,
-            templates_dir.to_string_lossy().to_string(),
-            project_root.to_path_buf(),
-            project_root.join("build"),
-        )
     }
 
     /// Prepares the test environment (templates, etc.)

@@ -158,29 +158,41 @@ Each binary now:
 **Example for e2e_config_tests.rs**:
 
 ```rust
+let env_name = EnvironmentName::new("e2e-config".to_string())?;
+let ssh_user = Username::new("torrust")?;
 let environment = Environment::new(
-    EnvironmentName::new("e2e-config".to_string())?,
+    env_name,
+    ssh_user,
     ssh_private_key_path,
     ssh_public_key_path,
 );
 
-let test_context = TestContext::initialized(
+let test_context = TestContext::from_environment(
     false,
     environment,
-    &ssh_user,
     TestContextType::Container,
-)?;
+)?.init()?;
 ```
 
-### Step 5: Update TestContext
+### Step 5: Update TestContext ✅ COMPLETED
 
 **Location**: `src/e2e/context.rs`
 
 **Requirements**:
 
-- Replace individual parameters with Environment entity
-- Maintain backward compatibility during transition
-- Update all dependent code
+- ✅ Replace individual parameters with Environment entity
+- ✅ Add Environment as a field in TestContext struct
+- ✅ Rename `initialized` to private `new` method
+- ✅ Make `init` method public for explicit initialization
+- ✅ Update all dependent code
+
+**Implementation Summary**:
+
+- Added `environment: Environment` field to TestContext struct
+- Renamed `TestContext::initialized` → `TestContext::new` (private)
+- Made `TestContext::init()` public with ownership transfer pattern
+- Updated all E2E binaries to use `.init()` explicitly
+- Updated documentation examples and comments
 
 **Key Changes**:
 
