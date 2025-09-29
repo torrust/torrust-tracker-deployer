@@ -15,6 +15,7 @@ cpus
 Crossplane
 dearmor
 debootstrap
+debuginfo
 distutils
 Dockerfiles
 dpkg
@@ -47,6 +48,7 @@ maxbytes
 mgmt
 mocksecret
 MVVM
+myapp
 myenv
 nameof
 newgrp
