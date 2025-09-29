@@ -63,7 +63,7 @@ use torrust_tracker_deploy::e2e::tasks::{
     },
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
-use torrust_tracker_deploy::shared::Username;
+use torrust_tracker_deploy::shared::{ssh::SshCredentials, Username};
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
@@ -123,13 +123,13 @@ pub async fn main() -> Result<()> {
     let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
     let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
     let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
-
-    let environment = Environment::new(
-        environment_name,
-        ssh_user.clone(),
+    let ssh_credentials = SshCredentials::new(
         ssh_private_key_path.clone(),
         ssh_public_key_path.clone(),
+        ssh_user.clone(),
     );
+
+    let environment = Environment::new(environment_name, ssh_credentials);
 
     let test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?

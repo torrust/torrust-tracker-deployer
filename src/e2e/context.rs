@@ -171,18 +171,18 @@ impl TestContext {
     ///
     /// ```rust
     /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::Username;
+    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
     /// use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("e2e-test".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
-    /// let environment = Environment::new(
-    ///     env_name,
-    ///     ssh_username,
+    /// let ssh_credentials = SshCredentials::new(
     ///     PathBuf::from("fixtures/testing_rsa"),
     ///     PathBuf::from("fixtures/testing_rsa.pub"),
+    ///     ssh_username,
     /// );
+    /// let environment = Environment::new(env_name, ssh_credentials);
     ///
     /// let test_context = TestContext::from_environment(
     ///     false,

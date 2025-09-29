@@ -16,12 +16,13 @@
 use std::path::PathBuf;
 
 use crate::shared::Username;
+use serde::{Deserialize, Serialize};
 
 /// SSH credentials for remote instance authentication.
 ///
 /// Contains the static SSH authentication information that is known
 /// at program startup, before any instances are provisioned.
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SshCredentials {
     /// Path to the SSH private key file for remote connections.
     ///

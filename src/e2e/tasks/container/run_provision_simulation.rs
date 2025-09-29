@@ -62,7 +62,7 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 ///
 /// ```rust
 /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-/// use torrust_tracker_deploy::shared::Username;
+/// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
 /// use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 /// use torrust_tracker_deploy::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
 /// use std::path::PathBuf;
@@ -73,12 +73,12 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 ///     let ssh_user = Username::new("torrust")?;
 ///     let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
 ///     let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
-///     let environment = Environment::new(
-///         env_name,
-///         ssh_user,
+///     let ssh_credentials = SshCredentials::new(
 ///         ssh_private_key_path,
 ///         ssh_public_key_path,
+///         ssh_user,
 ///     );
+///     let environment = Environment::new(env_name, ssh_credentials);
 ///     let test_context = TestContext::from_environment(
 ///         false,
 ///         environment,
