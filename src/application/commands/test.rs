@@ -16,8 +16,7 @@ use std::net::IpAddr;
 use tracing::{info, instrument};
 
 use crate::application::steps::{
-    // ValidateCloudInitCompletionStep, // Disabled for container testing - see execute() method
-    ValidateDockerComposeInstallationStep,
+    ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,
 };
 use crate::infrastructure::remote_actions::RemoteActionError;
@@ -76,16 +75,9 @@ impl TestCommand {
         let ssh_connection =
             SshConnection::with_default_port(self.ssh_credentials.clone(), self.instance_ip);
 
-        // TODO: Cloud-init validation disabled for container testing
-        // This step fails when testing with Docker containers since they don't have cloud-init installed.
-        // In the future, we can:
-        // - Add a flag to enable this only when the provisioned instance supports it
-        // - Check for the cloud-init completion file (which is simulated in the Docker container)
-        //   instead of calling the cloud-init service directly
-        //
-        // ValidateCloudInitCompletionStep::new(ssh_connection.clone())
-        //     .execute()
-        //     .await?;
+        ValidateCloudInitCompletionStep::new(ssh_connection.clone())
+            .execute()
+            .await?;
 
         ValidateDockerInstallationStep::new(ssh_connection.clone())
             .execute()

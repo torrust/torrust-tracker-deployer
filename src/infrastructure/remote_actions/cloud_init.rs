@@ -61,23 +61,52 @@ impl RemoteAction for CloudInitValidator {
             "Validating cloud-init completion"
         );
 
-        // Check cloud-init status
-        let status_output = self
+        // Check if cloud-init is installed
+        let cloud_init_installed = self
             .ssh_client
-            .execute("cloud-init status")
+            .check_command("command -v cloud-init")
             .map_err(|source| RemoteActionError::SshCommandFailed {
                 action_name: self.name().to_string(),
                 source,
             })?;
 
-        if !status_output.contains("status: done") {
-            return Err(RemoteActionError::ValidationFailed {
-                action_name: self.name().to_string(),
-                message: format!("Cloud-init status is not 'done': {status_output}"),
-            });
+        if cloud_init_installed {
+            info!(
+                action = "cloud_init_validation",
+                check = "installation",
+                "Cloud-init is installed, checking status"
+            );
+
+            // Check cloud-init status only if cloud-init is installed
+            let status_output = self
+                .ssh_client
+                .execute("cloud-init status")
+                .map_err(|source| RemoteActionError::SshCommandFailed {
+                    action_name: self.name().to_string(),
+                    source,
+                })?;
+
+            if !status_output.contains("status: done") {
+                return Err(RemoteActionError::ValidationFailed {
+                    action_name: self.name().to_string(),
+                    message: format!("Cloud-init status is not 'done': {status_output}"),
+                });
+            }
+
+            info!(
+                action = "cloud_init_validation",
+                check = "status_done",
+                "Cloud-init status is 'done'"
+            );
+        } else {
+            info!(
+                action = "cloud_init_validation",
+                check = "installation",
+                "Cloud-init is not installed, skipping status check (container environment)"
+            );
         }
 
-        // Check for completion marker file
+        // Check for completion marker file (applies to both VM and container environments)
         let marker_exists = self
             .ssh_client
             .check_command("test -f /var/lib/cloud/instance/boot-finished")
@@ -95,18 +124,14 @@ impl RemoteAction for CloudInitValidator {
 
         info!(
             action = "cloud_init_validation",
-            status = "success",
-            "Cloud-init validation passed"
-        );
-        info!(
-            action = "cloud_init_validation",
-            check = "status_done",
-            "Cloud-init status is 'done'"
-        );
-        info!(
-            action = "cloud_init_validation",
             check = "completion_marker",
             "Completion marker file exists"
+        );
+
+        info!(
+            action = "cloud_init_validation",
+            status = "success",
+            "Cloud-init validation passed"
         );
 
         Ok(())
