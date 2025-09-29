@@ -75,6 +75,8 @@ These principles should guide all development decisions, code reviews, and featu
 
 5. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](../docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
 
+6. **Understanding expected errors**: Read [`docs/contributing/known-issues.md`](../docs/contributing/known-issues.md) for known issues and expected behaviors. Some errors that appear red in E2E test output (like SSH host key warnings) are normal and expected - not actual failures.
+
 ## 🧪 Build & Test
 
 - **Lint**: `cargo run --bin linter all` (comprehensive - tests stable & nightly toolchains)
