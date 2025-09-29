@@ -5,6 +5,30 @@
 //! is properly provisioned and ready for configuration, but does NOT attempt
 //! to configure or install software.
 //!
+//! ## Usage
+//!
+//! Run the E2E provisioning tests:
+//!
+//! ```bash
+//! cargo run --bin e2e-provision-tests
+//! ```
+//!
+//! Run with custom options:
+//!
+//! ```bash
+//! # Use specific environment name
+//! cargo run --bin e2e-provision-tests -- --environment e2e-staging
+//!
+//! # Keep test environment after completion (for debugging)
+//! cargo run --bin e2e-provision-tests -- --keep
+//!
+//! # Change logging format
+//! cargo run --bin e2e-provision-tests -- --log-format json
+//!
+//! # Show help
+//! cargo run --bin e2e-provision-tests -- --help
+//! ```
+//!
 //! ## Test Workflow
 //!
 //! 1. **Preflight cleanup** - Remove any lingering test resources
@@ -22,7 +46,7 @@ use std::time::Instant;
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
-use torrust_tracker_deploy::config::InstanceName;
+use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
 use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
@@ -42,9 +66,9 @@ struct Cli {
     #[arg(long)]
     keep: bool,
 
-    /// Templates directory path (default: ./data/templates)
-    #[arg(long, default_value = "./data/templates")]
-    templates_dir: String,
+    /// Environment name for deployment testing (e.g., "e2e-provision", "staging"). This determines the instance name and directory structure.
+    #[arg(long, default_value = "e2e-provision")]
+    environment: String,
 
     /// Logging format to use
     #[arg(
@@ -69,6 +93,7 @@ struct Cli {
 /// # Errors
 ///
 /// This function may return errors in the following cases:
+/// - Invalid environment name provided via CLI
 /// - Test environment setup fails
 /// - Pre-flight cleanup encounters issues
 /// - Infrastructure provisioning fails
@@ -76,11 +101,8 @@ struct Cli {
 ///
 /// # Panics
 ///
-/// May panic if the hardcoded instance name "torrust-tracker-vm" is invalid,
+/// This function may panic if the hardcoded username "torrust" is invalid,
 /// which should never happen in normal operation.
-///
-/// May panic during the match statement if unexpected error combinations occur
-/// that are not handled by the current error handling logic.
 #[tokio::main]
 pub async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -95,20 +117,23 @@ pub async fn main() -> Result<()> {
         "Starting E2E provisioning tests"
     );
 
-    // Instance name for the test environment - not user configurable for now
-    let instance_name =
-        InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
+    // Create environment entity from CLI input
+    let environment_name = EnvironmentName::new(cli.environment)?;
+    let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
+    let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
+    let environment = Environment::new(
+        environment_name,
+        ssh_private_key_path.clone(),
+        ssh_public_key_path.clone(),
+    );
 
     let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
 
-    let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
-    let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
-
     let test_context = TestContext::initialized(
         cli.keep,
-        cli.templates_dir,
+        environment.data_dir.to_string_lossy().to_string(),
         &ssh_user,
-        instance_name,
+        environment.instance_name.clone(),
         ssh_private_key_path,
         ssh_public_key_path,
         TestContextType::VirtualMachine,

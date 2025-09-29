@@ -9,6 +9,30 @@
 //! - `cargo run --bin e2e-provision-tests` - Infrastructure provisioning only
 //! - `cargo run --bin e2e-config-tests` - Configuration and software installation
 //!
+//! ## Usage
+//!
+//! Run the full E2E test suite:
+//!
+//! ```bash
+//! cargo run --bin e2e-tests-full
+//! ```
+//!
+//! Run with custom options:
+//!
+//! ```bash
+//! # Use specific environment name
+//! cargo run --bin e2e-tests-full -- --environment e2e-staging
+//!
+//! # Keep test environment after completion (for debugging)
+//! cargo run --bin e2e-tests-full -- --keep
+//!
+//! # Change logging format
+//! cargo run --bin e2e-tests-full -- --log-format json
+//!
+//! # Show help
+//! cargo run --bin e2e-tests-full -- --help
+//! ```
+//!
 //! ## Test Workflow
 //!
 //! 1. **Preflight cleanup** - Remove any lingering test resources
@@ -27,7 +51,7 @@ use std::time::Instant;
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
-use torrust_tracker_deploy::config::InstanceName;
+use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
 use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
@@ -49,9 +73,9 @@ struct Cli {
     #[arg(long)]
     keep: bool,
 
-    /// Templates directory path (default: ./data/templates)
-    #[arg(long, default_value = "./data/templates")]
-    templates_dir: String,
+    /// Environment name for deployment testing (e.g., "e2e-full", "staging"). This determines the instance name and directory structure.
+    #[arg(long, default_value = "e2e-full")]
+    environment: String,
 
     /// Logging format to use
     #[arg(
@@ -70,6 +94,7 @@ struct Cli {
 /// # Errors
 ///
 /// Returns an error if:
+/// - Invalid environment name provided via CLI
 /// - Pre-flight cleanup fails
 /// - Infrastructure provisioning fails  
 /// - Service configuration fails
@@ -94,20 +119,23 @@ pub async fn main() -> Result<()> {
         "Starting E2E tests"
     );
 
-    // Instance name for the test environment - not user configurable for now
-    let instance_name =
-        InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
+    // Create environment entity from CLI input
+    let environment_name = EnvironmentName::new(cli.environment)?;
+    let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
+    let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
+    let environment = Environment::new(
+        environment_name,
+        ssh_private_key_path.clone(),
+        ssh_public_key_path.clone(),
+    );
 
     let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
 
-    let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
-    let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
-
     let test_context = TestContext::initialized(
         cli.keep,
-        cli.templates_dir,
+        environment.data_dir.to_string_lossy().to_string(),
         &ssh_user,
-        instance_name,
+        environment.instance_name.clone(),
         ssh_private_key_path,
         ssh_public_key_path,
         TestContextType::VirtualMachine,

@@ -128,19 +128,32 @@ pub mod environment_name;
 // ... existing modules
 ```
 
-### Step 4: Update E2E Binaries
+### Step 4: Update E2E Binaries ✅ COMPLETED
 
 **Files to Modify**:
 
-- `src/bin/e2e_provision_tests.rs`
-- `src/bin/e2e_config_tests.rs`
-- `src/bin/e2e_tests_full.rs`
+- ✅ `src/bin/e2e_provision_tests.rs`
+- ✅ `src/bin/e2e_config_tests.rs`
+- ✅ `src/bin/e2e_tests_full.rs`
 
 **Requirements**:
 
-- Create Environment instances in each binary
-- Use environment-specific configurations
-- Maintain existing CLI argument compatibility where possible
+- ✅ Create Environment instances in each binary
+- ✅ Use environment-specific configurations
+- ✅ Replace hardcoded instance names with Environment entity
+- ✅ Update CLI arguments from `--templates-dir` to `--environment`
+- ✅ Update help text and documentation
+
+**Implementation Summary**:
+
+Each binary now:
+
+- Accepts `--environment` parameter instead of `--templates-dir`
+- Creates Environment entity with auto-generated paths and instance names
+- Uses different default environment names for isolation:
+  - `e2e-config` for config tests
+  - `e2e-provision` for provision tests
+  - `e2e-full` for full tests
 
 **Example for e2e_config_tests.rs**:
 

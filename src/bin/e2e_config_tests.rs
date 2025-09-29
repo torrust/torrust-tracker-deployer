@@ -16,10 +16,10 @@
 //! Run with custom options:
 //!
 //! ```bash
-//! # Use custom templates directory
-//! cargo run --bin e2e-config-tests -- --templates-dir ./custom/templates
+//! # Use specific environment name
+//! cargo run --bin e2e-config-tests -- --environment e2e-staging
 //!
-//! # Change logging format
+//! # Change logging format  
 //! cargo run --bin e2e-config-tests -- --log-format json
 //!
 //! # Show help
@@ -50,7 +50,7 @@ use std::time::Instant;
 use torrust_tracker_deploy::e2e::tasks::run_configure_command::run_configure_command;
 use tracing::{error, info};
 
-use torrust_tracker_deploy::config::InstanceName;
+use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
 use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deploy::e2e::tasks::{
     container::{
@@ -67,9 +67,9 @@ use torrust_tracker_deploy::shared::Username;
 #[command(name = "e2e-config-tests")]
 #[command(about = "E2E configuration tests for Torrust Tracker Deploy using Docker containers")]
 struct CliArgs {
-    /// Templates directory path (default: ./data/templates)
-    #[arg(long, default_value = "./data/templates")]
-    templates_dir: String,
+    /// Environment name for deployment testing (e.g., "e2e-config", "staging"). This determines the instance name and directory structure.
+    #[arg(long, default_value = "e2e-config")]
+    environment: String,
 
     /// Logging format to use
     #[arg(
@@ -106,25 +106,35 @@ pub async fn main() -> Result<()> {
     info!(
         application = "torrust_tracker_deploy",
         test_suite = "e2e_config_tests",
+        environment = %cli.environment,
         log_format = ?cli.log_format,
         "Starting E2E configuration tests with Docker containers"
     );
 
     let test_start = Instant::now();
 
-    let instance_name =
-        InstanceName::new("torrust-tracker-vm".to_string()).expect("Valid hardcoded instance name");
-
-    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
+    // Create Environment entity from CLI argument
+    let env_name = EnvironmentName::new(&cli.environment)
+        .map_err(|e| anyhow::anyhow!("Invalid environment name '{}': {}", cli.environment, e))?;
 
     let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
     let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
 
+    let environment = Environment::new(
+        env_name,
+        ssh_private_key_path.clone(),
+        ssh_public_key_path.clone(),
+    );
+
+    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
+
+    // Extract values from Environment entity for TestContext
+    // TODO: Update TestContext to accept Environment entity directly
     let test_context = TestContext::initialized(
         false,
-        cli.templates_dir,
+        environment.templates_dir(),
         &ssh_user,
-        instance_name,
+        environment.instance_name.clone(),
         ssh_private_key_path,
         ssh_public_key_path,
         TestContextType::Container,
