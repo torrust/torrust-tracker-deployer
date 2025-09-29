@@ -193,12 +193,12 @@ fn cleanup_lxd_resources(test_context: &TestContext) {
     }
 
     // Clean up test profile if it exists
-    match lxd_client.delete_profile("torrust-profile") {
+    match lxd_client.delete_profile(test_context.config.profile_name.as_str()) {
         Ok(()) => {
             info!(
                 operation = "lxd_resources_cleanup",
                 resource = "profile",
-                name = "torrust-profile",
+                name = %test_context.config.profile_name.as_str(),
                 status = "success",
                 "LXD profile cleanup completed successfully"
             );
@@ -207,7 +207,7 @@ fn cleanup_lxd_resources(test_context: &TestContext) {
             warn!(
                 operation = "lxd_resources_cleanup",
                 resource = "profile",
-                name = "torrust-profile",
+                name = %test_context.config.profile_name.as_str(),
                 error = %e,
                 "Failed to clean LXD profile"
             );

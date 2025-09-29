@@ -4,5 +4,8 @@
 # VM instance name - injected dynamically from runtime context
 instance_name = "{{ instance_name }}"
 
+# LXD profile name - injected dynamically from runtime context for environment isolation
+profile_name = "{{ profile_name }}"
+
 # LXD image to use for the container
 image = "ubuntu:24.04"

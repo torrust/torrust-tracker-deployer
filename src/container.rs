@@ -56,7 +56,8 @@ impl Services {
             template_manager.clone(),
             config.build_dir.clone(),
             config.ssh_credentials.clone(),
-            config.instance_name.clone(), // Phase 3: Use instance_name from config instead of hardcoded value
+            config.instance_name.clone(),
+            config.profile_name.clone(),
         );
 
         // Create configuration template renderer

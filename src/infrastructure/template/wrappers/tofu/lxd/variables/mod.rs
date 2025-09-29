@@ -115,6 +115,7 @@ mod tests {
     fn create_test_context() -> VariablesContext {
         VariablesContext::builder()
             .with_instance_name(InstanceName::new("test-instance".to_string()).unwrap())
+            .with_profile_name(crate::domain::ProfileName::new("test-profile".to_string()).unwrap())
             .build()
             .unwrap()
     }
@@ -261,6 +262,9 @@ image = "ubuntu:24.04""#;
             File::new("variables.tfvars.tera", "{{ instance_name }}".to_string()).unwrap();
         let context = VariablesContext::builder()
             .with_instance_name(InstanceName::new("dynamic-vm".to_string()).unwrap())
+            .with_profile_name(
+                crate::domain::ProfileName::new("dynamic-profile".to_string()).unwrap(),
+            )
             .build()
             .unwrap();
 

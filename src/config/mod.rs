@@ -16,7 +16,7 @@
 
 use std::path::PathBuf;
 
-pub use crate::domain::InstanceName;
+pub use crate::domain::{InstanceName, ProfileName};
 pub use crate::shared::ssh::{SshConnection, SshCredentials};
 
 /// Configuration parameters for deployment environments.
@@ -47,6 +47,12 @@ pub struct Config {
     /// 1-63 characters, ASCII letters/numbers/dashes, cannot start with digit/dash,
     /// cannot end with dash.
     pub instance_name: InstanceName,
+
+    /// Name for the LXD profile to be created.
+    ///
+    /// This name will be used for creating LXD profiles with environment-specific
+    /// naming to ensure test isolation between different environments.
+    pub profile_name: ProfileName,
 
     /// Subdirectory name for Ansible-related files within the build directory.
     ///
@@ -90,6 +96,7 @@ impl Config {
     /// # use std::net::{IpAddr, Ipv4Addr};
     /// # use std::path::PathBuf;
     /// # use torrust_tracker_deploy::config::{Config, SshCredentials, InstanceName};
+    /// # use torrust_tracker_deploy::domain::ProfileName;
     /// # use torrust_tracker_deploy::shared::Username;
     /// let ssh_credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
@@ -97,10 +104,12 @@ impl Config {
     ///     Username::new("ubuntu").unwrap(),
     /// );
     /// let instance_name = InstanceName::new("my-instance".to_string()).unwrap();
+    /// let profile_name = ProfileName::new("my-profile".to_string()).unwrap();
     /// let config = Config::new(
     ///     true,                           // keep environment for debugging
     ///     ssh_credentials,
     ///     instance_name,
+    ///     profile_name,
     ///     "templates".to_string(),
     ///     PathBuf::from("/path/to/project"),
     ///     PathBuf::from("/path/to/project/build"),
@@ -111,6 +120,7 @@ impl Config {
         keep_env: bool,
         ssh_config: SshCredentials,
         instance_name: InstanceName,
+        profile_name: ProfileName,
         templates_dir: String,
         project_root: PathBuf,
         build_dir: PathBuf,
@@ -119,6 +129,7 @@ impl Config {
             keep_env,
             ssh_credentials: ssh_config,
             instance_name,
+            profile_name,
             ansible_subfolder: "ansible".to_string(),
             opentofu_subfolder: "tofu/lxd".to_string(),
             templates_dir,

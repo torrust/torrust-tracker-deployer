@@ -37,7 +37,7 @@
 //! ```
 
 use crate::config::InstanceName;
-use crate::domain::EnvironmentName;
+use crate::domain::{EnvironmentName, ProfileName};
 use crate::shared::Username;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -74,6 +74,9 @@ pub struct Environment {
 
     /// The instance name for this environment (auto-generated)
     instance_name: InstanceName,
+
+    /// The profile name for this environment (auto-generated)
+    profile_name: ProfileName,
 
     /// SSH username for connecting to instances in this environment
     ssh_username: Username,
@@ -147,6 +150,11 @@ impl Environment {
         let instance_name = InstanceName::new(instance_name_str)
             .expect("Generated instance name should always be valid");
 
+        // Generate profile name: torrust-profile-{env_name}
+        let profile_name_str = format!("torrust-profile-{env_str}");
+        let profile_name = ProfileName::new(profile_name_str)
+            .expect("Generated profile name should always be valid");
+
         // Generate environment-specific directories
         let data_dir = PathBuf::from("data").join(env_str);
         let build_dir = PathBuf::from("build").join(env_str);
@@ -154,6 +162,7 @@ impl Environment {
         Self {
             name,
             instance_name,
+            profile_name,
             ssh_username,
             ssh_private_key_path,
             ssh_public_key_path,
@@ -172,6 +181,15 @@ impl Environment {
     #[must_use]
     pub fn instance_name(&self) -> &InstanceName {
         &self.instance_name
+    }
+
+    /// Returns the profile name for this environment
+    ///
+    /// Returns the unique LXD profile name based on the environment name
+    /// to ensure profile isolation between different test environments.
+    #[must_use]
+    pub fn profile_name(&self) -> &ProfileName {
+        &self.profile_name
     }
 
     /// Returns the SSH username for this environment

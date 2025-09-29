@@ -15,9 +15,11 @@
 //! ```rust
 //! use torrust_tracker_deploy::infrastructure::template::wrappers::tofu::lxd::variables::VariablesContext;
 //! use torrust_tracker_deploy::infrastructure::adapters::lxd::instance::InstanceName;
+//! use torrust_tracker_deploy::domain::ProfileName;
 //!
 //! let context = VariablesContext::builder()
 //!     .with_instance_name(InstanceName::new("my-test-vm".to_string()).unwrap())
+//!     .with_profile_name(ProfileName::new("my-test-profile".to_string()).unwrap())
 //!     .build()
 //!     .unwrap();
 //! ```
@@ -25,6 +27,7 @@
 use serde::Serialize;
 use thiserror::Error;
 
+use crate::domain::ProfileName;
 #[allow(unused_imports)]
 use crate::infrastructure::adapters::lxd::instance::InstanceName;
 
@@ -34,6 +37,10 @@ pub enum VariablesContextError {
     /// Instance name is required but was not provided
     #[error("Instance name is required but was not provided")]
     MissingInstanceName,
+
+    /// Profile name is required but was not provided
+    #[error("Profile name is required but was not provided")]
+    MissingProfileName,
 }
 
 /// Context for `OpenTofu` variables template rendering
@@ -44,6 +51,8 @@ pub enum VariablesContextError {
 pub struct VariablesContext {
     /// The name of the VM/container instance to be created
     pub instance_name: InstanceName,
+    /// The name of the LXD profile to be created  
+    pub profile_name: ProfileName,
 }
 
 /// Builder for creating `VariablesContext` instances
@@ -53,6 +62,7 @@ pub struct VariablesContext {
 #[derive(Debug, Default)]
 pub struct VariablesContextBuilder {
     instance_name: Option<InstanceName>,
+    profile_name: Option<ProfileName>,
 }
 
 impl VariablesContextBuilder {
@@ -73,6 +83,17 @@ impl VariablesContextBuilder {
         self
     }
 
+    /// Sets the profile name for the LXD profile
+    ///
+    /// # Arguments
+    ///
+    /// * `profile_name` - The name to assign to the LXD profile
+    #[must_use]
+    pub fn with_profile_name(mut self, profile_name: ProfileName) -> Self {
+        self.profile_name = Some(profile_name);
+        self
+    }
+
     /// Builds the `VariablesContext` with validation
     ///
     /// # Returns
@@ -83,12 +104,20 @@ impl VariablesContextBuilder {
     /// # Errors
     ///
     /// Returns `MissingInstanceName` if instance name was not provided
+    /// Returns `MissingProfileName` if profile name was not provided
     pub fn build(self) -> Result<VariablesContext, VariablesContextError> {
         let instance_name = self
             .instance_name
             .ok_or(VariablesContextError::MissingInstanceName)?;
 
-        Ok(VariablesContext { instance_name })
+        let profile_name = self
+            .profile_name
+            .ok_or(VariablesContextError::MissingProfileName)?;
+
+        Ok(VariablesContext {
+            instance_name,
+            profile_name,
+        })
     }
 }
 
@@ -108,42 +137,63 @@ mod tests {
     fn it_should_create_variables_context_with_instance_name() {
         let context = VariablesContext::builder()
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
+            .with_profile_name(ProfileName::new("test-profile".to_string()).unwrap())
             .build()
             .unwrap();
 
         assert_eq!(context.instance_name.as_str(), "test-vm");
+        assert_eq!(context.profile_name.as_str(), "test-profile");
     }
 
     #[test]
     fn it_should_serialize_to_json() {
         let context = VariablesContext::builder()
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
+            .with_profile_name(ProfileName::new("test-profile".to_string()).unwrap())
             .build()
             .unwrap();
 
         let json = serde_json::to_string(&context).unwrap();
         assert!(json.contains("test-vm"));
         assert!(json.contains("instance_name"));
+        assert!(json.contains("test-profile"));
+        assert!(json.contains("profile_name"));
     }
 
     #[test]
     fn it_should_build_context_with_builder_pattern() {
         let result = VariablesContext::builder()
             .with_instance_name(InstanceName::new("my-instance".to_string()).unwrap())
+            .with_profile_name(ProfileName::new("my-profile".to_string()).unwrap())
             .build();
 
         assert!(result.is_ok());
         let context = result.unwrap();
         assert_eq!(context.instance_name.as_str(), "my-instance");
+        assert_eq!(context.profile_name.as_str(), "my-profile");
     }
 
     #[test]
     fn it_should_fail_when_instance_name_is_missing() {
-        let result = VariablesContext::builder().build();
+        let result = VariablesContext::builder()
+            .with_profile_name(ProfileName::new("test-profile".to_string()).unwrap())
+            .build();
 
         assert!(matches!(
             result.unwrap_err(),
             VariablesContextError::MissingInstanceName
+        ));
+    }
+
+    #[test]
+    fn it_should_fail_when_profile_name_is_missing() {
+        let result = VariablesContext::builder()
+            .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
+            .build();
+
+        assert!(matches!(
+            result.unwrap_err(),
+            VariablesContextError::MissingProfileName
         ));
     }
 }

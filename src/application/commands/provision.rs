@@ -23,6 +23,8 @@ use crate::application::steps::{
     RenderOpenTofuTemplatesStep, ValidateInfrastructureStep, WaitForCloudInitStep,
     WaitForSSHConnectivityStep,
 };
+#[allow(unused_imports)]
+use crate::domain::ProfileName;
 use crate::infrastructure::adapters::ansible::AnsibleClient;
 #[allow(unused_imports)]
 use crate::infrastructure::adapters::lxd::InstanceName;
@@ -206,6 +208,7 @@ mod tests {
             ssh_credentials.clone(),
             InstanceName::new("torrust-tracker-vm".to_string())
                 .expect("Valid hardcoded instance name"), // TODO: Make this configurable in Phase 3
+            ProfileName::new("default-profile".to_string()).expect("Valid hardcoded profile name"), // TODO: Make this configurable in Phase 3
         ));
 
         let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(

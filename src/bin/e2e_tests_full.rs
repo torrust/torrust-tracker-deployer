@@ -54,11 +54,11 @@ use tracing::{error, info};
 use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
 use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deploy::e2e::tasks::{
-    preflight_cleanup::cleanup_lingering_resources,
     run_configure_command::run_configure_command,
     run_test_command::run_test_command,
     virtual_machine::{
         cleanup_infrastructure::cleanup_infrastructure,
+        preflight_cleanup::cleanup_lingering_resources,
         run_provision_command::run_provision_command,
     },
 };

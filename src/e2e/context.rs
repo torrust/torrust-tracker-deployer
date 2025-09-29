@@ -122,6 +122,7 @@ impl TestContext {
             keep_env,
             ssh_credentials,
             environment.instance_name().clone(),
+            environment.profile_name().clone(),
             environment.templates_dir().to_string_lossy().to_string(),
             project_root,
             environment.build_dir().clone(),

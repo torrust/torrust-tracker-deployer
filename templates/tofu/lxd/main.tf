@@ -20,6 +20,12 @@ variable "instance_name" {
   default     = "torrust-tracker-vm"
 }
 
+variable "profile_name" {
+  description = "Name of the LXD profile"
+  type        = string
+  default     = "torrust-profile"
+}
+
 variable "image" {
   description = "LXD image to use"
   type        = string
@@ -28,7 +34,7 @@ variable "image" {
 
 # Create a profile for our container with cloud-init support
 resource "lxd_profile" "torrust_profile" {
-  name = "torrust-profile"
+  name = var.profile_name
 
   config = {
     "user.user-data" = file("${path.module}/cloud-init.yml")
