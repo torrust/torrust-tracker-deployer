@@ -6,7 +6,7 @@
 
 use std::fmt;
 
-use crate::e2e::environment::TestEnvironment;
+use crate::e2e::context::TestContext;
 use crate::infrastructure::adapters::opentofu::EmergencyDestroyError;
 use tracing::{info, warn};
 
@@ -71,8 +71,8 @@ impl std::error::Error for PreflightCleanupError {
 ///
 /// Returns a `PreflightCleanupError::ResourceConflicts` error if the build directory
 /// cannot be removed due to permission issues or file locks.
-pub fn cleanup_build_directory(env: &TestEnvironment) -> Result<(), PreflightCleanupError> {
-    let build_dir = &env.config.build_dir;
+pub fn cleanup_build_directory(test_context: &TestContext) -> Result<(), PreflightCleanupError> {
+    let build_dir = &test_context.config.build_dir;
 
     if !build_dir.exists() {
         info!(
@@ -143,8 +143,10 @@ pub fn cleanup_build_directory(env: &TestEnvironment) -> Result<(), PreflightCle
 ///
 /// Returns a `PreflightCleanupError::ResourceConflicts` error if the templates directory
 /// cannot be removed due to permission issues or file locks.
-pub fn cleanup_templates_directory(env: &TestEnvironment) -> Result<(), PreflightCleanupError> {
-    let templates_dir = std::path::Path::new(&env.config.templates_dir);
+pub fn cleanup_templates_directory(
+    test_context: &TestContext,
+) -> Result<(), PreflightCleanupError> {
+    let templates_dir = std::path::Path::new(&test_context.config.templates_dir);
 
     if !templates_dir.exists() {
         info!(

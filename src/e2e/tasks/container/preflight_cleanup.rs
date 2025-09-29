@@ -5,7 +5,7 @@
 //! testcontainers and automatically cleaned up, this module only handles
 //! directory cleanup operations.
 
-use crate::e2e::environment::TestEnvironment;
+use crate::e2e::context::TestContext;
 use crate::e2e::tasks::preflight_cleanup::{
     cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
 };
@@ -29,7 +29,7 @@ use tracing::{info, warn};
 /// # Errors
 ///
 /// Returns an error if directory cleanup fails and would prevent new test runs.
-pub fn cleanup_lingering_resources(env: &TestEnvironment) -> Result<(), PreflightCleanupError> {
+pub fn cleanup_lingering_resources(env: &TestContext) -> Result<(), PreflightCleanupError> {
     info!(
         operation = "preflight_cleanup_docker",
         "Starting pre-flight cleanup for Docker-based E2E tests"
@@ -66,7 +66,7 @@ pub fn cleanup_lingering_resources(env: &TestEnvironment) -> Result<(), Prefligh
 /// # Arguments
 ///
 /// * `env` - The test environment containing the instance name
-fn cleanup_hanging_docker_containers(env: &TestEnvironment) {
+fn cleanup_hanging_docker_containers(env: &TestContext) {
     let instance_name = env.config.instance_name.as_str();
     let command_executor = CommandExecutor::new();
 

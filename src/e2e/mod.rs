@@ -6,7 +6,7 @@
 //!
 //! ## Module Structure
 //!
-//! - `environment` - Test environment configuration and management
+//! - `context` - Test context configuration and management
 //! - `containers` - Container management for E2E testing scenarios
 //! - `tasks` - High-level testing tasks and workflows
 //!
@@ -17,7 +17,7 @@
 //! the entire deployment system works correctly.
 
 pub mod containers;
-pub mod environment;
+pub mod context;
 pub mod tasks;
 
 // Re-export provisioned container types for backward compatibility

@@ -28,7 +28,7 @@ use tracing::{error, info};
 
 // Import E2E testing infrastructure
 use torrust_tracker_deploy::config::InstanceName;
-use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
+use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
     run_configure_command::run_configure_command,
@@ -103,29 +103,29 @@ pub async fn main() -> Result<()> {
     let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
     let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
 
-    let env = TestEnvironment::initialized(
+    let test_context = TestContext::initialized(
         cli.keep,
         cli.templates_dir,
         &ssh_user,
         instance_name,
         ssh_private_key_path,
         ssh_public_key_path,
-        TestEnvironmentType::VirtualMachine,
+        TestContextType::VirtualMachine,
     )?;
 
     // Perform pre-flight cleanup to remove any lingering resources from interrupted tests
-    cleanup_lingering_resources(&env)?;
+    cleanup_lingering_resources(&test_context)?;
 
     let test_start = Instant::now();
 
-    let deployment_result = run_full_deployment_test(&env).await;
+    let deployment_result = run_full_deployment_test(&test_context).await;
 
     let validation_result = match &deployment_result {
-        Ok(instance_ip) => run_test_command(&env, instance_ip).await,
+        Ok(instance_ip) => run_test_command(&test_context, instance_ip).await,
         Err(_) => Ok(()), // Skip validation if deployment failed
     };
 
-    cleanup_infrastructure(&env);
+    cleanup_infrastructure(&test_context);
 
     let test_duration = test_start.elapsed();
 
@@ -176,7 +176,7 @@ pub async fn main() -> Result<()> {
     }
 }
 
-async fn run_full_deployment_test(env: &TestEnvironment) -> Result<IpAddr> {
+async fn run_full_deployment_test(env: &TestContext) -> Result<IpAddr> {
     info!(
         test_type = "full_deployment",
         workflow = "template_based",

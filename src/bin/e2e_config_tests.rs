@@ -51,7 +51,7 @@ use torrust_tracker_deploy::e2e::tasks::run_configure_command::run_configure_com
 use tracing::{error, info};
 
 use torrust_tracker_deploy::config::InstanceName;
-use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
+use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deploy::e2e::tasks::{
     container::{
         cleanup_infrastructure::cleanup_infrastructure,
@@ -120,19 +120,19 @@ pub async fn main() -> Result<()> {
     let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
     let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
 
-    let env = TestEnvironment::initialized(
+    let test_context = TestContext::initialized(
         false,
         cli.templates_dir,
         &ssh_user,
         instance_name,
         ssh_private_key_path,
         ssh_public_key_path,
-        TestEnvironmentType::Container,
+        TestContextType::Container,
     )?;
 
-    preflight_cleanup::cleanup_lingering_resources(&env)?;
+    preflight_cleanup::cleanup_lingering_resources(&test_context)?;
 
-    let test_result = run_configuration_tests(&env).await;
+    let test_result = run_configuration_tests(&test_context).await;
 
     let test_duration = test_start.elapsed();
 
@@ -166,19 +166,19 @@ pub async fn main() -> Result<()> {
 }
 
 /// Run the complete configuration tests using extracted tasks
-async fn run_configuration_tests(test_env: &TestEnvironment) -> Result<()> {
+async fn run_configuration_tests(test_context: &TestContext) -> Result<()> {
     info!("Starting configuration tests with Docker container");
 
     // Step 1: Run provision simulation (includes container setup and SSH connectivity)
-    let running_container = run_provision_simulation(test_env).await?;
+    let running_container = run_provision_simulation(test_context).await?;
 
     // Step 2: Run Ansible configuration
-    run_configure_command(test_env)?;
+    run_configure_command(test_context)?;
 
     // Step 3: Run configuration validation
     run_configuration_validation(
         running_container.ssh_socket_addr(),
-        &test_env.config.ssh_credentials,
+        &test_context.config.ssh_credentials,
     )
     .await?;
 

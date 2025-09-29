@@ -28,7 +28,7 @@ use std::sync::Arc;
 use tracing::info;
 
 use crate::application::commands::ProvisionCommand;
-use crate::e2e::environment::TestEnvironment;
+use crate::e2e::context::TestContext;
 
 /// Provision infrastructure using `OpenTofu` and prepare for configuration
 ///
@@ -38,16 +38,16 @@ use crate::e2e::environment::TestEnvironment;
 /// - `ProvisionCommand` execution fails
 /// - Infrastructure provisioning fails
 /// - IP address cannot be obtained from `OpenTofu` outputs
-pub async fn run_provision_command(env: &TestEnvironment) -> Result<IpAddr> {
+pub async fn run_provision_command(test_context: &TestContext) -> Result<IpAddr> {
     info!("Provisioning test infrastructure");
 
     // Use the new ProvisionCommand to handle all infrastructure provisioning steps
     let provision_command = ProvisionCommand::new(
-        Arc::clone(&env.services.tofu_template_renderer),
-        Arc::clone(&env.services.ansible_template_renderer),
-        Arc::clone(&env.services.ansible_client),
-        Arc::clone(&env.services.opentofu_client),
-        env.config.ssh_credentials.clone(),
+        Arc::clone(&test_context.services.tofu_template_renderer),
+        Arc::clone(&test_context.services.ansible_template_renderer),
+        Arc::clone(&test_context.services.ansible_client),
+        Arc::clone(&test_context.services.opentofu_client),
+        test_context.config.ssh_credentials.clone(),
     );
 
     let opentofu_instance_ip = provision_command

@@ -23,7 +23,7 @@ use tracing::{error, info};
 
 // Import E2E testing infrastructure
 use torrust_tracker_deploy::config::InstanceName;
-use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
+use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup::cleanup_lingering_resources,
     virtual_machine::{
@@ -104,24 +104,24 @@ pub async fn main() -> Result<()> {
     let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
     let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
 
-    let env = TestEnvironment::initialized(
+    let test_context = TestContext::initialized(
         cli.keep,
         cli.templates_dir,
         &ssh_user,
         instance_name,
         ssh_private_key_path,
         ssh_public_key_path,
-        TestEnvironmentType::VirtualMachine,
+        TestContextType::VirtualMachine,
     )?;
 
     // Perform pre-flight cleanup to remove any lingering resources from interrupted tests
-    cleanup_lingering_resources(&env)?;
+    cleanup_lingering_resources(&test_context)?;
 
     let test_start = Instant::now();
 
-    let provision_result = run_provisioning_test(&env).await;
+    let provision_result = run_provisioning_test(&test_context).await;
 
-    cleanup_infrastructure(&env);
+    cleanup_infrastructure(&test_context);
 
     let test_duration = test_start.elapsed();
 
@@ -165,7 +165,7 @@ pub async fn main() -> Result<()> {
 /// 2. **Basic Validation**: Verifies infrastructure is ready (cloud-init completed)
 ///
 /// Returns the provisioned instance IP address on success.
-async fn run_provisioning_test(env: &TestEnvironment) -> Result<IpAddr> {
+async fn run_provisioning_test(env: &TestContext) -> Result<IpAddr> {
     info!(
         test_type = "provision_only",
         workflow = "infrastructure_provisioning",

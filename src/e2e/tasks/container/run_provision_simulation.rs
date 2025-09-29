@@ -29,7 +29,7 @@ use crate::container::Services;
 use crate::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
 use crate::e2e::containers::timeout::ContainerTimeouts;
 use crate::e2e::containers::{RunningProvisionedContainer, StoppedProvisionedContainer};
-use crate::e2e::environment::TestEnvironment;
+use crate::e2e::context::TestContext;
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 
 /// Run provision simulation to prepare templates for container-based testing
@@ -42,7 +42,7 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 ///
 /// # Arguments
 ///
-/// * `test_env` - Test environment containing configuration and services
+/// * `test_context` - Test context containing configuration and services
 ///
 /// # Returns
 ///
@@ -62,7 +62,7 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 ///
 /// ```rust,no_run
 /// use torrust_tracker_deploy::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
-/// use torrust_tracker_deploy::e2e::environment::{TestEnvironment, TestEnvironmentType};
+/// use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 /// use torrust_tracker_deploy::config::InstanceName;
 /// use torrust_tracker_deploy::shared::Username;
 ///
@@ -72,47 +72,47 @@ use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 ///     let ssh_user = Username::new("torrust")?;
 ///     let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
 ///     let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
-///     let test_env = TestEnvironment::initialized(
+///     let test_context = TestContext::initialized(
 ///         false,
 ///         "./templates".to_string(),
 ///         &ssh_user,
 ///         instance_name,
 ///         ssh_private_key_path,
 ///         ssh_public_key_path,
-///         TestEnvironmentType::Container
+///         TestContextType::Container
 ///     )?;
 ///     
-///     let running_container = run_provision_simulation(&test_env).await?;
+///     let running_container = run_provision_simulation(&test_context).await?;
 ///     println!("Container provision simulation completed: {}", running_container.ssh_socket_addr());
 ///     Ok(())
 /// }
 /// ```
 pub async fn run_provision_simulation(
-    test_env: &TestEnvironment,
+    test_context: &TestContext,
 ) -> Result<RunningProvisionedContainer> {
     info!("Running provision simulation to prepare container configuration templates");
 
     // Step 1: Setup Docker container
     let running_container =
-        create_and_start_container(test_env.config.instance_name.as_str().to_string()).await?;
+        create_and_start_container(test_context.config.instance_name.as_str().to_string()).await?;
 
     let socket_addr = running_container.ssh_socket_addr();
 
     // Step 2: Establish SSH connectivity
     establish_ssh_connectivity(
         socket_addr,
-        &test_env.config.ssh_credentials,
+        &test_context.config.ssh_credentials,
         Some(&running_container),
     )
     .await?;
 
     // Step 3: Initialize services from test environment configuration
-    let services = Services::new(&test_env.config);
+    let services = Services::new(&test_context.config);
 
     // Step 4: Render Ansible configuration templates with container connection details
     render_ansible_configuration(
         Arc::clone(&services.ansible_template_renderer),
-        test_env.config.ssh_credentials.clone(),
+        test_context.config.ssh_credentials.clone(),
         socket_addr,
     )
     .await

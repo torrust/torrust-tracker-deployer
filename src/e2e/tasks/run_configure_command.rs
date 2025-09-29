@@ -31,7 +31,7 @@ use tracing::info;
 
 use crate::application::commands::ConfigureCommand;
 
-use crate::e2e::environment::TestEnvironment;
+use crate::e2e::context::TestContext;
 
 /// Configure infrastructure using Ansible playbooks
 ///
@@ -44,11 +44,12 @@ use crate::e2e::environment::TestEnvironment;
 /// Returns an error if:
 /// - `ConfigureCommand` execution fails
 /// - Infrastructure configuration fails
-pub fn run_configure_command(env: &TestEnvironment) -> Result<()> {
+pub fn run_configure_command(test_context: &TestContext) -> Result<()> {
     info!("Configuring test infrastructure");
 
     // Use the new ConfigureCommand to handle all infrastructure configuration steps
-    let configure_command = ConfigureCommand::new(Arc::clone(&env.services.ansible_client));
+    let configure_command =
+        ConfigureCommand::new(Arc::clone(&test_context.services.ansible_client));
 
     configure_command
         .execute()

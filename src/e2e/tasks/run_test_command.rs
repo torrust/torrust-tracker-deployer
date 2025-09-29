@@ -26,7 +26,7 @@ use std::net::IpAddr;
 use tracing::info;
 
 use crate::application::commands::TestCommand;
-use crate::e2e::environment::TestEnvironment;
+use crate::e2e::context::TestContext;
 
 /// Validate deployment by running infrastructure validation tests
 ///
@@ -35,7 +35,7 @@ use crate::e2e::environment::TestEnvironment;
 /// Returns an error if:
 /// - `TestCommand` execution fails
 /// - Any validation check fails
-pub async fn run_test_command(env: &TestEnvironment, instance_ip: &IpAddr) -> Result<()> {
+pub async fn run_test_command(env: &TestContext, instance_ip: &IpAddr) -> Result<()> {
     info!("Starting deployment validation");
 
     // Use the new TestCommand to handle all infrastructure validation steps

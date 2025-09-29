@@ -21,7 +21,7 @@
 
 use tracing::{info, warn};
 
-use crate::e2e::environment::TestEnvironment;
+use crate::e2e::context::TestContext;
 
 /// Clean up test infrastructure
 ///
@@ -39,9 +39,9 @@ use crate::e2e::environment::TestEnvironment;
 /// - Otherwise, attempts to destroy infrastructure using `OpenTofu`
 /// - Logs success or failure appropriately
 /// - Does not return errors - failures are logged as warnings
-pub fn cleanup_infrastructure(env: &TestEnvironment) {
-    if env.config.keep_env {
-        let instance_name = &env.config.instance_name;
+pub fn cleanup_infrastructure(test_context: &TestContext) {
+    if test_context.config.keep_env {
+        let instance_name = &test_context.config.instance_name;
         info!(
             operation = "cleanup",
             action = "keep_environment",
@@ -55,7 +55,7 @@ pub fn cleanup_infrastructure(env: &TestEnvironment) {
     info!(operation = "cleanup", "Cleaning up test environment");
 
     // Destroy infrastructure using OpenTofuClient with variables file
-    let result = env
+    let result = test_context
         .services
         .opentofu_client
         .destroy(true, &["-var-file=variables.tfvars"]) // auto_approve = true

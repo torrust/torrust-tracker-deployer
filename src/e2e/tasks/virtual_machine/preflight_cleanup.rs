@@ -4,7 +4,7 @@
 //! for VM-based E2E testing using LXD and `OpenTofu`. It handles cleanup of
 //! infrastructure resources including `OpenTofu` state and LXD instances.
 
-use crate::e2e::environment::TestEnvironment;
+use crate::e2e::context::TestContext;
 use crate::e2e::tasks::preflight_cleanup::{
     cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
 };
@@ -29,23 +29,25 @@ use tracing::{info, warn};
 /// # Errors
 ///
 /// Returns an error if cleanup fails and would prevent new test runs.
-pub fn cleanup_lingering_resources(env: &TestEnvironment) -> Result<(), PreflightCleanupError> {
+pub fn cleanup_lingering_resources(
+    test_context: &TestContext,
+) -> Result<(), PreflightCleanupError> {
     info!(
         operation = "preflight_cleanup",
         "Starting pre-flight cleanup of any lingering test resources"
     );
 
     // Clean the build directory to ensure fresh template state for E2E tests
-    cleanup_build_directory(env)?;
+    cleanup_build_directory(test_context)?;
 
     // Clean the templates directory to ensure fresh embedded template extraction for E2E tests
-    cleanup_templates_directory(env)?;
+    cleanup_templates_directory(test_context)?;
 
     // Clean any existing OpenTofu infrastructure from previous test runs
-    cleanup_opentofu_infrastructure(env)?;
+    cleanup_opentofu_infrastructure(test_context)?;
 
     // Clean any existing LXD resources that might conflict with new test runs
-    cleanup_lxd_resources(env);
+    cleanup_lxd_resources(test_context);
 
     info!(
         operation = "preflight_cleanup",
@@ -79,8 +81,13 @@ pub fn cleanup_lingering_resources(env: &TestEnvironment) -> Result<(), Prefligh
 ///
 /// Returns a `PreflightCleanupError` if infrastructure cleanup fails and resources
 /// are still present that would prevent new test runs.
-fn cleanup_opentofu_infrastructure(env: &TestEnvironment) -> Result<(), PreflightCleanupError> {
-    let tofu_dir = env.config.build_dir.join(&env.config.opentofu_subfolder);
+fn cleanup_opentofu_infrastructure(
+    test_context: &TestContext,
+) -> Result<(), PreflightCleanupError> {
+    let tofu_dir = test_context
+        .config
+        .build_dir
+        .join(&test_context.config.opentofu_subfolder);
 
     if !tofu_dir.exists() {
         info!(
@@ -152,7 +159,7 @@ fn cleanup_opentofu_infrastructure(env: &TestEnvironment) -> Result<(), Prefligh
 /// # Arguments
 ///
 /// * `env` - The test environment containing configuration paths
-fn cleanup_lxd_resources(env: &TestEnvironment) {
+fn cleanup_lxd_resources(test_context: &TestContext) {
     info!(
         operation = "lxd_resources_cleanup",
         "Cleaning existing LXD resources that might conflict with new test runs"
@@ -162,14 +169,14 @@ fn cleanup_lxd_resources(env: &TestEnvironment) {
 
     // Clean up test instance if it exists
     match lxd_client.delete_instance(
-        &env.config.instance_name, // Phase 3: Use instance_name from config instead of hardcoded value
+        &test_context.config.instance_name, // Phase 3: Use instance_name from config instead of hardcoded value
         true,
     ) {
         Ok(()) => {
             info!(
                 operation = "lxd_resources_cleanup",
                 resource = "instance",
-                name = %env.config.instance_name.as_str(),
+                name = %test_context.config.instance_name.as_str(),
                 status = "success",
                 "LXD instance cleanup completed successfully"
             );
@@ -178,7 +185,7 @@ fn cleanup_lxd_resources(env: &TestEnvironment) {
             warn!(
                 operation = "lxd_resources_cleanup",
                 resource = "instance",
-                name = %env.config.instance_name.as_str(),
+                name = %test_context.config.instance_name.as_str(),
                 error = %e,
                 "Failed to clean LXD instance"
             );
