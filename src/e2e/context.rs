@@ -73,6 +73,12 @@ pub struct TestContext {
     pub services: Services,
     /// The complete environment configuration containing instance name, SSH keys, and paths
     pub environment: Environment,
+    /// Whether to keep the deployment environment after completion.
+    ///
+    /// When `false`, the environment will be automatically cleaned up (destroyed)
+    /// after the test process completes. When `true`, the environment
+    /// will be left running for manual inspection or debugging.
+    pub keep_env: bool,
     /// Temporary directory for SSH keys. Must be kept alive for the lifetime
     /// of the test context to prevent cleanup of SSH key files.
     /// This field is not directly read but must be retained for RAII cleanup.
@@ -114,7 +120,6 @@ impl TestContext {
         let temp_dir = Self::create_temp_directory()?;
 
         let config = Config::new(
-            keep_env,
             environment.templates_dir().clone(),
             project_root,
             environment.build_dir().clone(),
@@ -131,6 +136,7 @@ impl TestContext {
             config,
             services,
             environment,
+            keep_env,
             temp_dir: Some(temp_dir),
             context_type,
         };
@@ -257,7 +263,7 @@ impl TestContext {
     /// Logs environment information
     fn log_environment_info(&self) {
         // Warn if keep_env is enabled with Container environment type
-        if self.config.keep_env && self.context_type == TestContextType::Container {
+        if self.keep_env && self.context_type == TestContextType::Container {
             warn!(
                 environment_type = "container",
                 keep_env = true,
@@ -300,7 +306,7 @@ impl TestContext {
 impl std::fmt::Debug for TestContext {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TestContext")
-            .field("keep_env", &self.config.keep_env)
+            .field("keep_env", &self.keep_env)
             .field("templates_dir", &self.config.templates_dir)
             .field("project_root", &self.config.project_root)
             .field("build_dir", &self.config.build_dir)
@@ -311,7 +317,7 @@ impl std::fmt::Debug for TestContext {
 
 impl Drop for TestContext {
     fn drop(&mut self) {
-        if !self.config.keep_env {
+        if !self.keep_env {
             // Only cleanup OpenTofu resources for VirtualMachine environments
             // Container environments use Docker/testcontainers which handle their own cleanup
             match self.context_type {

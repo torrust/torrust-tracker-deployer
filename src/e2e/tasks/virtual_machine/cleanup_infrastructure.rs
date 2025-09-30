@@ -35,12 +35,12 @@ use crate::e2e::context::TestContext;
 ///
 /// # Behavior
 ///
-/// - If `env.config.keep_env` is `true`, logs a message and returns without cleanup
+/// - If `test_context.keep_env` is `true`, logs a message and returns without cleanup
 /// - Otherwise, attempts to destroy infrastructure using `OpenTofu`
 /// - Logs success or failure appropriately
 /// - Does not return errors - failures are logged as warnings
 pub fn cleanup_infrastructure(test_context: &TestContext) {
-    if test_context.config.keep_env {
+    if test_context.keep_env {
         let instance_name = &test_context.environment.instance_name();
         info!(
             operation = "cleanup",

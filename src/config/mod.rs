@@ -23,13 +23,6 @@ use std::path::PathBuf;
 ///
 /// Created once at deployment start and passed to [`Services::new()`](crate::container::Services::new).
 pub struct Config {
-    /// Whether to keep the deployment environment after completion.
-    ///
-    /// When `false`, the environment will be automatically cleaned up (destroyed)
-    /// after the deployment process completes. When `true`, the environment
-    /// will be left running for manual inspection or reuse.
-    pub keep_env: bool,
-
     /// Directory containing template files for rendering configurations.
     ///
     /// This directory should contain subdirectories for different template
@@ -58,21 +51,14 @@ impl Config {
     /// # use std::path::PathBuf;
     /// # use torrust_tracker_deploy::config::Config;
     /// let config = Config::new(
-    ///     true,                           // keep environment for debugging
     ///     PathBuf::from("templates"),
     ///     PathBuf::from("/path/to/project"),
     ///     PathBuf::from("/path/to/project/build"),
     /// );
     /// ```
     #[must_use]
-    pub fn new(
-        keep_env: bool,
-        templates_dir: PathBuf,
-        project_root: PathBuf,
-        build_dir: PathBuf,
-    ) -> Self {
+    pub fn new(templates_dir: PathBuf, project_root: PathBuf, build_dir: PathBuf) -> Self {
         Self {
-            keep_env,
             templates_dir,
             project_root,
             build_dir,
