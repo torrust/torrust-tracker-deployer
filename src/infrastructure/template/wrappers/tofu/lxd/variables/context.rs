@@ -27,9 +27,7 @@
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::domain::ProfileName;
-#[allow(unused_imports)]
-use crate::infrastructure::adapters::lxd::instance::InstanceName;
+use crate::domain::{InstanceName, ProfileName};
 
 /// Errors that can occur when building the variables context
 #[derive(Error, Debug)]

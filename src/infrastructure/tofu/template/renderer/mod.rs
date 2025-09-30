@@ -45,9 +45,7 @@ use std::sync::Arc;
 use thiserror::Error;
 
 use crate::domain::template::{TemplateManager, TemplateManagerError};
-use crate::domain::ProfileName;
-#[allow(unused_imports)]
-use crate::infrastructure::adapters::lxd::instance::InstanceName;
+use crate::domain::{InstanceName, ProfileName};
 use crate::infrastructure::template::wrappers::tofu::lxd::variables::{
     VariablesContextBuilder, VariablesTemplate, VariablesTemplateError,
 };

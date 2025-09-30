@@ -24,10 +24,8 @@ use crate::application::steps::{
     WaitForSSHConnectivityStep,
 };
 #[allow(unused_imports)]
-use crate::domain::ProfileName;
+use crate::domain::{InstanceName, ProfileName};
 use crate::infrastructure::adapters::ansible::AnsibleClient;
-#[allow(unused_imports)]
-use crate::infrastructure::adapters::lxd::InstanceName;
 use crate::infrastructure::adapters::opentofu::client::{InstanceInfo, OpenTofuError};
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::tofu::{ProvisionTemplateError, TofuTemplateRenderer};

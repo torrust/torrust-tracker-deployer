@@ -15,7 +15,7 @@
 
 use std::net::IpAddr;
 
-use super::name::InstanceName;
+use crate::domain::InstanceName;
 
 /// Instance information from LXD
 #[derive(Debug, Clone, PartialEq)]
