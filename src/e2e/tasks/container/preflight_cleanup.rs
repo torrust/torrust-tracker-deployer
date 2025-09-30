@@ -89,7 +89,7 @@ fn cleanup_hanging_docker_containers(env: &TestContext) {
 
     match check_result {
         Ok(output) => {
-            if output.trim().is_empty() {
+            if output.stdout_trimmed().is_empty() {
                 info!(
                     operation = "hanging_container_cleanup",
                     container_name = instance_name,

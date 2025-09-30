@@ -4,12 +4,13 @@
 //! between different layers of the application, including infrastructure,
 //! e2e tests, and other components.
 
+pub mod command;
 pub mod executor;
 pub mod port_checker;
 pub mod ssh;
 pub mod username;
 
 // Re-export commonly used types for convenience
-pub use executor::{CommandError, CommandExecutor};
+pub use command::{CommandError, CommandExecutor, CommandResult};
 pub use port_checker::{PortChecker, PortCheckerError};
 pub use username::{Username, UsernameError};

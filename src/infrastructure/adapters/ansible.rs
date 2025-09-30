@@ -73,11 +73,13 @@ impl AnsibleClient {
 
         // Use -v flag for verbose output showing task progress
         // This helps track progress during long-running operations like Docker installation
-        self.command_executor.run_command(
-            "ansible-playbook",
-            &["-v", &playbook_file],
-            Some(&self.working_dir),
-        )
+        self.command_executor
+            .run_command(
+                "ansible-playbook",
+                &["-v", &playbook_file],
+                Some(&self.working_dir),
+            )
+            .map(|result| result.stdout)
     }
 
     /// Get the working directory path

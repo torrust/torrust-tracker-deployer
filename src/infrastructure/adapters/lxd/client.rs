@@ -206,7 +206,7 @@ impl LxdClient {
             .map_err(anyhow::Error::from)
             .context("Failed to execute lxc list command")?;
 
-        LxdJsonParser::parse_instances_json(&output)
+        LxdJsonParser::parse_instances_json(&output.stdout)
     }
 
     /// Delete an LXD instance

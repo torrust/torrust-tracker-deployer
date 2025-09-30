@@ -11,7 +11,11 @@
 //! - Working directory support
 //! - Comprehensive error categorization (startup vs execution failures)
 
-// Import the types from the new command modules
-pub use crate::shared::command::error::CommandError;
-pub use crate::shared::command::executor::CommandExecutor;
-pub use crate::shared::command::result::CommandResult;
+pub mod error;
+pub mod executor;
+pub mod result;
+
+// Re-export the main types for convenience
+pub use error::CommandError;
+pub use executor::CommandExecutor;
+pub use result::CommandResult;

@@ -97,6 +97,7 @@ impl OpenTofuClient {
 
         self.command_executor
             .run_command("tofu", &["init"], Some(&self.working_dir))
+            .map(|result| result.stdout)
     }
 
     /// Validate configuration syntax and consistency
@@ -120,6 +121,7 @@ impl OpenTofuClient {
 
         self.command_executor
             .run_command("tofu", &["validate"], Some(&self.working_dir))
+            .map(|result| result.stdout)
     }
 
     /// Plan infrastructure changes
@@ -149,6 +151,7 @@ impl OpenTofuClient {
 
         self.command_executor
             .run_command("tofu", &args, Some(&self.working_dir))
+            .map(|result| result.stdout)
     }
 
     /// Apply infrastructure changes
@@ -182,6 +185,7 @@ impl OpenTofuClient {
 
         self.command_executor
             .run_command("tofu", &args, Some(&self.working_dir))
+            .map(|result| result.stdout)
     }
 
     /// Destroy infrastructure
@@ -215,6 +219,7 @@ impl OpenTofuClient {
 
         self.command_executor
             .run_command("tofu", &args, Some(&self.working_dir))
+            .map(|result| result.stdout)
     }
 
     /// Get `OpenTofu` outputs and parse container information
@@ -242,7 +247,7 @@ impl OpenTofuClient {
             Some(&self.working_dir),
         )?;
 
-        let instance_info = OpenTofuJsonParser::parse_instance_info(&output)?;
+        let instance_info = OpenTofuJsonParser::parse_instance_info(&output.stdout)?;
         Ok(instance_info)
     }
 

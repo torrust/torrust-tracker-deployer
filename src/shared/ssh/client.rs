@@ -120,7 +120,9 @@ impl SshClient {
         let args = self.build_ssh_args(remote_command, additional_options);
         let args_str: Vec<&str> = args.iter().map(std::string::String::as_str).collect();
 
-        self.command_executor.run_command("ssh", &args_str, None)
+        self.command_executor
+            .run_command("ssh", &args_str, None)
+            .map(|result| result.stdout)
     }
 
     /// Check if a command succeeds on a remote host (returns only status)
