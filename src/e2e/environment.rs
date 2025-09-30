@@ -254,7 +254,7 @@ impl TestContext {
     ) -> Config {
         Config::new(
             keep_env,
-            templates_dir.to_string_lossy().to_string(),
+            templates_dir.to_path_buf(),
             project_root.to_path_buf(),
             project_root.join("build"),
         )

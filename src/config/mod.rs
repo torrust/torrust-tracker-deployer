@@ -35,7 +35,7 @@ pub struct Config {
     /// This directory should contain subdirectories for different template
     /// types (e.g., "ansible/", "tofu/") with template files that will be
     /// processed and rendered to the build directory.
-    pub templates_dir: String,
+    pub templates_dir: PathBuf,
 
     /// Root directory of the project.
     ///
@@ -59,7 +59,7 @@ impl Config {
     /// # use torrust_tracker_deploy::config::Config;
     /// let config = Config::new(
     ///     true,                           // keep environment for debugging
-    ///     "templates".to_string(),
+    ///     PathBuf::from("templates"),
     ///     PathBuf::from("/path/to/project"),
     ///     PathBuf::from("/path/to/project/build"),
     /// );
@@ -67,7 +67,7 @@ impl Config {
     #[must_use]
     pub fn new(
         keep_env: bool,
-        templates_dir: String,
+        templates_dir: PathBuf,
         project_root: PathBuf,
         build_dir: PathBuf,
     ) -> Self {

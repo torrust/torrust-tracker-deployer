@@ -115,7 +115,7 @@ impl TestContext {
 
         let config = Config::new(
             keep_env,
-            environment.templates_dir().to_string_lossy().to_string(),
+            environment.templates_dir().clone(),
             project_root,
             environment.build_dir().clone(),
         );
