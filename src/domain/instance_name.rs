@@ -1,8 +1,11 @@
-//! LXD instance name validation and management
+//! Instance name validation and management for LXD VMs and containers
 //!
-//! This module provides the `InstanceName` type which ensures LXD instance names
+//! This module provides the `InstanceName` type which ensures instance names
 //! follow the strict naming requirements imposed by LXD for security and
-//! compatibility reasons.
+//! compatibility reasons. The validated names are used for:
+//!
+//! - **LXD Virtual Machines**: Names for provisioned VMs in production/deployment environments
+//! - **Testing Containers**: Names for Docker containers used in end-to-end tests
 //!
 //! ## Naming Requirements
 //!
@@ -39,7 +42,10 @@ pub enum InstanceNameError {
     InvalidCharacters,
 }
 
-/// A validated LXD instance name following LXD naming requirements.
+/// A validated instance name following LXD naming requirements.
+///
+/// This type ensures that names are valid for both LXD virtual machines used in
+/// production deployments and Docker containers used in end-to-end testing.
 ///
 /// Valid instance names must fulfill the following requirements:
 /// - The name must be between 1 and 63 characters long
@@ -50,15 +56,20 @@ pub enum InstanceNameError {
 /// These requirements ensure that the instance name can be used in DNS records,
 /// on the file system, in various security profiles and as the host name.
 ///
+/// # Use Cases
+///
+/// - **LXD Virtual Machines**: Naming VMs provisioned for deployment environments
+/// - **Testing Containers**: Naming Docker containers in E2E test scenarios
+///
 /// # Examples
 ///
 /// ```rust
 /// use torrust_tracker_deploy::domain::InstanceName;
 ///
 /// // Valid instance names - accepts both &str and String
-/// let instance1 = InstanceName::new("test-instance")?;
-/// let instance2 = InstanceName::new("web-server-01".to_string())?;
-/// let instance3 = InstanceName::new(format!("app-{}", "prod"))?;
+/// let vm_instance = InstanceName::new("torrust-vm-prod")?;
+/// let test_container = InstanceName::new("test-container-01".to_string())?;
+/// let dynamic_name = InstanceName::new(format!("app-{}", "staging"))?;
 ///
 /// // Invalid instance names
 /// assert!(InstanceName::new("").is_err());
@@ -73,6 +84,9 @@ pub struct InstanceName(String);
 
 impl InstanceName {
     /// Creates a new `InstanceName` from a string if it's valid.
+    ///
+    /// This method validates that the provided name meets the requirements for both
+    /// LXD virtual machines and testing containers.
     ///
     /// # Arguments
     ///
@@ -97,10 +111,10 @@ impl InstanceName {
     /// ```rust
     /// use torrust_tracker_deploy::domain::InstanceName;
     ///
-    /// // Valid names - accepts both &str and String
-    /// let name1 = InstanceName::new("test-instance")?;
-    /// let name2 = InstanceName::new("web-01".to_string())?;
-    /// let name3 = InstanceName::new(format!("app-{}", "prod"))?;
+    /// // Valid names for VMs and containers - accepts both &str and String
+    /// let vm_name = InstanceName::new("torrust-vm-prod")?;
+    /// let container_name = InstanceName::new("test-web-01".to_string())?;
+    /// let dynamic_name = InstanceName::new(format!("app-{}", "staging"))?;
     ///
     /// // Invalid names
     /// assert!(InstanceName::new("").is_err());
