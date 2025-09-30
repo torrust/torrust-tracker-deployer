@@ -2,12 +2,37 @@
 //!
 //! This module provides an action to wait for SSH connectivity to become available.
 //! The action attempts to connect to SSH in a loop with configurable timeout and retry logic.
+//!
+//! ## Two-Stage Connectivity Check
+//!
+//! The SSH wait action uses a two-stage approach to minimize error noise in logs while
+//! ensuring SSH service is truly ready:
+//!
+//! 1. **Port Check**: First, we use `PortChecker` to wait for the TCP port (22) to be open.
+//!    This is a lightweight test that doesn't generate SSH protocol errors.
+//!
+//! 2. **SSH Service Check**: Once the port is open, we verify the SSH daemon is fully
+//!    operational using `SshServiceChecker`.
+//!
+//! ### Why This Approach?
+//!
+//! - **Reduces error noise**: Most waiting time is spent in the port check phase, which
+//!   doesn't generate SSH errors in logs
+//! - **Ensures service readiness**: The SSH check verifies the daemon is not just listening
+//!   but actually functional
+//! - **Handles edge cases**: Covers scenarios where port 22 is open but SSH daemon isn't
+//!   fully initialized yet
+//! - **Clean logging**: SSH errors only appear when there are actual SSH daemon issues,
+//!   not during normal waiting periods
+//!
+//! In most cases, when we reach the SSH check phase, the service is already ready,
+//! so we avoid the majority of SSH connection errors that would otherwise pollute logs.
 
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
-use crate::shared::ssh::SshServiceChecker;
+use crate::shared::{ssh::SshServiceChecker, PortChecker};
 
 /// Specific error types for SSH wait operations
 #[derive(Debug, thiserror::Error)]
@@ -154,25 +179,110 @@ impl SshWaitAction {
         })
     }
 
-    /// Test SSH connection by checking if SSH service is available
+    /// Test SSH connection using two-stage approach
+    ///
+    /// Stage 1: Check if TCP port 22 is open and accepting connections
+    /// Stage 2: Verify SSH daemon is fully operational
+    ///
+    /// This approach minimizes error noise by doing the lightweight port check first,
+    /// then only checking SSH protocol when the port is already open.
     fn test_ssh_connection(socket_addr: SocketAddr) -> Result<()> {
-        let checker = SshServiceChecker::new();
+        // Stage 1: Check if port is open (lightweight, no SSH errors)
+        Self::check_port_availability(socket_addr)?;
 
-        match checker.is_service_available(socket_addr) {
-            Ok(true) => Ok(()),
-            Ok(false) => Err(SshWaitError::SshConnectionTestFailed {
-                host: socket_addr.ip().to_string(),
-                port: socket_addr.port(),
-                source: std::io::Error::new(
-                    std::io::ErrorKind::ConnectionRefused,
-                    "SSH server not reachable",
-                ),
-            }),
+        // Stage 2: Port is open, now verify SSH daemon is operational
+        Self::check_ssh_daemon_availability(socket_addr)?;
+
+        Ok(())
+    }
+
+    /// Stage 1: Check if TCP port is open and accepting connections
+    ///
+    /// This is a lightweight connectivity test that doesn't generate SSH protocol errors.
+    /// It only verifies that something is listening on the target port.
+    fn check_port_availability(socket_addr: SocketAddr) -> Result<()> {
+        debug!(
+            socket_addr = %socket_addr,
+            "Stage 1: Checking if TCP port is open"
+        );
+
+        let port_checker = PortChecker::new();
+        match port_checker.is_port_open(socket_addr) {
+            Ok(true) => {
+                debug!(
+                    socket_addr = %socket_addr,
+                    "Stage 1: TCP port is open, proceeding to SSH service check"
+                );
+                Ok(())
+            }
+            Ok(false) => {
+                debug!(
+                    socket_addr = %socket_addr,
+                    "Stage 1: TCP port is not open"
+                );
+                Err(SshWaitError::SshConnectionTestFailed {
+                    host: socket_addr.ip().to_string(),
+                    port: socket_addr.port(),
+                    source: std::io::Error::new(
+                        std::io::ErrorKind::ConnectionRefused,
+                        "TCP port not open",
+                    ),
+                })
+            }
             Err(e) => Err(SshWaitError::SshConnectionTestFailed {
                 host: socket_addr.ip().to_string(),
                 port: socket_addr.port(),
-                source: std::io::Error::other(format!("SSH service check failed: {e}")),
+                source: std::io::Error::other(format!("Port check failed: {e}")),
             }),
+        }
+    }
+
+    /// Stage 2: Verify SSH daemon is fully operational
+    ///
+    /// This checks that the SSH service is not just listening on the port, but is
+    /// actually ready to accept SSH connections and respond to SSH protocol requests.
+    fn check_ssh_daemon_availability(socket_addr: SocketAddr) -> Result<()> {
+        debug!(
+            socket_addr = %socket_addr,
+            "Stage 2: Checking SSH daemon availability"
+        );
+
+        let ssh_checker = SshServiceChecker::new();
+        match ssh_checker.is_service_available(socket_addr) {
+            Ok(true) => {
+                debug!(
+                    socket_addr = %socket_addr,
+                    "Stage 2: SSH daemon is operational"
+                );
+                Ok(())
+            }
+            Ok(false) => {
+                // This should be rare since port was open in stage 1
+                warn!(
+                    socket_addr = %socket_addr,
+                    "Stage 2: Port open but SSH daemon not responding properly"
+                );
+                Err(SshWaitError::SshConnectionTestFailed {
+                    host: socket_addr.ip().to_string(),
+                    port: socket_addr.port(),
+                    source: std::io::Error::new(
+                        std::io::ErrorKind::ConnectionRefused,
+                        "SSH daemon not operational despite port being open",
+                    ),
+                })
+            }
+            Err(e) => {
+                warn!(
+                    socket_addr = %socket_addr,
+                    error = %e,
+                    "Stage 2: SSH service check failed despite port being open"
+                );
+                Err(SshWaitError::SshConnectionTestFailed {
+                    host: socket_addr.ip().to_string(),
+                    port: socket_addr.port(),
+                    source: std::io::Error::other(format!("SSH service check failed: {e}")),
+                })
+            }
         }
     }
 }
@@ -243,12 +353,14 @@ mod tests {
     fn it_should_handle_permission_denied_as_successful_connection() {
         // This test documents that "Permission denied" should be treated as a successful
         // connectivity test, since it means the SSH server is reachable but auth failed
-        // This is the core fix for the SSH wait issue
+        // This is handled in the SSH service check phase (stage 2) of our two-stage approach
 
-        // The logic is in test_ssh_connection:
-        // - Exit code 255 with "Connection refused" in stderr → Error (server not reachable)
-        // - Exit code 255 with "Permission denied" in stderr → Success (server reachable)
-        // - Exit code 0 → Success (command succeeded)
-        // - Other exit codes → Success (server reachable, other issues)
+        // The two-stage logic:
+        // Stage 1 (Port check): TCP connection to port 22 → Success (port open)
+        // Stage 2 (SSH check):
+        //   - Exit code 255 with "Connection refused" in stderr → Error (daemon not ready)
+        //   - Exit code 255 with "Permission denied" in stderr → Success (daemon ready)
+        //   - Exit code 0 → Success (command succeeded)
+        //   - Other exit codes → Success (daemon ready, other issues)
     }
 }
