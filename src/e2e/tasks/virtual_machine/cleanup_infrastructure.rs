@@ -23,11 +23,12 @@ use tracing::{info, warn};
 
 use crate::e2e::context::TestContext;
 
-/// Clean up test infrastructure
+/// Clean up test infrastructure created during VM-based E2E tests
 ///
-/// This function destroys the test infrastructure using `OpenTofu`.
-/// If `keep_env` is set in the environment configuration, the cleanup
-/// is skipped and the environment is preserved.
+/// This function destroys the test infrastructure using `OpenTofu` for resources
+/// that were created specifically during this test run. If `keep_env` is set in
+/// the environment configuration, the cleanup is skipped and the environment is
+/// preserved for debugging purposes.
 ///
 /// # Arguments
 ///
@@ -39,7 +40,7 @@ use crate::e2e::context::TestContext;
 /// - Otherwise, attempts to destroy infrastructure using `OpenTofu`
 /// - Logs success or failure appropriately
 /// - Does not return errors - failures are logged as warnings
-pub fn cleanup_infrastructure(test_context: &TestContext) {
+pub fn cleanup_test_infrastructure(test_context: &TestContext) {
     if test_context.keep_env {
         let instance_name = &test_context.environment.instance_name();
         info!(

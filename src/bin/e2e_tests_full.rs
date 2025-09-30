@@ -35,11 +35,20 @@
 //!
 //! ## Test Workflow
 //!
-//! 1. **Preflight cleanup** - Remove any lingering test resources
+//! 1. **Preflight cleanup** - Remove any artifacts from previous test runs that may have failed to clean up
 //! 2. **Infrastructure provisioning** - Create LXD VMs using `OpenTofu`
 //! 3. **Configuration** - Apply Ansible playbooks for software installation
 //! 4. **Validation** - Verify deployments are working correctly
-//! 5. **Cleanup** - Remove test resources
+//! 5. **Test infrastructure cleanup** - Remove test resources created during this run
+//!
+//! ## Two-Phase Cleanup Strategy
+//!
+//! The cleanup process happens in two distinct phases:
+//!
+//! - **Phase 1 - Preflight cleanup**: Removes artifacts from previous test runs that may have
+//!   failed to clean up properly (executed at the start in main function)
+//! - **Phase 2 - Test infrastructure cleanup**: Destroys resources created specifically during
+//!   the current test run (executed at the end in main function)
 //!
 //! The test suite supports different VM providers (LXD, Multipass) and includes
 //! comprehensive logging and error reporting.
@@ -57,8 +66,8 @@ use torrust_tracker_deploy::e2e::tasks::{
     run_configure_command::run_configure_command,
     run_test_command::run_test_command,
     virtual_machine::{
-        cleanup_infrastructure::cleanup_infrastructure,
-        preflight_cleanup::cleanup_lingering_resources,
+        cleanup_infrastructure::cleanup_test_infrastructure,
+        preflight_cleanup::preflight_cleanup_previous_resources,
         run_provision_command::run_provision_command,
     },
 };
@@ -135,8 +144,9 @@ pub async fn main() -> Result<()> {
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
             .init()?;
 
-    // Perform pre-flight cleanup to remove any lingering resources from interrupted tests
-    cleanup_lingering_resources(&test_context)?;
+    // Cleanup any artifacts from previous test runs that may have failed to clean up
+    // This ensures a clean slate before starting new tests
+    preflight_cleanup_previous_resources(&test_context)?;
 
     let test_start = Instant::now();
 
@@ -147,7 +157,9 @@ pub async fn main() -> Result<()> {
         Err(_) => Ok(()), // Skip validation if deployment failed
     };
 
-    cleanup_infrastructure(&test_context);
+    // Always cleanup test infrastructure created during this test run
+    // This ensures proper resource cleanup regardless of test success or failure
+    cleanup_test_infrastructure(&test_context);
 
     let test_duration = test_start.elapsed();
 

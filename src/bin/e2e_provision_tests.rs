@@ -28,10 +28,19 @@
 //!
 //! ## Test Workflow
 //!
-//! 1. **Preflight cleanup** - Remove any lingering test resources
+//! 1. **Preflight cleanup** - Remove any artifacts from previous test runs that may have failed to clean up
 //! 2. **Infrastructure provisioning** - Create VMs/containers using `OpenTofu`
 //! 3. **Basic validation** - Verify VM is created and cloud-init completed
-//! 4. **Cleanup** - Remove test resources
+//! 4. **Test infrastructure cleanup** - Remove test resources created during this run
+//!
+//! ## Two-Phase Cleanup Strategy
+//!
+//! The cleanup process happens in two distinct phases:
+//!
+//! - **Phase 1 - Preflight cleanup**: Removes artifacts from previous test runs that may have
+//!   failed to clean up properly (executed at the start in main function)
+//! - **Phase 2 - Test infrastructure cleanup**: Destroys resources created specifically during
+//!   the current test run (executed at the end in main function)
 //!
 //! This split allows provisioning tests to run reliably on GitHub Actions
 //! while configuration tests can be handled separately with different infrastructure.
@@ -46,7 +55,8 @@ use tracing::{error, info};
 use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
 use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deploy::e2e::tasks::virtual_machine::{
-    cleanup_infrastructure::cleanup_infrastructure, preflight_cleanup::cleanup_lingering_resources,
+    cleanup_infrastructure::cleanup_test_infrastructure,
+    preflight_cleanup::preflight_cleanup_previous_resources,
     run_provision_command::run_provision_command,
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
@@ -127,14 +137,17 @@ pub async fn main() -> Result<()> {
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
             .init()?;
 
-    // Perform pre-flight cleanup to remove any lingering resources from interrupted tests
-    cleanup_lingering_resources(&test_context)?;
+    // Cleanup any artifacts from previous test runs that may have failed to clean up
+    // This ensures a clean slate before starting new tests
+    preflight_cleanup_previous_resources(&test_context)?;
 
     let test_start = Instant::now();
 
     let provision_result = run_provisioning_test(&test_context).await;
 
-    cleanup_infrastructure(&test_context);
+    // Always cleanup test infrastructure created during this test run
+    // This ensures proper resource cleanup regardless of test success or failure
+    cleanup_test_infrastructure(&test_context);
 
     let test_duration = test_start.elapsed();
 

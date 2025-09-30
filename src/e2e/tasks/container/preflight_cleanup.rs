@@ -14,7 +14,8 @@ use tracing::{info, warn};
 
 /// Performs pre-flight cleanup for Docker-based E2E tests
 ///
-/// This function is specifically designed for Docker-based E2E tests that use
+/// This function cleans up any artifacts remaining from previous test runs that may have
+/// failed to clean up properly. It's designed for Docker-based E2E tests that use
 /// testcontainers for container lifecycle management. It cleans up directories
 /// and any hanging Docker containers from previous interrupted test runs.
 ///
@@ -29,7 +30,9 @@ use tracing::{info, warn};
 /// # Errors
 ///
 /// Returns an error if directory cleanup fails and would prevent new test runs.
-pub fn cleanup_lingering_resources(env: &TestContext) -> Result<(), PreflightCleanupError> {
+pub fn preflight_cleanup_previous_resources(
+    env: &TestContext,
+) -> Result<(), PreflightCleanupError> {
     info!(
         operation = "preflight_cleanup_docker",
         "Starting pre-flight cleanup for Docker-based E2E tests"
@@ -49,6 +52,7 @@ pub fn cleanup_lingering_resources(env: &TestContext) -> Result<(), PreflightCle
         status = "success",
         "Pre-flight cleanup for Docker-based E2E tests completed successfully"
     );
+
     Ok(())
 }
 

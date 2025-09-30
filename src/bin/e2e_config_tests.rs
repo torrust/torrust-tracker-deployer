@@ -25,11 +25,28 @@
 //!
 //! ## Test Workflow
 //!
-//! 1. **Container setup** - Build and start Docker container using `docker/provisioned-instance`
-//! 2. **SSH verification** - Ensure container is ready for Ansible connectivity
-//! 3. **Configuration** - Apply Ansible playbooks to configure services
-//! 4. **Validation** - Verify deployments are working correctly  
-//! 5. **Cleanup** - Stop and remove test containers
+//! 1. **Preflight cleanup** - Remove any artifacts from previous test runs that may have failed to clean up
+//! 2. **Container setup** - Build and start Docker container using `docker/provisioned-instance`
+//! 3. **SSH verification** - Ensure container is ready for Ansible connectivity
+//! 4. **Configuration** - Apply Ansible playbooks to configure services
+//! 5. **Validation** - Verify deployments are working correctly  
+//! 6. **Stop container** - Stop the test container (deletion handled automatically by testcontainers)
+//! 7. **Test infrastructure cleanup** - No-op for containers (automatic), called for symmetry with VMs
+//!
+//! ## Two-Phase Cleanup Strategy
+//!
+//! The cleanup process happens in two distinct phases:
+//!
+//! - **Phase 1 - Preflight cleanup**: Removes artifacts from previous test runs that may have
+//!   failed to clean up properly (executed at the start in main function)
+//! - **Phase 2 - Test infrastructure cleanup**: For containers, this is automatic via testcontainers
+//!   (called as no-op in main function for symmetry with VM workflows)
+//!
+//! ## Container vs VM Management
+//!
+//! - **Container stopping**: Happens immediately after tests (in test function) for resource management
+//! - **Container cleanup**: Automatic via testcontainers library (no explicit action needed)
+//! - **Symmetry**: Both workflows have stop+cleanup phases, but container cleanup is automatic
 //!
 //! This approach addresses network connectivity issues with LXD VMs on GitHub Actions
 //! while maintaining comprehensive testing of the configuration and deployment phases.
@@ -51,7 +68,7 @@ use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
 use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deploy::e2e::tasks::{
     container::{
-        cleanup_infrastructure::cleanup_infrastructure,
+        cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},
         run_provision_simulation::run_provision_simulation,
     },
     preflight_cleanup,
@@ -126,9 +143,15 @@ pub async fn main() -> Result<()> {
     let test_context =
         TestContext::from_environment(false, environment, TestContextType::Container)?.init()?;
 
-    preflight_cleanup::cleanup_lingering_resources(&test_context)?;
+    // Cleanup any artifacts from previous test runs that may have failed to clean up
+    // This ensures a clean slate before starting new tests
+    preflight_cleanup::preflight_cleanup_previous_resources(&test_context)?;
 
     let test_result = run_configuration_tests(&test_context).await;
+
+    // Cleanup test infrastructure created during this test run
+    // For containers, this is automatic via testcontainers (no-op), but called for symmetry with VMs
+    cleanup_test_infrastructure();
 
     let test_duration = test_start.elapsed();
 
@@ -178,8 +201,9 @@ async fn run_configuration_tests(test_context: &TestContext) -> Result<()> {
     )
     .await?;
 
-    // Step 4: Cleanup container
-    cleanup_infrastructure(running_container);
+    // Stop test infrastructure (container) created during this test run
+    // This stops the container immediately after tests - deletion is automatic via testcontainers
+    stop_test_infrastructure(running_container);
 
     info!("Configuration tests completed successfully");
 

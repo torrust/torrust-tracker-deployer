@@ -15,9 +15,9 @@ use tracing::{info, warn};
 
 /// Performs comprehensive pre-flight cleanup for VM-based E2E tests
 ///
-/// This function cleans up any lingering resources from previous test runs
-/// that may have been interrupted before cleanup, including directories,
-/// `OpenTofu` infrastructure, and LXD resources.
+/// This function cleans up any artifacts remaining from previous test runs that may have
+/// been interrupted before cleanup, including directories, `OpenTofu` infrastructure,
+/// and LXD resources. This ensures a clean slate for new test execution.
 ///
 /// # Arguments
 ///
@@ -30,7 +30,7 @@ use tracing::{info, warn};
 /// # Errors
 ///
 /// Returns an error if cleanup fails and would prevent new test runs.
-pub fn cleanup_lingering_resources(
+pub fn preflight_cleanup_previous_resources(
     test_context: &TestContext,
 ) -> Result<(), PreflightCleanupError> {
     info!(
