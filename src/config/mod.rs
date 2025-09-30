@@ -30,18 +30,6 @@ pub struct Config {
     /// will be left running for manual inspection or reuse.
     pub keep_env: bool,
 
-    /// Subdirectory name for Ansible-related files within the build directory.
-    ///
-    /// Ansible playbooks, inventory files, and configuration templates
-    /// will be rendered to `build_dir/{ansible_subfolder}/`.
-    pub ansible_subfolder: String,
-
-    /// Subdirectory name for OpenTofu-related files within the build directory.
-    ///
-    /// OpenTofu/Terraform configuration files and state will be managed
-    /// in `build_dir/{opentofu_subfolder}/`. Example: "tofu/lxd".
-    pub opentofu_subfolder: String,
-
     /// Directory containing template files for rendering configurations.
     ///
     /// This directory should contain subdirectories for different template
@@ -66,8 +54,6 @@ pub struct Config {
 impl Config {
     /// Creates a new configuration with the provided parameters.
     ///
-    /// The `ansible_subfolder` is set to "ansible" and `opentofu_subfolder` is set to "tofu/lxd" internally.
-    ///
     /// ```rust
     /// # use std::path::PathBuf;
     /// # use torrust_tracker_deploy::config::Config;
@@ -87,8 +73,6 @@ impl Config {
     ) -> Self {
         Self {
             keep_env,
-            ansible_subfolder: "ansible".to_string(),
-            opentofu_subfolder: "tofu/lxd".to_string(),
             templates_dir,
             project_root,
             build_dir,

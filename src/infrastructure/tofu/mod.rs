@@ -11,7 +11,12 @@
 //! - Template processing for infrastructure definitions
 //!
 //! The module complements the `OpenTofu` command wrapper by providing the template
-
 pub mod template;
 
 pub use template::{CloudInitTemplateRenderer, ProvisionTemplateError, TofuTemplateRenderer};
+
+/// Subdirectory name for OpenTofu-related files within the build directory.
+///
+/// OpenTofu/Terraform configuration files and state will be managed
+/// in `build_dir/{OPENTOFU_SUBFOLDER}/`. Example: "tofu/lxd".
+pub const OPENTOFU_SUBFOLDER: &str = "tofu/lxd";

@@ -19,7 +19,9 @@ use crate::infrastructure::adapters::ansible::AnsibleClient;
 use crate::infrastructure::adapters::lxd::LxdClient;
 use crate::infrastructure::adapters::opentofu::OpenTofuClient;
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
+use crate::infrastructure::ansible::ANSIBLE_SUBFOLDER;
 use crate::infrastructure::tofu::TofuTemplateRenderer;
+use crate::infrastructure::tofu::OPENTOFU_SUBFOLDER;
 use crate::shared::ssh::SshCredentials;
 
 /// Service clients and renderers for performing actions
@@ -49,14 +51,13 @@ impl Services {
         let template_manager = Arc::new(template_manager);
 
         // Create OpenTofu client pointing to build/opentofu_subfolder directory
-        let opentofu_client =
-            OpenTofuClient::new(config.build_dir.join(&config.opentofu_subfolder));
+        let opentofu_client = OpenTofuClient::new(config.build_dir.join(OPENTOFU_SUBFOLDER));
 
         // Create LXD client for instance management
         let lxd_client = LxdClient::new();
 
         // Create Ansible client pointing to build/ansible_subfolder directory
-        let ansible_client = AnsibleClient::new(config.build_dir.join(&config.ansible_subfolder));
+        let ansible_client = AnsibleClient::new(config.build_dir.join(ANSIBLE_SUBFOLDER));
 
         // Create provision template renderer
         let tofu_template_renderer = TofuTemplateRenderer::new(

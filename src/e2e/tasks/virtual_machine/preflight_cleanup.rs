@@ -10,6 +10,7 @@ use crate::e2e::tasks::preflight_cleanup::{
 };
 use crate::infrastructure::adapters::lxd::client::LxdClient;
 use crate::infrastructure::adapters::opentofu::{self};
+use crate::infrastructure::tofu::OPENTOFU_SUBFOLDER;
 use tracing::{info, warn};
 
 /// Performs comprehensive pre-flight cleanup for VM-based E2E tests
@@ -84,10 +85,7 @@ pub fn cleanup_lingering_resources(
 fn cleanup_opentofu_infrastructure(
     test_context: &TestContext,
 ) -> Result<(), PreflightCleanupError> {
-    let tofu_dir = test_context
-        .config
-        .build_dir
-        .join(&test_context.config.opentofu_subfolder);
+    let tofu_dir = test_context.config.build_dir.join(OPENTOFU_SUBFOLDER);
 
     if !tofu_dir.exists() {
         info!(
