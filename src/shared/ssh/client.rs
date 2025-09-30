@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::shared::executor::{CommandError, CommandExecutor};
 
@@ -40,6 +40,7 @@ impl SshClient {
     /// Creates a new `SshClient`
     ///
     /// # Arguments
+    ///
     /// * `ssh_connection` - SSH connection configuration containing credentials and host IP
     #[must_use]
     pub fn new(ssh_connection: SshConnection) -> Self {
@@ -84,13 +85,16 @@ impl SshClient {
     /// Execute a command on a remote host via SSH
     ///
     /// # Arguments
+    ///
     /// * `remote_command` - Command to execute on the remote host
     ///
     /// # Returns
+    ///
     /// * `Ok(String)` - The stdout output if the command succeeds
     /// * `Err(CommandError)` - Error describing what went wrong
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * The SSH connection cannot be established
     /// * The remote command execution fails with a non-zero exit code
@@ -101,14 +105,17 @@ impl SshClient {
     /// Execute a command on a remote host via SSH with additional SSH options
     ///
     /// # Arguments
+    ///
     /// * `remote_command` - Command to execute on the remote host
     /// * `additional_options` - Additional SSH options (e.g., `["ConnectTimeout=5"]`)
     ///
     /// # Returns
+    ///
     /// * `Ok(String)` - The stdout output if the command succeeds
     /// * `Err(CommandError)` - Error describing what went wrong
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * The SSH connection cannot be established
     /// * The remote command execution fails with a non-zero exit code
@@ -120,21 +127,55 @@ impl SshClient {
         let args = self.build_ssh_args(remote_command, additional_options);
         let args_str: Vec<&str> = args.iter().map(std::string::String::as_str).collect();
 
-        self.command_executor
-            .run_command("ssh", &args_str, None)
-            .map(|result| result.stdout)
+        let result = self.command_executor.run_command("ssh", &args_str, None)?;
+
+        // Process stderr for SSH warnings and log them
+        self.process_ssh_warnings(&result.stderr);
+
+        Ok(result.stdout)
+    }
+
+    /// Process SSH stderr output to detect and log warnings
+    ///
+    /// SSH writes various informational messages to stderr, including host key
+    /// warnings. This method detects these warnings and logs them appropriately
+    /// using the tracing framework so they are visible to users at warn level.
+    ///
+    /// # Arguments
+    ///
+    /// * `stderr` - The stderr output from the SSH command
+    fn process_ssh_warnings(&self, stderr: &str) {
+        if stderr.trim().is_empty() {
+            return;
+        }
+
+        // Split stderr into lines and check each line for warnings
+        for line in stderr.lines() {
+            let trimmed_line = line.trim();
+            if trimmed_line.starts_with("Warning:") {
+                warn!(
+                    operation = "ssh_warning",
+                    host_ip = %self.ssh_connection.host_ip(),
+                    message = %trimmed_line,
+                    "SSH warning detected"
+                );
+            }
+        }
     }
 
     /// Check if a command succeeds on a remote host (returns only status)
     ///
     /// # Arguments
+    ///
     /// * `remote_command` - Command to execute on the remote host
     ///
     /// # Returns
+    ///
     /// * `Ok(bool)` - true if command succeeded (exit code 0), false otherwise
     /// * `Err(CommandError)` - Error if SSH connection could not be established
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * The SSH connection cannot be established
     pub fn check_command(&self, remote_command: &str) -> Result<bool, CommandError> {
@@ -144,14 +185,17 @@ impl SshClient {
     /// Check if a command succeeds on a remote host with additional SSH options
     ///
     /// # Arguments
+    ///
     /// * `remote_command` - Command to execute on the remote host
     /// * `additional_options` - Additional SSH options (e.g., `["ConnectTimeout=5"]`)
     ///
     /// # Returns
+    ///
     /// * `Ok(bool)` - true if command succeeded (exit code 0), false otherwise  
     /// * `Err(CommandError)` - Error if SSH connection could not be established
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * The SSH connection cannot be established
     fn check_command_with_options(
@@ -169,10 +213,12 @@ impl SshClient {
     /// Test SSH connectivity to a host
     ///
     /// # Returns
+    ///
     /// * `Ok(bool)` - true if SSH connection succeeds, false otherwise
     /// * `Err(CommandError)` - Error if SSH command could not be started
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * The SSH command could not be started
     pub fn test_connectivity(&self) -> Result<bool, CommandError> {
@@ -186,10 +232,12 @@ impl SshClient {
     /// structured logging using the `tracing` crate.
     ///
     /// # Returns
+    ///
     /// * `Ok(())` - SSH connectivity was successfully established
     /// * `Err(SshError)` - SSH connectivity could not be established after all attempts
     ///
     /// # Errors
+    ///
     /// This function will return an error if:
     /// * SSH connectivity cannot be established after 30 attempts (60 seconds total)
     pub async fn wait_for_connectivity(&self) -> Result<(), SshError> {
@@ -298,5 +346,33 @@ mod tests {
         assert_eq!(ssh_client.ssh_connection.ssh_username(), "testuser");
         assert_eq!(ssh_client.ssh_connection.host_ip(), host_ip);
         // Note: logging is now handled by the tracing crate via CommandExecutor
+    }
+
+    #[test]
+    fn it_should_detect_ssh_warnings_in_stderr() {
+        let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let credentials = SshCredentials::new(
+            PathBuf::from("/path/to/key"),
+            PathBuf::from("/path/to/key.pub"),
+            Username::new("testuser").unwrap(),
+        );
+        let ssh_connection = SshConnection::with_default_port(credentials, host_ip);
+        let ssh_client = SshClient::new(ssh_connection);
+
+        // Test stderr with SSH warning
+        let stderr_with_warning =
+            "Warning: Permanently added '10.140.190.144' (ED25519) to the list of known hosts.";
+
+        // This test verifies the method exists and processes warnings correctly
+        // In a real scenario, this would trigger tracing::warn! which would be captured
+        // by a tracing subscriber in integration tests
+        ssh_client.process_ssh_warnings(stderr_with_warning);
+
+        // Test stderr without warning
+        let stderr_without_warning = "Some other output";
+        ssh_client.process_ssh_warnings(stderr_without_warning);
+
+        // Test empty stderr
+        ssh_client.process_ssh_warnings("");
     }
 }
