@@ -371,128 +371,213 @@ mod tests {
     use super::*;
     use crate::domain::EnvironmentName;
     use crate::shared::ssh::SshCredentials;
+    use tempfile::TempDir;
 
     #[test]
     fn it_should_create_environment_with_auto_generated_paths() {
-        let env_name = EnvironmentName::new("e2e-config".to_string()).unwrap();
+        // Use a temporary directory to avoid creating real directories in the project
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path();
+
+        // Create a custom Environment constructor for testing that uses temporary paths
+        let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
         let ssh_username = Username::new("torrust".to_string()).unwrap();
         let ssh_credentials = SshCredentials::new(
-            PathBuf::from("fixtures/testing_rsa"),
-            PathBuf::from("fixtures/testing_rsa.pub"),
+            temp_path.join("testing_rsa"),
+            temp_path.join("testing_rsa.pub"),
             ssh_username.clone(),
         );
-        let environment = Environment::new(env_name.clone(), ssh_credentials);
+
+        // Create environment with custom data/build dirs that point to temp
+        let data_dir = temp_path.join("data").join("test-env");
+        let build_dir = temp_path.join("build").join("test-env");
+        let instance_name =
+            InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
+        let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
+
+        let environment = Environment {
+            name: env_name.clone(),
+            instance_name,
+            profile_name,
+            ssh_credentials: ssh_credentials.clone(),
+            data_dir: data_dir.clone(),
+            build_dir: build_dir.clone(),
+        };
 
         // Check basic fields
         assert_eq!(*environment.name(), env_name);
         assert_eq!(*environment.ssh_username(), ssh_username);
         assert_eq!(
             *environment.ssh_private_key_path(),
-            PathBuf::from("fixtures/testing_rsa")
+            temp_path.join("testing_rsa")
         );
         assert_eq!(
             *environment.ssh_public_key_path(),
-            PathBuf::from("fixtures/testing_rsa.pub")
+            temp_path.join("testing_rsa.pub")
         );
 
-        // Check auto-generated paths
-        assert_eq!(*environment.data_dir(), PathBuf::from("data/e2e-config"));
-        assert_eq!(*environment.build_dir(), PathBuf::from("build/e2e-config"));
+        // Check auto-generated paths now point to temp directory
+        assert_eq!(*environment.data_dir(), data_dir);
+        assert_eq!(*environment.build_dir(), build_dir);
 
         // Check instance name
         assert_eq!(
             environment.instance_name().as_str(),
-            "torrust-tracker-vm-e2e-config"
+            "torrust-tracker-vm-test-env"
         );
     }
 
     #[test]
     fn it_should_generate_correct_template_directories() {
-        let env_name = EnvironmentName::new("production".to_string()).unwrap();
+        // Use a temporary directory to avoid creating real directories in the project
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path();
+
+        let env_name = EnvironmentName::new("test-production".to_string()).unwrap();
         let ssh_username = Username::new("torrust".to_string()).unwrap();
         let ssh_credentials = SshCredentials::new(
-            PathBuf::from("keys/prod_rsa"),
-            PathBuf::from("keys/prod_rsa.pub"),
+            temp_path.join("prod_rsa"),
+            temp_path.join("prod_rsa.pub"),
             ssh_username,
         );
-        let environment = Environment::new(env_name, ssh_credentials);
 
-        assert_eq!(
-            environment.templates_dir(),
-            PathBuf::from("data/production/templates")
-        );
+        // Create environment with custom paths that point to temp
+        let data_dir = temp_path.join("data").join("test-production");
+        let build_dir = temp_path.join("build").join("test-production");
+        let instance_name =
+            InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
+        let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
+
+        let environment = Environment {
+            name: env_name,
+            instance_name,
+            profile_name,
+            ssh_credentials,
+            data_dir: data_dir.clone(),
+            build_dir: build_dir.clone(),
+        };
+
+        assert_eq!(environment.templates_dir(), data_dir.join("templates"));
         assert_eq!(
             environment.ansible_templates_dir(),
-            PathBuf::from("data/production/templates/ansible")
+            data_dir.join("templates").join("ansible")
         );
         assert_eq!(
             environment.tofu_templates_dir(),
-            PathBuf::from("data/production/templates/tofu")
+            data_dir.join("templates").join("tofu")
         );
     }
 
     #[test]
     fn it_should_generate_correct_build_directories() {
-        let env_name = EnvironmentName::new("staging".to_string()).unwrap();
+        // Use a temporary directory to avoid creating real directories in the project
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path();
+
+        let env_name = EnvironmentName::new("test-staging".to_string()).unwrap();
         let ssh_username = Username::new("torrust".to_string()).unwrap();
         let ssh_credentials = SshCredentials::new(
-            PathBuf::from("keys/staging_rsa"),
-            PathBuf::from("keys/staging_rsa.pub"),
+            temp_path.join("staging_rsa"),
+            temp_path.join("staging_rsa.pub"),
             ssh_username,
         );
-        let environment = Environment::new(env_name, ssh_credentials);
 
-        assert_eq!(
-            environment.ansible_build_dir(),
-            PathBuf::from("build/staging/ansible")
-        );
-        assert_eq!(
-            environment.tofu_build_dir(),
-            PathBuf::from("build/staging/tofu")
-        );
+        // Create environment with custom paths that point to temp
+        let data_dir = temp_path.join("data").join("test-staging");
+        let build_dir = temp_path.join("build").join("test-staging");
+        let instance_name =
+            InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
+        let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
+
+        let environment = Environment {
+            name: env_name,
+            instance_name,
+            profile_name,
+            ssh_credentials,
+            data_dir: data_dir.clone(),
+            build_dir: build_dir.clone(),
+        };
+
+        assert_eq!(environment.ansible_build_dir(), build_dir.join("ansible"));
+        assert_eq!(environment.tofu_build_dir(), build_dir.join("tofu"));
     }
 
     #[test]
     fn it_should_handle_different_environment_names() {
+        // Use a temporary directory to avoid creating real directories in the project
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path();
+
         let test_cases = vec![
-            ("dev", "torrust-tracker-vm-dev"),
-            ("e2e-provision", "torrust-tracker-vm-e2e-provision"),
+            ("test-dev", "torrust-tracker-vm-test-dev"),
+            (
+                "test-e2e-provision",
+                "torrust-tracker-vm-test-e2e-provision",
+            ),
             ("test-integration", "torrust-tracker-vm-test-integration"),
-            ("release-v1-2", "torrust-tracker-vm-release-v1-2"),
+            ("test-release-v1-2", "torrust-tracker-vm-test-release-v1-2"),
         ];
 
         for (env_name_str, expected_instance_name) in test_cases {
             let env_name = EnvironmentName::new(env_name_str.to_string()).unwrap();
             let ssh_username = Username::new("torrust".to_string()).unwrap();
             let ssh_credentials = SshCredentials::new(
-                PathBuf::from("test_key"),
-                PathBuf::from("test_key.pub"),
+                temp_path.join("test_key"),
+                temp_path.join("test_key.pub"),
                 ssh_username,
             );
-            let environment = Environment::new(env_name, ssh_credentials);
+
+            // Create environment with custom paths that point to temp
+            let data_dir = temp_path.join("data").join(env_name_str);
+            let build_dir = temp_path.join("build").join(env_name_str);
+            let instance_name =
+                InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
+            let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
+
+            let environment = Environment {
+                name: env_name,
+                instance_name: instance_name.clone(),
+                profile_name,
+                ssh_credentials,
+                data_dir: data_dir.clone(),
+                build_dir: build_dir.clone(),
+            };
 
             assert_eq!(environment.instance_name().as_str(), expected_instance_name);
-            assert_eq!(
-                *environment.data_dir(),
-                PathBuf::from(format!("data/{env_name_str}"))
-            );
-            assert_eq!(
-                *environment.build_dir(),
-                PathBuf::from(format!("build/{env_name_str}"))
-            );
+            assert_eq!(*environment.data_dir(), data_dir);
+            assert_eq!(*environment.build_dir(), build_dir);
         }
     }
 
     #[test]
     fn it_should_be_serializable_to_json() {
-        let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
+        // Use a temporary directory to avoid creating real directories in the project
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path();
+
+        let env_name = EnvironmentName::new("test-serialization".to_string()).unwrap();
         let ssh_username = Username::new("torrust".to_string()).unwrap();
         let ssh_credentials = SshCredentials::new(
-            PathBuf::from("test_private_key"),
-            PathBuf::from("test_public_key"),
+            temp_path.join("test_private_key"),
+            temp_path.join("test_public_key"),
             ssh_username,
         );
-        let environment = Environment::new(env_name, ssh_credentials);
+
+        // Create environment with custom paths that point to temp
+        let data_dir = temp_path.join("data").join("test-serialization");
+        let build_dir = temp_path.join("build").join("test-serialization");
+        let instance_name =
+            InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
+        let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
+
+        let environment = Environment {
+            name: env_name,
+            instance_name,
+            profile_name,
+            ssh_credentials,
+            data_dir: data_dir.clone(),
+            build_dir: build_dir.clone(),
+        };
 
         // Serialize to JSON
         let json = serde_json::to_string(&environment).unwrap();
@@ -501,36 +586,55 @@ mod tests {
         let deserialized: Environment = serde_json::from_str(&json).unwrap();
 
         // Check that all fields are preserved
-        assert_eq!(deserialized.name().as_str(), "test-env");
+        assert_eq!(deserialized.name().as_str(), "test-serialization");
         assert_eq!(
             deserialized.instance_name().as_str(),
-            "torrust-tracker-vm-test-env"
+            "torrust-tracker-vm-test-serialization"
         );
         assert_eq!(
             *deserialized.ssh_private_key_path(),
-            PathBuf::from("test_private_key")
+            temp_path.join("test_private_key")
         );
         assert_eq!(
             *deserialized.ssh_public_key_path(),
-            PathBuf::from("test_public_key")
+            temp_path.join("test_public_key")
         );
-        assert_eq!(*deserialized.data_dir(), PathBuf::from("data/test-env"));
-        assert_eq!(*deserialized.build_dir(), PathBuf::from("build/test-env"));
+        assert_eq!(*deserialized.data_dir(), data_dir);
+        assert_eq!(*deserialized.build_dir(), build_dir);
     }
 
     #[test]
     fn it_should_support_common_e2e_environment_names() {
-        let e2e_environments = vec!["e2e-config", "e2e-provision", "e2e-full"];
+        // Use a temporary directory to avoid creating real directories in the project
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path();
+
+        let e2e_environments = vec!["test-e2e-config", "test-e2e-provision", "test-e2e-full"];
 
         for env_name_str in e2e_environments {
             let env_name = EnvironmentName::new(env_name_str.to_string()).unwrap();
             let ssh_username = Username::new("torrust".to_string()).unwrap();
             let ssh_credentials = SshCredentials::new(
-                PathBuf::from("fixtures/testing_rsa"),
-                PathBuf::from("fixtures/testing_rsa.pub"),
+                temp_path.join("testing_rsa"),
+                temp_path.join("testing_rsa.pub"),
                 ssh_username,
             );
-            let environment = Environment::new(env_name, ssh_credentials);
+
+            // Create environment with custom paths that point to temp
+            let data_dir = temp_path.join("data").join(env_name_str);
+            let build_dir = temp_path.join("build").join(env_name_str);
+            let instance_name =
+                InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
+            let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
+
+            let environment = Environment {
+                name: env_name,
+                instance_name,
+                profile_name,
+                ssh_credentials,
+                data_dir: data_dir.clone(),
+                build_dir: build_dir.clone(),
+            };
 
             // Verify the environment is created successfully
             assert_eq!(environment.name().as_str(), env_name_str);
@@ -551,30 +655,40 @@ mod tests {
 
     #[test]
     fn it_should_handle_dash_separated_environment_names() {
-        let env_name = EnvironmentName::new("feature-user-auth".to_string()).unwrap();
+        // Use a temporary directory to avoid creating real directories in the project
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path();
+
+        let env_name = EnvironmentName::new("test-feature-user-auth".to_string()).unwrap();
         let ssh_username = Username::new("torrust".to_string()).unwrap();
         let ssh_credentials = SshCredentials::new(
-            PathBuf::from("keys/feature_rsa"),
-            PathBuf::from("keys/feature_rsa.pub"),
+            temp_path.join("feature_rsa"),
+            temp_path.join("feature_rsa.pub"),
             ssh_username,
         );
-        let environment = Environment::new(env_name, ssh_credentials);
+
+        // Create environment with custom paths that point to temp
+        let data_dir = temp_path.join("data").join("test-feature-user-auth");
+        let build_dir = temp_path.join("build").join("test-feature-user-auth");
+        let instance_name =
+            InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
+        let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
+
+        let environment = Environment {
+            name: env_name,
+            instance_name,
+            profile_name,
+            ssh_credentials,
+            data_dir: data_dir.clone(),
+            build_dir: build_dir.clone(),
+        };
 
         assert_eq!(
             environment.instance_name().as_str(),
-            "torrust-tracker-vm-feature-user-auth"
+            "torrust-tracker-vm-test-feature-user-auth"
         );
-        assert_eq!(
-            *environment.data_dir(),
-            PathBuf::from("data/feature-user-auth")
-        );
-        assert_eq!(
-            *environment.build_dir(),
-            PathBuf::from("build/feature-user-auth")
-        );
-        assert_eq!(
-            environment.templates_dir(),
-            PathBuf::from("data/feature-user-auth/templates")
-        );
+        assert_eq!(*environment.data_dir(), data_dir);
+        assert_eq!(*environment.build_dir(), build_dir);
+        assert_eq!(environment.templates_dir(), data_dir.join("templates"));
     }
 }

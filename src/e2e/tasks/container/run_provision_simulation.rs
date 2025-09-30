@@ -60,19 +60,24 @@ use crate::shared::ssh::SshCredentials;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
 /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
 /// use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
 /// use torrust_tracker_deploy::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
 /// use std::path::PathBuf;
+/// use tempfile::TempDir;
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
-///     let env_name = EnvironmentName::new("test".to_string())?;
+///     // Use temporary directory to avoid creating real directories
+///     let temp_dir = TempDir::new()?;
+///     let temp_path = temp_dir.path();
+///
+///     let env_name = EnvironmentName::new("test-example".to_string())?;
 ///     let ssh_user = Username::new("torrust")?;
-///     let ssh_private_key_path = std::path::PathBuf::from("fixtures/testing_rsa");
-///     let ssh_public_key_path = std::path::PathBuf::from("fixtures/testing_rsa.pub");
+///     let ssh_private_key_path = temp_path.join("testing_rsa");
+///     let ssh_public_key_path = temp_path.join("testing_rsa.pub");
 ///     let ssh_credentials = SshCredentials::new(
 ///         ssh_private_key_path,
 ///         ssh_public_key_path,

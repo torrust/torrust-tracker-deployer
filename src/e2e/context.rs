@@ -172,17 +172,22 @@ impl TestContext {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
     /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
     /// use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
     /// use std::path::PathBuf;
+    /// use tempfile::TempDir;
     ///
-    /// let env_name = EnvironmentName::new("e2e-test".to_string())?;
+    /// // Use temporary directory to avoid creating real directories
+    /// let temp_dir = TempDir::new()?;
+    /// let temp_path = temp_dir.path();
+    ///
+    /// let env_name = EnvironmentName::new("test-example".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
     /// let ssh_credentials = SshCredentials::new(
-    ///     PathBuf::from("fixtures/testing_rsa"),
-    ///     PathBuf::from("fixtures/testing_rsa.pub"),
+    ///     temp_path.join("testing_rsa"),
+    ///     temp_path.join("testing_rsa.pub"),
     ///     ssh_username,
     /// );
     /// let environment = Environment::new(env_name, ssh_credentials);
