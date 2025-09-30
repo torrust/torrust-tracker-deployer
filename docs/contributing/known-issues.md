@@ -4,27 +4,27 @@ This document describes known issues, expected errors, and normal behaviors that
 
 ## 🔍 Overview
 
-During E2E tests and normal operation, some console output may appear as errors (displayed in red) even though they represent expected behavior or harmless warnings. This document catalogs these known cases to help developers and users understand what's normal versus what requires attention.
+During E2E tests and normal operation, some console output may contain warnings or informational messages that are normal behavior. Since we updated our logging strategy (as of September 2025), the executor module now logs both stdout and stderr at debug level when commands succeed, which should reduce confusion about what constitutes an actual error.
 
 ## 🟡 Expected "Errors" in E2E Tests
 
 ### SSH Host Key Warnings
 
-**Appearance**: Red error messages in logs during SSH operations
+**Appearance**: Debug messages in logs during SSH operations (as of September 2025 update)
 
 **Example Output**:
 
 ```text
-2025-09-29T11:32:57.584329Z ERROR torrust_tracker_deploy::shared::executor: Command produced stderr output, operation: "command_execution", command: ssh -i /tmp/.tmpSZhY0Y/testing_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22 torrust@10.140.190.144 rm -f /tmp/test-docker-compose.yml, stderr: Warning: Permanently added '10.140.190.144' (ED25519) to the list of known hosts.
+2025-09-30T11:32:57.584329Z DEBUG torrust_tracker_deploy::shared::executor: stderr: Warning: Permanently added '10.140.190.144' (ED25519) to the list of known hosts.
 ```
 
 **Why This Happens**:
 
 - SSH writes host key information to stderr (not stdout)
-- Our executor currently treats all stderr output as errors
+- As of September 2025, our executor logs both stdout and stderr at debug level when commands succeed
 - The SSH options we use (`-o StrictHostKeyChecking=no`) generate these warnings by design
 
-**Is This Actually An Error?**: **NO** - This is expected behavior
+**Is This Actually An Error?**: **NO** - This is expected behavior and now properly logged as debug information
 
 **Root Cause**: SSH is informing us that it's adding the host key to the known_hosts file, which is normal security behavior.
 
@@ -33,7 +33,7 @@ During E2E tests and normal operation, some console output may appear as errors 
 - `ssh -i <key> -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22 user@host <command>`
 - Any SSH-based operations during provisioning and deployment
 
-**Current Status**: **Known and Under Control**
+**Current Status**: **Resolved** - As of September 2025, these messages are now logged at debug level instead of error level
 
 **Future Resolution**: We plan to improve error detection by:
 
@@ -62,7 +62,7 @@ During E2E tests and normal operation, some console output may appear as errors 
 - `docker compose up/down` (via SSH)
 - Any Docker operations executed remotely
 
-**Current Status**: **Known and Under Control**
+**Current Status**: **Resolved** - As of September 2025, these messages are now logged at debug level instead of error level
 
 ## 🔧 How to Distinguish Real Errors
 
@@ -95,6 +95,11 @@ If you see red error messages in the output:
 
 ## 🔮 Future Improvements
 
+### Completed (September 2025)
+
+- ✅ **Implemented smarter logging strategy**: Executor now logs both stdout and stderr at debug level when commands succeed
+- ✅ **Used appropriate log levels**: No longer logging stderr as ERROR when commands succeed
+
 ### Short Term
 
 - Document all known warning patterns
@@ -103,9 +108,40 @@ If you see red error messages in the output:
 
 ### Medium Term
 
-- Implement smarter error detection based on exit codes
-- Filter known harmless warnings from error logs
-- Use appropriate log levels (WARN vs ERROR)
+- **Wrapper-level command handling**: Move command-specific output analysis from the generic executor to specialized wrappers (e.g., SSH connectivity checks in `src/shared/ssh/service_checker.rs`)
+- Filter known harmless warnings from error logs at the wrapper level
+- Implement command-specific error handling strategies
+
+### Long Term
+
+- Restructure logging to separate warnings from errors
+- Implement user-friendly output modes
+- Add verbose/debug modes for detailed information
+
+## 🧩 Architecture Strategy: Wrapper-Level Error Handling
+
+As of September 2025, we're moving toward a pattern where:
+
+1. **Generic Executor**: The `src/shared/executor.rs` module remains generic and logs stdout/stderr at debug level when commands succeed
+2. **Specialized Wrappers**: Command-specific modules (like `src/shared/ssh/service_checker.rs`) analyze command output and handle known patterns appropriately
+3. **Context-Aware Logging**: Wrappers can distinguish between expected warnings and actual errors based on the specific command and context
+
+### Example Implementation Pattern
+
+```rust
+// In a specialized wrapper like SSH service checker
+pub fn check_connectivity(&self, host: &str) -> Result<(), SshError> {
+    let output = self.executor.run_command("ssh", &[host, "echo", "connected"], None)?;
+
+    // Wrapper analyzes the specific command output
+    // Can handle SSH-specific warnings appropriately
+    // Logs meaningful messages at the right level
+
+    Ok(())
+}
+```
+
+This approach keeps the executor generic while allowing command-specific intelligence in the appropriate modules.
 
 ### Long Term
 

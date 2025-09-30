@@ -110,24 +110,6 @@ impl CommandExecutor {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
 
-        // Always log stderr if it's not empty
-        if !stderr.trim().is_empty() {
-            tracing::error!(
-                operation = "command_execution",
-                command = %command_display,
-                stderr = %stderr,
-                "Command produced stderr output"
-            );
-        }
-
-        // Log stdout at debug level
-        tracing::debug!(
-            operation = "command_execution",
-            command = %command_display,
-            stdout = %stdout,
-            "Command output"
-        );
-
         if !output.status.success() {
             let exit_code = output
                 .status
@@ -140,6 +122,25 @@ impl CommandExecutor {
                 stdout,
                 stderr,
             });
+        }
+
+        // Log stdout and stderr at debug level when command succeeds
+        if !stdout.trim().is_empty() {
+            tracing::debug!(
+                operation = "command_execution",
+                command = %command_display,
+                "stdout: {}",
+                stdout.trim()
+            );
+        }
+
+        if !stderr.trim().is_empty() {
+            tracing::debug!(
+                operation = "command_execution",
+                command = %command_display,
+                "stderr: {}",
+                stderr.trim()
+            );
         }
 
         Ok(stdout)
