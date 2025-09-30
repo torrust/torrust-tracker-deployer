@@ -14,11 +14,13 @@ use std::sync::Arc;
 
 use crate::config::Config;
 use crate::domain::template::TemplateManager;
+use crate::domain::{InstanceName, ProfileName};
 use crate::infrastructure::adapters::ansible::AnsibleClient;
 use crate::infrastructure::adapters::lxd::LxdClient;
 use crate::infrastructure::adapters::opentofu::OpenTofuClient;
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::tofu::TofuTemplateRenderer;
+use crate::shared::ssh::SshCredentials;
 
 /// Service clients and renderers for performing actions
 pub struct Services {
@@ -36,7 +38,12 @@ pub struct Services {
 impl Services {
     /// Create a new services container using the provided configuration
     #[must_use]
-    pub fn new(config: &Config) -> Self {
+    pub fn new(
+        config: &Config,
+        ssh_credentials: SshCredentials,
+        instance_name: InstanceName,
+        profile_name: ProfileName,
+    ) -> Self {
         // Create template manager
         let template_manager = TemplateManager::new(config.templates_dir.clone());
         let template_manager = Arc::new(template_manager);
@@ -55,9 +62,9 @@ impl Services {
         let tofu_template_renderer = TofuTemplateRenderer::new(
             template_manager.clone(),
             config.build_dir.clone(),
-            config.ssh_credentials.clone(),
-            config.instance_name.clone(),
-            config.profile_name.clone(),
+            ssh_credentials,
+            instance_name,
+            profile_name,
         );
 
         // Create configuration template renderer

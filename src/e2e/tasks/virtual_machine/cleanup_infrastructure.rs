@@ -41,7 +41,7 @@ use crate::e2e::context::TestContext;
 /// - Does not return errors - failures are logged as warnings
 pub fn cleanup_infrastructure(test_context: &TestContext) {
     if test_context.config.keep_env {
-        let instance_name = &test_context.config.instance_name;
+        let instance_name = &test_context.environment.instance_name();
         info!(
             operation = "cleanup",
             action = "keep_environment",

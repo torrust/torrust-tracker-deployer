@@ -16,9 +16,6 @@
 
 use std::path::PathBuf;
 
-pub use crate::domain::{InstanceName, ProfileName};
-pub use crate::shared::ssh::{SshConnection, SshCredentials};
-
 /// Configuration parameters for deployment environments.
 ///
 /// Centralizes all deployment-related configuration including file paths,
@@ -32,27 +29,6 @@ pub struct Config {
     /// after the deployment process completes. When `true`, the environment
     /// will be left running for manual inspection or reuse.
     pub keep_env: bool,
-
-    /// SSH credentials for remote connections.
-    ///
-    /// Contains SSH key paths and username settings that will be used
-    /// when connecting to deployed instances. The host IP will be determined
-    /// later when instances are provisioned.
-    pub ssh_credentials: SshCredentials,
-
-    /// Name for the instance to be deployed.
-    ///
-    /// This name will be used for creating LXD containers/VMs and referenced
-    /// in various configuration files. Must follow LXD naming requirements:
-    /// 1-63 characters, ASCII letters/numbers/dashes, cannot start with digit/dash,
-    /// cannot end with dash.
-    pub instance_name: InstanceName,
-
-    /// Name for the LXD profile to be created.
-    ///
-    /// This name will be used for creating LXD profiles with environment-specific
-    /// naming to ensure test isolation between different environments.
-    pub profile_name: ProfileName,
 
     /// Subdirectory name for Ansible-related files within the build directory.
     ///
@@ -93,23 +69,10 @@ impl Config {
     /// The `ansible_subfolder` is set to "ansible" and `opentofu_subfolder` is set to "tofu/lxd" internally.
     ///
     /// ```rust
-    /// # use std::net::{IpAddr, Ipv4Addr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::config::{Config, SshCredentials, InstanceName};
-    /// # use torrust_tracker_deploy::domain::ProfileName;
-    /// # use torrust_tracker_deploy::shared::Username;
-    /// let ssh_credentials = SshCredentials::new(
-    ///     PathBuf::from("/home/user/.ssh/deploy_key"),
-    ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
-    ///     Username::new("ubuntu").unwrap(),
-    /// );
-    /// let instance_name = InstanceName::new("my-instance".to_string()).unwrap();
-    /// let profile_name = ProfileName::new("my-profile".to_string()).unwrap();
+    /// # use torrust_tracker_deploy::config::Config;
     /// let config = Config::new(
     ///     true,                           // keep environment for debugging
-    ///     ssh_credentials,
-    ///     instance_name,
-    ///     profile_name,
     ///     "templates".to_string(),
     ///     PathBuf::from("/path/to/project"),
     ///     PathBuf::from("/path/to/project/build"),
@@ -118,18 +81,12 @@ impl Config {
     #[must_use]
     pub fn new(
         keep_env: bool,
-        ssh_config: SshCredentials,
-        instance_name: InstanceName,
-        profile_name: ProfileName,
         templates_dir: String,
         project_root: PathBuf,
         build_dir: PathBuf,
     ) -> Self {
         Self {
             keep_env,
-            ssh_credentials: ssh_config,
-            instance_name,
-            profile_name,
             ansible_subfolder: "ansible".to_string(),
             opentofu_subfolder: "tofu/lxd".to_string(),
             templates_dir,

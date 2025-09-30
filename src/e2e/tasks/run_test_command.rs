@@ -39,7 +39,7 @@ pub async fn run_test_command(env: &TestContext, instance_ip: &IpAddr) -> Result
     info!("Starting deployment validation");
 
     // Use the new TestCommand to handle all infrastructure validation steps
-    let test_command = TestCommand::new(env.config.ssh_credentials.clone(), *instance_ip);
+    let test_command = TestCommand::new(env.environment.ssh_credentials().clone(), *instance_ip);
 
     test_command
         .execute()

@@ -24,9 +24,10 @@ use anyhow::Context;
 use tempfile::TempDir;
 use tracing::{info, warn};
 
-use crate::config::{Config, InstanceName, SshCredentials};
+use crate::config::Config;
 use crate::container::Services;
-use crate::shared::Username;
+use crate::domain::{InstanceName, ProfileName};
+use crate::shared::{ssh::SshCredentials, Username};
 
 /// Errors that can occur during test context creation and initialization
 #[derive(Debug, thiserror::Error)]
@@ -134,15 +135,14 @@ impl TestContext {
             ssh_user,
         )?;
 
-        let config = Self::create_config(
-            keep_env,
-            ssh_credentials,
-            instance_name,
-            &templates_dir,
-            &project_root,
-        );
+        // Generate profile name from instance name
+        let profile_name_str = format!("torrust-profile-{}", instance_name.as_str());
+        let profile_name = ProfileName::new(profile_name_str)
+            .expect("Generated profile name should always be valid");
 
-        let services = Services::new(&config);
+        let config = Self::create_config(keep_env, &templates_dir, &project_root);
+
+        let services = Services::new(&config, ssh_credentials, instance_name, profile_name);
 
         let env = Self {
             config,
@@ -248,15 +248,11 @@ impl TestContext {
     /// Creates the main configuration object
     fn create_config(
         keep_env: bool,
-        ssh_credentials: SshCredentials,
-        instance_name: InstanceName,
         templates_dir: &std::path::Path,
         project_root: &std::path::Path,
     ) -> Config {
         Config::new(
             keep_env,
-            ssh_credentials,
-            instance_name,
             templates_dir.to_string_lossy().to_string(),
             project_root.to_path_buf(),
             project_root.join("build"),

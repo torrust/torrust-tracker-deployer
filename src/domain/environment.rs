@@ -36,8 +36,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::config::InstanceName;
-use crate::domain::{EnvironmentName, ProfileName};
+use crate::domain::{EnvironmentName, InstanceName, ProfileName};
 use crate::shared::{ssh::SshCredentials, Username};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

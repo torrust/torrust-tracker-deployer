@@ -24,13 +24,13 @@ use anyhow::{Context, Result};
 use tracing::info;
 
 use crate::application::steps::RenderAnsibleTemplatesStep;
-use crate::config::SshCredentials;
 use crate::container::Services;
 use crate::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
 use crate::e2e::containers::timeout::ContainerTimeouts;
 use crate::e2e::containers::{RunningProvisionedContainer, StoppedProvisionedContainer};
 use crate::e2e::context::TestContext;
 use crate::infrastructure::ansible::AnsibleTemplateRenderer;
+use crate::shared::ssh::SshCredentials;
 
 /// Run provision simulation to prepare templates for container-based testing
 ///
@@ -96,26 +96,37 @@ pub async fn run_provision_simulation(
     info!("Running provision simulation to prepare container configuration templates");
 
     // Step 1: Setup Docker container
-    let running_container =
-        create_and_start_container(test_context.config.instance_name.as_str().to_string()).await?;
+    let running_container = create_and_start_container(
+        test_context
+            .environment
+            .instance_name()
+            .as_str()
+            .to_string(),
+    )
+    .await?;
 
     let socket_addr = running_container.ssh_socket_addr();
 
     // Step 2: Establish SSH connectivity
     establish_ssh_connectivity(
         socket_addr,
-        &test_context.config.ssh_credentials,
+        test_context.environment.ssh_credentials(),
         Some(&running_container),
     )
     .await?;
 
     // Step 3: Initialize services from test environment configuration
-    let services = Services::new(&test_context.config);
+    let services = Services::new(
+        &test_context.config,
+        test_context.environment.ssh_credentials().clone(),
+        test_context.environment.instance_name().clone(),
+        test_context.environment.profile_name().clone(),
+    );
 
     // Step 4: Render Ansible configuration templates with container connection details
     render_ansible_configuration(
         Arc::clone(&services.ansible_template_renderer),
-        test_context.config.ssh_credentials.clone(),
+        test_context.environment.ssh_credentials().clone(),
         socket_addr,
     )
     .await

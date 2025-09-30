@@ -47,7 +47,7 @@ pub async fn run_provision_command(test_context: &TestContext) -> Result<IpAddr>
         Arc::clone(&test_context.services.ansible_template_renderer),
         Arc::clone(&test_context.services.ansible_client),
         Arc::clone(&test_context.services.opentofu_client),
-        test_context.config.ssh_credentials.clone(),
+        test_context.environment.ssh_credentials().clone(),
     );
 
     let opentofu_instance_ip = provision_command

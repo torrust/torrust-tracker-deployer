@@ -174,7 +174,7 @@ async fn run_configuration_tests(test_context: &TestContext) -> Result<()> {
     // Step 3: Run configuration validation
     run_configuration_validation(
         running_container.ssh_socket_addr(),
-        &test_context.config.ssh_credentials,
+        test_context.environment.ssh_credentials(),
     )
     .await?;
 

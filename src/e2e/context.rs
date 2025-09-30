@@ -23,7 +23,7 @@
 use tempfile::TempDir;
 use tracing::{info, warn};
 
-use crate::config::{Config, SshCredentials};
+use crate::config::Config;
 use crate::container::Services;
 use crate::domain::Environment;
 
@@ -112,23 +112,19 @@ impl TestContext {
         let project_root = Self::get_project_root()?;
         let temp_dir = Self::create_temp_directory()?;
 
-        let ssh_credentials = SshCredentials::new(
-            environment.ssh_private_key_path().clone(),
-            environment.ssh_public_key_path().clone(),
-            environment.ssh_username().clone(),
-        );
-
         let config = Config::new(
             keep_env,
-            ssh_credentials,
-            environment.instance_name().clone(),
-            environment.profile_name().clone(),
             environment.templates_dir().to_string_lossy().to_string(),
             project_root,
             environment.build_dir().clone(),
         );
 
-        let services = Services::new(&config);
+        let services = Services::new(
+            &config,
+            environment.ssh_credentials().clone(),
+            environment.instance_name().clone(),
+            environment.profile_name().clone(),
+        );
 
         let env = Self {
             config,

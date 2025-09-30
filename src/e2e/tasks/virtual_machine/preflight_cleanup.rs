@@ -169,14 +169,14 @@ fn cleanup_lxd_resources(test_context: &TestContext) {
 
     // Clean up test instance if it exists
     match lxd_client.delete_instance(
-        &test_context.config.instance_name, // Phase 3: Use instance_name from config instead of hardcoded value
+        test_context.environment.instance_name(), // Phase 3: Use instance_name from environment instead of hardcoded value
         true,
     ) {
         Ok(()) => {
             info!(
                 operation = "lxd_resources_cleanup",
                 resource = "instance",
-                name = %test_context.config.instance_name.as_str(),
+                name = %test_context.environment.instance_name().as_str(),
                 status = "success",
                 "LXD instance cleanup completed successfully"
             );
@@ -185,7 +185,7 @@ fn cleanup_lxd_resources(test_context: &TestContext) {
             warn!(
                 operation = "lxd_resources_cleanup",
                 resource = "instance",
-                name = %test_context.config.instance_name.as_str(),
+                name = %test_context.environment.instance_name().as_str(),
                 error = %e,
                 "Failed to clean LXD instance"
             );
@@ -193,12 +193,12 @@ fn cleanup_lxd_resources(test_context: &TestContext) {
     }
 
     // Clean up test profile if it exists
-    match lxd_client.delete_profile(test_context.config.profile_name.as_str()) {
+    match lxd_client.delete_profile(test_context.environment.profile_name().as_str()) {
         Ok(()) => {
             info!(
                 operation = "lxd_resources_cleanup",
                 resource = "profile",
-                name = %test_context.config.profile_name.as_str(),
+                name = %test_context.environment.profile_name().as_str(),
                 status = "success",
                 "LXD profile cleanup completed successfully"
             );
@@ -207,7 +207,7 @@ fn cleanup_lxd_resources(test_context: &TestContext) {
             warn!(
                 operation = "lxd_resources_cleanup",
                 resource = "profile",
-                name = %test_context.config.profile_name.as_str(),
+                name = %test_context.environment.profile_name().as_str(),
                 error = %e,
                 "Failed to clean LXD profile"
             );

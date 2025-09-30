@@ -67,7 +67,7 @@ pub fn cleanup_lingering_resources(env: &TestContext) -> Result<(), PreflightCle
 ///
 /// * `env` - The test environment containing the instance name
 fn cleanup_hanging_docker_containers(env: &TestContext) {
-    let instance_name = env.config.instance_name.as_str();
+    let instance_name = env.environment.instance_name().as_str();
     let command_executor = CommandExecutor::new();
 
     info!(
