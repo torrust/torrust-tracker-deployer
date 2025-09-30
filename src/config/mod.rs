@@ -1,18 +1,22 @@
 //! Configuration management for deployment settings
 //!
-//! This module provides the `Config` struct which centralizes all deployment-related
-//! configuration including file paths, service connections, SSH credentials,
-//! and runtime behavior settings.
+//! This module provides the `Config` struct which manages essential file system
+//! paths for the deployment process including template sources and build outputs.
 //!
-//! ## Key Configuration Areas
+//! ## Current Configuration Areas
 //!
-//! - SSH credentials and connection settings
 //! - File system paths for templates and build outputs
-//! - Deployment behavior flags (cleanup, verbosity, etc.)
-//! - Tool-specific configuration (Ansible, `OpenTofu`)
+//! - Project root directory for resolving relative paths
+//!
+//! ## Path Relationships
+//!
+//! Typically, the paths have this relationship:
+//! - `project_root`: `/path/to/torrust-tracker-deploy`
+//! - `templates_dir`: `{project_root}/templates`
+//! - `build_dir`: `{project_root}/build`
 //!
 //! The configuration is typically created once at deployment start and passed
-//! throughout the system to ensure consistent settings across all components.
+//! throughout the system to ensure consistent path resolution across all components.
 
 use std::path::PathBuf;
 
@@ -51,9 +55,9 @@ impl Config {
     /// # use std::path::PathBuf;
     /// # use torrust_tracker_deploy::config::Config;
     /// let config = Config::new(
-    ///     PathBuf::from("templates"),
-    ///     PathBuf::from("/path/to/project"),
-    ///     PathBuf::from("/path/to/project/build"),
+    ///     PathBuf::from("/home/user/project/templates"),
+    ///     PathBuf::from("/home/user/project"),
+    ///     PathBuf::from("/home/user/project/build"),
     /// );
     /// ```
     #[must_use]
