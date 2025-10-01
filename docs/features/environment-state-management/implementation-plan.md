@@ -66,12 +66,79 @@ This phase establishes the foundation for type-safe state management using the t
 
 ### Phase 2: Serialization & Type Erasure
 
+This phase adds the ability to convert between compile-time typed states and runtime type-erased states for serialization and storage. It's divided into three subtasks that can each be verified, tested, and committed independently.
+
 #### 2. Serialization Implementation
 
-- [ ] Create `AnyEnvironmentState` enum for type erasure
-- [ ] Implement conversion methods between typed and erased states
-- [ ] Add serialization/deserialization for all state types
-- [ ] Implement helper methods for state introspection and display
+##### Subtask 1: Create Type Erasure Enum
+
+Create `AnyEnvironmentState` enum to hold any typed `Environment<S>` at runtime.
+
+- [ ] Add `AnyEnvironmentState` enum to `src/domain/environment_state.rs`
+- [ ] Create variant for each state type:
+  - `Created(Environment<Created>)`
+  - `Provisioning(Environment<Provisioning>)`
+  - `Provisioned(Environment<Provisioned>)`
+  - `Configuring(Environment<Configuring>)`
+  - `Configured(Environment<Configured>)`
+  - `Releasing(Environment<Releasing>)`
+  - `Released(Environment<Released>)`
+  - `Running(Environment<Running>)`
+  - `ProvisionFailed(Environment<ProvisionFailed>)`
+  - `ConfigureFailed(Environment<ConfigureFailed>)`
+  - `ReleaseFailed(Environment<ReleaseFailed>)`
+  - `RunFailed(Environment<RunFailed>)`
+  - `Destroyed(Environment<Destroyed>)`
+- [ ] Derive `Debug`, `Clone`, `Serialize`, `Deserialize` for `AnyEnvironmentState`
+- [ ] Add basic unit tests for enum creation
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `feat: add type erasure enum for environment state serialization`
+
+##### Subtask 2: Implement Type Conversion Methods
+
+Add methods to convert between typed `Environment<S>` and type-erased `AnyEnvironmentState`.
+
+- [ ] Implement `into_any()` method for each `Environment<S>` type:
+  - `impl Environment<Created> { pub fn into_any(self) -> AnyEnvironmentState }`
+  - `impl Environment<Provisioning> { pub fn into_any(self) -> AnyEnvironmentState }`
+  - (repeat for all 13 state types)
+- [ ] Implement extraction methods on `AnyEnvironmentState`:
+  - `pub fn try_into_created(self) -> Result<Environment<Created>, StateTypeError>`
+  - `pub fn try_into_provisioning(self) -> Result<Environment<Provisioning>, StateTypeError>`
+  - (repeat for all 13 state types)
+- [ ] Add `StateTypeError` for invalid type conversions
+- [ ] Add unit tests for all conversion paths (type-to-any and any-to-type)
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `feat: implement bidirectional type conversion for environment states`
+
+##### Subtask 3: Add State Introspection Helpers
+
+Implement helper methods for working with type-erased states without pattern matching.
+
+- [ ] Add introspection methods to `AnyEnvironmentState`:
+  - `pub fn name(&self) -> &EnvironmentName` - Get environment name
+  - `pub fn state_name(&self) -> &'static str` - Get state name as string
+  - `pub fn is_success_state(&self) -> bool` - Check if in success state
+  - `pub fn is_error_state(&self) -> bool` - Check if in error state
+  - `pub fn is_terminal_state(&self) -> bool` - Check if in terminal state (Running/Destroyed/Failed)
+  - `pub fn error_details(&self) -> Option<&str>` - Get error details if in error state
+- [ ] Implement `Display` trait for `AnyEnvironmentState`
+- [ ] Add comprehensive unit tests for all helper methods
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `feat: add introspection helpers for type-erased environment states`
+
+**Phase 2 Completion Criteria:**
+
+- `AnyEnvironmentState` enum holds all 13 typed environment states
+- Bidirectional conversion between typed and erased states works correctly
+- Helper methods provide easy state introspection without pattern matching
+- Full serialization/deserialization round-trip works for all states
+- All existing tests continue to pass (backward compatibility maintained)
+- All linters pass
+- All unit tests pass (including new serialization tests)
 
 ### Phase 3: Persistence
 

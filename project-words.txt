@@ -12,6 +12,7 @@ cloudinit
 connrefused
 containerd
 cpus
+creds
 Crossplane
 dearmor
 debootstrap
@@ -84,8 +85,8 @@ rustc
 RUSTDOCFLAGS
 rustflags
 rustup
-SCRIPTDIR
 Scriptability
+SCRIPTDIR
 secureboot
 serde
 serverurl
@@ -96,6 +97,7 @@ spëcial
 spki
 sshpass
 startretries
+stringly
 subshell
 substates
 supervisorctl
@@ -123,6 +125,7 @@ tmpfiles
 tmpfs
 torrust
 Torrust
+unrepresentable
 unsubscription
 usermod
 userspace
