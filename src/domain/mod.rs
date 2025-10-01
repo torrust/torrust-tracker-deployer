@@ -20,7 +20,7 @@ pub mod template;
 // Re-export commonly used domain types for convenience
 pub use environment::{
     name::{EnvironmentName, EnvironmentNameError},
-    state::AnyEnvironmentState,
+    state::{AnyEnvironmentState, StateTypeError},
     Environment,
 };
 pub use instance_name::{InstanceName, InstanceNameError};

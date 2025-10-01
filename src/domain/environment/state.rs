@@ -41,6 +41,7 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 /// Initial state - Environment has been created but no operations performed
 ///
@@ -188,6 +189,33 @@ pub struct RunFailed {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Destroyed;
 
+/// Error type for invalid type conversions when working with type-erased environments
+///
+/// This error occurs when attempting to convert an `AnyEnvironmentState` to a specific
+/// typed `Environment<S>` state, but the runtime state doesn't match the expected type.
+///
+/// # Example
+///
+/// ```rust
+/// use torrust_tracker_deploy::domain::environment::state::AnyEnvironmentState;
+///
+/// // let any_env = AnyEnvironmentState::Provisioned(...);
+/// // // This will fail because any_env is Provisioned, not Created
+/// // let result = any_env.try_into_created();
+/// // assert!(result.is_err());
+/// ```
+#[derive(Debug, Error)]
+pub enum StateTypeError {
+    /// The environment is in a different state than expected
+    #[error("Expected state '{expected}', but found '{actual}'")]
+    UnexpectedState {
+        /// The state type that was expected
+        expected: &'static str,
+        /// The actual state type that was found
+        actual: String,
+    },
+}
+
 // Import Environment for type erasure enum
 use crate::domain::environment::Environment;
 
@@ -271,6 +299,226 @@ pub enum AnyEnvironmentState {
 
     /// Environment in `Destroyed` terminal state
     Destroyed(Environment<Destroyed>),
+}
+
+// Type Restoration: Runtime → Typed conversions (try_into_<state>)
+// These methods convert AnyEnvironmentState back to typed Environment<S>
+impl AnyEnvironmentState {
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<Created>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Created` state.
+    pub fn try_into_created(self) -> Result<Environment<Created>, StateTypeError> {
+        match self {
+            Self::Created(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "created",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<Provisioning>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Provisioning` state.
+    pub fn try_into_provisioning(self) -> Result<Environment<Provisioning>, StateTypeError> {
+        match self {
+            Self::Provisioning(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "provisioning",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<Provisioned>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Provisioned` state.
+    pub fn try_into_provisioned(self) -> Result<Environment<Provisioned>, StateTypeError> {
+        match self {
+            Self::Provisioned(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "provisioned",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<Configuring>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Configuring` state.
+    pub fn try_into_configuring(self) -> Result<Environment<Configuring>, StateTypeError> {
+        match self {
+            Self::Configuring(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "configuring",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<Configured>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Configured` state.
+    pub fn try_into_configured(self) -> Result<Environment<Configured>, StateTypeError> {
+        match self {
+            Self::Configured(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "configured",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<Releasing>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Releasing` state.
+    pub fn try_into_releasing(self) -> Result<Environment<Releasing>, StateTypeError> {
+        match self {
+            Self::Releasing(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "releasing",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<Released>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Released` state.
+    pub fn try_into_released(self) -> Result<Environment<Released>, StateTypeError> {
+        match self {
+            Self::Released(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "released",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<Running>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Running` state.
+    pub fn try_into_running(self) -> Result<Environment<Running>, StateTypeError> {
+        match self {
+            Self::Running(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "running",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<ProvisionFailed>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `ProvisionFailed` state.
+    pub fn try_into_provision_failed(self) -> Result<Environment<ProvisionFailed>, StateTypeError> {
+        match self {
+            Self::ProvisionFailed(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "provision_failed",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<ConfigureFailed>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `ConfigureFailed` state.
+    pub fn try_into_configure_failed(self) -> Result<Environment<ConfigureFailed>, StateTypeError> {
+        match self {
+            Self::ConfigureFailed(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "configure_failed",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<ReleaseFailed>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `ReleaseFailed` state.
+    pub fn try_into_release_failed(self) -> Result<Environment<ReleaseFailed>, StateTypeError> {
+        match self {
+            Self::ReleaseFailed(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "release_failed",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<RunFailed>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `RunFailed` state.
+    pub fn try_into_run_failed(self) -> Result<Environment<RunFailed>, StateTypeError> {
+        match self {
+            Self::RunFailed(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "run_failed",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Attempts to convert `AnyEnvironmentState` to `Environment<Destroyed>`
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Destroyed` state.
+    pub fn try_into_destroyed(self) -> Result<Environment<Destroyed>, StateTypeError> {
+        match self {
+            Self::Destroyed(env) => Ok(env),
+            other => Err(StateTypeError::UnexpectedState {
+                expected: "destroyed",
+                actual: other.state_name().to_string(),
+            }),
+        }
+    }
+
+    /// Helper method to get the state name as a string
+    ///
+    /// This is used internally for error messages when type conversion fails.
+    fn state_name(&self) -> &'static str {
+        match self {
+            Self::Created(_) => "created",
+            Self::Provisioning(_) => "provisioning",
+            Self::Provisioned(_) => "provisioned",
+            Self::Configuring(_) => "configuring",
+            Self::Configured(_) => "configured",
+            Self::Releasing(_) => "releasing",
+            Self::Released(_) => "released",
+            Self::Running(_) => "running",
+            Self::ProvisionFailed(_) => "provision_failed",
+            Self::ConfigureFailed(_) => "configure_failed",
+            Self::ReleaseFailed(_) => "release_failed",
+            Self::RunFailed(_) => "run_failed",
+            Self::Destroyed(_) => "destroyed",
+        }
+    }
 }
 
 #[cfg(test)]
@@ -508,6 +756,379 @@ mod tests {
             let any_env = AnyEnvironmentState::Created(env);
             let json = serde_json::to_string(&any_env).unwrap();
             assert!(json.contains("Created"));
+        }
+
+        // Tests for Type Conversion Methods (Subtask 2)
+
+        // Tests for into_any() - Typed to Runtime conversions
+
+        #[test]
+        fn it_should_convert_created_environment_into_any() {
+            let env = create_test_environment_created();
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::Created(_)));
+        }
+
+        #[test]
+        fn it_should_convert_provisioning_environment_into_any() {
+            let env = create_test_environment_created().start_provisioning();
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::Provisioning(_)));
+        }
+
+        #[test]
+        fn it_should_convert_provisioned_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned();
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::Provisioned(_)));
+        }
+
+        #[test]
+        fn it_should_convert_configuring_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring();
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::Configuring(_)));
+        }
+
+        #[test]
+        fn it_should_convert_configured_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured();
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::Configured(_)));
+        }
+
+        #[test]
+        fn it_should_convert_releasing_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing();
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::Releasing(_)));
+        }
+
+        #[test]
+        fn it_should_convert_released_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing()
+                .released();
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::Released(_)));
+        }
+
+        #[test]
+        fn it_should_convert_running_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing()
+                .released()
+                .start_running();
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::Running(_)));
+        }
+
+        #[test]
+        fn it_should_convert_provision_failed_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provision_failed("infrastructure error".to_string());
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::ProvisionFailed(_)));
+        }
+
+        #[test]
+        fn it_should_convert_configure_failed_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configure_failed("ansible error".to_string());
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::ConfigureFailed(_)));
+        }
+
+        #[test]
+        fn it_should_convert_release_failed_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing()
+                .release_failed("release error".to_string());
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::ReleaseFailed(_)));
+        }
+
+        #[test]
+        fn it_should_convert_run_failed_environment_into_any() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing()
+                .released()
+                .start_running()
+                .run_failed("runtime error".to_string());
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::RunFailed(_)));
+        }
+
+        #[test]
+        fn it_should_convert_destroyed_environment_into_any() {
+            let env = create_test_environment_created().destroy();
+            let any_env = env.into_any();
+            assert!(matches!(any_env, AnyEnvironmentState::Destroyed(_)));
+        }
+
+        // Tests for try_into_<state>() - Runtime to Typed conversions (successful cases)
+
+        #[test]
+        fn it_should_convert_any_to_created_successfully() {
+            let env = create_test_environment_created();
+            let any_env = env.into_any();
+            let result = any_env.try_into_created();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_provisioning_successfully() {
+            let env = create_test_environment_created().start_provisioning();
+            let any_env = env.into_any();
+            let result = any_env.try_into_provisioning();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_provisioned_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned();
+            let any_env = env.into_any();
+            let result = any_env.try_into_provisioned();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_configuring_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring();
+            let any_env = env.into_any();
+            let result = any_env.try_into_configuring();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_configured_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured();
+            let any_env = env.into_any();
+            let result = any_env.try_into_configured();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_releasing_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing();
+            let any_env = env.into_any();
+            let result = any_env.try_into_releasing();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_released_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing()
+                .released();
+            let any_env = env.into_any();
+            let result = any_env.try_into_released();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_running_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing()
+                .released()
+                .start_running();
+            let any_env = env.into_any();
+            let result = any_env.try_into_running();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_provision_failed_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provision_failed("test error".to_string());
+            let any_env = env.into_any();
+            let result = any_env.try_into_provision_failed();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_configure_failed_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configure_failed("test error".to_string());
+            let any_env = env.into_any();
+            let result = any_env.try_into_configure_failed();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_release_failed_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing()
+                .release_failed("test error".to_string());
+            let any_env = env.into_any();
+            let result = any_env.try_into_release_failed();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_run_failed_successfully() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provisioned()
+                .start_configuring()
+                .configured()
+                .start_releasing()
+                .released()
+                .start_running()
+                .run_failed("test error".to_string());
+            let any_env = env.into_any();
+            let result = any_env.try_into_run_failed();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_convert_any_to_destroyed_successfully() {
+            let env = create_test_environment_created().destroy();
+            let any_env = env.into_any();
+            let result = any_env.try_into_destroyed();
+            assert!(result.is_ok());
+        }
+
+        // Tests for try_into_<state>() - Runtime to Typed conversions (failure cases)
+
+        #[test]
+        fn it_should_fail_converting_provisioning_to_created() {
+            let env = create_test_environment_created().start_provisioning();
+            let any_env = env.into_any();
+            let result = any_env.try_into_created();
+            assert!(result.is_err());
+            let err = result.unwrap_err();
+            assert!(matches!(err, StateTypeError::UnexpectedState { .. }));
+            assert!(err.to_string().contains("created"));
+            assert!(err.to_string().contains("provisioning"));
+        }
+
+        #[test]
+        fn it_should_fail_converting_created_to_provisioning() {
+            let env = create_test_environment_created();
+            let any_env = env.into_any();
+            let result = any_env.try_into_provisioning();
+            assert!(result.is_err());
+            let err = result.unwrap_err();
+            assert!(err.to_string().contains("provisioning"));
+            assert!(err.to_string().contains("created"));
+        }
+
+        #[test]
+        fn it_should_fail_converting_provision_failed_to_provisioned() {
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provision_failed("error".to_string());
+            let any_env = env.into_any();
+            let result = any_env.try_into_provisioned();
+            assert!(result.is_err());
+            let err = result.unwrap_err();
+            assert!(err.to_string().contains("provisioned"));
+            assert!(err.to_string().contains("provision_failed"));
+        }
+
+        #[test]
+        fn it_should_fail_converting_destroyed_to_running() {
+            let env = create_test_environment_created().destroy();
+            let any_env = env.into_any();
+            let result = any_env.try_into_running();
+            assert!(result.is_err());
+            let err = result.unwrap_err();
+            assert!(err.to_string().contains("running"));
+            assert!(err.to_string().contains("destroyed"));
+        }
+
+        // Tests for round-trip conversions (preserving data integrity)
+
+        #[test]
+        fn it_should_preserve_data_in_round_trip_conversion() {
+            let original_name = "test-env";
+            let env = create_test_environment_created();
+
+            // Round-trip: typed -> erased -> typed
+            let any_env = env.into_any();
+            let env_restored = any_env.try_into_created().unwrap();
+            let name_after = env_restored.name().as_str();
+
+            assert_eq!(name_after, original_name);
+        }
+
+        #[test]
+        fn it_should_preserve_error_details_in_failed_states() {
+            let error_message = "infrastructure deployment failed";
+            let env = create_test_environment_created()
+                .start_provisioning()
+                .provision_failed(error_message.to_string());
+
+            // Round-trip conversion
+            let any_env = env.into_any();
+            let env_restored = any_env.try_into_provision_failed().unwrap();
+
+            assert_eq!(env_restored.state().failed_step, error_message);
         }
     }
 }

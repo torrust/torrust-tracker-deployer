@@ -401,6 +401,113 @@ impl<S> Environment<S> {
     }
 }
 
+// Type Erasure: Typed → Runtime conversions (into_any)
+// These methods convert typed Environment<S> to runtime AnyEnvironmentState
+
+impl Environment<Created> {
+    /// Converts typed `Environment<Created>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::Created(self)
+    }
+}
+
+impl Environment<Provisioning> {
+    /// Converts typed `Environment<Provisioning>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::Provisioning(self)
+    }
+}
+
+impl Environment<Provisioned> {
+    /// Converts typed `Environment<Provisioned>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::Provisioned(self)
+    }
+}
+
+impl Environment<Configuring> {
+    /// Converts typed `Environment<Configuring>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::Configuring(self)
+    }
+}
+
+impl Environment<Configured> {
+    /// Converts typed `Environment<Configured>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::Configured(self)
+    }
+}
+
+impl Environment<Releasing> {
+    /// Converts typed `Environment<Releasing>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::Releasing(self)
+    }
+}
+
+impl Environment<Released> {
+    /// Converts typed `Environment<Released>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::Released(self)
+    }
+}
+
+impl Environment<Running> {
+    /// Converts typed `Environment<Running>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::Running(self)
+    }
+}
+
+impl Environment<ProvisionFailed> {
+    /// Converts typed `Environment<ProvisionFailed>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::ProvisionFailed(self)
+    }
+}
+
+impl Environment<ConfigureFailed> {
+    /// Converts typed `Environment<ConfigureFailed>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::ConfigureFailed(self)
+    }
+}
+
+impl Environment<ReleaseFailed> {
+    /// Converts typed `Environment<ReleaseFailed>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::ReleaseFailed(self)
+    }
+}
+
+impl Environment<RunFailed> {
+    /// Converts typed `Environment<RunFailed>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::RunFailed(self)
+    }
+}
+
+impl Environment<Destroyed> {
+    /// Converts typed `Environment<Destroyed>` into type-erased `AnyEnvironmentState`
+    #[must_use]
+    pub fn into_any(self) -> AnyEnvironmentState {
+        AnyEnvironmentState::Destroyed(self)
+    }
+}
+
 // Generic implementations for all states
 impl<S> Environment<S> {
     /// Returns a reference to the current state
