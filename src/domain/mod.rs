@@ -7,12 +7,14 @@
 //!
 //! - `environment` - Environment entity encapsulating all environment-specific configuration
 //! - `environment_name` - Environment name validation and management
+//! - `environment_state` - State marker types for the environment state machine
 //! - `instance_name` - LXD instance name validation and management
 //! - `profile_name` - LXD profile name validation and management
 //! - `template` - Core template domain models and business logic
 
 pub mod environment;
 pub mod environment_name;
+pub mod environment_state;
 pub mod instance_name;
 pub mod profile_name;
 pub mod template;

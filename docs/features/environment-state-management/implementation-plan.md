@@ -9,10 +9,61 @@
 
 #### 1. Domain Model Enhancement
 
-- [ ] Create state marker types (`Created`, `Provisioning`, `Provisioned`, etc.)
-- [ ] Implement `Environment<S>` with type-state pattern
-- [ ] Add state-specific transition methods with compile-time validation
-- [ ] Create basic type-safe state transitions
+This phase establishes the foundation for type-safe state management using the type-state pattern. It's divided into three subtasks that can each be verified, tested, and committed independently.
+
+##### Subtask 1: Create State Marker Types Module ✅
+
+- [x] Create new file `src/domain/environment_state.rs`
+- [x] Define all state marker types as distinct types:
+  - Success states: `Created`, `Provisioning`, `Provisioned`, `Configuring`, `Configured`, `Releasing`, `Released`, `Running`, `Destroyed`
+  - Error states: `ProvisionFailed`, `ConfigureFailed`, `ReleaseFailed`, `RunFailed` (with `failed_step: String`)
+- [x] Derive `Debug`, `Clone`, `Serialize`, `Deserialize` for all state types
+- [x] Add module to `src/domain/mod.rs`
+- [x] Add basic unit tests for state type creation
+- [x] Run linters: `cargo run --bin linter all`
+- [x] Run tests: `cargo test`
+- [x] Commit: `feat: add state marker types for environment state machine`
+
+##### Subtask 2: Convert Environment to Generic Environment<S>
+
+- [ ] Modify `Environment` struct in `src/domain/environment.rs` to be generic over state type `S`
+- [ ] Add `state: S` field to the struct
+- [ ] Update `Environment::new()` to return `Environment<Created>` (initial state)
+- [ ] Add generic implementations for common methods (getters for name, ssh_credentials, directories)
+- [ ] Ensure all existing tests compile and pass with `Environment<Created>`
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `refactor: [#TBD] convert Environment to generic type-state struct`
+
+##### Subtask 3: Implement State Transition Methods
+
+- [ ] Implement state-specific transition methods:
+  - `Environment<Created>::start_provisioning() -> Environment<Provisioning>`
+  - `Environment<Provisioning>::provisioned() -> Environment<Provisioned>`
+  - `Environment<Provisioning>::provision_failed(String) -> Environment<ProvisionFailed>`
+  - `Environment<Provisioned>::start_configuring() -> Environment<Configuring>`
+  - `Environment<Configuring>::configured() -> Environment<Configured>`
+  - `Environment<Configuring>::configure_failed(String) -> Environment<ConfigureFailed>`
+  - `Environment<Configured>::start_releasing() -> Environment<Releasing>`
+  - `Environment<Releasing>::released() -> Environment<Released>`
+  - `Environment<Releasing>::release_failed(String) -> Environment<ReleaseFailed>`
+  - `Environment<Released>::start_running() -> Environment<Running>`
+  - `Environment<Running>::run_failed(String) -> Environment<RunFailed>`
+  - `Environment<S>::destroy() -> Environment<Destroyed>` (for any state)
+- [ ] Add unit tests for all valid state transitions
+- [ ] Add compile-time verification tests (code that shouldn't compile)
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `feat: [#TBD] implement type-safe state transition methods`
+
+**Phase 1 Completion Criteria:**
+
+- All state marker types defined and tested
+- Environment struct is generic over state type
+- All state transitions are type-safe and compile-time validated
+- Existing tests pass without modification (using `Environment<Created>`)
+- All linters pass
+- All unit tests pass
 
 ### Phase 2: Serialization & Type Erasure
 
