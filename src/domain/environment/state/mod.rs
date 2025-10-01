@@ -43,151 +43,35 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// Initial state - Environment has been created but no operations performed
-///
-/// This is the entry state for all new environments. From this state, the
-/// environment can transition to `Provisioning` when infrastructure setup begins.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Created;
+// State modules
+mod configure_failed;
+mod configured;
+mod configuring;
+mod created;
+mod destroyed;
+mod provision_failed;
+mod provisioned;
+mod provisioning;
+mod release_failed;
+mod released;
+mod releasing;
+mod run_failed;
+mod running;
 
-/// Intermediate state - Infrastructure provisioning in progress
-///
-/// The environment is actively being provisioned (VM creation, network setup, etc.).
-/// This state indicates that the provision command has started but not yet completed.
-///
-/// **Valid Transitions:**
-/// - Success: `Provisioned`
-/// - Failure: `ProvisionFailed`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Provisioning;
-
-/// Final state - Infrastructure provisioning completed successfully
-///
-/// The VM instance is running and accessible. The environment is ready for
-/// application configuration.
-///
-/// **Valid Transitions:**
-/// - `Configuring` (start application configuration)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Provisioned;
-
-/// Intermediate state - Application configuration in progress
-///
-/// The environment is being configured with application-specific settings
-/// (Ansible playbooks, configuration files, etc.).
-///
-/// **Valid Transitions:**
-/// - Success: `Configured`
-/// - Failure: `ConfigureFailed`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Configuring;
-
-/// Final state - Application configuration completed successfully
-///
-/// All application configuration has been applied. The environment is ready
-/// for release preparation.
-///
-/// **Valid Transitions:**
-/// - `Releasing` (start release process)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Configured;
-
-/// Intermediate state - Release preparation in progress
-///
-/// The environment is being prepared for production release (building artifacts,
-/// final checks, etc.).
-///
-/// **Valid Transitions:**
-/// - Success: `Released`
-/// - Failure: `ReleaseFailed`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Releasing;
-
-/// Final state - Release preparation completed successfully
-///
-/// The environment is fully prepared and ready to run the application.
-///
-/// **Valid Transitions:**
-/// - `Running` (start application)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Released;
-
-/// Final state - Application is running
-///
-/// The application is actively running in the environment. This is the target
-/// operational state.
-///
-/// **Valid Transitions:**
-/// - `RunFailed` (if runtime error occurs)
-/// - `Destroyed` (when shutting down)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Running;
-
-/// Error state - Infrastructure provisioning failed
-///
-/// The provision command failed during execution. The `failed_step` field
-/// contains the name of the step that caused the failure, providing context
-/// for debugging and recovery.
-///
-/// **Recovery Options:**
-/// - Destroy and recreate the environment
-/// - Manual inspection and repair (advanced users)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ProvisionFailed {
-    /// The name of the step that failed during provisioning
-    pub failed_step: String,
-}
-
-/// Error state - Application configuration failed
-///
-/// The configuration command failed during execution. The `failed_step` field
-/// contains the name of the step that caused the failure.
-///
-/// **Recovery Options:**
-/// - Destroy and recreate the environment
-/// - Manual configuration correction (advanced users)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ConfigureFailed {
-    /// The name of the step that failed during configuration
-    pub failed_step: String,
-}
-
-/// Error state - Release preparation failed
-///
-/// The release command failed during execution. The `failed_step` field
-/// contains the name of the step that caused the failure.
-///
-/// **Recovery Options:**
-/// - Destroy and recreate the environment
-/// - Manual release correction (advanced users)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ReleaseFailed {
-    /// The name of the step that failed during release
-    pub failed_step: String,
-}
-
-/// Error state - Application runtime failed
-///
-/// The application encountered a runtime error. The `failed_step` field
-/// contains the name of the operation that caused the failure.
-///
-/// **Recovery Options:**
-/// - Restart the application
-/// - Destroy and recreate the environment
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RunFailed {
-    /// The name of the operation that failed during runtime
-    pub failed_step: String,
-}
-
-/// Terminal state - Environment has been destroyed
-///
-/// All infrastructure resources have been released and the environment no longer
-/// exists. This is the final state in the lifecycle.
-///
-/// **No Valid Transitions:** This is a terminal state.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Destroyed;
+// Re-export state types
+pub use configure_failed::ConfigureFailed;
+pub use configured::Configured;
+pub use configuring::Configuring;
+pub use created::Created;
+pub use destroyed::Destroyed;
+pub use provision_failed::ProvisionFailed;
+pub use provisioned::Provisioned;
+pub use provisioning::Provisioning;
+pub use release_failed::ReleaseFailed;
+pub use released::Released;
+pub use releasing::Releasing;
+pub use run_failed::RunFailed;
+pub use running::Running;
 
 /// Error type for invalid type conversions when working with type-erased environments
 ///
@@ -301,204 +185,8 @@ pub enum AnyEnvironmentState {
     Destroyed(Environment<Destroyed>),
 }
 
-// Type Restoration: Runtime → Typed conversions (try_into_<state>)
-// These methods convert AnyEnvironmentState back to typed Environment<S>
+// Introspection methods for AnyEnvironmentState
 impl AnyEnvironmentState {
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<Created>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Created` state.
-    pub fn try_into_created(self) -> Result<Environment<Created>, StateTypeError> {
-        match self {
-            Self::Created(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "created",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<Provisioning>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Provisioning` state.
-    pub fn try_into_provisioning(self) -> Result<Environment<Provisioning>, StateTypeError> {
-        match self {
-            Self::Provisioning(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "provisioning",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<Provisioned>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Provisioned` state.
-    pub fn try_into_provisioned(self) -> Result<Environment<Provisioned>, StateTypeError> {
-        match self {
-            Self::Provisioned(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "provisioned",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<Configuring>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Configuring` state.
-    pub fn try_into_configuring(self) -> Result<Environment<Configuring>, StateTypeError> {
-        match self {
-            Self::Configuring(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "configuring",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<Configured>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Configured` state.
-    pub fn try_into_configured(self) -> Result<Environment<Configured>, StateTypeError> {
-        match self {
-            Self::Configured(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "configured",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<Releasing>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Releasing` state.
-    pub fn try_into_releasing(self) -> Result<Environment<Releasing>, StateTypeError> {
-        match self {
-            Self::Releasing(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "releasing",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<Released>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Released` state.
-    pub fn try_into_released(self) -> Result<Environment<Released>, StateTypeError> {
-        match self {
-            Self::Released(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "released",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<Running>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Running` state.
-    pub fn try_into_running(self) -> Result<Environment<Running>, StateTypeError> {
-        match self {
-            Self::Running(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "running",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<ProvisionFailed>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `ProvisionFailed` state.
-    pub fn try_into_provision_failed(self) -> Result<Environment<ProvisionFailed>, StateTypeError> {
-        match self {
-            Self::ProvisionFailed(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "provision_failed",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<ConfigureFailed>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `ConfigureFailed` state.
-    pub fn try_into_configure_failed(self) -> Result<Environment<ConfigureFailed>, StateTypeError> {
-        match self {
-            Self::ConfigureFailed(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "configure_failed",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<ReleaseFailed>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `ReleaseFailed` state.
-    pub fn try_into_release_failed(self) -> Result<Environment<ReleaseFailed>, StateTypeError> {
-        match self {
-            Self::ReleaseFailed(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "release_failed",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<RunFailed>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `RunFailed` state.
-    pub fn try_into_run_failed(self) -> Result<Environment<RunFailed>, StateTypeError> {
-        match self {
-            Self::RunFailed(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "run_failed",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
-    /// Attempts to convert `AnyEnvironmentState` to `Environment<Destroyed>`
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if the environment is not in `Destroyed` state.
-    pub fn try_into_destroyed(self) -> Result<Environment<Destroyed>, StateTypeError> {
-        match self {
-            Self::Destroyed(env) => Ok(env),
-            other => Err(StateTypeError::UnexpectedState {
-                expected: "destroyed",
-                actual: other.state_name().to_string(),
-            }),
-        }
-    }
-
     /// Get the environment name regardless of current state
     ///
     /// This method provides access to the environment name without needing to
@@ -678,19 +366,6 @@ mod tests {
     /// correctly. They ensure basic functionality of the state marker types.
 
     #[test]
-    fn it_should_create_created_state() {
-        let state = Created;
-        assert_eq!(state, Created);
-    }
-
-    #[test]
-    fn it_should_clone_created_state() {
-        let state = Created;
-        let cloned = state.clone();
-        assert_eq!(state, cloned);
-    }
-
-    #[test]
     fn it_should_create_provisioning_state() {
         let state = Provisioning;
         assert_eq!(state, Provisioning);
@@ -780,20 +455,6 @@ mod tests {
     }
 
     #[test]
-    fn it_should_serialize_created_state_to_json() {
-        let state = Created;
-        let json = serde_json::to_string(&state).unwrap();
-        assert_eq!(json, "null");
-    }
-
-    #[test]
-    fn it_should_deserialize_created_state_from_json() {
-        let json = "null";
-        let state: Created = serde_json::from_str(json).unwrap();
-        assert_eq!(state, Created);
-    }
-
-    #[test]
     fn it_should_serialize_provision_failed_state_to_json() {
         let state = ProvisionFailed {
             failed_step: "cloud_init".to_string(),
@@ -823,24 +484,6 @@ mod tests {
         let json = r#"{"failed_step":"ansible_playbook"}"#;
         let state: ConfigureFailed = serde_json::from_str(json).unwrap();
         assert_eq!(state.failed_step, "ansible_playbook");
-    }
-
-    #[test]
-    fn it_should_debug_format_states() {
-        let created = format!("{Created:?}");
-        assert_eq!(created, "Created");
-
-        let provisioning = format!("{Provisioning:?}");
-        assert_eq!(provisioning, "Provisioning");
-
-        let failed = format!(
-            "{:?}",
-            ProvisionFailed {
-                failed_step: "test".to_string()
-            }
-        );
-        assert!(failed.contains("ProvisionFailed"));
-        assert!(failed.contains("test"));
     }
 
     // Tests for AnyEnvironmentState enum (Type Erasure)
@@ -908,13 +551,6 @@ mod tests {
         // Tests for Type Conversion Methods (Subtask 2)
 
         // Tests for into_any() - Typed to Runtime conversions
-
-        #[test]
-        fn it_should_convert_created_environment_into_any() {
-            let env = create_test_environment_created();
-            let any_env = env.into_any();
-            assert!(matches!(any_env, AnyEnvironmentState::Created(_)));
-        }
 
         #[test]
         fn it_should_convert_provisioning_environment_into_any() {
@@ -1048,14 +684,6 @@ mod tests {
         }
 
         // Tests for try_into_<state>() - Runtime to Typed conversions (successful cases)
-
-        #[test]
-        fn it_should_convert_any_to_created_successfully() {
-            let env = create_test_environment_created();
-            let any_env = env.into_any();
-            let result = any_env.try_into_created();
-            assert!(result.is_ok());
-        }
 
         #[test]
         fn it_should_convert_any_to_provisioning_successfully() {
@@ -1203,18 +831,6 @@ mod tests {
         // Tests for try_into_<state>() - Runtime to Typed conversions (failure cases)
 
         #[test]
-        fn it_should_fail_converting_provisioning_to_created() {
-            let env = create_test_environment_created().start_provisioning();
-            let any_env = env.into_any();
-            let result = any_env.try_into_created();
-            assert!(result.is_err());
-            let err = result.unwrap_err();
-            assert!(matches!(err, StateTypeError::UnexpectedState { .. }));
-            assert!(err.to_string().contains("created"));
-            assert!(err.to_string().contains("provisioning"));
-        }
-
-        #[test]
         fn it_should_fail_converting_created_to_provisioning() {
             let env = create_test_environment_created();
             let any_env = env.into_any();
@@ -1250,19 +866,6 @@ mod tests {
         }
 
         // Tests for round-trip conversions (preserving data integrity)
-
-        #[test]
-        fn it_should_preserve_data_in_round_trip_conversion() {
-            let original_name = "test-env";
-            let env = create_test_environment_created();
-
-            // Round-trip: typed -> erased -> typed
-            let any_env = env.into_any();
-            let env_restored = any_env.try_into_created().unwrap();
-            let name_after = env_restored.name().as_str();
-
-            assert_eq!(name_after, original_name);
-        }
 
         #[test]
         fn it_should_preserve_error_details_in_failed_states() {
