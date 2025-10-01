@@ -88,9 +88,9 @@ mod tests {
             EnvironmentName::new("test-env".to_string()).unwrap(),
             ssh_credentials,
         );
-        
+
         let _provisioning = env.start_provisioning();
-        
+
         // Assert log contains expected fields
         assert!(logs_contain("Environment state transition"));
         assert!(logs_contain("environment_name=test-env"));
@@ -105,9 +105,9 @@ mod tests {
             EnvironmentName::new("test-env".to_string()).unwrap(),
             ssh_credentials,
         );
-        
+
         let _provisioning = env.start_provisioning();
-        
+
         assert!(logs_contain("instance_name=torrust-deploy-test-env"));
     }
 
@@ -115,9 +115,9 @@ mod tests {
     #[test]
     fn it_should_log_failed_state_transitions() {
         let env: Environment<Provisioning> = /* ... */;
-        
+
         let _failed = env.mark_provision_failed("Timeout".to_string());
-        
+
         assert!(logs_contain("to_state=ProvisionFailed"));
     }
 }
@@ -137,15 +137,16 @@ Expected log output:
 2025-01-30T10:15:23.456789Z  INFO environment_name=e2e-test instance_name=torrust-deploy-e2e-test from_state=Created to_state=Provisioning: Environment state transition
 ```
 
-
 ## 📦 Deliverables
 
 1. **Code Changes**:
+
    - [ ] Update `with_state()` method in `src/domain/environment/mod.rs`
    - [ ] Add `tracing::info!` with structured fields
    - [ ] Use `std::any::type_name::<T>()` for state names
 
 2. **Tests**:
+
    - [ ] Add unit tests for state transition logging
    - [ ] Verify E2E tests capture transition logs
    - [ ] Test all state transitions (success and failure paths)

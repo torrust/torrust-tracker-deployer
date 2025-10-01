@@ -65,6 +65,7 @@ OAAAAN
 oneline
 pacman
 parameterizing
+parseable
 passwordless
 pathbuf
 pidfile

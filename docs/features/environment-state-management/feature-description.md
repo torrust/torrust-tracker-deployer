@@ -202,7 +202,7 @@ created → provisioning → provisioned → configuring → configured → rele
 - [Deployment Overview](../../deployment-overview.md) - Current deployment states and commands
 - [Codebase Architecture](../../codebase-architecture.md) - Three-layer architecture context
 - [Error Handling Guide](../../contributing/error-handling.md) - Error handling best practices
-- [Implementation Plan](./implementation-plan.md) - Detailed implementation roadmap
+- [Implementation Plan](./implementation-plan/README.md) - Detailed implementation roadmap
 - [Requirements Analysis](./requirements-analysis.md) - Questions and answers that defined this specification
 
 ## 📝 Implementation Notes

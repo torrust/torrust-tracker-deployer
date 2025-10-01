@@ -392,7 +392,8 @@ let env = env.provisioned();
 
 ## 📚 Related Documentation
 
-- [Main Implementation Plan](../implementation-plan.md) - Overall feature roadmap
-- [Phase 2 Plan](./phase-2-serialization.md) - Serialization & Type Erasure
+- [Main Implementation Plan](./README.md) - Overall feature roadmap
+- [Phase 2 Plan](./phase-2-state-transition-logging.md) - State Transition Observability
+- [Phase 3 Plan](./phase-3-serialization.md) - Serialization & Type Erasure
 - [Feature Spec](../README.md) - Overall feature goals and motivation
 - [Error Handling Guide](../../../contributing/error-handling.md) - Error handling principles
