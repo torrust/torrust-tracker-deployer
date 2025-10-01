@@ -188,6 +188,91 @@ pub struct RunFailed {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Destroyed;
 
+// Import Environment for type erasure enum
+use crate::domain::environment::Environment;
+
+/// Type-erased environment that can hold any typed `Environment<S>` at runtime
+///
+/// This enum enables runtime handling of `Environment<S>` instances without
+/// knowing their specific state type at compile time. This is essential for:
+///
+/// - **Serialization**: Saving environments to disk (JSON files)
+/// - **Deserialization**: Loading environments from disk
+/// - **Collections**: Storing environments with different states together
+/// - **Runtime Inspection**: Checking state without compile-time type knowledge
+/// - **Generic Interfaces**: Passing through non-generic function parameters
+///
+/// ## Type Erasure Pattern
+///
+/// Each variant wraps a typed `Environment<S>` where `S` is one of the state
+/// marker types defined in this module. The enum variant name acts as a
+/// discriminator (similar to a `type` column in database Single Table Inheritance).
+///
+/// ## Usage Example
+///
+/// ```rust
+/// use torrust_tracker_deploy::domain::environment_state::AnyEnvironmentState;
+///
+/// // Type erasure: typed -> runtime
+/// // let env: Environment<Provisioned> = ...;
+/// // let any_env: AnyEnvironmentState = env.into_any();
+///
+/// // Serialization
+/// // let json = serde_json::to_string(&any_env)?;
+///
+/// // Deserialization
+/// // let any_env: AnyEnvironmentState = serde_json::from_str(&json)?;
+///
+/// // Type restoration: runtime -> typed
+/// // let env: Environment<Provisioned> = any_env.try_into_provisioned()?;
+/// ```
+///
+/// ## Design Decision
+///
+/// See [ADR: Type Erasure for Environment States](../../docs/decisions/type-erasure-for-environment-states.md)
+/// for detailed rationale behind this design choice.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AnyEnvironmentState {
+    /// Environment in `Created` state
+    Created(Environment<Created>),
+
+    /// Environment in `Provisioning` state
+    Provisioning(Environment<Provisioning>),
+
+    /// Environment in `Provisioned` state
+    Provisioned(Environment<Provisioned>),
+
+    /// Environment in `Configuring` state
+    Configuring(Environment<Configuring>),
+
+    /// Environment in `Configured` state
+    Configured(Environment<Configured>),
+
+    /// Environment in `Releasing` state
+    Releasing(Environment<Releasing>),
+
+    /// Environment in `Released` state
+    Released(Environment<Released>),
+
+    /// Environment in `Running` state
+    Running(Environment<Running>),
+
+    /// Environment in `ProvisionFailed` error state
+    ProvisionFailed(Environment<ProvisionFailed>),
+
+    /// Environment in `ConfigureFailed` error state
+    ConfigureFailed(Environment<ConfigureFailed>),
+
+    /// Environment in `ReleaseFailed` error state
+    ReleaseFailed(Environment<ReleaseFailed>),
+
+    /// Environment in `RunFailed` error state
+    RunFailed(Environment<RunFailed>),
+
+    /// Environment in `Destroyed` terminal state
+    Destroyed(Environment<Destroyed>),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -361,5 +446,68 @@ mod tests {
         );
         assert!(failed.contains("ProvisionFailed"));
         assert!(failed.contains("test"));
+    }
+
+    // Tests for AnyEnvironmentState enum (Type Erasure)
+    mod any_environment_state_tests {
+        use super::*;
+        use crate::domain::environment_name::EnvironmentName;
+        use crate::shared::ssh::SshCredentials;
+        use crate::shared::Username;
+        use std::path::PathBuf;
+
+        fn create_test_ssh_credentials() -> SshCredentials {
+            let username = Username::new("test-user".to_string()).unwrap();
+            SshCredentials::new(
+                PathBuf::from("/tmp/test_key"),
+                PathBuf::from("/tmp/test_key.pub"),
+                username,
+            )
+        }
+
+        fn create_test_environment_created() -> Environment<Created> {
+            let name = EnvironmentName::new("test-env".to_string()).unwrap();
+            let ssh_creds = create_test_ssh_credentials();
+            Environment::new(name, ssh_creds)
+        }
+
+        // Note: For testing other states, we'll use the state transition methods
+        // once they're implemented in Subtask 2. For now, we test with Created state
+        // which demonstrates that the enum can hold any Environment<S> type.
+
+        #[test]
+        fn it_should_create_any_environment_state_with_created_variant() {
+            let env = create_test_environment_created();
+            let any_env = AnyEnvironmentState::Created(env);
+            assert!(matches!(any_env, AnyEnvironmentState::Created(_)));
+        }
+
+        // Note: Tests for other state variants will be added in Subtask 2
+        // once we have the conversion methods (into_any()) that properly
+        // create environments in different states through state transitions.
+
+        #[test]
+        fn it_should_clone_any_environment_state() {
+            let env = create_test_environment_created();
+            let any_env = AnyEnvironmentState::Created(env);
+            let cloned = any_env.clone();
+            assert!(matches!(cloned, AnyEnvironmentState::Created(_)));
+        }
+
+        #[test]
+        fn it_should_debug_format_any_environment_state() {
+            let env = create_test_environment_created();
+            let any_env = AnyEnvironmentState::Created(env);
+            let debug_str = format!("{any_env:?}");
+            assert!(debug_str.contains("Created"));
+        }
+
+        #[test]
+        fn it_should_serialize_any_environment_state_to_json() {
+            let env = create_test_environment_created();
+            let any_env = AnyEnvironmentState::Created(env);
+            let json = serde_json::to_string(&any_env).unwrap();
+            assert!(json.contains("Created"));
+        }
     }
 }
