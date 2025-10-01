@@ -29,7 +29,26 @@
 
 ---
 
-### ⏳ Phase 2: Serialization & Type Erasure (IN PROGRESS)
+### 📅 Phase 2: State Transition Observability (PLANNED)
+
+**Goal**: Implement automatic logging of all state transitions for observability and audit trail.
+
+**Status**: 📅 Planned - CRITICAL requirement from requirements analysis
+
+**Key Deliverables**:
+
+- Automatic state transition logging in `with_state()` helper
+- Info-level logs with timestamps for all transitions
+- Structured logging with environment name and state names
+- Zero manual logging required in transition methods
+
+**Rationale**: Critical requirement for observability and audit trail. Addresses requirement: "Log all state transitions at info level with timestamps" from requirements-analysis.md.
+
+**📄 Detailed Phase 2 Plan**: To be created
+
+---
+
+### ⏳ Phase 3: Serialization & Type Erasure (IN PROGRESS)
 
 **Goal**: Enable runtime handling of typed states through type erasure for serialization and storage.
 
@@ -42,7 +61,7 @@
 - State introspection helper methods
 - Full serialization/deserialization support
 
-**📄 [View Detailed Phase 2 Plan →](./phase-2-serialization.md)**
+**📄 [View Detailed Phase 3 Plan →](./phase-3-serialization.md)**
 
 **Subtasks**:
 
@@ -52,9 +71,9 @@
 
 ---
 
-### 📅 Phase 3: Persistence (PLANNED)
+### 📅 Phase 4: Persistence (PLANNED)
 
-**Goal**: Implement repository pattern for state persistence with atomic writes.
+**Goal**: Implement repository pattern for state persistence with atomic writes and file locking.
 
 **Status**: 📅 Planned for future implementation
 
@@ -63,12 +82,15 @@
 - `StateRepository` trait for persistence operations
 - JSON file-based repository implementation
 - Atomic write operations (temp file + rename)
+- **File locking mechanism with process ID tracking** (CRITICAL)
+- Stale lock cleanup and crash recovery
 - Error handling for storage operations
-- File locking for concurrent access safety
+
+**Rationale**: File locking is critical to prevent concurrent access issues. Addresses requirement: "Implement state file locking with process ID tracking" from requirements-analysis.md.
 
 ---
 
-### 📅 Phase 4: Command Integration (PLANNED)
+### 📅 Phase 5: Command Integration (PLANNED)
 
 **Goal**: Update commands to use type-safe state transitions and orchestration.
 
@@ -84,7 +106,7 @@
 
 ---
 
-### 📅 Phase 5: Testing & Documentation (ONGOING)
+### 📅 Phase 6: Testing & Documentation (ONGOING)
 
 **Goal**: Comprehensive testing and documentation for all features.
 
@@ -96,8 +118,11 @@
 - Integration tests for repository operations
 - E2E tests for command integration
 - State recovery and error handling tests
+- Manual recovery documentation using OpenTofu commands (CRITICAL)
 - Updated architecture documentation
 - Troubleshooting guides
+
+**Rationale**: Recovery documentation is critical. Addresses requirement: "Document manual cleanup using OpenTofu commands" from requirements-analysis.md.
 
 ---
 
@@ -106,17 +131,20 @@
 ### Overall Progress
 
 - ✅ Phase 1: Foundation - **100% Complete** (3/3 subtasks)
-- ⏳ Phase 2: Serialization & Type Erasure - **0% Complete** (0/3 subtasks)
-- 📅 Phase 3: Persistence - **Not Started**
-- 📅 Phase 4: Command Integration - **Not Started**
-- 🔄 Phase 5: Testing & Documentation - **Ongoing**
+- 📅 Phase 2: State Transition Observability - **Not Started** (CRITICAL)
+- ⏳ Phase 3: Serialization & Type Erasure - **0% Complete** (0/3 subtasks)
+- 📅 Phase 4: Persistence (with File Locking) - **Not Started** (CRITICAL)
+- 📅 Phase 5: Command Integration - **Not Started**
+- 🔄 Phase 6: Testing & Documentation - **Ongoing**
 
 ### Test Coverage
 
-- **Current Tests**: 533 tests passing
+- **Current Tests**: 605 tests passing (updated after refactor)
 - **Phase 1 Tests Added**: +15 tests
-- **Expected Phase 2 Tests**: +100 tests
-- **Target Total**: ~700+ tests
+- **Expected Phase 2 Tests**: +5 tests (logging verification)
+- **Expected Phase 3 Tests**: +100 tests (serialization)
+- **Expected Phase 4 Tests**: +50 tests (file locking & persistence)
+- **Target Total**: ~750+ tests
 
 ---
 
@@ -187,8 +215,10 @@ impl ConfigureCommand {
 ## 📚 Related Documentation
 
 - [Feature Specification](../README.md) - Overall feature goals and motivation
+- [Requirements Analysis](../requirements-analysis.md) - Critical requirements and priorities
 - [Phase 1 Details](./phase-1-foundation.md) - Type-state pattern implementation
-- [Phase 2 Details](./phase-2-serialization.md) - Serialization & type erasure
+- Phase 2 Details - State transition observability (to be created)
+- [Phase 3 Details](./phase-3-serialization.md) - Serialization & type erasure (renamed from phase-2)
 - [Error Handling Guide](../../../contributing/error-handling.md) - Error handling principles
 - [Testing Conventions](../../../contributing/testing.md) - Testing best practices
 
@@ -213,9 +243,19 @@ cargo run --bin linter all
 
 ### For Phase 2 Implementation
 
-Phase 2 is ready to start. Follow the detailed plan:
+Phase 2 (State Transition Observability) is CRITICAL and ready to start:
 
-1. Read [Phase 2 Plan](./phase-2-serialization.md)
+1. Create detailed Phase 2 plan document
+2. Implement automatic logging in `with_state()` helper method
+3. Test logging output with different log levels
+4. Verify all transitions are logged correctly
+5. Test, lint, and commit
+
+### For Phase 3 Implementation
+
+Phase 3 (Serialization & Type Erasure) can be started after Phase 2:
+
+1. Read [Phase 3 Plan](./phase-3-serialization.md) (renamed from phase-2)
 2. Start with Subtask 1: Create `AnyEnvironmentState` enum
 3. Test, lint, and commit after each subtask
 4. Verify all existing tests continue to pass
@@ -239,9 +279,11 @@ Each phase is considered complete when:
 
 The entire feature is considered complete when:
 
-- ✅ All 5 phases are complete
+- ✅ All 6 phases are complete
+- ✅ State transitions are automatically logged (Phase 2 - CRITICAL)
 - ✅ E2E tests demonstrate end-to-end state management
 - ✅ Commands integrate with typed states
-- ✅ State persistence works reliably
+- ✅ State persistence works reliably with file locking (Phase 4 - CRITICAL)
+- ✅ Manual recovery documentation is complete (Phase 6 - CRITICAL)
 - ✅ Documentation is comprehensive
 - ✅ User feedback is incorporated

@@ -159,9 +159,145 @@ Implement helper methods for working with type-erased states without pattern mat
 - [ ] Add error state handling with compile-time guarantees
 - [ ] Ensure commands can only be called on valid state types
 
-### Phase 4: Testing & Documentation
+**Phase 4 Completion Criteria:**
 
-#### 4. Unit Tests
+- Commands can only accept and return specific state types
+- Invalid state transitions are caught at compile-time
+- Command orchestration maintains type safety throughout execution chain
+- Error states properly handled with compile-time guarantees
+- All linters pass
+- All tests pass
+
+### Phase 5: State Transition Observability (CRITICAL)
+
+**Purpose:** Implement automatic state transition logging to satisfy the "Must Have (Critical)" requirement from requirements-analysis.md: "Log all state transitions at info level with timestamps for audit trail."
+
+#### 1. Automatic Logging in State Transitions
+
+- [ ] Add automatic logging to `Environment::with_state()` helper method
+  - Log at `info` level using tracing crate
+  - Include timestamp (automatic with tracing)
+  - Include environment name
+  - Include old state name → new state name
+  - Include structured fields for filtering (environment_name, from_state, to_state)
+- [ ] Example log format: `"Environment '{name}' transitioning: {from} → {to}"`
+- [ ] Add tracing span context for state transitions
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `feat: [#issue] add automatic state transition logging`
+
+#### 2. Testing State Transition Logging
+
+- [ ] Add unit tests to verify logging output
+  - Test that each state transition generates expected log message
+  - Verify structured fields are present
+  - Test timestamp inclusion
+- [ ] Add E2E tests to verify logging in real workflows
+- [ ] Verify logs are visible in test output
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `test: [#issue] add tests for state transition logging`
+
+#### 3. Documentation
+
+- [ ] Document state transition logging in feature description
+- [ ] Add examples of log output to troubleshooting guide
+- [ ] Document how to filter logs by environment or state
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Commit: `docs: [#issue] document state transition logging`
+
+**Phase 5 Completion Criteria:**
+
+- All state transitions automatically log at info level with timestamps
+- Logs include environment name and state transition details
+- Structured logging enables easy filtering and analysis
+- Tests verify logging behavior
+- Documentation describes logging output and filtering
+- All linters pass
+- All tests pass
+
+### Phase 6: File Locking Mechanism (CRITICAL)
+
+**Purpose:** Implement state file locking to satisfy the "Must Have (Critical)" requirement from requirements-analysis.md: "Implement state file locking with process ID tracking to prevent concurrent modification."
+
+#### 1. Lock File Implementation
+
+- [ ] Create `StateLock` struct for managing lock files
+  - Lock file path: `{state_file_path}.lock`
+  - Lock file contains JSON: `{"pid": 12345, "timestamp": "2024-01-15T10:30:00Z", "environment": "prod"}`
+- [ ] Implement atomic lock acquisition
+  - Use `OpenOptions::new().write(true).create_new(true)` for atomic creation
+  - Write process ID and timestamp to lock file
+- [ ] Implement lock release
+  - Delete lock file on successful operation
+  - Include drop guard for automatic cleanup
+- [ ] Add lock timeout and stale lock detection
+  - Default timeout: 5 minutes
+  - Detect stale locks (process no longer exists)
+  - Provide mechanism to force-remove stale locks
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `feat: [#issue] implement state file locking with process ID tracking`
+
+#### 2. Repository Integration
+
+- [ ] Integrate locking into `StateRepository`
+  - Acquire lock before any state read/write operation
+  - Release lock after operation completes
+  - Handle lock acquisition failures gracefully
+- [ ] Add error types for lock operations
+  - `StateLockError::AlreadyLocked { pid, timestamp, environment }`
+  - `StateLockError::LockTimeout { duration }`
+  - `StateLockError::IoError`
+- [ ] Implement actionable error messages
+  - Show which process holds the lock
+  - Suggest waiting or checking if process is still running
+  - Provide command to force-remove stale lock if needed
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `feat: [#issue] integrate file locking into state repository`
+
+#### 3. Testing File Locking
+
+- [ ] Add unit tests for lock operations
+  - Test successful lock acquisition and release
+  - Test lock conflict detection
+  - Test stale lock handling
+  - Test error message clarity
+- [ ] Add integration tests for concurrent access
+  - Test multiple processes attempting to lock same file
+  - Verify only one process succeeds
+- [ ] Test lock cleanup on panic/error
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Run tests: `cargo test`
+- [ ] Commit: `test: [#issue] add tests for state file locking`
+
+#### 4. Documentation
+
+- [ ] Document locking mechanism in architecture documentation
+- [ ] Add troubleshooting guide for lock conflicts
+  - How to identify which process holds lock
+  - How to check if process is still running
+  - How to safely remove stale locks
+- [ ] Add examples of lock conflict error messages
+- [ ] Run linters: `cargo run --bin linter all`
+- [ ] Commit: `docs: [#issue] document state file locking mechanism`
+
+**Phase 6 Completion Criteria:**
+
+- State files are locked during all read/write operations
+- Lock files contain process ID and timestamp
+- Concurrent access is prevented with clear error messages
+- Stale locks can be detected and removed
+- Error messages are actionable and user-friendly
+- Tests verify locking behavior and concurrent access prevention
+- Documentation describes locking mechanism and troubleshooting
+- All linters pass
+- All tests pass
+
+### Phase 7: Testing & Documentation
+
+#### 1. Unit Tests
 
 - [ ] Test state machine transitions with compile-time validation
 - [ ] Test repository operations with type erasure
@@ -169,13 +305,13 @@ Implement helper methods for working with type-erased states without pattern mat
 - [ ] Test error scenarios and invalid state access attempts
 - [ ] Test serialization/deserialization of all state types
 
-#### 5. E2E Tests
+#### 2. E2E Tests
 
 - [ ] Test state persistence across command executions
 - [ ] Test error state handling
 - [ ] Test state recovery after interruptions
 
-#### 6. Documentation
+#### 3. Documentation
 
 - [ ] Update deployment overview with state management
 - [ ] Add state management to architecture documentation
@@ -1201,11 +1337,31 @@ impl StatusQuery {
 - [ ] Add compile-time state validation for command execution
 - [ ] Ensure commands can only be called on valid state types
 
-### Phase 4: Testing & Documentation
+### Phase 5: State Transition Observability (CRITICAL)
+
+- [ ] Add automatic logging to `Environment::with_state()` helper method
+- [ ] Log all state transitions at info level with timestamps
+- [ ] Include structured fields (environment name, from state, to state)
+- [ ] Add tests to verify logging output
+- [ ] Document logging behavior and filtering options
+
+### Phase 6: File Locking Mechanism (CRITICAL)
+
+- [ ] Implement `StateLock` struct with process ID tracking
+- [ ] Add atomic lock acquisition and release
+- [ ] Integrate locking into `StateRepository`
+- [ ] Add stale lock detection and removal
+- [ ] Add actionable error messages for lock conflicts
+- [ ] Test concurrent access prevention
+- [ ] Document locking mechanism and troubleshooting
+
+### Phase 7: Testing & Documentation
 
 - [ ] Add comprehensive unit tests for type-state pattern
 - [ ] Update E2E tests with state persistence validation
 - [ ] Test error scenarios and type safety guarantees
+- [ ] Test state transition logging in real workflows
+- [ ] Test file locking with concurrent access
 - [ ] Update documentation and create troubleshooting guides
 
 ## 🔮 Future Enhancements (Post-MVP)

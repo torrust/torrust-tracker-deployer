@@ -1,9 +1,9 @@
-# Phase 2: Serialization & Type Erasure - Implementation Plan
+# Phase 3: Serialization & Type Erasure - Implementation Plan
 
 > **📋 Detailed Plan**  
-> Breaking down Phase 2 into three manageable, testable subtasks.
+> Breaking down Phase 3 into three manageable, testable subtasks.
 
-## 🎯 Phase 2 Overview
+## 🎯 Phase 3 Overview
 
 **Goal**: Enable runtime handling of typed `Environment<S>` states through type erasure, enabling serialization, storage, and dynamic state inspection.
 
@@ -288,7 +288,7 @@ impl std::fmt::Display for AnyEnvironmentState {
 
 ---
 
-## 🎯 Phase 2 Completion Criteria
+## 🎯 Phase 3 Completion Criteria
 
 When all three subtasks are complete, we should have:
 
@@ -302,7 +302,7 @@ When all three subtasks are complete, we should have:
 - [x] All linters passing
 - [x] All tests passing (existing + new tests)
 
-## 📊 Expected Test Coverage After Phase 2
+## 📊 Expected Test Coverage After Phase 3
 
 - **Subtask 1**: +13 tests (one per state type for basic creation)
 - **Subtask 2**: +39 tests (13 into_any + 13 successful try_into + 13 failed try_into)
@@ -310,23 +310,25 @@ When all three subtasks are complete, we should have:
 - **Total New Tests**: ~100 tests
 - **Total Project Tests**: ~570 tests
 
-## 🔄 Integration with Phase 1
+## 🔄 Integration with Phase 1 & Phase 2
 
-Phase 2 builds directly on Phase 1:
+Phase 3 builds directly on Phase 1 and Phase 2:
 
 - Uses the state marker types from Phase 1 (`Created`, `Provisioning`, etc.)
 - Uses the generic `Environment<S>` from Phase 1
+- Benefits from Phase 2 state transition logging for observability
 - Preserves all type-safe transitions from Phase 1
 - Adds runtime capability without breaking compile-time safety
 
-## 🚀 What Comes After Phase 2
+## 🚀 What Comes After Phase 3
 
-Once Phase 2 is complete, Phase 3 will use `AnyEnvironmentState` to:
+Once Phase 3 is complete, Phase 4 will use `AnyEnvironmentState` to:
 
 - Implement `StateRepository` trait for persistence
 - Save/load environments to/from JSON files
 - Handle atomic writes for data integrity
-- Support concurrent access (future enhancement)
+- Implement file locking mechanism with process ID tracking
+- Support concurrent access with lock files
 
 ## 🔍 Design Decisions & Rationale
 
