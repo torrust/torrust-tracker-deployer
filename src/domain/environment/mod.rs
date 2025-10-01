@@ -195,6 +195,9 @@ impl<S> Environment<S> {
     /// duplicating field copying code. It transfers all environment data while
     /// changing only the state type parameter.
     ///
+    /// This method automatically logs all state transitions at info level with
+    /// structured fields for observability and audit trail purposes.
+    ///
     /// # Type Parameters
     ///
     /// * `T` - The target state type
@@ -207,6 +210,15 @@ impl<S> Environment<S> {
     ///
     /// A new `Environment<T>` with all fields preserved except the state
     fn with_state<T>(self, new_state: T) -> Environment<T> {
+        // Log state transition for observability and audit trail
+        tracing::info!(
+            environment_name = %self.name,
+            instance_name = %self.instance_name,
+            from_state = std::any::type_name::<S>(),
+            to_state = std::any::type_name::<T>(),
+            "Environment state transition"
+        );
+
         Environment {
             name: self.name,
             instance_name: self.instance_name,
@@ -846,6 +858,67 @@ mod tests {
             assert_eq!(env.instance_name(), &initial_instance_name);
             assert_eq!(env.data_dir(), &initial_data_dir);
             assert_eq!(env.build_dir(), &initial_build_dir);
+        }
+
+        // State transition logging tests
+        mod logging {
+            use super::*;
+            use tracing_test::traced_test;
+
+            #[traced_test]
+            #[test]
+            fn it_should_log_state_transition_from_created_to_provisioning() {
+                let env = create_test_environment();
+
+                let _provisioning = env.start_provisioning();
+
+                // Assert log contains expected fields
+                assert!(logs_contain("Environment state transition"));
+                assert!(logs_contain("environment_name=test-state"));
+                assert!(logs_contain("from_state="));
+                assert!(logs_contain("Created"));
+                assert!(logs_contain("to_state="));
+                assert!(logs_contain("Provisioning"));
+            }
+
+            #[traced_test]
+            #[test]
+            fn it_should_log_state_transition_with_instance_name() {
+                let env = create_test_environment();
+
+                let _provisioning = env.start_provisioning();
+
+                assert!(logs_contain("instance_name=torrust-tracker-vm-test-state"));
+            }
+
+            #[traced_test]
+            #[test]
+            fn it_should_log_complete_state_transition_chain() {
+                let env = create_test_environment();
+
+                let _env = env
+                    .start_provisioning()
+                    .provisioned()
+                    .start_configuring()
+                    .configured();
+
+                // Verify multiple transitions were logged
+                assert!(logs_contain("Provisioning"));
+                assert!(logs_contain("Provisioned"));
+                assert!(logs_contain("Configuring"));
+                assert!(logs_contain("Configured"));
+            }
+
+            #[traced_test]
+            #[test]
+            fn it_should_log_destroy_transition_from_any_state() {
+                let env = create_test_environment();
+                let env = env.start_provisioning();
+
+                let _destroyed = env.destroy();
+
+                assert!(logs_contain("Destroyed"));
+            }
         }
     }
 }
