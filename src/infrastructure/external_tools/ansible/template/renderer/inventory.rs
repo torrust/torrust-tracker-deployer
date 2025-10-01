@@ -14,9 +14,9 @@
 //! ```rust
 //! # use std::sync::Arc;
 //! # use tempfile::TempDir;
-//! use torrust_tracker_deploy::infrastructure::ansible::template::renderer::inventory::InventoryTemplateRenderer;
+//! use torrust_tracker_deploy::infrastructure::external_tools::ansible::template::renderer::inventory::InventoryTemplateRenderer;
 //! use torrust_tracker_deploy::domain::template::TemplateManager;
-//! use torrust_tracker_deploy::infrastructure::template::wrappers::ansible::inventory::InventoryContext;
+//! use torrust_tracker_deploy::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContext;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let temp_dir = TempDir::new()?;
@@ -35,7 +35,7 @@ use thiserror::Error;
 
 use crate::domain::template::file::File;
 use crate::domain::template::{FileOperationError, TemplateManager, TemplateManagerError};
-use crate::infrastructure::template::wrappers::ansible::inventory::{
+use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::{
     InventoryContext, InventoryTemplate,
 };
 
@@ -202,7 +202,7 @@ mod tests {
     use std::str::FromStr;
     use tempfile::TempDir;
 
-    use crate::infrastructure::template::wrappers::ansible::inventory::{
+    use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::{
         AnsibleHost, AnsiblePort, SshPrivateKeyFile,
     };
 

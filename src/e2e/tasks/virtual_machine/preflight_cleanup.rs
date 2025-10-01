@@ -8,9 +8,9 @@ use crate::e2e::context::TestContext;
 use crate::e2e::tasks::preflight_cleanup::{
     cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
 };
-use crate::infrastructure::adapters::lxd::client::LxdClient;
-use crate::infrastructure::adapters::opentofu::{self};
-use crate::infrastructure::tofu::OPENTOFU_SUBFOLDER;
+use crate::infrastructure::external_tools::lxd::adapter::client::LxdClient;
+use crate::infrastructure::external_tools::tofu::adapter;
+use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 use tracing::{info, warn};
 
 /// Performs comprehensive pre-flight cleanup for VM-based E2E tests
@@ -104,7 +104,7 @@ fn cleanup_opentofu_infrastructure(
     );
 
     // Use emergency_destroy which is designed to handle cases where resources may not exist
-    match opentofu::emergency_destroy(&tofu_dir) {
+    match adapter::emergency_destroy(&tofu_dir) {
         Ok(()) => {
             info!(
                 operation = "opentofu_infrastructure_cleanup",

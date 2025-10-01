@@ -46,11 +46,11 @@ use thiserror::Error;
 
 use crate::domain::template::{TemplateManager, TemplateManagerError};
 use crate::domain::{InstanceName, ProfileName};
-use crate::infrastructure::template::wrappers::tofu::lxd::variables::{
-    VariablesContextBuilder, VariablesTemplate, VariablesTemplateError,
-};
-use crate::infrastructure::tofu::template::renderer::cloud_init::{
+use crate::infrastructure::external_tools::tofu::template::renderer::cloud_init::{
     CloudInitTemplateError, CloudInitTemplateRenderer,
+};
+use crate::infrastructure::external_tools::tofu::template::wrappers::lxd::variables::{
+    VariablesContextBuilder, VariablesTemplate, VariablesTemplateError,
 };
 use crate::shared::ssh::credentials::SshCredentials;
 

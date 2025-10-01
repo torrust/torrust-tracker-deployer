@@ -1,12 +1,17 @@
 //! Ansible integration for configuration management
 //!
 //! This module provides Ansible-specific functionality for the deployment system,
-//! primarily focused on template rendering for Ansible playbooks and inventory files.
+//! including command-line wrapper and template rendering.
 //!
-//! The main component is `AnsibleTemplateRenderer` which handles the generation
-//! of Ansible configuration files with dynamic content like VM IP addresses and SSH keys.
+//! ## Components
+//!
+//! - `adapter` - Ansible command-line tool wrapper (`AnsibleClient`)
+//! - `template` - Template renderers and context wrappers for Ansible configuration files
+
+pub mod adapter;
 pub mod template;
 
+pub use adapter::AnsibleClient;
 pub use template::{AnsibleTemplateRenderer, InventoryTemplateRenderer};
 
 /// Subdirectory name for Ansible-related files within the build directory.

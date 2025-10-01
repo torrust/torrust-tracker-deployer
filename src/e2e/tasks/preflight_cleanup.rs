@@ -7,7 +7,7 @@
 use std::fmt;
 
 use crate::e2e::context::TestContext;
-use crate::infrastructure::adapters::opentofu::EmergencyDestroyError;
+use crate::infrastructure::external_tools::tofu::adapter::EmergencyDestroyError;
 use tracing::{info, warn};
 
 // Re-export functions from the new modular structure for backward compatibility

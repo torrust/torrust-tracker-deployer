@@ -19,7 +19,7 @@
 //! ```rust
 //! # use std::sync::Arc;
 //! # use std::path::Path;
-//! # use torrust_tracker_deploy::infrastructure::tofu::template::renderer::cloud_init::CloudInitTemplateRenderer;
+//! # use torrust_tracker_deploy::infrastructure::external_tools::tofu::template::renderer::cloud_init::CloudInitTemplateRenderer;
 //! # use torrust_tracker_deploy::domain::template::TemplateManager;
 //! # use torrust_tracker_deploy::shared::{Username, ssh::credentials::SshCredentials};
 //! # use std::path::PathBuf;
@@ -46,7 +46,7 @@ use thiserror::Error;
 
 use crate::domain::template::file::File;
 use crate::domain::template::{TemplateManager, TemplateManagerError};
-use crate::infrastructure::template::wrappers::tofu::lxd::cloud_init::{
+use crate::infrastructure::external_tools::tofu::template::wrappers::lxd::cloud_init::{
     CloudInitContext, CloudInitTemplate,
 };
 use crate::shared::ssh::credentials::SshCredentials;

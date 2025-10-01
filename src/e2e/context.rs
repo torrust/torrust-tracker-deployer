@@ -26,7 +26,7 @@ use tracing::{info, warn};
 use crate::config::Config;
 use crate::container::Services;
 use crate::domain::Environment;
-use crate::infrastructure::tofu::OPENTOFU_SUBFOLDER;
+use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 
 /// Errors that can occur during test context creation and initialization
 #[derive(Debug, thiserror::Error)]
@@ -332,7 +332,9 @@ impl Drop for TestContext {
                     let tofu_dir = self.config.build_dir.join(OPENTOFU_SUBFOLDER);
 
                     if let Err(e) =
-                        crate::infrastructure::adapters::opentofu::emergency_destroy(&tofu_dir)
+                        crate::infrastructure::external_tools::tofu::adapter::emergency_destroy(
+                            &tofu_dir,
+                        )
                     {
                         eprintln!("Warning: Failed to cleanup OpenTofu resources during TestContext drop: {e}");
                     }

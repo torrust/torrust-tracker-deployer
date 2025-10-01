@@ -20,9 +20,9 @@
 //! # use tempfile::TempDir;
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! use torrust_tracker_deploy::infrastructure::ansible::template::renderer::AnsibleTemplateRenderer;
+//! use torrust_tracker_deploy::infrastructure::external_tools::ansible::template::renderer::AnsibleTemplateRenderer;
 //! use torrust_tracker_deploy::domain::template::TemplateManager;
-//! use torrust_tracker_deploy::infrastructure::template::wrappers::ansible::inventory::{
+//! use torrust_tracker_deploy::infrastructure::external_tools::ansible::template::wrappers::inventory::{
 //!     InventoryContext, AnsibleHost, AnsiblePort, SshPrivateKeyFile
 //! };
 //!
@@ -50,8 +50,8 @@ use std::sync::Arc;
 use thiserror::Error;
 
 use crate::domain::template::{FileOperationError, TemplateManager, TemplateManagerError};
-use crate::infrastructure::ansible::template::renderer::inventory::InventoryTemplateError;
-use crate::infrastructure::template::wrappers::ansible::inventory::InventoryContext;
+use crate::infrastructure::external_tools::ansible::template::renderer::inventory::InventoryTemplateError;
+use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContext;
 
 pub mod inventory;
 
@@ -376,7 +376,7 @@ impl AnsibleTemplateRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::infrastructure::template::wrappers::ansible::inventory::{
+    use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::{
         AnsibleHost, InventoryContext, SshPrivateKeyFile,
     };
     use std::str::FromStr;

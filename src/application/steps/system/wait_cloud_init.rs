@@ -19,7 +19,7 @@
 use std::sync::Arc;
 use tracing::{info, instrument};
 
-use crate::infrastructure::adapters::ansible::AnsibleClient;
+use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::shared::executor::CommandError;
 
 /// Step that waits for cloud-init completion on a remote host

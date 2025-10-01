@@ -29,7 +29,7 @@ use crate::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
 use crate::e2e::containers::timeout::ContainerTimeouts;
 use crate::e2e::containers::{RunningProvisionedContainer, StoppedProvisionedContainer};
 use crate::e2e::context::TestContext;
-use crate::infrastructure::ansible::AnsibleTemplateRenderer;
+use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::shared::ssh::SshCredentials;
 
 /// Run provision simulation to prepare templates for container-based testing

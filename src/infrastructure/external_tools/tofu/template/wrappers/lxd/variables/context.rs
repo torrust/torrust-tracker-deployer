@@ -13,8 +13,8 @@
 //! ## Example Usage
 //!
 //! ```rust
-//! use torrust_tracker_deploy::infrastructure::template::wrappers::tofu::lxd::variables::VariablesContext;
-//! use torrust_tracker_deploy::infrastructure::adapters::lxd::instance::InstanceName;
+//! use torrust_tracker_deploy::infrastructure::external_tools::tofu::template::wrappers::lxd::variables::VariablesContext;
+//! use torrust_tracker_deploy::infrastructure::external_tools::lxd::adapter::instance::InstanceName;
 //! use torrust_tracker_deploy::domain::ProfileName;
 //!
 //! let context = VariablesContext::builder()

@@ -15,13 +15,13 @@ use std::sync::Arc;
 use crate::config::Config;
 use crate::domain::template::TemplateManager;
 use crate::domain::{InstanceName, ProfileName};
-use crate::infrastructure::adapters::ansible::AnsibleClient;
-use crate::infrastructure::adapters::lxd::LxdClient;
-use crate::infrastructure::adapters::opentofu::OpenTofuClient;
-use crate::infrastructure::ansible::AnsibleTemplateRenderer;
-use crate::infrastructure::ansible::ANSIBLE_SUBFOLDER;
-use crate::infrastructure::tofu::TofuTemplateRenderer;
-use crate::infrastructure::tofu::OPENTOFU_SUBFOLDER;
+use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
+use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
+use crate::infrastructure::external_tools::ansible::ANSIBLE_SUBFOLDER;
+use crate::infrastructure::external_tools::lxd::adapter::LxdClient;
+use crate::infrastructure::external_tools::tofu::adapter::OpenTofuClient;
+use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
+use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 use crate::shared::ssh::SshCredentials;
 
 /// Service clients and renderers for performing actions
