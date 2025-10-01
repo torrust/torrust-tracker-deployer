@@ -1,8 +1,17 @@
-//! Environment Domain Entity
+//! Environment Domain Module
 //!
-//! This module defines the `Environment` domain entity which encapsulates all
-//! environment-specific configuration for deployments. Each environment represents
-//! an isolated deployment context with its own directories, SSH keys, and instance naming.
+//! This module contains all environment-related domain entities and types.
+//!
+//! ## Submodules
+//!
+//! - `name` - Environment name validation and management
+//! - `state` - State marker types and type erasure for environment state machine
+//!
+//! ## Main Entity
+//!
+//! The `Environment` entity encapsulates all environment-specific configuration for deployments.
+//! Each environment represents an isolated deployment context with its own directories,
+//! SSH keys, and instance naming.
 //!
 //! ## Purpose
 //!
@@ -15,7 +24,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+//! use torrust_tracker_deploy::domain::environment::{Environment, name::EnvironmentName};
 //! use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
 //! use std::path::PathBuf;
 //!
@@ -36,11 +45,18 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::domain::environment_state::{
-    ConfigureFailed, Configured, Configuring, Created, Destroyed, ProvisionFailed, Provisioned,
-    Provisioning, ReleaseFailed, Released, Releasing, RunFailed, Running,
+pub mod name;
+pub mod state;
+
+// Re-export commonly used types for convenience
+pub use name::{EnvironmentName, EnvironmentNameError};
+pub use state::{
+    AnyEnvironmentState, ConfigureFailed, Configured, Configuring, Created, Destroyed,
+    ProvisionFailed, Provisioned, Provisioning, ReleaseFailed, Released, Releasing, RunFailed,
+    Running,
 };
-use crate::domain::{EnvironmentName, InstanceName, ProfileName};
+
+use crate::domain::{InstanceName, ProfileName};
 use crate::shared::{ssh::SshCredentials, Username};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

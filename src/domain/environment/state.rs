@@ -33,7 +33,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use torrust_tracker_deploy::domain::environment_state::{Created, Provisioning};
+//! use torrust_tracker_deploy::domain::environment::state::{Created, Provisioning};
 //!
 //! // State types are used as type parameters for Environment<S>
 //! // let env: Environment<Created> = Environment::new(name, credentials);
@@ -211,7 +211,7 @@ use crate::domain::environment::Environment;
 /// ## Usage Example
 ///
 /// ```rust
-/// use torrust_tracker_deploy::domain::environment_state::AnyEnvironmentState;
+/// use torrust_tracker_deploy::domain::environment::state::AnyEnvironmentState;
 ///
 /// // Type erasure: typed -> runtime
 /// // let env: Environment<Provisioned> = ...;
@@ -451,7 +451,7 @@ mod tests {
     // Tests for AnyEnvironmentState enum (Type Erasure)
     mod any_environment_state_tests {
         use super::*;
-        use crate::domain::environment_name::EnvironmentName;
+        use crate::domain::environment::name::EnvironmentName;
         use crate::shared::ssh::SshCredentials;
         use crate::shared::Username;
         use std::path::PathBuf;

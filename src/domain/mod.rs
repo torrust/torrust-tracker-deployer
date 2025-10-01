@@ -5,23 +5,24 @@
 //!
 //! ## Components
 //!
-//! - `environment` - Environment entity encapsulating all environment-specific configuration
-//! - `environment_name` - Environment name validation and management
-//! - `environment_state` - State marker types for the environment state machine
+//! - `environment` - Environment module with entity, name validation, and state management
+//!   - `environment::name` - Environment name validation and management
+//!   - `environment::state` - State marker types and type erasure for environment state machine
 //! - `instance_name` - LXD instance name validation and management
 //! - `profile_name` - LXD profile name validation and management
 //! - `template` - Core template domain models and business logic
 
 pub mod environment;
-pub mod environment_name;
-pub mod environment_state;
 pub mod instance_name;
 pub mod profile_name;
 pub mod template;
 
 // Re-export commonly used domain types for convenience
-pub use environment::Environment;
-pub use environment_name::{EnvironmentName, EnvironmentNameError};
+pub use environment::{
+    name::{EnvironmentName, EnvironmentNameError},
+    state::AnyEnvironmentState,
+    Environment,
+};
 pub use instance_name::{InstanceName, InstanceNameError};
 pub use profile_name::{ProfileName, ProfileNameError};
 pub use template::{TemplateEngine, TemplateEngineError, TemplateManager, TemplateManagerError};
