@@ -24,16 +24,16 @@ This phase establishes the foundation for type-safe state management using the t
 - [x] Run tests: `cargo test`
 - [x] Commit: `feat: add state marker types for environment state machine`
 
-##### Subtask 2: Convert Environment to Generic Environment<S>
+##### Subtask 2: Convert Environment to Generic Environment<S> ✅
 
-- [ ] Modify `Environment` struct in `src/domain/environment.rs` to be generic over state type `S`
-- [ ] Add `state: S` field to the struct
-- [ ] Update `Environment::new()` to return `Environment<Created>` (initial state)
-- [ ] Add generic implementations for common methods (getters for name, ssh_credentials, directories)
-- [ ] Ensure all existing tests compile and pass with `Environment<Created>`
-- [ ] Run linters: `cargo run --bin linter all`
-- [ ] Run tests: `cargo test`
-- [ ] Commit: `refactor: [#TBD] convert Environment to generic type-state struct`
+- [x] Modify `Environment` struct in `src/domain/environment.rs` to be generic over state type `S`
+- [x] Add `state: S` field to the struct
+- [x] Update `Environment::new()` to return `Environment<Created>` (initial state)
+- [x] Add generic implementations for common methods (getters for name, ssh_credentials, directories)
+- [x] Ensure all existing tests compile and pass with `Environment<Created>`
+- [x] Run linters: `cargo run --bin linter all`
+- [x] Run tests: `cargo test`
+- [x] Commit: `refactor: convert Environment to generic type-state struct`
 
 ##### Subtask 3: Implement State Transition Methods
 

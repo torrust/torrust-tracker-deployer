@@ -36,6 +36,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+use crate::domain::environment_state::Created;
 use crate::domain::{EnvironmentName, InstanceName, ProfileName};
 use crate::shared::{ssh::SshCredentials, Username};
 use serde::{Deserialize, Serialize};
@@ -47,12 +48,19 @@ use std::path::PathBuf;
 /// directory structure, SSH keys, and derived paths. It follows the principle of
 /// environment isolation where each environment has its own separate resources.
 ///
+/// # Type-State Pattern
+///
+/// The Environment uses the type-state pattern to enforce valid state transitions
+/// at compile-time. Each state is represented by a distinct type parameter `S`,
+/// ensuring that operations are only callable on appropriate states.
+///
 /// # Design Principles
 ///
 /// - **Isolation**: Each environment is completely isolated from others
 /// - **Consistency**: All paths follow the same naming pattern
 /// - **Predictability**: Paths are derived automatically from environment name
 /// - **Traceability**: All artifacts are organized by environment for debugging
+/// - **Type Safety**: Invalid state transitions are prevented at compile-time
 ///
 /// # Directory Structure
 ///
@@ -67,7 +75,7 @@ use std::path::PathBuf;
 /// Instance names follow the pattern: `torrust-tracker-vm-{env_name}`
 /// This ensures multiple environments can run concurrently without conflicts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Environment {
+pub struct Environment<S = Created> {
     /// The validated environment name
     name: EnvironmentName,
 
@@ -85,6 +93,9 @@ pub struct Environment {
 
     /// Data directory for this environment (auto-generated)
     data_dir: PathBuf,
+
+    /// Current state of the environment in the deployment lifecycle
+    state: S,
 }
 
 impl Environment {
@@ -128,7 +139,7 @@ impl Environment {
     /// This function does not panic. All instance name generation is guaranteed
     /// to succeed for valid environment names.
     #[must_use]
-    pub fn new(name: EnvironmentName, ssh_credentials: SshCredentials) -> Self {
+    pub fn new(name: EnvironmentName, ssh_credentials: SshCredentials) -> Environment<Created> {
         let env_str = name.as_str();
 
         // Generate instance name: torrust-tracker-vm-{env_name}
@@ -145,16 +156,25 @@ impl Environment {
         let data_dir = PathBuf::from("data").join(env_str);
         let build_dir = PathBuf::from("build").join(env_str);
 
-        Self {
+        Environment {
             name,
             instance_name,
             profile_name,
             ssh_credentials,
             build_dir,
             data_dir,
+            state: Created,
         }
     }
+}
 
+// Generic implementations for all states
+impl<S> Environment<S> {
+    /// Returns a reference to the current state
+    #[must_use]
+    pub fn state(&self) -> &S {
+        &self.state
+    }
     /// Returns the environment name
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {
@@ -402,6 +422,7 @@ mod tests {
             ssh_credentials: ssh_credentials.clone(),
             data_dir: data_dir.clone(),
             build_dir: build_dir.clone(),
+            state: Created,
         };
 
         // Check basic fields
@@ -455,6 +476,7 @@ mod tests {
             ssh_credentials,
             data_dir: data_dir.clone(),
             build_dir: build_dir.clone(),
+            state: Created,
         };
 
         assert_eq!(environment.templates_dir(), data_dir.join("templates"));
@@ -496,6 +518,7 @@ mod tests {
             ssh_credentials,
             data_dir: data_dir.clone(),
             build_dir: build_dir.clone(),
+            state: Created,
         };
 
         assert_eq!(environment.ansible_build_dir(), build_dir.join("ansible"));
@@ -541,6 +564,7 @@ mod tests {
                 ssh_credentials,
                 data_dir: data_dir.clone(),
                 build_dir: build_dir.clone(),
+                state: Created,
             };
 
             assert_eq!(environment.instance_name().as_str(), expected_instance_name);
@@ -577,6 +601,7 @@ mod tests {
             ssh_credentials,
             data_dir: data_dir.clone(),
             build_dir: build_dir.clone(),
+            state: Created,
         };
 
         // Serialize to JSON
@@ -634,6 +659,7 @@ mod tests {
                 ssh_credentials,
                 data_dir: data_dir.clone(),
                 build_dir: build_dir.clone(),
+                state: Created,
             };
 
             // Verify the environment is created successfully
@@ -681,6 +707,7 @@ mod tests {
             ssh_credentials,
             data_dir: data_dir.clone(),
             build_dir: build_dir.clone(),
+            state: Created,
         };
 
         assert_eq!(
