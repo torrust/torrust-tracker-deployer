@@ -189,12 +189,24 @@ impl Environment {
 
 // Common transitions available from any state
 impl<S> Environment<S> {
-    /// Transitions from any state to Destroyed state
+    /// Internal helper: Creates a new environment with a different state
     ///
-    /// This method can be called from any state to destroy the environment.
-    /// It indicates that all infrastructure resources have been released.
-    #[must_use]
-    pub fn destroy(self) -> Environment<Destroyed> {
+    /// This is a private helper method used by state transition methods to avoid
+    /// duplicating field copying code. It transfers all environment data while
+    /// changing only the state type parameter.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The target state type
+    ///
+    /// # Arguments
+    ///
+    /// * `new_state` - The new state instance to transition to
+    ///
+    /// # Returns
+    ///
+    /// A new `Environment<T>` with all fields preserved except the state
+    fn with_state<T>(self, new_state: T) -> Environment<T> {
         Environment {
             name: self.name,
             instance_name: self.instance_name,
@@ -202,8 +214,17 @@ impl<S> Environment<S> {
             ssh_credentials: self.ssh_credentials,
             build_dir: self.build_dir,
             data_dir: self.data_dir,
-            state: Destroyed,
+            state: new_state,
         }
+    }
+
+    /// Transitions from any state to Destroyed state
+    ///
+    /// This method can be called from any state to destroy the environment.
+    /// It indicates that all infrastructure resources have been released.
+    #[must_use]
+    pub fn destroy(self) -> Environment<Destroyed> {
+        self.with_state(Destroyed)
     }
 }
 

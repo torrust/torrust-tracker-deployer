@@ -34,15 +34,7 @@ impl Environment<Releasing> {
     /// This method indicates that release preparation completed successfully.
     #[must_use]
     pub fn released(self) -> Environment<Released> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: Released,
-        }
+        self.with_state(Released)
     }
 
     /// Transitions from Releasing to `ReleaseFailed` state
@@ -50,15 +42,7 @@ impl Environment<Releasing> {
     /// This method indicates that release preparation failed at a specific step.
     #[must_use]
     pub fn release_failed(self, failed_step: String) -> Environment<ReleaseFailed> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: ReleaseFailed { failed_step },
-        }
+        self.with_state(ReleaseFailed { failed_step })
     }
 }
 

@@ -28,15 +28,7 @@ impl Environment<Released> {
     /// This method indicates that the application has started running.
     #[must_use]
     pub fn start_running(self) -> Environment<Running> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: Running,
-        }
+        self.with_state(Running)
     }
 }
 

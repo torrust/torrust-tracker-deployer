@@ -34,15 +34,7 @@ impl Environment<Configuring> {
     /// This method indicates that application configuration completed successfully.
     #[must_use]
     pub fn configured(self) -> Environment<Configured> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: Configured,
-        }
+        self.with_state(Configured)
     }
 
     /// Transitions from Configuring to `ConfigureFailed` state
@@ -50,15 +42,7 @@ impl Environment<Configuring> {
     /// This method indicates that application configuration failed at a specific step.
     #[must_use]
     pub fn configure_failed(self, failed_step: String) -> Environment<ConfigureFailed> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: ConfigureFailed { failed_step },
-        }
+        self.with_state(ConfigureFailed { failed_step })
     }
 }
 

@@ -25,15 +25,7 @@ impl Environment<Created> {
     /// Provisioning state, indicating that infrastructure provisioning has begun.
     #[must_use]
     pub fn start_provisioning(self) -> Environment<Provisioning> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: Provisioning,
-        }
+        self.with_state(Provisioning)
     }
 }
 

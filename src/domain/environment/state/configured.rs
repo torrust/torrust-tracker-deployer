@@ -30,15 +30,7 @@ impl Environment<Configured> {
     /// This method indicates that release preparation has begun.
     #[must_use]
     pub fn start_releasing(self) -> Environment<Releasing> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: Releasing,
-        }
+        self.with_state(Releasing)
     }
 }
 

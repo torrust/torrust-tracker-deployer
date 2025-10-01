@@ -30,15 +30,7 @@ impl Environment<Provisioned> {
     /// This method indicates that application configuration has begun.
     #[must_use]
     pub fn start_configuring(self) -> Environment<Configuring> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: Configuring,
-        }
+        self.with_state(Configuring)
     }
 }
 

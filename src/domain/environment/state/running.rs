@@ -32,15 +32,7 @@ impl Environment<Running> {
     /// This method indicates that the application encountered a runtime failure.
     #[must_use]
     pub fn run_failed(self, failed_step: String) -> Environment<RunFailed> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: RunFailed { failed_step },
-        }
+        self.with_state(RunFailed { failed_step })
     }
 }
 

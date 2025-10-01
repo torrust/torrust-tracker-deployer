@@ -34,15 +34,7 @@ impl Environment<Provisioning> {
     /// This method indicates that infrastructure provisioning completed successfully.
     #[must_use]
     pub fn provisioned(self) -> Environment<Provisioned> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: Provisioned,
-        }
+        self.with_state(Provisioned)
     }
 
     /// Transitions from Provisioning to `ProvisionFailed` state
@@ -50,15 +42,7 @@ impl Environment<Provisioning> {
     /// This method indicates that infrastructure provisioning failed at a specific step.
     #[must_use]
     pub fn provision_failed(self, failed_step: String) -> Environment<ProvisionFailed> {
-        Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            state: ProvisionFailed { failed_step },
-        }
+        self.with_state(ProvisionFailed { failed_step })
     }
 }
 
