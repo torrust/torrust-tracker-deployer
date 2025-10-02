@@ -46,6 +46,7 @@
 //! ```
 
 pub mod name;
+pub mod repository;
 pub mod state;
 
 // Re-export commonly used types for convenience

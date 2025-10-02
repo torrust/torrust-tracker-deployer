@@ -19,160 +19,146 @@
 
 ## 📋 Implementation Subtasks
 
-### Subtask 1: Define Repository Trait & Error Types ⏳
+### Subtask 1: Define Repository Trait & Error Types ✅
 
-**Purpose**: Define the contract for state persistence operations and error handling.
+**Purpose**: Define the contract for environment persistence operations with generic error handling that doesn't expose implementation details.
+
+**Design Decision**: Renamed from `StateRepository` to `EnvironmentRepository` since we persist the entire `Environment<S>` (including name, credentials, instance name, state), not just the state marker. The error handling uses a generic pattern (NotFound, Conflict, Internal) to avoid exposing implementation-specific details (file paths, locks, etc.) in the trait interface.
 
 **Changes**:
 
-- Create new file `src/domain/environment/state_repository.rs`
-- Define `StateRepository` trait with save/load operations
-- Create `RepositoryError` enum with thiserror
+- Create new file `src/domain/environment/repository.rs`
+- Define `EnvironmentRepository` trait with save/load operations
+- Create `RepositoryError` enum with generic error variants
+- Use `Internal(anyhow::Error)` to wrap implementation-specific errors
 - Add module to `src/domain/environment/mod.rs`
-- Document trait methods and error cases
+- Document trait methods and error cases with examples
 
 **Implementation Details**:
 
 ```rust
-use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::environment::name::EnvironmentName;
+use crate::domain::environment::state::AnyEnvironmentState;
 use thiserror::Error;
-use std::path::PathBuf;
 
-/// Repository trait for persisting environment state
+/// Repository trait for persisting environments
 ///
-/// This trait defines the contract for state persistence operations.
-/// Implementations can use different storage backends (files, databases, etc.)
+/// This trait defines the contract for environment persistence operations.
+/// Implementations can use different storage backends (files, databases, in-memory, etc.)
 /// while maintaining consistent error handling and operation semantics.
 ///
 /// # Concurrency
 ///
-/// Implementations must handle concurrent access safely, typically through
-/// file locking mechanisms when using file-based storage.
+/// Implementations must handle concurrent access safely. File-based implementations
+/// typically use locking mechanisms, while in-memory implementations might use
+/// interior mutability patterns.
 ///
 /// # Atomicity
 ///
-/// Save operations should be atomic to prevent partial writes and data corruption.
-pub trait StateRepository {
-    /// Save environment state
+/// Save operations should be atomic - either the entire environment is saved
+/// successfully, or no changes are made to the storage.
+///
+/// # Error Handling
+///
+/// The trait uses `RepositoryError` as a generic error type. Implementation-specific
+/// errors are wrapped in `RepositoryError::Internal(anyhow::Error)`, allowing
+/// callers to handle errors generically while still supporting downcasting for
+/// advanced debugging scenarios.
+pub trait EnvironmentRepository {
+    /// Save environment
     ///
-    /// Persists the complete environment state to storage. This operation should
-    /// be atomic - either the entire state is saved successfully, or no changes
-    /// are made to the storage.
+    /// Persists the complete environment to storage. This operation should be atomic -
+    /// either the entire environment is saved successfully, or no changes are made.
     ///
     /// # Errors
     ///
-    /// Returns `RepositoryError` if:
-    /// - Storage location is not writable
-    /// - Serialization fails
-    /// - Lock cannot be acquired (another process is writing)
-    /// - I/O error occurs during write
+    /// Returns `RepositoryError::Conflict` if another process is currently modifying
+    /// the same environment.
+    ///
+    /// Returns `RepositoryError::Internal` for implementation-specific errors such as:
+    /// - Serialization failures
+    /// - Storage access issues (permissions, disk full, network errors)
+    /// - Lock acquisition timeouts
     fn save(&self, env: &AnyEnvironmentState) -> Result<(), RepositoryError>;
 
-    /// Load environment state by name
+    /// Load environment by name
     ///
-    /// Retrieves the environment state from storage. Returns `None` if the
-    /// environment has never been saved.
+    /// Retrieves the environment from storage. Returns `None` if the environment
+    /// has never been saved.
     ///
     /// # Errors
     ///
-    /// Returns `RepositoryError` if:
-    /// - Storage location is not readable
-    /// - Deserialization fails (corrupted data)
-    /// - Lock cannot be acquired (another process is writing)
-    /// - I/O error occurs during read
+    /// Returns `RepositoryError::NotFound` if the environment does not exist.
+    ///
+    /// Returns `RepositoryError::Internal` for implementation-specific errors such as:
+    /// - Deserialization failures (corrupted data)
+    /// - Storage access issues
+    /// - Lock acquisition timeouts
     fn load(&self, name: &EnvironmentName) -> Result<Option<AnyEnvironmentState>, RepositoryError>;
 
-    /// Check if environment state exists
+    /// Check if environment exists
     ///
-    /// Returns `true` if state file exists for the given environment name.
-    /// Does not validate that the file is readable or contains valid data.
-    fn exists(&self, name: &EnvironmentName) -> Result<bool, RepositoryError>;
-
-    /// Delete environment state
-    ///
-    /// Removes the persisted state for an environment. This is typically used
-    /// when cleaning up after environment destruction.
+    /// Returns `true` if an environment with the given name exists in storage.
+    /// Does not validate that the stored data is readable or well-formed.
     ///
     /// # Errors
     ///
-    /// Returns `RepositoryError` if:
-    /// - Lock cannot be acquired
-    /// - File deletion fails
-    /// - I/O error occurs
+    /// Returns `RepositoryError::Internal` if there are storage access issues.
+    fn exists(&self, name: &EnvironmentName) -> Result<bool, RepositoryError>;
+
+    /// Delete environment
+    ///
+    /// Removes the persisted environment from storage. This is typically used
+    /// when cleaning up after environment destruction.
+    ///
+    /// This operation is idempotent - deleting a non-existent environment is not an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RepositoryError::Conflict` if another process is currently accessing
+    /// the environment.
+    ///
+    /// Returns `RepositoryError::Internal` for implementation-specific errors such as:
+    /// - Storage access issues
+    /// - Lock acquisition timeouts
     fn delete(&self, name: &EnvironmentName) -> Result<(), RepositoryError>;
 }
 
 /// Errors that can occur during repository operations
+///
+/// This enum provides a generic error interface that doesn't expose implementation
+/// details. Concrete repository implementations wrap their specific errors in
+/// `Internal(anyhow::Error)`, allowing callers to:
+/// - Handle errors generically in most cases
+/// - Downcast to specific error types for advanced debugging
 #[derive(Debug, Error)]
 pub enum RepositoryError {
-    /// Failed to serialize environment state to JSON
-    #[error("Failed to serialize environment state")]
-    SerializationFailed {
-        #[source]
-        source: serde_json::Error,
-    },
+    /// Environment not found in storage
+    ///
+    /// This typically means the environment has never been saved, or has been deleted.
+    #[error("Environment not found")]
+    NotFound,
 
-    /// Failed to deserialize environment state from JSON
-    #[error("Failed to deserialize environment state from file: {path}")]
-    DeserializationFailed {
-        path: PathBuf,
-        #[source]
-        source: serde_json::Error,
-    },
+    /// Conflict with concurrent operation
+    ///
+    /// Another process is currently accessing the same environment. This can occur when:
+    /// - File-based repository: Another process holds the lock
+    /// - Database repository: Transaction conflict or row lock
+    /// - In-memory repository: Concurrent modification detected
+    #[error("Conflict: another process is accessing this environment")]
+    Conflict,
 
-    /// Failed to acquire file lock (another process holds the lock)
-    #[error("Failed to acquire lock for state file: {path}, held by process {holder_pid}")]
-    LockAcquisitionFailed {
-        path: PathBuf,
-        holder_pid: Option<u32>,
-    },
-
-    /// Lock file exists but process is no longer running (stale lock)
-    #[error("Stale lock detected for state file: {path}, process {dead_pid} is not running")]
-    StaleLockDetected {
-        path: PathBuf,
-        dead_pid: u32,
-    },
-
-    /// Failed to create state directory
-    #[error("Failed to create state directory: {path}")]
-    DirectoryCreationFailed {
-        path: PathBuf,
-        #[source]
-        source: std::io::Error,
-    },
-
-    /// Failed to write state file
-    #[error("Failed to write state file: {path}")]
-    WriteStateFailed {
-        path: PathBuf,
-        #[source]
-        source: std::io::Error,
-    },
-
-    /// Failed to read state file
-    #[error("Failed to read state file: {path}")]
-    ReadStateFailed {
-        path: PathBuf,
-        #[source]
-        source: std::io::Error,
-    },
-
-    /// Failed to delete state file
-    #[error("Failed to delete state file: {path}")]
-    DeleteStateFailed {
-        path: PathBuf,
-        #[source]
-        source: std::io::Error,
-    },
-
-    /// State file is corrupted or has invalid format
-    #[error("State file is corrupted: {path}")]
-    CorruptedStateFile {
-        path: PathBuf,
-        reason: String,
-    },
+    /// Internal implementation-specific error
+    ///
+    /// This wraps errors specific to the repository implementation:
+    /// - File repository: I/O errors, serialization failures, permission issues
+    /// - Database repository: Connection errors, query failures
+    /// - In-memory repository: Usually not used (in-memory ops rarely fail)
+    ///
+    /// Advanced callers can downcast the inner `anyhow::Error` to recover the
+    /// original error type for detailed debugging.
+    #[error("Internal error: {0}")]
+    Internal(#[from] anyhow::Error),
 }
 ```
 
@@ -180,21 +166,25 @@ pub enum RepositoryError {
 
 - Test that trait compiles and can be implemented
 - Test error types derive Debug, Display correctly
-- Test error source chain preservation
-- Test error display messages are clear and actionable
+- Test NotFound and Conflict variants display correct messages
+- Test Internal variant wraps anyhow::Error correctly
+- Test error conversion from anyhow::Error
+- Test downcasting from Internal variant to specific error types
+- Test error messages don't expose implementation details
 
 **Success Criteria**:
 
-- ✅ `StateRepository` trait compiles
-- ✅ All trait methods documented
-- ✅ `RepositoryError` enum covers all error cases
-- ✅ Error messages are clear and actionable
+- ✅ `EnvironmentRepository` trait compiles
+- ✅ All trait methods documented with generic error descriptions
+- ✅ `RepositoryError` enum uses generic pattern (NotFound, Conflict, Internal)
+- ✅ Error messages are clear, actionable, and don't expose implementation details
+- ✅ Downcasting works for debugging scenarios
 - ✅ All linters pass
-- ✅ All tests pass
+- ✅ All tests pass (615 tests)
 
-**Commit**: `feat: add StateRepository trait and error types for persistence`
+**Commit**: `feat: [#24] add EnvironmentRepository trait with generic error handling`
 
-**Status**: ⏳ Not started
+**Status**: ✅ Complete
 
 ---
 
@@ -497,15 +487,16 @@ pub enum FileLockError {
 
 ### Subtask 3: Implement JSON File Repository ⏳
 
-**Purpose**: Implement the `StateRepository` trait using JSON files with atomic writes and file locking.
+**Purpose**: Implement the `EnvironmentRepository` trait using JSON files with atomic writes and file locking. Implementation-specific errors (file paths, locks, I/O) will be wrapped in `RepositoryError::Internal(anyhow::Error)`.
 
 **Changes**:
 
 - Create new file `src/infrastructure/repository/json_file_repository.rs`
 - Implement `JsonFileRepository` struct
-- Implement `StateRepository` trait for `JsonFileRepository`
+- Implement `EnvironmentRepository` trait for `JsonFileRepository`
 - Use atomic write pattern (write to temp file, then rename)
 - Integrate `FileLock` for all operations
+- Convert implementation-specific errors to `RepositoryError::Conflict` or `RepositoryError::Internal`
 - Add comprehensive tests
 
 **Implementation Details**:
@@ -516,10 +507,11 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use serde_json;
+use anyhow::Context;
 
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::state::AnyEnvironmentState;
-use crate::domain::environment::state_repository::{RepositoryError, StateRepository};
+use crate::domain::environment::repository::{RepositoryError, EnvironmentRepository};
 use crate::infrastructure::repository::file_lock::FileLock;
 
 /// JSON file-based implementation of state repository
@@ -655,16 +647,16 @@ impl JsonFileRepository {
     }
 }
 
-impl StateRepository for JsonFileRepository {
+impl EnvironmentRepository for JsonFileRepository {
     fn save(&self, env: &AnyEnvironmentState) -> Result<(), RepositoryError> {
         let env_name = env.name();
 
         // Ensure directory exists
-        self.ensure_env_dir(env_name)?;
+        self.ensure_env_dir(env_name).map_err(|e| anyhow::Error::from(e))?;
 
         let state_path = self.state_file_path(env_name);
 
-        // Acquire lock
+        // Acquire lock - convert lock errors to Conflict
         let _lock = FileLock::acquire(&state_path, self.lock_timeout).map_err(|e| {
             match e {
                 file_lock::FileLockError::AcquisitionTimeout { holder_pid, .. } => {
@@ -796,15 +788,17 @@ impl StateRepository for JsonFileRepository {
 
 **Success Criteria**:
 
-- ✅ `StateRepository` trait fully implemented
+- ✅ `EnvironmentRepository` trait fully implemented
 - ✅ Atomic writes prevent partial state corruption
 - ✅ File locking prevents concurrent access issues
 - ✅ All state data preserved in round-trip
+- ✅ Implementation-specific errors wrapped in `Internal(anyhow::Error)`
+- ✅ Lock errors converted to `Conflict` variant
 - ✅ Error handling is comprehensive and clear
 - ✅ All linters pass
 - ✅ All tests pass (including concurrent scenarios)
 
-**Commit**: `feat: implement JSON file repository with atomic writes and locking`
+**Commit**: `feat: [#24] implement JSON file repository with atomic writes and locking`
 
 **Status**: ⏳ Not started
 
@@ -814,16 +808,17 @@ impl StateRepository for JsonFileRepository {
 
 When all three subtasks are complete, we should have:
 
-- [ ] `StateRepository` trait defining persistence contract
-- [ ] `RepositoryError` with clear, actionable error messages
+- [x] `EnvironmentRepository` trait defining persistence contract with generic errors
+- [x] `RepositoryError` with generic variants (NotFound, Conflict, Internal) that don't expose implementation details
 - [ ] `FileLock` mechanism with process ID tracking
 - [ ] Stale lock detection and automatic cleanup
 - [ ] `JsonFileRepository` implementation with atomic writes
 - [ ] File locking integrated into all repository operations
-- [ ] Comprehensive test coverage (~50 tests)
+- [ ] Implementation-specific errors wrapped appropriately
+- [ ] Comprehensive test coverage (~50 tests total)
 - [ ] All existing functionality preserved
 - [ ] All linters passing
-- [ ] All tests passing (655+ tests total)
+- [ ] All tests passing (665+ tests total)
 
 ## 📊 Expected Test Coverage After Phase 4
 
@@ -866,6 +861,54 @@ Once Phase 4 is complete, Phase 5 will integrate persistence into commands:
 2. ✅ **Testing**: Can create in-memory implementation for tests
 3. ✅ **Separation**: Domain logic separated from storage details
 4. ✅ **Future-Proof**: Easy to add caching, remote storage, etc.
+
+### Why EnvironmentRepository (Not StateRepository)?
+
+**Chosen**: `EnvironmentRepository` trait name  
+**Alternative**: `StateRepository` trait name
+
+**Rationale**:
+
+1. ✅ **Accuracy**: We persist the entire `Environment<S>` object, not just the state
+2. ✅ **Clarity**: The name reflects what is actually stored in the repository
+3. ✅ **Domain Alignment**: Matches domain terminology - environments have states, not states have environments
+4. ✅ **API Intent**: Methods like `save(environment)` and `load() -> Environment` make the purpose clear
+
+### Why Generic Error Types (Not Implementation-Specific)?
+
+**Chosen**: Generic `RepositoryError` with `NotFound`, `Conflict`, `Internal(anyhow::Error)` variants  
+**Alternative**: File-system-specific errors (e.g., `FileLocked { path, pid }`, `WriteError { path }`)
+
+**Rationale**:
+
+1. ✅ **Abstraction**: Trait interface doesn't expose storage implementation details
+2. ✅ **Flexibility**: Works equally well for file, database, or in-memory implementations
+3. ✅ **Simplicity**: Callers handle 3 generic cases, not N file-specific cases
+4. ✅ **Future-Proof**: Can add new implementations without changing error API
+5. ✅ **Debugging**: Advanced users can still downcast `Internal` variant to access original errors
+6. ✅ **Error Handling Guide**: Aligns with project principle: "errors should be actionable without exposing implementation details"
+
+**Example - Why this matters**:
+
+```rust
+// ❌ BAD: Exposes file-system implementation details in trait
+pub enum RepositoryError {
+    FileLocked { path: PathBuf, pid: u32 },  // Only makes sense for file storage
+    WriteError { path: PathBuf, error: std::io::Error },  // File-specific
+}
+
+// ✅ GOOD: Generic errors work for any storage backend
+pub enum RepositoryError {
+    NotFound,  // Works for files, databases, memory, etc.
+    Conflict,  // Generic: concurrent access detected
+    Internal(#[from] anyhow::Error),  // Wraps implementation-specific details
+}
+
+// Implementation can wrap specific errors:
+// File implementation: io::Error, lock acquisition → Internal
+// Database implementation: sqlx::Error → Internal
+// In-memory implementation: May not even need Internal variant
+```
 
 ### Why Atomic Writes (Temp File + Rename)?
 

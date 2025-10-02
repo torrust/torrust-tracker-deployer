@@ -14,6 +14,8 @@ containerd
 cpus
 creds
 Crossplane
+downcasted
+downcasting
 dearmor
 debootstrap
 debuginfo
@@ -46,7 +48,9 @@ loglevel
 lxdbr
 MAAACBA
 maxbytes
+sqlx
 mgmt
+millis
 mocksecret
 MVVM
 myapp
@@ -107,6 +111,7 @@ swappability
 sysfs
 sysv
 Taplo
+tasklist
 Tera
 terraformrc
 tést
