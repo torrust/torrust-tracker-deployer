@@ -34,6 +34,12 @@ use std::process;
 use std::time::{Duration, Instant};
 use thiserror::Error;
 
+/// Interval in milliseconds between lock acquisition retry attempts
+const LOCK_RETRY_INTERVAL_MS: u64 = 100;
+
+/// Duration to sleep between lock acquisition retry attempts
+const LOCK_RETRY_SLEEP: Duration = Duration::from_millis(LOCK_RETRY_INTERVAL_MS);
+
 /// File locking mechanism with process ID tracking
 ///
 /// Provides exclusive access to files by creating lock files that contain
@@ -136,8 +142,8 @@ impl FileLock {
                         });
                     }
 
-                    // Wait a bit before retrying
-                    std::thread::sleep(Duration::from_millis(100));
+                    // Wait before retrying
+                    std::thread::sleep(LOCK_RETRY_SLEEP);
                 }
                 Err(e) => return Err(e),
             }
