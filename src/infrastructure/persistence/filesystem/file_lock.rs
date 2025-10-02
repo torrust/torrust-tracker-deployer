@@ -114,7 +114,7 @@ impl FileLock {
     /// ```
     pub fn acquire(file_path: &Path, timeout: Duration) -> Result<Self, FileLockError> {
         let lock_file_path = Self::lock_file_path(file_path);
-        let current_pid = process::id();
+        let current_pid = ProcessId::current();
         let retry_strategy = LockRetryStrategy::new(timeout);
 
         loop {
@@ -202,11 +202,11 @@ impl FileLock {
     ///
     /// Returns the result of a single acquisition attempt, classifying the outcome
     /// to help the retry logic make decisions
-    fn try_acquire_once(lock_path: &Path, current_pid: u32) -> AcquireAttemptResult {
+    fn try_acquire_once(lock_path: &Path, current_pid: ProcessId) -> AcquireAttemptResult {
         match Self::try_create_lock(lock_path, current_pid) {
             Ok(()) => AcquireAttemptResult::Success,
             Err(FileLockError::LockHeldByProcess { pid }) => {
-                if Self::is_process_alive(pid) {
+                if pid.is_alive() {
                     AcquireAttemptResult::HeldByLiveProcess(pid)
                 } else {
                     AcquireAttemptResult::StaleProcess(pid)
@@ -220,7 +220,7 @@ impl FileLock {
     ///
     /// Uses `create_new` flag to ensure atomic creation - the operation fails
     /// if the file already exists, preventing race conditions.
-    fn try_create_lock(lock_path: &Path, pid: u32) -> Result<(), FileLockError> {
+    fn try_create_lock(lock_path: &Path, pid: ProcessId) -> Result<(), FileLockError> {
         use std::fs::OpenOptions;
         use std::io::Write;
 
@@ -246,14 +246,12 @@ impl FileLock {
                         source,
                     })?;
 
-                let holder_pid =
-                    content
-                        .trim()
-                        .parse::<u32>()
-                        .map_err(|_| FileLockError::InvalidLockFile {
-                            path: lock_path.to_path_buf(),
-                            content,
-                        })?;
+                let holder_pid = content.trim().parse::<ProcessId>().map_err(|_| {
+                    FileLockError::InvalidLockFile {
+                        path: lock_path.to_path_buf(),
+                        content,
+                    }
+                })?;
 
                 Err(FileLockError::LockHeldByProcess { pid: holder_pid })
             }
@@ -270,12 +268,12 @@ impl FileLock {
     /// - Unix: `kill -0` command (doesn't actually send a signal)
     /// - Windows: `tasklist` command to query running processes
     #[cfg(unix)]
-    fn is_process_alive(pid: u32) -> bool {
+    fn is_process_alive(pid: ProcessId) -> bool {
         // On Unix, we can send signal 0 to check if process exists
         // This doesn't actually send a signal, just checks permissions
         match std::process::Command::new("kill")
             .arg("-0")
-            .arg(pid.to_string())
+            .arg(pid.as_u32().to_string())
             .output()
         {
             Ok(output) => output.status.success(),
@@ -284,13 +282,15 @@ impl FileLock {
     }
 
     #[cfg(windows)]
-    fn is_process_alive(pid: u32) -> bool {
+    fn is_process_alive(pid: ProcessId) -> bool {
         // On Windows, try to query the process
         std::process::Command::new("tasklist")
             .arg("/FI")
-            .arg(format!("PID eq {pid}"))
+            .arg(format!("PID eq {}", pid.as_u32()))
             .output()
-            .map(|output| String::from_utf8_lossy(&output.stdout).contains(&pid.to_string()))
+            .map(|output| {
+                String::from_utf8_lossy(&output.stdout).contains(&pid.as_u32().to_string())
+            })
             .unwrap_or(false)
     }
 }
@@ -317,6 +317,55 @@ impl Drop for FileLock {
 
 // --- Lock Acquisition Helper Types ---
 
+/// Process ID newtype for type safety
+///
+/// Wraps a u32 process ID to provide type safety and prevent accidental misuse.
+/// This ensures PIDs are only used in appropriate contexts and makes the code
+/// more self-documenting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProcessId(u32);
+
+impl ProcessId {
+    /// Get the current process ID
+    #[must_use]
+    pub fn current() -> Self {
+        Self(process::id())
+    }
+
+    /// Create a `ProcessId` from a raw u32
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn from_raw(pid: u32) -> Self {
+        Self(pid)
+    }
+
+    /// Get the raw u32 value
+    #[must_use]
+    pub fn as_u32(&self) -> u32 {
+        self.0
+    }
+
+    /// Check if this process is currently alive
+    #[must_use]
+    pub fn is_alive(&self) -> bool {
+        FileLock::is_process_alive(*self)
+    }
+}
+
+impl std::fmt::Display for ProcessId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::str::FromStr for ProcessId {
+    type Err = std::num::ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse()?))
+    }
+}
+
 /// Represents the result of attempting to acquire a lock
 ///
 /// This internal enum helps separate different failure modes during lock acquisition
@@ -324,9 +373,9 @@ enum AcquireAttemptResult {
     /// Lock was successfully acquired
     Success,
     /// Lock is held by a dead process (stale lock)
-    StaleProcess(u32),
+    StaleProcess(ProcessId),
     /// Lock is held by a live process
-    HeldByLiveProcess(u32),
+    HeldByLiveProcess(ProcessId),
     /// I/O or other error occurred
     Error(FileLockError),
 }
@@ -369,7 +418,7 @@ pub enum FileLockError {
     /// This is an internal error used during lock acquisition retries.
     /// Users typically see `AcquisitionTimeout` instead.
     #[error("Lock held by process {pid}")]
-    LockHeldByProcess { pid: u32 },
+    LockHeldByProcess { pid: ProcessId },
 
     /// Failed to acquire lock within timeout period
     ///
@@ -380,7 +429,7 @@ pub enum FileLockError {
     )]
     AcquisitionTimeout {
         path: PathBuf,
-        holder_pid: Option<u32>,
+        holder_pid: Option<ProcessId>,
         timeout: Duration,
     },
 
@@ -617,7 +666,7 @@ mod tests {
             assert!(lock2_result.is_err());
             match lock2_result.unwrap_err() {
                 FileLockError::AcquisitionTimeout { holder_pid, .. } => {
-                    assert_eq!(holder_pid, Some(process::id()));
+                    assert_eq!(holder_pid, Some(ProcessId::current()));
                 }
                 other => panic!("Expected AcquisitionTimeout, got: {other:?}"),
             }
@@ -773,7 +822,7 @@ mod tests {
             // Test AcquisitionTimeout display
             let timeout_err = FileLockError::AcquisitionTimeout {
                 path: path.clone(),
-                holder_pid: Some(12345),
+                holder_pid: Some(ProcessId::from_raw(12345)),
                 timeout: Duration::from_secs(5),
             };
             let msg = timeout_err.to_string();
@@ -781,7 +830,9 @@ mod tests {
             assert!(msg.contains("12345"));
 
             // Test LockHeldByProcess display
-            let held_err = FileLockError::LockHeldByProcess { pid: 67890 };
+            let held_err = FileLockError::LockHeldByProcess {
+                pid: ProcessId::from_raw(67890),
+            };
             let msg = held_err.to_string();
             assert!(msg.contains("Lock held"));
             assert!(msg.contains("67890"));
