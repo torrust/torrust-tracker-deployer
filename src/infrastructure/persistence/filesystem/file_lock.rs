@@ -373,6 +373,34 @@ mod tests {
         temp_dir.path().join(name)
     }
 
+    /// Test helper to verify that a lock file exists and contains the current process ID
+    fn assert_lock_file_contains_current_pid(file_path: &Path) {
+        let lock_file_path = FileLock::lock_file_path(file_path);
+        assert!(
+            lock_file_path.exists(),
+            "Lock file should exist at {:?}",
+            lock_file_path
+        );
+
+        let pid_content =
+            fs::read_to_string(&lock_file_path).expect("Should be able to read lock file");
+        assert_eq!(
+            pid_content,
+            process::id().to_string(),
+            "Lock file should contain current process ID"
+        );
+    }
+
+    /// Test helper to verify that a lock file does not exist
+    fn assert_lock_file_absent(file_path: &Path) {
+        let lock_file_path = FileLock::lock_file_path(file_path);
+        assert!(
+            !lock_file_path.exists(),
+            "Lock file should not exist at {:?}",
+            lock_file_path
+        );
+    }
+
     #[test]
     fn it_should_successfully_acquire_lock() {
         // Arrange
@@ -388,14 +416,8 @@ mod tests {
         let lock = lock.unwrap();
         assert!(lock.acquired);
 
-        // Verify lock file exists
-        let lock_file_path = FileLock::lock_file_path(&file_path);
-        assert!(lock_file_path.exists());
-
-        // Verify lock file contains our PID
-        let pid_content = fs::read_to_string(&lock_file_path).unwrap();
-        let expected_pid = process::id().to_string();
-        assert_eq!(pid_content, expected_pid);
+        // Verify lock file exists and contains our PID
+        assert_lock_file_contains_current_pid(&file_path);
     }
 
     #[test]
@@ -457,7 +479,7 @@ mod tests {
         } // Lock dropped here
 
         // Assert: Lock file should be removed
-        assert!(!lock_file_path.exists());
+        assert_lock_file_absent(&file_path);
 
         // Verify we can acquire again
         let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
@@ -506,8 +528,7 @@ mod tests {
         assert!(lock_result.is_ok());
 
         // Verify new lock file has our PID
-        let pid_content = fs::read_to_string(&lock_file_path).unwrap();
-        assert_eq!(pid_content, process::id().to_string());
+        assert_lock_file_contains_current_pid(&file_path);
     }
 
     #[test]
