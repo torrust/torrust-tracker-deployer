@@ -12,6 +12,8 @@
 //!   - `tofu` - `OpenTofu` delivery mechanism and implementation details
 //!   - `template` - Template rendering delivery mechanisms (wrappers)
 //! - `remote_actions` - Repository-like implementations for remote system operations
+//! - `repository` - Persistence infrastructure (file locking, storage implementations)
 
 pub mod external_tools;
 pub mod remote_actions;
+pub mod repository;
