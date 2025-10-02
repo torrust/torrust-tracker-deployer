@@ -362,6 +362,7 @@ pub enum FileLockError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
     use std::error::Error;
     use std::fs;
     use std::thread;
@@ -532,21 +533,15 @@ mod tests {
         }
     }
 
-    #[test]
-    fn it_should_generate_correct_lock_file_path() {
-        // Test various file paths
-        let test_cases = vec![
-            ("test.json", "test.json.lock"),
-            ("data/state.json", "data/state.json.lock"),
-            ("/abs/path/file.txt", "/abs/path/file.txt.lock"),
-            ("no_extension", "no_extension.lock"),
-        ];
-
-        for (input, expected) in test_cases {
-            let input_path = Path::new(input);
-            let lock_path = FileLock::lock_file_path(input_path);
-            assert_eq!(lock_path.to_string_lossy(), expected);
-        }
+    #[rstest]
+    #[case("test.json", "test.json.lock")]
+    #[case("data/state.json", "data/state.json.lock")]
+    #[case("/abs/path/file.txt", "/abs/path/file.txt.lock")]
+    #[case("no_extension", "no_extension.lock")]
+    fn it_should_generate_correct_lock_file_path(#[case] input: &str, #[case] expected: &str) {
+        let input_path = Path::new(input);
+        let lock_path = FileLock::lock_file_path(input_path);
+        assert_eq!(lock_path.to_string_lossy(), expected);
     }
 
     #[test]
