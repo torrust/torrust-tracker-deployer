@@ -494,6 +494,25 @@ pub enum FileLockError {
 
 #[cfg(test)]
 mod tests {
+    //! # File Lock Test Suite
+    //!
+    //! Comprehensive tests for the file locking mechanism, organized into logical modules.
+    //!
+    //! ## 📋 Test Organization
+    //!
+    //! - **`basic_operations`**: Core lock acquisition and release functionality
+    //! - **`concurrency`**: Multi-threaded scenarios and concurrent lock handling
+    //! - **`stale_lock_handling`**: Detection and cleanup of stale locks from dead processes
+    //! - **`timeout_behavior`**: Retry logic and timeout handling
+    //! - **`error_handling`**: Error message validation and source chain preservation
+    //! - **`lock_file_path_generation`**: Lock file path generation and validation
+    //!
+    //! ## 🛠️ Test Helpers
+    //!
+    //! - **`TestLockScenario`**: Builder pattern for configuring test scenarios
+    //! - **`assert_lock_file_contains_current_pid`**: Verify lock file exists with correct PID
+    //! - **`assert_lock_file_absent`**: Verify lock file doesn't exist
+
     use super::*;
     use rstest::rstest;
     use std::error::Error;
