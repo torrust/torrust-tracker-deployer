@@ -14,13 +14,13 @@ containerd
 cpus
 creds
 Crossplane
-downcasted
-downcasting
 dearmor
 debootstrap
 debuginfo
 distutils
 Dockerfiles
+downcasted
+downcasting
 dpkg
 dtolnay
 EAAAADAQABAAABAQC
@@ -48,7 +48,6 @@ loglevel
 lxdbr
 MAAACBA
 maxbytes
-sqlx
 mgmt
 millis
 mocksecret
@@ -85,6 +84,7 @@ reqwest
 resolv
 rgba
 rpcinterface
+rstest
 runcmd
 rustc
 RUSTDOCFLAGS
@@ -100,6 +100,7 @@ Silverlight
 smorimoto
 spëcial
 spki
+sqlx
 sshpass
 startretries
 stringly
