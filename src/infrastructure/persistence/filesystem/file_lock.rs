@@ -468,6 +468,55 @@ mod tests {
     }
 
     // ========================================================================
+    // Test Builder - Builder pattern for test configuration
+    // ========================================================================
+
+    /// Builder for creating test lock scenarios with configurable parameters
+    struct TestLockScenario {
+        temp_dir: TempDir,
+        file_name: String,
+        timeout: Duration,
+    }
+
+    impl TestLockScenario {
+        /// Create a new test scenario with default values
+        fn new() -> Self {
+            Self {
+                temp_dir: TempDir::new().unwrap(),
+                file_name: "test.json".to_string(),
+                timeout: Duration::from_secs(1),
+            }
+        }
+
+        /// Set a custom file name for the lock file
+        fn with_file_name(mut self, name: &str) -> Self {
+            self.file_name = name.to_string();
+            self
+        }
+
+        /// Set a custom timeout duration
+        fn with_timeout(mut self, timeout: Duration) -> Self {
+            self.timeout = timeout;
+            self
+        }
+
+        /// Get the path to the file that will be locked
+        fn file_path(&self) -> PathBuf {
+            self.temp_dir.path().join(&self.file_name)
+        }
+
+        /// Get the path to the lock file
+        fn lock_file_path(&self) -> PathBuf {
+            FileLock::lock_file_path(&self.file_path())
+        }
+
+        /// Attempt to acquire a lock with the configured parameters
+        fn acquire_lock(&self) -> Result<FileLock, FileLockError> {
+            FileLock::acquire(&self.file_path(), self.timeout)
+        }
+    }
+
+    // ========================================================================
     // Basic Operations - Core lock acquisition and release functionality
     // ========================================================================
 
@@ -477,12 +526,10 @@ mod tests {
         #[test]
         fn it_should_successfully_acquire_lock() {
             // Arrange
-            let temp_dir = TempDir::new().unwrap();
-            let file_path = create_temp_file_path(&temp_dir, "test.json");
-            let timeout = Duration::from_secs(1);
+            let scenario = TestLockScenario::new();
 
             // Act
-            let lock = FileLock::acquire(&file_path, timeout);
+            let lock = scenario.acquire_lock();
 
             // Assert
             assert!(lock.is_ok());
@@ -490,63 +537,58 @@ mod tests {
             assert!(lock.acquired);
 
             // Verify lock file exists and contains our PID
-            assert_lock_file_contains_current_pid(&file_path);
+            assert_lock_file_contains_current_pid(&scenario.file_path());
         }
 
         #[test]
         fn it_should_release_lock_explicitly() {
             // Arrange
-            let temp_dir = TempDir::new().unwrap();
-            let file_path = create_temp_file_path(&temp_dir, "explicit_release.json");
-            let lock_file_path = FileLock::lock_file_path(&file_path);
+            let scenario = TestLockScenario::new().with_file_name("explicit_release.json");
 
             // Act: Acquire and explicitly release
-            let lock = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
-            assert!(lock_file_path.exists());
+            let lock = scenario.acquire_lock().unwrap();
+            assert!(scenario.lock_file_path().exists());
 
             let release_result = lock.release();
 
             // Assert
             assert!(release_result.is_ok());
-            assert!(!lock_file_path.exists());
+            assert!(!scenario.lock_file_path().exists());
 
             // Verify we can acquire again
-            let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
+            let lock2 = scenario.acquire_lock();
             assert!(lock2.is_ok());
         }
 
         #[test]
         fn it_should_release_lock_on_drop() {
             // Arrange
-            let temp_dir = TempDir::new().unwrap();
-            let file_path = create_temp_file_path(&temp_dir, "drop_release.json");
-            let lock_file_path = FileLock::lock_file_path(&file_path);
+            let scenario = TestLockScenario::new().with_file_name("drop_release.json");
 
             // Act: Acquire lock in inner scope
             {
-                let _lock = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
-                assert!(lock_file_path.exists());
+                let _lock = scenario.acquire_lock().unwrap();
+                assert!(scenario.lock_file_path().exists());
             } // Lock dropped here
 
             // Assert: Lock file should be removed
-            assert_lock_file_absent(&file_path);
+            assert_lock_file_absent(&scenario.file_path());
 
             // Verify we can acquire again
-            let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
+            let lock2 = scenario.acquire_lock();
             assert!(lock2.is_ok());
         }
 
         #[test]
         fn it_should_allow_sequential_locks_by_same_process() {
             // Arrange
-            let temp_dir = TempDir::new().unwrap();
-            let file_path = create_temp_file_path(&temp_dir, "sequential.json");
+            let scenario = TestLockScenario::new().with_file_name("sequential.json");
 
             // Act & Assert: Acquire, release, acquire again
-            let lock1 = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
+            let lock1 = scenario.acquire_lock().unwrap();
             drop(lock1); // Release
 
-            let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
+            let lock2 = scenario.acquire_lock();
             assert!(lock2.is_ok());
         }
     }
@@ -561,15 +603,15 @@ mod tests {
         #[test]
         fn it_should_prevent_concurrent_lock_acquisition() {
             // Arrange
-            let temp_dir = TempDir::new().unwrap();
-            let file_path = create_temp_file_path(&temp_dir, "concurrent.json");
-            let timeout = Duration::from_millis(500);
+            let scenario = TestLockScenario::new()
+                .with_file_name("concurrent.json")
+                .with_timeout(Duration::from_millis(500));
 
             // Act: First lock succeeds
-            let _lock1 = FileLock::acquire(&file_path, timeout).unwrap();
+            let _lock1 = scenario.acquire_lock().unwrap();
 
             // Act: Second lock fails immediately (timeout < retry interval)
-            let lock2_result = FileLock::acquire(&file_path, Duration::from_millis(50));
+            let lock2_result = FileLock::acquire(&scenario.file_path(), Duration::from_millis(50));
 
             // Assert
             assert!(lock2_result.is_err());
