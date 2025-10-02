@@ -23,8 +23,8 @@ This document tracks the refactoring of the file locking module to improve code 
 | --- | ---------------------------------------------- | ---------------------------- | -------------- | ------- |
 | 1   | Extract magic numbers to named constants       | High Impact, Low Effort      | ✅ Completed   | e873661 |
 | 2   | Use rstest for parameterized lock path tests   | High Impact, Low Effort      | ✅ Completed   | d34bafc |
-| 3   | Extract test helper for lock file verification | High Impact, Low Effort      | ✅ Completed   | pending |
-| 4   | Improve error context in Drop with tracing     | High Impact, Low Effort      | ⬜ Not Started | -       |
+| 3   | Extract test helper for lock file verification | High Impact, Low Effort      | ✅ Completed   | c62b714 |
+| 4   | Improve error context in Drop with tracing     | High Impact, Low Effort      | ✅ Completed   | pending |
 | 5   | Extract lock acquisition retry logic           | Medium Impact, Medium Effort | ⬜ Not Started | -       |
 | 6   | Improve test naming and organization           | Medium Impact, Medium Effort | ⬜ Not Started | -       |
 | 7   | Add builder pattern for test configuration     | Medium Impact, Medium Effort | ⬜ Not Started | -       |
@@ -225,7 +225,7 @@ Update tests to use helpers.
 ### Proposal 4: Improve Error Context in Drop with Tracing ⭐⭐
 
 **Priority:** High Impact, Low Effort  
-**Status:** ⬜ Not Started
+**Status:** ✅ Completed
 
 #### Current Issue
 

@@ -33,6 +33,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::time::{Duration, Instant};
 use thiserror::Error;
+use tracing;
 
 /// Interval in milliseconds between lock acquisition retry attempts
 const LOCK_RETRY_INTERVAL_MS: u64 = 100;
@@ -284,11 +285,18 @@ impl Drop for FileLock {
     /// Automatically release the lock when the `FileLock` is dropped
     ///
     /// This ensures cleanup even if an error occurs during file operations.
-    /// Errors during cleanup are ignored as this is best-effort cleanup.
+    /// Errors during cleanup are logged but otherwise ignored as this is best-effort cleanup.
     fn drop(&mut self) {
         if self.acquired {
-            // Best effort cleanup, ignore errors on drop
-            drop(fs::remove_file(&self.lock_file_path));
+            // Best effort cleanup, log errors for observability
+            if let Err(e) = fs::remove_file(&self.lock_file_path) {
+                tracing::warn!(
+                    path = ?self.lock_file_path,
+                    error = %e,
+                    "Failed to remove lock file during drop"
+                );
+            }
+            self.acquired = false;
         }
     }
 }
