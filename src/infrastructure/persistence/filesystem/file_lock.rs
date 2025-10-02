@@ -41,6 +41,54 @@ const LOCK_RETRY_INTERVAL_MS: u64 = 100;
 /// Duration to sleep between lock acquisition retry attempts
 const LOCK_RETRY_SLEEP: Duration = Duration::from_millis(LOCK_RETRY_INTERVAL_MS);
 
+// --- Platform-Specific Module ---
+
+/// Platform-specific functionality for process management
+///
+/// This module encapsulates platform-dependent code for checking process status.
+/// It provides a unified interface while implementing platform-specific details
+/// for Unix and Windows systems.
+mod platform {
+    use super::ProcessId;
+
+    /// Check if a process with the given PID is currently running
+    ///
+    /// Uses platform-specific methods:
+    /// - Unix: `kill -0` command (doesn't send signal, just checks permissions)
+    /// - Windows: `tasklist` command to query running processes
+    #[cfg(unix)]
+    pub fn is_process_alive(pid: ProcessId) -> bool {
+        // On Unix, we can send signal 0 to check if process exists
+        // This doesn't actually send a signal, just checks permissions
+        match std::process::Command::new("kill")
+            .arg("-0")
+            .arg(pid.as_u32().to_string())
+            .output()
+        {
+            Ok(output) => output.status.success(),
+            Err(_) => false,
+        }
+    }
+
+    /// Check if a process with the given PID is currently running
+    ///
+    /// Uses platform-specific methods:
+    /// - Unix: `kill -0` command (doesn't send signal, just checks permissions)
+    /// - Windows: `tasklist` command to query running processes
+    #[cfg(windows)]
+    pub fn is_process_alive(pid: ProcessId) -> bool {
+        // On Windows, try to query the process
+        std::process::Command::new("tasklist")
+            .arg("/FI")
+            .arg(format!("PID eq {}", pid.as_u32()))
+            .output()
+            .map(|output| {
+                String::from_utf8_lossy(&output.stdout).contains(&pid.as_u32().to_string())
+            })
+            .unwrap_or(false)
+    }
+}
+
 /// File locking mechanism with process ID tracking
 ///
 /// Provides exclusive access to files by creating lock files that contain
@@ -261,38 +309,6 @@ impl FileLock {
             }),
         }
     }
-
-    /// Check if a process with the given PID is currently running
-    ///
-    /// Uses platform-specific methods to check process existence:
-    /// - Unix: `kill -0` command (doesn't actually send a signal)
-    /// - Windows: `tasklist` command to query running processes
-    #[cfg(unix)]
-    fn is_process_alive(pid: ProcessId) -> bool {
-        // On Unix, we can send signal 0 to check if process exists
-        // This doesn't actually send a signal, just checks permissions
-        match std::process::Command::new("kill")
-            .arg("-0")
-            .arg(pid.as_u32().to_string())
-            .output()
-        {
-            Ok(output) => output.status.success(),
-            Err(_) => false,
-        }
-    }
-
-    #[cfg(windows)]
-    fn is_process_alive(pid: ProcessId) -> bool {
-        // On Windows, try to query the process
-        std::process::Command::new("tasklist")
-            .arg("/FI")
-            .arg(format!("PID eq {}", pid.as_u32()))
-            .output()
-            .map(|output| {
-                String::from_utf8_lossy(&output.stdout).contains(&pid.as_u32().to_string())
-            })
-            .unwrap_or(false)
-    }
 }
 
 impl Drop for FileLock {
@@ -348,7 +364,7 @@ impl ProcessId {
     /// Check if this process is currently alive
     #[must_use]
     pub fn is_alive(&self) -> bool {
-        FileLock::is_process_alive(*self)
+        platform::is_process_alive(*self)
     }
 }
 
