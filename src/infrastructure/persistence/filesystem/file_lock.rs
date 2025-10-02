@@ -114,39 +114,35 @@ impl FileLock {
     /// ```
     pub fn acquire(file_path: &Path, timeout: Duration) -> Result<Self, FileLockError> {
         let lock_file_path = Self::lock_file_path(file_path);
-        let start = Instant::now();
         let current_pid = process::id();
+        let retry_strategy = LockRetryStrategy::new(timeout);
 
         loop {
-            // Try to create lock file with our PID
-            match Self::try_create_lock(&lock_file_path, current_pid) {
-                Ok(()) => {
+            match Self::try_acquire_once(&lock_file_path, current_pid) {
+                AcquireAttemptResult::Success => {
                     return Ok(Self {
                         lock_file_path,
                         acquired: true,
                     });
                 }
-                Err(FileLockError::LockHeldByProcess { pid }) => {
-                    // Check if holding process is alive
-                    if !Self::is_process_alive(pid) {
-                        // Stale lock detected, clean it up and retry
-                        drop(fs::remove_file(&lock_file_path));
-                        continue;
-                    }
-
-                    // Process is alive, check timeout
-                    if start.elapsed() >= timeout {
+                AcquireAttemptResult::StaleProcess(_pid) => {
+                    // Stale lock detected, clean it up and retry immediately
+                    drop(fs::remove_file(&lock_file_path));
+                    continue;
+                }
+                AcquireAttemptResult::HeldByLiveProcess(pid) => {
+                    // Process is alive, check if we've timed out
+                    if retry_strategy.is_expired() {
                         return Err(FileLockError::AcquisitionTimeout {
                             path: lock_file_path,
                             holder_pid: Some(pid),
                             timeout,
                         });
                     }
-
                     // Wait before retrying
-                    std::thread::sleep(LOCK_RETRY_SLEEP);
+                    retry_strategy.wait();
                 }
-                Err(e) => return Err(e),
+                AcquireAttemptResult::Error(e) => return Err(e),
             }
         }
     }
@@ -200,6 +196,24 @@ impl FileLock {
         };
         lock_path.set_extension(new_extension);
         lock_path
+    }
+
+    /// Try to acquire the lock once
+    ///
+    /// Returns the result of a single acquisition attempt, classifying the outcome
+    /// to help the retry logic make decisions
+    fn try_acquire_once(lock_path: &Path, current_pid: u32) -> AcquireAttemptResult {
+        match Self::try_create_lock(lock_path, current_pid) {
+            Ok(()) => AcquireAttemptResult::Success,
+            Err(FileLockError::LockHeldByProcess { pid }) => {
+                if Self::is_process_alive(pid) {
+                    AcquireAttemptResult::HeldByLiveProcess(pid)
+                } else {
+                    AcquireAttemptResult::StaleProcess(pid)
+                }
+            }
+            Err(e) => AcquireAttemptResult::Error(e),
+        }
     }
 
     /// Try to create lock file atomically with current process ID
@@ -300,6 +314,52 @@ impl Drop for FileLock {
         }
     }
 }
+
+// --- Lock Acquisition Helper Types ---
+
+/// Represents the result of attempting to acquire a lock
+///
+/// This internal enum helps separate different failure modes during lock acquisition
+enum AcquireAttemptResult {
+    /// Lock was successfully acquired
+    Success,
+    /// Lock is held by a dead process (stale lock)
+    StaleProcess(u32),
+    /// Lock is held by a live process
+    HeldByLiveProcess(u32),
+    /// I/O or other error occurred
+    Error(FileLockError),
+}
+
+/// Manages retry logic for lock acquisition
+///
+/// Encapsulates timeout tracking and retry timing to keep the acquire logic clean
+struct LockRetryStrategy {
+    start: Instant,
+    timeout: Duration,
+}
+
+impl LockRetryStrategy {
+    /// Create a new retry strategy with the given timeout
+    fn new(timeout: Duration) -> Self {
+        Self {
+            start: Instant::now(),
+            timeout,
+        }
+    }
+
+    /// Check if the timeout has expired
+    fn is_expired(&self) -> bool {
+        self.start.elapsed() >= self.timeout
+    }
+
+    /// Sleep before the next retry attempt
+    fn wait(&self) {
+        std::thread::sleep(LOCK_RETRY_SLEEP);
+    }
+}
+
+// --- Error Types ---
 
 /// Errors related to file locking operations
 #[derive(Debug, Error)]
