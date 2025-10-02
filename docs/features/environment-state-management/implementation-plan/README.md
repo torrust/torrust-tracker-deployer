@@ -82,11 +82,11 @@
 
 ---
 
-### 📅 Phase 4: Persistence (PLANNED)
+### 📅 Phase 4: Persistence (READY FOR IMPLEMENTATION)
 
 **Goal**: Implement repository pattern for state persistence with atomic writes and file locking.
 
-**Status**: 📅 Planned for future implementation
+**Status**: � Detailed plan complete, ready to begin implementation
 
 **Key Deliverables**:
 
@@ -98,6 +98,14 @@
 - Error handling for storage operations
 
 **Rationale**: File locking is critical to prevent concurrent access issues. Addresses requirement: "Implement state file locking with process ID tracking" from requirements-analysis.md.
+
+**📄 [View Detailed Phase 4 Plan →](./phase-4-persistence.md)**
+
+**Subtasks**:
+
+1. ⏳ Define Repository Trait & Error Types
+2. ⏳ Implement File Locking Mechanism
+3. ⏳ Implement JSON File Repository
 
 ---
 
