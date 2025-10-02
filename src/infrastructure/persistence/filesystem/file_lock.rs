@@ -128,7 +128,7 @@ impl FileLock {
                 AcquireAttemptResult::StaleProcess(_pid) => {
                     // Stale lock detected, clean it up and retry immediately
                     drop(fs::remove_file(&lock_file_path));
-                    continue;
+                    // Continue to next retry attempt
                 }
                 AcquireAttemptResult::HeldByLiveProcess(pid) => {
                     // Process is alive, check if we've timed out
@@ -140,7 +140,7 @@ impl FileLock {
                         });
                     }
                     // Wait before retrying
-                    retry_strategy.wait();
+                    LockRetryStrategy::wait();
                 }
                 AcquireAttemptResult::Error(e) => return Err(e),
             }
@@ -354,7 +354,7 @@ impl LockRetryStrategy {
     }
 
     /// Sleep before the next retry attempt
-    fn wait(&self) {
+    fn wait() {
         std::thread::sleep(LOCK_RETRY_SLEEP);
     }
 }
@@ -446,8 +446,7 @@ mod tests {
         let lock_file_path = FileLock::lock_file_path(file_path);
         assert!(
             lock_file_path.exists(),
-            "Lock file should exist at {:?}",
-            lock_file_path
+            "Lock file should exist at {lock_file_path:?}"
         );
 
         let pid_content =
@@ -464,281 +463,330 @@ mod tests {
         let lock_file_path = FileLock::lock_file_path(file_path);
         assert!(
             !lock_file_path.exists(),
-            "Lock file should not exist at {:?}",
-            lock_file_path
+            "Lock file should not exist at {lock_file_path:?}"
         );
     }
 
-    #[test]
-    fn it_should_successfully_acquire_lock() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "test.json");
-        let timeout = Duration::from_secs(1);
+    // ========================================================================
+    // Basic Operations - Core lock acquisition and release functionality
+    // ========================================================================
 
-        // Act
-        let lock = FileLock::acquire(&file_path, timeout);
+    mod basic_operations {
+        use super::*;
 
-        // Assert
-        assert!(lock.is_ok());
-        let lock = lock.unwrap();
-        assert!(lock.acquired);
+        #[test]
+        fn it_should_successfully_acquire_lock() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "test.json");
+            let timeout = Duration::from_secs(1);
 
-        // Verify lock file exists and contains our PID
-        assert_lock_file_contains_current_pid(&file_path);
-    }
+            // Act
+            let lock = FileLock::acquire(&file_path, timeout);
 
-    #[test]
-    fn it_should_prevent_concurrent_lock_acquisition() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "concurrent.json");
-        let timeout = Duration::from_millis(500);
+            // Assert
+            assert!(lock.is_ok());
+            let lock = lock.unwrap();
+            assert!(lock.acquired);
 
-        // Act: First lock succeeds
-        let _lock1 = FileLock::acquire(&file_path, timeout).unwrap();
-
-        // Act: Second lock fails immediately (timeout < retry interval)
-        let lock2_result = FileLock::acquire(&file_path, Duration::from_millis(50));
-
-        // Assert
-        assert!(lock2_result.is_err());
-        match lock2_result.unwrap_err() {
-            FileLockError::AcquisitionTimeout { holder_pid, .. } => {
-                assert_eq!(holder_pid, Some(process::id()));
-            }
-            other => panic!("Expected AcquisitionTimeout, got: {other:?}"),
+            // Verify lock file exists and contains our PID
+            assert_lock_file_contains_current_pid(&file_path);
         }
-    }
 
-    #[test]
-    fn it_should_release_lock_explicitly() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "explicit_release.json");
-        let lock_file_path = FileLock::lock_file_path(&file_path);
+        #[test]
+        fn it_should_release_lock_explicitly() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "explicit_release.json");
+            let lock_file_path = FileLock::lock_file_path(&file_path);
 
-        // Act: Acquire and explicitly release
-        let lock = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
-        assert!(lock_file_path.exists());
-
-        let release_result = lock.release();
-
-        // Assert
-        assert!(release_result.is_ok());
-        assert!(!lock_file_path.exists());
-
-        // Verify we can acquire again
-        let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
-        assert!(lock2.is_ok());
-    }
-
-    #[test]
-    fn it_should_release_lock_on_drop() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "drop_release.json");
-        let lock_file_path = FileLock::lock_file_path(&file_path);
-
-        // Act: Acquire lock in inner scope
-        {
-            let _lock = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
-            assert!(lock_file_path.exists());
-        } // Lock dropped here
-
-        // Assert: Lock file should be removed
-        assert_lock_file_absent(&file_path);
-
-        // Verify we can acquire again
-        let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
-        assert!(lock2.is_ok());
-    }
-
-    #[test]
-    fn it_should_timeout_when_lock_held_by_another_process() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "timeout.json");
-        let short_timeout = Duration::from_millis(200);
-
-        // Act: Hold lock in first thread
-        let _lock1 = FileLock::acquire(&file_path, Duration::from_secs(5)).unwrap();
-
-        // Try to acquire in same process (simulates another process)
-        let lock2_result = FileLock::acquire(&file_path, short_timeout);
-
-        // Assert
-        assert!(lock2_result.is_err());
-        match lock2_result.unwrap_err() {
-            FileLockError::AcquisitionTimeout { timeout, .. } => {
-                // Verify timeout value is approximately what we set
-                assert!(timeout <= short_timeout + Duration::from_millis(50));
-            }
-            other => panic!("Expected AcquisitionTimeout, got: {other:?}"),
-        }
-    }
-
-    #[test]
-    fn it_should_clean_up_stale_lock_with_invalid_pid() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "stale.json");
-        let lock_file_path = FileLock::lock_file_path(&file_path);
-
-        // Create a lock file with a (hopefully) non-existent PID
-        let fake_pid = 999_999_u32;
-        fs::write(&lock_file_path, fake_pid.to_string()).unwrap();
-
-        // Act: Try to acquire lock - should detect stale lock and succeed
-        let lock_result = FileLock::acquire(&file_path, Duration::from_secs(1));
-
-        // Assert: Should succeed by cleaning up stale lock
-        assert!(lock_result.is_ok());
-
-        // Verify new lock file has our PID
-        assert_lock_file_contains_current_pid(&file_path);
-    }
-
-    #[test]
-    fn it_should_handle_invalid_lock_file_content() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "invalid.json");
-        let lock_file_path = FileLock::lock_file_path(&file_path);
-
-        // Create lock file with invalid content
-        fs::write(&lock_file_path, "not-a-number").unwrap();
-
-        // Act
-        let lock_result = FileLock::acquire(&file_path, Duration::from_millis(100));
-
-        // Assert
-        assert!(lock_result.is_err());
-        match lock_result.unwrap_err() {
-            FileLockError::InvalidLockFile { content, .. } => {
-                assert_eq!(content, "not-a-number");
-            }
-            other => panic!("Expected InvalidLockFile, got: {other:?}"),
-        }
-    }
-
-    #[rstest]
-    #[case("test.json", "test.json.lock")]
-    #[case("data/state.json", "data/state.json.lock")]
-    #[case("/abs/path/file.txt", "/abs/path/file.txt.lock")]
-    #[case("no_extension", "no_extension.lock")]
-    fn it_should_generate_correct_lock_file_path(#[case] input: &str, #[case] expected: &str) {
-        let input_path = Path::new(input);
-        let lock_path = FileLock::lock_file_path(input_path);
-        assert_eq!(lock_path.to_string_lossy(), expected);
-    }
-
-    #[test]
-    fn it_should_allow_sequential_locks_by_same_process() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "sequential.json");
-
-        // Act & Assert: Acquire, release, acquire again
-        let lock1 = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
-        drop(lock1); // Release
-
-        let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
-        assert!(lock2.is_ok());
-    }
-
-    #[test]
-    fn it_should_handle_concurrent_acquisitions_with_threads() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "thread_test.json");
-        let file_path_clone = file_path.clone();
-
-        // Act: Try to acquire lock from two threads
-        let handle1 = thread::spawn(move || FileLock::acquire(&file_path, Duration::from_secs(2)));
-
-        // Give first thread a head start
-        thread::sleep(Duration::from_millis(50));
-
-        let handle2 =
-            thread::spawn(move || FileLock::acquire(&file_path_clone, Duration::from_millis(100)));
-
-        let result1 = handle1.join().unwrap();
-        let result2 = handle2.join().unwrap();
-
-        // Assert: One should succeed, one should timeout
-        assert!(result1.is_ok() ^ result2.is_ok());
-    }
-
-    #[test]
-    fn it_should_display_error_messages_correctly() {
-        let path = PathBuf::from("/test/path.json");
-
-        // Test AcquisitionTimeout display
-        let timeout_err = FileLockError::AcquisitionTimeout {
-            path: path.clone(),
-            holder_pid: Some(12345),
-            timeout: Duration::from_secs(5),
-        };
-        let msg = timeout_err.to_string();
-        assert!(msg.contains("Failed to acquire lock"));
-        assert!(msg.contains("12345"));
-
-        // Test LockHeldByProcess display
-        let held_err = FileLockError::LockHeldByProcess { pid: 67890 };
-        let msg = held_err.to_string();
-        assert!(msg.contains("Lock held"));
-        assert!(msg.contains("67890"));
-
-        // Test InvalidLockFile display
-        let invalid_err = FileLockError::InvalidLockFile {
-            path: path.clone(),
-            content: "bad-content".to_string(),
-        };
-        let msg = invalid_err.to_string();
-        assert!(msg.contains("Invalid lock file"));
-        assert!(msg.contains("bad-content"));
-    }
-
-    #[test]
-    fn it_should_handle_lock_acquisition_with_retries() {
-        // Arrange
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = create_temp_file_path(&temp_dir, "retry.json");
-        let file_path_clone = file_path.clone();
-
-        // Act: Hold lock briefly then release
-        let handle = thread::spawn(move || {
+            // Act: Acquire and explicitly release
             let lock = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
-            thread::sleep(Duration::from_millis(300));
-            drop(lock); // Release after 300ms
-        });
+            assert!(lock_file_path.exists());
 
-        // Give first thread time to acquire
-        thread::sleep(Duration::from_millis(50));
+            let release_result = lock.release();
 
-        // Try to acquire with longer timeout - should succeed after retry
-        let lock2_result = FileLock::acquire(&file_path_clone, Duration::from_secs(2));
+            // Assert
+            assert!(release_result.is_ok());
+            assert!(!lock_file_path.exists());
 
-        handle.join().unwrap();
+            // Verify we can acquire again
+            let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
+            assert!(lock2.is_ok());
+        }
 
-        // Assert: Second lock should eventually succeed
-        assert!(lock2_result.is_ok());
+        #[test]
+        fn it_should_release_lock_on_drop() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "drop_release.json");
+            let lock_file_path = FileLock::lock_file_path(&file_path);
+
+            // Act: Acquire lock in inner scope
+            {
+                let _lock = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
+                assert!(lock_file_path.exists());
+            } // Lock dropped here
+
+            // Assert: Lock file should be removed
+            assert_lock_file_absent(&file_path);
+
+            // Verify we can acquire again
+            let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
+            assert!(lock2.is_ok());
+        }
+
+        #[test]
+        fn it_should_allow_sequential_locks_by_same_process() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "sequential.json");
+
+            // Act & Assert: Acquire, release, acquire again
+            let lock1 = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
+            drop(lock1); // Release
+
+            let lock2 = FileLock::acquire(&file_path, Duration::from_secs(1));
+            assert!(lock2.is_ok());
+        }
     }
 
-    #[test]
-    fn it_should_preserve_error_source_chain() {
-        // Test that errors preserve source information
-        let path = PathBuf::from("/test/path.json");
-        let io_error =
-            std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+    // ========================================================================
+    // Concurrency - Tests for concurrent lock acquisition scenarios
+    // ========================================================================
 
-        let create_failed = FileLockError::CreateFailed {
-            path,
-            source: io_error,
-        };
+    mod concurrency {
+        use super::*;
 
-        // Verify source is preserved
-        assert!(create_failed.source().is_some());
+        #[test]
+        fn it_should_prevent_concurrent_lock_acquisition() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "concurrent.json");
+            let timeout = Duration::from_millis(500);
+
+            // Act: First lock succeeds
+            let _lock1 = FileLock::acquire(&file_path, timeout).unwrap();
+
+            // Act: Second lock fails immediately (timeout < retry interval)
+            let lock2_result = FileLock::acquire(&file_path, Duration::from_millis(50));
+
+            // Assert
+            assert!(lock2_result.is_err());
+            match lock2_result.unwrap_err() {
+                FileLockError::AcquisitionTimeout { holder_pid, .. } => {
+                    assert_eq!(holder_pid, Some(process::id()));
+                }
+                other => panic!("Expected AcquisitionTimeout, got: {other:?}"),
+            }
+        }
+
+        #[test]
+        fn it_should_handle_concurrent_acquisitions_with_threads() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "thread_test.json");
+            let file_path_clone = file_path.clone();
+
+            // Act: Try to acquire lock from two threads
+            let handle1 =
+                thread::spawn(move || FileLock::acquire(&file_path, Duration::from_secs(2)));
+
+            // Give first thread a head start
+            thread::sleep(Duration::from_millis(50));
+
+            let handle2 = thread::spawn(move || {
+                FileLock::acquire(&file_path_clone, Duration::from_millis(100))
+            });
+
+            let result1 = handle1.join().unwrap();
+            let result2 = handle2.join().unwrap();
+
+            // Assert: One should succeed, one should timeout
+            assert!(result1.is_ok() ^ result2.is_ok());
+        }
+    }
+
+    // ========================================================================
+    // Stale Lock Handling - Tests for cleaning up stale locks
+    // ========================================================================
+
+    mod stale_lock_handling {
+        use super::*;
+
+        #[test]
+        fn it_should_clean_up_stale_lock_with_invalid_pid() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "stale.json");
+            let lock_file_path = FileLock::lock_file_path(&file_path);
+
+            // Create a lock file with a (hopefully) non-existent PID
+            let fake_pid = 999_999_u32;
+            fs::write(&lock_file_path, fake_pid.to_string()).unwrap();
+
+            // Act: Try to acquire lock - should detect stale lock and succeed
+            let lock_result = FileLock::acquire(&file_path, Duration::from_secs(1));
+
+            // Assert: Should succeed by cleaning up stale lock
+            assert!(lock_result.is_ok());
+
+            // Verify new lock file has our PID
+            assert_lock_file_contains_current_pid(&file_path);
+        }
+
+        #[test]
+        fn it_should_handle_invalid_lock_file_content() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "invalid.json");
+            let lock_file_path = FileLock::lock_file_path(&file_path);
+
+            // Create lock file with invalid content
+            fs::write(&lock_file_path, "not-a-number").unwrap();
+
+            // Act
+            let lock_result = FileLock::acquire(&file_path, Duration::from_millis(100));
+
+            // Assert
+            assert!(lock_result.is_err());
+            match lock_result.unwrap_err() {
+                FileLockError::InvalidLockFile { content, .. } => {
+                    assert_eq!(content, "not-a-number");
+                }
+                other => panic!("Expected InvalidLockFile, got: {other:?}"),
+            }
+        }
+    }
+
+    // ========================================================================
+    // Timeout Behavior - Tests for timeout and retry mechanisms
+    // ========================================================================
+
+    mod timeout_behavior {
+        use super::*;
+
+        #[test]
+        fn it_should_timeout_when_lock_held_by_another_process() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "timeout.json");
+            let short_timeout = Duration::from_millis(200);
+
+            // Act: Hold lock in first thread
+            let _lock1 = FileLock::acquire(&file_path, Duration::from_secs(5)).unwrap();
+
+            // Try to acquire in same process (simulates another process)
+            let lock2_result = FileLock::acquire(&file_path, short_timeout);
+
+            // Assert
+            assert!(lock2_result.is_err());
+            match lock2_result.unwrap_err() {
+                FileLockError::AcquisitionTimeout { timeout, .. } => {
+                    // Verify timeout value is approximately what we set
+                    assert!(timeout <= short_timeout + Duration::from_millis(50));
+                }
+                other => panic!("Expected AcquisitionTimeout, got: {other:?}"),
+            }
+        }
+
+        #[test]
+        fn it_should_handle_lock_acquisition_with_retries() {
+            // Arrange
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = create_temp_file_path(&temp_dir, "retry.json");
+            let file_path_clone = file_path.clone();
+
+            // Act: Hold lock briefly then release
+            let handle = thread::spawn(move || {
+                let lock = FileLock::acquire(&file_path, Duration::from_secs(1)).unwrap();
+                thread::sleep(Duration::from_millis(300));
+                drop(lock); // Release after 300ms
+            });
+
+            // Give first thread time to acquire
+            thread::sleep(Duration::from_millis(50));
+
+            // Try to acquire with longer timeout - should succeed after retry
+            let lock2_result = FileLock::acquire(&file_path_clone, Duration::from_secs(2));
+
+            handle.join().unwrap();
+
+            // Assert: Second lock should eventually succeed
+            assert!(lock2_result.is_ok());
+        }
+    }
+
+    // ========================================================================
+    // Error Handling - Tests for error messages and error source preservation
+    // ========================================================================
+
+    mod error_handling {
+        use super::*;
+
+        #[test]
+        fn it_should_display_error_messages_correctly() {
+            let path = PathBuf::from("/test/path.json");
+
+            // Test AcquisitionTimeout display
+            let timeout_err = FileLockError::AcquisitionTimeout {
+                path: path.clone(),
+                holder_pid: Some(12345),
+                timeout: Duration::from_secs(5),
+            };
+            let msg = timeout_err.to_string();
+            assert!(msg.contains("Failed to acquire lock"));
+            assert!(msg.contains("12345"));
+
+            // Test LockHeldByProcess display
+            let held_err = FileLockError::LockHeldByProcess { pid: 67890 };
+            let msg = held_err.to_string();
+            assert!(msg.contains("Lock held"));
+            assert!(msg.contains("67890"));
+
+            // Test InvalidLockFile display
+            let invalid_err = FileLockError::InvalidLockFile {
+                path: path.clone(),
+                content: "bad-content".to_string(),
+            };
+            let msg = invalid_err.to_string();
+            assert!(msg.contains("Invalid lock file"));
+            assert!(msg.contains("bad-content"));
+        }
+
+        #[test]
+        fn it_should_preserve_error_source_chain() {
+            // Test that errors preserve source information
+            let path = PathBuf::from("/test/path.json");
+            let io_error =
+                std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+
+            let create_failed = FileLockError::CreateFailed {
+                path,
+                source: io_error,
+            };
+
+            // Verify source is preserved
+            assert!(create_failed.source().is_some());
+        }
+    }
+
+    // ========================================================================
+    // Lock File Path Generation - Tests for lock file path generation
+    // ========================================================================
+
+    mod lock_file_path_generation {
+        use super::*;
+
+        #[rstest]
+        #[case("test.json", "test.json.lock")]
+        #[case("data/state.json", "data/state.json.lock")]
+        #[case("/abs/path/file.txt", "/abs/path/file.txt.lock")]
+        #[case("no_extension", "no_extension.lock")]
+        fn it_should_generate_correct_lock_file_path(#[case] input: &str, #[case] expected: &str) {
+            let input_path = Path::new(input);
+            let lock_path = FileLock::lock_file_path(input_path);
+            assert_eq!(lock_path.to_string_lossy(), expected);
+        }
     }
 }
