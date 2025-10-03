@@ -14,15 +14,16 @@ Refactoring plans serve to:
 
 ## 📁 Active Refactoring Plans
 
-| Document                                                                    | Status        | Target                    | Created     |
-| --------------------------------------------------------------------------- | ------------- | ------------------------- | ----------- |
-| [JSON File Repository Improvements](./json-file-repository-improvements.md) | � In Progress | `json_file_repository.rs` | Oct 3, 2025 |
+| Document                                   | Status | Target | Created |
+| ------------------------------------------ | ------ | ------ | ------- |
+| _No active refactoring plans at this time_ |        |        |         |
 
 ## ✅ Completed Refactorings
 
-| Document               | Completed   | Target         | Notes                                                                                                                         |
-| ---------------------- | ----------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| File Lock Improvements | Oct 3, 2025 | `file_lock.rs` | See git history at `docs/refactors/file-lock-improvements.md` for the complete refactoring plan (10 proposals, all completed) |
+| Document                          | Completed   | Target                    | Notes                                                                                                                                   |
+| --------------------------------- | ----------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| JSON File Repository Improvements | Oct 3, 2025 | `json_file_repository.rs` | See git history at `docs/refactors/json-file-repository-improvements.md` for the complete refactoring plan (9 proposals, all completed) |
+| File Lock Improvements            | Oct 3, 2025 | `file_lock.rs`            | See git history at `docs/refactors/file-lock-improvements.md` for the complete refactoring plan (10 proposals, all completed)           |
 
 ## 🎯 Plan Structure
 
