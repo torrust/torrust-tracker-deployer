@@ -351,7 +351,106 @@ mod tests {
     use super::*;
     use crate::testing::fixtures::TestEntity;
     use std::error::Error as StdError;
+    use std::path::PathBuf;
     use tempfile::TempDir;
+
+    /// Test scenario builder for JSON file repository tests
+    ///
+    /// Provides a fluent interface for setting up common test scenarios,
+    /// reducing boilerplate and improving test readability.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// // Basic scenario with defaults
+    /// let scenario = TestRepositoryScenario::new();
+    /// let entity = TestEntity::default();
+    /// scenario.save(&entity).expect("Failed to save");
+    ///
+    /// // Scenario optimized for timeout tests
+    /// let scenario = TestRepositoryScenario::for_timeout_test();
+    /// // ... test timeout behavior
+    ///
+    /// // Custom file name
+    /// let scenario = TestRepositoryScenario::new()
+    ///     .with_file_name("custom.json");
+    /// ```
+    struct TestRepositoryScenario {
+        temp_dir: TempDir,
+        repo: JsonFileRepository,
+        file_name: String,
+    }
+
+    impl TestRepositoryScenario {
+        /// Create a new test scenario with default settings
+        ///
+        /// Default timeout: 10 seconds
+        /// Default file name: "test.json"
+        fn new() -> Self {
+            Self {
+                temp_dir: TempDir::new().expect("Failed to create temporary directory for test"),
+                repo: JsonFileRepository::new(Duration::from_secs(10)),
+                file_name: "test.json".to_string(),
+            }
+        }
+
+        /// Create scenario with custom timeout
+        fn with_timeout(timeout: Duration) -> Self {
+            Self {
+                temp_dir: TempDir::new().expect("Failed to create temporary directory for test"),
+                repo: JsonFileRepository::new(timeout),
+                file_name: "test.json".to_string(),
+            }
+        }
+
+        /// Create scenario optimized for timeout tests (short timeout)
+        fn for_timeout_test() -> Self {
+            Self::with_timeout(Duration::from_millis(100))
+        }
+
+        /// Create scenario optimized for success tests (longer timeout)
+        #[allow(dead_code)]
+        fn for_success_test() -> Self {
+            Self::with_timeout(Duration::from_secs(10))
+        }
+
+        /// Set custom file name
+        fn with_file_name(mut self, name: impl Into<String>) -> Self {
+            self.file_name = name.into();
+            self
+        }
+
+        /// Get the repository instance
+        #[allow(dead_code)]
+        fn repo(&self) -> &JsonFileRepository {
+            &self.repo
+        }
+
+        /// Get the file path for the scenario
+        fn file_path(&self) -> PathBuf {
+            self.temp_dir.path().join(&self.file_name)
+        }
+
+        /// Save an entity using this scenario's repository
+        fn save<T: Serialize>(&self, entity: &T) -> Result<(), JsonFileError> {
+            self.repo.save(&self.file_path(), entity)
+        }
+
+        /// Load an entity using this scenario's repository
+        fn load<T: for<'de> Deserialize<'de>>(&self) -> Result<Option<T>, JsonFileError> {
+            self.repo.load(&self.file_path())
+        }
+
+        /// Check if file exists using this scenario's repository
+        fn exists(&self) -> bool {
+            self.repo.exists(&self.file_path())
+        }
+
+        /// Delete file using this scenario's repository
+        fn delete(&self) -> Result<(), JsonFileError> {
+            self.repo.delete(&self.file_path())
+        }
+    }
 
     #[test]
     fn it_should_create_repository_with_custom_timeout() {
@@ -362,97 +461,94 @@ mod tests {
 
     #[test]
     fn it_should_save_and_load_entity_successfully() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_secs(10));
-        let file_path = temp_dir.path().join("entity.json");
-
+        // Arrange
+        let scenario = TestRepositoryScenario::new();
         let entity = TestEntity::new("test-123", 42);
 
-        // Save
-        repo.save(&file_path, &entity)
+        // Act
+        scenario
+            .save(&entity)
             .expect("Failed to save entity to file");
 
-        // Load
-        let loaded: Option<TestEntity> = repo
-            .load(&file_path)
-            .expect("Failed to load entity from file");
+        let loaded: Option<TestEntity> = scenario.load().expect("Failed to load entity from file");
+
+        // Assert
         assert!(loaded.is_some());
         assert_eq!(loaded.expect("Entity should exist in file"), entity);
     }
 
     #[test]
     fn it_should_return_none_when_loading_nonexistent_file() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_secs(10));
-        let file_path = temp_dir.path().join("nonexistent.json");
+        // Arrange
+        let scenario = TestRepositoryScenario::new().with_file_name("nonexistent.json");
 
-        let result: Option<TestEntity> = repo.load(&file_path).expect("Failed to load from file");
+        // Act
+        let result: Option<TestEntity> = scenario.load().expect("Failed to load from file");
+
+        // Assert
         assert!(result.is_none());
     }
 
     #[test]
     fn it_should_check_if_file_exists() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_secs(10));
-        let file_path = temp_dir.path().join("entity.json");
-
+        // Arrange
+        let scenario = TestRepositoryScenario::new();
         let entity = TestEntity::new("test", 100);
 
-        // Before save
-        assert!(!repo.exists(&file_path));
+        // Act & Assert - Before save
+        assert!(!scenario.exists());
 
-        // Save
-        repo.save(&file_path, &entity)
+        // Act - Save
+        scenario
+            .save(&entity)
             .expect("Failed to save entity to file");
 
-        // After save
-        assert!(repo.exists(&file_path));
+        // Assert - After save
+        assert!(scenario.exists());
     }
 
     #[test]
     fn it_should_delete_file_successfully() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_secs(10));
-        let file_path = temp_dir.path().join("entity.json");
-
+        // Arrange
+        let scenario = TestRepositoryScenario::new();
         let entity = TestEntity::new("test", 100);
 
-        // Save then delete
-        repo.save(&file_path, &entity)
+        // Act - Save then delete
+        scenario
+            .save(&entity)
             .expect("Failed to save entity to file");
-        assert!(repo.exists(&file_path));
+        assert!(scenario.exists());
 
-        repo.delete(&file_path).expect("Failed to delete file");
-        assert!(!repo.exists(&file_path));
+        scenario.delete().expect("Failed to delete file");
+
+        // Assert
+        assert!(!scenario.exists());
     }
 
     #[test]
     fn it_should_delete_nonexistent_file_without_error() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_secs(10));
-        let file_path = temp_dir.path().join("nonexistent.json");
+        // Arrange
+        let scenario = TestRepositoryScenario::new().with_file_name("nonexistent.json");
 
-        // Delete should succeed even if file doesn't exist (idempotent)
-        repo.delete(&file_path)
+        // Act & Assert - Delete should succeed even if file doesn't exist (idempotent)
+        scenario
+            .delete()
             .expect("Failed to delete nonexistent file");
     }
 
     #[test]
     fn it_should_create_parent_directories_automatically() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_secs(10));
-        let file_path = temp_dir
-            .path()
-            .join("nested")
-            .join("deep")
-            .join("entity.json");
-
+        // Arrange
+        let scenario = TestRepositoryScenario::new().with_file_name("nested/deep/entity.json");
         let entity = TestEntity::new("test", 100);
 
-        // Save should create nested directory structure
-        repo.save(&file_path, &entity)
+        // Act - Save should create nested directory structure
+        scenario
+            .save(&entity)
             .expect("Failed to save entity with nested directories");
 
+        // Assert
+        let file_path = scenario.file_path();
         assert!(file_path
             .parent()
             .expect("File path should have parent directory")
@@ -462,24 +558,24 @@ mod tests {
 
     #[test]
     fn it_should_overwrite_existing_file() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_secs(10));
-        let file_path = temp_dir.path().join("entity.json");
-
+        // Arrange
+        let scenario = TestRepositoryScenario::new();
         let entity1 = TestEntity::new("first", 1);
         let entity2 = TestEntity::new("second", 2);
 
-        // Save first version
-        repo.save(&file_path, &entity1)
+        // Act - Save first version
+        scenario
+            .save(&entity1)
             .expect("Failed to save first entity version");
 
-        // Save second version (should overwrite)
-        repo.save(&file_path, &entity2)
+        // Act - Save second version (should overwrite)
+        scenario
+            .save(&entity2)
             .expect("Failed to save second entity version");
 
-        // Load should return latest version
-        let loaded: TestEntity = repo
-            .load(&file_path)
+        // Assert - Load should return latest version
+        let loaded: TestEntity = scenario
+            .load()
             .expect("Failed to load entity from file")
             .expect("Entity should exist in file");
         assert_eq!(loaded, entity2);
@@ -487,40 +583,40 @@ mod tests {
 
     #[test]
     fn it_should_use_atomic_writes() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_secs(10));
-        let file_path = temp_dir.path().join("entity.json");
-
+        // Arrange
+        let scenario = TestRepositoryScenario::new();
         let entity = TestEntity::new("test", 100);
 
-        // Save
-        repo.save(&file_path, &entity)
+        // Act
+        scenario
+            .save(&entity)
             .expect("Failed to save entity to file");
 
-        // Verify no temporary file exists after save
+        // Assert - Verify no temporary file exists after save
+        let file_path = scenario.file_path();
         let temp_file = file_path.with_extension(JsonFileRepository::TEMP_FILE_EXTENSION);
         assert!(!temp_file.exists());
 
-        // Verify target file exists
+        // Assert - Verify target file exists
         assert!(file_path.exists());
     }
 
     #[test]
     fn it_should_preserve_json_structure() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_secs(10));
-        let file_path = temp_dir.path().join("entity.json");
-
+        // Arrange
+        let scenario = TestRepositoryScenario::new();
         let entity = TestEntity::new("test", 100);
 
-        // Save
-        repo.save(&file_path, &entity)
+        // Act
+        scenario
+            .save(&entity)
             .expect("Failed to save entity to file");
 
-        // Read raw JSON
+        // Assert - Read raw JSON
+        let file_path = scenario.file_path();
         let json_content = fs::read_to_string(&file_path).expect("Failed to read JSON file");
 
-        // Verify it's valid JSON and has expected structure
+        // Assert - Verify it's valid JSON and has expected structure
         let parsed: serde_json::Value =
             serde_json::from_str(&json_content).expect("Failed to parse JSON content");
         assert!(parsed.is_object());
@@ -530,46 +626,45 @@ mod tests {
 
     #[test]
     fn it_should_handle_concurrent_access_with_locking() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_millis(100));
-        let file_path = temp_dir.path().join("entity.json");
-
+        // Arrange
+        let scenario = TestRepositoryScenario::for_timeout_test();
         let entity = TestEntity::new("test", 100);
 
-        // Save to create the file
-        repo.save(&file_path, &entity)
+        scenario
+            .save(&entity)
             .expect("Failed to save entity to file");
 
-        // Acquire lock manually
-        let _lock = FileLock::acquire(&file_path, Duration::from_secs(5))
+        // Hold lock manually
+        let _lock = FileLock::acquire(&scenario.file_path(), Duration::from_secs(5))
             .expect("Failed to acquire lock for test");
 
-        // Try to load while lock is held - should timeout
-        let result: Result<Option<TestEntity>, JsonFileError> = repo.load(&file_path);
-        assert!(result.is_err());
+        // Act - Try to load while lock is held - should timeout
+        let result: Result<Option<TestEntity>, JsonFileError> = scenario.load();
 
+        // Assert
+        assert!(result.is_err());
         let err = result.expect_err("Expected conflict error");
         assert!(matches!(err, JsonFileError::Conflict { .. }));
     }
 
     #[test]
     fn it_should_return_conflict_error_on_lock_timeout() {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
-        let repo = JsonFileRepository::new(Duration::from_millis(50));
-        let file_path = temp_dir.path().join("entity.json");
-
+        // Arrange
+        let scenario = TestRepositoryScenario::with_timeout(Duration::from_millis(50));
         let entity = TestEntity::new("test", 100);
 
-        // Save to create the file
-        repo.save(&file_path, &entity)
+        scenario
+            .save(&entity)
             .expect("Failed to save entity to file");
 
         // Hold lock
-        let _lock = FileLock::acquire(&file_path, Duration::from_secs(5))
+        let _lock = FileLock::acquire(&scenario.file_path(), Duration::from_secs(5))
             .expect("Failed to acquire lock for test");
 
-        // Try to save while lock is held
-        let result = repo.save(&file_path, &entity);
+        // Act - Try to save while lock is held
+        let result = scenario.save(&entity);
+
+        // Assert
         assert!(result.is_err());
         assert!(matches!(
             result.expect_err("Expected conflict error"),
