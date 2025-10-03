@@ -15,8 +15,9 @@
 //! - No additional dependencies required
 //! - Sufficient for our use case (not performance-critical)
 
-use crate::infrastructure::persistence::filesystem::file_lock::ProcessId;
 use std::process::Command;
+
+use super::process_id::ProcessId;
 
 /// Check if a process with the given PID is currently running
 ///
@@ -41,7 +42,7 @@ use std::process::Command;
 ///
 /// ```rust
 /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::platform;
-/// use torrust_tracker_deploy::infrastructure::persistence::filesystem::file_lock::ProcessId;
+/// use torrust_tracker_deploy::infrastructure::persistence::filesystem::process_id::ProcessId;
 ///
 /// let current_pid = ProcessId::current();
 /// assert!(platform::is_process_alive(current_pid));

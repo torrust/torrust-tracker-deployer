@@ -30,12 +30,11 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process;
 use std::time::{Duration, Instant};
 use thiserror::Error;
 use tracing;
 
-use super::platform;
+use super::process_id::ProcessId;
 
 /// Interval in milliseconds between lock acquisition retry attempts
 const LOCK_RETRY_INTERVAL_MS: u64 = 100;
@@ -318,55 +317,6 @@ impl Drop for FileLock {
 }
 
 // --- Lock Acquisition Helper Types ---
-
-/// Process ID newtype for type safety
-///
-/// Wraps a u32 process ID to provide type safety and prevent accidental misuse.
-/// This ensures PIDs are only used in appropriate contexts and makes the code
-/// more self-documenting.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ProcessId(u32);
-
-impl ProcessId {
-    /// Get the current process ID
-    #[must_use]
-    pub fn current() -> Self {
-        Self(process::id())
-    }
-
-    /// Create a `ProcessId` from a raw u32
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn from_raw(pid: u32) -> Self {
-        Self(pid)
-    }
-
-    /// Get the raw u32 value
-    #[must_use]
-    pub fn as_u32(&self) -> u32 {
-        self.0
-    }
-
-    /// Check if this process is currently alive
-    #[must_use]
-    pub fn is_alive(&self) -> bool {
-        platform::is_process_alive(*self)
-    }
-}
-
-impl std::fmt::Display for ProcessId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::str::FromStr for ProcessId {
-    type Err = std::num::ParseIntError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(s.parse()?))
-    }
-}
 
 /// Represents the result of attempting to acquire a lock
 ///

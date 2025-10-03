@@ -6,4 +6,9 @@
 pub mod file_environment_repository;
 pub mod file_lock;
 pub mod json_file_repository;
+pub mod process_id;
+
 mod platform;
+
+// Re-export commonly used types
+pub use process_id::ProcessId;
