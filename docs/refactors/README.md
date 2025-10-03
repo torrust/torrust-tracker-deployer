@@ -14,9 +14,13 @@ Refactoring plans serve to:
 
 ## 📁 Active Refactoring Plans
 
-| Document                                              | Status      | Target         | Priority |
-| ----------------------------------------------------- | ----------- | -------------- | -------- |
-| [File Lock Improvements](./file-lock-improvements.md) | 📋 Planning | `file_lock.rs` | High     |
+Currently no active refactoring plans.
+
+## ✅ Completed Refactorings
+
+| Document               | Completed   | Target         | Notes                                                                                                                         |
+| ---------------------- | ----------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| File Lock Improvements | Oct 3, 2025 | `file_lock.rs` | See git history at `docs/refactors/file-lock-improvements.md` for the complete refactoring plan (10 proposals, all completed) |
 
 ## 🎯 Plan Structure
 

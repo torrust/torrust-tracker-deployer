@@ -337,7 +337,7 @@ match operation() {
 
 - [Error Handling Guide](../contributing/error-handling.md) - Full implementation guidance
 - [Development Principles](../development-principles.md) - Actionability principle
-- [Proposal #8](../refactors/file-lock-improvements.md#proposal-8-improve-error-context-with-tiered-help-system) - Implementation details
+- Proposal #8 implementation details - See git history for `docs/refactors/file-lock-improvements.md` (completed October 3, 2025)
 
 ## 🔄 Future Considerations
 
