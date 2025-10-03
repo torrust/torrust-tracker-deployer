@@ -5,7 +5,6 @@
 //! e2e tests, and other components.
 
 pub mod command;
-pub mod executor;
 pub mod port_checker;
 pub mod ssh;
 pub mod username;

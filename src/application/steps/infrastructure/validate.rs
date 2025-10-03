@@ -27,7 +27,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient;
-use crate::shared::executor::CommandError;
+use crate::shared::command::CommandError;
 
 /// Simple step that validates `OpenTofu` configuration by executing `tofu validate`
 pub struct ValidateInfrastructureStep {

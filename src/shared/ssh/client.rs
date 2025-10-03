@@ -18,7 +18,7 @@ use std::time::Duration;
 
 use tracing::{info, warn};
 
-use crate::shared::executor::{CommandError, CommandExecutor};
+use crate::shared::command::{CommandError, CommandExecutor};
 
 use super::{SshConnection, SshError};
 

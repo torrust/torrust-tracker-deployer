@@ -9,7 +9,7 @@ use crate::e2e::context::TestContext;
 use crate::e2e::tasks::preflight_cleanup::{
     cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
 };
-use crate::shared::executor::CommandExecutor;
+use crate::shared::command::CommandExecutor;
 use tracing::{info, warn};
 
 /// Performs pre-flight cleanup for Docker-based E2E tests

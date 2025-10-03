@@ -29,7 +29,7 @@ use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::adapter::client::{InstanceInfo, OpenTofuError};
 use crate::infrastructure::external_tools::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
-use crate::shared::executor::CommandError;
+use crate::shared::command::CommandError;
 use crate::shared::ssh::{credentials::SshCredentials, SshConnection, SshError};
 
 /// Comprehensive error type for the `ProvisionCommand`

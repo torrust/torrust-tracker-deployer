@@ -37,7 +37,7 @@ pub use service_checker::SshServiceChecker;
 
 use thiserror::Error;
 
-use crate::shared::executor::CommandError;
+use crate::shared::command::CommandError;
 
 /// Errors that can occur during SSH operations
 #[derive(Error, Debug)]

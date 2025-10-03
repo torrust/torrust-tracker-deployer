@@ -20,7 +20,7 @@ use crate::application::steps::{
     ValidateDockerInstallationStep,
 };
 use crate::infrastructure::remote_actions::RemoteActionError;
-use crate::shared::executor::CommandError;
+use crate::shared::command::CommandError;
 use crate::shared::ssh::{credentials::SshCredentials, SshConnection};
 
 /// Comprehensive error type for the `TestCommand`

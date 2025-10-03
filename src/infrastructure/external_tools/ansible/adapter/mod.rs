@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 use tracing::info;
 
-use crate::shared::executor::{CommandError, CommandExecutor};
+use crate::shared::command::{CommandError, CommandExecutor};
 
 /// A specialized `Ansible` client for configuration management.
 /// This client provides a consistent interface for `Ansible` operations:
