@@ -39,12 +39,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file_path = PathBuf::from(&args[1]);
     let duration_secs: u64 = args[2].parse().expect("Duration must be a positive number");
 
-    println!("Acquiring lock on {}", file_path.display());
+    // Acquire lock silently (only output on error via Result)
     let _lock = FileLock::acquire(&file_path, Duration::from_secs(10))?;
-    println!("Lock acquired, holding for {duration_secs} seconds");
 
+    // Hold the lock for the specified duration
     thread::sleep(Duration::from_secs(duration_secs));
 
-    println!("Releasing lock");
+    // Lock released automatically on drop
     Ok(())
 }

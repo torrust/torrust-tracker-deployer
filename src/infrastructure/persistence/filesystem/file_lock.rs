@@ -157,6 +157,15 @@ impl FileLock {
                     drop(fs::remove_file(&lock_file_path));
                     // Continue to next retry attempt
                 }
+                AcquireAttemptResult::TransientError => {
+                    tracing::trace!(
+                        attempt,
+                        "Transient error during lock acquisition (likely race condition), retrying"
+                    );
+                    // Transient errors (like empty lock files) should be retried
+                    // Wait a short time before retrying
+                    LockRetryStrategy::wait();
+                }
                 AcquireAttemptResult::HeldByLiveProcess(pid) => {
                     tracing::trace!(
                         holder_pid = %pid,
@@ -270,6 +279,11 @@ impl FileLock {
                     AcquireAttemptResult::StaleProcess(pid)
                 }
             }
+            Err(FileLockError::InvalidLockFile { ref content, .. }) if content.is_empty() => {
+                // Empty lock file indicates a race condition during write
+                // Treat as transient and retry
+                AcquireAttemptResult::TransientError
+            }
             Err(e) => AcquireAttemptResult::Error(e),
         }
     }
@@ -300,6 +314,14 @@ impl FileLock {
                 // Write our PID to the lock file
                 write!(file, "{pid}").map_err(|source| {
                     tracing::warn!(error = %source, "Failed to write PID to lock file");
+                    FileLockError::CreateFailed {
+                        path: lock_path.to_path_buf(),
+                        source,
+                    }
+                })?;
+                // Flush to ensure PID is written to disk before other processes can read
+                file.flush().map_err(|source| {
+                    tracing::warn!(error = %source, "Failed to flush PID to lock file");
                     FileLockError::CreateFailed {
                         path: lock_path.to_path_buf(),
                         source,
@@ -410,6 +432,8 @@ enum AcquireAttemptResult {
     StaleProcess(ProcessId),
     /// Lock is held by a live process
     HeldByLiveProcess(ProcessId),
+    /// Transient error that should be retried (e.g., empty lock file during write race)
+    TransientError,
     /// I/O or other error occurred
     Error(FileLockError),
 }
