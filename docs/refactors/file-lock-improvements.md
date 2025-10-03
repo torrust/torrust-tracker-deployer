@@ -29,11 +29,11 @@ This document outlines a comprehensive refactoring plan for the file lock module
 
 | Phase                    | Proposals | Status         | Completion |
 | ------------------------ | --------- | -------------- | ---------- |
-| **Phase 1: Quick Wins**  | #1-4      | 🚧 In Progress | 3/4        |
+| **Phase 1: Quick Wins**  | #1-4      | ✅ Completed   | 4/4        |
 | **Phase 2: Testability** | #5, #7    | ⏳ Not Started | 0/2        |
 | **Phase 3: Polish**      | #8-10     | ⏳ Not Started | 0/3        |
 | **Phase 4: Advanced**    | #11       | ⏳ Not Started | 0/1        |
-| **Total**                |           |                | **3/10**   |
+| **Total**                |           |                | **4/10**   |
 
 ### Legend
 
@@ -265,7 +265,7 @@ fn it_should_clean_up_stale_lock_with_invalid_pid() {
 
 ### Proposal #4: Extract Assertion Helpers into Granular Functions
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢 Medium-High  
 **Effort**: 🔵 Low  
 **Priority**: P0
@@ -356,11 +356,11 @@ fn assert_invalid_lock_file_error(
 
 #### Implementation Checklist
 
-- [ ] Add new assertion helper functions
-- [ ] Refactor existing tests to use helpers
-- [ ] Document assertion helpers
-- [ ] Verify all tests pass
-- [ ] Consider moving to shared test utilities if needed
+- [x] Add new assertion helper functions
+- [x] Refactor existing tests to use helpers
+- [x] Document assertion helpers
+- [x] Verify all tests pass
+- [x] Consider moving to shared test utilities if needed
 
 ---
 

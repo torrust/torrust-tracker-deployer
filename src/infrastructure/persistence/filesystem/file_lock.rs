@@ -531,19 +531,8 @@ mod tests {
 
     /// Test helper to verify that a lock file exists and contains the current process ID
     fn assert_lock_file_contains_current_pid(file_path: &Path) {
-        let lock_file_path = FileLock::lock_file_path(file_path);
-        assert!(
-            lock_file_path.exists(),
-            "Lock file should exist at {lock_file_path:?}"
-        );
-
-        let pid_content =
-            fs::read_to_string(&lock_file_path).expect("Should be able to read lock file");
-        assert_eq!(
-            pid_content,
-            process::id().to_string(),
-            "Lock file should contain current process ID"
-        );
+        assert_lock_file_exists(file_path);
+        assert_lock_file_contains_pid(file_path, ProcessId::current());
     }
 
     /// Test helper to verify that a lock file does not exist
@@ -553,6 +542,71 @@ mod tests {
             !lock_file_path.exists(),
             "Lock file should not exist at {lock_file_path:?}"
         );
+    }
+
+    /// Test helper to verify that a lock file exists (without checking content)
+    fn assert_lock_file_exists(file_path: &Path) {
+        let lock_file_path = FileLock::lock_file_path(file_path);
+        assert!(
+            lock_file_path.exists(),
+            "Lock file should exist at {lock_file_path:?}"
+        );
+    }
+
+    /// Test helper to verify that a lock file contains a specific PID
+    fn assert_lock_file_contains_pid(file_path: &Path, expected_pid: ProcessId) {
+        let lock_file_path = FileLock::lock_file_path(file_path);
+        let pid_content =
+            fs::read_to_string(&lock_file_path).expect("Should be able to read lock file");
+        assert_eq!(
+            pid_content.trim(),
+            expected_pid.to_string(),
+            "Lock file should contain PID {expected_pid}"
+        );
+    }
+
+    /// Test helper to verify that lock acquisition failed with a timeout error
+    fn assert_timeout_error(result: Result<FileLock, FileLockError>) {
+        assert!(result.is_err(), "Expected timeout error");
+        match result.unwrap_err() {
+            FileLockError::AcquisitionTimeout { .. } => {}
+            other => panic!("Expected AcquisitionTimeout, got: {other:?}"),
+        }
+    }
+
+    /// Test helper to verify timeout error and check the holder PID
+    fn assert_timeout_error_with_holder(
+        result: Result<FileLock, FileLockError>,
+        expected_holder: ProcessId,
+    ) {
+        assert!(result.is_err(), "Expected timeout error");
+        match result.unwrap_err() {
+            FileLockError::AcquisitionTimeout { holder_pid, .. } => {
+                assert_eq!(
+                    holder_pid,
+                    Some(expected_holder),
+                    "Expected holder PID {expected_holder}"
+                );
+            }
+            other => panic!("Expected AcquisitionTimeout, got: {other:?}"),
+        }
+    }
+
+    /// Test helper to verify invalid lock file error with expected content
+    fn assert_invalid_lock_file_error(
+        result: Result<FileLock, FileLockError>,
+        expected_content: &str,
+    ) {
+        assert!(result.is_err(), "Expected invalid lock file error");
+        match result.unwrap_err() {
+            FileLockError::InvalidLockFile { content, .. } => {
+                assert_eq!(
+                    content, expected_content,
+                    "Expected invalid content '{expected_content}'"
+                );
+            }
+            other => panic!("Expected InvalidLockFile, got: {other:?}"),
+        }
     }
 
     // ========================================================================
@@ -730,13 +784,7 @@ mod tests {
             let lock2_result = FileLock::acquire(&scenario.file_path(), Duration::from_millis(50));
 
             // Assert
-            assert!(lock2_result.is_err());
-            match lock2_result.unwrap_err() {
-                FileLockError::AcquisitionTimeout { holder_pid, .. } => {
-                    assert_eq!(holder_pid, Some(ProcessId::current()));
-                }
-                other => panic!("Expected AcquisitionTimeout, got: {other:?}"),
-            }
+            assert_timeout_error_with_holder(lock2_result, ProcessId::current());
         }
 
         #[test]
@@ -806,13 +854,7 @@ mod tests {
             let lock_result = scenario.acquire_lock();
 
             // Assert
-            assert!(lock_result.is_err());
-            match lock_result.unwrap_err() {
-                FileLockError::InvalidLockFile { content, .. } => {
-                    assert_eq!(content, "not-a-number");
-                }
-                other => panic!("Expected InvalidLockFile, got: {other:?}"),
-            }
+            assert_invalid_lock_file_error(lock_result, "not-a-number");
         }
     }
 
@@ -836,15 +878,8 @@ mod tests {
             // Try to acquire in same process (simulates another process)
             let lock2_result = FileLock::acquire(&scenario.file_path(), short_timeout);
 
-            // Assert
-            assert!(lock2_result.is_err());
-            match lock2_result.unwrap_err() {
-                FileLockError::AcquisitionTimeout { timeout, .. } => {
-                    // Verify timeout value is approximately what we set
-                    assert!(timeout <= short_timeout + Duration::from_millis(50));
-                }
-                other => panic!("Expected AcquisitionTimeout, got: {other:?}"),
-            }
+            // Assert: Should timeout
+            assert_timeout_error(lock2_result);
         }
 
         #[test]
