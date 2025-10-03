@@ -29,11 +29,11 @@ This document outlines a comprehensive refactoring plan for the file lock module
 
 | Phase                    | Proposals | Status         | Completion |
 | ------------------------ | --------- | -------------- | ---------- |
-| **Phase 1: Quick Wins**  | #1-4      | 🚧 In Progress | 2/4        |
+| **Phase 1: Quick Wins**  | #1-4      | 🚧 In Progress | 3/4        |
 | **Phase 2: Testability** | #5, #7    | ⏳ Not Started | 0/2        |
 | **Phase 3: Polish**      | #8-10     | ⏳ Not Started | 0/3        |
 | **Phase 4: Advanced**    | #11       | ⏳ Not Started | 0/1        |
-| **Total**                |           |                | **2/10**   |
+| **Total**                |           |                | **3/10**   |
 
 ### Legend
 
@@ -167,7 +167,7 @@ fn it_should_successfully_acquire_lock() {
 
 ### Proposal #3: Add Builder Methods for Common Test Scenarios
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢 Medium-High  
 **Effort**: 🔵 Low  
 **Priority**: P0
@@ -255,11 +255,11 @@ fn it_should_clean_up_stale_lock_with_invalid_pid() {
 
 #### Implementation Checklist
 
-- [ ] Add builder methods to `TestLockScenario`
-- [ ] Refactor existing tests to use new methods
-- [ ] Add documentation for new methods
-- [ ] Verify all tests pass
-- [ ] Update testing conventions doc if needed
+- [x] Add builder methods to `TestLockScenario`
+- [x] Refactor existing tests to use new methods
+- [x] Add documentation for new methods
+- [x] Verify all tests pass
+- [x] Update testing conventions doc if needed
 
 ---
 

@@ -602,6 +602,26 @@ mod tests {
         fn acquire_lock(&self) -> Result<FileLock, FileLockError> {
             FileLock::acquire(&self.file_path(), self.timeout)
         }
+
+        /// Create scenario with short timeout for failure tests (200ms)
+        fn for_timeout_test() -> Self {
+            Self::new().with_timeout(Duration::from_millis(200))
+        }
+
+        /// Create scenario with long timeout for success tests (5 seconds)
+        fn for_success_test() -> Self {
+            Self::new().with_timeout(Duration::from_secs(5))
+        }
+
+        /// Create a stale lock file with a dead process PID
+        fn with_stale_lock(&self, fake_pid: u32) -> Result<(), std::io::Error> {
+            fs::write(self.lock_file_path(), fake_pid.to_string())
+        }
+
+        /// Create a lock file with invalid content for error testing
+        fn with_invalid_lock(&self, content: &str) -> Result<(), std::io::Error> {
+            fs::write(self.lock_file_path(), content)
+        }
     }
 
     // ========================================================================
@@ -759,38 +779,31 @@ mod tests {
         #[test]
         fn it_should_clean_up_stale_lock_with_invalid_pid() {
             // Arrange
-            let temp_dir = TempDir::new().expect("Failed to create temp dir for stale lock test");
-            let file_path = create_temp_file_path(&temp_dir, "stale.json");
-            let lock_file_path = FileLock::lock_file_path(&file_path);
+            let scenario = TestLockScenario::for_success_test().with_file_name("stale.json");
+            scenario
+                .with_stale_lock(FAKE_DEAD_PROCESS_PID)
+                .expect("Failed to create stale lock file");
 
-            // Create a lock file with a (hopefully) non-existent PID
-            let fake_pid = FAKE_DEAD_PROCESS_PID;
-            fs::write(&lock_file_path, fake_pid.to_string())
-                .expect("Failed to write stale lock file");
-
-            // Act: Try to acquire lock - should detect stale lock and succeed
-            let lock_result = FileLock::acquire(&file_path, Duration::from_secs(1));
+            // Act
+            let lock_result = scenario.acquire_lock();
 
             // Assert: Should succeed by cleaning up stale lock
             assert!(lock_result.is_ok());
 
             // Verify new lock file has our PID
-            assert_lock_file_contains_current_pid(&file_path);
+            assert_lock_file_contains_current_pid(&scenario.file_path());
         }
 
         #[test]
         fn it_should_handle_invalid_lock_file_content() {
             // Arrange
-            let temp_dir =
-                TempDir::new().expect("Failed to create temp dir for invalid lock file test");
-            let file_path = create_temp_file_path(&temp_dir, "invalid.json");
-            let lock_file_path = FileLock::lock_file_path(&file_path);
-
-            // Create lock file with invalid content
-            fs::write(&lock_file_path, "not-a-number").expect("Failed to write invalid lock file");
+            let scenario = TestLockScenario::for_timeout_test().with_file_name("invalid.json");
+            scenario
+                .with_invalid_lock("not-a-number")
+                .expect("Failed to create invalid lock file");
 
             // Act
-            let lock_result = FileLock::acquire(&file_path, Duration::from_millis(100));
+            let lock_result = scenario.acquire_lock();
 
             // Assert
             assert!(lock_result.is_err());
@@ -813,16 +826,15 @@ mod tests {
         #[test]
         fn it_should_timeout_when_lock_held_by_another_process() {
             // Arrange
-            let temp_dir = TempDir::new().expect("Failed to create temp dir for timeout test");
-            let file_path = create_temp_file_path(&temp_dir, "timeout.json");
+            let scenario = TestLockScenario::for_timeout_test().with_file_name("timeout.json");
             let short_timeout = Duration::from_millis(200);
 
-            // Act: Hold lock in first thread
-            let _lock1 = FileLock::acquire(&file_path, Duration::from_secs(5))
+            // Act: Hold lock in first acquisition
+            let _lock1 = FileLock::acquire(&scenario.file_path(), Duration::from_secs(5))
                 .expect("Failed to acquire first lock for timeout test");
 
             // Try to acquire in same process (simulates another process)
-            let lock2_result = FileLock::acquire(&file_path, short_timeout);
+            let lock2_result = FileLock::acquire(&scenario.file_path(), short_timeout);
 
             // Assert
             assert!(lock2_result.is_err());
@@ -838,8 +850,8 @@ mod tests {
         #[test]
         fn it_should_handle_lock_acquisition_with_retries() {
             // Arrange
-            let temp_dir = TempDir::new().expect("Failed to create temp dir for retry test");
-            let file_path = create_temp_file_path(&temp_dir, "retry.json");
+            let scenario = TestLockScenario::for_success_test().with_file_name("retry.json");
+            let file_path = scenario.file_path();
             let file_path_clone = file_path.clone();
 
             // Act: Hold lock briefly then release
