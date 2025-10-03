@@ -20,8 +20,19 @@ pub enum ConfigureCommandError {
 /// This command handles all steps required to configure infrastructure:
 /// 1. Install Docker
 /// 2. Install Docker Compose
+///
+/// # TODO(Phase 5): State Management Integration
+///
+/// When implementing state management in Phase 5:
+/// 1. Add `repository: Arc<dyn EnvironmentRepository>` field
+/// 2. Update `new()` to accept repository parameter
+/// 3. Change `execute()` to accept `Environment<Provisioned>` instead of no parameters
+/// 4. Return `Environment<Configured>` instead of `()`
+/// 5. Add state transitions and persistence calls at marked points in `execute()`
 pub struct ConfigureCommand {
     ansible_client: Arc<AnsibleClient>,
+    // TODO(Phase 5): Add repository field here
+    // repository: Arc<dyn EnvironmentRepository>,
 }
 
 impl ConfigureCommand {
@@ -49,9 +60,18 @@ impl ConfigureCommand {
             "Starting complete infrastructure configuration workflow"
         );
 
+        // TODO(Phase 5): Transition to Configuring state and persist
+        // let environment = environment.start_configuring();
+        // self.persist_state(&environment)?;
+
         InstallDockerStep::new(Arc::clone(&self.ansible_client)).execute()?;
 
         InstallDockerComposeStep::new(Arc::clone(&self.ansible_client)).execute()?;
+
+        // TODO(Phase 5): Transition to Configured state and persist
+        // let configured_env = environment.complete_configuring();
+        // self.persist_state(&configured_env)?;
+        // return Ok(configured_env);
 
         info!(
             command = "configure",

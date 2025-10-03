@@ -11,6 +11,7 @@
 //! - **Configuration**: Centralized configuration management
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::config::Config;
 use crate::domain::template::TemplateManager;
@@ -22,7 +23,17 @@ use crate::infrastructure::external_tools::lxd::adapter::LxdClient;
 use crate::infrastructure::external_tools::tofu::adapter::OpenTofuClient;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
+use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::ssh::SshCredentials;
+
+/// Default lock timeout for repository operations
+///
+/// This timeout controls how long repository operations will wait to acquire
+/// file locks before giving up. This prevents operations from hanging indefinitely
+/// if another process has locked the state file.
+///
+/// TODO: Make this configurable via Config in the future
+const REPOSITORY_LOCK_TIMEOUT_SECS: u64 = 30;
 
 /// Service clients and renderers for performing actions
 pub struct Services {
@@ -35,6 +46,10 @@ pub struct Services {
     pub template_manager: Arc<TemplateManager>,
     pub tofu_template_renderer: Arc<TofuTemplateRenderer>,
     pub ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
+
+    // Persistence layer
+    /// Factory for creating environment-specific repositories
+    pub repository_factory: RepositoryFactory,
 }
 
 impl Services {
@@ -72,6 +87,10 @@ impl Services {
         let ansible_template_renderer =
             AnsibleTemplateRenderer::new(config.build_dir.clone(), template_manager.clone());
 
+        // Create repository factory
+        let repository_factory =
+            RepositoryFactory::new(Duration::from_secs(REPOSITORY_LOCK_TIMEOUT_SECS));
+
         Self {
             // Command wrappers
             opentofu_client: Arc::new(opentofu_client),
@@ -82,6 +101,9 @@ impl Services {
             template_manager: template_manager.clone(),
             tofu_template_renderer: Arc::new(tofu_template_renderer),
             ansible_template_renderer: Arc::new(ansible_template_renderer),
+
+            // Persistence layer
+            repository_factory,
         }
     }
 }

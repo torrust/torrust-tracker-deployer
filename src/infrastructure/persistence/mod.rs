@@ -4,3 +4,4 @@
 //! including repositories and file-based storage implementations.
 
 pub mod filesystem;
+pub mod repository_factory;
