@@ -41,26 +41,31 @@ use crate::e2e::context::TestContext;
 pub async fn run_provision_command(test_context: &TestContext) -> Result<IpAddr> {
     info!("Provisioning test infrastructure");
 
+    // Create repository for this environment
+    let repository = test_context.create_repository();
+
     // Use the new ProvisionCommand to handle all infrastructure provisioning steps
     let provision_command = ProvisionCommand::new(
         Arc::clone(&test_context.services.tofu_template_renderer),
         Arc::clone(&test_context.services.ansible_template_renderer),
         Arc::clone(&test_context.services.ansible_client),
         Arc::clone(&test_context.services.opentofu_client),
+        repository,
     );
 
-    let opentofu_instance_ip = provision_command
-        .execute(test_context.environment.ssh_credentials())
+    // Execute provisioning with environment in Created state
+    let (provisioned_env, instance_ip) = provision_command
+        .execute(test_context.environment.clone())
         .await
         .map_err(anyhow::Error::from)
         .context("Failed to provision infrastructure")?;
 
     info!(
         status = "complete",
-        opentofu_ip = %opentofu_instance_ip,
-        "Infrastructure provisioned successfully"
+        environment = %provisioned_env.name(),
+        instance_ip = %instance_ip,
+        "Instance provisioned successfully"
     );
 
-    // Return the IP from OpenTofu as it's our preferred source
-    Ok(opentofu_instance_ip)
+    Ok(instance_ip)
 }

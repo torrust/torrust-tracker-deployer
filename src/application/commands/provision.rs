@@ -15,13 +15,17 @@
 use std::net::IpAddr;
 use std::sync::Arc;
 
-use tracing::{info, instrument};
+use tracing::{info, instrument, warn};
 
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep,
     RenderOpenTofuTemplatesStep, ValidateInfrastructureStep, WaitForCloudInitStep,
     WaitForSSHConnectivityStep,
+};
+use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::{
+    Created, Environment, ProvisionFailed, Provisioned, Provisioning,
 };
 #[allow(unused_imports)]
 use crate::domain::{InstanceName, ProfileName};
@@ -66,33 +70,23 @@ pub enum ProvisionCommandError {
 /// 8. Wait for SSH connectivity
 /// 9. Wait for cloud-init completion
 ///
-/// # Refactoring Note (Phase 5 preparation)
+/// # State Management
 ///
-/// The command structure has been refactored to extract logical steps:
-/// 1. Render `OpenTofu` templates
-/// 2. Create infrastructure via `OpenTofu`
-/// 3. Get instance information
-/// 4. Render Ansible templates with runtime IP
-/// 5. Wait for system readiness
+/// The command integrates with the type-state pattern for environment lifecycle:
+/// - Accepts `Environment<Created>` as input
+/// - Transitions to `Environment<Provisioning>` at start
+/// - Returns `Environment<Provisioned>` on success
+/// - Transitions to `Environment<ProvisionFailed>` on error
 ///
-/// This makes it easier to integrate state management with clear persistence points.
-///
-/// # TODO(Phase 5): State Management Integration
-///
-/// When implementing state management in Phase 5:
-/// 1. Add `repository: Arc<dyn EnvironmentRepository>` field
-/// 2. Update `new()` to accept repository parameter
-/// 3. Change `execute()` to accept `Environment<Created>` instead of `&SshCredentials`
-/// 4. Return `Environment<Provisioned>` instead of `IpAddr`
-/// 5. Add state transitions and persistence calls at marked points in `execute()`
+/// State is persisted after each transition using the injected repository.
+/// Persistence failures are logged but don't fail the command (state remains valid in memory).
 pub struct ProvisionCommand {
     tofu_template_renderer: Arc<TofuTemplateRenderer>,
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
     ansible_client: Arc<AnsibleClient>,
     opentofu_client:
         Arc<crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient>,
-    // TODO(Phase 5): Add repository field here
-    // repository: Arc<dyn EnvironmentRepository>,
+    repository: Arc<dyn EnvironmentRepository>,
 }
 
 impl ProvisionCommand {
@@ -105,12 +99,14 @@ impl ProvisionCommand {
         opentofu_client: Arc<
             crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient,
         >,
+        repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
             tofu_template_renderer,
             ansible_template_renderer,
             ansible_client,
             opentofu_client,
+            repository,
         }
     }
 
@@ -118,11 +114,11 @@ impl ProvisionCommand {
     ///
     /// # Arguments
     ///
-    /// * `ssh_credentials` - SSH credentials for connecting to the instance
+    /// * `environment` - The environment in `Created` state to provision
     ///
     /// # Returns
     ///
-    /// Returns the IP address of the provisioned instance
+    /// Returns a tuple of the provisioned environment and its IP address
     ///
     /// # Errors
     ///
@@ -132,29 +128,75 @@ impl ProvisionCommand {
     /// * Unable to retrieve instance information
     /// * SSH connectivity cannot be established
     /// * Cloud-init does not complete successfully
+    ///
+    /// On error, the environment transitions to `ProvisionFailed` state and is persisted.
     #[instrument(
         name = "provision_command",
         skip_all,
-        fields(command_type = "provision")
+        fields(
+            command_type = "provision",
+            environment = %environment.name()
+        )
     )]
     pub async fn execute(
         &self,
-        ssh_credentials: &SshCredentials,
-    ) -> Result<IpAddr, ProvisionCommandError> {
+        environment: Environment<Created>,
+    ) -> Result<(Environment<Provisioned>, IpAddr), ProvisionCommandError> {
         info!(
             command = "provision",
+            environment = %environment.name(),
             "Starting complete infrastructure provisioning workflow"
         );
 
-        // TODO(Phase 5): Transition to Provisioning state and persist
-        // let environment = environment.start_provisioning();
-        // self.persist_state(&environment)?;
+        // Transition to Provisioning state
+        let environment = environment.start_provisioning();
+
+        // Persist intermediate state
+        self.persist_provisioning_state(&environment);
+
+        // Execute provisioning steps
+        match self.execute_provisioning_steps(&environment).await {
+            Ok((provisioned, instance_ip)) => {
+                // Persist final state
+                self.persist_provisioned_state(&provisioned);
+
+                info!(
+                    command = "provision",
+                    environment = %provisioned.name(),
+                    instance_ip = %instance_ip,
+                    "Infrastructure provisioning completed successfully"
+                );
+
+                Ok((provisioned, instance_ip))
+            }
+            Err(e) => {
+                // Transition to error state with step context
+                let failed = environment.provision_failed(self.extract_failed_step(&e));
+
+                // Persist error state
+                self.persist_provision_failed_state(&failed);
+
+                Err(e)
+            }
+        }
+    }
+
+    /// Execute the provisioning steps on an environment in `Provisioning` state
+    ///
+    /// This internal method performs all the provisioning work without state management.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any provisioning step fails
+    async fn execute_provisioning_steps(
+        &self,
+        environment: &Environment<Provisioning>,
+    ) -> Result<(Environment<Provisioned>, IpAddr), ProvisionCommandError> {
+        let ssh_credentials = environment.ssh_credentials();
 
         self.render_opentofu_templates().await?;
 
         self.create_instance()?;
-
-        // TODO(Phase 5): Consider persisting state after infrastructure creation
 
         let instance_info = self.get_instance_info()?;
         let instance_ip = instance_info.ip_address;
@@ -165,18 +207,49 @@ impl ProvisionCommand {
         self.wait_for_readiness(ssh_credentials, instance_ip)
             .await?;
 
-        // TODO(Phase 5): Transition to Provisioned state and persist
-        // let provisioned_env = environment.complete_provisioning(instance_ip);
-        // self.persist_state(&provisioned_env)?;
-        // return Ok(provisioned_env);
+        // Transition to Provisioned state
+        let provisioned = environment.clone().provisioned();
 
-        info!(
-            command = "provision",
-            instance_ip = %instance_ip,
-            "Infrastructure provisioning completed successfully"
-        );
+        Ok((provisioned, instance_ip))
+    }
 
-        Ok(instance_ip)
+    /// Persist provisioning state
+    fn persist_provisioning_state(&self, environment: &Environment<Provisioning>) {
+        let any_state = environment.clone().into_any();
+
+        if let Err(e) = self.repository.save(&any_state) {
+            warn!(
+                environment = %environment.name(),
+                error = %e,
+                "Failed to persist provisioning state. Command execution continues."
+            );
+        }
+    }
+
+    /// Persist provisioned state
+    fn persist_provisioned_state(&self, environment: &Environment<Provisioned>) {
+        let any_state = environment.clone().into_any();
+
+        if let Err(e) = self.repository.save(&any_state) {
+            warn!(
+                environment = %environment.name(),
+                error = %e,
+                "Failed to persist provisioned state. Command execution continues."
+            );
+        }
+    }
+
+    /// Persist provision failed state
+    fn persist_provision_failed_state(&self, environment: &Environment<ProvisionFailed>) {
+        let any_state = environment.clone().into_any();
+
+        if let Err(e) = self.repository.save(&any_state) {
+            warn!(
+                environment = %environment.name(),
+                error = %e,
+                "Failed to persist provision failed state. Command execution continues."
+            );
+        }
     }
 
     // Private helper methods - organized from higher to lower level of abstraction
@@ -338,11 +411,13 @@ mod tests {
     use crate::shared::Username;
 
     // Helper function to create mock dependencies for testing
+    #[allow(clippy::type_complexity)]
     fn create_mock_dependencies() -> (
         Arc<TofuTemplateRenderer>,
         Arc<AnsibleTemplateRenderer>,
         Arc<AnsibleClient>,
         Arc<crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient>,
+        Arc<dyn EnvironmentRepository>,
         SshCredentials,
         TempDir,
     ) {
@@ -379,6 +454,13 @@ mod tests {
             ),
         );
 
+        // Create repository
+        let repository_factory =
+            crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
+                std::time::Duration::from_secs(30),
+            );
+        let repository = repository_factory.create(temp_dir.path().to_path_buf());
+
         let ssh_key_path = temp_dir.path().join("test_key");
         let ssh_pub_key_path = temp_dir.path().join("test_key.pub");
         let ssh_credentials = SshCredentials::new(
@@ -392,6 +474,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
             ssh_credentials,
             temp_dir,
         )
@@ -404,6 +487,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
             _ssh_credentials,
             _temp_dir,
         ) = create_mock_dependencies();
@@ -413,6 +497,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
         );
 
         // Verify the command was created (basic structure test)
@@ -464,6 +549,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
             _ssh_credentials,
             _temp_dir,
         ) = create_mock_dependencies();
@@ -473,6 +559,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
         );
 
         let error = ProvisionCommandError::OpenTofuTemplateRendering(
@@ -498,6 +585,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
             _ssh_credentials,
             _temp_dir,
         ) = create_mock_dependencies();
@@ -507,6 +595,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
         );
 
         let error = ProvisionCommandError::SshConnectivity(SshError::ConnectivityTimeout {
@@ -526,6 +615,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
             _ssh_credentials,
             _temp_dir,
         ) = create_mock_dependencies();
@@ -535,6 +625,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
         );
 
         let error = ProvisionCommandError::Command(CommandError::ExecutionFailed {
@@ -555,6 +646,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
             _ssh_credentials,
             _temp_dir,
         ) = create_mock_dependencies();
@@ -564,6 +656,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            repository,
         );
 
         let opentofu_error = OpenTofuError::CommandError(CommandError::ExecutionFailed {

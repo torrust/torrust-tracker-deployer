@@ -306,6 +306,35 @@ impl TestContext {
     pub fn temp_dir_path(&self) -> Option<&std::path::Path> {
         self.temp_dir.as_ref().map(tempfile::TempDir::path)
     }
+
+    /// Creates a repository for the current environment
+    ///
+    /// This is a convenience method that creates an `EnvironmentRepository`
+    /// configured for this test context's environment. The repository is
+    /// created using the repository factory with the environment's data directory.
+    ///
+    /// # Returns
+    ///
+    /// An `Arc<dyn EnvironmentRepository>` that can be used to persist and load
+    /// environment state for this test context.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use torrust_tracker_deploy::e2e::context::TestContext;
+    /// # fn example(test_context: &TestContext) {
+    /// let repository = test_context.create_repository();
+    /// // Use repository for state persistence...
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn create_repository(
+        &self,
+    ) -> std::sync::Arc<dyn crate::domain::environment::repository::EnvironmentRepository> {
+        self.services
+            .repository_factory
+            .create(self.environment.data_dir().clone())
+    }
 }
 
 impl std::fmt::Debug for TestContext {
