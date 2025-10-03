@@ -488,10 +488,11 @@ pub enum FileLockError {
 
     /// Failed to acquire lock within timeout period
     ///
-    /// Another process holds the lock and the timeout expired before it was released.
-    /// The holder's PID is included if it could be determined.
+    /// This typically means another process is holding the lock.
+    /// Use `.help()` for detailed troubleshooting steps.
     #[error(
-        "Failed to acquire lock for {path:?} within {timeout:?} (held by process {holder_pid:?})"
+        "Failed to acquire lock for '{path}' within {timeout:?} (held by process {holder_pid:?})
+Tip: Use 'ps -p {holder_pid:?}' to check if process is running"
     )]
     AcquisitionTimeout {
         path: PathBuf,
@@ -501,22 +502,26 @@ pub enum FileLockError {
 
     /// Failed to create lock file
     ///
-    /// Common causes:
-    /// - Insufficient permissions to create file
-    /// - Parent directory doesn't exist
-    /// - Disk full or I/O error
-    #[error("Failed to create lock file: {path:?}")]
+    /// This usually indicates permission issues or file system problems.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Failed to create lock file at '{path}': {source}
+Tip: Check directory permissions and disk space"
+    )]
     CreateFailed {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
 
-    /// Failed to read lock file
+    /// Failed to read lock file content
     ///
-    /// Occurs when a lock file exists but cannot be read to determine the holder PID.
-    /// May indicate file system issues or permission problems.
-    #[error("Failed to read lock file: {path:?}")]
+    /// This may indicate file system corruption or permission changes.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Failed to read lock file at '{path}': {source}
+Tip: Check file permissions and file system status"
+    )]
     ReadFailed {
         path: PathBuf,
         #[source]
@@ -525,21 +530,202 @@ pub enum FileLockError {
 
     /// Lock file contains invalid content
     ///
-    /// The lock file exists but doesn't contain a valid process ID.
-    /// This may indicate corruption or manual file creation.
-    #[error("Invalid lock file content at {path:?}: {content}")]
+    /// Expected a process ID but found something else.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Invalid lock file content at '{path}': expected PID, found '{content}'
+Tip: Remove the invalid lock file and let the system recreate it"
+    )]
     InvalidLockFile { path: PathBuf, content: String },
 
-    /// Failed to release lock
+    /// Failed to release lock file during cleanup
     ///
-    /// Occurs when the lock file cannot be removed during explicit release.
-    /// Note: Errors during Drop are silently ignored.
-    #[error("Failed to release lock file: {path:?}")]
+    /// This is usually not critical but the lock file may persist.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Failed to release lock file at '{path}': {source}
+Tip: The lock file may need manual cleanup"
+    )]
     ReleaseFailed {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
+}
+
+impl FileLockError {
+    /// Get detailed troubleshooting guidance for this error
+    ///
+    /// This method provides comprehensive troubleshooting steps that can be
+    /// displayed to users when they need more help resolving the error.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use std::path::Path;
+    /// use std::time::Duration;
+    /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::file_lock::FileLock;
+    ///
+    /// if let Err(e) = FileLock::acquire(Path::new("test.json"), Duration::from_secs(5)) {
+    ///     eprintln!("Error: {e}");
+    ///     eprintln!("\nTroubleshooting:\n{}", e.help());
+    /// }
+    /// # Ok::<(), ()>(())
+    /// ```
+    #[must_use]
+    #[allow(clippy::too_many_lines)]
+    pub fn help(&self) -> &'static str {
+        match self {
+            Self::AcquisitionTimeout { .. } => {
+                "Lock Acquisition Timeout - Detailed Troubleshooting:
+
+1. Check if the holder process is still running:
+   Unix/Linux/macOS: ps -p <pid>
+   Windows: tasklist /FI \"PID eq <pid>\"
+
+2. If the process is running and should release the lock:
+   - Wait for the process to complete its operation
+   - Or increase the timeout duration in your configuration
+
+3. If the process is stuck or hung:
+   - Try graceful termination: kill <pid>  (Unix) or taskkill /PID <pid> (Windows)
+   - Force terminate if needed: kill -9 <pid>  (Unix) or taskkill /F /PID <pid> (Windows)
+
+4. If the process doesn't exist (stale lock):
+   - This should be handled automatically by the lock system
+   - If you see this error repeatedly, it indicates a bug
+   - Please report at: https://github.com/torrust/torrust-tracker-deploy-rust-poc/issues
+
+For more information, see the documentation on file locking."
+            }
+
+            Self::CreateFailed { .. } => {
+                "Lock Creation Failed - Detailed Troubleshooting:
+
+1. Check directory permissions:
+   Unix: ls -la <directory>
+   Windows: icacls <directory>
+   - Ensure write access: chmod u+w <directory>  (Unix)
+
+2. Verify parent directory exists:
+   - Create if needed: mkdir -p <directory>  (Unix/Linux/macOS)
+   - Create if needed: mkdir <directory>  (Windows)
+
+3. Check available disk space:
+   Unix: df -h
+   Windows: wmic logicaldisk get size,freespace,caption
+   - Free up space or use a different location if disk is full
+
+4. Check for file system issues:
+   - Run file system checks if problems persist
+   - Try using a different directory
+   - Check system logs for file system errors
+
+If the problem persists, report it with system details."
+            }
+
+            Self::ReadFailed { .. } => {
+                "Lock File Read Failed - Detailed Troubleshooting:
+
+This error may indicate:
+1. File system corruption
+2. Permission changes after lock creation
+3. Concurrent file deletion by another process
+
+Troubleshooting steps:
+1. Check if the lock file still exists:
+   Unix: ls -la <path>.lock
+   Windows: dir <path>.lock
+
+2. Check file permissions:
+   Unix: stat <path>.lock
+   Windows: icacls <path>.lock
+
+3. Check file system status:
+   Unix: df -h && dmesg | tail
+   Windows: chkdsk
+
+4. If the error persists:
+   - The lock file may be corrupted
+   - You can manually remove it: rm <path>.lock  (Unix) or del <path>.lock  (Windows)
+   - Let the system recreate it on next lock acquisition
+
+Report persistent issues with full error context."
+            }
+
+            Self::InvalidLockFile { .. } => {
+                "Invalid Lock File Content - Detailed Troubleshooting:
+
+The lock file should contain only a process ID (numeric value).
+This error indicates the file contains invalid content.
+
+Common causes:
+1. Manual modification of lock file (not recommended)
+2. File system corruption
+3. Lock file created by incompatible software
+4. Encoding issues
+
+Resolution steps:
+1. Remove the invalid lock file:
+   Unix: rm <path>.lock
+   Windows: del <path>.lock
+
+2. Let the system recreate it properly on next lock acquisition
+
+3. Ensure no external tools or scripts are modifying .lock files
+
+4. If using shared storage (NFS, CIFS, etc.):
+   - Check for file system compatibility issues
+   - Verify proper file locking support
+
+Prevention:
+- Never manually edit .lock files
+- Ensure proper file system support for atomic operations
+- Use appropriate locking mechanisms for shared storage
+
+Report if this error occurs without manual intervention."
+            }
+
+            Self::ReleaseFailed { .. } => {
+                "Lock Release Failed - Detailed Troubleshooting:
+
+This is a cleanup error that occurs when removing the lock file.
+It typically doesn't affect functionality, but the lock file may persist.
+
+Common causes:
+1. File was already deleted (race condition with another process)
+2. Permissions changed after lock creation
+3. File system issue during cleanup
+4. File is open by another process
+
+Steps to resolve:
+1. Check if the lock file still exists:
+   Unix: ls -la <path>.lock
+   Windows: dir <path>.lock
+
+2. If it exists and causes issues, manually remove it:
+   Unix: rm <path>.lock
+   Windows: del <path>.lock
+
+3. Verify no other processes have the file open:
+   Unix: lsof <path>.lock
+   Windows: handle.exe <path>.lock  (requires Sysinternals)
+
+Impact:
+- This error usually doesn't affect the current operation
+- The lock was already released from the application perspective
+- Stale lock files will be cleaned up on next acquisition
+
+Only report if this error occurs frequently or causes operational issues."
+            }
+
+            Self::LockHeldByProcess { .. } => {
+                "This is an internal error used during lock acquisition.
+If you see this error directly, it may indicate a logic error in the application.
+Please report it with full context."
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -961,6 +1147,162 @@ mod tests {
 
     mod error_handling {
         use super::*;
+
+        #[test]
+        fn it_should_include_brief_tips_in_error_messages() {
+            let path = PathBuf::from("/test/path.json");
+
+            // Test AcquisitionTimeout includes tip
+            let timeout_err = FileLockError::AcquisitionTimeout {
+                path: path.clone(),
+                holder_pid: Some(ProcessId::from_raw(12345)),
+                timeout: Duration::from_secs(5),
+            };
+            let msg = timeout_err.to_string();
+            assert!(msg.contains("Tip:"), "Error message should contain a tip");
+            assert!(
+                msg.contains("ps -p"),
+                "Tip should mention process check command"
+            );
+
+            // Test CreateFailed includes tip
+            let io_error =
+                std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+            let create_err = FileLockError::CreateFailed {
+                path: path.clone(),
+                source: io_error,
+            };
+            let msg = create_err.to_string();
+            assert!(msg.contains("Tip:"), "Error message should contain a tip");
+            assert!(
+                msg.contains("permissions"),
+                "Tip should mention permissions"
+            );
+
+            // Test ReadFailed includes tip
+            let io_error =
+                std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+            let read_err = FileLockError::ReadFailed {
+                path: path.clone(),
+                source: io_error,
+            };
+            let msg = read_err.to_string();
+            assert!(msg.contains("Tip:"), "Error message should contain a tip");
+
+            // Test InvalidLockFile includes tip
+            let invalid_err = FileLockError::InvalidLockFile {
+                path: path.clone(),
+                content: "bad-content".to_string(),
+            };
+            let msg = invalid_err.to_string();
+            assert!(msg.contains("Tip:"), "Error message should contain a tip");
+            assert!(
+                msg.contains("Remove"),
+                "Tip should mention removing the file"
+            );
+
+            // Test ReleaseFailed includes tip
+            let io_error =
+                std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+            let release_err = FileLockError::ReleaseFailed {
+                path: path.clone(),
+                source: io_error,
+            };
+            let msg = release_err.to_string();
+            assert!(msg.contains("Tip:"), "Error message should contain a tip");
+        }
+
+        #[test]
+        fn it_should_provide_detailed_help_for_all_error_variants() {
+            let path = PathBuf::from("/test/path.json");
+            let io_error =
+                std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+
+            let test_cases = vec![
+                (
+                    "AcquisitionTimeout",
+                    FileLockError::AcquisitionTimeout {
+                        path: path.clone(),
+                        holder_pid: Some(ProcessId::from_raw(12345)),
+                        timeout: Duration::from_secs(5),
+                    },
+                ),
+                (
+                    "CreateFailed",
+                    FileLockError::CreateFailed {
+                        path: path.clone(),
+                        source: io_error.kind().into(),
+                    },
+                ),
+                (
+                    "ReadFailed",
+                    FileLockError::ReadFailed {
+                        path: path.clone(),
+                        source: io_error.kind().into(),
+                    },
+                ),
+                (
+                    "InvalidLockFile",
+                    FileLockError::InvalidLockFile {
+                        path: path.clone(),
+                        content: "bad-content".to_string(),
+                    },
+                ),
+                (
+                    "ReleaseFailed",
+                    FileLockError::ReleaseFailed {
+                        path: path.clone(),
+                        source: io_error.kind().into(),
+                    },
+                ),
+                (
+                    "LockHeldByProcess",
+                    FileLockError::LockHeldByProcess {
+                        pid: ProcessId::from_raw(12345),
+                    },
+                ),
+            ];
+
+            for (variant_name, error) in test_cases {
+                let help = error.help();
+                assert!(!help.is_empty(), "{variant_name}: Help should not be empty");
+                assert!(
+                    help.len() > 50,
+                    "{variant_name}: Help should be detailed (at least 50 chars)"
+                );
+            }
+        }
+
+        #[test]
+        fn it_should_include_platform_specific_commands_in_help() {
+            let timeout_err = FileLockError::AcquisitionTimeout {
+                path: PathBuf::from("/test/path.json"),
+                holder_pid: Some(ProcessId::from_raw(12345)),
+                timeout: Duration::from_secs(5),
+            };
+
+            let help = timeout_err.help();
+
+            // Check for Unix commands
+            assert!(
+                help.contains("ps -p"),
+                "Help should include Unix process check command"
+            );
+            assert!(
+                help.contains("kill"),
+                "Help should include Unix kill command"
+            );
+
+            // Check for Windows commands
+            assert!(
+                help.contains("tasklist"),
+                "Help should include Windows process check command"
+            );
+            assert!(
+                help.contains("taskkill"),
+                "Help should include Windows kill command"
+            );
+        }
 
         #[test]
         fn it_should_display_error_messages_correctly() {
