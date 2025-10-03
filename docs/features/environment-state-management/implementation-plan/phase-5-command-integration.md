@@ -138,7 +138,7 @@ impl Container {
 
 ### Subtask 2: Document Architectural Decision (ADR) ✅ COMPLETED
 
-**Status**: ✅ Completed (Commit: TBD - pending commit)
+**Status**: ✅ Completed (Commit: 7f02019)
 
 **Purpose**: Document the architectural decision to use typed state returns in commands instead of the pure command handler pattern.
 
