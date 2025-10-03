@@ -31,9 +31,9 @@ This document outlines a comprehensive refactoring plan for the file lock module
 | ------------------------ | --------- | -------------- | ---------- |
 | **Phase 1: Quick Wins**  | #1-4      | ✅ Completed   | 4/4        |
 | **Phase 2: Testability** | #5, #7    | ✅ Completed   | 2/2        |
-| **Phase 3: Polish**      | #8-10     | 🚧 In Progress | 2/3        |
+| **Phase 3: Polish**      | #8-10     | ✅ Completed   | 3/3        |
 | **Phase 4: Advanced**    | #11       | ⏳ Not Started | 0/1        |
-| **Total**                |           |                | **8/10**   |
+| **Total**                |           |                | **9/10**   |
 
 ### Legend
 
@@ -1328,7 +1328,7 @@ pub use file_lock::{FileLock, FileLockError, ProcessId};
 
 ### Proposal #10: Add Multi-Process Integration Tests
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵🔵🔵 Medium-High  
 **Priority**: P2  
@@ -1572,16 +1572,16 @@ required-features = [] # Available for tests
 
 #### Implementation Checklist
 
-- [ ] Create helper binary `lock_holder_helper.rs`
-- [ ] Create integration test file `tests/file_lock_multiprocess.rs`
-- [ ] Add test for basic inter-process blocking
-- [ ] Add test for lock handoff between processes
-- [ ] Add test for crash/stale lock cleanup
-- [ ] Add test for rapid handoff scenarios
-- [ ] Update `Cargo.toml` to build helper binary
-- [ ] Document how to run these tests
-- [ ] Add to CI pipeline if appropriate
-- [ ] Verify all tests pass
+- [x] Create helper binary `lock_holder_helper.rs`
+- [x] Create integration test file `tests/file_lock_multiprocess.rs`
+- [x] Add test for basic inter-process blocking
+- [x] Add test for lock handoff between processes
+- [x] Add test for crash/stale lock cleanup
+- [x] Add test for rapid handoff scenarios
+- [x] Update `Cargo.toml` to build helper binary (automatic for bin/)
+- [x] Document how to run these tests (in file header comments)
+- [x] Add to CI pipeline if appropriate (runs with `cargo test`)
+- [x] Verify all tests pass (8/8 passing)
 
 ---
 
