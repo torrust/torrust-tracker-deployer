@@ -1,10 +1,123 @@
 //! Generic JSON file-based persistence layer
 //!
 //! This module provides a generic file-based repository that persists entities
+//! as JSON files with atomic writes and file locking for concurrency control.
 //!
-//! The repository is designed to be a reusable component that can be used by
-//! domain-specific repositories as a collaborator for handling all file I/O,
-//! atomic writes, and locking logic.
+//! # Design Philosophy
+//!
+//! The repository is designed as a **reusable infrastructure component** that
+//! domain-specific repositories can use as a collaborator. This separation of
+//! concerns allows domain repositories to focus on business logic while
+//! delegating file I/O, serialization, and locking to this generic component.
+//!
+//! # Usage Patterns
+//!
+//! ## Pattern 1: Direct Usage (Simple Cases)
+//!
+//! For simple persistence needs, use the repository directly:
+//!
+//! ```rust,no_run
+//! use std::path::PathBuf;
+//! use std::time::Duration;
+//! use torrust_tracker_deploy::infrastructure::persistence::filesystem::json_file_repository::JsonFileRepository;
+//! use serde::{Deserialize, Serialize};
+//!
+//! #[derive(Serialize, Deserialize)]
+//! struct AppConfig {
+//!     host: String,
+//!     port: u16,
+//! }
+//!
+//! let repo = JsonFileRepository::new(Duration::from_secs(10));
+//! let config = AppConfig {
+//!     host: "localhost".to_string(),
+//!     port: 8080,
+//! };
+//!
+//! // Save configuration
+//! repo.save(&PathBuf::from("./config/app.json"), &config)?;
+//!
+//! // Load configuration
+//! let loaded_config: Option<AppConfig> = repo.load(&PathBuf::from("./config/app.json"))?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ## Pattern 2: Collaborator in Domain Repository (Recommended)
+//!
+//! For complex domain logic, wrap this repository in a domain-specific repository:
+//!
+//! ```rust,no_run
+//! use std::path::{Path, PathBuf};
+//! use std::time::Duration;
+//! use torrust_tracker_deploy::infrastructure::persistence::filesystem::json_file_repository::{
+//!     JsonFileRepository, JsonFileError
+//! };
+//! use serde::{Deserialize, Serialize};
+//!
+//! // Domain entity
+//! #[derive(Serialize, Deserialize)]
+//! struct UserProfile {
+//!     username: String,
+//!     email: String,
+//! }
+//!
+//! // Domain-specific error type
+//! #[derive(Debug, thiserror::Error)]
+//! enum UserProfileError {
+//!     #[error("User profile not found: {username}")]
+//!     NotFound { username: String },
+//!
+//!     #[error("User profile is locked by another process: {username}")]
+//!     Locked { username: String },
+//!
+//!     #[error("Failed to persist user profile: {0}")]
+//!     PersistenceError(#[from] JsonFileError),
+//! }
+//!
+//! // Domain repository wrapping generic repository
+//! struct UserProfileRepository {
+//!     file_repo: JsonFileRepository,
+//!     base_path: PathBuf,
+//! }
+//!
+//! impl UserProfileRepository {
+//!     pub fn new(base_path: PathBuf) -> Self {
+//!         Self {
+//!             file_repo: JsonFileRepository::new(Duration::from_secs(5)),
+//!             base_path,
+//!         }
+//!     }
+//!
+//!     fn user_file_path(&self, username: &str) -> PathBuf {
+//!         self.base_path.join(format!("{username}.json"))
+//!     }
+//!
+//!     pub fn save_profile(&self, profile: &UserProfile) -> Result<(), UserProfileError> {
+//!         let file_path = self.user_file_path(&profile.username);
+//!
+//!         // Delegate to generic repository
+//!         self.file_repo.save(&file_path, profile)
+//!             .map_err(|e| match e {
+//!                 JsonFileError::Conflict { .. } => UserProfileError::Locked {
+//!                     username: profile.username.clone(),
+//!                 },
+//!                 _ => UserProfileError::from(e),
+//!             })
+//!     }
+//!
+//!     pub fn load_profile(&self, username: &str) -> Result<UserProfile, UserProfileError> {
+//!         let file_path = self.user_file_path(username);
+//!
+//!         // Delegate to generic repository
+//!         self.file_repo.load(&file_path)
+//!             .map_err(UserProfileError::from)?
+//!             .ok_or_else(|| UserProfileError::NotFound {
+//!                 username: username.to_string(),
+//!             })
+//!     }
+//! }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 //!
 //! # File Structure
 //!
@@ -29,30 +142,24 @@
 //! Uses `FileLock` to prevent concurrent access. Lock files contain the process
 //! ID of the lock holder for debugging and stale lock detection.
 //!
-//! # Usage
+//! All operations (read and write) acquire locks to ensure consistency.
 //!
-//! ```rust,no_run
-//! use std::path::PathBuf;
-//! use std::time::Duration;
-//! use torrust_tracker_deploy::infrastructure::persistence::filesystem::json_file_repository::JsonFileRepository;
-//! use serde::{Deserialize, Serialize};
+//! # Error Handling
 //!
-//! #[derive(Serialize, Deserialize)]
-//! struct MyEntity {
-//!     id: String,
-//!     value: i32,
-//! }
+//! The repository uses a simplified error type with three categories:
 //!
-//! let repo = JsonFileRepository::new(Duration::from_secs(10));
-//! let entity = MyEntity { id: "test".to_string(), value: 42 };
+//! - `NotFound`: File doesn't exist (only used internally)
+//! - `Conflict`: File is locked by another process (timeout or held by another PID)
+//! - `Internal`: I/O errors, serialization errors, or unexpected failures
 //!
-//! // Save entity
-//! // repo.save(&PathBuf::from("./data/entity.json"), &entity)?;
+//! Domain-specific repositories should map these to their own error types
+//! with more context (see Pattern 2 example above).
 //!
-//! // Load entity
-//! // let loaded: Option<MyEntity> = repo.load(&PathBuf::from("./data/entity.json"))?;
-//! # Ok::<(), Box<dyn std::error::Error>>(())
-//! ```
+//! # Thread Safety
+//!
+//! The repository itself is thread-safe and can be shared across threads using `Arc`.
+//! File locking ensures that concurrent access from multiple threads or processes
+//! is handled correctly.
 
 use std::fs;
 use std::path::Path;
