@@ -792,21 +792,49 @@ mod tests {
 
     #[test]
     fn it_should_display_error_messages_correctly() {
+        // Test NotFound error - should be clear and include path
         let not_found = JsonFileError::NotFound {
             path: "/path/to/file.json".to_string(),
         };
-        assert!(not_found.to_string().contains("File not found"));
-        assert!(not_found.to_string().contains("/path/to/file.json"));
+        let message = not_found.to_string();
+        assert!(
+            message.contains("File not found"),
+            "Should clearly state the problem"
+        );
+        assert!(
+            message.contains("/path/to/file.json"),
+            "Should include the file path for context"
+        );
 
+        // Test Conflict error - should explain the conflict and include path
         let conflict = JsonFileError::Conflict {
             path: "/path/to/file.json".to_string(),
         };
-        assert!(conflict.to_string().contains("Lock conflict"));
-        assert!(conflict.to_string().contains("/path/to/file.json"));
+        let message = conflict.to_string();
+        assert!(
+            message.contains("Lock conflict"),
+            "Should clearly state lock issue"
+        );
+        assert!(
+            message.contains("another process"),
+            "Should explain the conflict source"
+        );
+        assert!(
+            message.contains("/path/to/file.json"),
+            "Should include the file path for context"
+        );
 
+        // Test Internal error - should preserve context
         let internal = JsonFileError::Internal(anyhow::anyhow!("test error"));
-        assert!(internal.to_string().contains("Internal error"));
-        assert!(internal.to_string().contains("test error"));
+        let message = internal.to_string();
+        assert!(
+            message.contains("Internal error"),
+            "Should indicate internal error category"
+        );
+        assert!(
+            message.contains("test error"),
+            "Should preserve the underlying error message"
+        );
     }
 
     #[test]
@@ -827,6 +855,54 @@ mod tests {
         assert!(
             chain_length >= 2,
             "Error chain should have at least 2 levels"
+        );
+    }
+
+    #[test]
+    fn it_should_preserve_full_error_context_chain_with_operation_context() {
+        // Create a realistic error chain simulating an atomic write failure
+        let io_error = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "access denied");
+        let anyhow_error = anyhow::Error::from(io_error)
+            .context("Failed to write to temporary file")
+            .context("Lock operation failed during 'save' for: /data/entity.json");
+        let json_error = JsonFileError::Internal(anyhow_error);
+
+        // Verify error chain is preserved and accessible
+        let mut source = json_error.source();
+        let mut chain_messages = Vec::new();
+
+        while let Some(err) = source {
+            chain_messages.push(err.to_string());
+            source = err.source();
+        }
+
+        // Should have multiple context levels
+        assert!(
+            chain_messages.len() >= 2,
+            "Error chain should preserve multiple context levels, found: {}",
+            chain_messages.len()
+        );
+
+        // Should preserve operation context (high-level)
+        assert!(
+            chain_messages
+                .iter()
+                .any(|m| m.contains("Lock operation failed during 'save'")),
+            "Should preserve operation context in error chain"
+        );
+
+        // Should preserve intermediate context
+        assert!(
+            chain_messages
+                .iter()
+                .any(|m| m.contains("Failed to write to temporary file")),
+            "Should preserve intermediate context in error chain"
+        );
+
+        // Should preserve root cause
+        assert!(
+            chain_messages.iter().any(|m| m.contains("access denied")),
+            "Should preserve root cause in error chain"
         );
     }
 }
