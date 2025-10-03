@@ -30,10 +30,10 @@ This document outlines a comprehensive refactoring plan for the file lock module
 | Phase                    | Proposals | Status         | Completion |
 | ------------------------ | --------- | -------------- | ---------- |
 | **Phase 1: Quick Wins**  | #1-4      | ✅ Completed   | 4/4        |
-| **Phase 2: Testability** | #5, #7    | ⏳ Not Started | 0/2        |
+| **Phase 2: Testability** | #5, #7    | 🚧 In Progress | 1/2        |
 | **Phase 3: Polish**      | #8-10     | ⏳ Not Started | 0/3        |
 | **Phase 4: Advanced**    | #11       | ⏳ Not Started | 0/1        |
-| **Total**                |           |                | **4/10**   |
+| **Total**                |           |                | **5/10**   |
 
 ### Legend
 
@@ -370,7 +370,7 @@ Medium-effort improvements that significantly enhance test quality and maintaina
 
 ### Proposal #5: Introduce `LockAcquisitionState` Enum
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P1  
@@ -472,12 +472,12 @@ fn it_should_detect_blocked_state_when_lock_held() {
 
 #### Implementation Checklist
 
-- [ ] Add `LockAcquisitionState` enum
-- [ ] Implement `check_lock_state()` test helper
-- [ ] Add unit tests for state detection
-- [ ] Consider refactoring `acquire()` to use states explicitly
-- [ ] Update documentation
-- [ ] Verify all tests pass
+- [x] Add `LockAcquisitionState` enum
+- [x] Implement `check_lock_state()` test helper
+- [x] Add unit tests for state detection
+- [ ] Consider refactoring `acquire()` to use states explicitly (future enhancement)
+- [x] Update documentation
+- [x] Verify all tests pass
 
 ---
 

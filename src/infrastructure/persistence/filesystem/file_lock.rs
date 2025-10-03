@@ -309,6 +309,38 @@ impl FileLock {
             }),
         }
     }
+
+    /// Get the current state of lock acquisition (test helper)
+    ///
+    /// This method checks the lock state without actually acquiring the lock or waiting.
+    /// It's primarily for testing to verify lock states in specific scenarios.
+    ///
+    /// # Note
+    ///
+    /// If the lock is available (Acquired state), this method briefly creates and
+    /// then immediately removes the lock file to verify availability.
+    #[cfg(test)]
+    #[must_use]
+    pub fn check_lock_state(file_path: &Path) -> LockAcquisitionState {
+        let lock_path = Self::lock_file_path(file_path);
+        let current_pid = ProcessId::current();
+
+        match Self::try_create_lock(&lock_path, current_pid) {
+            Ok(()) => {
+                // Clean up the lock file we just created for testing
+                drop(fs::remove_file(&lock_path));
+                LockAcquisitionState::Acquired
+            }
+            Err(FileLockError::LockHeldByProcess { pid }) => {
+                if pid.is_alive() {
+                    LockAcquisitionState::Blocked(pid)
+                } else {
+                    LockAcquisitionState::FoundStaleLock(pid)
+                }
+            }
+            Err(_) => LockAcquisitionState::Attempting,
+        }
+    }
 }
 
 impl Drop for FileLock {
@@ -394,6 +426,24 @@ enum AcquireAttemptResult {
     HeldByLiveProcess(ProcessId),
     /// I/O or other error occurred
     Error(FileLockError),
+}
+
+/// Represents the state of lock acquisition process
+///
+/// This enum makes the lock acquisition state machine explicit and testable.
+/// It's used primarily in tests to verify lock states without actually
+/// acquiring locks or waiting for timeouts.
+#[cfg(test)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum LockAcquisitionState {
+    /// Lock acquisition is being attempted
+    Attempting,
+    /// Found a lock held by a dead process (stale lock)
+    FoundStaleLock(ProcessId),
+    /// Lock is held by a live process
+    Blocked(ProcessId),
+    /// Lock was successfully acquired (or would be acquired)
+    Acquired,
 }
 
 /// Manages retry logic for lock acquisition
@@ -982,6 +1032,74 @@ mod tests {
             let input_path = Path::new(input);
             let lock_path = FileLock::lock_file_path(input_path);
             assert_eq!(lock_path.to_string_lossy(), expected);
+        }
+    }
+
+    // ========================================================================
+    // Lock State Detection - Tests for lock acquisition state machine
+    // ========================================================================
+
+    mod lock_state_detection {
+        use super::*;
+
+        #[test]
+        fn it_should_detect_acquired_state_when_no_lock_exists() {
+            // Arrange
+            let scenario = TestLockScenario::new().with_file_name("state_acquired.json");
+
+            // Act
+            let state = FileLock::check_lock_state(&scenario.file_path());
+
+            // Assert
+            assert_eq!(state, LockAcquisitionState::Acquired);
+        }
+
+        #[test]
+        fn it_should_detect_stale_lock_state() {
+            // Arrange
+            let scenario = TestLockScenario::new().with_file_name("state_stale.json");
+            scenario
+                .with_stale_lock(FAKE_DEAD_PROCESS_PID)
+                .expect("Failed to create stale lock file for state test");
+
+            // Act
+            let state = FileLock::check_lock_state(&scenario.file_path());
+
+            // Assert
+            assert_eq!(
+                state,
+                LockAcquisitionState::FoundStaleLock(ProcessId::from_raw(FAKE_DEAD_PROCESS_PID))
+            );
+        }
+
+        #[test]
+        fn it_should_detect_blocked_state_when_lock_held() {
+            // Arrange
+            let scenario = TestLockScenario::new().with_file_name("state_blocked.json");
+            let _lock = scenario
+                .acquire_lock()
+                .expect("Failed to acquire lock for state test");
+
+            // Act
+            let state = FileLock::check_lock_state(&scenario.file_path());
+
+            // Assert
+            assert_eq!(state, LockAcquisitionState::Blocked(ProcessId::current()));
+        }
+
+        #[test]
+        fn it_should_detect_attempting_state_on_error() {
+            // Arrange
+            let scenario = TestLockScenario::new().with_file_name("state_error.json");
+            scenario
+                .with_invalid_lock("invalid-pid-content")
+                .expect("Failed to create invalid lock file for state test");
+
+            // Act
+            let state = FileLock::check_lock_state(&scenario.file_path());
+
+            // Assert
+            assert_eq!(state, LockAcquisitionState::Attempting);
         }
     }
 }
