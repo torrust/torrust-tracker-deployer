@@ -32,3 +32,6 @@ pub mod e2e;
 pub mod infrastructure;
 pub mod logging;
 pub mod shared;
+
+#[cfg(test)]
+pub mod testing;

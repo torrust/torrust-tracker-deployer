@@ -342,15 +342,9 @@ impl JsonFileRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::{Deserialize, Serialize};
+    use crate::testing::fixtures::TestEntity;
     use std::error::Error as StdError;
     use tempfile::TempDir;
-
-    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-    struct TestEntity {
-        id: String,
-        value: i32,
-    }
 
     #[test]
     fn it_should_create_repository_with_custom_timeout() {
@@ -365,10 +359,7 @@ mod tests {
         let repo = JsonFileRepository::new(Duration::from_secs(10));
         let file_path = temp_dir.path().join("entity.json");
 
-        let entity = TestEntity {
-            id: "test-123".to_string(),
-            value: 42,
-        };
+        let entity = TestEntity::new("test-123", 42);
 
         // Save
         repo.save(&file_path, &entity).unwrap();
@@ -395,10 +386,7 @@ mod tests {
         let repo = JsonFileRepository::new(Duration::from_secs(10));
         let file_path = temp_dir.path().join("entity.json");
 
-        let entity = TestEntity {
-            id: "test".to_string(),
-            value: 100,
-        };
+        let entity = TestEntity::new("test", 100);
 
         // Before save
         assert!(!repo.exists(&file_path));
@@ -416,10 +404,7 @@ mod tests {
         let repo = JsonFileRepository::new(Duration::from_secs(10));
         let file_path = temp_dir.path().join("entity.json");
 
-        let entity = TestEntity {
-            id: "test".to_string(),
-            value: 100,
-        };
+        let entity = TestEntity::new("test", 100);
 
         // Save then delete
         repo.save(&file_path, &entity).unwrap();
@@ -449,10 +434,7 @@ mod tests {
             .join("deep")
             .join("entity.json");
 
-        let entity = TestEntity {
-            id: "test".to_string(),
-            value: 100,
-        };
+        let entity = TestEntity::new("test", 100);
 
         // Save should create nested directory structure
         repo.save(&file_path, &entity).unwrap();
@@ -467,14 +449,8 @@ mod tests {
         let repo = JsonFileRepository::new(Duration::from_secs(10));
         let file_path = temp_dir.path().join("entity.json");
 
-        let entity1 = TestEntity {
-            id: "first".to_string(),
-            value: 1,
-        };
-        let entity2 = TestEntity {
-            id: "second".to_string(),
-            value: 2,
-        };
+        let entity1 = TestEntity::new("first", 1);
+        let entity2 = TestEntity::new("second", 2);
 
         // Save first version
         repo.save(&file_path, &entity1).unwrap();
@@ -493,10 +469,7 @@ mod tests {
         let repo = JsonFileRepository::new(Duration::from_secs(10));
         let file_path = temp_dir.path().join("entity.json");
 
-        let entity = TestEntity {
-            id: "test".to_string(),
-            value: 100,
-        };
+        let entity = TestEntity::new("test", 100);
 
         // Save
         repo.save(&file_path, &entity).unwrap();
@@ -515,10 +488,7 @@ mod tests {
         let repo = JsonFileRepository::new(Duration::from_secs(10));
         let file_path = temp_dir.path().join("entity.json");
 
-        let entity = TestEntity {
-            id: "test".to_string(),
-            value: 100,
-        };
+        let entity = TestEntity::new("test", 100);
 
         // Save
         repo.save(&file_path, &entity).unwrap();
@@ -539,10 +509,7 @@ mod tests {
         let repo = JsonFileRepository::new(Duration::from_millis(100));
         let file_path = temp_dir.path().join("entity.json");
 
-        let entity = TestEntity {
-            id: "test".to_string(),
-            value: 100,
-        };
+        let entity = TestEntity::new("test", 100);
 
         // Save to create the file
         repo.save(&file_path, &entity).unwrap();
@@ -564,10 +531,7 @@ mod tests {
         let repo = JsonFileRepository::new(Duration::from_millis(50));
         let file_path = temp_dir.path().join("entity.json");
 
-        let entity = TestEntity {
-            id: "test".to_string(),
-            value: 100,
-        };
+        let entity = TestEntity::new("test", 100);
 
         // Save to create the file
         repo.save(&file_path, &entity).unwrap();
