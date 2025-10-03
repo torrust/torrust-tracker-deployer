@@ -271,19 +271,12 @@ impl JsonFileRepository {
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn save<T: Serialize>(&self, file_path: &Path, entity: &T) -> Result<(), JsonFileError> {
-        // Ensure parent directory exists
         Self::ensure_parent_dir(file_path)?;
 
-        // Acquire lock
-        let _lock = FileLock::acquire(file_path, self.lock_timeout)
-            .map_err(|e| Self::convert_lock_error(e, file_path, "save"))?;
+        let _lock = self.acquire_lock(file_path, "save")?;
 
-        // Serialize to JSON
-        let json_content = serde_json::to_string_pretty(entity)
-            .context("Failed to serialize entity to JSON")
-            .map_err(JsonFileError::Internal)?;
+        let json_content = Self::serialize_to_json(entity)?;
 
-        // Write atomically
         Self::write_atomic(file_path, &json_content)?;
 
         Ok(())
@@ -310,24 +303,15 @@ impl JsonFileRepository {
         &self,
         file_path: &Path,
     ) -> Result<Option<T>, JsonFileError> {
-        // Check if file exists
         if !file_path.exists() {
             return Ok(None);
         }
 
-        // Acquire lock for reading
-        let _lock = FileLock::acquire(file_path, self.lock_timeout)
-            .map_err(|e| Self::convert_lock_error(e, file_path, "load"))?;
+        let _lock = self.acquire_lock(file_path, "load")?;
 
-        // Read file content
-        let content = fs::read_to_string(file_path)
-            .with_context(|| format!("Failed to read file: {}", file_path.display()))
-            .map_err(JsonFileError::Internal)?;
+        let content = Self::read_file_content(file_path)?;
 
-        // Deserialize from JSON
-        let entity: T = serde_json::from_str(&content)
-            .with_context(|| format!("Failed to deserialize JSON from: {}", file_path.display()))
-            .map_err(JsonFileError::Internal)?;
+        let entity = Self::deserialize_from_json(&content, file_path)?;
 
         Ok(Some(entity))
         // Lock is automatically released when _lock goes out of scope
@@ -360,16 +344,12 @@ impl JsonFileRepository {
     /// Returns `JsonFileError::Conflict` if the file is locked by another process.
     /// Returns `JsonFileError::Internal` for I/O errors.
     pub fn delete(&self, file_path: &Path) -> Result<(), JsonFileError> {
-        // If file doesn't exist, operation is successful (idempotent)
         if !file_path.exists() {
             return Ok(());
         }
 
-        // Acquire lock before deletion
-        let _lock = FileLock::acquire(file_path, self.lock_timeout)
-            .map_err(|e| Self::convert_lock_error(e, file_path, "delete"))?;
+        let _lock = self.acquire_lock(file_path, "delete")?;
 
-        // Delete the file
         fs::remove_file(file_path)
             .with_context(|| format!("Failed to delete file: {}", file_path.display()))
             .map_err(JsonFileError::Internal)?;
@@ -431,6 +411,49 @@ impl JsonFileRepository {
                     file_path.display()
                 )
             })
+            .map_err(JsonFileError::Internal)
+    }
+
+    /// Acquire lock for file operation
+    ///
+    /// Acquires a file lock with timeout and converts lock errors to JSON file errors.
+    ///
+    /// # Arguments
+    ///
+    /// * `file_path` - Path to the file to lock
+    /// * `operation` - Description of the operation being performed (for error context)
+    fn acquire_lock(&self, file_path: &Path, operation: &str) -> Result<FileLock, JsonFileError> {
+        FileLock::acquire(file_path, self.lock_timeout)
+            .map_err(|e| Self::convert_lock_error(e, file_path, operation))
+    }
+
+    /// Serialize entity to JSON
+    ///
+    /// Converts an entity to a pretty-printed JSON string.
+    fn serialize_to_json<T: Serialize>(entity: &T) -> Result<String, JsonFileError> {
+        serde_json::to_string_pretty(entity)
+            .context("Failed to serialize entity to JSON")
+            .map_err(JsonFileError::Internal)
+    }
+
+    /// Read file content
+    ///
+    /// Reads the entire file content as a string.
+    fn read_file_content(file_path: &Path) -> Result<String, JsonFileError> {
+        fs::read_to_string(file_path)
+            .with_context(|| format!("Failed to read file: {}", file_path.display()))
+            .map_err(JsonFileError::Internal)
+    }
+
+    /// Deserialize from JSON
+    ///
+    /// Parses JSON content into the target entity type.
+    fn deserialize_from_json<T: for<'de> Deserialize<'de>>(
+        content: &str,
+        file_path: &Path,
+    ) -> Result<T, JsonFileError> {
+        serde_json::from_str(content)
+            .with_context(|| format!("Failed to deserialize JSON from: {}", file_path.display()))
             .map_err(JsonFileError::Internal)
     }
 
