@@ -4,6 +4,11 @@ Tracker Deploy - AI Assistant Instructions
 
 This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. It uses OpenTofu (Terraform), Ansible, and Rust to provision and manage deployment environments with LXD VM instances.
 
+### Architecture
+
+- **DDD Layers**: The codebase follows Domain-Driven Design with `domain/` (business logic), `application/` (use cases and commands), and `infrastructure/` (external integrations) layers.
+- **Three-Level Pattern**: Commands orchestrate Steps, which execute remote Actions - providing clear separation of concerns across deployment operations (see `docs/codebase-architecture.md`).
+
 ## 🏗️ Tech Stack
 
 - **Languages**: Rust, Shell scripts, YAML, TOML
@@ -14,13 +19,14 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 
 ## 📁 Key Directories
 
-- `src/` - Rust source code and binaries
-- `data/templates/` - Source template files for Ansible and OpenTofu
+- `src/` - Rust source code organized by DDD layers (`domain/`, `application/`, `infrastructure/`, `shared/`)
+- `src/bin/` - Binary executables (linter, E2E tests)
+- `data/` - Environment-specific data and source templates
 - `templates/` - Generated template examples and test fixtures
 - `build/` - Generated runtime configurations (git-ignored)
 - `docs/` - Project documentation
+- `docs/decisions/` - Architectural Decision Records (ADRs)
 - `scripts/` - Shell scripts for development tasks
-- `examples/` - Example configurations and usage patterns
 - `fixtures/` - Test data and keys for development
 - `packages/` - Rust workspace packages (linting tools)
 
@@ -43,6 +49,16 @@ The development of this application is guided by fundamental principles that ens
 - **User Friendliness**: All errors must be clear, informative, and solution-oriented
 - **Actionability**: The system must always tell users how to continue with detailed instructions
 
+**Code Quality Standards:**
+
+Both production and test code must be:
+
+- **Clean**: Well-structured with clear naming and minimal complexity
+- **Maintainable**: Easy to modify and extend without breaking existing functionality
+- **Sustainable**: Long-term viability with proper documentation and patterns
+- **Readable**: Clear intent that can be understood by other developers
+- **Testable**: Designed to support comprehensive testing at all levels
+
 These principles should guide all development decisions, code reviews, and feature implementations.
 
 ## 🔧 Essential Rules
@@ -60,14 +76,6 @@ These principles should guide all development decisions, code reviews, and featu
    ./scripts/pre-commit.sh
    ```
 
-   The script runs:
-
-   - `cargo machete` - Check for unused dependencies (MANDATORY)
-   - `cargo run --bin linter all` - Run linters (stable & nightly toolchains)
-   - `cargo test` - Run all tests
-   - `cargo doc --no-deps --bins --examples --workspace --all-features` - Test documentation builds
-   - `cargo run --bin e2e-tests-full` - Run comprehensive E2E tests
-
    This applies to **any** method of committing:
 
    - Terminal: `git add`, `git commit`, `git commit -am`, `cd ../ && git add ...`, `git add . && git commit -m "..."`
@@ -81,6 +89,8 @@ These principles should guide all development decisions, code reviews, and featu
 5. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](../docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
 
 6. **Understanding expected errors**: Read [`docs/contributing/known-issues.md`](../docs/contributing/known-issues.md) for known issues and expected behaviors. Some errors that appear red in E2E test output (like SSH host key warnings) are normal and expected - not actual failures.
+
+7. **Before making engineering decisions**: Document significant architectural or design decisions as Architectural Decision Records (ADRs) in `docs/decisions/`. Read [`docs/decisions/README.md`](../docs/decisions/README.md) for the ADR template and guidelines. This ensures decisions are properly documented with context, rationale, and consequences for future reference.
 
 ## 🧪 Build & Test
 
