@@ -35,59 +35,13 @@ use std::time::{Duration, Instant};
 use thiserror::Error;
 use tracing;
 
+use super::platform;
+
 /// Interval in milliseconds between lock acquisition retry attempts
 const LOCK_RETRY_INTERVAL_MS: u64 = 100;
 
 /// Duration to sleep between lock acquisition retry attempts
 const LOCK_RETRY_SLEEP: Duration = Duration::from_millis(LOCK_RETRY_INTERVAL_MS);
-
-// --- Platform-Specific Module ---
-
-/// Platform-specific functionality for process management
-///
-/// This module encapsulates platform-dependent code for checking process status.
-/// It provides a unified interface while implementing platform-specific details
-/// for Unix and Windows systems.
-mod platform {
-    use super::ProcessId;
-
-    /// Check if a process with the given PID is currently running
-    ///
-    /// Uses platform-specific methods:
-    /// - Unix: `kill -0` command (doesn't send signal, just checks permissions)
-    /// - Windows: `tasklist` command to query running processes
-    #[cfg(unix)]
-    pub fn is_process_alive(pid: ProcessId) -> bool {
-        // On Unix, we can send signal 0 to check if process exists
-        // This doesn't actually send a signal, just checks permissions
-        match std::process::Command::new("kill")
-            .arg("-0")
-            .arg(pid.as_u32().to_string())
-            .output()
-        {
-            Ok(output) => output.status.success(),
-            Err(_) => false,
-        }
-    }
-
-    /// Check if a process with the given PID is currently running
-    ///
-    /// Uses platform-specific methods:
-    /// - Unix: `kill -0` command (doesn't send signal, just checks permissions)
-    /// - Windows: `tasklist` command to query running processes
-    #[cfg(windows)]
-    pub fn is_process_alive(pid: ProcessId) -> bool {
-        // On Windows, try to query the process
-        std::process::Command::new("tasklist")
-            .arg("/FI")
-            .arg(format!("PID eq {}", pid.as_u32()))
-            .output()
-            .map(|output| {
-                String::from_utf8_lossy(&output.stdout).contains(&pid.as_u32().to_string())
-            })
-            .unwrap_or(false)
-    }
-}
 
 /// File locking mechanism with process ID tracking
 ///

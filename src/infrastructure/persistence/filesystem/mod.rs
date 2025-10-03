@@ -6,3 +6,4 @@
 pub mod file_environment_repository;
 pub mod file_lock;
 pub mod json_file_repository;
+mod platform;
