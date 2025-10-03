@@ -29,11 +29,11 @@ This document outlines a comprehensive refactoring plan for the file lock module
 
 | Phase                    | Proposals | Status         | Completion |
 | ------------------------ | --------- | -------------- | ---------- |
-| **Phase 1: Quick Wins**  | #1-4      | ⏳ Not Started | 0/4        |
+| **Phase 1: Quick Wins**  | #1-4      | 🚧 In Progress | 1/4        |
 | **Phase 2: Testability** | #5, #7    | ⏳ Not Started | 0/2        |
 | **Phase 3: Polish**      | #8-10     | ⏳ Not Started | 0/3        |
 | **Phase 4: Advanced**    | #11       | ⏳ Not Started | 0/1        |
-| **Total**                |           |                | **0/10**   |
+| **Total**                |           |                | **1/10**   |
 
 ### Legend
 
@@ -52,7 +52,7 @@ High-impact improvements with minimal effort. Can be completed in a single PR.
 
 ### Proposal #1: Extract Magic Numbers to Named Constants
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0
@@ -98,10 +98,10 @@ fn it_should_clean_up_stale_lock_with_invalid_pid() {
 
 #### Implementation Checklist
 
-- [ ] Add `FAKE_DEAD_PROCESS_PID` constant to test module
-- [ ] Replace all instances of `999_999_u32` in tests
-- [ ] Verify all tests pass
-- [ ] Run linters
+- [x] Add `FAKE_DEAD_PROCESS_PID` constant to test module
+- [x] Replace all instances of `999_999_u32` in tests
+- [x] Verify all tests pass
+- [x] Run linters
 
 ---
 

@@ -520,6 +520,10 @@ mod tests {
     use std::thread;
     use tempfile::TempDir;
 
+    /// PID value that is highly unlikely to be a running process
+    /// Used in tests to simulate stale locks from dead processes
+    const FAKE_DEAD_PROCESS_PID: u32 = 999_999;
+
     // Test helper to create a temp file path
     fn create_temp_file_path(temp_dir: &TempDir, name: &str) -> PathBuf {
         temp_dir.path().join(name)
@@ -748,7 +752,7 @@ mod tests {
             let lock_file_path = FileLock::lock_file_path(&file_path);
 
             // Create a lock file with a (hopefully) non-existent PID
-            let fake_pid = 999_999_u32;
+            let fake_pid = FAKE_DEAD_PROCESS_PID;
             fs::write(&lock_file_path, fake_pid.to_string()).unwrap();
 
             // Act: Try to acquire lock - should detect stale lock and succeed
