@@ -105,7 +105,6 @@ impl ProcessId {
     /// Check if this process is currently alive
     ///
     /// Uses platform-specific methods to check if the process exists.
-    /// See [`platform`](super::platform) module for implementation details.
     ///
     /// # Examples
     ///
