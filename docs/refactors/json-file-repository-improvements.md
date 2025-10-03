@@ -39,10 +39,10 @@ This document outlines a comprehensive refactoring plan for the JSON file reposi
 | Phase                          | Proposals | Status         | Completion |
 | ------------------------------ | --------- | -------------- | ---------- |
 | **Phase 1: Quick Wins**        | #1-3      | ✅ Completed   | 3/3        |
-| **Phase 2: Test Organization** | #4-6      | 🚧 In Progress | 1/3        |
+| **Phase 2: Test Organization** | #4-6      | 🚧 In Progress | 2/3        |
 | **Phase 3: Error Enhancement** | #7-8      | ⏳ Not Started | 0/2        |
 | **Phase 4: Documentation**     | #9        | ⏳ Not Started | 0/1        |
-| **Total**                      |           |                | **4/9**    |
+| **Total**                      |           |                | **5/9**    |
 
 ### Legend
 
@@ -588,7 +588,7 @@ No unused dependencies (cargo machete clean)
 
 ### Proposal #5: Extract Test Assertion Helpers
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢 Medium-High  
 **Effort**: 🔵 Low  
 **Priority**: P1
@@ -734,11 +734,69 @@ fn it_should_return_conflict_error_on_lock_timeout() {
 
 #### Implementation Checklist
 
-- [ ] Create assertion helper functions
-- [ ] Add comprehensive documentation with examples
-- [ ] Refactor existing tests to use helpers
-- [ ] Verify all tests pass
-- [ ] Run linters
+- [x] Create assertion helper functions
+- [x] Add comprehensive documentation with examples
+- [x] Refactor existing tests to use helpers
+- [x] Verify all tests pass
+- [x] Run linters
+
+#### Implementation Notes
+
+**Completed**: October 3, 2025
+
+Created four assertion helper functions with comprehensive documentation:
+
+**Assertion Helpers Implemented**:
+
+1. **`assert_atomic_write_completed(file_path)`** - Verifies atomic write completion
+
+   - Checks temporary file is cleaned up
+   - Verifies target file exists
+   - Provides detailed panic messages with file paths
+
+2. **`assert_json_structure_valid<T>(file_path)`** - Validates JSON file structure
+
+   - Reads and parses file as JSON
+   - Verifies deserialization to expected type `T`
+   - Returns parsed JSON value for additional field-level assertions
+   - Used in `it_should_preserve_json_structure` test
+
+3. **`assert_is_conflict_error(result)`** - Verifies lock conflict errors
+
+   - Generic over result type with `Debug` bound
+   - Pattern matches on `JsonFileError::Conflict` variant
+   - Used in both concurrency tests (`it_should_handle_concurrent_access_with_locking` and `it_should_return_conflict_error_on_lock_timeout`)
+
+4. **`assert_is_internal_error(result)`** - Verifies internal errors
+   - Generic over result type with `Debug` bound
+   - Pattern matches on `JsonFileError::Internal` variant
+   - Marked as `#[allow(dead_code)]` for future use
+
+**Tests Refactored** (4 tests now use assertion helpers):
+
+- `it_should_use_atomic_writes` - Now uses `assert_atomic_write_completed()`, reducing from 8 lines to 3 lines in the assertion section
+- `it_should_preserve_json_structure` - Now uses `assert_json_structure_valid()`, cleaner field-level assertions
+- `it_should_handle_concurrent_access_with_locking` - Now uses `assert_is_conflict_error()`, reduced from 3 lines to 1 line
+- `it_should_return_conflict_error_on_lock_timeout` - Now uses `assert_is_conflict_error()`, consistent error checking
+
+**Benefits Realized**:
+
+- ✅ Reduced test assertion boilerplate by ~60% in refactored tests
+- ✅ More expressive and self-documenting assertions
+- ✅ Consistent error checking across tests
+- ✅ Better error messages when assertions fail (includes context like file paths)
+- ✅ Reusable assertion logic that can be used in future tests
+
+**Technical Details**:
+
+- All helpers have comprehensive rustdoc documentation with usage examples
+- Generic helpers require `Debug` bound for `expect_err()` usage
+- `assert_is_internal_error` reserved for future use (currently unused but provides API surface)
+- Assertion helpers located at test module level for easy access by all tests
+
+All 690 tests pass successfully
+All linters pass (markdown, yaml, toml, cspell, clippy, rustfmt, shellcheck)
+No unused dependencies (cargo machete clean)
 
 ---
 

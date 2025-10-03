@@ -452,6 +452,108 @@ mod tests {
         }
     }
 
+    // Test Assertion Helpers
+    // These functions provide reusable assertions for common test patterns,
+    // improving test readability and reducing duplication.
+
+    /// Assert that the temporary file was cleaned up and target file exists after atomic write
+    ///
+    /// This verifies the atomic write operation completed successfully by checking:
+    /// - Temporary file (*.json.tmp) no longer exists
+    /// - Target file exists at the expected location
+    ///
+    /// # Panics
+    ///
+    /// Panics if either assertion fails, indicating incomplete atomic write
+    fn assert_atomic_write_completed(file_path: &Path) {
+        let temp_file = file_path.with_extension(JsonFileRepository::TEMP_FILE_EXTENSION);
+        assert!(
+            !temp_file.exists(),
+            "Temporary file should be cleaned up after atomic write: {temp_file:?}"
+        );
+        assert!(
+            file_path.exists(),
+            "Target file should exist after atomic write: {file_path:?}"
+        );
+    }
+
+    /// Assert that file contains valid JSON with expected structure
+    ///
+    /// This function:
+    /// 1. Reads the file content as a string
+    /// 2. Parses it as JSON to verify syntax
+    /// 3. Deserializes to the expected type to verify structure
+    /// 4. Returns the parsed JSON value for further assertions
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The expected entity type that the JSON should deserialize to
+    ///
+    /// # Returns
+    ///
+    /// The parsed JSON value for additional field-level assertions
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    /// - File cannot be read
+    /// - Content is not valid JSON
+    /// - JSON cannot be deserialized to type `T`
+    fn assert_json_structure_valid<T: for<'de> Deserialize<'de>>(
+        file_path: &Path,
+    ) -> serde_json::Value {
+        let json_content = fs::read_to_string(file_path).expect("Should be able to read JSON file");
+
+        // Verify it's valid JSON
+        let parsed: serde_json::Value =
+            serde_json::from_str(&json_content).expect("File should contain valid JSON");
+
+        // Verify it can be deserialized to expected type
+        let _typed: T = serde_json::from_value(parsed.clone())
+            .expect("JSON should deserialize to expected type");
+
+        parsed
+    }
+
+    /// Assert that the result is a conflict error (lock timeout or held by another process)
+    ///
+    /// This is used to verify that file locking is working correctly when
+    /// multiple processes or threads attempt to access the same file.
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    /// - Result is Ok (expected an error)
+    /// - Error is not a `JsonFileError::Conflict` variant
+    fn assert_is_conflict_error<T: std::fmt::Debug>(result: Result<T, JsonFileError>) {
+        assert!(result.is_err(), "Expected conflict error, got Ok result");
+        let err = result.expect_err("Already verified result is Err");
+        assert!(
+            matches!(err, JsonFileError::Conflict { .. }),
+            "Expected Conflict error, got: {err:?}"
+        );
+    }
+
+    /// Assert that the result is an internal error
+    ///
+    /// This is used to verify error handling for unexpected failures like
+    /// I/O errors, serialization errors, or other system-level issues.
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    /// - Result is Ok (expected an error)
+    /// - Error is not a `JsonFileError::Internal` variant
+    #[allow(dead_code)]
+    fn assert_is_internal_error<T: std::fmt::Debug>(result: Result<T, JsonFileError>) {
+        assert!(result.is_err(), "Expected internal error, got Ok result");
+        let err = result.expect_err("Already verified result is Err");
+        assert!(
+            matches!(err, JsonFileError::Internal(_)),
+            "Expected Internal error, got: {err:?}"
+        );
+    }
+
     #[test]
     fn it_should_create_repository_with_custom_timeout() {
         let timeout = Duration::from_secs(30);
@@ -592,13 +694,8 @@ mod tests {
             .save(&entity)
             .expect("Failed to save entity to file");
 
-        // Assert - Verify no temporary file exists after save
-        let file_path = scenario.file_path();
-        let temp_file = file_path.with_extension(JsonFileRepository::TEMP_FILE_EXTENSION);
-        assert!(!temp_file.exists());
-
-        // Assert - Verify target file exists
-        assert!(file_path.exists());
+        // Assert
+        assert_atomic_write_completed(&scenario.file_path());
     }
 
     #[test]
@@ -612,16 +709,11 @@ mod tests {
             .save(&entity)
             .expect("Failed to save entity to file");
 
-        // Assert - Read raw JSON
-        let file_path = scenario.file_path();
-        let json_content = fs::read_to_string(&file_path).expect("Failed to read JSON file");
-
-        // Assert - Verify it's valid JSON and has expected structure
-        let parsed: serde_json::Value =
-            serde_json::from_str(&json_content).expect("Failed to parse JSON content");
-        assert!(parsed.is_object());
-        assert_eq!(parsed["id"], "test");
-        assert_eq!(parsed["value"], 100);
+        // Assert
+        let json = assert_json_structure_valid::<TestEntity>(&scenario.file_path());
+        assert!(json.is_object());
+        assert_eq!(json["id"], "test");
+        assert_eq!(json["value"], 100);
     }
 
     #[test]
@@ -642,9 +734,7 @@ mod tests {
         let result: Result<Option<TestEntity>, JsonFileError> = scenario.load();
 
         // Assert
-        assert!(result.is_err());
-        let err = result.expect_err("Expected conflict error");
-        assert!(matches!(err, JsonFileError::Conflict { .. }));
+        assert_is_conflict_error(result);
     }
 
     #[test]
@@ -665,11 +755,7 @@ mod tests {
         let result = scenario.save(&entity);
 
         // Assert
-        assert!(result.is_err());
-        assert!(matches!(
-            result.expect_err("Expected conflict error"),
-            JsonFileError::Conflict { .. }
-        ));
+        assert_is_conflict_error(result);
     }
 
     #[test]
