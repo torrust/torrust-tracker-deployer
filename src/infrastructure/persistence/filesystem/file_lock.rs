@@ -574,11 +574,6 @@ mod tests {
     /// Used in tests to simulate stale locks from dead processes
     const FAKE_DEAD_PROCESS_PID: u32 = 999_999;
 
-    // Test helper to create a temp file path
-    fn create_temp_file_path(temp_dir: &TempDir, name: &str) -> PathBuf {
-        temp_dir.path().join(name)
-    }
-
     /// Test helper to verify that a lock file exists and contains the current process ID
     fn assert_lock_file_contains_current_pid(file_path: &Path) {
         assert_lock_file_exists(file_path);
@@ -840,8 +835,8 @@ mod tests {
         #[test]
         fn it_should_handle_concurrent_acquisitions_with_threads() {
             // Arrange
-            let temp_dir = TempDir::new().expect("Failed to create temp dir for thread test");
-            let file_path = create_temp_file_path(&temp_dir, "thread_test.json");
+            let scenario = TestLockScenario::for_success_test().with_file_name("thread_test.json");
+            let file_path = scenario.file_path();
             let file_path_clone = file_path.clone();
 
             // Act: Try to acquire lock from two threads

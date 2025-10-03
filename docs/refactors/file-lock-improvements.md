@@ -30,10 +30,10 @@ This document outlines a comprehensive refactoring plan for the file lock module
 | Phase                    | Proposals | Status         | Completion |
 | ------------------------ | --------- | -------------- | ---------- |
 | **Phase 1: Quick Wins**  | #1-4      | ✅ Completed   | 4/4        |
-| **Phase 2: Testability** | #5, #7    | 🚧 In Progress | 1/2        |
+| **Phase 2: Testability** | #5, #7    | ✅ Completed   | 2/2        |
 | **Phase 3: Polish**      | #8-10     | ⏳ Not Started | 0/3        |
 | **Phase 4: Advanced**    | #11       | ⏳ Not Started | 0/1        |
-| **Total**                |           |                | **5/10**   |
+| **Total**                |           |                | **6/10**   |
 
 ### Legend
 
@@ -629,11 +629,13 @@ fn it_should_handle_process_state_changes() {
 
 ### Proposal #7: Consolidate Duplicate Test Setup Code
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢 Medium  
 **Effort**: 🔵🔵 Low-Medium  
 **Priority**: P1  
 **Depends On**: Proposal #3 (shares similar goals)
+
+**Note**: This proposal was completed through Proposal #3's TestLockScenario builder pattern, which provides a superior solution to the originally proposed fixture functions. All tests now consistently use the builder pattern for setup.
 
 #### Problem
 
@@ -732,12 +734,12 @@ fn it_should_clean_up_stale_lock_with_invalid_pid() {
 
 #### Implementation Checklist
 
-- [ ] Create `test_fixtures` module
-- [ ] Implement setup functions
-- [ ] Refactor existing tests to use fixtures
-- [ ] Verify all tests pass
-- [ ] Document fixture patterns in testing conventions
-- [ ] Consider coordination with Proposal #3
+- [x] Create reusable test setup (via TestLockScenario builder in Proposal #3)
+- [x] Implement setup methods (builder pattern with fluent API)
+- [x] Refactor existing tests to use consistent pattern
+- [x] Remove unused helper functions (create_temp_file_path)
+- [x] Verify all tests pass
+- [x] Document builder pattern in test module comments
 
 ---
 
