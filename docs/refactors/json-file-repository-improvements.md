@@ -40,9 +40,9 @@ This document outlines a comprehensive refactoring plan for the JSON file reposi
 | ------------------------------ | --------- | -------------- | ---------- |
 | **Phase 1: Quick Wins**        | #1-3      | ✅ Completed   | 3/3        |
 | **Phase 2: Test Organization** | #4-6      | ✅ Completed   | 3/3        |
-| **Phase 3: Error Enhancement** | #7-8      | ⏳ Not Started | 0/2        |
+| **Phase 3: Error Enhancement** | #7-8      | 🚧 In Progress | 1/2        |
 | **Phase 4: Documentation**     | #9        | ⏳ Not Started | 0/1        |
-| **Total**                      |           |                | **6/9**    |
+| **Total**                      |           |                | **7/9**    |
 
 ### Legend
 
@@ -965,7 +965,7 @@ Improve error handling and error messages.
 
 ### Proposal #7: Add Context to Error Conversion
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢 Medium  
 **Effort**: 🔵 Low  
 **Priority**: P2
@@ -1050,11 +1050,49 @@ pub fn save<T: Serialize>(&self, file_path: &Path, entity: &T) -> Result<(), Jso
 
 #### Implementation Checklist
 
-- [ ] Add `operation` parameter to `convert_lock_error`
-- [ ] Update all calls to `convert_lock_error` with appropriate operation names
-- [ ] Update tests that check error messages
-- [ ] Verify error messages are clear and informative
-- [ ] Run linters
+- [x] Add `operation` parameter to `convert_lock_error`
+- [x] Update all calls to `convert_lock_error` with appropriate operation names
+- [x] Update tests that check error messages
+- [x] Verify error messages are clear and informative
+- [x] Run linters
+
+#### Implementation Notes
+
+**Completed**: October 3, 2025
+
+Successfully enhanced error messages by adding operation context to `convert_lock_error` method:
+
+**Changes Made**:
+
+1. **Updated `convert_lock_error` method signature**:
+
+   - Added `operation: &str` parameter to provide context about which operation triggered the lock error
+   - Enhanced documentation with parameter descriptions and usage examples
+   - Updated error message format from `"Lock operation failed for: {path}"` to `"Lock operation failed during '{operation}' for: {path}"`
+
+2. **Updated all three method calls**:
+   - `save()`: `.map_err(|e| Self::convert_lock_error(e, file_path, "save"))?`
+   - `load()`: `.map_err(|e| Self::convert_lock_error(e, file_path, "load"))?`
+   - `delete()`: `.map_err(|e| Self::convert_lock_error(e, file_path, "delete"))?`
+
+**Benefits Realized**:
+
+- ✅ Error messages now include specific operation context (save, load, or delete)
+- ✅ Improved debugging experience - immediately know which operation failed
+- ✅ Aligns with project's observability principles
+- ✅ Better traceability for error diagnosis
+- ✅ No impact on existing tests - all tests still pass
+
+**Example Error Messages**:
+
+Before: `"Lock operation failed for: /path/to/file.json"`  
+After: `"Lock operation failed during 'save' for: /path/to/file.json"`
+
+This small change significantly improves error message quality by providing immediate context about what operation was being performed when the error occurred.
+
+All 693 tests pass successfully
+All linters pass (markdown, yaml, toml, cspell, clippy, rustfmt, shellcheck)
+No unused dependencies (cargo machete clean)
 
 ---
 

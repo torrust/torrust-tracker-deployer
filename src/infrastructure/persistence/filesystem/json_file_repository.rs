@@ -169,7 +169,7 @@ impl JsonFileRepository {
 
         // Acquire lock
         let _lock = FileLock::acquire(file_path, self.lock_timeout)
-            .map_err(|e| Self::convert_lock_error(e, file_path))?;
+            .map_err(|e| Self::convert_lock_error(e, file_path, "save"))?;
 
         // Serialize to JSON
         let json_content = serde_json::to_string_pretty(entity)
@@ -210,7 +210,7 @@ impl JsonFileRepository {
 
         // Acquire lock for reading
         let _lock = FileLock::acquire(file_path, self.lock_timeout)
-            .map_err(|e| Self::convert_lock_error(e, file_path))?;
+            .map_err(|e| Self::convert_lock_error(e, file_path, "load"))?;
 
         // Read file content
         let content = fs::read_to_string(file_path)
@@ -260,7 +260,7 @@ impl JsonFileRepository {
 
         // Acquire lock before deletion
         let _lock = FileLock::acquire(file_path, self.lock_timeout)
-            .map_err(|e| Self::convert_lock_error(e, file_path))?;
+            .map_err(|e| Self::convert_lock_error(e, file_path, "delete"))?;
 
         // Delete the file
         fs::remove_file(file_path)
@@ -327,11 +327,28 @@ impl JsonFileRepository {
             .map_err(JsonFileError::Internal)
     }
 
-    /// Convert `FileLockError` to `JsonFileError`
+    /// Convert `FileLockError` to `JsonFileError` with operation context
     ///
     /// Lock acquisition timeouts are mapped to `Conflict` errors, while other
-    /// lock errors are wrapped in `Internal`.
-    fn convert_lock_error(error: FileLockError, file_path: &Path) -> JsonFileError {
+    /// lock errors are wrapped in `Internal` with operation context.
+    ///
+    /// # Arguments
+    ///
+    /// * `error` - The lock error to convert
+    /// * `file_path` - Path to the file being locked
+    /// * `operation` - Description of the operation being performed (e.g., "save", "load", "delete")
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// let _lock = FileLock::acquire(file_path, self.lock_timeout)
+    ///     .map_err(|e| Self::convert_lock_error(e, file_path, "save"))?;
+    /// ```
+    fn convert_lock_error(
+        error: FileLockError,
+        file_path: &Path,
+        operation: &str,
+    ) -> JsonFileError {
         match error {
             FileLockError::AcquisitionTimeout { .. } | FileLockError::LockHeldByProcess { .. } => {
                 JsonFileError::Conflict {
@@ -339,7 +356,8 @@ impl JsonFileRepository {
                 }
             }
             _ => JsonFileError::Internal(anyhow::Error::from(error).context(format!(
-                "Lock operation failed for: {}",
+                "Lock operation failed during '{}' for: {}",
+                operation,
                 file_path.display()
             ))),
         }
