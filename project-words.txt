@@ -36,6 +36,7 @@ exitcode
 getent
 Gossman
 Hostnames
+hotfixes
 htdocs
 hugepages
 impls
@@ -51,6 +52,8 @@ maxbytes
 mgmt
 millis
 mocksecret
+multiprocess
+nocapture
 MVVM
 myapp
 myenv
@@ -72,6 +75,7 @@ parseable
 passwordless
 pathbuf
 pidfile
+pids
 pipefail
 prereq
 println
