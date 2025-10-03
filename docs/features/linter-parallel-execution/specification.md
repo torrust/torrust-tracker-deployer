@@ -358,11 +358,130 @@ If/when this feature is implemented:
 - [Development Principles](../../development-principles.md)
 - [Linting Guide](../../contributing/linting.md)
 
-## 📊 Priority
+## � Alternative Approach: Process-Level Parallelization
+
+### Discovery: Existing CLI Support
+
+The linter binary already supports running individual linter types via command-line arguments:
+
+```bash
+cargo run --bin linter markdown
+cargo run --bin linter yaml
+cargo run --bin linter toml
+cargo run --bin linter clippy
+cargo run --bin linter rustfmt
+cargo run --bin linter shellcheck
+cargo run --bin linter cspell
+```
+
+This enables **process-level parallelization** without any code changes - simply run multiple linter processes concurrently using shell job control.
+
+### Implementation: Shell Script
+
+**Location**: `scripts/lint-parallel.sh`
+
+**Approach**:
+
+```bash
+#!/bin/bash
+
+# Build once in release mode for better performance
+cargo build --release --bin linter --quiet
+LINTER_BIN="./target/release/linter"
+
+# Group 1: Run linters in parallel (different file types)
+"$LINTER_BIN" markdown &
+"$LINTER_BIN" yaml &
+"$LINTER_BIN" toml &
+"$LINTER_BIN" shellcheck &
+"$LINTER_BIN" rustfmt &
+wait
+
+# Group 2: Run clippy sequentially
+"$LINTER_BIN" clippy
+
+# Separate: Run cspell (read-only)
+"$LINTER_BIN" cspell
+```
+
+### Performance Comparison
+
+**Sequential execution** (`cargo run --bin linter all`):
+
+- Total time: ~15 seconds
+- Output: Clean, grouped by linter
+- All errors displayed in logical order
+
+**Process-level parallel execution** (`./scripts/lint-parallel.sh`):
+
+- Total time: ~14 seconds (7% faster)
+- Output: May be interleaved from concurrent processes
+- Limited improvement because clippy dominates (~12s out of 15s)
+
+### Why Minimal Performance Gain?
+
+**Execution time breakdown**:
+
+- clippy: ~12s (80% of total time) - runs sequentially
+- markdown: ~1s
+- yaml: ~0.15s
+- toml: ~0.07s
+- rustfmt: ~0.2s
+- shellcheck: ~0.03s
+- cspell: ~1.6s
+
+**Analysis**: Clippy dominates execution time, so parallelizing the other fast linters (~3s combined) only saves ~1 second.
+
+**Theoretical maximum speedup**: Even if all non-clippy linters ran instantly, total time would be ~12s (clippy) + ~0s (others) = ~12s, only ~3s improvement from current 15s.
+
+### Trade-offs: Process-Level vs Code-Level Parallelization
+
+| Aspect               | Process-Level (Shell Script) | Code-Level (Async Refactor)           |
+| -------------------- | ---------------------------- | ------------------------------------- |
+| **Implementation**   | ✅ Simple shell script       | ❌ Complex async refactoring          |
+| **Code changes**     | ✅ None required             | ❌ All 7 linters need refactoring     |
+| **Performance gain** | ⚠️ Minimal (~1s, 7%)         | ⚠️ Similar (~1-2s at best)            |
+| **Output quality**   | ❌ May be interleaved        | ✅ Clean, sequential display          |
+| **Error handling**   | ❌ Basic process exit codes  | ✅ Rich error aggregation             |
+| **Maintenance**      | ✅ Easy to modify            | ❌ More complex to maintain           |
+| **Testing**          | ✅ Simple to test            | ❌ Requires async test infrastructure |
+| **Dependencies**     | ✅ None                      | ❌ Adds tokio/async runtime           |
+
+### Recommendation
+
+**Use sequential execution** (`cargo run --bin linter all`) because:
+
+1. **Clean output**: Errors are grouped by linter and easy to read
+2. **Minimal speedup**: Process-level parallelization only saves ~1s (7%)
+3. **Simplicity**: No additional scripts or complexity needed
+4. **Maintenance**: One less thing to maintain
+
+**When to use process-level parallelization**:
+
+- Never recommended for regular development workflow
+- Could be useful for CI/CD if every second counts (but 1s is negligible)
+- Better to wait for more linters to be added (if ever) before optimizing
+
+**When to implement code-level parallelization**:
+
+- Execution time exceeds 25 seconds (more linters added)
+- Clippy execution time is significantly reduced
+- Auto-fix feature makes linting much slower
+
+### Conclusion
+
+The discovery that process-level parallelization is already possible **confirms the initial decision** to defer implementation:
+
+- ✅ Minimal performance gain even with perfect parallelization
+- ✅ Clean sequential output is more valuable than 1s speedup
+- ✅ No compelling reason to add complexity
+- ✅ YAGNI principle applies - implement only if truly needed
+
+## �📊 Priority
 
 **Priority**: Low (Future Enhancement)
 
-**Reason**: Current performance is acceptable. Focus on higher-value features first (like auto-fix).
+**Reason**: Current performance (15s) is acceptable. Process-level parallelization available but provides minimal benefit (1s). Focus on higher-value features first (like auto-fix).
 
 **Decision**: Defer implementation until there's clear evidence it's needed.
 

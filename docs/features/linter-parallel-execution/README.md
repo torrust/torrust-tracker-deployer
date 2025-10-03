@@ -36,7 +36,46 @@ Clarifying questions for implementation (if feature is prioritized in the future
 
 **Status**: **Deferred** - Not a priority for initial implementation
 
-**Reason**: Current performance (13s) is acceptable for pre-commit workflow. Implementation complexity outweighs performance gains.
+**Reason**: Current performance (15s) is acceptable for pre-commit workflow. Implementation complexity outweighs minimal performance gains.
+
+**Reconsider when**: Execution time exceeds **25 seconds** (more linters added) or auto-fix feature makes it too slow.
+
+## ✅ Alternative: Process-Level Parallelization (Already Possible)
+
+**Discovery**: The linter binary already supports running individual linter types via command-line arguments, which enables **process-level parallelization** without code changes.
+
+**Script Location**: `scripts/lint-parallel.sh`
+
+**How it works**:
+
+```bash
+# Run individual linters in parallel processes
+./target/release/linter markdown &
+./target/release/linter yaml &
+./target/release/linter toml &
+./target/release/linter shellcheck &
+./target/release/linter rustfmt &
+wait
+
+# Run clippy sequentially (may conflict with rustfmt)
+./target/release/linter clippy
+
+# Run cspell separately (read-only)
+./target/release/linter cspell
+```
+
+**Performance**: ~14s (vs 15s sequential) - minimal improvement due to clippy dominating execution time (~12s)
+
+**Trade-offs**:
+
+- ✅ No code changes required
+- ✅ Simple shell script implementation
+- ✅ Easy to adjust grouping strategy
+- ❌ Output may be interleaved (less readable)
+- ❌ Minimal performance gain (~1s) since clippy dominates
+- ❌ Less control over error aggregation and reporting
+
+**Recommendation**: Use sequential execution (`cargo run --bin linter all`) for clean output. Process-level parallelization provides minimal benefit and potentially confusing output.
 
 **Reconsider when**: Execution time exceeds **25 seconds** (more linters added) or auto-fix feature makes it too slow.
 

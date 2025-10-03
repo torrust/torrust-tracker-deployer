@@ -70,6 +70,24 @@ cargo run --bin linter shellcheck
 ./scripts/linting/shellcheck.sh
 ```
 
+### Parallel Execution (Experimental)
+
+For scenarios where you want to run linters concurrently:
+
+```bash
+# Run linters in parallel using process-level parallelization
+./scripts/lint-parallel.sh
+```
+
+**Note**: Parallel execution provides minimal performance improvement (~1s, 7% faster) and may produce interleaved output. Sequential execution is recommended for regular development.
+
+**When to use**:
+
+- ✅ CI/CD pipelines where every second counts
+- ❌ Regular development (use sequential for clean output)
+
+See [Linter Parallel Execution Feature](../features/linter-parallel-execution/README.md) for detailed analysis and trade-offs.
+
 ## 📋 Tool-Specific Guidelines
 
 ### Markdown Linting (`markdownlint-cli`)
@@ -352,10 +370,25 @@ rustup component add clippy rustfmt
 
 ```bash
 # Run specific linters for faster feedback during development
-cargo run --bin linter markdown    # Only markdown (fastest)
-cargo run --bin linter yaml        # Only YAML files
-cargo run --bin linter clippy      # Only Rust analysis (slowest)
+cargo run --bin linter markdown    # Only markdown (~1s)
+cargo run --bin linter yaml        # Only YAML files (~0.2s)
+cargo run --bin linter clippy      # Only Rust analysis (~12s - slowest)
+
+# Run non-Rust linters for quick checks
+cargo run --bin linter markdown
+cargo run --bin linter yaml
+cargo run --bin linter toml
+# Skip clippy for faster iteration during active development
 ```
+
+**Parallel execution** is also possible but provides minimal benefit:
+
+```bash
+# Process-level parallelization (experimental, ~1s faster)
+./scripts/lint-parallel.sh
+```
+
+Note: Parallel execution trades clean output for minimal speed gain. Use sequential execution for regular development.
 
 ## 🚨 Troubleshooting
 
