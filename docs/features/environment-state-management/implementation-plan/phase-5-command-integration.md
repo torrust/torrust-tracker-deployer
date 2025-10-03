@@ -36,7 +36,9 @@
 
 ## 📋 Implementation Subtasks
 
-### Subtask 1: Preparatory Refactoring
+### Subtask 1: Preparatory Refactoring ✅ COMPLETED
+
+**Status**: ✅ Completed (Commit: ff80d7d)
 
 **Purpose**: Clean up and restructure commands to make Phase 5 implementation easier and safer.
 
@@ -134,7 +136,9 @@ impl Container {
 
 ---
 
-### Subtask 2: Document Architectural Decision (ADR)
+### Subtask 2: Document Architectural Decision (ADR) ✅ COMPLETED
+
+**Status**: ✅ Completed (Commit: TBD - pending commit)
 
 **Purpose**: Document the architectural decision to use typed state returns in commands instead of the pure command handler pattern.
 
