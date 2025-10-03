@@ -108,6 +108,13 @@ pub struct JsonFileRepository {
 }
 
 impl JsonFileRepository {
+    /// Temporary file extension used during atomic writes
+    ///
+    /// This extension is appended to the target file path when creating
+    /// temporary files for atomic write operations. After the write is
+    /// complete, the temporary file is atomically renamed to the target path.
+    const TEMP_FILE_EXTENSION: &'static str = "json.tmp";
+
     /// Create a new JSON file repository
     ///
     /// # Arguments
@@ -281,7 +288,7 @@ impl JsonFileRepository {
     /// This ensures that the file is never in a partially written state, even if
     /// a crash occurs during writing.
     fn write_atomic(file_path: &Path, content: &str) -> Result<(), JsonFileError> {
-        let temp_path = file_path.with_extension("json.tmp");
+        let temp_path = file_path.with_extension(Self::TEMP_FILE_EXTENSION);
 
         // Write to temporary file
         fs::write(&temp_path, content)
@@ -491,7 +498,7 @@ mod tests {
             .expect("Failed to save entity to file");
 
         // Verify no temporary file exists after save
-        let temp_file = file_path.with_extension("json.tmp");
+        let temp_file = file_path.with_extension(JsonFileRepository::TEMP_FILE_EXTENSION);
         assert!(!temp_file.exists());
 
         // Verify target file exists
