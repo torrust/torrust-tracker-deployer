@@ -296,6 +296,131 @@ impl From<anyhow::Error> for DeploymentError {
 }
 ```
 
+### Unwrap and Expect Usage
+
+The use of `unwrap()` is generally **discouraged** in this project. While it may make sense in certain contexts, we prefer alternatives that align with our principles of observability, traceability, and user-friendliness.
+
+#### General Rule
+
+**Prefer `expect()` over `unwrap()`** - Even in cases where panicking is acceptable, use `expect()` to provide meaningful context that aids debugging and aligns with our observability principles.
+
+#### When Unwrap/Expect is Acceptable
+
+##### Tests
+
+In test code, panicking on unexpected failures is acceptable and even desired. However, **prefer `expect()` with descriptive messages** to make test failures easier to understand.
+
+```rust
+// ✅ Good: Tests with expect() providing context
+#[test]
+fn it_should_parse_valid_config() {
+    let config_str = r#"{"name": "test", "port": 8080}"#;
+    let config: Config = serde_json::from_str(config_str)
+        .expect("Failed to parse valid test configuration - this indicates a parsing bug");
+
+    assert_eq!(config.name, "test");
+}
+
+// ✅ Also acceptable in tests with clear context
+#[test]
+fn it_should_create_temp_directory() {
+    let temp_dir = TempDir::new()
+        .expect("Failed to create temporary directory for test - check filesystem permissions");
+    // ... rest of test
+}
+
+// ❌ Avoid: Unwrap without context
+#[test]
+fn it_should_parse_valid_config() {
+    let config_str = r#"{"name": "test", "port": 8080}"#;
+    let config: Config = serde_json::from_str(config_str).unwrap();  // What failed? Why?
+
+    assert_eq!(config.name, "test");
+}
+```
+
+##### Infallible Operations
+
+Use `expect()` (not `unwrap()`) for operations that are logically infallible but return `Result` or `Option` due to API design.
+
+```rust
+// ✅ Good: expect() with clear reasoning
+let port: u16 = env::var("PORT")
+    .expect("PORT environment variable must be set during application initialization")
+    .parse()
+    .expect("PORT must be a valid u16 number - validated during configuration loading");
+
+// ✅ Good: Mutex operations that should never fail
+let data = self.state.lock()
+    .expect("State mutex poisoned - indicates a panic occurred while holding the lock");
+
+// ❌ Avoid: unwrap() without explanation
+let port: u16 = env::var("PORT").unwrap().parse().unwrap();
+```
+
+#### When to Use Proper Error Handling Instead
+
+In production code and public APIs, prefer proper error handling over `unwrap()` or `expect()`:
+
+```rust
+// ✅ Production code: Return proper errors
+pub fn load_config(path: &Path) -> Result<Config, ConfigError> {
+    let content = std::fs::read_to_string(path)
+        .map_err(|source| ConfigError::FileAccess {
+            path: path.to_path_buf(),
+            source
+        })?;
+
+    serde_json::from_str(&content)
+        .map_err(|source| ConfigError::InvalidJson {
+            path: path.to_path_buf(),
+            source
+        })
+}
+
+// ❌ Don't do this in production code
+pub fn load_config(path: &Path) -> Config {
+    let content = std::fs::read_to_string(path).unwrap();
+    serde_json::from_str(&content).unwrap()
+}
+```
+
+#### Context Requirements for Expect
+
+When using `expect()`, the message should explain:
+
+1. **What** was expected to succeed
+2. **Why** it should succeed (if not obvious)
+3. **What** the failure indicates (if relevant)
+
+```rust
+// ✅ Good: Complete context
+let timestamp = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .expect("System time is before UNIX epoch - this indicates a serious system clock issue");
+
+// ✅ Good: Clear explanation
+let config = CONFIG.get()
+    .expect("Configuration must be initialized before starting application - call init_config() first");
+
+// ❌ Insufficient context
+let timestamp = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .expect("Time error");
+
+// ❌ No context at all
+let config = CONFIG.get().unwrap();
+```
+
+#### Summary
+
+- **Default**: Use proper error handling with `Result` and specific error types
+- **Tests**: Use `expect()` with descriptive messages explaining what failed
+- **Infallible operations**: Use `expect()` with clear reasoning about why failure is impossible
+- **Never**: Use `unwrap()` without a very good reason (prefer `expect()` even in those cases)
+
+This approach ensures that even panic messages provide valuable debugging context, maintaining our commitment to observability and traceability throughout the codebase.
+
 ### Tiered Help System for Actionable Errors
 
 For errors that require detailed troubleshooting guidance without cluttering the error message, use the **tiered help system** pattern. This approach balances brevity with actionability.
@@ -462,6 +587,7 @@ When reviewing error handling code, verify:
 - [ ] **Thiserror Usage**: Are enum errors using `thiserror` with proper `#[error]` attributes?
 - [ ] **Source Preservation**: Are source errors preserved with `#[source]` for traceability?
 - [ ] **Pattern Matching**: Can callers handle different error cases appropriately?
+- [ ] **Unwrap/Expect**: Is `unwrap()` avoided in favor of `expect()` with descriptive messages?
 - [ ] **Consistency**: Does the error follow project conventions?
 
 ## 🔗 Related Documentation
@@ -484,7 +610,8 @@ Look for error handling examples in:
 2. **Use enums by default**: Only use `anyhow` when justified
 3. **Include context**: Always provide enough information for diagnosis
 4. **Make errors actionable**: Tell users how to fix the problem
-5. **Test error paths**: Write tests for error scenarios
-6. **Document error types**: Document when and why specific errors occur
+5. **Prefer `expect()` over `unwrap()`**: Provide meaningful context even when panicking
+6. **Test error paths**: Write tests for error scenarios
+7. **Document error types**: Document when and why specific errors occur
 
 By following these guidelines, we ensure that errors in the Torrust Tracker Deploy application are not just informative, but truly helpful in guiding users toward solutions.
