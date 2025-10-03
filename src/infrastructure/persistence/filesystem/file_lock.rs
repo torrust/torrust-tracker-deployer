@@ -113,27 +113,66 @@ impl FileLock {
     /// }
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
+    #[tracing::instrument(
+        name = "file_lock_acquire",
+        skip(file_path),
+        fields(
+            file = %file_path.display(),
+            timeout_ms = timeout.as_millis(),
+            pid = %ProcessId::current(),
+        )
+    )]
     pub fn acquire(file_path: &Path, timeout: Duration) -> Result<Self, FileLockError> {
+        tracing::debug!("Attempting to acquire lock");
+
         let lock_file_path = Self::lock_file_path(file_path);
         let current_pid = ProcessId::current();
         let retry_strategy = LockRetryStrategy::new(timeout);
 
+        tracing::trace!(
+            lock_file = %lock_file_path.display(),
+            "Lock file path determined"
+        );
+
+        let mut attempt = 0;
         loop {
+            attempt += 1;
+            tracing::trace!(attempt, "Lock acquisition attempt");
+
             match Self::try_acquire_once(&lock_file_path, current_pid) {
                 AcquireAttemptResult::Success => {
+                    tracing::debug!(attempts = attempt, "Lock acquired successfully");
                     return Ok(Self {
                         lock_file_path,
                         acquired: true,
                     });
                 }
-                AcquireAttemptResult::StaleProcess(_pid) => {
+                AcquireAttemptResult::StaleProcess(pid) => {
+                    tracing::warn!(
+                        stale_pid = %pid,
+                        attempt,
+                        "Detected stale lock, cleaning up"
+                    );
                     // Stale lock detected, clean it up and retry immediately
                     drop(fs::remove_file(&lock_file_path));
                     // Continue to next retry attempt
                 }
                 AcquireAttemptResult::HeldByLiveProcess(pid) => {
+                    tracing::trace!(
+                        holder_pid = %pid,
+                        attempt,
+                        elapsed_ms = retry_strategy.start.elapsed().as_millis(),
+                        "Lock held by live process"
+                    );
+
                     // Process is alive, check if we've timed out
                     if retry_strategy.is_expired() {
+                        tracing::warn!(
+                            holder_pid = %pid,
+                            attempts = attempt,
+                            timeout_ms = timeout.as_millis(),
+                            "Lock acquisition timeout"
+                        );
                         return Err(FileLockError::AcquisitionTimeout {
                             path: lock_file_path,
                             holder_pid: Some(pid),
@@ -143,7 +182,14 @@ impl FileLock {
                     // Wait before retrying
                     LockRetryStrategy::wait();
                 }
-                AcquireAttemptResult::Error(e) => return Err(e),
+                AcquireAttemptResult::Error(e) => {
+                    tracing::warn!(
+                        error = %e,
+                        attempt,
+                        "Error during lock acquisition"
+                    );
+                    return Err(e);
+                }
             }
         }
     }
@@ -169,15 +215,26 @@ impl FileLock {
     /// lock.release()?; // Explicit release with error handling
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
+    #[tracing::instrument(
+        name = "file_lock_release",
+        skip(self),
+        fields(lock_file = %self.lock_file_path.display())
+    )]
     pub fn release(mut self) -> Result<(), FileLockError> {
+        tracing::debug!("Releasing lock");
+
         if self.acquired {
             fs::remove_file(&self.lock_file_path).map_err(|source| {
+                tracing::warn!(error = %source, "Failed to remove lock file");
                 FileLockError::ReleaseFailed {
                     path: self.lock_file_path.clone(),
                     source,
                 }
             })?;
             self.acquired = false;
+            tracing::debug!("Lock released successfully");
+        } else {
+            tracing::trace!("Lock was not acquired, nothing to release");
         }
         Ok(())
     }
@@ -221,9 +278,16 @@ impl FileLock {
     ///
     /// Uses `create_new` flag to ensure atomic creation - the operation fails
     /// if the file already exists, preventing race conditions.
+    #[tracing::instrument(
+        name = "file_lock_try_create",
+        skip(lock_path),
+        fields(lock_file = %lock_path.display(), pid = %pid)
+    )]
     fn try_create_lock(lock_path: &Path, pid: ProcessId) -> Result<(), FileLockError> {
         use std::fs::OpenOptions;
         use std::io::Write;
+
+        tracing::trace!("Attempting to create lock file");
 
         // Try to create the file exclusively (fails if exists)
         match OpenOptions::new()
@@ -232,34 +296,47 @@ impl FileLock {
             .open(lock_path)
         {
             Ok(mut file) => {
+                tracing::trace!("Lock file created, writing PID");
                 // Write our PID to the lock file
-                write!(file, "{pid}").map_err(|source| FileLockError::CreateFailed {
-                    path: lock_path.to_path_buf(),
-                    source,
+                write!(file, "{pid}").map_err(|source| {
+                    tracing::warn!(error = %source, "Failed to write PID to lock file");
+                    FileLockError::CreateFailed {
+                        path: lock_path.to_path_buf(),
+                        source,
+                    }
                 })?;
+                tracing::debug!("Lock file created successfully");
                 Ok(())
             }
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                tracing::trace!("Lock file already exists, reading holder PID");
                 // Lock file exists, read the holder PID
-                let content =
-                    fs::read_to_string(lock_path).map_err(|source| FileLockError::ReadFailed {
+                let content = fs::read_to_string(lock_path).map_err(|source| {
+                    tracing::warn!(error = %source, "Failed to read lock file");
+                    FileLockError::ReadFailed {
                         path: lock_path.to_path_buf(),
                         source,
-                    })?;
+                    }
+                })?;
 
                 let holder_pid = content.trim().parse::<ProcessId>().map_err(|_| {
+                    tracing::warn!(content = %content, "Invalid PID content in lock file");
                     FileLockError::InvalidLockFile {
                         path: lock_path.to_path_buf(),
                         content,
                     }
                 })?;
 
+                tracing::trace!(holder_pid = %holder_pid, "Lock held by process");
                 Err(FileLockError::LockHeldByProcess { pid: holder_pid })
             }
-            Err(source) => Err(FileLockError::CreateFailed {
-                path: lock_path.to_path_buf(),
-                source,
-            }),
+            Err(source) => {
+                tracing::warn!(error = %source, "Failed to create lock file");
+                Err(FileLockError::CreateFailed {
+                    path: lock_path.to_path_buf(),
+                    source,
+                })
+            }
         }
     }
 
@@ -306,9 +383,14 @@ impl Drop for FileLock {
             // Best effort cleanup, log errors for observability
             if let Err(e) = fs::remove_file(&self.lock_file_path) {
                 tracing::warn!(
-                    path = ?self.lock_file_path,
+                    lock_file = %self.lock_file_path.display(),
                     error = %e,
                     "Failed to remove lock file during drop"
+                );
+            } else {
+                tracing::trace!(
+                    lock_file = %self.lock_file_path.display(),
+                    "Lock file removed successfully during drop"
                 );
             }
             self.acquired = false;
@@ -1341,6 +1423,114 @@ mod tests {
 
             // Assert
             assert_eq!(state, LockAcquisitionState::Attempting);
+        }
+    }
+
+    // ========================================================================
+    // Tracing - Tests for observability and tracing instrumentation
+    // ========================================================================
+
+    mod tracing {
+        use super::*;
+
+        #[test]
+        fn it_should_complete_lock_operations_with_tracing_enabled() {
+            // Arrange
+            let scenario = TestLockScenario::new().with_file_name("traced.json");
+
+            // Act: Acquire lock (tracing happens in background)
+            let lock = scenario
+                .acquire_lock()
+                .expect("Failed to acquire lock with tracing");
+
+            // Assert: Lock was acquired successfully
+            assert_lock_file_exists(&scenario.file_path());
+            assert_lock_file_contains_current_pid(&scenario.file_path());
+
+            // Act: Release lock explicitly (tracing happens in background)
+            lock.release().expect("Failed to release lock with tracing");
+
+            // Assert: Lock was released successfully
+            assert_lock_file_absent(&scenario.file_path());
+        }
+
+        #[test]
+        fn it_should_trace_stale_lock_cleanup() {
+            // Arrange
+            let scenario = TestLockScenario::new().with_file_name("stale_traced.json");
+            scenario
+                .with_stale_lock(FAKE_DEAD_PROCESS_PID)
+                .expect("Failed to create stale lock for tracing test");
+
+            // Act: Acquire should clean up stale lock (tracing shows cleanup)
+            let lock = scenario
+                .acquire_lock()
+                .expect("Failed to acquire after stale lock cleanup");
+
+            // Assert: Lock acquired successfully after cleanup
+            assert_lock_file_contains_current_pid(&scenario.file_path());
+
+            drop(lock);
+        }
+
+        #[test]
+        fn it_should_trace_timeout_scenario() {
+            // Arrange
+            let scenario =
+                TestLockScenario::for_timeout_test().with_file_name("timeout_traced.json");
+
+            let _blocking_lock = scenario
+                .acquire_lock()
+                .expect("Failed to acquire blocking lock");
+
+            // Act: Try to acquire with short timeout (tracing shows retry attempts)
+            let result = FileLock::acquire(&scenario.file_path(), Duration::from_millis(200));
+
+            // Assert: Should timeout (tracing shows all retry attempts)
+            assert_timeout_error(result);
+        }
+
+        #[test]
+        fn it_should_trace_invalid_lock_file_scenario() {
+            // Arrange
+            let scenario = TestLockScenario::new().with_file_name("invalid_traced.json");
+            let invalid_content = "not-a-valid-pid";
+            scenario
+                .with_invalid_lock(invalid_content)
+                .expect("Failed to create invalid lock for tracing test");
+
+            // Act: Try to acquire (tracing shows invalid content detection)
+            let result = scenario.acquire_lock();
+
+            // Assert: Should fail with invalid lock file error
+            assert_invalid_lock_file_error(result, invalid_content);
+        }
+
+        #[test]
+        fn it_should_trace_concurrent_acquisition_attempts() {
+            // Arrange
+            let scenario = TestLockScenario::new().with_file_name("concurrent_traced.json");
+
+            // Act: Spawn threads that try to acquire concurrently
+            let handles: Vec<_> = (0..3)
+                .map(|_| {
+                    let path = scenario.file_path();
+                    std::thread::spawn(move || FileLock::acquire(&path, Duration::from_millis(200)))
+                })
+                .collect();
+
+            // Collect results
+            let results: Vec<_> = handles
+                .into_iter()
+                .map(|h| h.join().expect("Thread panicked"))
+                .collect();
+
+            // Assert: Exactly one should succeed, others should timeout
+            let success_count = results.iter().filter(|r| r.is_ok()).count();
+            assert_eq!(
+                success_count, 1,
+                "Exactly one thread should acquire the lock"
+            );
         }
     }
 }

@@ -40,12 +40,12 @@ use super::process_id::ProcessId;
 ///
 /// # Examples
 ///
-/// ```rust
-/// use torrust_tracker_deploy::infrastructure::persistence::filesystem::platform;
-/// use torrust_tracker_deploy::infrastructure::persistence::filesystem::process_id::ProcessId;
-///
+/// ```rust,no_run
+/// # use torrust_tracker_deploy::infrastructure::persistence::filesystem::process_id::ProcessId;
+/// # // Note: platform module is private, this example is for documentation only
+/// # fn is_process_alive(pid: ProcessId) -> bool { true }
 /// let current_pid = ProcessId::current();
-/// assert!(platform::is_process_alive(current_pid));
+/// assert!(is_process_alive(current_pid));
 /// ```
 #[cfg(unix)]
 pub fn is_process_alive(pid: ProcessId) -> bool {
