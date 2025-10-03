@@ -296,6 +296,159 @@ impl From<anyhow::Error> for DeploymentError {
 }
 ```
 
+### Tiered Help System for Actionable Errors
+
+For errors that require detailed troubleshooting guidance without cluttering the error message, use the **tiered help system** pattern. This approach balances brevity with actionability.
+
+See [Decision Record: Actionable Error Messages](../decisions/actionable-error-messages.md) for the rationale behind this pattern.
+
+#### Pattern Overview
+
+1. **Base error message**: Concise with essential context
+2. **Brief tip**: One-liner actionable hint in the error message
+3. **`.help()` method**: Detailed troubleshooting available on-demand
+4. **Rustdoc**: Developer-oriented documentation
+
+#### Implementation Example
+
+````rust
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum FileLockError {
+    /// Failed to acquire lock within timeout period
+    ///
+    /// This typically means another process is holding the lock.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Failed to acquire lock for '{path}' within {timeout:?} (held by process {holder_pid})
+Tip: Use 'ps -p {holder_pid}' to check if process is running")]
+    AcquisitionTimeout {
+        path: PathBuf,
+        holder_pid: ProcessId,
+        timeout: Duration,
+    },
+
+    /// Failed to create lock file
+    ///
+    /// This usually indicates permission issues or file system problems.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Failed to create lock file at '{path}': {source}
+Tip: Check directory permissions and disk space")]
+    CreateFailed {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+}
+
+impl FileLockError {
+    /// Get detailed troubleshooting guidance for this error
+    ///
+    /// This method provides comprehensive troubleshooting steps that can be
+    /// displayed to users when they need more help resolving the error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// if let Err(e) = FileLock::acquire(&path, timeout) {
+    ///     eprintln!("Error: {e}");
+    ///     eprintln!("\nTroubleshooting:\n{}", e.help());
+    /// }
+    /// ```
+    pub fn help(&self) -> &'static str {
+        match self {
+            Self::AcquisitionTimeout { .. } => {
+                "Lock Acquisition Timeout - Detailed Troubleshooting:
+
+1. Check if the holder process is still running:
+   Unix/Linux/macOS: ps -p <pid>
+   Windows: tasklist /FI \"PID eq <pid>\"
+
+2. If the process is running and should release the lock:
+   - Wait for the process to complete its operation
+   - Or increase the timeout duration in your configuration
+
+3. If the process is stuck or hung:
+   - Try graceful termination: kill <pid>  (Unix) or taskkill /PID <pid> (Windows)
+   - Force terminate if needed: kill -9 <pid>  (Unix) or taskkill /F /PID <pid> (Windows)
+
+4. If the process doesn't exist (stale lock):
+   - This should be handled automatically by the lock system
+   - If you see this error repeatedly, it indicates a bug
+   - Please report the issue with full details
+
+For more information, see the documentation on file locking."
+            }
+
+            Self::CreateFailed { .. } => {
+                "Lock Creation Failed - Detailed Troubleshooting:
+
+1. Check directory permissions and ensure write access
+2. Verify parent directory exists
+3. Check available disk space: df -h  (Unix) or wmic logicaldisk (Windows)
+4. Check for file system issues
+
+If the problem persists, report it with system details."
+            }
+        }
+    }
+}
+````
+
+#### When to Use This Pattern
+
+Use the tiered help system when:
+
+- ✅ Errors require detailed troubleshooting steps
+- ✅ Platform-specific guidance is needed (Unix vs Windows commands)
+- ✅ Multiple resolution approaches exist
+- ✅ Brief error messages would be insufficient
+- ✅ Verbose error messages would be overwhelming
+
+Don't use this pattern when:
+
+- ❌ The error is self-explanatory
+- ❌ Resolution is a single, obvious step
+- ❌ The error is purely internal (developers only)
+
+#### Application Integration
+
+```rust
+// Basic usage: just show the error
+match FileLock::acquire(&path, timeout) {
+    Ok(lock) => { /* use lock */ }
+    Err(e) => {
+        eprintln!("Error: {e}");
+        std::process::exit(1);
+    }
+}
+
+// Advanced usage: show help based on verbosity
+match FileLock::acquire(&path, timeout) {
+    Ok(lock) => { /* use lock */ }
+    Err(e) => {
+        eprintln!("Error: {e}");
+
+        if verbose {
+            eprintln!("\n{}", e.help());
+        } else {
+            eprintln!("\nRun with --verbose for detailed troubleshooting");
+        }
+
+        std::process::exit(1);
+    }
+}
+```
+
+#### Benefits
+
+- ✅ Balances brevity with actionability
+- ✅ No external infrastructure required
+- ✅ Help always available at runtime
+- ✅ Easy to maintain (help lives with error definition)
+- ✅ Platform-aware guidance included
+- ✅ Users control verbosity level
+
 ## 📋 Error Review Checklist
 
 When reviewing error handling code, verify:
@@ -303,6 +456,8 @@ When reviewing error handling code, verify:
 - [ ] **Clarity**: Is the error message clear and unambiguous?
 - [ ] **Context**: Does the error include sufficient context (what, where, when, why)?
 - [ ] **Actionability**: Does the error tell users how to fix it?
+- [ ] **Tiered Help**: If detailed guidance is needed, does the error use the `.help()` pattern?
+- [ ] **Brief Tips**: Does the error include a concise tip in the message?
 - [ ] **Type Safety**: Are domain-specific errors using enums instead of strings?
 - [ ] **Thiserror Usage**: Are enum errors using `thiserror` with proper `#[error]` attributes?
 - [ ] **Source Preservation**: Are source errors preserved with `#[source]` for traceability?

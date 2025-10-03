@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status      | Date       | Decision                                                                                            | Summary                                                                                   |
 | ----------- | ---------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ✅ Accepted | 2025-10-03 | [Actionable Error Messages](./actionable-error-messages.md)                                         | Use tiered help system with brief tips + .help() method for detailed troubleshooting      |
 | ✅ Accepted | 2025-10-01 | [Type Erasure for Environment States](./type-erasure-for-environment-states.md)                     | Use enum-based type erasure to enable runtime handling and serialization of typed states  |
 | ✅ Accepted | 2025-09-29 | [Test Context vs Deployment Environment Naming](./test-context-vs-deployment-environment-naming.md) | Rename TestEnvironment to TestContext to avoid conflicts with multi-environment feature   |
 | ✅ Accepted | 2025-09-10 | [LXD VMs over Containers](./lxd-vm-over-containers.md)                                              | Use LXD virtual machines instead of containers for production alignment                   |

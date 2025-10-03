@@ -747,17 +747,17 @@ fn it_should_clean_up_stale_lock_with_invalid_pid() {
 
 Higher-effort improvements focusing on error handling, organization, and comprehensive testing.
 
-### Proposal #8: Improve Error Context with Structured Fields
+### Proposal #8: Improve Error Context with Tiered Help System
 
 **Status**: ⏳ Not Started  
 **Impact**: 🟢🟢🟢 High  
-**Effort**: 🔵🔵🔵 Medium  
+**Effort**: 🔵🔵 Medium  
 **Priority**: P2  
 **Depends On**: None
 
 #### Problem
 
-Some errors lack actionable guidance per the project's development principles (Observability, Traceability, Actionability). Users need clear steps to resolve issues when locks fail.
+Some errors lack actionable guidance per the project's development principles (Observability, Traceability, Actionability). Users need clear steps to resolve issues when locks fail, but verbose error messages with extensive troubleshooting steps can be overwhelming and violate the DRY principle.
 
 #### Current State
 
@@ -772,175 +772,318 @@ AcquisitionTimeout {
 },
 ```
 
+#### Design Decision
+
+After evaluating multiple approaches (see [Decision Record: Actionable Error Messages](../../docs/decisions/actionable-error-messages.md)), we've chosen a **tiered help system**:
+
+1. **Base error message**: Concise with essential context
+2. **Brief actionable tip**: One-liner hint in the error message
+3. **`.help()` method**: Detailed troubleshooting available on-demand
+4. **Rustdoc**: Developer-oriented documentation
+
+This approach balances brevity with actionability without requiring external infrastructure or sacrificing runtime accessibility.
+
 #### Proposed Solution
 
-Enhance error messages with actionable guidance and troubleshooting steps:
+Enhance error messages with brief tips and add a `.help()` method for detailed troubleshooting:
+
+**Error Definitions with Brief Tips:**
 
 ```rust
 #[derive(Debug, Error)]
 pub enum FileLockError {
-    #[error("Failed to acquire lock for '{path}' within {timeout:?}
-
-The lock is currently held by process {holder_pid}.
-
-To resolve this issue:
-1. Check if process {holder_pid} is still running:
-   ps -p {holder_pid}
-
-2. If the process is running and should release the lock:
-   - Wait for the process to complete its operation
-   - Or increase the timeout duration
-
-3. If the process is stuck or hung:
-   - Terminate it: kill {holder_pid}
-   - Or force terminate: kill -9 {holder_pid}
-
-4. If the process doesn't exist (stale lock):
-   - This should be handled automatically
-   - If you see this error repeatedly, report a bug
-
-Current timeout: {timeout:?}
-Lock file: {path}.lock")]
+    /// Failed to acquire lock within timeout period
+    ///
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Failed to acquire lock for '{path}' within {timeout:?} (held by process {holder_pid})
+Tip: Use 'ps -p {holder_pid}' to check if process is running")]
     AcquisitionTimeout {
         path: PathBuf,
-        holder_pid: ProcessId, // Changed from Option to required
+        holder_pid: ProcessId,
         timeout: Duration,
     },
 
-    #[error("Failed to create lock file at '{path}'
-
-Possible causes and solutions:
-1. Insufficient permissions:
-   - Check directory permissions: ls -la {parent_dir}
-   - Ensure write access: chmod u+w {parent_dir}
-
-2. Parent directory doesn't exist:
-   - Create it: mkdir -p {parent_dir}
-
-3. Disk full:
-   - Check disk space: df -h
-   - Free up space or use a different location
-
-4. File system issue:
-   - Check file system health
-   - Try a different directory
-
-Original error: {source}
-Lock file path: {path}.lock")]
+    /// Failed to create lock file
+    ///
+    /// This usually indicates permission issues or file system problems.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Failed to create lock file at '{path}': {source}
+Tip: Check directory permissions and disk space")]
     CreateFailed {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("Failed to read lock file at '{path}'
-
-This may indicate:
-1. File system corruption
-2. Permission changes after lock creation
-3. Concurrent file deletion
-
-Troubleshooting:
-- Check if file exists: ls -la {path}.lock
-- Check file permissions: stat {path}.lock
-- Check file system status: df -h
-
-If this error persists, the lock may be corrupted.
-You can manually remove it: rm {path}.lock
-
-Original error: {source}")]
+    /// Failed to read lock file content
+    ///
+    /// This may indicate file system corruption or permission changes.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Failed to read lock file at '{path}': {source}
+Tip: Check file permissions and file system status")]
     ReadFailed {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("Invalid lock file content at '{path}'
-
-Expected: Process ID (numeric value)
-Found: '{content}'
-
-This indicates:
-1. Manual modification of lock file (not recommended)
-2. File system corruption
-3. Lock file created by incompatible software
-
-To resolve:
-- Remove the invalid lock file: rm {path}.lock
-- Let the system recreate it properly
-- Ensure no manual edits to .lock files
-
-Lock file path: {path}.lock")]
+    /// Lock file contains invalid content
+    ///
+    /// Expected a process ID but found something else.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Invalid lock file content at '{path}': expected PID, found '{content}'
+Tip: Remove the invalid lock file and let the system recreate it")]
     InvalidLockFile {
         path: PathBuf,
-        content: String
+        content: String,
     },
 
-    #[error("Failed to release lock file at '{path}'
-
-This is a cleanup error and may not affect functionality,
-but the lock file may persist.
-
-Possible causes:
-1. File was already deleted (race condition)
-2. Permission changed after lock creation
-3. File system issue
-
-Manual cleanup:
-- Remove lock file: rm {path}.lock
-
-Original error: {source}")]
+    /// Failed to release lock file during cleanup
+    ///
+    /// This is usually not critical but the lock file may persist.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Failed to release lock file at '{path}': {source}
+Tip: The lock file may need manual cleanup")]
     ReleaseFailed {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
+
+    /// Lock is held by another process
+    ///
+    /// This is an internal error used during lock acquisition logic.
+    #[error("Lock is held by process {pid}")]
+    LockHeldByProcess { pid: ProcessId },
 }
 ```
+
+**Help Method Implementation:**
+
+````rust
+impl FileLockError {
+    /// Get detailed troubleshooting guidance for this error
+    ///
+    /// This method provides comprehensive troubleshooting steps that can be
+    /// displayed to users when they need more help resolving the error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// if let Err(e) = FileLock::acquire(&path, timeout) {
+    ///     eprintln!("Error: {e}");
+    ///     eprintln!("\nTroubleshooting:\n{}", e.help());
+    /// }
+    /// ```
+    pub fn help(&self) -> &'static str {
+        match self {
+            Self::AcquisitionTimeout { holder_pid, .. } => {
+                "Lock Acquisition Timeout - Detailed Troubleshooting:
+
+1. Check if the holder process is still running:
+   Unix/Linux/macOS: ps -p <pid>
+   Windows: tasklist /FI \"PID eq <pid>\"
+
+2. If the process is running and should release the lock:
+   - Wait for the process to complete its operation
+   - Or increase the timeout duration in your configuration
+
+3. If the process is stuck or hung:
+   - Try graceful termination: kill <pid>  (Unix) or taskkill /PID <pid> (Windows)
+   - Force terminate if needed: kill -9 <pid>  (Unix) or taskkill /F /PID <pid> (Windows)
+
+4. If the process doesn't exist (stale lock):
+   - This should be handled automatically by the lock system
+   - If you see this error repeatedly, it indicates a bug
+   - Please report at: https://github.com/torrust/torrust-tracker-deploy-rust-poc/issues
+
+For more information, see the documentation on file locking."
+            }
+
+            Self::CreateFailed { .. } => {
+                "Lock Creation Failed - Detailed Troubleshooting:
+
+1. Check directory permissions:
+   Unix: ls -la <directory>
+   Windows: icacls <directory>
+   - Ensure write access: chmod u+w <directory>  (Unix)
+
+2. Verify parent directory exists:
+   - Create if needed: mkdir -p <directory>  (Unix/Linux/macOS)
+   - Create if needed: mkdir <directory>  (Windows)
+
+3. Check available disk space:
+   Unix: df -h
+   Windows: wmic logicaldisk get size,freespace,caption
+   - Free up space or use a different location if disk is full
+
+4. Check for file system issues:
+   - Run file system checks if problems persist
+   - Try using a different directory
+   - Check system logs for file system errors
+
+If the problem persists, report it with system details."
+            }
+
+            Self::ReadFailed { .. } => {
+                "Lock File Read Failed - Detailed Troubleshooting:
+
+This error may indicate:
+1. File system corruption
+2. Permission changes after lock creation
+3. Concurrent file deletion by another process
+
+Troubleshooting steps:
+1. Check if the lock file still exists:
+   Unix: ls -la <path>.lock
+   Windows: dir <path>.lock
+
+2. Check file permissions:
+   Unix: stat <path>.lock
+   Windows: icacls <path>.lock
+
+3. Check file system status:
+   Unix: df -h && dmesg | tail
+   Windows: chkdsk
+
+4. If the error persists:
+   - The lock file may be corrupted
+   - You can manually remove it: rm <path>.lock  (Unix) or del <path>.lock  (Windows)
+   - Let the system recreate it on next lock acquisition
+
+Report persistent issues with full error context."
+            }
+
+            Self::InvalidLockFile { .. } => {
+                "Invalid Lock File Content - Detailed Troubleshooting:
+
+The lock file should contain only a process ID (numeric value).
+This error indicates the file contains invalid content.
+
+Common causes:
+1. Manual modification of lock file (not recommended)
+2. File system corruption
+3. Lock file created by incompatible software
+4. Encoding issues
+
+Resolution steps:
+1. Remove the invalid lock file:
+   Unix: rm <path>.lock
+   Windows: del <path>.lock
+
+2. Let the system recreate it properly on next lock acquisition
+
+3. Ensure no external tools or scripts are modifying .lock files
+
+4. If using shared storage (NFS, CIFS, etc.):
+   - Check for file system compatibility issues
+   - Verify proper file locking support
+
+Prevention:
+- Never manually edit .lock files
+- Ensure proper file system support for atomic operations
+- Use appropriate locking mechanisms for shared storage
+
+Report if this error occurs without manual intervention."
+            }
+
+            Self::ReleaseFailed { .. } => {
+                "Lock Release Failed - Detailed Troubleshooting:
+
+This is a cleanup error that occurs when removing the lock file.
+It typically doesn't affect functionality, but the lock file may persist.
+
+Common causes:
+1. File was already deleted (race condition with another process)
+2. Permissions changed after lock creation
+3. File system issue during cleanup
+4. File is open by another process
+
+Steps to resolve:
+1. Check if the lock file still exists:
+   Unix: ls -la <path>.lock
+   Windows: dir <path>.lock
+
+2. If it exists and causes issues, manually remove it:
+   Unix: rm <path>.lock
+   Windows: del <path>.lock
+
+3. Verify no other processes have the file open:
+   Unix: lsof <path>.lock
+   Windows: handle.exe <path>.lock  (requires Sysinternals)
+
+Impact:
+- This error usually doesn't affect the current operation
+- The lock was already released from the application perspective
+- Stale lock files will be cleaned up on next acquisition
+
+Only report if this error occurs frequently or causes operational issues."
+            }
+
+            Self::LockHeldByProcess { .. } => {
+                "This is an internal error used during lock acquisition.
+If you see this error directly, it may indicate a logic error in the application.
+Please report it with full context."
+            }
+        }
+    }
+}
+````
 
 #### Implementation Notes
 
-**Helper method for parent directory**: Add a method to extract parent directory for error messages:
+**Platform-Specific Guidance:**
+The `.help()` method provides platform-specific commands (Unix vs Windows) inline within the help text. This keeps the implementation simple while being actionable for all users.
+
+**No External Infrastructure:**
+All help content is embedded in the binary. This ensures:
+
+- Help is always available at runtime
+- No internet connection required
+- No version synchronization issues
+- Simple deployment
+
+**Application Integration Example:**
 
 ```rust
-impl FileLockError {
-    fn parent_dir(path: &Path) -> String {
-        path.parent()
-            .map(|p| p.display().to_string())
-            .unwrap_or_else(|| ".".to_string())
+// Example: Using .help() in application code
+match FileLock::acquire(&path, timeout) {
+    Ok(lock) => {
+        // Use the lock
     }
-}
-```
+    Err(e) => {
+        eprintln!("Error: {e}");
 
-**Platform-specific commands**: Consider adding platform-specific guidance:
+        // Optionally show detailed help based on verbosity flag
+        if verbose {
+            eprintln!("\n{}", e.help());
+        } else {
+            eprintln!("Run with --verbose for detailed troubleshooting");
+        }
 
-```rust
-#[cfg(unix)]
-fn get_process_check_command(pid: ProcessId) -> String {
-    format!("ps -p {pid}")
-}
-
-#[cfg(windows)]
-fn get_process_check_command(pid: ProcessId) -> String {
-    format!("tasklist /FI \"PID eq {pid}\"")
+        std::process::exit(1);
+    }
 }
 ```
 
 #### Benefits
 
 - ✅ Aligns with "Actionability" development principle
-- ✅ Better user experience for error scenarios
-- ✅ Reduces support burden and debugging time
-- ✅ Self-documenting error handling
-- ✅ Platform-aware guidance
+- ✅ Balances brevity with actionability
+- ✅ No external infrastructure required
+- ✅ Help always available at runtime
+- ✅ Easy to maintain (help lives with error definition)
+- ✅ Better user experience without overwhelming output
+- ✅ Platform-aware guidance included
+- ✅ No version stability concerns
 
 #### Testing Requirements
 
-Add tests to verify error message content:
+Add tests to verify error message content and help availability:
 
 ```rust
 #[test]
-fn it_should_include_troubleshooting_steps_in_timeout_error() {
+fn it_should_include_brief_tip_in_timeout_error() {
     let error = FileLockError::AcquisitionTimeout {
         path: PathBuf::from("/test/file.json"),
         holder_pid: ProcessId::from_raw(12345),
@@ -948,20 +1091,41 @@ fn it_should_include_troubleshooting_steps_in_timeout_error() {
     };
 
     let message = error.to_string();
-    assert!(message.contains("To resolve this issue"));
+    assert!(message.contains("Tip:"));
     assert!(message.contains("ps -p"));
-    assert!(message.contains("kill"));
+}
+
+#[test]
+fn it_should_provide_detailed_help_for_all_error_variants() {
+    let test_cases = vec![
+        FileLockError::AcquisitionTimeout {
+            path: PathBuf::from("/test/file.json"),
+            holder_pid: ProcessId::from_raw(12345),
+            timeout: Duration::from_secs(5),
+        },
+        FileLockError::CreateFailed {
+            path: PathBuf::from("/test/file.json"),
+            source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
+        },
+        // ... other variants
+    ];
+
+    for error in test_cases {
+        let help = error.help();
+        assert!(!help.is_empty(), "Help should not be empty");
+        assert!(help.len() > 50, "Help should be detailed");
+    }
 }
 ```
 
 #### Implementation Checklist
 
-- [ ] Update error variant definitions with enhanced messages
-- [ ] Add helper methods for path formatting
-- [ ] Add platform-specific command helpers
-- [ ] Update error construction sites if needed
-- [ ] Add tests for error message content
-- [ ] Update documentation
+- [ ] Update error variant definitions with Rustdoc and brief tips
+- [ ] Implement `.help()` method with detailed troubleshooting for all variants
+- [ ] Update error construction sites if needed (ensure ProcessId is always available)
+- [ ] Add tests for error message tips
+- [ ] Add tests for `.help()` method completeness
+- [ ] Update error handling documentation
 - [ ] Verify all tests pass
 - [ ] Run linters
 
