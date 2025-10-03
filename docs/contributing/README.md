@@ -20,32 +20,23 @@ This guide will help you understand our development practices and contribution w
 
 ## 🔧 Development Workflow Summary
 
-````bash
+```bash
 # 1. Create a feature branch (use issue number)
 git checkout -b 42-add-your-feature-name
 
 # 2. Make your changes
 # ... edit files ...
 
-# 3. Run linters before committing
-# Pre-commit Checklist
+# 3. Run pre-commit verification script
+./scripts/pre-commit.sh
 
-Before each commit, run:
-
-```bash
-cargo run --bin linter all
-
-# 4. Run tests
-cargo test
-cargo run --bin e2e-tests-full
-
-# 5. Commit with conventional format (include issue number)
+# 4. Commit with conventional format (include issue number)
 git add .
 git commit -m "feat: [#42] add new testing feature"
 
-# 6. Push and create PR
+# 5. Push and create PR
 git push origin 42-add-your-feature-name
-````
+```
 
 ## 📖 Additional Resources
 

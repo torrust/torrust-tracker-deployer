@@ -78,32 +78,32 @@ Closes #23"
 
 ## ✅ Pre-commit Checklist
 
-Before committing any changes, you **MUST** complete the following checks:
-
-### 1. Run All Linters
+Before committing any changes, you **MUST** run the pre-commit verification script:
 
 ```bash
-# Run all linters at once
-cargo run --bin linter all
+./scripts/pre-commit.sh
+```
 
-# Or run individually
+This script runs all mandatory checks:
+
+1. **Check for unused dependencies**: `cargo machete`
+2. **Run all linters**: `cargo run --bin linter all` (stable & nightly toolchains)
+3. **Run tests**: `cargo test`
+4. **Test documentation builds**: `cargo doc --no-deps --bins --examples --workspace --all-features`
+5. **Run E2E tests**: `cargo run --bin e2e-tests-full`
+
+**All checks must pass** before committing. Fix any reported issues.
+
+### Running Individual Linters
+
+If you need to run specific linters for debugging:
+
+```bash
 cargo run --bin linter markdown   # Markdown
 cargo run --bin linter yaml       # YAML
 cargo run --bin linter clippy     # Rust code analysis
 cargo run --bin linter rustfmt    # Rust formatting
 cargo run --bin linter shellcheck # Shell scripts
-```
-
-**All linters must pass** before committing. Fix any reported issues.
-
-### 2. Run Tests
-
-```bash
-# Run Rust unit tests
-cargo test
-
-# Run E2E tests (if applicable to your changes)
-cargo run --bin e2e-tests-full
 ```
 
 ## 📋 Commit Quality Guidelines

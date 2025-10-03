@@ -54,14 +54,19 @@ These principles should guide all development decisions, code reviews, and featu
    - **With issue branch**: `{type}: [#{issue}] {description}` (when branch name starts with `{issue-number}-`)
    - **Without issue branch**: `{type}: {description}` (when working on main or branch without issue number prefix)
 
-3. **Before committing**: Always run these verifications - all must pass before staging files or creating commits, regardless of the tool or method used:
+3. **Before committing**: Always run the pre-commit verification script - all checks must pass before staging files or creating commits, regardless of the tool or method used:
 
    ```bash
-   cargo machete                    # Run cargo machete (MANDATORY - no unused dependencies)
-   cargo run --bin linter all       # Run linters (comprehensive - stable & nightly toolchains)
-   cargo test                       # Run tests
-   cargo run --bin e2e-tests-full   # Run comprehensive e2e tests
+   ./scripts/pre-commit.sh
    ```
+
+   The script runs:
+
+   - `cargo machete` - Check for unused dependencies (MANDATORY)
+   - `cargo run --bin linter all` - Run linters (stable & nightly toolchains)
+   - `cargo test` - Run all tests
+   - `cargo doc --no-deps --bins --examples --workspace --all-features` - Test documentation builds
+   - `cargo run --bin e2e-tests-full` - Run comprehensive E2E tests
 
    This applies to **any** method of committing:
 
