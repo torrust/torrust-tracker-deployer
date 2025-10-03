@@ -14,7 +14,9 @@ Refactoring plans serve to:
 
 ## 📁 Active Refactoring Plans
 
-Currently no active refactoring plans.
+| Document                                                                    | Status      | Target                    | Created     |
+| --------------------------------------------------------------------------- | ----------- | ------------------------- | ----------- |
+| [JSON File Repository Improvements](./json-file-repository-improvements.md) | 📋 Planning | `json_file_repository.rs` | Oct 3, 2025 |
 
 ## ✅ Completed Refactorings
 
