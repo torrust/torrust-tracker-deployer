@@ -350,6 +350,7 @@ impl JsonFileRepository {
 mod tests {
     use super::*;
     use crate::testing::fixtures::TestEntity;
+    use rstest::rstest;
     use std::error::Error as StdError;
     use std::path::PathBuf;
     use tempfile::TempDir;
@@ -638,24 +639,37 @@ mod tests {
             .expect("Failed to delete nonexistent file");
     }
 
-    #[test]
-    fn it_should_create_parent_directories_automatically() {
+    #[rstest]
+    #[case("entity.json", "root directory")]
+    #[case("nested/entity.json", "single nested directory")]
+    #[case("nested/deep/entity.json", "double nested directory")]
+    #[case("very/deep/nested/path/entity.json", "deep nested path")]
+    fn it_should_create_parent_directories_automatically(
+        #[case] file_path: &str,
+        #[case] description: &str,
+    ) {
         // Arrange
-        let scenario = TestRepositoryScenario::new().with_file_name("nested/deep/entity.json");
+        let scenario = TestRepositoryScenario::new().with_file_name(file_path);
         let entity = TestEntity::new("test", 100);
 
         // Act - Save should create nested directory structure
-        scenario
-            .save(&entity)
-            .expect("Failed to save entity with nested directories");
+        let result = scenario.save(&entity);
 
         // Assert
+        assert!(
+            result.is_ok(),
+            "Failed to save to {description}: {result:?}"
+        );
+        assert!(scenario.exists(), "File should exist in {description}");
+
         let file_path = scenario.file_path();
-        assert!(file_path
-            .parent()
-            .expect("File path should have parent directory")
-            .exists());
-        assert!(file_path.exists());
+        assert!(
+            file_path
+                .parent()
+                .expect("File path should have parent directory")
+                .exists(),
+            "Parent directory should exist for {description}"
+        );
     }
 
     #[test]
