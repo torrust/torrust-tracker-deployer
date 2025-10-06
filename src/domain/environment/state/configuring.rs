@@ -39,10 +39,15 @@ impl Environment<Configuring> {
 
     /// Transitions from Configuring to `ConfigureFailed` state
     ///
-    /// This method indicates that application configuration failed at a specific step.
+    /// This method indicates that application configuration failed.
+    /// The context parameter provides structured error information including
+    /// the failed step, error classification, and trace reference.
     #[must_use]
-    pub fn configure_failed(self, failed_step: String) -> Environment<ConfigureFailed> {
-        self.with_state(ConfigureFailed { failed_step })
+    pub fn configure_failed(
+        self,
+        context: crate::domain::environment::state::ConfigureFailureContext,
+    ) -> Environment<ConfigureFailed> {
+        self.with_state(ConfigureFailed { context })
     }
 }
 
@@ -157,10 +162,29 @@ mod tests {
 
         #[test]
         fn it_should_transition_from_configuring_to_configure_failed() {
-            let env = create_test_environment();
-            let env = env.configure_failed("ansible_playbook_error".to_string());
+            use crate::domain::environment::state::{
+                ConfigureErrorKind, ConfigureFailureContext, ConfigureStep, TraceId,
+            };
+            use chrono::Utc;
+            use std::time::Duration;
 
-            assert_eq!(env.state().failed_step, "ansible_playbook_error");
+            let env = create_test_environment();
+            let context = ConfigureFailureContext {
+                failed_step: ConfigureStep::InstallDocker,
+                error_kind: ConfigureErrorKind::InstallationFailed,
+                error_summary: "ansible_playbook_error".to_string(),
+                failed_at: Utc::now(),
+                execution_started_at: Utc::now(),
+                execution_duration: Duration::from_secs(15),
+                trace_id: TraceId::new(),
+                trace_file_path: None,
+            };
+            let env = env.configure_failed(context.clone());
+
+            assert_eq!(
+                env.state().context.failed_step,
+                ConfigureStep::InstallDocker
+            );
             assert_eq!(env.name().as_str(), "test-state");
         }
     }

@@ -51,6 +51,22 @@ pub enum OpenTofuError {
     ParseError(#[from] ParseError),
 }
 
+impl crate::shared::Traceable for OpenTofuError {
+    fn trace_format(&self) -> String {
+        match self {
+            Self::CommandError(e) => format!("OpenTofuError: Command execution failed - {e}"),
+            Self::ParseError(e) => format!("OpenTofuError: JSON parsing failed - {e}"),
+        }
+    }
+
+    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
+        match self {
+            Self::CommandError(e) => Some(e),
+            Self::ParseError(_) => None, // ParseError doesn't implement Traceable
+        }
+    }
+}
+
 /// A specialized `OpenTofu` client for infrastructure management.
 /// This client provides a consistent interface for `OpenTofu` operations:
 /// - Initialize `OpenTofu` configurations  

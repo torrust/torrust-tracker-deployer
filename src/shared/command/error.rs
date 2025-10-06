@@ -28,6 +28,29 @@ pub enum CommandError {
     },
 }
 
+impl crate::shared::Traceable for CommandError {
+    fn trace_format(&self) -> String {
+        match self {
+            Self::StartupFailed { command, source } => {
+                format!("CommandError: Failed to start '{command}' - {source}")
+            }
+            Self::ExecutionFailed {
+                command,
+                exit_code,
+                stdout,
+                stderr,
+            } => {
+                format!("CommandError: Command '{command}' failed with exit code {exit_code}\nStdout: {stdout}\nStderr: {stderr}")
+            }
+        }
+    }
+
+    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
+        // std::io::Error doesn't implement Traceable, so we return None
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

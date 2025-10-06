@@ -49,6 +49,7 @@ mod configured;
 mod configuring;
 mod created;
 mod destroyed;
+mod error_context;
 mod provision_failed;
 mod provisioned;
 mod provisioning;
@@ -57,6 +58,7 @@ mod released;
 mod releasing;
 mod run_failed;
 mod running;
+mod trace_id;
 
 // Re-export state types
 pub use configure_failed::ConfigureFailed;
@@ -64,6 +66,10 @@ pub use configured::Configured;
 pub use configuring::Configuring;
 pub use created::Created;
 pub use destroyed::Destroyed;
+pub use error_context::{
+    ConfigureErrorKind, ConfigureFailureContext, ConfigureStep, ProvisionErrorKind,
+    ProvisionFailureContext, ProvisionStep,
+};
 pub use provision_failed::ProvisionFailed;
 pub use provisioned::Provisioned;
 pub use provisioning::Provisioning;
@@ -72,6 +78,7 @@ pub use released::Released;
 pub use releasing::Releasing;
 pub use run_failed::RunFailed;
 pub use running::Running;
+pub use trace_id::TraceId;
 
 /// Error type for invalid type conversions when working with type-erased environments
 ///
@@ -319,8 +326,8 @@ impl AnyEnvironmentState {
     #[must_use]
     pub fn error_details(&self) -> Option<&str> {
         match self {
-            Self::ProvisionFailed(env) => Some(&env.state().failed_step),
-            Self::ConfigureFailed(env) => Some(&env.state().failed_step),
+            Self::ProvisionFailed(env) => Some(&env.state().context.error_summary),
+            Self::ConfigureFailed(env) => Some(&env.state().context.error_summary),
             Self::ReleaseFailed(env) => Some(&env.state().failed_step),
             Self::RunFailed(env) => Some(&env.state().failed_step),
             _ => None,
@@ -359,6 +366,61 @@ impl std::fmt::Display for AnyEnvironmentState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::environment::name::EnvironmentName;
+    use crate::shared::ssh::SshCredentials;
+    use crate::shared::Username;
+    use std::path::PathBuf;
+
+    /// Helper to create test SSH credentials
+    fn create_test_ssh_credentials() -> SshCredentials {
+        let username = Username::new("test-user".to_string()).unwrap();
+        SshCredentials::new(
+            PathBuf::from("/tmp/test_key"),
+            PathBuf::from("/tmp/test_key.pub"),
+            username,
+        )
+    }
+
+    /// Helper to create a test environment in Created state
+    fn create_test_environment_created() -> Environment<Created> {
+        let name = EnvironmentName::new("test-env".to_string()).unwrap();
+        let ssh_creds = create_test_ssh_credentials();
+        Environment::new(name, ssh_creds)
+    }
+
+    /// Helper to create a test `ProvisionFailureContext` with custom error message
+    fn create_test_provision_context(error_message: &str) -> ProvisionFailureContext {
+        use chrono::Utc;
+        use std::time::Duration;
+
+        ProvisionFailureContext {
+            failed_step: ProvisionStep::OpenTofuApply,
+            error_kind: ProvisionErrorKind::InfrastructureProvisioning,
+            error_summary: error_message.to_string(),
+            failed_at: Utc::now(),
+            execution_started_at: Utc::now(),
+            execution_duration: Duration::from_secs(0),
+            trace_id: TraceId::default(),
+            trace_file_path: None,
+        }
+    }
+
+    /// Helper to create a test `ConfigureFailureContext` with custom error message
+    fn create_test_configure_context(error_message: &str) -> ConfigureFailureContext {
+        use chrono::Utc;
+        use std::time::Duration;
+
+        ConfigureFailureContext {
+            failed_step: ConfigureStep::InstallDocker,
+            error_kind: ConfigureErrorKind::InstallationFailed,
+            error_summary: error_message.to_string(),
+            failed_at: Utc::now(),
+            execution_started_at: Utc::now(),
+            execution_duration: Duration::from_secs(0),
+            trace_id: TraceId::default(),
+            trace_file_path: None,
+        }
+    }
 
     /// Test module for state marker types
     ///
@@ -410,15 +472,15 @@ mod tests {
     #[test]
     fn it_should_create_provision_failed_state_with_context() {
         let state = ProvisionFailed {
-            failed_step: "cloud_init_execution".to_string(),
+            context: create_test_provision_context("cloud_init_execution"),
         };
-        assert_eq!(state.failed_step, "cloud_init_execution");
+        assert_eq!(state.context.error_summary, "cloud_init_execution");
     }
 
     #[test]
     fn it_should_clone_provision_failed_state() {
         let state = ProvisionFailed {
-            failed_step: "cloud_init_execution".to_string(),
+            context: create_test_provision_context("cloud_init_execution"),
         };
         let cloned = state.clone();
         assert_eq!(state, cloned);
@@ -427,9 +489,9 @@ mod tests {
     #[test]
     fn it_should_create_configure_failed_state_with_context() {
         let state = ConfigureFailed {
-            failed_step: "ansible_playbook_execution".to_string(),
+            context: create_test_configure_context("ansible_playbook_execution"),
         };
-        assert_eq!(state.failed_step, "ansible_playbook_execution");
+        assert_eq!(state.context.error_summary, "ansible_playbook_execution");
     }
 
     #[test]
@@ -457,65 +519,57 @@ mod tests {
     #[test]
     fn it_should_serialize_provision_failed_state_to_json() {
         let state = ProvisionFailed {
-            failed_step: "cloud_init".to_string(),
+            context: create_test_provision_context("cloud_init"),
         };
         let json = serde_json::to_string(&state).unwrap();
         assert!(json.contains("cloud_init"));
+        assert!(json.contains("context"));
     }
 
     #[test]
     fn it_should_deserialize_provision_failed_state_from_json() {
-        let json = r#"{"failed_step":"cloud_init"}"#;
-        let state: ProvisionFailed = serde_json::from_str(json).unwrap();
-        assert_eq!(state.failed_step, "cloud_init");
+        // Note: This test now uses the full context structure
+        let context = create_test_provision_context("cloud_init");
+        let state = ProvisionFailed {
+            context: context.clone(),
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let deserialized: ProvisionFailed = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.context.error_summary, "cloud_init");
     }
 
     #[test]
     fn it_should_serialize_configure_failed_state_to_json() {
         let state = ConfigureFailed {
-            failed_step: "ansible_playbook".to_string(),
+            context: create_test_configure_context("ansible_playbook"),
         };
         let json = serde_json::to_string(&state).unwrap();
         assert!(json.contains("ansible_playbook"));
+        assert!(json.contains("context"));
     }
 
     #[test]
     fn it_should_deserialize_configure_failed_state_from_json() {
-        let json = r#"{"failed_step":"ansible_playbook"}"#;
-        let state: ConfigureFailed = serde_json::from_str(json).unwrap();
-        assert_eq!(state.failed_step, "ansible_playbook");
+        // Note: This test now uses the full context structure
+        let context = create_test_configure_context("ansible_playbook");
+        let state = ConfigureFailed {
+            context: context.clone(),
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let deserialized: ConfigureFailed = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.context.error_summary, "ansible_playbook");
     }
 
     // Tests for AnyEnvironmentState enum (Type Erasure)
     mod any_environment_state_tests {
         use super::*;
-        use crate::domain::environment::name::EnvironmentName;
-        use crate::shared::ssh::SshCredentials;
-        use crate::shared::Username;
-        use std::path::PathBuf;
 
-        pub(super) fn create_test_ssh_credentials() -> SshCredentials {
-            let username = Username::new("test-user".to_string()).unwrap();
-            SshCredentials::new(
-                PathBuf::from("/tmp/test_key"),
-                PathBuf::from("/tmp/test_key.pub"),
-                username,
-            )
-        }
-
-        pub(super) fn create_test_environment_created() -> Environment<Created> {
-            let name = EnvironmentName::new("test-env".to_string()).unwrap();
-            let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds)
-        }
-
-        // Note: For testing other states, we'll use the state transition methods
-        // once they're implemented in Subtask 2. For now, we test with Created state
-        // which demonstrates that the enum can hold any Environment<S> type.
+        // Note: Helper functions for creating test environments and contexts
+        // are defined in the parent module and can be accessed via super::
 
         #[test]
         fn it_should_create_any_environment_state_with_created_variant() {
-            let env = create_test_environment_created();
+            let env = super::create_test_environment_created();
             let any_env = AnyEnvironmentState::Created(env);
             assert!(matches!(any_env, AnyEnvironmentState::Created(_)));
         }
@@ -526,7 +580,7 @@ mod tests {
 
         #[test]
         fn it_should_clone_any_environment_state() {
-            let env = create_test_environment_created();
+            let env = super::create_test_environment_created();
             let any_env = AnyEnvironmentState::Created(env);
             let cloned = any_env.clone();
             assert!(matches!(cloned, AnyEnvironmentState::Created(_)));
@@ -534,7 +588,7 @@ mod tests {
 
         #[test]
         fn it_should_debug_format_any_environment_state() {
-            let env = create_test_environment_created();
+            let env = super::create_test_environment_created();
             let any_env = AnyEnvironmentState::Created(env);
             let debug_str = format!("{any_env:?}");
             assert!(debug_str.contains("Created"));
@@ -542,7 +596,7 @@ mod tests {
 
         #[test]
         fn it_should_serialize_any_environment_state_to_json() {
-            let env = create_test_environment_created();
+            let env = super::create_test_environment_created();
             let any_env = AnyEnvironmentState::Created(env);
             let json = serde_json::to_string(&any_env).unwrap();
             assert!(json.contains("Created"));
@@ -554,14 +608,14 @@ mod tests {
 
         #[test]
         fn it_should_convert_provisioning_environment_into_any() {
-            let env = create_test_environment_created().start_provisioning();
+            let env = super::create_test_environment_created().start_provisioning();
             let any_env = env.into_any();
             assert!(matches!(any_env, AnyEnvironmentState::Provisioning(_)));
         }
 
         #[test]
         fn it_should_convert_provisioned_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned();
             let any_env = env.into_any();
@@ -570,7 +624,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_configuring_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring();
@@ -580,7 +634,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_configured_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -591,7 +645,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_releasing_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -603,7 +657,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_released_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -616,7 +670,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_running_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -630,27 +684,27 @@ mod tests {
 
         #[test]
         fn it_should_convert_provision_failed_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provision_failed("infrastructure error".to_string());
+                .provision_failed(super::create_test_provision_context("infrastructure error"));
             let any_env = env.into_any();
             assert!(matches!(any_env, AnyEnvironmentState::ProvisionFailed(_)));
         }
 
         #[test]
         fn it_should_convert_configure_failed_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
-                .configure_failed("ansible error".to_string());
+                .configure_failed(super::create_test_configure_context("ansible error"));
             let any_env = env.into_any();
             assert!(matches!(any_env, AnyEnvironmentState::ConfigureFailed(_)));
         }
 
         #[test]
         fn it_should_convert_release_failed_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -663,7 +717,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_run_failed_environment_into_any() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -678,7 +732,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_destroyed_environment_into_any() {
-            let env = create_test_environment_created().destroy();
+            let env = super::create_test_environment_created().destroy();
             let any_env = env.into_any();
             assert!(matches!(any_env, AnyEnvironmentState::Destroyed(_)));
         }
@@ -687,7 +741,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_provisioning_successfully() {
-            let env = create_test_environment_created().start_provisioning();
+            let env = super::create_test_environment_created().start_provisioning();
             let any_env = env.into_any();
             let result = any_env.try_into_provisioning();
             assert!(result.is_ok());
@@ -695,7 +749,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_provisioned_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned();
             let any_env = env.into_any();
@@ -705,7 +759,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_configuring_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring();
@@ -716,7 +770,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_configured_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -728,7 +782,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_releasing_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -741,7 +795,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_released_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -755,7 +809,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_running_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -770,9 +824,9 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_provision_failed_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provision_failed("test error".to_string());
+                .provision_failed(super::create_test_provision_context("test error"));
             let any_env = env.into_any();
             let result = any_env.try_into_provision_failed();
             assert!(result.is_ok());
@@ -780,11 +834,11 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_configure_failed_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
-                .configure_failed("test error".to_string());
+                .configure_failed(super::create_test_configure_context("test error"));
             let any_env = env.into_any();
             let result = any_env.try_into_configure_failed();
             assert!(result.is_ok());
@@ -792,7 +846,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_release_failed_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -806,7 +860,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_run_failed_successfully() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -822,7 +876,7 @@ mod tests {
 
         #[test]
         fn it_should_convert_any_to_destroyed_successfully() {
-            let env = create_test_environment_created().destroy();
+            let env = super::create_test_environment_created().destroy();
             let any_env = env.into_any();
             let result = any_env.try_into_destroyed();
             assert!(result.is_ok());
@@ -832,7 +886,7 @@ mod tests {
 
         #[test]
         fn it_should_fail_converting_created_to_provisioning() {
-            let env = create_test_environment_created();
+            let env = super::create_test_environment_created();
             let any_env = env.into_any();
             let result = any_env.try_into_provisioning();
             assert!(result.is_err());
@@ -843,9 +897,9 @@ mod tests {
 
         #[test]
         fn it_should_fail_converting_provision_failed_to_provisioned() {
-            let env = create_test_environment_created()
+            let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provision_failed("error".to_string());
+                .provision_failed(super::create_test_provision_context("error"));
             let any_env = env.into_any();
             let result = any_env.try_into_provisioned();
             assert!(result.is_err());
@@ -856,7 +910,7 @@ mod tests {
 
         #[test]
         fn it_should_fail_converting_destroyed_to_running() {
-            let env = create_test_environment_created().destroy();
+            let env = super::create_test_environment_created().destroy();
             let any_env = env.into_any();
             let result = any_env.try_into_running();
             assert!(result.is_err());
@@ -870,28 +924,31 @@ mod tests {
         #[test]
         fn it_should_preserve_error_details_in_failed_states() {
             let error_message = "infrastructure deployment failed";
-            let env = create_test_environment_created()
+            let context = super::create_test_provision_context(error_message);
+            let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provision_failed(error_message.to_string());
+                .provision_failed(context.clone());
 
             // Round-trip conversion
             let any_env = env.into_any();
             let env_restored = any_env.try_into_provision_failed().unwrap();
 
-            assert_eq!(env_restored.state().failed_step, error_message);
+            assert_eq!(env_restored.state().context.error_summary, error_message);
         }
     }
 
     mod introspection_tests {
-        use super::super::*; // Import from grandparent (module root)
-        use super::any_environment_state_tests::create_test_environment_created;
+        use super::{
+            create_test_configure_context, create_test_environment_created,
+            create_test_provision_context,
+        };
 
         mod name {
-            use super::*;
+            use super::super::EnvironmentName;
 
             #[test]
             fn it_should_return_environment_name_for_created_state() {
-                let any_env = create_test_environment_created().into_any();
+                let any_env = super::create_test_environment_created().into_any();
                 let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
 
                 assert_eq!(any_env.name(), &env_name);
@@ -900,7 +957,7 @@ mod tests {
 
             #[test]
             fn it_should_return_same_name_for_provisioning_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .into_any();
                 let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
@@ -910,9 +967,9 @@ mod tests {
 
             #[test]
             fn it_should_return_same_name_for_error_states() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provision_failed("error".to_string())
+                    .provision_failed(super::create_test_provision_context("error"))
                     .into_any();
                 let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
 
@@ -921,17 +978,16 @@ mod tests {
         }
 
         mod state_name {
-            use super::*;
 
             #[test]
             fn it_should_return_created_for_created_state() {
-                let any_env = create_test_environment_created().into_any();
+                let any_env = super::create_test_environment_created().into_any();
                 assert_eq!(any_env.state_name(), "created");
             }
 
             #[test]
             fn it_should_return_provisioning_for_provisioning_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .into_any();
                 assert_eq!(any_env.state_name(), "provisioning");
@@ -939,7 +995,7 @@ mod tests {
 
             #[test]
             fn it_should_return_provisioned_for_provisioned_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .into_any();
@@ -948,7 +1004,7 @@ mod tests {
 
             #[test]
             fn it_should_return_configuring_for_configuring_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -958,7 +1014,7 @@ mod tests {
 
             #[test]
             fn it_should_return_configured_for_configured_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -969,7 +1025,7 @@ mod tests {
 
             #[test]
             fn it_should_return_releasing_for_releasing_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -981,7 +1037,7 @@ mod tests {
 
             #[test]
             fn it_should_return_released_for_released_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -994,7 +1050,7 @@ mod tests {
 
             #[test]
             fn it_should_return_running_for_running_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1008,27 +1064,27 @@ mod tests {
 
             #[test]
             fn it_should_return_provision_failed_for_provision_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provision_failed("error".to_string())
+                    .provision_failed(super::create_test_provision_context("error"))
                     .into_any();
                 assert_eq!(any_env.state_name(), "provision_failed");
             }
 
             #[test]
             fn it_should_return_configure_failed_for_configure_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
-                    .configure_failed("error".to_string())
+                    .configure_failed(super::create_test_configure_context("error"))
                     .into_any();
                 assert_eq!(any_env.state_name(), "configure_failed");
             }
 
             #[test]
             fn it_should_return_release_failed_for_release_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1041,7 +1097,7 @@ mod tests {
 
             #[test]
             fn it_should_return_run_failed_for_run_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1056,23 +1112,24 @@ mod tests {
 
             #[test]
             fn it_should_return_destroyed_for_destroyed_state() {
-                let any_env = create_test_environment_created().destroy().into_any();
+                let any_env = super::create_test_environment_created()
+                    .destroy()
+                    .into_any();
                 assert_eq!(any_env.state_name(), "destroyed");
             }
         }
 
         mod is_success_state {
-            use super::*;
 
             #[test]
             fn it_should_return_true_for_created_state() {
-                let any_env = create_test_environment_created().into_any();
+                let any_env = super::create_test_environment_created().into_any();
                 assert!(any_env.is_success_state());
             }
 
             #[test]
             fn it_should_return_true_for_provisioning_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .into_any();
                 assert!(any_env.is_success_state());
@@ -1080,7 +1137,7 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_provisioned_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .into_any();
@@ -1089,7 +1146,7 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_configuring_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1099,7 +1156,7 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_configured_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1110,7 +1167,7 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_releasing_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1122,7 +1179,7 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_released_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1135,7 +1192,7 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_running_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1149,33 +1206,35 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_destroyed_state() {
-                let any_env = create_test_environment_created().destroy().into_any();
+                let any_env = super::create_test_environment_created()
+                    .destroy()
+                    .into_any();
                 assert!(any_env.is_success_state());
             }
 
             #[test]
             fn it_should_return_false_for_provision_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provision_failed("error".to_string())
+                    .provision_failed(super::create_test_provision_context("error"))
                     .into_any();
                 assert!(!any_env.is_success_state());
             }
 
             #[test]
             fn it_should_return_false_for_configure_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
-                    .configure_failed("error".to_string())
+                    .configure_failed(super::create_test_configure_context("error"))
                     .into_any();
                 assert!(!any_env.is_success_state());
             }
 
             #[test]
             fn it_should_return_false_for_release_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1188,7 +1247,7 @@ mod tests {
 
             #[test]
             fn it_should_return_false_for_run_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1203,38 +1262,37 @@ mod tests {
         }
 
         mod is_error_state {
-            use super::*;
 
             #[test]
             fn it_should_return_false_for_success_states() {
                 let success_states = vec![
-                    create_test_environment_created().into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created().into_any(),
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
                         .configured()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
                         .configured()
                         .start_releasing()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
@@ -1242,7 +1300,7 @@ mod tests {
                         .start_releasing()
                         .released()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
@@ -1251,7 +1309,9 @@ mod tests {
                         .released()
                         .start_running()
                         .into_any(),
-                    create_test_environment_created().destroy().into_any(),
+                    super::create_test_environment_created()
+                        .destroy()
+                        .into_any(),
                 ];
 
                 for state in success_states {
@@ -1261,27 +1321,27 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_provision_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provision_failed("error".to_string())
+                    .provision_failed(super::create_test_provision_context("error"))
                     .into_any();
                 assert!(any_env.is_error_state());
             }
 
             #[test]
             fn it_should_return_true_for_configure_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
-                    .configure_failed("error".to_string())
+                    .configure_failed(super::create_test_configure_context("error"))
                     .into_any();
                 assert!(any_env.is_error_state());
             }
 
             #[test]
             fn it_should_return_true_for_release_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1294,7 +1354,7 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_run_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1309,38 +1369,37 @@ mod tests {
         }
 
         mod is_terminal_state {
-            use super::*;
 
             #[test]
             fn it_should_return_false_for_transient_states() {
                 let transient_states = vec![
-                    create_test_environment_created().into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created().into_any(),
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
                         .configured()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
                         .configured()
                         .start_releasing()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
@@ -1357,7 +1416,7 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_running_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1371,33 +1430,35 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_destroyed_state() {
-                let any_env = create_test_environment_created().destroy().into_any();
+                let any_env = super::create_test_environment_created()
+                    .destroy()
+                    .into_any();
                 assert!(any_env.is_terminal_state());
             }
 
             #[test]
             fn it_should_return_true_for_provision_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provision_failed("error".to_string())
+                    .provision_failed(super::create_test_provision_context("error"))
                     .into_any();
                 assert!(any_env.is_terminal_state());
             }
 
             #[test]
             fn it_should_return_true_for_configure_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
-                    .configure_failed("error".to_string())
+                    .configure_failed(super::create_test_configure_context("error"))
                     .into_any();
                 assert!(any_env.is_terminal_state());
             }
 
             #[test]
             fn it_should_return_true_for_release_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1410,7 +1471,7 @@ mod tests {
 
             #[test]
             fn it_should_return_true_for_run_failed_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1425,38 +1486,37 @@ mod tests {
         }
 
         mod error_details {
-            use super::*;
 
             #[test]
             fn it_should_return_none_for_success_states() {
                 let success_states = vec![
-                    create_test_environment_created().into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created().into_any(),
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
                         .configured()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
                         .configured()
                         .start_releasing()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
@@ -1464,7 +1524,7 @@ mod tests {
                         .start_releasing()
                         .released()
                         .into_any(),
-                    create_test_environment_created()
+                    super::create_test_environment_created()
                         .start_provisioning()
                         .provisioned()
                         .start_configuring()
@@ -1473,7 +1533,9 @@ mod tests {
                         .released()
                         .start_running()
                         .into_any(),
-                    create_test_environment_created().destroy().into_any(),
+                    super::create_test_environment_created()
+                        .destroy()
+                        .into_any(),
                 ];
 
                 for state in success_states {
@@ -1484,9 +1546,9 @@ mod tests {
             #[test]
             fn it_should_return_error_message_for_provision_failed_state() {
                 let error_message = "network timeout during provisioning";
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provision_failed(error_message.to_string())
+                    .provision_failed(super::create_test_provision_context(error_message))
                     .into_any();
 
                 assert_eq!(any_env.error_details(), Some(error_message));
@@ -1495,11 +1557,11 @@ mod tests {
             #[test]
             fn it_should_return_error_message_for_configure_failed_state() {
                 let error_message = "ansible playbook failed";
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
-                    .configure_failed(error_message.to_string())
+                    .configure_failed(super::create_test_configure_context(error_message))
                     .into_any();
 
                 assert_eq!(any_env.error_details(), Some(error_message));
@@ -1508,7 +1570,7 @@ mod tests {
             #[test]
             fn it_should_return_error_message_for_release_failed_state() {
                 let error_message = "release process error";
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1523,7 +1585,7 @@ mod tests {
             #[test]
             fn it_should_return_error_message_for_run_failed_state() {
                 let error_message = "application crash";
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1539,11 +1601,10 @@ mod tests {
         }
 
         mod display {
-            use super::*;
 
             #[test]
             fn it_should_format_success_state_without_error_details() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .into_any();
 
@@ -1553,7 +1614,7 @@ mod tests {
 
             #[test]
             fn it_should_format_running_state() {
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
@@ -1570,9 +1631,9 @@ mod tests {
             #[test]
             fn it_should_format_error_state_with_error_details() {
                 let error_message = "network timeout";
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provision_failed(error_message.to_string())
+                    .provision_failed(super::create_test_provision_context(error_message))
                     .into_any();
 
                 let output = format!("{any_env}");
@@ -1585,11 +1646,11 @@ mod tests {
             #[test]
             fn it_should_format_configure_failed_with_error_details() {
                 let error_message = "ansible error";
-                let any_env = create_test_environment_created()
+                let any_env = super::create_test_environment_created()
                     .start_provisioning()
                     .provisioned()
                     .start_configuring()
-                    .configure_failed(error_message.to_string())
+                    .configure_failed(super::create_test_configure_context(error_message))
                     .into_any();
 
                 let output = format!("{any_env}");
@@ -1601,7 +1662,9 @@ mod tests {
 
             #[test]
             fn it_should_format_destroyed_state() {
-                let any_env = create_test_environment_created().destroy().into_any();
+                let any_env = super::create_test_environment_created()
+                    .destroy()
+                    .into_any();
 
                 let output = format!("{any_env}");
                 assert_eq!(output, "Environment 'test-env' is in state: destroyed");
@@ -1609,7 +1672,7 @@ mod tests {
 
             #[test]
             fn it_should_work_with_println_macro() {
-                let any_env = create_test_environment_created().into_any();
+                let any_env = super::create_test_environment_created().into_any();
 
                 // This test verifies that Display can be used with println!
                 // We can't capture println output easily, but we can verify it compiles

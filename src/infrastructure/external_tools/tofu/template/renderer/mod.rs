@@ -96,6 +96,33 @@ pub enum ProvisionTemplateError {
     },
 }
 
+impl crate::shared::Traceable for ProvisionTemplateError {
+    fn trace_format(&self) -> String {
+        match self {
+            Self::DirectoryCreationFailed { directory, .. } => {
+                format!("ProvisionTemplateError: Failed to create build directory '{directory}'")
+            }
+            Self::TemplatePathFailed { file_name, .. } => {
+                format!("ProvisionTemplateError: Failed to get template path for '{file_name}'")
+            }
+            Self::FileCopyFailed { file_name, .. } => {
+                format!("ProvisionTemplateError: Failed to copy template file '{file_name}'")
+            }
+            Self::CloudInitRenderingFailed { .. } => {
+                "ProvisionTemplateError: Cloud-init template rendering failed".to_string()
+            }
+            Self::VariablesRenderingFailed { .. } => {
+                "ProvisionTemplateError: Variables template rendering failed".to_string()
+            }
+        }
+    }
+
+    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
+        // None of the source errors implement Traceable (std::io::Error, TemplateManagerError, etc.)
+        None
+    }
+}
+
 /// Renders `OpenTofu` provision templates to a build directory
 ///
 /// This collaborator is responsible for preparing `OpenTofu` templates for deployment workflows.

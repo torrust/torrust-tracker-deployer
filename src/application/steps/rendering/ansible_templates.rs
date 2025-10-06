@@ -52,6 +52,30 @@ pub enum RenderAnsibleTemplatesError {
     TemplateRenderingError(#[from] ConfigurationTemplateError),
 }
 
+impl crate::shared::Traceable for RenderAnsibleTemplatesError {
+    fn trace_format(&self) -> String {
+        match self {
+            Self::SshKeyPathError(e) => {
+                format!("RenderAnsibleTemplatesError: SSH key path parsing failed - {e}")
+            }
+            Self::SshPortError(e) => {
+                format!("RenderAnsibleTemplatesError: SSH port parsing failed - {e}")
+            }
+            Self::InventoryContextError(e) => {
+                format!("RenderAnsibleTemplatesError: Inventory context creation failed - {e}")
+            }
+            Self::TemplateRenderingError(e) => {
+                format!("RenderAnsibleTemplatesError: Template rendering failed - {e}")
+            }
+        }
+    }
+
+    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
+        // None of the source errors implement Traceable
+        None
+    }
+}
+
 /// Simple step that renders `Ansible` templates to the build directory with runtime variables
 pub struct RenderAnsibleTemplatesStep {
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,

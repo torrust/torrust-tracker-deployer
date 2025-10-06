@@ -57,3 +57,27 @@ pub enum SshError {
         source: CommandError,
     },
 }
+
+impl crate::shared::Traceable for SshError {
+    fn trace_format(&self) -> String {
+        match self {
+            Self::ConnectivityTimeout {
+                host_ip,
+                attempts,
+                timeout_seconds,
+            } => {
+                format!("SshError: Connectivity timeout to '{host_ip}' after {attempts} attempts ({timeout_seconds} seconds)")
+            }
+            Self::CommandFailed { source } => {
+                format!("SshError: SSH command failed - {source}")
+            }
+        }
+    }
+
+    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
+        match self {
+            Self::ConnectivityTimeout { .. } => None,
+            Self::CommandFailed { source } => Some(source),
+        }
+    }
+}

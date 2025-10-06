@@ -2,30 +2,36 @@
 //!
 //! Error state - Application configuration failed
 //!
-//! The configuration command failed during execution. The `failed_step` field
-//! contains the name of the step that caused the failure.
+//! The configuration command failed during execution. The `context` field
+//! contains structured error information including the failed step, error kind,
+//! timing information, and a reference to the detailed trace file.
 //!
 //! **Recovery Options:**
 //! - Destroy and recreate the environment
 //! - Manual configuration correction (advanced users)
+//! - Review trace file for detailed error information
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::environment::state::{AnyEnvironmentState, StateTypeError};
+use crate::domain::environment::state::{
+    AnyEnvironmentState, ConfigureFailureContext, StateTypeError,
+};
 use crate::domain::environment::Environment;
 
 /// Error state - Application configuration failed
 ///
-/// The configuration command failed during execution. The `failed_step` field
-/// contains the name of the step that caused the failure.
+/// The configuration command failed during execution. The `context` field
+/// contains structured error information including the failed step, error kind,
+/// timing information, and a reference to the detailed trace file.
 ///
 /// **Recovery Options:**
 /// - Destroy and recreate the environment
 /// - Manual configuration correction (advanced users)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// - Review trace file for detailed error information
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConfigureFailed {
-    /// The name of the step that failed during configuration
-    pub failed_step: String,
+    /// Structured error context with detailed failure information
+    pub context: ConfigureFailureContext,
 }
 
 // Type Erasure: Typed → Runtime conversion (into_any)
@@ -58,29 +64,59 @@ impl AnyEnvironmentState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::environment::state::{
+        ConfigureErrorKind, ConfigureFailureContext, ConfigureStep, TraceId,
+    };
+    use chrono::Utc;
+    use std::time::Duration;
+
+    fn create_test_context() -> ConfigureFailureContext {
+        ConfigureFailureContext {
+            failed_step: ConfigureStep::InstallDocker,
+            error_kind: ConfigureErrorKind::InstallationFailed,
+            error_summary: "Docker installation failed".to_string(),
+            failed_at: Utc::now(),
+            execution_started_at: Utc::now(),
+            execution_duration: Duration::from_secs(15),
+            trace_id: TraceId::new(),
+            trace_file_path: None,
+        }
+    }
 
     #[test]
     fn it_should_create_configure_failed_state_with_context() {
+        let context = create_test_context();
         let state = ConfigureFailed {
-            failed_step: "ansible_playbook_execution".to_string(),
+            context: context.clone(),
         };
-        assert_eq!(state.failed_step, "ansible_playbook_execution");
+        assert_eq!(state.context.failed_step, ConfigureStep::InstallDocker);
+        assert_eq!(
+            state.context.error_kind,
+            ConfigureErrorKind::InstallationFailed
+        );
     }
 
     #[test]
     fn it_should_serialize_configure_failed_state_to_json() {
         let state = ConfigureFailed {
-            failed_step: "ansible_playbook".to_string(),
+            context: create_test_context(),
         };
         let json = serde_json::to_string(&state).unwrap();
-        assert!(json.contains("ansible_playbook"));
+        assert!(json.contains("InstallDocker"));
+        assert!(json.contains("InstallationFailed"));
     }
 
     #[test]
     fn it_should_deserialize_configure_failed_state_from_json() {
-        let json = r#"{"failed_step":"ansible_playbook"}"#;
-        let state: ConfigureFailed = serde_json::from_str(json).unwrap();
-        assert_eq!(state.failed_step, "ansible_playbook");
+        let state = ConfigureFailed {
+            context: create_test_context(),
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let deserialized: ConfigureFailed = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            deserialized.context.failed_step,
+            ConfigureStep::InstallDocker
+        );
     }
 
     mod conversion_tests {
@@ -106,7 +142,7 @@ mod tests {
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
-                .configure_failed("test error".to_string())
+                .configure_failed(super::create_test_context())
         }
 
         #[test]

@@ -4,6 +4,9 @@ use tracing::{info, instrument, warn};
 
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::state::{
+    ConfigureErrorKind, ConfigureFailureContext, ConfigureStep, TraceId,
+};
 use crate::domain::environment::{
     ConfigureFailed, Configured, Configuring, Environment, Provisioned,
 };
@@ -15,6 +18,22 @@ use crate::shared::command::CommandError;
 pub enum ConfigureCommandError {
     #[error("Command execution failed: {0}")]
     Command(#[from] CommandError),
+}
+
+impl crate::shared::Traceable for ConfigureCommandError {
+    fn trace_format(&self) -> String {
+        match self {
+            Self::Command(e) => {
+                format!("ConfigureCommandError: Command execution failed - {e}")
+            }
+        }
+    }
+
+    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
+        match self {
+            Self::Command(e) => Some(e),
+        }
+    }
 }
 
 /// `ConfigureCommand` orchestrates the complete infrastructure configuration workflow
@@ -109,8 +128,9 @@ impl ConfigureCommand {
                 Ok(configured_env)
             }
             Err(e) => {
-                // Transition to error state with step context
-                let failed = environment.configure_failed(self.extract_failed_step(&e));
+                // Transition to error state with structured context
+                let context = self.build_failure_context(&e);
+                let failed = environment.configure_failed(context);
 
                 // Persist error state
                 self.persist_configure_failed_state(&failed);
@@ -186,18 +206,38 @@ impl ConfigureCommand {
     ///
     /// # Arguments
     ///
-    /// * `error` - The configuration error to extract step information from
+    /// * `error` - The configuration error to build context from
     ///
     /// # Returns
     ///
-    /// A string identifying the failed step
+    /// A structured `ConfigureFailureContext` with timing and error details
     #[allow(clippy::unused_self)] // Method kept as instance method for consistency with ProvisionCommand
-    fn extract_failed_step(&self, error: &ConfigureCommandError) -> String {
-        match error {
-            ConfigureCommandError::Command(e) => {
-                // Try to extract step from command error
-                format!("configuration_step: {e}")
+    fn build_failure_context(&self, error: &ConfigureCommandError) -> ConfigureFailureContext {
+        use chrono::Utc;
+        use std::time::Duration;
+
+        let (failed_step, error_kind) = match error {
+            ConfigureCommandError::Command(_) => {
+                // For now, we can't distinguish between Docker and Docker Compose installation
+                // from a CommandError alone. Default to Docker as it's the first step.
+                // In the future, we could add more context to CommandError to distinguish.
+                (
+                    ConfigureStep::InstallDocker,
+                    ConfigureErrorKind::InstallationFailed,
+                )
             }
+        };
+
+        let now = Utc::now();
+        ConfigureFailureContext {
+            failed_step,
+            error_kind,
+            error_summary: error.to_string(),
+            failed_at: now,
+            execution_started_at: now, // TODO: Track actual start time
+            execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
+            trace_id: TraceId::default(),
+            trace_file_path: None,
         }
     }
 }
@@ -246,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn it_should_extract_failed_step_from_command_error() {
+    fn it_should_build_failure_context_from_command_error() {
         let (ansible_client, repository, _temp_dir) = create_mock_dependencies();
 
         let command = ConfigureCommand::new(ansible_client, repository);
@@ -258,7 +298,8 @@ mod tests {
             stderr: "test error".to_string(),
         });
 
-        let step_name = command.extract_failed_step(&error);
-        assert!(step_name.contains("configuration_step"));
+        let context = command.build_failure_context(&error);
+        assert_eq!(context.failed_step, ConfigureStep::InstallDocker);
+        assert_eq!(context.error_kind, ConfigureErrorKind::InstallationFailed);
     }
 }

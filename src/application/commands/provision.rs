@@ -24,6 +24,9 @@ use crate::application::steps::{
     WaitForSSHConnectivityStep,
 };
 use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::state::{
+    ProvisionErrorKind, ProvisionFailureContext, ProvisionStep, TraceId,
+};
 use crate::domain::environment::{
     Created, Environment, ProvisionFailed, Provisioned, Provisioning,
 };
@@ -53,6 +56,38 @@ pub enum ProvisionCommandError {
 
     #[error("SSH connectivity failed: {0}")]
     SshConnectivity(#[from] SshError),
+}
+
+impl crate::shared::Traceable for ProvisionCommandError {
+    fn trace_format(&self) -> String {
+        match self {
+            Self::OpenTofuTemplateRendering(e) => {
+                format!("ProvisionCommandError: OpenTofu template rendering failed - {e}")
+            }
+            Self::AnsibleTemplateRendering(e) => {
+                format!("ProvisionCommandError: Ansible template rendering failed - {e}")
+            }
+            Self::OpenTofu(e) => {
+                format!("ProvisionCommandError: OpenTofu command failed - {e}")
+            }
+            Self::Command(e) => {
+                format!("ProvisionCommandError: Command execution failed - {e}")
+            }
+            Self::SshConnectivity(e) => {
+                format!("ProvisionCommandError: SSH connectivity failed - {e}")
+            }
+        }
+    }
+
+    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
+        match self {
+            Self::OpenTofuTemplateRendering(e) => Some(e),
+            Self::AnsibleTemplateRendering(e) => Some(e),
+            Self::OpenTofu(e) => Some(e),
+            Self::Command(e) => Some(e),
+            Self::SshConnectivity(e) => Some(e),
+        }
+    }
 }
 
 /// `ProvisionCommand` orchestrates the complete infrastructure provisioning workflow
@@ -170,8 +205,9 @@ impl ProvisionCommand {
                 Ok((provisioned, instance_ip))
             }
             Err(e) => {
-                // Transition to error state with step context
-                let failed = environment.provision_failed(self.extract_failed_step(&e));
+                // Transition to error state with structured context
+                let context = self.build_failure_context(&e);
+                let failed = environment.provision_failed(context);
 
                 // Persist error state
                 self.persist_provision_failed_state(&failed);
@@ -358,7 +394,6 @@ impl ProvisionCommand {
     /// Extract the failed step name from a provisioning error
     ///
     /// This helper method provides context about which step failed during provisioning.
-    /// It will be used in Phase 5 to track failed steps in error states.
     ///
     /// # Arguments
     ///
@@ -367,20 +402,46 @@ impl ProvisionCommand {
     /// # Returns
     ///
     /// A string identifying the failed step
-    #[allow(dead_code)] // Will be used in Phase 5 Subtask 3
-    fn extract_failed_step(&self, error: &ProvisionCommandError) -> String {
-        match error {
-            ProvisionCommandError::OpenTofuTemplateRendering(_) => {
-                "render_opentofu_templates".to_string()
-            }
+    fn build_failure_context(&self, error: &ProvisionCommandError) -> ProvisionFailureContext {
+        use chrono::Utc;
+        use std::time::Duration;
+
+        let (failed_step, error_kind) = match error {
+            ProvisionCommandError::OpenTofuTemplateRendering(_) => (
+                ProvisionStep::RenderOpenTofuTemplates,
+                ProvisionErrorKind::TemplateRendering,
+            ),
             ProvisionCommandError::OpenTofu(e) => {
-                format!("opentofu_{}", self.extract_opentofu_step(e))
+                let step = match self.extract_opentofu_step(e).as_str() {
+                    "init" => ProvisionStep::OpenTofuInit,
+                    _ => ProvisionStep::OpenTofuApply, // Default to Apply for unknown operations
+                };
+                (step, ProvisionErrorKind::InfrastructureProvisioning)
             }
-            ProvisionCommandError::AnsibleTemplateRendering(_) => {
-                "render_ansible_templates".to_string()
-            }
-            ProvisionCommandError::SshConnectivity(_) => "wait_ssh_connectivity".to_string(),
-            ProvisionCommandError::Command(_) => "cloud_init_wait".to_string(),
+            ProvisionCommandError::AnsibleTemplateRendering(_) => (
+                ProvisionStep::RenderAnsibleTemplates,
+                ProvisionErrorKind::TemplateRendering,
+            ),
+            ProvisionCommandError::SshConnectivity(_) => (
+                ProvisionStep::WaitSshConnectivity,
+                ProvisionErrorKind::NetworkConnectivity,
+            ),
+            ProvisionCommandError::Command(_) => (
+                ProvisionStep::CloudInitWait,
+                ProvisionErrorKind::ConfigurationTimeout,
+            ),
+        };
+
+        let now = Utc::now();
+        ProvisionFailureContext {
+            failed_step,
+            error_kind,
+            error_summary: error.to_string(),
+            failed_at: now,
+            execution_started_at: now, // TODO: Track actual start time
+            execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
+            trace_id: TraceId::default(),
+            trace_file_path: None,
         }
     }
 
@@ -395,7 +456,6 @@ impl ProvisionCommand {
     /// # Returns
     ///
     /// A string identifying the `OpenTofu` operation (currently returns generic "operation")
-    #[allow(dead_code)] // Will be used in Phase 5 Subtask 3
     #[allow(clippy::unused_self)] // Will use self in future implementations
     fn extract_opentofu_step(&self, _error: &OpenTofuError) -> String {
         // Could be more sophisticated based on error variant in the future
@@ -543,7 +603,7 @@ mod tests {
     }
 
     #[test]
-    fn it_should_extract_failed_step_from_opentofu_template_error() {
+    fn it_should_build_failure_context_from_opentofu_template_error() {
         let (
             tofu_renderer,
             ansible_renderer,
@@ -569,17 +629,18 @@ mod tests {
             },
         );
 
-        let step_name = command.extract_failed_step(&error);
-        assert_eq!(step_name, "render_opentofu_templates");
+        let context = command.build_failure_context(&error);
+        assert_eq!(context.failed_step, ProvisionStep::RenderOpenTofuTemplates);
+        assert_eq!(context.error_kind, ProvisionErrorKind::TemplateRendering);
     }
 
     // Note: We don't test AnsibleTemplateRendering errors directly as the error types are complex
-    // and deeply nested. The extract_failed_step method handles them by matching on the
+    // and deeply nested. The build_failure_context method handles them by matching on the
     // ProvisionCommandError::AnsibleTemplateRendering variant, which is sufficient for
-    // Phase 5 integration.
+    // error context generation.
 
     #[test]
-    fn it_should_extract_failed_step_from_ssh_connectivity_error() {
+    fn it_should_build_failure_context_from_ssh_connectivity_error() {
         let (
             tofu_renderer,
             ansible_renderer,
@@ -604,12 +665,13 @@ mod tests {
             timeout_seconds: 30,
         });
 
-        let step_name = command.extract_failed_step(&error);
-        assert_eq!(step_name, "wait_ssh_connectivity");
+        let context = command.build_failure_context(&error);
+        assert_eq!(context.failed_step, ProvisionStep::WaitSshConnectivity);
+        assert_eq!(context.error_kind, ProvisionErrorKind::NetworkConnectivity);
     }
 
     #[test]
-    fn it_should_extract_failed_step_from_command_error() {
+    fn it_should_build_failure_context_from_command_error() {
         let (
             tofu_renderer,
             ansible_renderer,
@@ -635,12 +697,13 @@ mod tests {
             stderr: "test error".to_string(),
         });
 
-        let step_name = command.extract_failed_step(&error);
-        assert_eq!(step_name, "cloud_init_wait");
+        let context = command.build_failure_context(&error);
+        assert_eq!(context.failed_step, ProvisionStep::CloudInitWait);
+        assert_eq!(context.error_kind, ProvisionErrorKind::ConfigurationTimeout);
     }
 
     #[test]
-    fn it_should_extract_failed_step_from_opentofu_error() {
+    fn it_should_build_failure_context_from_opentofu_error() {
         let (
             tofu_renderer,
             ansible_renderer,
@@ -668,7 +731,11 @@ mod tests {
 
         let error = ProvisionCommandError::OpenTofu(opentofu_error);
 
-        let step_name = command.extract_failed_step(&error);
-        assert_eq!(step_name, "opentofu_operation");
+        let context = command.build_failure_context(&error);
+        assert_eq!(context.failed_step, ProvisionStep::OpenTofuApply);
+        assert_eq!(
+            context.error_kind,
+            ProvisionErrorKind::InfrastructureProvisioning
+        );
     }
 }

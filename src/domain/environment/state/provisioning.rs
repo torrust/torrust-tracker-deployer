@@ -39,10 +39,15 @@ impl Environment<Provisioning> {
 
     /// Transitions from Provisioning to `ProvisionFailed` state
     ///
-    /// This method indicates that infrastructure provisioning failed at a specific step.
+    /// This method indicates that infrastructure provisioning failed.
+    /// The context parameter provides structured error information including
+    /// the failed step, error classification, and trace reference.
     #[must_use]
-    pub fn provision_failed(self, failed_step: String) -> Environment<ProvisionFailed> {
-        self.with_state(ProvisionFailed { failed_step })
+    pub fn provision_failed(
+        self,
+        context: crate::domain::environment::state::ProvisionFailureContext,
+    ) -> Environment<ProvisionFailed> {
+        self.with_state(ProvisionFailed { context })
     }
 }
 
@@ -168,10 +173,29 @@ mod tests {
 
         #[test]
         fn it_should_transition_from_provisioning_to_provision_failed() {
-            let env = create_test_environment_provisioning();
-            let env = env.provision_failed("cloud_init_timeout".to_string());
+            use crate::domain::environment::state::{
+                ProvisionErrorKind, ProvisionFailureContext, ProvisionStep, TraceId,
+            };
+            use chrono::Utc;
+            use std::time::Duration;
 
-            assert_eq!(env.state().failed_step, "cloud_init_timeout");
+            let env = create_test_environment_provisioning();
+            let context = ProvisionFailureContext {
+                failed_step: ProvisionStep::CloudInitWait,
+                error_kind: ProvisionErrorKind::ConfigurationTimeout,
+                error_summary: "cloud_init_timeout".to_string(),
+                failed_at: Utc::now(),
+                execution_started_at: Utc::now(),
+                execution_duration: Duration::from_secs(30),
+                trace_id: TraceId::new(),
+                trace_file_path: None,
+            };
+            let env = env.provision_failed(context.clone());
+
+            assert_eq!(
+                env.state().context.failed_step,
+                ProvisionStep::CloudInitWait
+            );
             assert_eq!(env.name().as_str(), "test-env");
         }
     }

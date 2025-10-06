@@ -2,32 +2,36 @@
 //!
 //! Error state - Infrastructure provisioning failed
 //!
-//! The provision command failed during execution. The `failed_step` field
-//! contains the name of the step that caused the failure, providing context
-//! for debugging and recovery.
+//! The provision command failed during execution. The `context` field
+//! contains structured error information including the failed step, error kind,
+//! timing information, and a reference to the detailed trace file.
 //!
 //! **Recovery Options:**
 //! - Destroy and recreate the environment
 //! - Manual inspection and repair (advanced users)
+//! - Review trace file for detailed error information
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::environment::state::{AnyEnvironmentState, StateTypeError};
+use crate::domain::environment::state::{
+    AnyEnvironmentState, ProvisionFailureContext, StateTypeError,
+};
 use crate::domain::environment::Environment;
 
 /// Error state - Infrastructure provisioning failed
 ///
-/// The provision command failed during execution. The `failed_step` field
-/// contains the name of the step that caused the failure, providing context
-/// for debugging and recovery.
+/// The provision command failed during execution. The `context` field
+/// contains structured error information including the failed step, error kind,
+/// timing information, and a reference to the detailed trace file.
 ///
 /// **Recovery Options:**
 /// - Destroy and recreate the environment
 /// - Manual inspection and repair (advanced users)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// - Review trace file for detailed error information
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProvisionFailed {
-    /// The name of the step that failed during provisioning
-    pub failed_step: String,
+    /// Structured error context with detailed failure information
+    pub context: ProvisionFailureContext,
 }
 
 // Type Erasure: Typed → Runtime conversion (into_any)
@@ -60,38 +64,68 @@ impl AnyEnvironmentState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::environment::state::{
+        ProvisionErrorKind, ProvisionFailureContext, ProvisionStep, TraceId,
+    };
+    use chrono::Utc;
+    use std::time::Duration;
+
+    fn create_test_context() -> ProvisionFailureContext {
+        ProvisionFailureContext {
+            failed_step: ProvisionStep::CloudInitWait,
+            error_kind: ProvisionErrorKind::ConfigurationTimeout,
+            error_summary: "cloud_init_timeout".to_string(),
+            failed_at: Utc::now(),
+            execution_started_at: Utc::now(),
+            execution_duration: Duration::from_secs(30),
+            trace_id: TraceId::new(),
+            trace_file_path: None,
+        }
+    }
 
     #[test]
     fn it_should_create_provision_failed_state_with_context() {
+        let context = create_test_context();
         let state = ProvisionFailed {
-            failed_step: "cloud_init_execution".to_string(),
+            context: context.clone(),
         };
-        assert_eq!(state.failed_step, "cloud_init_execution");
+        assert_eq!(state.context.failed_step, ProvisionStep::CloudInitWait);
+        assert_eq!(
+            state.context.error_kind,
+            ProvisionErrorKind::ConfigurationTimeout
+        );
     }
 
     #[test]
     fn it_should_clone_provision_failed_state() {
         let state = ProvisionFailed {
-            failed_step: "cloud_init_execution".to_string(),
+            context: create_test_context(),
         };
         let cloned = state.clone();
-        assert_eq!(state, cloned);
+        assert_eq!(state.context.failed_step, cloned.context.failed_step);
     }
 
     #[test]
     fn it_should_serialize_provision_failed_state_to_json() {
         let state = ProvisionFailed {
-            failed_step: "cloud_init".to_string(),
+            context: create_test_context(),
         };
         let json = serde_json::to_string(&state).unwrap();
-        assert!(json.contains("cloud_init"));
+        assert!(json.contains("CloudInitWait"));
+        assert!(json.contains("ConfigurationTimeout"));
     }
 
     #[test]
     fn it_should_deserialize_provision_failed_state_from_json() {
-        let json = r#"{"failed_step":"cloud_init"}"#;
-        let state: ProvisionFailed = serde_json::from_str(json).unwrap();
-        assert_eq!(state.failed_step, "cloud_init");
+        let state = ProvisionFailed {
+            context: create_test_context(),
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let deserialized: ProvisionFailed = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            deserialized.context.failed_step,
+            ProvisionStep::CloudInitWait
+        );
     }
 
     mod conversion_tests {
@@ -115,7 +149,7 @@ mod tests {
             let ssh_creds = create_test_ssh_credentials();
             Environment::new(name, ssh_creds)
                 .start_provisioning()
-                .provision_failed("test error".to_string())
+                .provision_failed(super::create_test_context())
         }
 
         #[test]
@@ -135,18 +169,25 @@ mod tests {
 
         #[test]
         fn it_should_preserve_error_details_in_failed_states() {
-            let error_message = "infrastructure deployment failed";
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
+            let context = super::create_test_context();
             let env = Environment::new(name, ssh_creds)
                 .start_provisioning()
-                .provision_failed(error_message.to_string());
+                .provision_failed(context.clone());
 
             // Round-trip conversion
             let any_env = env.into_any();
             let env_restored = any_env.try_into_provision_failed().unwrap();
 
-            assert_eq!(env_restored.state().failed_step, error_message);
+            assert_eq!(
+                env_restored.state().context.failed_step,
+                context.failed_step
+            );
+            assert_eq!(
+                env_restored.state().context.error_summary,
+                context.error_summary
+            );
         }
     }
 }

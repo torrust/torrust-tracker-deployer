@@ -74,6 +74,7 @@ mod tests {
     mod conversion_tests {
         use super::*;
         use crate::domain::environment::name::EnvironmentName;
+        use crate::domain::environment::state::ProvisionFailureContext;
         use crate::shared::ssh::SshCredentials;
         use crate::shared::Username;
         use std::path::PathBuf;
@@ -93,6 +94,23 @@ mod tests {
             Environment::new(name, ssh_creds)
                 .start_provisioning()
                 .provisioned()
+        }
+
+        fn create_test_provision_context() -> ProvisionFailureContext {
+            use crate::domain::environment::state::{ProvisionErrorKind, ProvisionStep, TraceId};
+            use chrono::Utc;
+            use std::time::Duration;
+
+            ProvisionFailureContext {
+                failed_step: ProvisionStep::CloudInitWait,
+                error_kind: ProvisionErrorKind::ConfigurationTimeout,
+                error_summary: "error".to_string(),
+                failed_at: Utc::now(),
+                execution_started_at: Utc::now(),
+                execution_duration: Duration::from_secs(0),
+                trace_id: TraceId::default(),
+                trace_file_path: None,
+            }
         }
 
         #[test]
@@ -116,7 +134,7 @@ mod tests {
             let ssh_creds = create_test_ssh_credentials();
             let env = Environment::new(name, ssh_creds)
                 .start_provisioning()
-                .provision_failed("error".to_string());
+                .provision_failed(create_test_provision_context());
             let any_env = env.into_any();
             let result = any_env.try_into_provisioned();
             assert!(result.is_err());

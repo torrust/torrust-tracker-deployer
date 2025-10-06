@@ -5,11 +5,13 @@
 //! e2e tests, and other components.
 
 pub mod command;
+pub mod error;
 pub mod port_checker;
 pub mod ssh;
 pub mod username;
 
 // Re-export commonly used types for convenience
 pub use command::{CommandError, CommandExecutor, CommandResult};
+pub use error::Traceable;
 pub use port_checker::{PortChecker, PortCheckerError};
 pub use username::{Username, UsernameError};

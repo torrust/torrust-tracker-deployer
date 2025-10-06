@@ -35,6 +35,7 @@ path = "src/bin/linter.rs"
 [dependencies]
 tokio = { version = "1.0", features = [ "full" ] }
 anyhow = "1.0"
+chrono = { version = "0.4", features = [ "serde" ] }
 clap = { version = "4.0", features = [ "derive" ] }
 derive_more = "0.99"
 rust-embed = "8.0"
@@ -47,6 +48,7 @@ thiserror = "1.0"
 torrust-linting = { path = "packages/linting" }
 tracing = { version = "0.1", features = [ "attributes" ] }
 tracing-subscriber = { version = "0.3", features = [ "env-filter", "json", "fmt" ] }
+uuid = { version = "1.0", features = [ "v4", "serde" ] }
 
 [dev-dependencies]
 rstest = "0.23"

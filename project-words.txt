@@ -6,7 +6,9 @@ Avalonia
 buildx
 chdir
 childlogdir
+chkdsk
 chrono
+CIFS
 clippy
 clonable
 cloneable
@@ -35,8 +37,6 @@ epel
 EPEL
 eprintln
 exitcode
-chkdsk
-CIFS
 getent
 Gossman
 Hostnames
@@ -62,6 +62,7 @@ MVVM
 myapp
 myenv
 nameof
+nanos
 newgrp
 newtype
 nistp
