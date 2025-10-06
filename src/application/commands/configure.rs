@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
-use tracing::{info, instrument};
+use tracing::{info, instrument, warn};
 
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
+use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::{
+    ConfigureFailed, Configured, Configuring, Environment, Provisioned,
+};
 use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::shared::command::CommandError;
 
@@ -21,64 +25,180 @@ pub enum ConfigureCommandError {
 /// 1. Install Docker
 /// 2. Install Docker Compose
 ///
-/// # TODO(Phase 5): State Management Integration
+/// # State Management
 ///
-/// When implementing state management in Phase 5:
-/// 1. Add `repository: Arc<dyn EnvironmentRepository>` field
-/// 2. Update `new()` to accept repository parameter
-/// 3. Change `execute()` to accept `Environment<Provisioned>` instead of no parameters
-/// 4. Return `Environment<Configured>` instead of `()`
-/// 5. Add state transitions and persistence calls at marked points in `execute()`
+/// The command integrates with the type-state pattern for environment lifecycle:
+/// - Accepts `Environment<Provisioned>` as input
+/// - Transitions to `Environment<Configuring>` at start
+/// - Returns `Environment<Configured>` on success
+/// - Transitions to `Environment<ConfigureFailed>` on error
+///
+/// State is persisted after each transition using the injected repository.
+/// Persistence failures are logged but don't fail the command (state remains valid in memory).
 pub struct ConfigureCommand {
     ansible_client: Arc<AnsibleClient>,
-    // TODO(Phase 5): Add repository field here
-    // repository: Arc<dyn EnvironmentRepository>,
+    repository: Arc<dyn EnvironmentRepository>,
 }
 
 impl ConfigureCommand {
     /// Create a new `ConfigureCommand`
     #[must_use]
-    pub fn new(ansible_client: Arc<AnsibleClient>) -> Self {
-        Self { ansible_client }
+    pub fn new(
+        ansible_client: Arc<AnsibleClient>,
+        repository: Arc<dyn EnvironmentRepository>,
+    ) -> Self {
+        Self {
+            ansible_client,
+            repository,
+        }
     }
 
     /// Execute the complete configuration workflow
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in `Provisioned` state to configure
+    ///
+    /// # Returns
+    ///
+    /// Returns the configured environment
     ///
     /// # Errors
     ///
     /// Returns an error if any step in the configuration workflow fails:
     /// * Docker installation fails
     /// * Docker Compose installation fails
+    ///
+    /// On error, the environment transitions to `ConfigureFailed` state and is persisted.
     #[instrument(
         name = "configure_command",
         skip_all,
-        fields(command_type = "configure")
+        fields(
+            command_type = "configure",
+            environment = %environment.name()
+        )
     )]
-    pub fn execute(&self) -> Result<(), ConfigureCommandError> {
+    pub fn execute(
+        &self,
+        environment: Environment<Provisioned>,
+    ) -> Result<Environment<Configured>, ConfigureCommandError> {
         info!(
             command = "configure",
+            environment = %environment.name(),
             "Starting complete infrastructure configuration workflow"
         );
 
-        // TODO(Phase 5): Transition to Configuring state and persist
-        // let environment = environment.start_configuring();
-        // self.persist_state(&environment)?;
+        // Transition to Configuring state
+        let environment = environment.start_configuring();
 
+        // Persist intermediate state
+        self.persist_configuring_state(&environment);
+
+        // Execute configuration steps
+        match self.execute_configuration_steps(&environment) {
+            Ok(configured_env) => {
+                // Persist final state
+                self.persist_configured_state(&configured_env);
+
+                info!(
+                    command = "configure",
+                    environment = %configured_env.name(),
+                    "Infrastructure configuration completed successfully"
+                );
+
+                Ok(configured_env)
+            }
+            Err(e) => {
+                // Transition to error state with step context
+                let failed = environment.configure_failed(self.extract_failed_step(&e));
+
+                // Persist error state
+                self.persist_configure_failed_state(&failed);
+
+                Err(e)
+            }
+        }
+    }
+
+    /// Execute the configuration steps on an environment in `Configuring` state
+    ///
+    /// This internal method performs all the configuration work without state management.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any configuration step fails
+    fn execute_configuration_steps(
+        &self,
+        environment: &Environment<Configuring>,
+    ) -> Result<Environment<Configured>, ConfigureCommandError> {
         InstallDockerStep::new(Arc::clone(&self.ansible_client)).execute()?;
 
         InstallDockerComposeStep::new(Arc::clone(&self.ansible_client)).execute()?;
 
-        // TODO(Phase 5): Transition to Configured state and persist
-        // let configured_env = environment.complete_configuring();
-        // self.persist_state(&configured_env)?;
-        // return Ok(configured_env);
+        // Transition to Configured state
+        let configured = environment.clone().configured();
 
-        info!(
-            command = "configure",
-            "Infrastructure configuration completed successfully"
-        );
+        Ok(configured)
+    }
 
-        Ok(())
+    /// Persist configuring state
+    fn persist_configuring_state(&self, environment: &Environment<Configuring>) {
+        let any_state = environment.clone().into_any();
+
+        if let Err(e) = self.repository.save(&any_state) {
+            warn!(
+                environment = %environment.name(),
+                error = %e,
+                "Failed to persist configuring state. Command execution continues."
+            );
+        }
+    }
+
+    /// Persist configured state
+    fn persist_configured_state(&self, environment: &Environment<Configured>) {
+        let any_state = environment.clone().into_any();
+
+        if let Err(e) = self.repository.save(&any_state) {
+            warn!(
+                environment = %environment.name(),
+                error = %e,
+                "Failed to persist configured state. Command execution continues."
+            );
+        }
+    }
+
+    /// Persist configure failed state
+    fn persist_configure_failed_state(&self, environment: &Environment<ConfigureFailed>) {
+        let any_state = environment.clone().into_any();
+
+        if let Err(e) = self.repository.save(&any_state) {
+            warn!(
+                environment = %environment.name(),
+                error = %e,
+                "Failed to persist configure failed state. Command execution continues."
+            );
+        }
+    }
+
+    /// Extract the failed step name from a configuration error
+    ///
+    /// This helper method provides context about which step failed during configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `error` - The configuration error to extract step information from
+    ///
+    /// # Returns
+    ///
+    /// A string identifying the failed step
+    #[allow(clippy::unused_self)] // Method kept as instance method for consistency with ProvisionCommand
+    fn extract_failed_step(&self, error: &ConfigureCommandError) -> String {
+        match error {
+            ConfigureCommandError::Command(e) => {
+                // Try to extract step from command error
+                format!("configuration_step: {e}")
+            }
+        }
     }
 }
 
@@ -88,18 +208,26 @@ mod tests {
     use tempfile::TempDir;
 
     // Helper function to create mock dependencies for testing
-    fn create_mock_dependencies() -> (Arc<AnsibleClient>, TempDir) {
+    #[allow(clippy::type_complexity)]
+    fn create_mock_dependencies() -> (Arc<AnsibleClient>, Arc<dyn EnvironmentRepository>, TempDir) {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let ansible_client = Arc::new(AnsibleClient::new(temp_dir.path()));
 
-        (ansible_client, temp_dir)
+        // Create repository
+        let repository_factory =
+            crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
+                std::time::Duration::from_secs(30),
+            );
+        let repository = repository_factory.create(temp_dir.path().to_path_buf());
+
+        (ansible_client, repository, temp_dir)
     }
 
     #[test]
-    fn it_should_create_configure_command_with_ansible_client() {
-        let (ansible_client, _temp_dir) = create_mock_dependencies();
+    fn it_should_create_configure_command_with_all_dependencies() {
+        let (ansible_client, repository, _temp_dir) = create_mock_dependencies();
 
-        let command = ConfigureCommand::new(ansible_client);
+        let command = ConfigureCommand::new(ansible_client, repository);
 
         // Verify the command was created (basic structure test)
         // This test just verifies that the command can be created with the dependencies
@@ -115,5 +243,22 @@ mod tests {
         };
         let configure_error: ConfigureCommandError = command_error.into();
         drop(configure_error);
+    }
+
+    #[test]
+    fn it_should_extract_failed_step_from_command_error() {
+        let (ansible_client, repository, _temp_dir) = create_mock_dependencies();
+
+        let command = ConfigureCommand::new(ansible_client, repository);
+
+        let error = ConfigureCommandError::Command(CommandError::ExecutionFailed {
+            command: "test".to_string(),
+            exit_code: "1".to_string(),
+            stdout: String::new(),
+            stderr: "test error".to_string(),
+        });
+
+        let step_name = command.extract_failed_step(&error);
+        assert!(step_name.contains("configuration_step"));
     }
 }

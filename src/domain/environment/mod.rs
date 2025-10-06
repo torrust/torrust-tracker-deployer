@@ -249,6 +249,7 @@ impl<S> Environment<S> {
     pub fn state(&self) -> &S {
         &self.state
     }
+
     /// Returns the environment name
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {

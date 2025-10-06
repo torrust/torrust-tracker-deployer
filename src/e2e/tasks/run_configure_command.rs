@@ -36,30 +36,38 @@ use crate::e2e::context::TestContext;
 /// Configure infrastructure using Ansible playbooks
 ///
 /// This function executes Ansible configuration using the `ConfigureCommand` for E2E tests.
-/// It works with both VM and container-based infrastructure, utilizing rendered Ansible
-/// inventories and configuration files generated during the provision simulation phase.
+/// It requires a provisioned environment to ensure type-safe state transitions.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 /// - `ConfigureCommand` execution fails
 /// - Infrastructure configuration fails
-pub fn run_configure_command(test_context: &TestContext) -> Result<()> {
+pub fn run_configure_command(
+    test_context: &TestContext,
+    provisioned_env: crate::domain::Environment<crate::domain::environment::Provisioned>,
+) -> Result<crate::domain::Environment<crate::domain::environment::Configured>> {
     info!("Configuring test infrastructure");
 
-    // Use the new ConfigureCommand to handle all infrastructure configuration steps
-    let configure_command =
-        ConfigureCommand::new(Arc::clone(&test_context.services.ansible_client));
+    // Create repository for this environment
+    let repository = test_context.create_repository();
 
-    configure_command
-        .execute()
+    // Use the new ConfigureCommand to handle all infrastructure configuration steps
+    let configure_command = ConfigureCommand::new(
+        Arc::clone(&test_context.services.ansible_client),
+        repository,
+    );
+
+    let configured_env = configure_command
+        .execute(provisioned_env)
         .map_err(anyhow::Error::from)
         .context("Failed to configure infrastructure")?;
 
     info!(
         status = "complete",
+        environment = %configured_env.name(),
         "Infrastructure configuration completed successfully"
     );
 
-    Ok(())
+    Ok(configured_env)
 }

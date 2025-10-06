@@ -6,6 +6,7 @@ Avalonia
 buildx
 chdir
 childlogdir
+chrono
 clippy
 clonable
 cloneable

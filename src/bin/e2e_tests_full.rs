@@ -217,9 +217,12 @@ async fn run_full_deployment_test(env: &TestContext) -> Result<IpAddr> {
         "Starting full deployment E2E test"
     );
 
-    let instance_ip = run_provision_command(env).await?;
+    // Provision infrastructure - returns typed Environment<Provisioned>
+    let (provisioned_env, instance_ip) = run_provision_command(env).await?;
 
-    run_configure_command(env)?;
+    // Configure infrastructure - requires Environment<Provisioned>, returns Environment<Configured>
+    // This demonstrates compile-time type safety: cannot call configure without provisioning first
+    let _configured_env = run_configure_command(env, provisioned_env)?;
 
     info!(status = "success", "Deployment completed successfully");
 

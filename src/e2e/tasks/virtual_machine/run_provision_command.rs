@@ -32,13 +32,21 @@ use crate::e2e::context::TestContext;
 
 /// Provision infrastructure using `OpenTofu` and prepare for configuration
 ///
+/// Returns both the provisioned environment (for type-safe command chaining) and
+/// the IP address (for validation tasks).
+///
 /// # Errors
 ///
 /// Returns an error if:
 /// - `ProvisionCommand` execution fails
 /// - Infrastructure provisioning fails
 /// - IP address cannot be obtained from `OpenTofu` outputs
-pub async fn run_provision_command(test_context: &TestContext) -> Result<IpAddr> {
+pub async fn run_provision_command(
+    test_context: &TestContext,
+) -> Result<(
+    crate::domain::Environment<crate::domain::environment::Provisioned>,
+    IpAddr,
+)> {
     info!("Provisioning test infrastructure");
 
     // Create repository for this environment
@@ -67,5 +75,5 @@ pub async fn run_provision_command(test_context: &TestContext) -> Result<IpAddr>
         "Instance provisioned successfully"
     );
 
-    Ok(instance_ip)
+    Ok((provisioned_env, instance_ip))
 }

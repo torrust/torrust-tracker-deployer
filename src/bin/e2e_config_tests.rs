@@ -191,10 +191,19 @@ async fn run_configuration_tests(test_context: &TestContext) -> Result<()> {
     // Step 1: Run provision simulation (includes container setup and SSH connectivity)
     let running_container = run_provision_simulation(test_context).await?;
 
-    // Step 2: Run Ansible configuration
-    run_configure_command(test_context)?;
+    // Step 2: Create a simulated provisioned environment for type-safe configuration
+    // In config-only tests, we simulate the provisioned state since we use Docker containers
+    // instead of actual VM provisioning
+    let provisioned_env = test_context
+        .environment
+        .clone()
+        .start_provisioning()
+        .provisioned();
 
-    // Step 3: Run configuration validation
+    // Step 3: Run Ansible configuration with typed environment
+    let _configured_env = run_configure_command(test_context, provisioned_env)?;
+
+    // Step 4: Run configuration validation
     run_configuration_validation(
         running_container.ssh_socket_addr(),
         test_context.environment.ssh_credentials(),

@@ -331,9 +331,11 @@ impl TestContext {
     pub fn create_repository(
         &self,
     ) -> std::sync::Arc<dyn crate::domain::environment::repository::EnvironmentRepository> {
-        self.services
-            .repository_factory
-            .create(self.environment.data_dir().clone())
+        // Pass the parent "data" directory, not the environment-specific directory
+        // The repository will add the environment name subdirectory automatically
+        // e.g., "data" + "e2e-provision" = "data/e2e-provision/environment.json"
+        let base_data_dir = std::path::PathBuf::from("data");
+        self.services.repository_factory.create(base_data_dir)
     }
 }
 

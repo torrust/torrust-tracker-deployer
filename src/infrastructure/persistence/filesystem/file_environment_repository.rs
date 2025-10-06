@@ -12,8 +12,8 @@
 //! # File Structure
 //!
 //! ```text
-//! ./data/{env_name}/state.json       # Environment state
-//! ./data/{env_name}/state.json.lock  # Lock file (contains process ID)
+//! ./data/{env_name}/environment.json       # Environment state
+//! ./data/{env_name}/environment.json.lock  # Lock file (contains process ID)
 //! ```
 //!
 //! # Usage
@@ -50,8 +50,8 @@ use crate::infrastructure::persistence::filesystem::json_file_repository::{
 /// # Directory Structure
 ///
 /// Each environment gets its own directory under the base directory:
-/// - `{base_dir}/{env_name}/state.json` - State file
-/// - `{base_dir}/{env_name}/state.json.lock` - Lock file
+/// - `{base_dir}/{env_name}/environment.json` - Environment file
+/// - `{base_dir}/{env_name}/environment.json.lock` - Lock file
 pub struct FileEnvironmentRepository {
     /// Base directory for environment state files (typically "./data")
     base_dir: PathBuf,
@@ -105,9 +105,9 @@ impl FileEnvironmentRepository {
         self
     }
 
-    /// Get the state file path for an environment
-    fn state_file_path(&self, name: &EnvironmentName) -> PathBuf {
-        self.base_dir.join(name.as_str()).join("state.json")
+    /// Get the environment file path for an environment
+    fn environment_file_path(&self, name: &EnvironmentName) -> PathBuf {
+        self.base_dir.join(name.as_str()).join("environment.json")
     }
 
     /// Get the directory path for an environment
@@ -127,7 +127,7 @@ impl FileEnvironmentRepository {
 
 impl EnvironmentRepository for FileEnvironmentRepository {
     fn save(&self, env: &AnyEnvironmentState) -> Result<(), RepositoryError> {
-        let file_path = self.state_file_path(env.name());
+        let file_path = self.environment_file_path(env.name());
 
         self.json_repo
             .save(&file_path, env)
@@ -135,7 +135,7 @@ impl EnvironmentRepository for FileEnvironmentRepository {
     }
 
     fn load(&self, name: &EnvironmentName) -> Result<Option<AnyEnvironmentState>, RepositoryError> {
-        let file_path = self.state_file_path(name);
+        let file_path = self.environment_file_path(name);
 
         self.json_repo
             .load(&file_path)
@@ -143,12 +143,12 @@ impl EnvironmentRepository for FileEnvironmentRepository {
     }
 
     fn exists(&self, name: &EnvironmentName) -> Result<bool, RepositoryError> {
-        let file_path = self.state_file_path(name);
+        let file_path = self.environment_file_path(name);
         Ok(self.json_repo.exists(&file_path))
     }
 
     fn delete(&self, name: &EnvironmentName) -> Result<(), RepositoryError> {
-        let file_path = self.state_file_path(name);
+        let file_path = self.environment_file_path(name);
 
         self.json_repo
             .delete(&file_path)
@@ -214,11 +214,11 @@ mod tests {
     }
 
     #[rstest]
-    #[case("e2e-config", "e2e-config/state.json")]
-    #[case("e2e-full", "e2e-full/state.json")]
-    #[case("e2e-provision", "e2e-provision/state.json")]
-    #[case("my-env", "my-env/state.json")]
-    fn it_should_create_state_file_in_environment_specific_subdirectory(
+    #[case("e2e-config", "e2e-config/environment.json")]
+    #[case("e2e-full", "e2e-full/environment.json")]
+    #[case("e2e-provision", "e2e-provision/environment.json")]
+    #[case("my-env", "my-env/environment.json")]
+    fn it_should_create_environment_file_in_environment_specific_subdirectory(
         #[case] env_name: &str,
         #[case] expected_relative_path: &str,
     ) {
@@ -351,9 +351,9 @@ mod tests {
         assert!(env_dir.exists());
         assert!(env_dir.is_dir());
 
-        let state_file = env_dir.join("state.json");
-        assert!(state_file.exists());
-        assert!(state_file.is_file());
+        let environment_file = env_dir.join("environment.json");
+        assert!(environment_file.exists());
+        assert!(environment_file.is_file());
     }
 
     #[test]
@@ -392,12 +392,15 @@ mod tests {
         repo.save(&state).unwrap();
 
         // Verify no temporary file exists after save
-        let temp_file = temp_dir.path().join("test-env").join("state.json.tmp");
+        let temp_file = temp_dir
+            .path()
+            .join("test-env")
+            .join("environment.json.tmp");
         assert!(!temp_file.exists());
 
-        // Verify state file exists
-        let state_file = temp_dir.path().join("test-env").join("state.json");
-        assert!(state_file.exists());
+        // Verify environment file exists
+        let environment_file = temp_dir.path().join("test-env").join("environment.json");
+        assert!(environment_file.exists());
     }
 
     #[test]
@@ -412,8 +415,8 @@ mod tests {
         repo.save(&state).unwrap();
 
         // Read raw JSON
-        let state_file = temp_dir.path().join("test-env").join("state.json");
-        let json_content = fs::read_to_string(state_file).unwrap();
+        let environment_file = temp_dir.path().join("test-env").join("environment.json");
+        let json_content = fs::read_to_string(environment_file).unwrap();
 
         // Verify it's valid JSON
         let parsed: serde_json::Value = serde_json::from_str(&json_content).unwrap();
@@ -436,8 +439,8 @@ mod tests {
         repo.save(&state).unwrap();
 
         // Acquire lock manually
-        let state_path = repo.state_file_path(&env_name);
-        let _lock = FileLock::acquire(&state_path, Duration::from_secs(5)).unwrap();
+        let environment_path = repo.environment_file_path(&env_name);
+        let _lock = FileLock::acquire(&environment_path, Duration::from_secs(5)).unwrap();
 
         // Try to load while lock is held - should timeout and return Conflict
         let result = repo.load(&env_name);
@@ -463,8 +466,8 @@ mod tests {
         repo.save(&state).unwrap();
 
         // Hold lock in one scope
-        let state_path = repo.state_file_path(&env_name);
-        let _lock = FileLock::acquire(&state_path, Duration::from_secs(5)).unwrap();
+        let environment_path = repo.environment_file_path(&env_name);
+        let _lock = FileLock::acquire(&environment_path, Duration::from_secs(5)).unwrap();
 
         // Try to save while lock is held
         let result = repo.save(&state);
