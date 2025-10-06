@@ -6,13 +6,22 @@ This refactor improves error handling in commands by replacing string-based erro
 
 **Key Insight**: Instead of forcing errors to implement `Serialize`, we create a custom `Traceable` trait for error formatting. This decouples error types from serialization constraints.
 
+**Scope**: This refactor focuses on the currently active commands: `provision` and `configure`. The `release` and `run` commands (and their corresponding failed states) will be addressed when those commands are implemented.
+
 ## 🎯 Goals
 
 1. **Type Safety**: Replace `String` with enums for pattern matching
 2. **Complete Information**: Capture full error chains via `Traceable` trait
 3. **Independent Traces**: Decouple trace generation from state management
 4. **Error History**: Preserve all failure attempts
-5. **User Actionability**: Provide detailed troubleshooting guidance
+5. **User Actionability**: Provide detailed troubleshooting guidance (basic implementation first)
+
+## 🚫 Non-Goals (For This Refactor)
+
+1. **Backward Compatibility**: Not needed - not used in production yet
+2. **Suggested Actions**: Future improvement - focus on basic trace implementation first
+3. **Automatic Cleanup**: Not needed - entire data directory is removed after successful tracker installation
+4. **Release/Run Commands**: Not implemented yet - will be addressed when those commands are added
 
 ## ❌ Current Problems
 
@@ -129,7 +138,7 @@ data/e2e-full/
 - **Independence**: Separate from state management (separate repository/concern)
 - **Universal**: Any command can generate traces (provision, configure, deploy, etc.)
 
-**Trace File Format**:
+**Trace File Format (Basic Implementation)**:
 
 ```text
 === Provision Command Failed ===
@@ -137,6 +146,7 @@ Timestamp: 2025-10-03T10:30:45.123Z
 Trace ID: 550e8400-e29b-41d4-a716-446655440000
 Failed Step: OpenTofuApply
 Error Kind: InfrastructureProvisioning
+Error Summary: Infrastructure provisioning failed
 
 === Error Chain ===
 
@@ -154,25 +164,12 @@ Error Kind: InfrastructureProvisioning
    Exit Code: 1
    Stderr: Error creating instance: Quota 'INSTANCES' exceeded
 
-4. Root Cause: Quota exceeded
-   Provider: LXD
-   Resource: instances
-   Limit: 8
-   Current Usage: 8
+=== Future Enhancements ===
 
-=== Suggested Actions ===
-
-1. Check current quota usage:
-   lxc list
-
-2. Delete unused instances:
-   lxc delete <instance-name> --force
-
-3. Or request quota increase from infrastructure team
-
-4. Then retry provisioning:
-   torrust-deploy provision e2e-full
+Suggested actions section will be added in a future iteration.
 ```
+
+**Note**: The "Suggested Actions" section is planned for future implementation to keep this refactor focused.
 
 ### The `Traceable` Trait
 
@@ -207,13 +204,15 @@ pub trait Traceable {
 
 **Steps**:
 
-1. Create `ProvisionFailureContext` struct
-2. Create `ProvisionStep` and `ProvisionErrorKind` enums
+1. Create `ProvisionFailureContext` and `ConfigureFailureContext` structs (separate per command)
+2. Create `ProvisionStep`, `ConfigureStep`, `ProvisionErrorKind`, and `ConfigureErrorKind` enums
 3. Define `Traceable` trait
-4. Implement `Traceable` for all command errors
+4. Implement `Traceable` for provision and configure command errors
 5. Add tests for context serialization
 
-**Estimated**: 3 hours (increased to include `Traceable` trait)
+**Note**: Separate context structs per command because they have command-specific enums (`ProvisionStep` vs `ConfigureStep`). Common fields are shared but type-specific fields require separate structs.
+
+**Estimated**: 3 hours
 
 ### Task 2: Update Failed States
 
@@ -222,10 +221,13 @@ pub trait Traceable {
 - `src/domain/environment/state/provision_failed.rs`
 - `src/domain/environment/state/configure_failed.rs`
 
-1. Replace `String` field with `ProvisionFailureContext`
+**Steps**:
+
+1. Replace `String` field with `ProvisionFailureContext` / `ConfigureFailureContext`
 2. Update transition methods to accept context
 3. Update serialization tests
-4. Verify backward compatibility (deserialize old format)
+
+**Note**: No backward compatibility needed - not used in production yet.
 
 **Estimated**: 1 hour
 
@@ -241,10 +243,12 @@ pub trait Traceable {
 1. Create `TraceWriter` that walks error chain via `Traceable`
 2. Implement trace file naming: `{timestamp}-{command}.log`
 3. Create trace directory: `data/{env}/traces/`
-4. Format trace with error chain, context, suggestions
+4. Format trace with error chain and context (no suggested actions yet)
 5. Add tests for trace generation
 
-**Estimated**: 3 hours
+**Note**: Basic implementation without suggested actions section. That will be a future enhancement.
+
+**Estimated**: 2.5 hours
 
 ### Task 4: Update Commands to Generate Traces
 
@@ -268,56 +272,46 @@ pub trait Traceable {
 **Files**:
 
 - `docs/contributing/error-handling.md`
-- `docs/user-guide/troubleshooting.md`
 
 **Steps**:
 
 1. Document `Traceable` trait usage
 2. Add examples of trace file reading
 3. Update error handling guide
-4. Add troubleshooting workflow
 
-**Estimated**: 1 hour
-
-### Task 6: Backward Compatibility
-
-**Files**:
-
-- Migration logic in state deserialization
-
-**Steps**:
-
-1. Support deserializing old string-based format
-2. Migrate old format to new format on load
-3. Add migration tests
-
-**Estimated**: 2 hours
+**Estimated**: 0.5 hours
 
 ## ⏱️ Total Estimated Effort
 
-**13 hours** (~2 days of focused work)
+**10 hours** (~1.5 days of focused work)
+
+**Reduced from original 13 hours due to**:
+
+- No backward compatibility needed (saves 2 hours)
+- No suggested actions in traces yet (saves 0.5 hours)
+- Focused on provision/configure only (saves 0.5 hours)
 
 ## ✅ Success Criteria
 
-- [ ] All error contexts use enums (no strings)
-- [ ] Trace files generated on command failure
+- [ ] Error contexts use enums for provision and configure commands
+- [ ] Trace files generated **only** on command failure
 - [ ] Trace files stored in `data/{env}/traces/`
 - [ ] Trace files named `{timestamp}-{command}.log`
-- [ ] `Traceable` trait implemented for all errors
-- [ ] Complete error chains captured
-- [ ] Old state files can still be loaded
+- [ ] `Traceable` trait implemented for provision and configure errors
+- [ ] Complete error chains captured in trace files
+- [ ] Basic trace format (without suggested actions)
 - [ ] All tests pass (703+)
-- [ ] Documentation updated
+- [ ] Error handling documentation updated
 
-## 🔄 Migration Path
+## 🔄 Implementation Path
 
 1. **Current Phase 5**: String-based context (working, tested)
-2. **Create refactor branch**: `refactor/error-context-trace-files`
+2. **Implement on main branch**: Direct implementation (no branch needed for internal refactor)
 3. **Implement in stages**: One task at a time
-4. **Test thoroughly**: Unit + integration + E2E
-5. **Verify backward compatibility**: Load old states
-6. **Merge to main**: After all checks pass
-7. **Optional cleanup**: Remove string-based support after grace period
+4. **Test thoroughly**: Unit + integration + E2E after each task
+5. **Commit**: Single commit with all changes after verification
+
+**Note**: No backward compatibility or cleanup needed. This is a breaking change to internal state representation, but acceptable since not in production.
 
 ## 📚 Related Documentation
 
