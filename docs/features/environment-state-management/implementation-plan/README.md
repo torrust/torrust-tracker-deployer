@@ -123,19 +123,36 @@
 
 ---
 
-### 📅 Phase 5: Command Integration (PLANNED)
+### ✅ Phase 5: Command Integration (COMPLETED)
 
 **Goal**: Update commands to use type-safe state transitions and state persistence.
 
-**Status**: 📅 Planned for future implementation
+**Status**: ✅ All 4 subtasks completed
 
-**Key Deliverables**:
+**Key Achievements**:
 
-- Commands accept and return specific state types
-- Type-safe state transitions in command execution
-- Error state handling with compile-time guarantees
-- State persistence during command execution
-- Graceful handling of persistence failures
+- `ProvisionCommand` accepts `Environment<Created>`, returns `Environment<Provisioned>`
+- `ConfigureCommand` accepts `Environment<Provisioned>`, returns `Environment<Configured>`
+- Commands transition through intermediate states with persistence
+- Error states include failed step context
+- Graceful handling of persistence failures (warning logs)
+- Compile-time prevention of invalid state transitions
+- Type-safe command chaining demonstrated in E2E tests
+- 704 tests passing
+
+**📄 [View Detailed Phase 5 Plan →](./phase-5-command-integration.md)**
+
+**Subtasks**:
+
+1. ✅ Preparatory Refactoring (Commit: ff80d7d)
+2. ✅ Document Architectural Decision (Commit: 7f02019)
+3. ✅ Update ProvisionCommand (Commit: 698d85a)
+4. ✅ Update ConfigureCommand (Commit: 8997275)
+
+**Commits**:
+
+- `feat: [#24] integrate state management in ConfigureCommand and fix environment persistence`
+- `fix: use temp directory in repository_factory test to avoid data/ artifacts`
 
 ---
 
@@ -166,18 +183,21 @@
 - ✅ Phase 1: Foundation - **100% Complete** (3/3 subtasks)
 - ✅ Phase 2: State Transition Observability - **100% Complete** (CRITICAL - Core implementation done)
 - ✅ Phase 3: Serialization & Type Erasure - **100% Complete** (3/3 subtasks)
-- 📅 Phase 4: Persistence (with File Locking) - **Not Started** (CRITICAL)
-- 📅 Phase 5: Command Integration - **Not Started**
+- ✅ Phase 4: Persistence (with File Locking) - **100% Complete** (3/3 subtasks)
+- ✅ Phase 5: Command Integration - **100% Complete** (4/4 subtasks)
 - 🔄 Phase 6: Testing & Documentation - **Ongoing**
+
+**🎉 FEATURE COMPLETE**: All core implementation phases (1-5) are complete!
 
 ### Test Coverage
 
-- **Current Tests**: 605 tests passing (includes Phase 3 tests)
-- **Phase 1 Tests Added**: +15 tests
+- **Current Tests**: 704 tests passing (all phases complete)
+- **Phase 1 Tests Added**: +15 tests (state machine foundation)
 - **Phase 2 Tests Added**: +4 tests (logging verification)
 - **Phase 3 Tests Added**: ~100 tests (serialization, conversion, introspection)
-- **Expected Phase 4 Tests**: +50 tests (file locking & persistence)
-- **Target Total**: ~750+ tests
+- **Phase 4 Tests Added**: +31 tests (file locking & persistence)
+- **Phase 5 Tests Added**: +14 tests (command integration)
+- **Total Tests**: 704 tests ✅
 
 ---
 
