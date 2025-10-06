@@ -161,8 +161,9 @@ mod tests {
         );
         let environment = Environment::new(env_name.clone(), ssh_credentials);
 
-        // Create repository for this specific environment's data directory
-        let repo = factory.create(environment.data_dir().clone());
+        // Create repository with temp directory as base (not environment-specific directory)
+        // The repository will automatically create the environment subdirectory
+        let repo = factory.create(temp_dir.path().to_path_buf());
 
         // Convert to AnyEnvironmentState for repository operations
         let env_state = environment.into_any();
