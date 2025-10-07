@@ -13,6 +13,7 @@ use crate::domain::environment::{
 use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::command::CommandError;
+use crate::shared::SystemClock;
 
 /// Comprehensive error type for the `ConfigureCommand`
 #[derive(Debug, thiserror::Error)]
@@ -258,7 +259,8 @@ impl ConfigureCommand {
 
         // Generate trace file with complete error chain
         let traces_dir = environment.data_dir().join("traces");
-        let trace_writer = ConfigureTraceWriter::new(traces_dir);
+        let clock = Arc::new(SystemClock);
+        let trace_writer = ConfigureTraceWriter::new(traces_dir, clock);
 
         match trace_writer.write_trace(&context, error) {
             Ok(trace_file_path) => {

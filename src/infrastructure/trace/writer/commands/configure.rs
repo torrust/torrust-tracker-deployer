@@ -4,9 +4,10 @@
 //! context and metadata.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use crate::domain::environment::state::ConfigureFailureContext;
-use crate::shared::Traceable;
+use crate::shared::{Clock, Traceable};
 
 use super::super::common::CommonTraceWriter;
 use super::super::error::TraceWriterError;
@@ -21,10 +22,13 @@ use super::super::sections::TraceSections;
 ///
 /// ```no_run
 /// use std::path::PathBuf;
+/// use std::sync::Arc;
 /// use torrust_tracker_deploy::infrastructure::trace::ConfigureTraceWriter;
+/// use torrust_tracker_deploy::shared::SystemClock;
 ///
 /// let traces_dir = PathBuf::from("data/my-env/traces");
-/// let writer = ConfigureTraceWriter::new(traces_dir);
+/// let clock = Arc::new(SystemClock);
+/// let writer = ConfigureTraceWriter::new(traces_dir, clock);
 /// ```
 pub struct ConfigureTraceWriter {
     common: CommonTraceWriter,
@@ -33,9 +37,9 @@ pub struct ConfigureTraceWriter {
 impl ConfigureTraceWriter {
     /// Create a new configure trace writer
     #[must_use]
-    pub fn new(traces_dir: impl Into<PathBuf>) -> Self {
+    pub fn new(traces_dir: impl Into<PathBuf>, clock: Arc<dyn Clock>) -> Self {
         Self {
-            common: CommonTraceWriter::new(traces_dir),
+            common: CommonTraceWriter::new(traces_dir, clock),
         }
     }
 
@@ -145,9 +149,14 @@ mod tests {
     /// Returns (writer, `temp_dir`, `traces_dir`)
     /// The `temp_dir` must be kept alive for the duration of the test
     fn create_test_writer() -> (ConfigureTraceWriter, TempDir, PathBuf) {
+        use crate::testing::MockClock;
+        use chrono::TimeZone;
+
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let traces_dir = temp_dir.path().join("traces");
-        let writer = ConfigureTraceWriter::new(traces_dir.clone());
+        let fixed_time = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
+        let clock = Arc::new(MockClock::new(fixed_time));
+        let writer = ConfigureTraceWriter::new(traces_dir.clone(), clock);
         (writer, temp_dir, traces_dir)
     }
 

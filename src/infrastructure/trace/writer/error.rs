@@ -23,7 +23,7 @@ pub enum TraceWriterError {
     FileWrite {
         /// Path where file write was attempted
         path: String,
-        
+
         /// Underlying I/O error
         #[source]
         source: std::io::Error,
