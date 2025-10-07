@@ -121,8 +121,8 @@ impl ConfigureCommand {
         // Persist intermediate state
         self.persist_configuring_state(&environment);
 
-        // Execute configuration steps
-        match self.execute_configuration_steps(&environment) {
+        // Execute configuration steps with explicit step tracking
+        match self.execute_configuration_with_tracking(&environment) {
             Ok(configured_env) => {
                 // Persist final state
                 self.persist_configured_state(&configured_env);
@@ -135,9 +135,11 @@ impl ConfigureCommand {
 
                 Ok(configured_env)
             }
-            Err(e) => {
+            Err((e, current_step)) => {
                 // Transition to error state with structured context
-                let context = self.build_failure_context(&environment, &e, started_at);
+                // current_step contains the step that was executing when the error occurred
+                let context =
+                    self.build_failure_context(&environment, &e, current_step, started_at);
                 let failed = environment.configure_failed(context);
 
                 // Persist error state
@@ -148,20 +150,31 @@ impl ConfigureCommand {
         }
     }
 
-    /// Execute the configuration steps on an environment in `Configuring` state
+    /// Execute the configuration steps with step tracking
     ///
-    /// This internal method performs all the configuration work without state management.
+    /// This method executes all configuration steps while tracking which step is currently
+    /// being executed. If an error occurs, it returns both the error and the step that
+    /// was being executed, enabling accurate failure context generation.
     ///
     /// # Errors
     ///
-    /// Returns an error if any configuration step fails
-    fn execute_configuration_steps(
+    /// Returns a tuple of (error, `current_step`) if any configuration step fails
+    fn execute_configuration_with_tracking(
         &self,
         environment: &Environment<Configuring>,
-    ) -> Result<Environment<Configured>, ConfigureCommandError> {
-        InstallDockerStep::new(Arc::clone(&self.ansible_client)).execute()?;
+    ) -> Result<Environment<Configured>, (ConfigureCommandError, ConfigureStep)> {
+        // Track current step and execute each step
+        // If an error occurs, we return it along with the current step
 
-        InstallDockerComposeStep::new(Arc::clone(&self.ansible_client)).execute()?;
+        let current_step = ConfigureStep::InstallDocker;
+        InstallDockerStep::new(Arc::clone(&self.ansible_client))
+            .execute()
+            .map_err(|e| (e.into(), current_step))?;
+
+        let current_step = ConfigureStep::InstallDockerCompose;
+        InstallDockerComposeStep::new(Arc::clone(&self.ansible_client))
+            .execute()
+            .map_err(|e| (e.into(), current_step))?;
 
         // Transition to Configured state
         let configured = environment.clone().configured();
@@ -208,40 +221,38 @@ impl ConfigureCommand {
         }
     }
 
-    /// Extract the failed step name from a configuration error
+    /// Build failure context for a configuration error and generate trace file
     ///
-    /// This helper method provides context about which step failed during configuration
-    /// and generates a detailed trace file with the complete error chain.
+    /// This helper method builds structured error context including the failed step,
+    /// error classification, timing information, and generates a trace file for
+    /// post-mortem analysis.
     ///
     /// The trace file is written to `{environment.data_dir()}/traces/{trace_id}.txt`
     /// and contains a formatted representation of the entire error chain.
     ///
     /// # Arguments
     ///
-    /// * `environment` - The environment being configured (for determining trace file location)
-    /// * `error` - The configuration error to build context from
+    /// * `environment` - The environment being configured (for trace directory path)
+    /// * `error` - The configuration error that occurred
+    /// * `current_step` - The step that was executing when the error occurred
     /// * `started_at` - The timestamp when configuration execution started
     ///
     /// # Returns
     ///
     /// A structured `ConfigureFailureContext` with timing, error details, and trace file path
-    #[allow(clippy::unused_self)] // Method kept as instance method for consistency with ProvisionCommand
     fn build_failure_context(
         &self,
         environment: &Environment<Configuring>,
         error: &ConfigureCommandError,
+        current_step: ConfigureStep,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> ConfigureFailureContext {
-        let (failed_step, error_kind) = match error {
-            ConfigureCommandError::Command(_) => {
-                // For now, we can't distinguish between Docker and Docker Compose installation
-                // from a CommandError alone. Default to Docker as it's the first step.
-                // In the future, we could add more context to CommandError to distinguish.
-                (
-                    ConfigureStep::InstallDocker,
-                    ConfigureErrorKind::InstallationFailed,
-                )
-            }
+        // Step that failed is directly provided - no reverse engineering needed
+        let failed_step = current_step;
+
+        // Classify the error kind based on error type
+        let error_kind = match error {
+            ConfigureCommandError::Command(_) => ConfigureErrorKind::InstallationFailed,
         };
 
         let now = self.clock.now();
@@ -383,7 +394,8 @@ mod tests {
         });
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
-        let context = command.build_failure_context(&environment, &error, started_at);
+        let current_step = ConfigureStep::InstallDocker;
+        let context = command.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ConfigureStep::InstallDocker);
         assert_eq!(context.error_kind, ConfigureErrorKind::InstallationFailed);
         assert_eq!(context.base.execution_started_at, started_at);

@@ -196,8 +196,9 @@ impl ProvisionCommand {
         // Persist intermediate state
         self.persist_provisioning_state(&environment);
 
-        // Execute provisioning steps
-        match self.execute_provisioning_steps(&environment).await {
+        // Execute provisioning steps with explicit step tracking
+        // This allows us to know exactly which step failed if an error occurs
+        match self.execute_provisioning_with_tracking(&environment).await {
             Ok((provisioned, instance_ip)) => {
                 // Persist final state
                 self.persist_provisioned_state(&provisioned);
@@ -211,9 +212,11 @@ impl ProvisionCommand {
 
                 Ok((provisioned, instance_ip))
             }
-            Err(e) => {
+            Err((e, current_step)) => {
                 // Transition to error state with structured context
-                let context = self.build_failure_context(&environment, &e, started_at);
+                // current_step contains the step that was executing when the error occurred
+                let context =
+                    self.build_failure_context(&environment, &e, current_step, started_at);
                 let failed = environment.provision_failed(context);
 
                 // Persist error state
@@ -224,31 +227,51 @@ impl ProvisionCommand {
         }
     }
 
-    /// Execute the provisioning steps on an environment in `Provisioning` state
+    /// Execute the provisioning steps with step tracking
     ///
-    /// This internal method performs all the provisioning work without state management.
+    /// This method executes all provisioning steps while tracking which step is currently
+    /// being executed. If an error occurs, it returns both the error and the step that
+    /// was being executed, enabling accurate failure context generation.
     ///
     /// # Errors
     ///
-    /// Returns an error if any provisioning step fails
-    async fn execute_provisioning_steps(
+    /// Returns a tuple of (error, `current_step`) if any provisioning step fails
+    ///
+    /// # Returns
+    ///
+    /// Returns a tuple of:
+    /// - The provisioned environment
+    /// - The instance IP address
+    async fn execute_provisioning_with_tracking(
         &self,
         environment: &Environment<Provisioning>,
-    ) -> Result<(Environment<Provisioned>, IpAddr), ProvisionCommandError> {
+    ) -> Result<(Environment<Provisioned>, IpAddr), (ProvisionCommandError, ProvisionStep)> {
         let ssh_credentials = environment.ssh_credentials();
 
-        self.render_opentofu_templates().await?;
+        // Track current step and execute each step
+        // If an error occurs, we return it along with the current step
 
-        self.create_instance()?;
+        let current_step = ProvisionStep::RenderOpenTofuTemplates;
+        self.render_opentofu_templates()
+            .await
+            .map_err(|e| (e, current_step))?;
 
-        let instance_info = self.get_instance_info()?;
+        let current_step = ProvisionStep::OpenTofuInit;
+        self.create_instance().map_err(|e| (e, current_step))?;
+
+        let current_step = ProvisionStep::GetInstanceInfo;
+        let instance_info = self.get_instance_info().map_err(|e| (e, current_step))?;
         let instance_ip = instance_info.ip_address;
 
+        let current_step = ProvisionStep::RenderAnsibleTemplates;
         self.render_ansible_templates(ssh_credentials, instance_ip)
-            .await?;
+            .await
+            .map_err(|e| (e, current_step))?;
 
+        let current_step = ProvisionStep::WaitSshConnectivity;
         self.wait_for_readiness(ssh_credentials, instance_ip)
-            .await?;
+            .await
+            .map_err(|e| (e, current_step))?;
 
         // Transition to Provisioned state
         let provisioned = environment.clone().provisioned();
@@ -398,15 +421,17 @@ impl ProvisionCommand {
         Ok(())
     }
 
-    /// Extract the failed step name from a provisioning error and generate trace file
+    /// Build failure context for a provisioning error and generate trace file
     ///
-    /// This helper method provides context about which step failed during provisioning
-    /// and generates a trace file for post-mortem analysis.
+    /// This helper method builds structured error context including the failed step,
+    /// error classification, timing information, and generates a trace file for
+    /// post-mortem analysis.
     ///
     /// # Arguments
     ///
     /// * `environment` - The environment being provisioned (for trace directory path)
-    /// * `error` - The provisioning error to extract step information from
+    /// * `error` - The provisioning error that occurred
+    /// * `current_step` - The step that was executing when the error occurred
     /// * `started_at` - The timestamp when provisioning execution started
     ///
     /// # Returns
@@ -416,34 +441,23 @@ impl ProvisionCommand {
         &self,
         environment: &Environment<Provisioning>,
         error: &ProvisionCommandError,
+        current_step: ProvisionStep,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> ProvisionFailureContext {
         use crate::infrastructure::trace::ProvisionTraceWriter;
 
-        let (failed_step, error_kind) = match error {
-            ProvisionCommandError::OpenTofuTemplateRendering(_) => (
-                ProvisionStep::RenderOpenTofuTemplates,
-                ProvisionErrorKind::TemplateRendering,
-            ),
-            ProvisionCommandError::OpenTofu(e) => {
-                let step = match self.extract_opentofu_step(e).as_str() {
-                    "init" => ProvisionStep::OpenTofuInit,
-                    _ => ProvisionStep::OpenTofuApply, // Default to Apply for unknown operations
-                };
-                (step, ProvisionErrorKind::InfrastructureProvisioning)
+        // Step that failed is directly provided - no reverse engineering needed
+        let failed_step = current_step;
+
+        // Classify the error kind based on error type
+        let error_kind = match error {
+            ProvisionCommandError::OpenTofuTemplateRendering(_)
+            | ProvisionCommandError::AnsibleTemplateRendering(_) => {
+                ProvisionErrorKind::TemplateRendering
             }
-            ProvisionCommandError::AnsibleTemplateRendering(_) => (
-                ProvisionStep::RenderAnsibleTemplates,
-                ProvisionErrorKind::TemplateRendering,
-            ),
-            ProvisionCommandError::SshConnectivity(_) => (
-                ProvisionStep::WaitSshConnectivity,
-                ProvisionErrorKind::NetworkConnectivity,
-            ),
-            ProvisionCommandError::Command(_) => (
-                ProvisionStep::CloudInitWait,
-                ProvisionErrorKind::ConfigurationTimeout,
-            ),
+            ProvisionCommandError::OpenTofu(_) => ProvisionErrorKind::InfrastructureProvisioning,
+            ProvisionCommandError::SshConnectivity(_) => ProvisionErrorKind::NetworkConnectivity,
+            ProvisionCommandError::Command(_) => ProvisionErrorKind::ConfigurationTimeout,
         };
 
         let now = self.clock.now();
@@ -493,23 +507,6 @@ impl ProvisionCommand {
         }
 
         context
-    }
-
-    /// Extract the specific `OpenTofu` operation that failed
-    ///
-    /// This helper method provides more granular context about `OpenTofu` failures.
-    ///
-    /// # Arguments
-    ///
-    /// * `_error` - The `OpenTofu` error (currently unused, but could be used for more sophisticated extraction)
-    ///
-    /// # Returns
-    ///
-    /// A string identifying the `OpenTofu` operation (currently returns generic "operation")
-    #[allow(clippy::unused_self)] // Will use self in future implementations
-    fn extract_opentofu_step(&self, _error: &OpenTofuError) -> String {
-        // Could be more sophisticated based on error variant in the future
-        "operation".to_string()
     }
 }
 
@@ -706,7 +703,8 @@ mod tests {
         );
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
-        let context = command.build_failure_context(&environment, &error, started_at);
+        let current_step = ProvisionStep::RenderOpenTofuTemplates;
+        let context = command.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::RenderOpenTofuTemplates);
         assert_eq!(context.error_kind, ProvisionErrorKind::TemplateRendering);
         assert_eq!(context.base.execution_started_at, started_at);
@@ -750,7 +748,8 @@ mod tests {
         });
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
-        let context = command.build_failure_context(&environment, &error, started_at);
+        let current_step = ProvisionStep::WaitSshConnectivity;
+        let context = command.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::WaitSshConnectivity);
         assert_eq!(context.error_kind, ProvisionErrorKind::NetworkConnectivity);
         assert_eq!(context.base.execution_started_at, started_at);
@@ -790,7 +789,8 @@ mod tests {
         });
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
-        let context = command.build_failure_context(&environment, &error, started_at);
+        let current_step = ProvisionStep::CloudInitWait;
+        let context = command.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::CloudInitWait);
         assert_eq!(context.error_kind, ProvisionErrorKind::ConfigurationTimeout);
         assert_eq!(context.base.execution_started_at, started_at);
@@ -832,8 +832,9 @@ mod tests {
         let error = ProvisionCommandError::OpenTofu(opentofu_error);
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
-        let context = command.build_failure_context(&environment, &error, started_at);
-        assert_eq!(context.failed_step, ProvisionStep::OpenTofuApply);
+        let current_step = ProvisionStep::OpenTofuInit;
+        let context = command.build_failure_context(&environment, &error, current_step, started_at);
+        assert_eq!(context.failed_step, ProvisionStep::OpenTofuInit);
         assert_eq!(
             context.error_kind,
             ProvisionErrorKind::InfrastructureProvisioning
