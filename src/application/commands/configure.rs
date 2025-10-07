@@ -283,7 +283,7 @@ impl ConfigureCommand {
         };
 
         // Generate trace file with complete error chain
-        let traces_dir = environment.data_dir().join("traces");
+        let traces_dir = environment.traces_dir();
         let clock = Arc::new(SystemClock);
         let trace_writer = ConfigureTraceWriter::new(traces_dir, clock);
 

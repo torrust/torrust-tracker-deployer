@@ -70,6 +70,9 @@ use crate::shared::{ssh::SshCredentials, Username};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Directory name for trace files within an environment's data directory
+pub const TRACES_DIR_NAME: &str = "traces";
+
 /// Environment configuration encapsulating all environment-specific settings
 ///
 /// This entity represents a complete environment configuration including naming,
@@ -346,6 +349,39 @@ impl<S> Environment<S> {
     #[must_use]
     pub fn templates_dir(&self) -> PathBuf {
         self.data_dir.join("templates")
+    }
+
+    /// Returns the traces directory for this environment
+    ///
+    /// The traces directory is located at `data/{env_name}/traces/`
+    /// and contains error trace files for failed operations.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use std::path::PathBuf;
+    ///
+    /// let env_name = EnvironmentName::new("production".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
+    /// let ssh_credentials = SshCredentials::new(
+    ///     PathBuf::from("keys/prod_rsa"),
+    ///     PathBuf::from("keys/prod_rsa.pub"),
+    ///     ssh_username,
+    /// );
+    /// let environment = Environment::new(env_name, ssh_credentials);
+    ///
+    /// assert_eq!(
+    ///     environment.traces_dir(),
+    ///     PathBuf::from("data/production/traces")
+    /// );
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub fn traces_dir(&self) -> PathBuf {
+        self.data_dir.join(TRACES_DIR_NAME)
     }
 
     /// Returns the ansible build directory for this environment

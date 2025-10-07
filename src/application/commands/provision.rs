@@ -488,7 +488,7 @@ impl ProvisionCommand {
         };
 
         // Generate trace file
-        let traces_dir = environment.data_dir().join("traces");
+        let traces_dir = environment.traces_dir();
         let clock = Arc::new(SystemClock);
         let writer = ProvisionTraceWriter::new(traces_dir, clock);
 

@@ -154,11 +154,12 @@ mod tests {
     /// Returns (writer, `temp_dir`, `traces_dir`)
     /// The `temp_dir` must be kept alive for the duration of the test
     fn create_test_writer() -> (ConfigureTraceWriter, TempDir, PathBuf) {
+        use crate::domain::environment::TRACES_DIR_NAME;
         use crate::testing::MockClock;
         use chrono::TimeZone;
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let traces_dir = temp_dir.path().join("traces");
+        let traces_dir = temp_dir.path().join(TRACES_DIR_NAME);
         let fixed_time = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
         let clock = Arc::new(MockClock::new(fixed_time));
         let writer = ConfigureTraceWriter::new(traces_dir.clone(), clock);

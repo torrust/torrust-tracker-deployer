@@ -162,6 +162,7 @@ mod tests {
 
     // Test helpers - Arrange phase utilities
 
+    use crate::domain::environment::TRACES_DIR_NAME;
     use crate::testing::MockClock;
     use chrono::TimeZone;
     use std::sync::Arc;
@@ -171,8 +172,10 @@ mod tests {
     /// Returns (writer, `temp_dir`, `traces_dir`)
     /// The `temp_dir` must be kept alive for the duration of the test
     fn create_test_writer() -> (CommonTraceWriter, TempDir, PathBuf) {
+        use crate::domain::environment::TRACES_DIR_NAME;
+
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let traces_dir = temp_dir.path().join("traces");
+        let traces_dir = temp_dir.path().join(TRACES_DIR_NAME);
         let fixed_time = chrono::Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
         let clock = Arc::new(MockClock::new(fixed_time));
         let writer = CommonTraceWriter::new(traces_dir.clone(), clock);
@@ -389,7 +392,7 @@ mod tests {
             perms.set_mode(0o444); // Read-only
             fs::set_permissions(&readonly_dir, perms).expect("Failed to set permissions");
 
-            let traces_dir = readonly_dir.join("traces");
+            let traces_dir = readonly_dir.join(TRACES_DIR_NAME);
             let fixed_time = chrono::Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
             let clock = Arc::new(MockClock::new(fixed_time));
             let writer = CommonTraceWriter::new(traces_dir, clock);
