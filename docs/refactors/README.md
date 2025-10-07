@@ -20,10 +20,14 @@ Refactoring plans serve to:
 
 ## ✅ Completed Refactorings
 
-| Document                          | Completed   | Target                    | Notes                                                                                                                                   |
-| --------------------------------- | ----------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| JSON File Repository Improvements | Oct 3, 2025 | `json_file_repository.rs` | See git history at `docs/refactors/json-file-repository-improvements.md` for the complete refactoring plan (9 proposals, all completed) |
-| File Lock Improvements            | Oct 3, 2025 | `file_lock.rs`            | See git history at `docs/refactors/file-lock-improvements.md` for the complete refactoring plan (10 proposals, all completed)           |
+| Document                                 | Completed   | Target                                 | Notes                                                                                                                                                          |
+| ---------------------------------------- | ----------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JSON File Repository Improvements        | Oct 3, 2025 | `json_file_repository.rs`              | See git history at `docs/refactors/json-file-repository-improvements.md` for the complete refactoring plan (9 proposals, all completed)                        |
+| File Lock Improvements                   | Oct 3, 2025 | `file_lock.rs`                         | See git history at `docs/refactors/file-lock-improvements.md` for the complete refactoring plan (10 proposals, all completed)                                  |
+| Command Preparation for State Management | Oct 7, 2025 | `ProvisionCommand`, `ConfigureCommand` | See git history at `docs/refactors/command-preparation-for-state-management.md` - Refactored commands to prepare for type-state pattern integration            |
+| Error Context with Trace Files           | Oct 7, 2025 | Error handling infrastructure          | See git history at `docs/refactors/error-context-with-trace-files.md` - Replaced string-based error context with structured, type-safe context and trace files |
+| Error Kind Classification Strategy       | Oct 7, 2025 | `Traceable` trait, error types         | See git history at `docs/refactors/error-kind-classification-strategy.md` - Moved error kind determination into error types via `Traceable` trait              |
+| Step Tracking for Failure Context        | Oct 7, 2025 | Command execution flow                 | See git history at `docs/refactors/step-tracking-for-failure-context.md` - Added explicit step tracking to eliminate reverse engineering from error types      |
 
 ## 🎯 Plan Structure
 
