@@ -2,6 +2,71 @@
 
 This document provides a comprehensive overview of the Rust codebase architecture, organizing all modules by their functional responsibilities and relationships within the deployment architecture.
 
+## 🎨 Domain-Driven Design (DDD) Architecture
+
+The project follows **Domain-Driven Design** principles with a layered architecture that enforces clear separation of concerns and dependency rules:
+
+### Layer Structure
+
+```text
+┌─────────────────────────────────────┐
+│      Application Layer              │
+│  (Commands, Use Cases, Steps)       │
+│  src/application/                   │
+└────────────┬────────────────────────┘
+             │ depends on
+             ↓
+┌─────────────────────────────────────┐
+│       Domain Layer                  │
+│  (Business Logic, Entities,         │
+│   Value Objects)                    │
+│  src/domain/                        │
+└─────────────────────────────────────┘
+             ↑
+             │ depends on
+             │
+┌─────────────────────────────────────┐
+│    Infrastructure Layer             │
+│  (External Tools, File System,      │
+│   SSH, Templates, Trace Writers)    │
+│  src/infrastructure/                │
+└─────────────────────────────────────┘
+```
+
+### Layer Responsibilities
+
+**Domain Layer** (`src/domain/`):
+
+- **Purpose**: Core business logic and domain entities
+- **Contains**: Entities (Environment), Value Objects (EnvironmentName, TraceId), State Machine (type-state pattern)
+- **Rules**: No dependencies on infrastructure or application layers
+- **Example**: `Environment<S>` entity with type-state pattern for deployment lifecycle
+
+**Application Layer** (`src/application/`):
+
+- **Purpose**: Use cases and command orchestration
+- **Contains**: Commands, Steps, Application services
+- **Rules**: Depends on domain layer, coordinates infrastructure services
+- **Example**: `ProvisionCommand` orchestrating provisioning workflow
+
+**Infrastructure Layer** (`src/infrastructure/`):
+
+- **Purpose**: External integrations and technical implementations
+- **Contains**: File system operations, SSH clients, OpenTofu/Ansible wrappers, trace writers
+- **Rules**: Implements domain interfaces, depends on domain layer
+- **Example**: `ProvisionTraceWriter` implementing trace file persistence
+
+### Dependency Rule
+
+The fundamental rule is that **dependencies flow inward**:
+
+- Infrastructure → Domain (✅ Correct)
+- Application → Domain (✅ Correct)
+- Domain → Infrastructure (❌ Forbidden)
+- Domain → Application (❌ Forbidden)
+
+This ensures the domain layer remains pure business logic, free from technical implementation details.
+
 ## 🏗️ Three-Level Architecture Pattern
 
 > **Architectural Foundation**: This architecture provides clear separation of concerns and enables scalable, maintainable code organization through distinct abstraction layers.
@@ -14,7 +79,7 @@ The project implements a **three-level architecture** for deployment automation:
 
 - Orchestrates multiple steps to achieve command objectives
 - Manages command-specific error handling and reporting
-- Currently implemented: `ProvisionCommand`, `ConfigureCommand`, `TestCommand`
+- Currently implemented: `ProvisionCommand`, `ConfigureCommand`
 
 ### Level 2: Steps
 
@@ -37,13 +102,13 @@ The project implements a **three-level architecture** for deployment automation:
 
 This architecture is supported by:
 
-- **Command Wrappers** - Integration with external tools (`OpenTofu`, `Ansible`, `LXD`, `SSH`)
+- **External Tool Adapters** - Integration with external tools (`OpenTofu`, `Ansible`, `LXD`, `SSH`)
 - **Template System** - Configuration template rendering and management
 - **E2E Framework** - End-to-end testing and validation infrastructure
 
 ## 🔄 Architecture Flow & Command Orchestration
 
-## Deployment Flow Pattern
+### Deployment Flow Pattern
 
 The typical deployment flow follows this pattern:
 
@@ -57,7 +122,7 @@ The typical deployment flow follows this pattern:
    - **Validation** - Verify successful installation and configuration
    - **Application** - Deploy and manage applications
 3. **Remote Actions** perform low-level operations on remote systems
-4. **Command Wrappers** provide integration with external tools
+4. **External Tool Adapters** provide integration with external tools
 5. **Template System** manages configuration generation throughout the process
 
 ### Command Orchestration Example
@@ -66,7 +131,7 @@ Commands orchestrate multiple steps to achieve their objectives. Here's how `Pro
 
 ```rust
 impl ProvisionCommand {
-    pub async fn execute(&mut self) -> Result<(), ProvisionCommandError> {
+    pub async fn execute(&mut self) -> Result<Environment<Provisioned>, ProvisionCommandError> {
         // Execute steps in sequence
         self.render_opentofu_templates().await?;
         self.initialize_infrastructure().await?;
@@ -77,7 +142,7 @@ impl ProvisionCommand {
         self.wait_for_ssh_connectivity(&instance_info.ip_address).await?;
         self.wait_for_cloud_init(&instance_info.ip_address).await?;
 
-        Ok(())
+        Ok(provisioned_environment)
     }
 
     // Each method delegates to corresponding Step structs
@@ -105,292 +170,226 @@ All modules include comprehensive `//!` documentation with:
 **Root Level Files:**
 
 - ✅ `src/main.rs` - Main binary entry point
-- ✅ `src/command.rs` - Command execution utilities with error handling
 - ✅ `src/container.rs` - Dependency injection container
 - ✅ `src/logging.rs` - Logging configuration and utilities
 - ✅ `src/lib.rs` - Library root module
 
 **Binary Files:**
 
-- ✅ `src/bin/e2e_tests.rs` - E2E testing binary
 - ✅ `src/bin/linter.rs` - Code quality linting binary
+- ✅ `src/bin/e2e-config-tests.rs` - E2E configuration tests
+- ✅ `src/bin/e2e-provision-tests.rs` - E2E provisioning tests
+- ✅ `src/bin/e2e-tests-full.rs` - Full E2E test suite
 
-### Level 1: High-Level Commands
+### Domain Layer
 
-**Command Modules:**
+**Core Domain Entities:**
 
-- ✅ `src/commands/mod.rs` - High-level deployment commands
-- ✅ `src/commands/configure.rs` - Infrastructure configuration command
-- ✅ `src/commands/provision.rs` - Infrastructure provisioning command
-- ✅ `src/commands/test.rs` - Infrastructure testing command
+- ✅ `src/domain/mod.rs` - Domain layer root module
+- ✅ `src/domain/environment/mod.rs` - Environment entity and aggregate root
+- ✅ `src/domain/environment/name.rs` - Environment name value object
+- ✅ `src/domain/environment/trace_id.rs` - Trace identifier value object
+- ✅ `src/domain/environment/repository.rs` - Environment repository trait
+- ✅ `src/domain/environment/state/` - Environment state machine (type-state pattern)
+- ✅ `src/domain/instance_name.rs` - Instance name value object
+- ✅ `src/domain/profile_name.rs` - Profile name value object
 
-### External Tool Integration
+**Domain Template System:**
 
-Command wrappers provide clean abstractions for integrating with external deployment tools, handling command execution, output parsing, and error management.
+- ✅ `src/domain/template/mod.rs` - Template domain module
+- ✅ `src/domain/template/engine.rs` - Template engine abstraction
+- ✅ `src/domain/template/file.rs` - Template file domain entity
+- ✅ `src/domain/template/file_ops.rs` - Template file operations
 
-**Ansible Integration:**
+### Application Layer
 
-Provides integration with `Ansible` for configuration management and software installation on remote systems.
+**Level 1: High-Level Commands:**
 
-- ✅ `src/ansible/mod.rs` - Ansible playbook integration and coordination
-- ✅ `src/ansible/template/mod.rs` - Ansible template functionality module
-- ✅ `src/ansible/template/renderer/mod.rs` - Ansible template rendering coordination
-- ✅ `src/ansible/template/renderer/inventory.rs` - Ansible inventory template rendering
+- ✅ `src/application/mod.rs` - Application layer root module
+- ✅ `src/application/commands/mod.rs` - Command coordination
+- ✅ `src/application/commands/provision.rs` - Infrastructure provisioning command
+- ✅ `src/application/commands/configure.rs` - Infrastructure configuration command
 
-**Command Wrappers:**
+**Level 2: Granular Deployment Steps:**
 
-- ✅ `src/command_wrappers/mod.rs` - Common wrapper utilities for external tools
-- ✅ `src/command_wrappers/ansible.rs` - `Ansible` command execution wrapper
-
-**SSH Wrappers:**
-
-Enable secure remote access to provisioned systems for executing commands and file transfers.
-
-- ✅ `src/command_wrappers/ssh/mod.rs` - SSH integration module and error handling
-- ✅ `src/command_wrappers/ssh/client.rs` - SSH client implementation for remote operations
-- ✅ `src/command_wrappers/ssh/connection.rs` - SSH connection configuration management
-- ✅ `src/command_wrappers/ssh/credentials.rs` - SSH authentication credentials handling
-
-**LXD Wrappers:**
-
-Interface with LXD for container and virtual machine management, providing local development environments.
-
-- ✅ `src/command_wrappers/lxd/mod.rs` - LXD container/VM management coordination
-- ✅ `src/command_wrappers/lxd/client.rs` - LXD client implementation and command execution
-- ✅ `src/command_wrappers/lxd/json_parser.rs` - Parse LXD JSON response data
-- ✅ `src/command_wrappers/lxd/instance/mod.rs` - LXD instance type definitions
-- ✅ `src/command_wrappers/lxd/instance/info.rs` - Instance information data structures
-- ✅ `src/command_wrappers/lxd/instance/name.rs` - Instance name validation and formatting
-
-**OpenTofu Wrappers:**
-
-Interface with `OpenTofu` for infrastructure-as-code operations, managing infrastructure provisioning and state.
-
-- ✅ `src/command_wrappers/opentofu/mod.rs` - `OpenTofu` infrastructure management coordination
-- ✅ `src/command_wrappers/opentofu/client.rs` - `OpenTofu` client implementation and command execution
-- ✅ `src/command_wrappers/opentofu/json_parser.rs` - Parse `OpenTofu` JSON output and state
-
-### Configuration and Testing Framework
-
-**Configuration Management:**
-
-Handles application configuration loading, validation, and environment-specific settings management.
-
-- ✅ `src/config/mod.rs` - Application configuration management and validation
-
-**E2E Testing Infrastructure:**
-
-Comprehensive end-to-end testing framework that validates complete deployment workflows from infrastructure provisioning to application deployment.
-
-- ✅ `src/e2e/mod.rs` - End-to-end testing framework coordination and test execution
-- ✅ `src/e2e/environment.rs` - Test environment setup and teardown management
-
-**E2E Task Modules:**
-
-Individual task modules that compose complete end-to-end test scenarios, validating different aspects of the deployment pipeline.
-
-- ✅ `src/e2e/tasks/setup_ssh_key.rs` - SSH key generation and setup for secure access
-- ✅ `src/e2e/tasks/configure_infrastructure.rs` - Infrastructure configuration validation
-- ✅ `src/e2e/tasks/cleanup_infrastructure.rs` - Infrastructure cleanup and resource deallocation
-- ✅ `src/e2e/tasks/validate_deployment.rs` - Complete deployment validation and health checks
-- ✅ `src/e2e/tasks/provision_infrastructure.rs` - Infrastructure provisioning validation
-- ✅ `src/e2e/tasks/clean_and_prepare_templates.rs` - Template cleanup and preparation for testing
-- ✅ `src/e2e/tasks/preflight_cleanup.rs` - Pre-test environment cleanup and initialization
-
-### Level 2: Granular Deployment Steps
-
-Steps are the core building blocks of deployment workflows, providing reusable, composable operations that can be orchestrated by Commands. Each step category handles specific aspects of the deployment process.
+Steps are the core building blocks of deployment workflows, providing reusable, composable operations.
 
 **Infrastructure Steps:**
 
-Manage the infrastructure lifecycle using `OpenTofu`, from planning and initialization to provisioning and information retrieval.
-
-- ✅ `src/steps/infrastructure/mod.rs` - Infrastructure lifecycle management
-- ✅ `src/steps/infrastructure/initialize.rs` - Initialize `OpenTofu` backend and providers
-- ✅ `src/steps/infrastructure/apply.rs` - Apply infrastructure changes and provision resources
-- ✅ `src/steps/infrastructure/get_instance_info.rs` - Retrieve provisioned instance information
-- ✅ `src/steps/infrastructure/plan.rs` - Generate and validate infrastructure execution plans
-- ✅ `src/steps/infrastructure/validate.rs` - Validate infrastructure configuration and state
+- ✅ `src/application/steps/infrastructure/mod.rs` - Infrastructure lifecycle management
+- ✅ `src/application/steps/infrastructure/initialize.rs` - Initialize OpenTofu backend
+- ✅ `src/application/steps/infrastructure/apply.rs` - Apply infrastructure changes
+- ✅ `src/application/steps/infrastructure/get_instance_info.rs` - Retrieve instance information
+- ✅ `src/application/steps/infrastructure/plan.rs` - Generate execution plans
+- ✅ `src/application/steps/infrastructure/validate.rs` - Validate infrastructure configuration
 
 **System-Level Steps:**
 
-Handle system-level operations and waiting for system initialization processes to complete.
-
-- ✅ `src/steps/system/mod.rs` - System-level configuration steps
-- ✅ `src/steps/system/wait_cloud_init.rs` - Wait for cloud-init completion on remote systems
+- ✅ `src/application/steps/system/mod.rs` - System-level configuration steps
+- ✅ `src/application/steps/system/wait_cloud_init.rs` - Wait for cloud-init completion
 
 **Template Rendering Steps:**
 
-Generate configuration files from templates, preparing tool-specific configurations for deployment.
-
-- ✅ `src/steps/rendering/mod.rs` - Configuration template rendering coordination
-- ✅ `src/steps/rendering/opentofu_templates.rs` - Generate `OpenTofu` configuration files
-- ✅ `src/steps/rendering/ansible_templates.rs` - Generate `Ansible` playbook configurations
+- ✅ `src/application/steps/rendering/mod.rs` - Template rendering coordination
+- ✅ `src/application/steps/rendering/opentofu_templates.rs` - Generate OpenTofu configurations
+- ✅ `src/application/steps/rendering/ansible_templates.rs` - Generate Ansible configurations
 
 **Software Installation Steps:**
 
-Install and configure required software on remote systems using `Ansible` playbooks.
-
-- ✅ `src/steps/software/mod.rs` - Software installation and configuration coordination
-- ✅ `src/steps/software/docker.rs` - Install Docker engine on remote systems
-- ✅ `src/steps/software/docker_compose.rs` - Install Docker Compose tool
+- ✅ `src/application/steps/software/mod.rs` - Software installation coordination
+- ✅ `src/application/steps/software/docker.rs` - Install Docker engine
+- ✅ `src/application/steps/software/docker_compose.rs` - Install Docker Compose
 
 **Validation Steps:**
 
-Verify successful installation and configuration of system components and software.
-
-- ✅ `src/steps/validation/mod.rs` - System and software validation coordination
-- ✅ `src/steps/validation/docker.rs` - Validate Docker engine installation and functionality
-- ✅ `src/steps/validation/docker_compose.rs` - Verify Docker Compose installation
-- ✅ `src/steps/validation/cloud_init.rs` - Confirm cloud-init process completion
+- ✅ `src/application/steps/validation/mod.rs` - System and software validation
+- ✅ `src/application/steps/validation/docker.rs` - Validate Docker installation
+- ✅ `src/application/steps/validation/docker_compose.rs` - Verify Docker Compose
+- ✅ `src/application/steps/validation/cloud_init.rs` - Confirm cloud-init completion
 
 **Connectivity Steps:**
 
-Establish and verify network connections to remote systems, ensuring systems are accessible.
-
-- ✅ `src/steps/connectivity/mod.rs` - Network connectivity operations coordination
-- ✅ `src/steps/connectivity/wait_ssh_connectivity.rs` - Wait for SSH access to remote systems
+- ✅ `src/application/steps/connectivity/mod.rs` - Network connectivity operations
+- ✅ `src/application/steps/connectivity/wait_ssh_connectivity.rs` - Wait for SSH access
 
 **Application Steps:**
 
-Handle application deployment and lifecycle management (prepared for future implementation).
+- ✅ `src/application/steps/application/mod.rs` - Application deployment coordination
 
-- ✅ `src/steps/application/mod.rs` - Application deployment and lifecycle coordination
+### Infrastructure Layer
 
-### Level 3: Remote System Operations
+**External Tool Integration:**
 
-Remote Actions represent the lowest level of the architecture, performing direct operations on remote systems via SSH. These actions validate system state, install software, and execute maintenance tasks on provisioned infrastructure.
+Adapters for external deployment tools, handling command execution, output parsing, and error management.
 
-**Remote Actions:**
+**Ansible Integration:**
 
-- ✅ `src/remote_actions/mod.rs` - Remote system operation definitions and traits
-- ✅ `src/remote_actions/cloud_init.rs` - Validates cloud-init completion status
-- ✅ `src/remote_actions/docker.rs` - Verifies Docker engine installation and status
-- ✅ `src/remote_actions/docker_compose.rs` - Validates Docker Compose availability
+- ✅ `src/infrastructure/external_tools/ansible/mod.rs` - Ansible integration root
+- ✅ `src/infrastructure/external_tools/ansible/adapter.rs` - Ansible client adapter
+- ✅ `src/infrastructure/external_tools/ansible/template/mod.rs` - Ansible templates
+- ✅ `src/infrastructure/external_tools/ansible/template/renderer/mod.rs` - Template rendering
+- ✅ `src/infrastructure/external_tools/ansible/template/renderer/inventory.rs` - Inventory rendering
+- ✅ `src/infrastructure/external_tools/ansible/template/wrappers/inventory/` - Inventory template wrappers
 
-### Template System
+**OpenTofu Integration:**
 
-The template system provides dynamic configuration file generation using the Tera templating engine. It enables flexible, environment-specific configurations for both `OpenTofu` infrastructure definitions and `Ansible` playbooks.
+- ✅ `src/infrastructure/external_tools/tofu/mod.rs` - OpenTofu integration root
+- ✅ `src/infrastructure/external_tools/tofu/adapter/mod.rs` - OpenTofu adapter
+- ✅ `src/infrastructure/external_tools/tofu/adapter/client.rs` - OpenTofu client
+- ✅ `src/infrastructure/external_tools/tofu/adapter/json_parser.rs` - Parse OpenTofu output
+- ✅ `src/infrastructure/external_tools/tofu/template/mod.rs` - OpenTofu templates
+- ✅ `src/infrastructure/external_tools/tofu/template/renderer/mod.rs` - Template rendering
+- ✅ `src/infrastructure/external_tools/tofu/template/renderer/cloud_init.rs` - Cloud-init rendering
+- ✅ `src/infrastructure/external_tools/tofu/template/wrappers/lxd/` - LXD template wrappers
 
-**Template Engine:**
+**LXD Integration:**
 
-- ✅ `src/template/mod.rs` - Template system root module
-- ✅ `src/template/engine.rs` - Tera template engine integration
-- ✅ `src/template/file.rs` - Template file management
-- ✅ `src/template/file_ops.rs` - File operations for templates
-- ✅ `src/template/embedded.rs` - Embedded template resources
+- ✅ `src/infrastructure/external_tools/lxd/mod.rs` - LXD integration root
+- ✅ `src/infrastructure/external_tools/lxd/adapter/mod.rs` - LXD adapter
+- ✅ `src/infrastructure/external_tools/lxd/adapter/client.rs` - LXD client
+- ✅ `src/infrastructure/external_tools/lxd/adapter/json_parser.rs` - Parse LXD output
 
-**Template Wrappers:**
+**Level 3: Remote System Operations:**
 
-Template wrappers provide specialized rendering logic for different tool configurations, handling tool-specific template variables and output formats.
+- ✅ `src/infrastructure/remote_actions/mod.rs` - Remote operations root
+- ✅ `src/infrastructure/remote_actions/cloud_init.rs` - Validate cloud-init completion
+- ✅ `src/infrastructure/remote_actions/docker.rs` - Verify Docker installation
+- ✅ `src/infrastructure/remote_actions/docker_compose.rs` - Validate Docker Compose
 
-- ✅ `src/template/wrappers/mod.rs` - Template wrapper utilities
-- ✅ `src/template/wrappers/ansible/mod.rs` - Ansible template wrappers
-- ✅ `src/template/wrappers/ansible/inventory/mod.rs` - Ansible inventory templates
-- ✅ `src/template/wrappers/ansible/inventory/context/mod.rs` - Inventory context management
-- ✅ `src/template/wrappers/tofu/mod.rs` - OpenTofu template wrappers
-- ✅ `src/template/wrappers/tofu/lxd/mod.rs` - LXD-specific OpenTofu template wrappers
+**Persistence Layer:**
 
-**Tofu Integration:**
+- ✅ `src/infrastructure/persistence/mod.rs` - Persistence layer root
+- ✅ `src/infrastructure/persistence/filesystem/mod.rs` - Filesystem persistence
+- ✅ `src/infrastructure/persistence/filesystem/file_environment_repository.rs` - Environment file storage
+- ✅ `src/infrastructure/persistence/filesystem/file_lock.rs` - File locking mechanism
+- ✅ `src/infrastructure/persistence/filesystem/json_file_repository.rs` - Generic JSON file repository
+- ✅ `src/infrastructure/persistence/repository_factory.rs` - Repository factory
 
-Specialized integration for `OpenTofu` template processing, handling infrastructure-as-code template rendering with proper variable substitution.
+**Trace System:**
 
-- ✅ `src/tofu/mod.rs` - OpenTofu integration module
-- ✅ `src/tofu/template/mod.rs` - OpenTofu template functionality module
-- ✅ `src/tofu/template/renderer/mod.rs` - OpenTofu template rendering coordination
-- ✅ `src/tofu/template/renderer/cloud_init.rs` - Cloud-init template rendering for OpenTofu
+- ✅ `src/infrastructure/trace/mod.rs` - Trace system root
+- ✅ `src/infrastructure/trace/common.rs` - Common trace utilities
+- ✅ `src/infrastructure/trace/provision.rs` - Provision command trace writer
+- ✅ `src/infrastructure/trace/configure.rs` - Configure command trace writer
+
+### Shared Layer
+
+**Cross-Cutting Concerns:**
+
+- ✅ `src/shared/mod.rs` - Shared utilities root
+- ✅ `src/shared/command/mod.rs` - Command execution utilities
+- ✅ `src/shared/error/mod.rs` - Shared error types
+- ✅ `src/shared/port_checker.rs` - Network port checking
+- ✅ `src/shared/ssh/mod.rs` - SSH utilities
+- ✅ `src/shared/ssh/client.rs` - SSH client wrapper
+- ✅ `src/shared/ssh/public_key.rs` - SSH public key handling
+- ✅ `src/shared/ssh/service_checker.rs` - SSH service validation
+- ✅ `src/shared/username.rs` - Username value object
+
+### Testing Infrastructure
+
+**E2E Testing Framework:**
+
+- ✅ `src/e2e/mod.rs` - E2E testing framework coordination
+- ✅ `src/e2e/containers/mod.rs` - Container-based testing infrastructure
+- ✅ `src/e2e/containers/actions/` - E2E test actions
+- ✅ `src/e2e/containers/provisioned.rs` - Provisioned container management
+
+**Configuration:**
+
+- ✅ `src/config/mod.rs` - Application configuration management
 
 ## 🔄 Architecture Flow
 
 The typical deployment flow follows this pattern:
 
-1. **Commands** receive user input and orchestrate the deployment process
-2. **Steps** execute specific deployment operations in sequence:
-   - **Rendering** - Generate configuration files from templates
-   - **Infrastructure** - Provision and manage infrastructure resources
-   - **Connectivity** - Establish and verify network connections
-   - **System** - Configure system-level settings
-   - **Software** - Install and configure required software
-   - **Validation** - Verify successful installation and configuration
-   - **Application** - Deploy and manage applications
-3. **Remote Actions** perform low-level operations on remote systems
-4. **Command Wrappers** provide integration with external tools
-5. **Template System** manages configuration generation throughout the process
+1. **Commands** (Application Layer) receive user input and orchestrate the deployment
+2. **Steps** (Application Layer) execute specific operations by coordinating:
+   - **Domain Entities** - Environment state transitions
+   - **Infrastructure Services** - External tool adapters, persistence, remote actions
+3. **Infrastructure Layer** handles all external integrations:
+   - External tool execution (OpenTofu, Ansible, LXD)
+   - File system operations (templates, state persistence)
+   - Remote SSH operations
+   - Trace file generation
 
 ## 📊 Architecture Benefits
 
 ### Code Quality
 
+- **DDD Principles**: Clear separation between domain logic, application use cases, and infrastructure
 - **Reduced complexity**: Large operations broken into focused components
-- **Better testability**: Each command and step can be unit tested independently
-- **Clear separation**: Command orchestration, step execution, remote validation are distinct
-- **Reusable components**: Steps can be shared across commands
+- **Better testability**: Each layer and component can be tested independently
+- **Type Safety**: Type-state pattern prevents invalid state transitions at compile time
 
 ### Maintainability
 
-- **Modular structure**: Changes to one command don't affect others
-- **Clear interfaces**: Well-defined traits for commands, steps, and remote actions
+- **Modular structure**: Changes in one layer don't affect others
+- **Clear interfaces**: Well-defined boundaries between layers
 - **Easy extension**: Adding new commands/steps/actions follows established patterns
-- **Better error handling**: Comprehensive error types with context
+- **Dependency Direction**: Domain remains independent of infrastructure details
 
 ### Production Readiness
 
-- **Console application**: Ready-to-use CLI with proper subcommand structure
-- **State management**: Context passing enables complex workflows
-- **Progress reporting**: User-friendly feedback during long-running operations
-- **Configuration system**: Support for different environments and settings
-
-## 🚀 Recent Architecture Improvements
-
-### Hierarchical Module Organization (September 2024)
-
-Recent refactoring efforts have improved the module organization for both `Ansible` and `OpenTofu` integrations:
-
-**Before:**
-
-```text
-src/ansible/template_renderer.rs
-src/tofu/template_renderer.rs
-src/tofu/cloud_init_template_renderer.rs
-```
-
-**After:**
-
-```text
-src/ansible/template/
-├── mod.rs
-└── renderer/
-    ├── mod.rs (AnsibleTemplateRenderer)
-    └── inventory.rs (InventoryTemplateRenderer)
-
-src/tofu/template/
-├── mod.rs
-└── renderer/
-    ├── mod.rs (TofuTemplateRenderer)
-    └── cloud_init.rs (CloudInitTemplateRenderer)
-```
-
-**Benefits of the New Structure:**
-
-- **Eliminated Redundant Naming**: Removed `_template_renderer` suffixes from file names
-- **Logical Hierarchy**: Clear `template/renderer/` organization pattern
-- **Better Separation**: Specialized renderers properly grouped by functionality
-- **Consistent Pattern**: Same organizational approach across both modules
-- **Improved Maintainability**: Easier to locate and modify specific template renderers
-
-This refactoring maintains full backward compatibility while providing a cleaner, more maintainable codebase structure.
+- **State Management**: Type-safe environment state transitions with persistence
+- **Error Context**: Structured error handling with trace files for debugging
+- **Progress Reporting**: User-friendly feedback during long-running operations
+- **File Locking**: Prevents concurrent access conflicts
 
 ## 📊 Module Statistics
 
-- **Total Modules**: 86 Rust files
-- **Architecture Levels**: 3 (Commands → Steps → Remote Actions)
-- **External Tool Integrations**: 4 (`OpenTofu`, `Ansible`, `LXD`, `SSH`)
+- **Total Modules**: ~100+ Rust files
+- **Architecture Layers**: 3 (Domain, Application, Infrastructure) + Shared
+- **External Tool Integrations**: 3 (OpenTofu, Ansible, LXD)
 - **Step Categories**: 7 (Infrastructure, System, Software, Validation, Connectivity, Application, Rendering)
+- **State Types**: 13+ environment states with type-state pattern
 
 ## 💡 Key Design Principles
 
+- **Domain-Driven Design**: Pure domain logic independent of infrastructure
 - **Separation of Concerns**: Each module has a single, well-defined responsibility
-- **Composability**: Steps can be combined to create complex deployment workflows
-- **Testability**: E2E framework enables comprehensive testing of deployment scenarios
-- **External Tool Integration**: Clean abstraction layers for third-party tools
-- **Template-Driven Configuration**: Flexible configuration management through templates
+- **Dependency Inversion**: Depend on abstractions, not concretions
+- **Type Safety**: Leverage Rust's type system for correctness
+- **Composability**: Steps combine to create complex deployment workflows
+- **Observability**: Comprehensive logging and trace file generation
+- **Testability**: E2E framework enables full deployment workflow testing
