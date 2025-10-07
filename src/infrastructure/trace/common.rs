@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use chrono::Utc;
 use thiserror::Error;
 
+use crate::domain::environment::state::BaseFailureContext;
 use crate::shared::Traceable;
 
 /// Errors that can occur during trace file writing
@@ -77,6 +78,34 @@ impl TraceSections {
         if let Some(source) = error.trace_source() {
             Self::format_error_chain_recursive(source, output, level + 1);
         }
+    }
+
+    /// Format base metadata section common to all failure contexts
+    ///
+    /// Formats the metadata fields from `BaseFailureContext`:
+    /// - Trace ID
+    /// - Failed At timestamp
+    /// - Execution Started timestamp
+    /// - Execution Duration
+    /// - Error Summary
+    ///
+    /// # Returns
+    ///
+    /// Formatted string with base metadata, ready to be included in a trace file
+    pub(crate) fn format_base_metadata(base: &BaseFailureContext) -> String {
+        use std::fmt::Write;
+
+        let mut metadata = String::new();
+        let _ = writeln!(metadata, "Trace ID: {}", base.trace_id);
+        let _ = writeln!(metadata, "Failed At: {}", base.failed_at);
+        let _ = writeln!(metadata, "Execution Started: {}", base.execution_started_at);
+        let _ = writeln!(
+            metadata,
+            "Execution Duration: {:?}",
+            base.execution_duration
+        );
+        let _ = writeln!(metadata, "Error Summary: {}", base.error_summary);
+        metadata
     }
 }
 

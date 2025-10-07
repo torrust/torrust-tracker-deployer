@@ -69,22 +69,12 @@ impl ConfigureTraceWriter {
         // Header
         trace.push_str(&TraceSections::header("CONFIGURE FAILURE TRACE"));
 
-        // Metadata
-        let _ = writeln!(trace, "Trace ID: {}", ctx.base.trace_id);
-        let _ = writeln!(trace, "Failed At: {}", ctx.base.failed_at);
-        let _ = writeln!(
-            trace,
-            "Execution Started: {}",
-            ctx.base.execution_started_at
-        );
-        let _ = writeln!(
-            trace,
-            "Execution Duration: {:?}",
-            ctx.base.execution_duration
-        );
+        // Base metadata (common to all failures)
+        trace.push_str(&TraceSections::format_base_metadata(&ctx.base));
+
+        // Command-specific metadata
         let _ = writeln!(trace, "Failed Step: {:?}", ctx.failed_step);
-        let _ = writeln!(trace, "Error Kind: {:?}", ctx.error_kind);
-        let _ = writeln!(trace, "Error Summary: {}\n", ctx.base.error_summary);
+        let _ = writeln!(trace, "Error Kind: {:?}\n", ctx.error_kind);
 
         // Error chain
         trace.push_str(TraceSections::error_chain_header());
