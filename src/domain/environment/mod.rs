@@ -68,6 +68,7 @@ pub use state::{
 use crate::domain::{InstanceName, ProfileName};
 use crate::shared::{ssh::SshCredentials, Username};
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
 use std::path::PathBuf;
 
 /// Directory name for trace files within an environment's data directory
@@ -124,6 +125,13 @@ pub struct Environment<S = Created> {
 
     /// Data directory for this environment (auto-generated)
     data_dir: PathBuf,
+
+    /// Instance IP address (populated after provisioning)
+    ///
+    /// This field stores the IP address of the provisioned instance and is
+    /// `None` until the environment has been successfully provisioned.
+    /// Once set, it's carried through all subsequent state transitions.
+    instance_ip: Option<IpAddr>,
 
     /// Current state of the environment in the deployment lifecycle
     state: S,
@@ -194,6 +202,7 @@ impl Environment {
             ssh_credentials,
             build_dir,
             data_dir,
+            instance_ip: None,
             state: Created,
         }
     }
@@ -238,6 +247,7 @@ impl<S> Environment<S> {
             ssh_credentials: self.ssh_credentials,
             build_dir: self.build_dir,
             data_dir: self.data_dir,
+            instance_ip: self.instance_ip,
             state: new_state,
         }
     }
@@ -316,6 +326,92 @@ impl<S> Environment<S> {
     #[must_use]
     pub fn data_dir(&self) -> &PathBuf {
         &self.data_dir
+    }
+
+    /// Returns the instance IP address if available
+    ///
+    /// The instance IP is populated after successful provisioning and is
+    /// `None` for environments that haven't been provisioned yet.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(IpAddr)` if the environment has been provisioned
+    /// - `None` if the environment hasn't been provisioned yet
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use std::path::PathBuf;
+    /// use std::net::{IpAddr, Ipv4Addr};
+    ///
+    /// let env_name = EnvironmentName::new("test".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
+    /// let ssh_credentials = SshCredentials::new(
+    ///     PathBuf::from("keys/test_rsa"),
+    ///     PathBuf::from("keys/test_rsa.pub"),
+    ///     ssh_username,
+    /// );
+    /// let environment = Environment::new(env_name, ssh_credentials);
+    ///
+    /// // Before provisioning
+    /// assert_eq!(environment.instance_ip(), None);
+    ///
+    /// // After provisioning (simulated)
+    /// let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
+    /// let environment = environment.with_instance_ip(ip);
+    /// assert_eq!(environment.instance_ip(), Some(ip));
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub fn instance_ip(&self) -> Option<IpAddr> {
+        self.instance_ip
+    }
+
+    /// Sets the instance IP address for this environment
+    ///
+    /// This method is typically called by the `ProvisionCommand` after successfully
+    /// provisioning the infrastructure and obtaining the instance's IP address.
+    ///
+    /// # Arguments
+    ///
+    /// * `ip` - The IP address of the provisioned instance
+    ///
+    /// # Returns
+    ///
+    /// A new Environment instance with the IP address set
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use std::path::PathBuf;
+    /// use std::net::{IpAddr, Ipv4Addr};
+    ///
+    /// let env_name = EnvironmentName::new("production".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
+    /// let ssh_credentials = SshCredentials::new(
+    ///     PathBuf::from("keys/prod_rsa"),
+    ///     PathBuf::from("keys/prod_rsa.pub"),
+    ///     ssh_username,
+    /// );
+    /// let environment = Environment::new(env_name, ssh_credentials);
+    ///
+    /// // Set IP after provisioning
+    /// let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 42));
+    /// let environment = environment.with_instance_ip(ip);
+    ///
+    /// assert_eq!(environment.instance_ip(), Some(ip));
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub fn with_instance_ip(mut self, ip: IpAddr) -> Self {
+        self.instance_ip = Some(ip);
+        self
     }
 
     /// Returns the templates directory for this environment
@@ -643,6 +739,7 @@ mod tests {
                 ssh_credentials,
                 data_dir: data_dir.clone(),
                 build_dir: build_dir.clone(),
+                instance_ip: None,
                 state: Created,
             };
 

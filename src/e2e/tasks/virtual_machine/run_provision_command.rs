@@ -23,7 +23,6 @@
 //! the foundation infrastructure for all subsequent testing operations.
 
 use anyhow::{Context, Result};
-use std::net::IpAddr;
 use std::sync::Arc;
 use tracing::info;
 
@@ -32,8 +31,8 @@ use crate::e2e::context::TestContext;
 
 /// Provision infrastructure using `OpenTofu` and prepare for configuration
 ///
-/// Returns both the provisioned environment (for type-safe command chaining) and
-/// the IP address (for validation tasks).
+/// Returns the provisioned environment with the instance IP stored in its context.
+/// Callers can extract the IP address using `environment.instance_ip()`.
 ///
 /// # Errors
 ///
@@ -43,10 +42,7 @@ use crate::e2e::context::TestContext;
 /// - IP address cannot be obtained from `OpenTofu` outputs
 pub async fn run_provision_command(
     test_context: &TestContext,
-) -> Result<(
-    crate::domain::Environment<crate::domain::environment::Provisioned>,
-    IpAddr,
-)> {
+) -> Result<crate::domain::Environment<crate::domain::environment::Provisioned>> {
     info!("Provisioning test infrastructure");
 
     // Create repository for this environment
@@ -63,7 +59,7 @@ pub async fn run_provision_command(
     );
 
     // Execute provisioning with environment in Created state
-    let (provisioned_env, instance_ip) = provision_command
+    let provisioned_env = provision_command
         .execute(test_context.environment.clone())
         .await
         .map_err(anyhow::Error::from)
@@ -72,9 +68,9 @@ pub async fn run_provision_command(
     info!(
         status = "complete",
         environment = %provisioned_env.name(),
-        instance_ip = %instance_ip,
+        instance_ip = ?provisioned_env.instance_ip(),
         "Instance provisioned successfully"
     );
 
-    Ok((provisioned_env, instance_ip))
+    Ok(provisioned_env)
 }

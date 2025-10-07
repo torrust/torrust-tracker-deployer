@@ -192,7 +192,7 @@ impl ProvisionCommand {
     pub async fn execute(
         &self,
         environment: Environment<Created>,
-    ) -> Result<(Environment<Provisioned>, IpAddr), ProvisionCommandError> {
+    ) -> Result<Environment<Provisioned>, ProvisionCommandError> {
         info!(
             command = "provision",
             environment = %environment.name(),
@@ -212,17 +212,20 @@ impl ProvisionCommand {
         // This allows us to know exactly which step failed if an error occurs
         match self.execute_provisioning_with_tracking(&environment).await {
             Ok((provisioned, instance_ip)) => {
+                // Store instance IP in the environment context
+                let provisioned = provisioned.with_instance_ip(instance_ip);
+
                 // Persist final state
                 self.persist_provisioned_state(&provisioned);
 
                 info!(
                     command = "provision",
                     environment = %provisioned.name(),
-                    instance_ip = %instance_ip,
+                    instance_ip = ?provisioned.instance_ip(),
                     "Infrastructure provisioning completed successfully"
                 );
 
-                Ok((provisioned, instance_ip))
+                Ok(provisioned)
             }
             Err((e, current_step)) => {
                 // Transition to error state with structured context

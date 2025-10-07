@@ -198,7 +198,11 @@ async fn run_provisioning_test(env: &TestContext) -> Result<IpAddr> {
         "Starting infrastructure provisioning E2E test"
     );
 
-    let (_provisioned_env, instance_ip) = run_provision_command(env).await?;
+    let provisioned_env = run_provision_command(env).await?;
+
+    let instance_ip = provisioned_env
+        .instance_ip()
+        .expect("Instance IP must be set after successful provisioning");
 
     info!(
         status = "success",

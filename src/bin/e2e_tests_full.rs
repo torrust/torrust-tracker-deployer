@@ -218,7 +218,12 @@ async fn run_full_deployment_test(env: &TestContext) -> Result<IpAddr> {
     );
 
     // Provision infrastructure - returns typed Environment<Provisioned>
-    let (provisioned_env, instance_ip) = run_provision_command(env).await?;
+    let provisioned_env = run_provision_command(env).await?;
+
+    // Extract instance IP from the provisioned environment
+    let instance_ip = provisioned_env
+        .instance_ip()
+        .expect("Instance IP must be set after successful provisioning");
 
     // Configure infrastructure - requires Environment<Provisioned>, returns Environment<Configured>
     // This demonstrates compile-time type safety: cannot call configure without provisioning first

@@ -136,6 +136,7 @@ impl EnvironmentTestBuilder {
             ssh_credentials,
             data_dir: data_dir.clone(),
             build_dir: build_dir.clone(),
+            instance_ip: None,
             state: Created,
         };
 
