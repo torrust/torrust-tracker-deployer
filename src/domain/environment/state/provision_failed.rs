@@ -11,14 +11,10 @@
 //! - Manual inspection and repair (advanced users)
 //! - Review trace file for detailed error information
 
-use std::path::PathBuf;
-use std::time::Duration;
-
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::environment::state::{AnyEnvironmentState, StateTypeError};
-use crate::domain::environment::{Environment, TraceId};
+use crate::domain::environment::state::{AnyEnvironmentState, BaseFailureContext, StateTypeError};
+use crate::domain::environment::Environment;
 
 // ============================================================================
 // Provision Command Error Context
@@ -36,23 +32,9 @@ pub struct ProvisionFailureContext {
     /// Error category for type-safe handling
     pub error_kind: ProvisionErrorKind,
 
-    /// Human-readable error summary
-    pub error_summary: String,
-
-    /// When the failure occurred
-    pub failed_at: DateTime<Utc>,
-
-    /// When execution started
-    pub execution_started_at: DateTime<Utc>,
-
-    /// How long execution ran before failing
-    pub execution_duration: Duration,
-
-    /// Unique trace identifier
-    pub trace_id: TraceId,
-
-    /// Path to the detailed trace file (if generated)
-    pub trace_file_path: Option<PathBuf>,
+    /// Base failure context with common fields
+    #[serde(flatten)]
+    pub base: BaseFailureContext,
 }
 
 /// Steps in the provision workflow
@@ -137,17 +119,23 @@ impl AnyEnvironmentState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::environment::TraceId;
+    use chrono::Utc;
+    use std::path::PathBuf;
+    use std::time::Duration;
 
     fn create_test_context() -> ProvisionFailureContext {
         ProvisionFailureContext {
             failed_step: ProvisionStep::CloudInitWait,
             error_kind: ProvisionErrorKind::ConfigurationTimeout,
-            error_summary: "cloud_init_timeout".to_string(),
-            failed_at: Utc::now(),
-            execution_started_at: Utc::now(),
-            execution_duration: Duration::from_secs(30),
-            trace_id: TraceId::new(),
-            trace_file_path: None,
+            base: BaseFailureContext {
+                error_summary: "cloud_init_timeout".to_string(),
+                failed_at: Utc::now(),
+                execution_started_at: Utc::now(),
+                execution_duration: Duration::from_secs(30),
+                trace_id: TraceId::new(),
+                trace_file_path: None,
+            },
         }
     }
 
@@ -253,8 +241,8 @@ mod tests {
                 context.failed_step
             );
             assert_eq!(
-                env_restored.state().context.error_summary,
-                context.error_summary
+                env_restored.state().context.base.error_summary,
+                context.base.error_summary
             );
         }
     }
@@ -267,12 +255,14 @@ mod tests {
             let context = ProvisionFailureContext {
                 failed_step: ProvisionStep::OpenTofuApply,
                 error_kind: ProvisionErrorKind::InfrastructureProvisioning,
-                error_summary: "Infrastructure provisioning failed".to_string(),
-                failed_at: Utc::now(),
-                execution_started_at: Utc::now(),
-                execution_duration: Duration::from_secs(30),
-                trace_id: TraceId::new(),
-                trace_file_path: Some(PathBuf::from("/data/env/traces/trace.log")),
+                base: BaseFailureContext {
+                    error_summary: "Infrastructure provisioning failed".to_string(),
+                    failed_at: Utc::now(),
+                    execution_started_at: Utc::now(),
+                    execution_duration: Duration::from_secs(30),
+                    trace_id: TraceId::new(),
+                    trace_file_path: Some(PathBuf::from("/data/env/traces/trace.log")),
+                },
             };
 
             let json = serde_json::to_string(&context).unwrap();

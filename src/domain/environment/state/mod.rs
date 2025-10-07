@@ -44,6 +44,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 // State modules
+mod common;
 mod configure_failed;
 mod configured;
 mod configuring;
@@ -59,12 +60,17 @@ mod run_failed;
 mod running;
 
 // Re-export state types
-pub use configure_failed::{ConfigureFailed, ConfigureErrorKind, ConfigureFailureContext, ConfigureStep};
+pub use common::BaseFailureContext;
+pub use configure_failed::{
+    ConfigureErrorKind, ConfigureFailed, ConfigureFailureContext, ConfigureStep,
+};
 pub use configured::Configured;
 pub use configuring::Configuring;
 pub use created::Created;
 pub use destroyed::Destroyed;
-pub use provision_failed::{ProvisionFailed, ProvisionErrorKind, ProvisionFailureContext, ProvisionStep};
+pub use provision_failed::{
+    ProvisionErrorKind, ProvisionFailed, ProvisionFailureContext, ProvisionStep,
+};
 pub use provisioned::Provisioned;
 pub use provisioning::Provisioning;
 pub use release_failed::ReleaseFailed;
@@ -319,8 +325,8 @@ impl AnyEnvironmentState {
     #[must_use]
     pub fn error_details(&self) -> Option<&str> {
         match self {
-            Self::ProvisionFailed(env) => Some(&env.state().context.error_summary),
-            Self::ConfigureFailed(env) => Some(&env.state().context.error_summary),
+            Self::ProvisionFailed(env) => Some(&env.state().context.base.error_summary),
+            Self::ConfigureFailed(env) => Some(&env.state().context.base.error_summary),
             Self::ReleaseFailed(env) => Some(&env.state().failed_step),
             Self::RunFailed(env) => Some(&env.state().failed_step),
             _ => None,
@@ -390,12 +396,14 @@ mod tests {
         ProvisionFailureContext {
             failed_step: ProvisionStep::OpenTofuApply,
             error_kind: ProvisionErrorKind::InfrastructureProvisioning,
-            error_summary: error_message.to_string(),
-            failed_at: Utc::now(),
-            execution_started_at: Utc::now(),
-            execution_duration: Duration::from_secs(0),
-            trace_id: TraceId::default(),
-            trace_file_path: None,
+            base: BaseFailureContext {
+                error_summary: error_message.to_string(),
+                failed_at: Utc::now(),
+                execution_started_at: Utc::now(),
+                execution_duration: Duration::from_secs(0),
+                trace_id: TraceId::default(),
+                trace_file_path: None,
+            },
         }
     }
 
@@ -408,12 +416,14 @@ mod tests {
         ConfigureFailureContext {
             failed_step: ConfigureStep::InstallDocker,
             error_kind: ConfigureErrorKind::InstallationFailed,
-            error_summary: error_message.to_string(),
-            failed_at: Utc::now(),
-            execution_started_at: Utc::now(),
-            execution_duration: Duration::from_secs(0),
-            trace_id: TraceId::default(),
-            trace_file_path: None,
+            base: BaseFailureContext {
+                error_summary: error_message.to_string(),
+                failed_at: Utc::now(),
+                execution_started_at: Utc::now(),
+                execution_duration: Duration::from_secs(0),
+                trace_id: TraceId::default(),
+                trace_file_path: None,
+            },
         }
     }
 
@@ -469,7 +479,7 @@ mod tests {
         let state = ProvisionFailed {
             context: create_test_provision_context("cloud_init_execution"),
         };
-        assert_eq!(state.context.error_summary, "cloud_init_execution");
+        assert_eq!(state.context.base.error_summary, "cloud_init_execution");
     }
 
     #[test]
@@ -486,7 +496,10 @@ mod tests {
         let state = ConfigureFailed {
             context: create_test_configure_context("ansible_playbook_execution"),
         };
-        assert_eq!(state.context.error_summary, "ansible_playbook_execution");
+        assert_eq!(
+            state.context.base.error_summary,
+            "ansible_playbook_execution"
+        );
     }
 
     #[test]
@@ -530,7 +543,7 @@ mod tests {
         };
         let json = serde_json::to_string(&state).unwrap();
         let deserialized: ProvisionFailed = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.context.error_summary, "cloud_init");
+        assert_eq!(deserialized.context.base.error_summary, "cloud_init");
     }
 
     #[test]
@@ -539,8 +552,10 @@ mod tests {
             context: create_test_configure_context("ansible_playbook"),
         };
         let json = serde_json::to_string(&state).unwrap();
-        assert!(json.contains("ansible_playbook"));
-        assert!(json.contains("context"));
+        assert!(json.contains("InstallDocker"));
+        assert!(json.contains("InstallationFailed"));
+        let deserialized: ConfigureFailed = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.context.base.error_summary, "ansible_playbook");
     }
 
     #[test]
@@ -552,7 +567,7 @@ mod tests {
         };
         let json = serde_json::to_string(&state).unwrap();
         let deserialized: ConfigureFailed = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.context.error_summary, "ansible_playbook");
+        assert_eq!(deserialized.context.base.error_summary, "ansible_playbook");
     }
 
     // Tests for AnyEnvironmentState enum (Type Erasure)
@@ -928,7 +943,10 @@ mod tests {
             let any_env = env.into_any();
             let env_restored = any_env.try_into_provision_failed().unwrap();
 
-            assert_eq!(env_restored.state().context.error_summary, error_message);
+            assert_eq!(
+                env_restored.state().context.base.error_summary,
+                error_message
+            );
         }
     }
 

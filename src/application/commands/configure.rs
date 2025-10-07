@@ -5,7 +5,7 @@ use tracing::{info, instrument, warn};
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
-    ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
+    BaseFailureContext, ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
 };
 use crate::domain::environment::{
     ConfigureFailed, Configured, Configuring, Environment, Provisioned, TraceId,
@@ -246,12 +246,14 @@ impl ConfigureCommand {
         let mut context = ConfigureFailureContext {
             failed_step,
             error_kind,
-            error_summary: error.to_string(),
-            failed_at: now,
-            execution_started_at: now, // TODO: Track actual start time
-            execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
-            trace_id,
-            trace_file_path: None,
+            base: BaseFailureContext {
+                error_summary: error.to_string(),
+                failed_at: now,
+                execution_started_at: now, // TODO: Track actual start time
+                execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
+                trace_id,
+                trace_file_path: None,
+            },
         };
 
         // Generate trace file with complete error chain
@@ -262,16 +264,16 @@ impl ConfigureCommand {
             Ok(trace_file_path) => {
                 info!(
                     command = "configure",
-                    trace_id = %context.trace_id,
+                    trace_id = %context.base.trace_id,
                     trace_file = ?trace_file_path,
                     "Trace file generated successfully"
                 );
-                context.trace_file_path = Some(trace_file_path);
+                context.base.trace_file_path = Some(trace_file_path);
             }
             Err(e) => {
                 warn!(
                     command = "configure",
-                    trace_id = %context.trace_id,
+                    trace_id = %context.base.trace_id,
                     error = %e,
                     "Failed to generate trace file"
                 );

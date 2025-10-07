@@ -174,7 +174,7 @@ mod tests {
         #[test]
         fn it_should_transition_from_provisioning_to_provision_failed() {
             use crate::domain::environment::state::{
-                ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
+                BaseFailureContext, ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
             };
             use crate::domain::environment::TraceId;
             use chrono::Utc;
@@ -184,12 +184,14 @@ mod tests {
             let context = ProvisionFailureContext {
                 failed_step: ProvisionStep::CloudInitWait,
                 error_kind: ProvisionErrorKind::ConfigurationTimeout,
-                error_summary: "cloud_init_timeout".to_string(),
-                failed_at: Utc::now(),
-                execution_started_at: Utc::now(),
-                execution_duration: Duration::from_secs(30),
-                trace_id: TraceId::new(),
-                trace_file_path: None,
+                base: BaseFailureContext {
+                    error_summary: "cloud_init_timeout".to_string(),
+                    failed_at: Utc::now(),
+                    execution_started_at: Utc::now(),
+                    execution_duration: Duration::from_secs(30),
+                    trace_id: TraceId::new(),
+                    trace_file_path: None,
+                },
             };
             let env = env.provision_failed(context.clone());
 

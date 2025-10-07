@@ -70,13 +70,21 @@ impl ConfigureTraceWriter {
         trace.push_str(&TraceSections::header("CONFIGURE FAILURE TRACE"));
 
         // Metadata
-        let _ = writeln!(trace, "Trace ID: {}", ctx.trace_id);
-        let _ = writeln!(trace, "Failed At: {}", ctx.failed_at);
-        let _ = writeln!(trace, "Execution Started: {}", ctx.execution_started_at);
-        let _ = writeln!(trace, "Execution Duration: {:?}", ctx.execution_duration);
+        let _ = writeln!(trace, "Trace ID: {}", ctx.base.trace_id);
+        let _ = writeln!(trace, "Failed At: {}", ctx.base.failed_at);
+        let _ = writeln!(
+            trace,
+            "Execution Started: {}",
+            ctx.base.execution_started_at
+        );
+        let _ = writeln!(
+            trace,
+            "Execution Duration: {:?}",
+            ctx.base.execution_duration
+        );
         let _ = writeln!(trace, "Failed Step: {:?}", ctx.failed_step);
         let _ = writeln!(trace, "Error Kind: {:?}", ctx.error_kind);
-        let _ = writeln!(trace, "Error Summary: {}\n", ctx.error_summary);
+        let _ = writeln!(trace, "Error Summary: {}\n", ctx.base.error_summary);
 
         // Error chain
         trace.push_str(TraceSections::error_chain_header());
@@ -103,7 +111,7 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::domain::environment::state::{
-        ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
+        BaseFailureContext, ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
     };
     use crate::domain::environment::TraceId;
 
@@ -145,12 +153,14 @@ mod tests {
         let context = ConfigureFailureContext {
             failed_step: ConfigureStep::InstallDocker,
             error_kind: ConfigureErrorKind::InstallationFailed,
-            error_summary: error.to_string(),
-            failed_at: now,
-            execution_started_at: now,
-            execution_duration: Duration::from_secs(3),
-            trace_id: TraceId::new(),
-            trace_file_path: None,
+            base: BaseFailureContext {
+                error_summary: error.to_string(),
+                failed_at: now,
+                execution_started_at: now,
+                execution_duration: Duration::from_secs(3),
+                trace_id: TraceId::new(),
+                trace_file_path: None,
+            },
         };
 
         let trace_file = writer.write_trace(&context, &error).unwrap();
@@ -178,12 +188,14 @@ mod tests {
         let context = ConfigureFailureContext {
             failed_step: ConfigureStep::InstallDocker,
             error_kind: ConfigureErrorKind::InstallationFailed,
-            error_summary: "Test configure error".to_string(),
-            failed_at: now,
-            execution_started_at: now,
-            execution_duration: Duration::from_secs(3),
-            trace_id: trace_id.clone(),
-            trace_file_path: None,
+            base: BaseFailureContext {
+                error_summary: "Test configure error".to_string(),
+                failed_at: now,
+                execution_started_at: now,
+                execution_duration: Duration::from_secs(3),
+                trace_id: trace_id.clone(),
+                trace_file_path: None,
+            },
         };
 
         let trace_file = writer.write_trace(&context, &error).unwrap();

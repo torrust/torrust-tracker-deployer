@@ -163,7 +163,7 @@ mod tests {
         #[test]
         fn it_should_transition_from_configuring_to_configure_failed() {
             use crate::domain::environment::state::{
-                ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
+                BaseFailureContext, ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
             };
             use crate::domain::environment::TraceId;
             use chrono::Utc;
@@ -173,12 +173,14 @@ mod tests {
             let context = ConfigureFailureContext {
                 failed_step: ConfigureStep::InstallDocker,
                 error_kind: ConfigureErrorKind::InstallationFailed,
-                error_summary: "ansible_playbook_error".to_string(),
-                failed_at: Utc::now(),
-                execution_started_at: Utc::now(),
-                execution_duration: Duration::from_secs(15),
-                trace_id: TraceId::new(),
-                trace_file_path: None,
+                base: BaseFailureContext {
+                    error_summary: "ansible_playbook_error".to_string(),
+                    failed_at: Utc::now(),
+                    execution_started_at: Utc::now(),
+                    execution_duration: Duration::from_secs(15),
+                    trace_id: TraceId::new(),
+                    trace_file_path: None,
+                },
             };
             let env = env.configure_failed(context.clone());
 

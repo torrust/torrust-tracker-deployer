@@ -25,7 +25,7 @@ use crate::application::steps::{
 };
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
-    ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
+    BaseFailureContext, ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
 };
 use crate::domain::environment::{
     Created, Environment, ProvisionFailed, Provisioned, Provisioning, TraceId,
@@ -448,12 +448,14 @@ impl ProvisionCommand {
         let mut context = ProvisionFailureContext {
             failed_step,
             error_kind,
-            error_summary: error.to_string(),
-            failed_at: now,
-            execution_started_at: now, // TODO: Track actual start time
-            execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
-            trace_id,
-            trace_file_path: None,
+            base: BaseFailureContext {
+                error_summary: error.to_string(),
+                failed_at: now,
+                execution_started_at: now, // TODO: Track actual start time
+                execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
+                trace_id,
+                trace_file_path: None,
+            },
         };
 
         // Generate trace file
@@ -463,15 +465,15 @@ impl ProvisionCommand {
         match writer.write_trace(&context, error) {
             Ok(trace_file) => {
                 info!(
-                    trace_id = %context.trace_id,
+                    trace_id = %context.base.trace_id,
                     trace_file = ?trace_file,
                     "Generated trace file for provision failure"
                 );
-                context.trace_file_path = Some(trace_file);
+                context.base.trace_file_path = Some(trace_file);
             }
             Err(e) => {
                 warn!(
-                    trace_id = %context.trace_id,
+                    trace_id = %context.base.trace_id,
                     error = %e,
                     "Failed to generate trace file for provision failure"
                 );

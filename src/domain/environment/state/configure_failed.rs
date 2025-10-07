@@ -11,14 +11,10 @@
 //! - Manual configuration correction (advanced users)
 //! - Review trace file for detailed error information
 
-use std::path::PathBuf;
-use std::time::Duration;
-
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::environment::state::{AnyEnvironmentState, StateTypeError};
-use crate::domain::environment::{Environment, TraceId};
+use crate::domain::environment::state::{AnyEnvironmentState, BaseFailureContext, StateTypeError};
+use crate::domain::environment::Environment;
 
 // ============================================================================
 // Configure Command Error Context
@@ -36,23 +32,9 @@ pub struct ConfigureFailureContext {
     /// Error category for type-safe handling
     pub error_kind: ConfigureErrorKind,
 
-    /// Human-readable error summary
-    pub error_summary: String,
-
-    /// When the failure occurred
-    pub failed_at: DateTime<Utc>,
-
-    /// When execution started
-    pub execution_started_at: DateTime<Utc>,
-
-    /// How long execution ran before failing
-    pub execution_duration: Duration,
-
-    /// Unique trace identifier
-    pub trace_id: TraceId,
-
-    /// Path to the detailed trace file (if generated)
-    pub trace_file_path: Option<PathBuf>,
+    /// Base failure context with common fields
+    #[serde(flatten)]
+    pub base: BaseFailureContext,
 }
 
 /// Steps in the configure workflow
@@ -119,17 +101,22 @@ impl AnyEnvironmentState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::environment::TraceId;
+    use chrono::Utc;
+    use std::time::Duration;
 
     fn create_test_context() -> ConfigureFailureContext {
         ConfigureFailureContext {
             failed_step: ConfigureStep::InstallDocker,
             error_kind: ConfigureErrorKind::InstallationFailed,
-            error_summary: "Docker installation failed".to_string(),
-            failed_at: Utc::now(),
-            execution_started_at: Utc::now(),
-            execution_duration: Duration::from_secs(15),
-            trace_id: TraceId::new(),
-            trace_file_path: None,
+            base: BaseFailureContext {
+                error_summary: "Docker installation failed".to_string(),
+                failed_at: Utc::now(),
+                execution_started_at: Utc::now(),
+                execution_duration: Duration::from_secs(15),
+                trace_id: TraceId::new(),
+                trace_file_path: None,
+            },
         }
     }
 
@@ -219,12 +206,14 @@ mod tests {
             let context = ConfigureFailureContext {
                 failed_step: ConfigureStep::InstallDocker,
                 error_kind: ConfigureErrorKind::InstallationFailed,
-                error_summary: "Docker installation failed".to_string(),
-                failed_at: Utc::now(),
-                execution_started_at: Utc::now(),
-                execution_duration: Duration::from_secs(15),
-                trace_id: TraceId::new(),
-                trace_file_path: None,
+                base: BaseFailureContext {
+                    error_summary: "Docker installation failed".to_string(),
+                    failed_at: Utc::now(),
+                    execution_started_at: Utc::now(),
+                    execution_duration: Duration::from_secs(15),
+                    trace_id: TraceId::new(),
+                    trace_file_path: None,
+                },
             };
 
             let json = serde_json::to_string(&context).unwrap();
