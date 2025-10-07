@@ -22,14 +22,14 @@ This refactoring plan addresses code quality, maintainability, readability, and 
 **Total Active Proposals**: 5 (API Simplification + Quick Wins + Test Improvements)
 **Total Postponed**: 4 (Will revisit after implementing 1-2 more commands)
 **Total Discarded**: 1
-**Completed**: 3
+**Completed**: 4
 **In Progress**: 0
-**Not Started**: 2
+**Not Started**: 1
 
 ### Phase Summary
 
 - **Phase 0 - API Simplification (High Impact, Low Effort)**: ✅ 1/1 completed
-- **Phase 1 - Quick Wins (High Impact, Low Effort)**: ✅ 2/3 completed
+- **Phase 1 - Quick Wins (High Impact, Low Effort)**: ✅ 3/3 completed
 - **Phase 2 - Test Improvements (Medium Impact, Medium Effort)**: 0/1 completed
 - **Phase 3 - Advanced Patterns**: Postponed until 1-2 more commands implemented
 
@@ -462,14 +462,13 @@ let trace_writer = ProvisionTraceWriter::new(traces_dir, Arc::clone(&self.clock)
 
 ### Proposal #3: Extract Common Trace Writing Pattern (Move Logging Inside write_trace)
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
+**Completed**: October 7, 2025  
+**Commit**: b033843  
 **Impact**: 🟢🟢 Medium-High  
 **Effort**: 🔵 Low  
 **Priority**: P2  
-**Estimated Time**: 2 hours  
-**Depends On**: Proposal #2
-
-**Updated Based on Feedback**: Instead of creating a wrapper function with logging, move the tracing macros (info and warn) directly inside the `write_trace` method implementation. This is a cleaner approach that truly eliminates the duplicated logging logic.
+**Actual Time**: 1 hour
 
 #### Problem
 
@@ -599,17 +598,18 @@ if let Ok(trace_file_path) = trace_writer.write_trace(&context, error) {
 
 #### Implementation Checklist
 
-- [ ] Move logging into `ProvisionTraceWriter::write_trace()` implementation
-- [ ] Move logging into `ConfigureTraceWriter::write_trace()` implementation
-- [ ] Update `ProvisionCommand::build_failure_context()` to remove logging
-- [ ] Update `ConfigureCommand::build_failure_context()` to remove logging
-- [ ] Verify tests still pass
-- [ ] Run linter and fix any issues
+- [x] Move logging into `ProvisionTraceWriter::write_trace()` implementation
+- [x] Move logging into `ConfigureTraceWriter::write_trace()` implementation
+- [x] Update `ProvisionCommand::build_failure_context()` to remove logging
+- [x] Update `ConfigureCommand::build_failure_context()` to remove logging
+- [x] Remove unused `warn` import from provision.rs
+- [x] Verify all tests pass (100 tests passed)
+- [x] All linters passing
 
 #### Testing Strategy
 
-- Existing tests should continue to work
-- Verify logging output is still generated correctly
+- Existing tests continued to work without changes
+- Logging output is still generated correctly (verified in E2E tests)
 - No new tests needed (logging moved, not changed)
 
 ---
