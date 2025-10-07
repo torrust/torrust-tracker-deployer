@@ -22,14 +22,14 @@ This refactoring plan addresses code quality, maintainability, readability, and 
 **Total Active Proposals**: 5 (API Simplification + Quick Wins + Test Improvements)
 **Total Postponed**: 4 (Will revisit after implementing 1-2 more commands)
 **Total Discarded**: 1
-**Completed**: 2
+**Completed**: 3
 **In Progress**: 0
-**Not Started**: 3
+**Not Started**: 2
 
 ### Phase Summary
 
 - **Phase 0 - API Simplification (High Impact, Low Effort)**: ✅ 1/1 completed
-- **Phase 1 - Quick Wins (High Impact, Low Effort)**: ✅ 1/3 completed
+- **Phase 1 - Quick Wins (High Impact, Low Effort)**: ✅ 2/3 completed
 - **Phase 2 - Test Improvements (Medium Impact, Medium Effort)**: 0/1 completed
 - **Phase 3 - Advanced Patterns**: Postponed until 1-2 more commands implemented
 
@@ -402,11 +402,13 @@ This aligns with the observability principle: if we can't save state, the deploy
 
 ### Proposal #2: Use Injected Clock for Trace Writers
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
+**Completed**: October 7, 2025  
+**Commit**: 4c116a0  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P1  
-**Estimated Time**: 1 hour
+**Actual Time**: 30 minutes
 
 #### Problem
 
@@ -444,11 +446,12 @@ let trace_writer = ProvisionTraceWriter::new(traces_dir, Arc::clone(&self.clock)
 
 #### Implementation Checklist
 
-- [ ] Update `build_failure_context()` in `provision.rs` to use `Arc::clone(&self.clock)`
-- [ ] Update `build_failure_context()` in `configure.rs` to use `Arc::clone(&self.clock)`
-- [ ] Verify trace files are generated correctly
-- [ ] Verify tests still pass
-- [ ] Consider adding test to verify clock is used consistently
+- [x] Update `build_failure_context()` in `provision.rs` to use `Arc::clone(&self.clock)`
+- [x] Update `build_failure_context()` in `configure.rs` to use `Arc::clone(&self.clock)`
+- [x] Remove unused `SystemClock` imports from both files
+- [x] Verify trace files are generated correctly (tested with E2E tests)
+- [x] Verify all tests pass (100 tests passed)
+- [x] All linters passing
 
 #### Testing Strategy
 
