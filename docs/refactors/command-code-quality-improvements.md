@@ -22,13 +22,13 @@ This refactoring plan addresses code quality, maintainability, readability, and 
 **Total Active Proposals**: 5 (API Simplification + Quick Wins + Test Improvements)
 **Total Postponed**: 4 (Will revisit after implementing 1-2 more commands)
 **Total Discarded**: 1
-**Completed**: 0
-**In Progress**: 0
-**Not Started**: 5
+**Completed**: 1
+**In Progress**: 1
+**Not Started**: 3
 
 ### Phase Summary
 
-- **Phase 0 - API Simplification (High Impact, Low Effort)**: 0/1 completed
+- **Phase 0 - API Simplification (High Impact, Low Effort)**: ✅ 1/1 completed
 - **Phase 1 - Quick Wins (High Impact, Low Effort)**: 0/3 completed
 - **Phase 2 - Test Improvements (Medium Impact, Medium Effort)**: 0/1 completed
 - **Phase 3 - Advanced Patterns**: Postponed until 1-2 more commands implemented
@@ -80,11 +80,12 @@ Foundation changes that simplify the command API and should be done first.
 
 ### Proposal #0: Add instance_ip to Environment Context
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0 (Must do first - simplifies subsequent refactorings)  
-**Estimated Time**: 2-3 hours
+**Completed**: October 7, 2025  
+**Commit**: `d8673f5`
 
 #### Problem
 
@@ -216,20 +217,19 @@ pub async fn execute(
 
 #### Implementation Checklist
 
-- [ ] Add `instance_ip: Option<IpAddr>` field to `Environment<S>` struct
-- [ ] Add `instance_ip(&self) -> Option<IpAddr>` getter method
-- [ ] Add `with_instance_ip(self, ip: IpAddr) -> Self` builder method
-- [ ] Update `Environment::new()` to initialize `instance_ip: None`
-- [ ] Update `ProvisionCommand::execute()` return type to `Result<Environment<Provisioned>, Error>`
-- [ ] Update `ProvisionCommand` to call `.with_instance_ip(ip)` before returning
-- [ ] Update `ConfigureCommand::execute()` signature to remove separate `instance_ip` parameter
-- [ ] Update `ConfigureCommand` to extract IP from `environment.instance_ip()`
-- [ ] Update all test code that calls these commands
-- [ ] Update state serialization/deserialization to include `instance_ip`
-- [ ] Update `AnyState` enum to preserve `instance_ip` during type erasure
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
-- [ ] Update documentation and API examples
+- [x] Add `instance_ip: Option<IpAddr>` field to `Environment<S>` struct
+- [x] Add `instance_ip(&self) -> Option<IpAddr>` getter method
+- [x] Add `with_instance_ip(self, ip: IpAddr) -> Self` builder method
+- [x] Update `Environment::new()` to initialize `instance_ip: None`
+- [x] Update `ProvisionCommand::execute()` return type to `Result<Environment<Provisioned>, Error>`
+- [x] Update `ProvisionCommand` to call `.with_instance_ip(ip)` before returning
+- [x] Update `ConfigureCommand::execute()` signature (already didn't have separate parameter)
+- [x] Update all test code that calls these commands
+- [x] Update state serialization/deserialization (handled automatically by serde)
+- [x] Update `AnyState` enum (preserves `instance_ip` through type erasure automatically)
+- [x] Verify all tests pass (758 tests passed)
+- [x] Run linter and fix any issues (all linters passed)
+- [x] Update documentation and API examples
 
 #### Testing Strategy
 
@@ -258,7 +258,7 @@ Quick improvements that significantly enhance code quality with minimal effort.
 
 ### Proposal #1: Extract State Persistence Helper
 
-**Status**: ⏳ Not Started  
+**Status**: 🔄 In Progress  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P1  
