@@ -266,30 +266,6 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    // Helper function to create mock dependencies for testing
-    #[allow(clippy::type_complexity)]
-    fn create_mock_dependencies() -> (
-        Arc<AnsibleClient>,
-        Arc<dyn crate::shared::Clock>,
-        Arc<dyn EnvironmentRepository>,
-        TempDir,
-    ) {
-        let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let ansible_client = Arc::new(AnsibleClient::new(temp_dir.path()));
-
-        // Create clock
-        let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
-
-        // Create repository
-        let repository_factory =
-            crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
-                std::time::Duration::from_secs(30),
-            );
-        let repository = repository_factory.create(temp_dir.path().to_path_buf());
-
-        (ansible_client, clock, repository, temp_dir)
-    }
-
     // Helper function to create a test environment in Configuring state
     fn create_test_environment(_temp_dir: &TempDir) -> (Environment<Configuring>, TempDir) {
         use crate::domain::environment::testing::EnvironmentTestBuilder;
@@ -308,11 +284,46 @@ mod tests {
         )
     }
 
+    /// Test builder for `ConfigureCommand` that manages dependencies and lifecycle
+    ///
+    /// This builder simplifies test setup by:
+    /// - Managing `TempDir` lifecycle
+    /// - Providing sensible defaults for all dependencies
+    /// - Returning only the command and necessary test artifacts
+    pub struct ConfigureCommandTestBuilder {
+        temp_dir: TempDir,
+    }
+
+    impl ConfigureCommandTestBuilder {
+        /// Create a new test builder with default configuration
+        pub fn new() -> Self {
+            let temp_dir = TempDir::new().expect("Failed to create temp dir");
+            Self { temp_dir }
+        }
+
+        /// Build the `ConfigureCommand` with all dependencies
+        ///
+        /// Returns: (`command`, `temp_dir`)
+        /// The `temp_dir` must be kept alive for the duration of the test.
+        pub fn build(self) -> (ConfigureCommand, TempDir) {
+            let ansible_client = Arc::new(AnsibleClient::new(self.temp_dir.path()));
+            let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
+
+            let repository_factory =
+                crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
+                    std::time::Duration::from_secs(30),
+                );
+            let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
+
+            let command = ConfigureCommand::new(ansible_client, clock, repository);
+
+            (command, self.temp_dir)
+        }
+    }
+
     #[test]
     fn it_should_create_configure_command_with_all_dependencies() {
-        let (ansible_client, clock, repository, _temp_dir) = create_mock_dependencies();
-
-        let command = ConfigureCommand::new(ansible_client, clock, repository);
+        let (command, _temp_dir) = ConfigureCommandTestBuilder::new().build();
 
         // Verify the command was created (basic structure test)
         // This test just verifies that the command can be created with the dependencies
@@ -334,9 +345,7 @@ mod tests {
     fn it_should_build_failure_context_from_command_error() {
         use chrono::{TimeZone, Utc};
 
-        let (ansible_client, clock, repository, temp_dir) = create_mock_dependencies();
-
-        let command = ConfigureCommand::new(ansible_client, clock, repository);
+        let (command, temp_dir) = ConfigureCommandTestBuilder::new().build();
 
         // Create test environment for trace generation
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);

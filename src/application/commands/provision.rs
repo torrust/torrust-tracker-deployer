@@ -475,81 +475,6 @@ mod tests {
 
     use crate::shared::Username;
 
-    // Helper function to create mock dependencies for testing
-    #[allow(clippy::type_complexity)]
-    fn create_mock_dependencies() -> (
-        Arc<TofuTemplateRenderer>,
-        Arc<AnsibleTemplateRenderer>,
-        Arc<AnsibleClient>,
-        Arc<crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient>,
-        Arc<dyn crate::shared::Clock>,
-        Arc<dyn EnvironmentRepository>,
-        SshCredentials,
-        TempDir,
-    ) {
-        let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let template_manager = Arc::new(crate::domain::template::TemplateManager::new(
-            temp_dir.path(),
-        ));
-
-        let ssh_credentials = SshCredentials::new(
-            "dummy_key".into(),
-            "dummy_key.pub".into(),
-            Username::new("testuser").unwrap(),
-        );
-
-        let tofu_renderer = Arc::new(TofuTemplateRenderer::new(
-            template_manager.clone(),
-            temp_dir.path(),
-            ssh_credentials.clone(),
-            InstanceName::new("torrust-tracker-vm".to_string())
-                .expect("Valid hardcoded instance name"), // TODO: Make this configurable in Phase 3
-            ProfileName::new("default-profile".to_string()).expect("Valid hardcoded profile name"), // TODO: Make this configurable in Phase 3
-        ));
-
-        let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(
-            temp_dir.path(),
-            template_manager,
-        ));
-
-        let ansible_client = Arc::new(AnsibleClient::new(temp_dir.path()));
-
-        let opentofu_client = Arc::new(
-            crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient::new(
-                temp_dir.path(),
-            ),
-        );
-
-        // Create repository
-        let repository_factory =
-            crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
-                std::time::Duration::from_secs(30),
-            );
-        let repository = repository_factory.create(temp_dir.path().to_path_buf());
-
-        let ssh_key_path = temp_dir.path().join("test_key");
-        let ssh_pub_key_path = temp_dir.path().join("test_key.pub");
-        let ssh_credentials = SshCredentials::new(
-            ssh_key_path,
-            ssh_pub_key_path,
-            Username::new("test_user").unwrap(),
-        );
-
-        // Create mock clock for testing
-        let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
-
-        (
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-            ssh_credentials,
-            temp_dir,
-        )
-    }
-
     fn create_test_environment(_temp_dir: &TempDir) -> (Environment<Provisioning>, TempDir) {
         use crate::domain::environment::testing::EnvironmentTestBuilder;
 
@@ -563,27 +488,102 @@ mod tests {
         (env.start_provisioning(), env_temp_dir)
     }
 
+    /// Test builder for `ProvisionCommand` that manages dependencies and lifecycle
+    ///
+    /// This builder simplifies test setup by:
+    /// - Managing `TempDir` lifecycle
+    /// - Providing sensible defaults for all dependencies
+    /// - Allowing selective customization of dependencies
+    /// - Returning only the command and necessary test artifacts
+    pub struct ProvisionCommandTestBuilder {
+        temp_dir: TempDir,
+        ssh_credentials: Option<SshCredentials>,
+    }
+
+    impl ProvisionCommandTestBuilder {
+        /// Create a new test builder with default configuration
+        pub fn new() -> Self {
+            let temp_dir = TempDir::new().expect("Failed to create temp dir");
+            Self {
+                temp_dir,
+                ssh_credentials: None,
+            }
+        }
+
+        /// Customize SSH credentials (optional - uses defaults if not called)
+        #[allow(dead_code)]
+        pub fn with_ssh_credentials(mut self, credentials: SshCredentials) -> Self {
+            self.ssh_credentials = Some(credentials);
+            self
+        }
+
+        /// Build the `ProvisionCommand` with all dependencies
+        ///
+        /// Returns: (`command`, `temp_dir`, `ssh_credentials`)
+        /// The `temp_dir` must be kept alive for the duration of the test.
+        pub fn build(self) -> (ProvisionCommand, TempDir, SshCredentials) {
+            let template_manager = Arc::new(crate::domain::template::TemplateManager::new(
+                self.temp_dir.path(),
+            ));
+
+            // Use provided SSH credentials or create defaults
+            let ssh_credentials = self.ssh_credentials.unwrap_or_else(|| {
+                let ssh_key_path = self.temp_dir.path().join("test_key");
+                let ssh_pub_key_path = self.temp_dir.path().join("test_key.pub");
+                SshCredentials::new(
+                    ssh_key_path,
+                    ssh_pub_key_path,
+                    Username::new("test_user").unwrap(),
+                )
+            });
+
+            let tofu_renderer = Arc::new(TofuTemplateRenderer::new(
+                template_manager.clone(),
+                self.temp_dir.path(),
+                ssh_credentials.clone(),
+                InstanceName::new("torrust-tracker-vm".to_string())
+                    .expect("Valid hardcoded instance name"),
+                ProfileName::new("default-profile".to_string())
+                    .expect("Valid hardcoded profile name"),
+            ));
+
+            let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(
+                self.temp_dir.path(),
+                template_manager,
+            ));
+
+            let ansible_client = Arc::new(AnsibleClient::new(self.temp_dir.path()));
+
+            let opentofu_client = Arc::new(
+                crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient::new(
+                    self.temp_dir.path(),
+                ),
+            );
+
+            let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
+
+            let repository_factory =
+                crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
+                    std::time::Duration::from_secs(30),
+                );
+            let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
+
+            let command = ProvisionCommand::new(
+                tofu_renderer,
+                ansible_renderer,
+                ansible_client,
+                opentofu_client,
+                clock,
+                repository,
+            );
+
+            (command, self.temp_dir, ssh_credentials)
+        }
+    }
+
     #[test]
     fn it_should_create_provision_command_with_all_dependencies() {
-        let (
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-            _ssh_credentials,
-            _temp_dir,
-        ) = create_mock_dependencies();
-
-        let command = ProvisionCommand::new(
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-        );
+        let (command, _temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
 
         // Verify the command was created (basic structure test)
         // This test just verifies that the command can be created with the dependencies
@@ -631,25 +631,7 @@ mod tests {
     fn it_should_build_failure_context_from_opentofu_template_error() {
         use chrono::{TimeZone, Utc};
 
-        let (
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-            _ssh_credentials,
-            temp_dir,
-        ) = create_mock_dependencies();
-
-        let command = ProvisionCommand::new(
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-        );
+        let (command, temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
@@ -680,25 +662,7 @@ mod tests {
     fn it_should_build_failure_context_from_ssh_connectivity_error() {
         use chrono::{TimeZone, Utc};
 
-        let (
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-            _ssh_credentials,
-            temp_dir,
-        ) = create_mock_dependencies();
-
-        let command = ProvisionCommand::new(
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-        );
+        let (command, temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
@@ -723,25 +687,7 @@ mod tests {
     fn it_should_build_failure_context_from_command_error() {
         use chrono::{TimeZone, Utc};
 
-        let (
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-            _ssh_credentials,
-            temp_dir,
-        ) = create_mock_dependencies();
-
-        let command = ProvisionCommand::new(
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-        );
+        let (command, temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
@@ -767,25 +713,7 @@ mod tests {
     fn it_should_build_failure_context_from_opentofu_error() {
         use chrono::{TimeZone, Utc};
 
-        let (
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-            _ssh_credentials,
-            temp_dir,
-        ) = create_mock_dependencies();
-
-        let command = ProvisionCommand::new(
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-        );
+        let (command, temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
