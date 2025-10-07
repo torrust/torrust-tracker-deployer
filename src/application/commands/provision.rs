@@ -37,7 +37,6 @@ use crate::infrastructure::external_tools::tofu::{ProvisionTemplateError, TofuTe
 use crate::shared::command::CommandError;
 use crate::shared::error::Traceable;
 use crate::shared::ssh::{SshConnection, SshCredentials, SshError};
-use crate::shared::SystemClock;
 
 /// Comprehensive error type for the `ProvisionCommand`
 #[derive(Debug, thiserror::Error)]
@@ -459,8 +458,7 @@ impl ProvisionCommand {
 
         // Generate trace file
         let traces_dir = environment.traces_dir();
-        let clock = Arc::new(SystemClock);
-        let writer = ProvisionTraceWriter::new(traces_dir, clock);
+        let writer = ProvisionTraceWriter::new(traces_dir, Arc::clone(&self.clock));
 
         match writer.write_trace(&context, error) {
             Ok(trace_file) => {

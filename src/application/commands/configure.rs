@@ -12,7 +12,6 @@ use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::command::CommandError;
 use crate::shared::error::Traceable;
-use crate::shared::SystemClock;
 
 /// Comprehensive error type for the `ConfigureCommand`
 #[derive(Debug, thiserror::Error)]
@@ -252,8 +251,7 @@ impl ConfigureCommand {
 
         // Generate trace file with complete error chain
         let traces_dir = environment.traces_dir();
-        let clock = Arc::new(SystemClock);
-        let trace_writer = ConfigureTraceWriter::new(traces_dir, clock);
+        let trace_writer = ConfigureTraceWriter::new(traces_dir, Arc::clone(&self.clock));
 
         match trace_writer.write_trace(&context, error) {
             Ok(trace_file_path) => {
