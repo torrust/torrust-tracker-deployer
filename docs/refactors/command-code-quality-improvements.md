@@ -256,17 +256,17 @@ This is a breaking API change, but we're still in POC phase:
 
 Quick improvements that significantly enhance code quality with minimal effort.
 
-### Proposal #1: Extract State Persistence Helper
+### Proposal #1: Remove Duplicate State Persistence Methods
 
 **Status**: 🔄 In Progress  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P1  
-**Estimated Time**: 2 hours
+**Estimated Time**: 1 hour
 
 #### Problem
 
-Both commands have identical `persist_*_state()` methods with copy-pasted error handling logic:
+Both commands have identical `persist_*_state()` methods that are just wrappers around `repository.save()`:
 
 ```rust
 // In provision.rs - duplicated 3 times
@@ -294,48 +294,44 @@ fn persist_configuring_state(&self, environment: &Environment<Configuring>) {
 }
 ```
 
-This violates DRY principles and makes maintenance harder.
+These methods:
+
+- Violate DRY principles (6 nearly identical methods)
+- Silently ignore persistence errors (wrong behavior - state must be saved)
+- Mix concerns (repository logging should be in repository, not command)
 
 #### Proposed Solution
 
-Create a generic helper function or trait method that handles state persistence:
+**Remove these helper methods entirely** and use the repository directly:
+
+1. **Update Repository to log errors** at the infrastructure layer where they occur
+2. **Use `?` operator in commands** to propagate persistence errors (fail-fast)
+3. **No service or trait needed** - just call `repository.save()` directly
+
+**Repository logs errors:**
 
 ```rust
-// In src/application/commands/common/state_persistence.rs
-
-use tracing::warn;
-use crate::domain::environment::{Environment, repository::EnvironmentRepository};
-
-/// Helper trait for persisting environment state with consistent error handling
-pub trait StatePersistence {
-    fn persist_state<S>(&self, environment: &Environment<S>, state_name: &str)
-    where
-        Environment<S>: Clone + Into<crate::domain::environment::AnyState>;
-}
-
-impl<T: AsRef<dyn EnvironmentRepository>> StatePersistence for T {
-    fn persist_state<S>(&self, environment: &Environment<S>, state_name: &str)
-    where
-        Environment<S>: Clone + Into<crate::domain::environment::AnyState>
-    {
-        let any_state = environment.clone().into_any();
-
-        if let Err(e) = self.as_ref().save(&any_state) {
-            warn!(
-                environment = %environment.name(),
-                state = state_name,
+// In infrastructure/environment_repository.rs
+impl EnvironmentRepository for JsonFileRepository {
+    fn save(&self, environment: &Environment<AnyState>) -> Result<(), RepositoryError> {
+        // ... write to file ...
+        if let Err(e) = write_file() {
+            error!(
+                path = %file_path,
                 error = %e,
-                "Failed to persist state. Command execution continues."
+                "Failed to save environment state to file"
             );
+            return Err(RepositoryError::WriteFailed { path, source: e });
         }
+        Ok(())
     }
 }
 ```
 
-**Usage in commands:**
+**Commands propagate errors:**
 
 ```rust
-// Before (provision.rs)
+// In provision.rs - Before (3 identical methods)
 fn persist_provisioning_state(&self, environment: &Environment<Provisioning>) {
     let any_state = environment.clone().into_any();
     if let Err(e) = self.repository.save(&any_state) {
@@ -343,36 +339,58 @@ fn persist_provisioning_state(&self, environment: &Environment<Provisioning>) {
     }
 }
 
-// After
-fn persist_provisioning_state(&self, environment: &Environment<Provisioning>) {
-    self.repository.persist_state(environment, "provisioning");
-}
+// After - just one line, repeated inline where needed
+let environment = environment.with_state(Provisioning);
+self.repository.save(&environment.clone().into_any())?;  // Fail if save fails
 ```
+
+#### Rationale
+
+**Why no service/trait abstraction?**
+
+- **Not really duplication**: It's just calling a dependency method with `?` operator
+- **Single Responsibility**: Repository handles persistence, command handles orchestration
+- **Proper error handling**: Persistence failures should stop command execution
+- **Separation of concerns**: Repository logs at ERROR level, commands just propagate
+- **YAGNI**: Don't create abstractions for simple pass-through calls
+
+**Error Handling Philosophy:**
+
+- **Before**: Silently ignore errors, continue execution (dangerous - wrong state persisted)
+- **After**: Fail fast on persistence errors (correct - state must be saved or command fails)
+
+This aligns with the observability principle: if we can't save state, the deployment is in an unknown state and should fail.
 
 #### Benefits
 
 - ✅ Eliminates 6 duplicate methods (3 per command)
-- ✅ Centralizes state persistence logic in one place
-- ✅ Consistent error handling across all state transitions
-- ✅ Easier to modify persistence behavior globally
-- ✅ Reduces test surface area for persistence logic
+- ✅ **Proper error handling**: Commands fail if state can't be saved
+- ✅ **Clearer code**: Direct repository calls are more explicit
+- ✅ **Single Responsibility**: Repository logs errors, commands propagate them
+- ✅ **Simpler architecture**: No unnecessary service/trait abstraction
+- ✅ **Better observability**: Repository logs at ERROR level when saves fail
 
 #### Implementation Checklist
 
-- [ ] Create `src/application/commands/common/` directory
-- [ ] Create `state_persistence.rs` module
-- [ ] Implement `StatePersistence` trait with default implementation
-- [ ] Update `ProvisionCommand` to use the helper (3 methods)
-- [ ] Update `ConfigureCommand` to use the helper (3 methods)
-- [ ] Verify tests still pass
+- [ ] Remove `persist_provisioning_state()` from `ProvisionCommand`
+- [ ] Remove `persist_provisioned_state()` from `ProvisionCommand`
+- [ ] Remove `persist_provision_failed_state()` from `ProvisionCommand`
+- [ ] Remove `persist_configuring_state()` from `ConfigureCommand`
+- [ ] Remove `persist_configured_state()` from `ConfigureCommand`
+- [ ] Remove `persist_configure_failed_state()` from `ConfigureCommand`
+- [ ] Replace all method calls with direct `self.repository.save(&env.clone().into_any())?`
+- [ ] Update repository implementation to log errors at ERROR level
+- [ ] Add error context to repository errors (which state, which file, etc.)
+- [ ] Update command error types to include `RepositoryError` if needed
+- [ ] Verify tests still pass (or update tests expecting different error behavior)
 - [ ] Run linter and fix any issues
-- [ ] Update documentation if needed
 
 #### Testing Strategy
 
-- Existing tests should continue to work without modification
-- Consider adding a unit test for the trait implementation
-- Verify warning logs are still generated correctly
+- Existing tests should mostly continue to work
+- Tests expecting commands to continue on persistence errors will need updates
+- Add tests for commands failing when repository returns error
+- Verify repository error messages include proper context
 
 ---
 
