@@ -11,12 +11,67 @@
 //! - Manual configuration correction (advanced users)
 //! - Review trace file for detailed error information
 
+use std::path::PathBuf;
+use std::time::Duration;
+
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::environment::state::{
-    AnyEnvironmentState, ConfigureFailureContext, StateTypeError,
-};
-use crate::domain::environment::Environment;
+use crate::domain::environment::state::{AnyEnvironmentState, StateTypeError};
+use crate::domain::environment::{Environment, TraceId};
+
+// ============================================================================
+// Configure Command Error Context
+// ============================================================================
+
+/// Error context for configure command failures
+///
+/// Captures comprehensive information about configuration failures including
+/// the specific step that failed, error classification, timing, and trace details.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ConfigureFailureContext {
+    /// Which step failed during configuration
+    pub failed_step: ConfigureStep,
+
+    /// Error category for type-safe handling
+    pub error_kind: ConfigureErrorKind,
+
+    /// Human-readable error summary
+    pub error_summary: String,
+
+    /// When the failure occurred
+    pub failed_at: DateTime<Utc>,
+
+    /// When execution started
+    pub execution_started_at: DateTime<Utc>,
+
+    /// How long execution ran before failing
+    pub execution_duration: Duration,
+
+    /// Unique trace identifier
+    pub trace_id: TraceId,
+
+    /// Path to the detailed trace file (if generated)
+    pub trace_file_path: Option<PathBuf>,
+}
+
+/// Steps in the configure workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ConfigureStep {
+    /// Installing Docker
+    InstallDocker,
+    /// Installing Docker Compose
+    InstallDockerCompose,
+}
+
+/// Error categories for configure failures
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ConfigureErrorKind {
+    /// Software installation failed
+    InstallationFailed,
+    /// Command execution failed
+    CommandExecutionFailed,
+}
 
 /// Error state - Application configuration failed
 ///
@@ -64,12 +119,6 @@ impl AnyEnvironmentState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::environment::state::{
-        ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
-    };
-    use crate::domain::environment::TraceId;
-    use chrono::Utc;
-    use std::time::Duration;
 
     fn create_test_context() -> ConfigureFailureContext {
         ConfigureFailureContext {
@@ -159,6 +208,52 @@ mod tests {
             let any_env = env.into_any();
             let result = any_env.try_into_configure_failed();
             assert!(result.is_ok());
+        }
+    }
+
+    mod context_tests {
+        use super::*;
+
+        #[test]
+        fn it_should_serialize_configure_failure_context() {
+            let context = ConfigureFailureContext {
+                failed_step: ConfigureStep::InstallDocker,
+                error_kind: ConfigureErrorKind::InstallationFailed,
+                error_summary: "Docker installation failed".to_string(),
+                failed_at: Utc::now(),
+                execution_started_at: Utc::now(),
+                execution_duration: Duration::from_secs(15),
+                trace_id: TraceId::new(),
+                trace_file_path: None,
+            };
+
+            let json = serde_json::to_string(&context).unwrap();
+            assert!(json.contains("InstallDocker"));
+            assert!(json.contains("InstallationFailed"));
+        }
+
+        #[test]
+        fn it_should_deserialize_configure_failure_context() {
+            let trace_id = TraceId::new();
+            let json = format!(
+                r#"{{
+                    "failed_step": "InstallDockerCompose",
+                    "error_kind": "CommandExecutionFailed",
+                    "error_summary": "Command execution failed",
+                    "failed_at": "2025-10-06T10:00:00Z",
+                    "execution_started_at": "2025-10-06T09:59:30Z",
+                    "execution_duration": {{"secs": 30, "nanos": 0}},
+                    "trace_id": "{trace_id}",
+                    "trace_file_path": null
+                }}"#
+            );
+
+            let context: ConfigureFailureContext = serde_json::from_str(&json).unwrap();
+            assert_eq!(context.failed_step, ConfigureStep::InstallDockerCompose);
+            assert_eq!(
+                context.error_kind,
+                ConfigureErrorKind::CommandExecutionFailed
+            );
         }
     }
 }

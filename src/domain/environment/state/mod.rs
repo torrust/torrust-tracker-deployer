@@ -49,7 +49,6 @@ mod configured;
 mod configuring;
 mod created;
 mod destroyed;
-mod error_context;
 mod provision_failed;
 mod provisioned;
 mod provisioning;
@@ -60,16 +59,12 @@ mod run_failed;
 mod running;
 
 // Re-export state types
-pub use configure_failed::ConfigureFailed;
+pub use configure_failed::{ConfigureFailed, ConfigureErrorKind, ConfigureFailureContext, ConfigureStep};
 pub use configured::Configured;
 pub use configuring::Configuring;
 pub use created::Created;
 pub use destroyed::Destroyed;
-pub use error_context::{
-    ConfigureErrorKind, ConfigureFailureContext, ConfigureStep, ProvisionErrorKind,
-    ProvisionFailureContext, ProvisionStep,
-};
-pub use provision_failed::ProvisionFailed;
+pub use provision_failed::{ProvisionFailed, ProvisionErrorKind, ProvisionFailureContext, ProvisionStep};
 pub use provisioned::Provisioned;
 pub use provisioning::Provisioning;
 pub use release_failed::ReleaseFailed;
