@@ -14,9 +14,9 @@ Refactoring plans serve to:
 
 ## 📁 Active Refactoring Plans
 
-| Document                                   | Status | Target | Created |
-| ------------------------------------------ | ------ | ------ | ------- |
-| _No active refactoring plans at this time_ |        |        |         |
+| Document                                                                    | Status      | Target                                 | Created     |
+| --------------------------------------------------------------------------- | ----------- | -------------------------------------- | ----------- |
+| [Command Code Quality Improvements](./command-code-quality-improvements.md) | 📋 Planning | `ProvisionCommand`, `ConfigureCommand` | Oct 7, 2025 |
 
 ## ✅ Completed Refactorings
 
