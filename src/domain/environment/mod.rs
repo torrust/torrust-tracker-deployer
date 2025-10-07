@@ -49,6 +49,10 @@ pub mod name;
 pub mod repository;
 pub mod state;
 
+// Test utilities (only available in test configuration)
+#[cfg(test)]
+pub mod testing;
+
 // Re-export commonly used types for convenience
 pub use name::{EnvironmentName, EnvironmentNameError};
 pub use state::{

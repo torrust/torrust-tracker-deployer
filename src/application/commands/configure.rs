@@ -11,6 +11,7 @@ use crate::domain::environment::{
     ConfigureFailed, Configured, Configuring, Environment, Provisioned,
 };
 use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
+use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::command::CommandError;
 
 /// Comprehensive error type for the `ConfigureCommand`
@@ -129,7 +130,7 @@ impl ConfigureCommand {
             }
             Err(e) => {
                 // Transition to error state with structured context
-                let context = self.build_failure_context(&e);
+                let context = self.build_failure_context(&environment, &e);
                 let failed = environment.configure_failed(context);
 
                 // Persist error state
@@ -202,17 +203,26 @@ impl ConfigureCommand {
 
     /// Extract the failed step name from a configuration error
     ///
-    /// This helper method provides context about which step failed during configuration.
+    /// This helper method provides context about which step failed during configuration
+    /// and generates a detailed trace file with the complete error chain.
+    ///
+    /// The trace file is written to `{environment.data_dir()}/traces/{trace_id}.txt`
+    /// and contains a formatted representation of the entire error chain.
     ///
     /// # Arguments
     ///
+    /// * `environment` - The environment being configured (for determining trace file location)
     /// * `error` - The configuration error to build context from
     ///
     /// # Returns
     ///
-    /// A structured `ConfigureFailureContext` with timing and error details
+    /// A structured `ConfigureFailureContext` with timing, error details, and trace file path
     #[allow(clippy::unused_self)] // Method kept as instance method for consistency with ProvisionCommand
-    fn build_failure_context(&self, error: &ConfigureCommandError) -> ConfigureFailureContext {
+    fn build_failure_context(
+        &self,
+        environment: &Environment<Configuring>,
+        error: &ConfigureCommandError,
+    ) -> ConfigureFailureContext {
         use chrono::Utc;
         use std::time::Duration;
 
@@ -229,16 +239,44 @@ impl ConfigureCommand {
         };
 
         let now = Utc::now();
-        ConfigureFailureContext {
+        let trace_id = TraceId::new();
+
+        let mut context = ConfigureFailureContext {
             failed_step,
             error_kind,
             error_summary: error.to_string(),
             failed_at: now,
             execution_started_at: now, // TODO: Track actual start time
             execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
-            trace_id: TraceId::default(),
+            trace_id,
             trace_file_path: None,
+        };
+
+        // Generate trace file with complete error chain
+        let traces_dir = environment.data_dir().join("traces");
+        let trace_writer = ConfigureTraceWriter::new(traces_dir);
+
+        match trace_writer.write_trace(&context, error) {
+            Ok(trace_file_path) => {
+                info!(
+                    command = "configure",
+                    trace_id = %context.trace_id,
+                    trace_file = ?trace_file_path,
+                    "Trace file generated successfully"
+                );
+                context.trace_file_path = Some(trace_file_path);
+            }
+            Err(e) => {
+                warn!(
+                    command = "configure",
+                    trace_id = %context.trace_id,
+                    error = %e,
+                    "Failed to generate trace file"
+                );
+            }
         }
+
+        context
     }
 }
 
@@ -261,6 +299,24 @@ mod tests {
         let repository = repository_factory.create(temp_dir.path().to_path_buf());
 
         (ansible_client, repository, temp_dir)
+    }
+
+    // Helper function to create a test environment in Configuring state
+    fn create_test_environment(_temp_dir: &TempDir) -> (Environment<Configuring>, TempDir) {
+        use crate::domain::environment::testing::EnvironmentTestBuilder;
+
+        let (env, _data_dir, _build_dir, env_temp_dir) = EnvironmentTestBuilder::new()
+            .with_name("test-env")
+            .build_with_custom_paths();
+
+        // Environment is created with paths inside env_temp_dir
+        // which will be automatically cleaned up when env_temp_dir is dropped
+
+        // Transition Created -> Provisioning -> Provisioned -> Configuring
+        (
+            env.start_provisioning().provisioned().start_configuring(),
+            env_temp_dir,
+        )
     }
 
     #[test]
@@ -287,9 +343,12 @@ mod tests {
 
     #[test]
     fn it_should_build_failure_context_from_command_error() {
-        let (ansible_client, repository, _temp_dir) = create_mock_dependencies();
+        let (ansible_client, repository, temp_dir) = create_mock_dependencies();
 
         let command = ConfigureCommand::new(ansible_client, repository);
+
+        // Create test environment for trace generation
+        let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
         let error = ConfigureCommandError::Command(CommandError::ExecutionFailed {
             command: "test".to_string(),
@@ -298,7 +357,7 @@ mod tests {
             stderr: "test error".to_string(),
         });
 
-        let context = command.build_failure_context(&error);
+        let context = command.build_failure_context(&environment, &error);
         assert_eq!(context.failed_step, ConfigureStep::InstallDocker);
         assert_eq!(context.error_kind, ConfigureErrorKind::InstallationFailed);
     }

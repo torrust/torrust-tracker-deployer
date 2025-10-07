@@ -206,7 +206,7 @@ impl ProvisionCommand {
             }
             Err(e) => {
                 // Transition to error state with structured context
-                let context = self.build_failure_context(&e);
+                let context = self.build_failure_context(&environment, &e);
                 let failed = environment.provision_failed(context);
 
                 // Persist error state
@@ -391,18 +391,25 @@ impl ProvisionCommand {
         Ok(())
     }
 
-    /// Extract the failed step name from a provisioning error
+    /// Extract the failed step name from a provisioning error and generate trace file
     ///
-    /// This helper method provides context about which step failed during provisioning.
+    /// This helper method provides context about which step failed during provisioning
+    /// and generates a trace file for post-mortem analysis.
     ///
     /// # Arguments
     ///
+    /// * `environment` - The environment being provisioned (for trace directory path)
     /// * `error` - The provisioning error to extract step information from
     ///
     /// # Returns
     ///
-    /// A string identifying the failed step
-    fn build_failure_context(&self, error: &ProvisionCommandError) -> ProvisionFailureContext {
+    /// A `ProvisionFailureContext` with all failure metadata and trace file path
+    fn build_failure_context(
+        &self,
+        environment: &Environment<Provisioning>,
+        error: &ProvisionCommandError,
+    ) -> ProvisionFailureContext {
+        use crate::infrastructure::trace::ProvisionTraceWriter;
         use chrono::Utc;
         use std::time::Duration;
 
@@ -433,16 +440,43 @@ impl ProvisionCommand {
         };
 
         let now = Utc::now();
-        ProvisionFailureContext {
+        let trace_id = TraceId::new();
+
+        // Build initial context without trace file path
+        let mut context = ProvisionFailureContext {
             failed_step,
             error_kind,
             error_summary: error.to_string(),
             failed_at: now,
             execution_started_at: now, // TODO: Track actual start time
             execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
-            trace_id: TraceId::default(),
+            trace_id,
             trace_file_path: None,
+        };
+
+        // Generate trace file
+        let traces_dir = environment.data_dir().join("traces");
+        let writer = ProvisionTraceWriter::new(traces_dir);
+
+        match writer.write_trace(&context, error) {
+            Ok(trace_file) => {
+                info!(
+                    trace_id = %context.trace_id,
+                    trace_file = ?trace_file,
+                    "Generated trace file for provision failure"
+                );
+                context.trace_file_path = Some(trace_file);
+            }
+            Err(e) => {
+                warn!(
+                    trace_id = %context.trace_id,
+                    error = %e,
+                    "Failed to generate trace file for provision failure"
+                );
+            }
         }
+
+        context
     }
 
     /// Extract the specific `OpenTofu` operation that failed
@@ -540,6 +574,19 @@ mod tests {
         )
     }
 
+    fn create_test_environment(_temp_dir: &TempDir) -> (Environment<Provisioning>, TempDir) {
+        use crate::domain::environment::testing::EnvironmentTestBuilder;
+
+        let (env, _data_dir, _build_dir, env_temp_dir) = EnvironmentTestBuilder::new()
+            .with_name("test-env")
+            .build_with_custom_paths();
+
+        // Environment is created with paths inside env_temp_dir
+        // which will be automatically cleaned up when env_temp_dir is dropped
+
+        (env.start_provisioning(), env_temp_dir)
+    }
+
     #[test]
     fn it_should_create_provision_command_with_all_dependencies() {
         let (
@@ -611,7 +658,7 @@ mod tests {
             opentofu_client,
             repository,
             _ssh_credentials,
-            _temp_dir,
+            temp_dir,
         ) = create_mock_dependencies();
 
         let command = ProvisionCommand::new(
@@ -622,6 +669,8 @@ mod tests {
             repository,
         );
 
+        let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
+
         let error = ProvisionCommandError::OpenTofuTemplateRendering(
             ProvisionTemplateError::DirectoryCreationFailed {
                 directory: "/test".to_string(),
@@ -629,7 +678,7 @@ mod tests {
             },
         );
 
-        let context = command.build_failure_context(&error);
+        let context = command.build_failure_context(&environment, &error);
         assert_eq!(context.failed_step, ProvisionStep::RenderOpenTofuTemplates);
         assert_eq!(context.error_kind, ProvisionErrorKind::TemplateRendering);
     }
@@ -648,7 +697,7 @@ mod tests {
             opentofu_client,
             repository,
             _ssh_credentials,
-            _temp_dir,
+            temp_dir,
         ) = create_mock_dependencies();
 
         let command = ProvisionCommand::new(
@@ -659,13 +708,15 @@ mod tests {
             repository,
         );
 
+        let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
+
         let error = ProvisionCommandError::SshConnectivity(SshError::ConnectivityTimeout {
             host_ip: "127.0.0.1".to_string(),
             attempts: 5,
             timeout_seconds: 30,
         });
 
-        let context = command.build_failure_context(&error);
+        let context = command.build_failure_context(&environment, &error);
         assert_eq!(context.failed_step, ProvisionStep::WaitSshConnectivity);
         assert_eq!(context.error_kind, ProvisionErrorKind::NetworkConnectivity);
     }
@@ -679,7 +730,7 @@ mod tests {
             opentofu_client,
             repository,
             _ssh_credentials,
-            _temp_dir,
+            temp_dir,
         ) = create_mock_dependencies();
 
         let command = ProvisionCommand::new(
@@ -690,6 +741,8 @@ mod tests {
             repository,
         );
 
+        let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
+
         let error = ProvisionCommandError::Command(CommandError::ExecutionFailed {
             command: "test".to_string(),
             exit_code: "1".to_string(),
@@ -697,7 +750,7 @@ mod tests {
             stderr: "test error".to_string(),
         });
 
-        let context = command.build_failure_context(&error);
+        let context = command.build_failure_context(&environment, &error);
         assert_eq!(context.failed_step, ProvisionStep::CloudInitWait);
         assert_eq!(context.error_kind, ProvisionErrorKind::ConfigurationTimeout);
     }
@@ -711,7 +764,7 @@ mod tests {
             opentofu_client,
             repository,
             _ssh_credentials,
-            _temp_dir,
+            temp_dir,
         ) = create_mock_dependencies();
 
         let command = ProvisionCommand::new(
@@ -722,6 +775,8 @@ mod tests {
             repository,
         );
 
+        let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
+
         let opentofu_error = OpenTofuError::CommandError(CommandError::ExecutionFailed {
             command: "tofu init".to_string(),
             exit_code: "1".to_string(),
@@ -731,7 +786,7 @@ mod tests {
 
         let error = ProvisionCommandError::OpenTofu(opentofu_error);
 
-        let context = command.build_failure_context(&error);
+        let context = command.build_failure_context(&environment, &error);
         assert_eq!(context.failed_step, ProvisionStep::OpenTofuApply);
         assert_eq!(
             context.error_kind,
