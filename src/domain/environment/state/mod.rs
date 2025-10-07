@@ -58,7 +58,6 @@ mod released;
 mod releasing;
 mod run_failed;
 mod running;
-mod trace_id;
 
 // Re-export state types
 pub use configure_failed::ConfigureFailed;
@@ -78,7 +77,6 @@ pub use released::Released;
 pub use releasing::Releasing;
 pub use run_failed::RunFailed;
 pub use running::Running;
-pub use trace_id::TraceId;
 
 /// Error type for invalid type conversions when working with type-erased environments
 ///
@@ -390,6 +388,7 @@ mod tests {
 
     /// Helper to create a test `ProvisionFailureContext` with custom error message
     fn create_test_provision_context(error_message: &str) -> ProvisionFailureContext {
+        use crate::domain::environment::TraceId;
         use chrono::Utc;
         use std::time::Duration;
 
@@ -407,6 +406,7 @@ mod tests {
 
     /// Helper to create a test `ConfigureFailureContext` with custom error message
     fn create_test_configure_context(error_message: &str) -> ConfigureFailureContext {
+        use crate::domain::environment::TraceId;
         use chrono::Utc;
         use std::time::Duration;
 

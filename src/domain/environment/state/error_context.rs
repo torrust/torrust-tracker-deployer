@@ -9,7 +9,7 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::TraceId;
+use crate::domain::environment::TraceId;
 
 // ============================================================================
 // Provision Command Error Context

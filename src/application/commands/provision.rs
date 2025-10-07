@@ -25,9 +25,9 @@ use crate::application::steps::{
 };
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
-    ProvisionErrorKind, ProvisionFailureContext, ProvisionStep, TraceId,
+    ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
 };
-use crate::domain::environment::{
+use crate::domain::environment::{TraceId,
     Created, Environment, ProvisionFailed, Provisioned, Provisioning,
 };
 #[allow(unused_imports)]

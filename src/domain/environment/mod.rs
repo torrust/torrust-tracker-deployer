@@ -48,10 +48,14 @@
 pub mod name;
 pub mod repository;
 pub mod state;
+mod trace_id;
 
 // Test utilities (only available in test configuration)
 #[cfg(test)]
 pub mod testing;
+
+// Re-export TraceId for use by state module
+pub use trace_id::TraceId;
 
 // Re-export commonly used types for convenience
 pub use name::{EnvironmentName, EnvironmentNameError};

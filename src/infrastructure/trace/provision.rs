@@ -103,8 +103,9 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::domain::environment::state::{
-        ProvisionErrorKind, ProvisionFailureContext, ProvisionStep, TraceId,
+        ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
     };
+    use crate::domain::environment::TraceId;
 
     // Test error implementing Traceable
     #[derive(Debug)]

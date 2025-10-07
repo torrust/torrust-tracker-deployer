@@ -163,8 +163,9 @@ mod tests {
         #[test]
         fn it_should_transition_from_configuring_to_configure_failed() {
             use crate::domain::environment::state::{
-                ConfigureErrorKind, ConfigureFailureContext, ConfigureStep, TraceId,
+                ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
             };
+            use crate::domain::environment::TraceId;
             use chrono::Utc;
             use std::time::Duration;
 

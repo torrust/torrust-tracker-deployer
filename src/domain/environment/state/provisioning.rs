@@ -174,8 +174,9 @@ mod tests {
         #[test]
         fn it_should_transition_from_provisioning_to_provision_failed() {
             use crate::domain::environment::state::{
-                ProvisionErrorKind, ProvisionFailureContext, ProvisionStep, TraceId,
+                ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
             };
+            use crate::domain::environment::TraceId;
             use chrono::Utc;
             use std::time::Duration;
 

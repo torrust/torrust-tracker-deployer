@@ -5,10 +5,10 @@ use tracing::{info, instrument, warn};
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
-    ConfigureErrorKind, ConfigureFailureContext, ConfigureStep, TraceId,
+    ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
 };
 use crate::domain::environment::{
-    ConfigureFailed, Configured, Configuring, Environment, Provisioned,
+    ConfigureFailed, Configured, Configuring, Environment, Provisioned, TraceId,
 };
 use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::infrastructure::trace::ConfigureTraceWriter;

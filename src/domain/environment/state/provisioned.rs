@@ -97,7 +97,8 @@ mod tests {
         }
 
         fn create_test_provision_context() -> ProvisionFailureContext {
-            use crate::domain::environment::state::{ProvisionErrorKind, ProvisionStep, TraceId};
+            use crate::domain::environment::state::{ProvisionErrorKind, ProvisionStep};
+            use crate::domain::environment::TraceId;
             use chrono::Utc;
             use std::time::Duration;
 
