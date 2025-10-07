@@ -17,6 +17,7 @@ use super::ErrorKind;
 ///
 /// ```rust
 /// use torrust_tracker_deploy::shared::error::Traceable;
+/// use torrust_tracker_deploy::shared::ErrorKind;
 ///
 /// #[derive(Debug, thiserror::Error)]
 /// enum MyError {
@@ -43,6 +44,12 @@ use super::ErrorKind;
 ///                 // Would return Some if source implemented Traceable
 ///                 None
 ///             }
+///         }
+///     }
+///
+///     fn error_kind(&self) -> ErrorKind {
+///         match self {
+///             Self::OperationFailed { .. } => ErrorKind::FileSystem,
 ///         }
 ///     }
 /// }
