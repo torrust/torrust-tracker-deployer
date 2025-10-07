@@ -112,6 +112,9 @@ impl ConfigureCommand {
             "Starting complete infrastructure configuration workflow"
         );
 
+        // Capture start time before transitioning to Configuring state
+        let started_at = self.clock.now();
+
         // Transition to Configuring state
         let environment = environment.start_configuring();
 
@@ -134,7 +137,7 @@ impl ConfigureCommand {
             }
             Err(e) => {
                 // Transition to error state with structured context
-                let context = self.build_failure_context(&environment, &e);
+                let context = self.build_failure_context(&environment, &e, started_at);
                 let failed = environment.configure_failed(context);
 
                 // Persist error state
@@ -217,6 +220,7 @@ impl ConfigureCommand {
     ///
     /// * `environment` - The environment being configured (for determining trace file location)
     /// * `error` - The configuration error to build context from
+    /// * `started_at` - The timestamp when configuration execution started
     ///
     /// # Returns
     ///
@@ -226,9 +230,8 @@ impl ConfigureCommand {
         &self,
         environment: &Environment<Configuring>,
         error: &ConfigureCommandError,
+        started_at: chrono::DateTime<chrono::Utc>,
     ) -> ConfigureFailureContext {
-        use std::time::Duration;
-
         let (failed_step, error_kind) = match error {
             ConfigureCommandError::Command(_) => {
                 // For now, we can't distinguish between Docker and Docker Compose installation
@@ -244,14 +247,20 @@ impl ConfigureCommand {
         let now = self.clock.now();
         let trace_id = TraceId::new();
 
+        // Calculate actual execution duration
+        let execution_duration = now
+            .signed_duration_since(started_at)
+            .to_std()
+            .unwrap_or_default();
+
         let mut context = ConfigureFailureContext {
             failed_step,
             error_kind,
             base: BaseFailureContext {
                 error_summary: error.to_string(),
                 failed_at: now,
-                execution_started_at: now, // TODO: Track actual start time
-                execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
+                execution_started_at: started_at,
+                execution_duration,
                 trace_id,
                 trace_file_path: None,
             },
@@ -357,6 +366,8 @@ mod tests {
 
     #[test]
     fn it_should_build_failure_context_from_command_error() {
+        use chrono::{TimeZone, Utc};
+
         let (ansible_client, clock, repository, temp_dir) = create_mock_dependencies();
 
         let command = ConfigureCommand::new(ansible_client, clock, repository);
@@ -371,8 +382,10 @@ mod tests {
             stderr: "test error".to_string(),
         });
 
-        let context = command.build_failure_context(&environment, &error);
+        let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
+        let context = command.build_failure_context(&environment, &error, started_at);
         assert_eq!(context.failed_step, ConfigureStep::InstallDocker);
         assert_eq!(context.error_kind, ConfigureErrorKind::InstallationFailed);
+        assert_eq!(context.base.execution_started_at, started_at);
     }
 }

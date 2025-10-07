@@ -187,6 +187,9 @@ impl ProvisionCommand {
             "Starting complete infrastructure provisioning workflow"
         );
 
+        // Capture start time before transitioning to Provisioning state
+        let started_at = self.clock.now();
+
         // Transition to Provisioning state
         let environment = environment.start_provisioning();
 
@@ -210,7 +213,7 @@ impl ProvisionCommand {
             }
             Err(e) => {
                 // Transition to error state with structured context
-                let context = self.build_failure_context(&environment, &e);
+                let context = self.build_failure_context(&environment, &e, started_at);
                 let failed = environment.provision_failed(context);
 
                 // Persist error state
@@ -404,6 +407,7 @@ impl ProvisionCommand {
     ///
     /// * `environment` - The environment being provisioned (for trace directory path)
     /// * `error` - The provisioning error to extract step information from
+    /// * `started_at` - The timestamp when provisioning execution started
     ///
     /// # Returns
     ///
@@ -412,9 +416,9 @@ impl ProvisionCommand {
         &self,
         environment: &Environment<Provisioning>,
         error: &ProvisionCommandError,
+        started_at: chrono::DateTime<chrono::Utc>,
     ) -> ProvisionFailureContext {
         use crate::infrastructure::trace::ProvisionTraceWriter;
-        use std::time::Duration;
 
         let (failed_step, error_kind) = match error {
             ProvisionCommandError::OpenTofuTemplateRendering(_) => (
@@ -445,6 +449,12 @@ impl ProvisionCommand {
         let now = self.clock.now();
         let trace_id = TraceId::new();
 
+        // Calculate actual execution duration
+        let execution_duration = now
+            .signed_duration_since(started_at)
+            .to_std()
+            .unwrap_or_default();
+
         // Build initial context without trace file path
         let mut context = ProvisionFailureContext {
             failed_step,
@@ -452,8 +462,8 @@ impl ProvisionCommand {
             base: BaseFailureContext {
                 error_summary: error.to_string(),
                 failed_at: now,
-                execution_started_at: now, // TODO: Track actual start time
-                execution_duration: Duration::from_secs(0), // TODO: Calculate actual duration
+                execution_started_at: started_at,
+                execution_duration,
                 trace_id,
                 trace_file_path: None,
             },
@@ -664,6 +674,8 @@ mod tests {
 
     #[test]
     fn it_should_build_failure_context_from_opentofu_template_error() {
+        use chrono::{TimeZone, Utc};
+
         let (
             tofu_renderer,
             ansible_renderer,
@@ -693,9 +705,11 @@ mod tests {
             },
         );
 
-        let context = command.build_failure_context(&environment, &error);
+        let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
+        let context = command.build_failure_context(&environment, &error, started_at);
         assert_eq!(context.failed_step, ProvisionStep::RenderOpenTofuTemplates);
         assert_eq!(context.error_kind, ProvisionErrorKind::TemplateRendering);
+        assert_eq!(context.base.execution_started_at, started_at);
     }
 
     // Note: We don't test AnsibleTemplateRendering errors directly as the error types are complex
@@ -705,6 +719,8 @@ mod tests {
 
     #[test]
     fn it_should_build_failure_context_from_ssh_connectivity_error() {
+        use chrono::{TimeZone, Utc};
+
         let (
             tofu_renderer,
             ansible_renderer,
@@ -733,13 +749,17 @@ mod tests {
             timeout_seconds: 30,
         });
 
-        let context = command.build_failure_context(&environment, &error);
+        let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
+        let context = command.build_failure_context(&environment, &error, started_at);
         assert_eq!(context.failed_step, ProvisionStep::WaitSshConnectivity);
         assert_eq!(context.error_kind, ProvisionErrorKind::NetworkConnectivity);
+        assert_eq!(context.base.execution_started_at, started_at);
     }
 
     #[test]
     fn it_should_build_failure_context_from_command_error() {
+        use chrono::{TimeZone, Utc};
+
         let (
             tofu_renderer,
             ansible_renderer,
@@ -769,13 +789,17 @@ mod tests {
             stderr: "test error".to_string(),
         });
 
-        let context = command.build_failure_context(&environment, &error);
+        let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
+        let context = command.build_failure_context(&environment, &error, started_at);
         assert_eq!(context.failed_step, ProvisionStep::CloudInitWait);
         assert_eq!(context.error_kind, ProvisionErrorKind::ConfigurationTimeout);
+        assert_eq!(context.base.execution_started_at, started_at);
     }
 
     #[test]
     fn it_should_build_failure_context_from_opentofu_error() {
+        use chrono::{TimeZone, Utc};
+
         let (
             tofu_renderer,
             ansible_renderer,
@@ -807,11 +831,13 @@ mod tests {
 
         let error = ProvisionCommandError::OpenTofu(opentofu_error);
 
-        let context = command.build_failure_context(&environment, &error);
+        let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
+        let context = command.build_failure_context(&environment, &error, started_at);
         assert_eq!(context.failed_step, ProvisionStep::OpenTofuApply);
         assert_eq!(
             context.error_kind,
             ProvisionErrorKind::InfrastructureProvisioning
         );
+        assert_eq!(context.base.execution_started_at, started_at);
     }
 }
