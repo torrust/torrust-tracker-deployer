@@ -55,6 +55,7 @@ pub fn run_configure_command(
     // Use the new ConfigureCommand to handle all infrastructure configuration steps
     let configure_command = ConfigureCommand::new(
         Arc::clone(&test_context.services.ansible_client),
+        Arc::clone(&test_context.services.clock),
         repository,
     );
 

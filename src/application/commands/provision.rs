@@ -27,8 +27,8 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
     ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
 };
-use crate::domain::environment::{TraceId,
-    Created, Environment, ProvisionFailed, Provisioned, Provisioning,
+use crate::domain::environment::{
+    Created, Environment, ProvisionFailed, Provisioned, Provisioning, TraceId,
 };
 #[allow(unused_imports)]
 use crate::domain::{InstanceName, ProfileName};
@@ -121,6 +121,7 @@ pub struct ProvisionCommand {
     ansible_client: Arc<AnsibleClient>,
     opentofu_client:
         Arc<crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient>,
+    clock: Arc<dyn crate::shared::Clock>,
     repository: Arc<dyn EnvironmentRepository>,
 }
 
@@ -134,6 +135,7 @@ impl ProvisionCommand {
         opentofu_client: Arc<
             crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient,
         >,
+        clock: Arc<dyn crate::shared::Clock>,
         repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
@@ -141,6 +143,7 @@ impl ProvisionCommand {
             ansible_template_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
         }
     }
@@ -410,7 +413,6 @@ impl ProvisionCommand {
         error: &ProvisionCommandError,
     ) -> ProvisionFailureContext {
         use crate::infrastructure::trace::ProvisionTraceWriter;
-        use chrono::Utc;
         use std::time::Duration;
 
         let (failed_step, error_kind) = match error {
@@ -439,7 +441,7 @@ impl ProvisionCommand {
             ),
         };
 
-        let now = Utc::now();
+        let now = self.clock.now();
         let trace_id = TraceId::new();
 
         // Build initial context without trace file path
@@ -511,6 +513,7 @@ mod tests {
         Arc<AnsibleTemplateRenderer>,
         Arc<AnsibleClient>,
         Arc<crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient>,
+        Arc<dyn crate::shared::Clock>,
         Arc<dyn EnvironmentRepository>,
         SshCredentials,
         TempDir,
@@ -563,11 +566,15 @@ mod tests {
             Username::new("test_user").unwrap(),
         );
 
+        // Create mock clock for testing
+        let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
+
         (
             tofu_renderer,
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
             ssh_credentials,
             temp_dir,
@@ -594,6 +601,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
             _ssh_credentials,
             _temp_dir,
@@ -604,6 +612,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
         );
 
@@ -656,6 +665,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
             _ssh_credentials,
             temp_dir,
@@ -666,6 +676,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
         );
 
@@ -695,6 +706,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
             _ssh_credentials,
             temp_dir,
@@ -705,6 +717,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
         );
 
@@ -728,6 +741,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
             _ssh_credentials,
             temp_dir,
@@ -738,6 +752,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
         );
 
@@ -762,6 +777,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
             _ssh_credentials,
             temp_dir,
@@ -772,6 +788,7 @@ mod tests {
             ansible_renderer,
             ansible_client,
             opentofu_client,
+            clock,
             repository,
         );
 

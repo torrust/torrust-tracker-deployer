@@ -58,6 +58,7 @@ pub async fn run_provision_command(
         Arc::clone(&test_context.services.ansible_template_renderer),
         Arc::clone(&test_context.services.ansible_client),
         Arc::clone(&test_context.services.opentofu_client),
+        Arc::clone(&test_context.services.clock),
         repository,
     );
 

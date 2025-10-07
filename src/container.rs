@@ -25,6 +25,7 @@ use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::ssh::SshCredentials;
+use crate::shared::Clock;
 
 /// Default lock timeout for repository operations
 ///
@@ -46,6 +47,10 @@ pub struct Services {
     pub template_manager: Arc<TemplateManager>,
     pub tofu_template_renderer: Arc<TofuTemplateRenderer>,
     pub ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
+
+    // Infrastructure services
+    /// Clock service for testable time management
+    pub clock: Arc<dyn Clock>,
 
     // Persistence layer
     /// Factory for creating environment-specific repositories
@@ -91,6 +96,9 @@ impl Services {
         let repository_factory =
             RepositoryFactory::new(Duration::from_secs(REPOSITORY_LOCK_TIMEOUT_SECS));
 
+        // Create clock service (production implementation uses system time)
+        let clock: Arc<dyn Clock> = Arc::new(crate::shared::SystemClock);
+
         Self {
             // Command wrappers
             opentofu_client: Arc::new(opentofu_client),
@@ -101,6 +109,9 @@ impl Services {
             template_manager: template_manager.clone(),
             tofu_template_renderer: Arc::new(tofu_template_renderer),
             ansible_template_renderer: Arc::new(ansible_template_renderer),
+
+            // Infrastructure services
+            clock,
 
             // Persistence layer
             repository_factory,

@@ -57,6 +57,7 @@ impl crate::shared::Traceable for ConfigureCommandError {
 /// Persistence failures are logged but don't fail the command (state remains valid in memory).
 pub struct ConfigureCommand {
     ansible_client: Arc<AnsibleClient>,
+    clock: Arc<dyn crate::shared::Clock>,
     repository: Arc<dyn EnvironmentRepository>,
 }
 
@@ -65,10 +66,12 @@ impl ConfigureCommand {
     #[must_use]
     pub fn new(
         ansible_client: Arc<AnsibleClient>,
+        clock: Arc<dyn crate::shared::Clock>,
         repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
             ansible_client,
+            clock,
             repository,
         }
     }
@@ -223,7 +226,6 @@ impl ConfigureCommand {
         environment: &Environment<Configuring>,
         error: &ConfigureCommandError,
     ) -> ConfigureFailureContext {
-        use chrono::Utc;
         use std::time::Duration;
 
         let (failed_step, error_kind) = match error {
@@ -238,7 +240,7 @@ impl ConfigureCommand {
             }
         };
 
-        let now = Utc::now();
+        let now = self.clock.now();
         let trace_id = TraceId::new();
 
         let mut context = ConfigureFailureContext {
@@ -287,9 +289,17 @@ mod tests {
 
     // Helper function to create mock dependencies for testing
     #[allow(clippy::type_complexity)]
-    fn create_mock_dependencies() -> (Arc<AnsibleClient>, Arc<dyn EnvironmentRepository>, TempDir) {
+    fn create_mock_dependencies() -> (
+        Arc<AnsibleClient>,
+        Arc<dyn crate::shared::Clock>,
+        Arc<dyn EnvironmentRepository>,
+        TempDir,
+    ) {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let ansible_client = Arc::new(AnsibleClient::new(temp_dir.path()));
+
+        // Create clock
+        let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 
         // Create repository
         let repository_factory =
@@ -298,7 +308,7 @@ mod tests {
             );
         let repository = repository_factory.create(temp_dir.path().to_path_buf());
 
-        (ansible_client, repository, temp_dir)
+        (ansible_client, clock, repository, temp_dir)
     }
 
     // Helper function to create a test environment in Configuring state
@@ -321,9 +331,9 @@ mod tests {
 
     #[test]
     fn it_should_create_configure_command_with_all_dependencies() {
-        let (ansible_client, repository, _temp_dir) = create_mock_dependencies();
+        let (ansible_client, clock, repository, _temp_dir) = create_mock_dependencies();
 
-        let command = ConfigureCommand::new(ansible_client, repository);
+        let command = ConfigureCommand::new(ansible_client, clock, repository);
 
         // Verify the command was created (basic structure test)
         // This test just verifies that the command can be created with the dependencies
@@ -343,9 +353,9 @@ mod tests {
 
     #[test]
     fn it_should_build_failure_context_from_command_error() {
-        let (ansible_client, repository, temp_dir) = create_mock_dependencies();
+        let (ansible_client, clock, repository, temp_dir) = create_mock_dependencies();
 
-        let command = ConfigureCommand::new(ansible_client, repository);
+        let command = ConfigureCommand::new(ansible_client, clock, repository);
 
         // Create test environment for trace generation
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
