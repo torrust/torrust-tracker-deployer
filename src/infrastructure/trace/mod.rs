@@ -2,11 +2,15 @@
 //!
 //! This module provides a scalable architecture for generating trace files
 //! with command-specific writers and shared infrastructure.
+//!
+//! ## Module Structure
+//!
+//! - `writer` - Trace writing infrastructure
+//!   - `sections` - Formatting utilities for trace sections
+//!   - `error` - Error types for trace writing operations
+//!   - `common` - Shared file I/O operations
+//!   - `commands` - Command-specific trace writers (provision, configure)
 
-mod common;
-mod configure;
-mod provision;
+pub mod writer;
 
-pub use common::TraceWriterError;
-pub use configure::ConfigureTraceWriter;
-pub use provision::ProvisionTraceWriter;
+pub use writer::{ConfigureTraceWriter, ProvisionTraceWriter, TraceWriterError};

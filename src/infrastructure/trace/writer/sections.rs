@@ -1,43 +1,32 @@
-//! Common trace file infrastructure
+//! Trace file formatting sections
 //!
-//! This module provides shared functionality for all command-specific trace writers:
-//! - Formatting sections (header, footer, error chain)
-//! - File I/O operations
-//! - Directory management
-//! - Timestamp-based filename generation
-
-use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-
-use chrono::Utc;
-use thiserror::Error;
+//! Provides formatting utilities for trace file sections:
+//! - Headers and footers
+//! - Error chain formatting
+//! - Base metadata formatting
 
 use crate::domain::environment::state::BaseFailureContext;
 use crate::shared::Traceable;
 
-/// Errors that can occur during trace file writing
-#[derive(Debug, Error)]
-pub enum TraceWriterError {
-    #[error("Failed to create traces directory at {path}: {source}")]
-    DirectoryCreation {
-        path: String,
-        source: std::io::Error,
-    },
-
-    #[error("Failed to write trace file at {path}: {source}")]
-    FileWrite {
-        path: String,
-        source: std::io::Error,
-    },
-}
-
 /// Common sections for all trace files
-pub(crate) struct TraceSections;
+///
+/// Provides static methods for formatting various sections of trace files
+/// with consistent styling and structure.
+pub(super) struct TraceSections;
 
 impl TraceSections {
     /// Format a trace header
-    pub(crate) fn header(title: &str) -> String {
+    ///
+    /// Creates a centered header with decorative borders for trace files.
+    ///
+    /// # Arguments
+    ///
+    /// * `title` - The title to display in the header
+    ///
+    /// # Returns
+    ///
+    /// Formatted header string with borders
+    pub(super) fn header(title: &str) -> String {
         format!(
             "═══════════════════════════════════════════════════════════════\n\
              {title:^63}\n\
@@ -46,21 +35,36 @@ impl TraceSections {
     }
 
     /// Format a trace footer
-    pub(crate) fn footer() -> &'static str {
+    ///
+    /// Creates a footer section to mark the end of a trace file.
+    pub(super) fn footer() -> &'static str {
         "\n═══════════════════════════════════════════════════════════════\n\
-                            END OF TRACE\n\
+                             END OF TRACE\n\
          ═══════════════════════════════════════════════════════════════\n"
     }
 
     /// Format an error chain section header
-    pub(crate) fn error_chain_header() -> &'static str {
+    ///
+    /// Creates a section header for the error chain portion of trace files.
+    pub(super) fn error_chain_header() -> &'static str {
         "───────────────────────────────────────────────────────────────\n\
                              ERROR CHAIN\n\
          ───────────────────────────────────────────────────────────────\n\n"
     }
 
     /// Format a complete error chain by walking the `Traceable` hierarchy
-    pub(crate) fn format_error_chain<E: Traceable>(error: &E) -> String {
+    ///
+    /// Recursively formats all errors in the error chain, numbering each
+    /// level for easy navigation.
+    ///
+    /// # Arguments
+    ///
+    /// * `error` - Root error implementing `Traceable`
+    ///
+    /// # Returns
+    ///
+    /// Formatted string containing the complete error chain
+    pub(super) fn format_error_chain<E: Traceable>(error: &E) -> String {
         let mut chain = String::new();
         Self::format_error_chain_recursive(error, &mut chain, 0);
         chain
@@ -89,10 +93,14 @@ impl TraceSections {
     /// - Execution Duration
     /// - Error Summary
     ///
+    /// # Arguments
+    ///
+    /// * `base` - Base failure context containing common metadata
+    ///
     /// # Returns
     ///
     /// Formatted string with base metadata, ready to be included in a trace file
-    pub(crate) fn format_base_metadata(base: &BaseFailureContext) -> String {
+    pub(super) fn format_base_metadata(base: &BaseFailureContext) -> String {
         use std::fmt::Write;
 
         let mut metadata = String::new();
@@ -106,76 +114,6 @@ impl TraceSections {
         );
         let _ = writeln!(metadata, "Error Summary: {}", base.error_summary);
         metadata
-    }
-}
-
-/// Common trace file writer infrastructure
-///
-/// Provides shared functionality for all command-specific trace writers:
-/// - File I/O operations
-/// - Directory management
-/// - Timestamp-based filename generation
-///
-/// This is used as a collaborator by command-specific writers.
-pub(crate) struct CommonTraceWriter {
-    traces_dir: PathBuf,
-}
-
-impl CommonTraceWriter {
-    /// Create a new common trace writer
-    pub(crate) fn new(traces_dir: impl Into<PathBuf>) -> Self {
-        Self {
-            traces_dir: traces_dir.into(),
-        }
-    }
-
-    /// Write trace content to a file
-    ///
-    /// Creates the traces directory if needed, generates a timestamp-based
-    /// filename, and writes the content.
-    pub(crate) fn write_trace(
-        &self,
-        command_name: &str,
-        content: &str,
-    ) -> Result<PathBuf, TraceWriterError> {
-        self.ensure_traces_dir()?;
-
-        let timestamp = Utc::now().format("%Y%m%d-%H%M%S");
-        let trace_file = self
-            .traces_dir
-            .join(format!("{timestamp}-{command_name}.log"));
-
-        let mut file =
-            fs::File::create(&trace_file).map_err(|source| TraceWriterError::FileWrite {
-                path: trace_file.display().to_string(),
-                source,
-            })?;
-
-        file.write_all(content.as_bytes())
-            .map_err(|source| TraceWriterError::FileWrite {
-                path: trace_file.display().to_string(),
-                source,
-            })?;
-
-        Ok(trace_file)
-    }
-
-    /// Ensure the traces directory exists
-    fn ensure_traces_dir(&self) -> Result<(), TraceWriterError> {
-        if !self.traces_dir.exists() {
-            fs::create_dir_all(&self.traces_dir).map_err(|source| {
-                TraceWriterError::DirectoryCreation {
-                    path: self.traces_dir.display().to_string(),
-                    source,
-                }
-            })?;
-        }
-        Ok(())
-    }
-
-    /// Get the traces directory path
-    pub(crate) fn traces_dir(&self) -> &Path {
-        &self.traces_dir
     }
 }
 

@@ -8,7 +8,9 @@ use std::path::{Path, PathBuf};
 use crate::domain::environment::state::ProvisionFailureContext;
 use crate::shared::Traceable;
 
-use super::common::{CommonTraceWriter, TraceSections, TraceWriterError};
+use super::super::common::CommonTraceWriter;
+use super::super::error::TraceWriterError;
+use super::super::sections::TraceSections;
 
 /// Provision-specific trace writer
 ///

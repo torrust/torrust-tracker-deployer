@@ -8,7 +8,9 @@ use std::path::{Path, PathBuf};
 use crate::domain::environment::state::ConfigureFailureContext;
 use crate::shared::Traceable;
 
-use super::common::{CommonTraceWriter, TraceSections, TraceWriterError};
+use super::super::common::CommonTraceWriter;
+use super::super::error::TraceWriterError;
+use super::super::sections::TraceSections;
 
 /// Configure-specific trace writer
 ///
