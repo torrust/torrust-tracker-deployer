@@ -249,28 +249,12 @@ impl ConfigureCommand {
             },
         };
 
-        // Generate trace file with complete error chain
+        // Generate trace file (logging handled by trace writer)
         let traces_dir = environment.traces_dir();
         let trace_writer = ConfigureTraceWriter::new(traces_dir, Arc::clone(&self.clock));
 
-        match trace_writer.write_trace(&context, error) {
-            Ok(trace_file_path) => {
-                info!(
-                    command = "configure",
-                    trace_id = %context.base.trace_id,
-                    trace_file = ?trace_file_path,
-                    "Trace file generated successfully"
-                );
-                context.base.trace_file_path = Some(trace_file_path);
-            }
-            Err(e) => {
-                warn!(
-                    command = "configure",
-                    trace_id = %context.base.trace_id,
-                    error = %e,
-                    "Failed to generate trace file"
-                );
-            }
+        if let Ok(trace_file_path) = trace_writer.write_trace(&context, error) {
+            context.base.trace_file_path = Some(trace_file_path);
         }
 
         context

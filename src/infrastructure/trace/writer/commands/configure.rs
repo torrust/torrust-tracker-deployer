@@ -45,6 +45,9 @@ impl ConfigureTraceWriter {
 
     /// Write a configure failure trace file
     ///
+    /// Generates a trace file with configure-specific context and logs the outcome.
+    /// Success is logged at INFO level, failures at WARN level.
+    ///
     /// # Arguments
     ///
     /// * `ctx` - The configure failure context with metadata
@@ -62,8 +65,30 @@ impl ConfigureTraceWriter {
         ctx: &ConfigureFailureContext,
         error: &E,
     ) -> Result<PathBuf, TraceWriterError> {
+        use tracing::{info, warn};
+
         let trace_content = Self::format_trace(ctx, error);
-        self.common.write_trace("configure", &trace_content)
+
+        match self.common.write_trace("configure", &trace_content) {
+            Ok(trace_file_path) => {
+                info!(
+                    command = "configure",
+                    trace_id = %ctx.base.trace_id,
+                    trace_file = ?trace_file_path,
+                    "Trace file generated successfully"
+                );
+                Ok(trace_file_path)
+            }
+            Err(e) => {
+                warn!(
+                    command = "configure",
+                    trace_id = %ctx.base.trace_id,
+                    error = %e,
+                    "Failed to generate trace file"
+                );
+                Err(e)
+            }
+        }
     }
 
     /// Format a complete configure trace

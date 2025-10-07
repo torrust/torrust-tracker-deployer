@@ -45,6 +45,9 @@ impl ProvisionTraceWriter {
 
     /// Write a provision failure trace file
     ///
+    /// Generates a trace file with provision-specific context and logs the outcome.
+    /// Success is logged at INFO level, failures at WARN level.
+    ///
     /// # Arguments
     ///
     /// * `ctx` - The provision failure context with metadata
@@ -62,8 +65,28 @@ impl ProvisionTraceWriter {
         ctx: &ProvisionFailureContext,
         error: &E,
     ) -> Result<PathBuf, TraceWriterError> {
+        use tracing::{info, warn};
+
         let trace_content = Self::format_trace(ctx, error);
-        self.common.write_trace("provision", &trace_content)
+
+        match self.common.write_trace("provision", &trace_content) {
+            Ok(trace_file_path) => {
+                info!(
+                    trace_id = %ctx.base.trace_id,
+                    trace_file = ?trace_file_path,
+                    "Generated trace file for provision failure"
+                );
+                Ok(trace_file_path)
+            }
+            Err(e) => {
+                warn!(
+                    trace_id = %ctx.base.trace_id,
+                    error = %e,
+                    "Failed to generate trace file for provision failure"
+                );
+                Err(e)
+            }
+        }
     }
 
     /// Format a complete provision trace

@@ -15,7 +15,7 @@
 use std::net::IpAddr;
 use std::sync::Arc;
 
-use tracing::{info, instrument, warn};
+use tracing::{info, instrument};
 
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
@@ -456,26 +456,12 @@ impl ProvisionCommand {
             },
         };
 
-        // Generate trace file
+        // Generate trace file (logging handled by trace writer)
         let traces_dir = environment.traces_dir();
         let writer = ProvisionTraceWriter::new(traces_dir, Arc::clone(&self.clock));
 
-        match writer.write_trace(&context, error) {
-            Ok(trace_file) => {
-                info!(
-                    trace_id = %context.base.trace_id,
-                    trace_file = ?trace_file,
-                    "Generated trace file for provision failure"
-                );
-                context.base.trace_file_path = Some(trace_file);
-            }
-            Err(e) => {
-                warn!(
-                    trace_id = %context.base.trace_id,
-                    error = %e,
-                    "Failed to generate trace file for provision failure"
-                );
-            }
+        if let Ok(trace_file) = writer.write_trace(&context, error) {
+            context.base.trace_file_path = Some(trace_file);
         }
 
         context
