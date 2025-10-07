@@ -7,9 +7,7 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
     BaseFailureContext, ConfigureFailureContext, ConfigureStep,
 };
-use crate::domain::environment::{
-    ConfigureFailed, Configured, Configuring, Environment, Provisioned, TraceId,
-};
+use crate::domain::environment::{Configured, Configuring, Environment, Provisioned, TraceId};
 use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::command::CommandError;
@@ -21,6 +19,9 @@ use crate::shared::SystemClock;
 pub enum ConfigureCommandError {
     #[error("Command execution failed: {0}")]
     Command(#[from] CommandError),
+
+    #[error("Failed to persist environment state: {0}")]
+    StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
 }
 
 impl crate::shared::Traceable for ConfigureCommandError {
@@ -29,18 +30,23 @@ impl crate::shared::Traceable for ConfigureCommandError {
             Self::Command(e) => {
                 format!("ConfigureCommandError: Command execution failed - {e}")
             }
+            Self::StatePersistence(e) => {
+                format!("ConfigureCommandError: Failed to persist environment state - {e}")
+            }
         }
     }
 
     fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
         match self {
             Self::Command(e) => Some(e),
+            Self::StatePersistence(_) => None,
         }
     }
 
     fn error_kind(&self) -> crate::shared::ErrorKind {
         match self {
             Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
+            Self::StatePersistence(_) => crate::shared::ErrorKind::StatePersistence,
         }
     }
 }
@@ -126,13 +132,13 @@ impl ConfigureCommand {
         let environment = environment.start_configuring();
 
         // Persist intermediate state
-        self.persist_configuring_state(&environment);
+        self.repository.save(&environment.clone().into_any())?;
 
         // Execute configuration steps with explicit step tracking
         match self.execute_configuration_with_tracking(&environment) {
             Ok(configured_env) => {
                 // Persist final state
-                self.persist_configured_state(&configured_env);
+                self.repository.save(&configured_env.clone().into_any())?;
 
                 info!(
                     command = "configure",
@@ -150,7 +156,7 @@ impl ConfigureCommand {
                 let failed = environment.configure_failed(context);
 
                 // Persist error state
-                self.persist_configure_failed_state(&failed);
+                self.repository.save(&failed.clone().into_any())?;
 
                 Err(e)
             }
@@ -190,44 +196,6 @@ impl ConfigureCommand {
     }
 
     /// Persist configuring state
-    fn persist_configuring_state(&self, environment: &Environment<Configuring>) {
-        let any_state = environment.clone().into_any();
-
-        if let Err(e) = self.repository.save(&any_state) {
-            warn!(
-                environment = %environment.name(),
-                error = %e,
-                "Failed to persist configuring state. Command execution continues."
-            );
-        }
-    }
-
-    /// Persist configured state
-    fn persist_configured_state(&self, environment: &Environment<Configured>) {
-        let any_state = environment.clone().into_any();
-
-        if let Err(e) = self.repository.save(&any_state) {
-            warn!(
-                environment = %environment.name(),
-                error = %e,
-                "Failed to persist configured state. Command execution continues."
-            );
-        }
-    }
-
-    /// Persist configure failed state
-    fn persist_configure_failed_state(&self, environment: &Environment<ConfigureFailed>) {
-        let any_state = environment.clone().into_any();
-
-        if let Err(e) = self.repository.save(&any_state) {
-            warn!(
-                environment = %environment.name(),
-                error = %e,
-                "Failed to persist configure failed state. Command execution continues."
-            );
-        }
-    }
-
     /// Build failure context for a configuration error and generate trace file
     ///
     /// This helper method builds structured error context including the failed step,

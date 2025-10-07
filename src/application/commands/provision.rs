@@ -27,9 +27,7 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
     BaseFailureContext, ProvisionFailureContext, ProvisionStep,
 };
-use crate::domain::environment::{
-    Created, Environment, ProvisionFailed, Provisioned, Provisioning, TraceId,
-};
+use crate::domain::environment::{Created, Environment, Provisioned, Provisioning, TraceId};
 #[allow(unused_imports)]
 use crate::domain::{InstanceName, ProfileName};
 use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
@@ -58,6 +56,9 @@ pub enum ProvisionCommandError {
 
     #[error("SSH connectivity failed: {0}")]
     SshConnectivity(#[from] SshError),
+
+    #[error("Failed to persist environment state: {0}")]
+    StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
 }
 
 impl crate::shared::Traceable for ProvisionCommandError {
@@ -78,6 +79,9 @@ impl crate::shared::Traceable for ProvisionCommandError {
             Self::SshConnectivity(e) => {
                 format!("ProvisionCommandError: SSH connectivity failed - {e}")
             }
+            Self::StatePersistence(e) => {
+                format!("ProvisionCommandError: Failed to persist environment state - {e}")
+            }
         }
     }
 
@@ -88,6 +92,7 @@ impl crate::shared::Traceable for ProvisionCommandError {
             Self::OpenTofu(e) => Some(e),
             Self::Command(e) => Some(e),
             Self::SshConnectivity(e) => Some(e),
+            Self::StatePersistence(_) => None,
         }
     }
 
@@ -99,6 +104,7 @@ impl crate::shared::Traceable for ProvisionCommandError {
             Self::OpenTofu(_) => crate::shared::ErrorKind::InfrastructureOperation,
             Self::SshConnectivity(_) => crate::shared::ErrorKind::NetworkConnectivity,
             Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
+            Self::StatePersistence(_) => crate::shared::ErrorKind::StatePersistence,
         }
     }
 }
@@ -206,7 +212,7 @@ impl ProvisionCommand {
         let environment = environment.start_provisioning();
 
         // Persist intermediate state
-        self.persist_provisioning_state(&environment);
+        self.repository.save(&environment.clone().into_any())?;
 
         // Execute provisioning steps with explicit step tracking
         // This allows us to know exactly which step failed if an error occurs
@@ -216,7 +222,7 @@ impl ProvisionCommand {
                 let provisioned = provisioned.with_instance_ip(instance_ip);
 
                 // Persist final state
-                self.persist_provisioned_state(&provisioned);
+                self.repository.save(&provisioned.clone().into_any())?;
 
                 info!(
                     command = "provision",
@@ -235,7 +241,7 @@ impl ProvisionCommand {
                 let failed = environment.provision_failed(context);
 
                 // Persist error state
-                self.persist_provision_failed_state(&failed);
+                self.repository.save(&failed.clone().into_any())?;
 
                 Err(e)
             }
@@ -292,45 +298,6 @@ impl ProvisionCommand {
         let provisioned = environment.clone().provisioned();
 
         Ok((provisioned, instance_ip))
-    }
-
-    /// Persist provisioning state
-    fn persist_provisioning_state(&self, environment: &Environment<Provisioning>) {
-        let any_state = environment.clone().into_any();
-
-        if let Err(e) = self.repository.save(&any_state) {
-            warn!(
-                environment = %environment.name(),
-                error = %e,
-                "Failed to persist provisioning state. Command execution continues."
-            );
-        }
-    }
-
-    /// Persist provisioned state
-    fn persist_provisioned_state(&self, environment: &Environment<Provisioned>) {
-        let any_state = environment.clone().into_any();
-
-        if let Err(e) = self.repository.save(&any_state) {
-            warn!(
-                environment = %environment.name(),
-                error = %e,
-                "Failed to persist provisioned state. Command execution continues."
-            );
-        }
-    }
-
-    /// Persist provision failed state
-    fn persist_provision_failed_state(&self, environment: &Environment<ProvisionFailed>) {
-        let any_state = environment.clone().into_any();
-
-        if let Err(e) = self.repository.save(&any_state) {
-            warn!(
-                environment = %environment.name(),
-                error = %e,
-                "Failed to persist provision failed state. Command execution continues."
-            );
-        }
     }
 
     // Private helper methods - organized from higher to lower level of abstraction

@@ -71,6 +71,12 @@ pub enum ErrorKind {
     /// Examples: Invalid YAML/TOML, missing required fields,
     /// configuration value out of range
     Configuration,
+
+    /// State persistence operation failed
+    ///
+    /// Examples: Failed to save environment state, repository errors,
+    /// serialization/deserialization failures, storage access issues
+    StatePersistence,
 }
 
 #[cfg(test)]
