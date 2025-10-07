@@ -14,6 +14,6 @@ pub mod username;
 // Re-export commonly used types for convenience
 pub use clock::{Clock, SystemClock};
 pub use command::{CommandError, CommandExecutor, CommandResult};
-pub use error::Traceable;
+pub use error::{ErrorKind, Traceable};
 pub use port_checker::{PortChecker, PortCheckerError};
 pub use username::{Username, UsernameError};

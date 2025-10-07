@@ -49,6 +49,10 @@ impl crate::shared::Traceable for CommandError {
         // std::io::Error doesn't implement Traceable, so we return None
         None
     }
+
+    fn error_kind(&self) -> crate::shared::ErrorKind {
+        crate::shared::ErrorKind::CommandExecution
+    }
 }
 
 #[cfg(test)]

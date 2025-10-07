@@ -97,16 +97,15 @@ mod tests {
         }
 
         fn create_test_provision_context() -> ProvisionFailureContext {
-            use crate::domain::environment::state::{
-                BaseFailureContext, ProvisionErrorKind, ProvisionStep,
-            };
+            use crate::domain::environment::state::{BaseFailureContext, ProvisionStep};
             use crate::domain::environment::TraceId;
+            use crate::shared::ErrorKind;
             use chrono::Utc;
             use std::time::Duration;
 
             ProvisionFailureContext {
                 failed_step: ProvisionStep::CloudInitWait,
-                error_kind: ProvisionErrorKind::ConfigurationTimeout,
+                error_kind: ErrorKind::Timeout,
                 base: BaseFailureContext {
                     error_summary: "error".to_string(),
                     failed_at: Utc::now(),

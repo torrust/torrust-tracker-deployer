@@ -144,6 +144,10 @@ mod tests {
         fn trace_source(&self) -> Option<&dyn Traceable> {
             self.source.as_deref()
         }
+
+        fn error_kind(&self) -> crate::shared::ErrorKind {
+            crate::shared::ErrorKind::CommandExecution
+        }
     }
 
     #[test]

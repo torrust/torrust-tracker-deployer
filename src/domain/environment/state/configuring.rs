@@ -163,16 +163,17 @@ mod tests {
         #[test]
         fn it_should_transition_from_configuring_to_configure_failed() {
             use crate::domain::environment::state::{
-                BaseFailureContext, ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
+                BaseFailureContext, ConfigureFailureContext, ConfigureStep,
             };
             use crate::domain::environment::TraceId;
+            use crate::shared::ErrorKind;
             use chrono::Utc;
             use std::time::Duration;
 
             let env = create_test_environment();
             let context = ConfigureFailureContext {
                 failed_step: ConfigureStep::InstallDocker,
-                error_kind: ConfigureErrorKind::InstallationFailed,
+                error_kind: ErrorKind::CommandExecution,
                 base: BaseFailureContext {
                     error_summary: "ansible_playbook_error".to_string(),
                     failed_at: Utc::now(),

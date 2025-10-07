@@ -174,16 +174,17 @@ mod tests {
         #[test]
         fn it_should_transition_from_provisioning_to_provision_failed() {
             use crate::domain::environment::state::{
-                BaseFailureContext, ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
+                BaseFailureContext, ProvisionFailureContext, ProvisionStep,
             };
             use crate::domain::environment::TraceId;
+            use crate::shared::ErrorKind;
             use chrono::Utc;
             use std::time::Duration;
 
             let env = create_test_environment_provisioning();
             let context = ProvisionFailureContext {
                 failed_step: ProvisionStep::CloudInitWait,
-                error_kind: ProvisionErrorKind::ConfigurationTimeout,
+                error_kind: ErrorKind::Timeout,
                 base: BaseFailureContext {
                     error_summary: "cloud_init_timeout".to_string(),
                     failed_at: Utc::now(),

@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::environment::state::{AnyEnvironmentState, BaseFailureContext, StateTypeError};
 use crate::domain::environment::Environment;
+use crate::shared::ErrorKind;
 
 // ============================================================================
 // Configure Command Error Context
@@ -30,7 +31,7 @@ pub struct ConfigureFailureContext {
     pub failed_step: ConfigureStep,
 
     /// Error category for type-safe handling
-    pub error_kind: ConfigureErrorKind,
+    pub error_kind: ErrorKind,
 
     /// Base failure context with common fields
     #[serde(flatten)]
@@ -44,15 +45,6 @@ pub enum ConfigureStep {
     InstallDocker,
     /// Installing Docker Compose
     InstallDockerCompose,
-}
-
-/// Error categories for configure failures
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ConfigureErrorKind {
-    /// Software installation failed
-    InstallationFailed,
-    /// Command execution failed
-    CommandExecutionFailed,
 }
 
 /// Error state - Application configuration failed
@@ -108,7 +100,7 @@ mod tests {
     fn create_test_context() -> ConfigureFailureContext {
         ConfigureFailureContext {
             failed_step: ConfigureStep::InstallDocker,
-            error_kind: ConfigureErrorKind::InstallationFailed,
+            error_kind: ErrorKind::CommandExecution,
             base: BaseFailureContext {
                 error_summary: "Docker installation failed".to_string(),
                 failed_at: Utc::now(),
@@ -127,10 +119,7 @@ mod tests {
             context: context.clone(),
         };
         assert_eq!(state.context.failed_step, ConfigureStep::InstallDocker);
-        assert_eq!(
-            state.context.error_kind,
-            ConfigureErrorKind::InstallationFailed
-        );
+        assert_eq!(state.context.error_kind, ErrorKind::CommandExecution);
     }
 
     #[test]
@@ -140,7 +129,7 @@ mod tests {
         };
         let json = serde_json::to_string(&state).unwrap();
         assert!(json.contains("InstallDocker"));
-        assert!(json.contains("InstallationFailed"));
+        assert!(json.contains("CommandExecution"));
     }
 
     #[test]
@@ -205,7 +194,7 @@ mod tests {
         fn it_should_serialize_configure_failure_context() {
             let context = ConfigureFailureContext {
                 failed_step: ConfigureStep::InstallDocker,
-                error_kind: ConfigureErrorKind::InstallationFailed,
+                error_kind: ErrorKind::CommandExecution,
                 base: BaseFailureContext {
                     error_summary: "Docker installation failed".to_string(),
                     failed_at: Utc::now(),
@@ -218,7 +207,7 @@ mod tests {
 
             let json = serde_json::to_string(&context).unwrap();
             assert!(json.contains("InstallDocker"));
-            assert!(json.contains("InstallationFailed"));
+            assert!(json.contains("CommandExecution"));
         }
 
         #[test]
@@ -227,7 +216,7 @@ mod tests {
             let json = format!(
                 r#"{{
                     "failed_step": "InstallDockerCompose",
-                    "error_kind": "CommandExecutionFailed",
+                    "error_kind": "CommandExecution",
                     "error_summary": "Command execution failed",
                     "failed_at": "2025-10-06T10:00:00Z",
                     "execution_started_at": "2025-10-06T09:59:30Z",
@@ -239,10 +228,7 @@ mod tests {
 
             let context: ConfigureFailureContext = serde_json::from_str(&json).unwrap();
             assert_eq!(context.failed_step, ConfigureStep::InstallDockerCompose);
-            assert_eq!(
-                context.error_kind,
-                ConfigureErrorKind::CommandExecutionFailed
-            );
+            assert_eq!(context.error_kind, ErrorKind::CommandExecution);
         }
     }
 }

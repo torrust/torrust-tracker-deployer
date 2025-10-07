@@ -107,9 +107,10 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::domain::environment::state::{
-        BaseFailureContext, ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
+        BaseFailureContext, ProvisionFailureContext, ProvisionStep,
     };
     use crate::domain::environment::TraceId;
+    use crate::shared::ErrorKind;
 
     // Test error implementing Traceable
     #[derive(Debug)]
@@ -133,6 +134,10 @@ mod tests {
 
         fn trace_source(&self) -> Option<&dyn Traceable> {
             self.source.as_deref()
+        }
+
+        fn error_kind(&self) -> crate::shared::ErrorKind {
+            crate::shared::ErrorKind::CommandExecution
         }
     }
 
@@ -175,7 +180,7 @@ mod tests {
         let now = Utc::now();
         ProvisionFailureContext {
             failed_step: ProvisionStep::RenderOpenTofuTemplates,
-            error_kind: ProvisionErrorKind::TemplateRendering,
+            error_kind: ErrorKind::TemplateRendering,
             base: BaseFailureContext {
                 error_summary: error_summary.to_string(),
                 failed_at: now,
@@ -197,7 +202,7 @@ mod tests {
         let now = Utc::now();
         ProvisionFailureContext {
             failed_step: ProvisionStep::RenderOpenTofuTemplates,
-            error_kind: ProvisionErrorKind::TemplateRendering,
+            error_kind: ErrorKind::TemplateRendering,
             base: BaseFailureContext {
                 error_summary: error_summary.to_string(),
                 failed_at: now,

@@ -74,6 +74,10 @@ impl crate::shared::Traceable for RenderAnsibleTemplatesError {
         // None of the source errors implement Traceable
         None
     }
+
+    fn error_kind(&self) -> crate::shared::ErrorKind {
+        crate::shared::ErrorKind::TemplateRendering
+    }
 }
 
 /// Simple step that renders `Ansible` templates to the build directory with runtime variables

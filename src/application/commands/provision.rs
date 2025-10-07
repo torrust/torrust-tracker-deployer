@@ -25,7 +25,7 @@ use crate::application::steps::{
 };
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
-    BaseFailureContext, ProvisionErrorKind, ProvisionFailureContext, ProvisionStep,
+    BaseFailureContext, ProvisionFailureContext, ProvisionStep,
 };
 use crate::domain::environment::{
     Created, Environment, ProvisionFailed, Provisioned, Provisioning, TraceId,
@@ -37,6 +37,7 @@ use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::adapter::client::{InstanceInfo, OpenTofuError};
 use crate::infrastructure::external_tools::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 use crate::shared::command::CommandError;
+use crate::shared::error::Traceable;
 use crate::shared::ssh::{SshConnection, SshCredentials, SshError};
 use crate::shared::SystemClock;
 
@@ -87,6 +88,17 @@ impl crate::shared::Traceable for ProvisionCommandError {
             Self::OpenTofu(e) => Some(e),
             Self::Command(e) => Some(e),
             Self::SshConnectivity(e) => Some(e),
+        }
+    }
+
+    fn error_kind(&self) -> crate::shared::ErrorKind {
+        match self {
+            Self::OpenTofuTemplateRendering(_) | Self::AnsibleTemplateRendering(_) => {
+                crate::shared::ErrorKind::TemplateRendering
+            }
+            Self::OpenTofu(_) => crate::shared::ErrorKind::InfrastructureOperation,
+            Self::SshConnectivity(_) => crate::shared::ErrorKind::NetworkConnectivity,
+            Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
         }
     }
 }
@@ -449,16 +461,8 @@ impl ProvisionCommand {
         // Step that failed is directly provided - no reverse engineering needed
         let failed_step = current_step;
 
-        // Classify the error kind based on error type
-        let error_kind = match error {
-            ProvisionCommandError::OpenTofuTemplateRendering(_)
-            | ProvisionCommandError::AnsibleTemplateRendering(_) => {
-                ProvisionErrorKind::TemplateRendering
-            }
-            ProvisionCommandError::OpenTofu(_) => ProvisionErrorKind::InfrastructureProvisioning,
-            ProvisionCommandError::SshConnectivity(_) => ProvisionErrorKind::NetworkConnectivity,
-            ProvisionCommandError::Command(_) => ProvisionErrorKind::ConfigurationTimeout,
-        };
+        // Get error kind from the error itself (errors are self-describing)
+        let error_kind = error.error_kind();
 
         let now = self.clock.now();
         let trace_id = TraceId::new();
@@ -706,7 +710,10 @@ mod tests {
         let current_step = ProvisionStep::RenderOpenTofuTemplates;
         let context = command.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::RenderOpenTofuTemplates);
-        assert_eq!(context.error_kind, ProvisionErrorKind::TemplateRendering);
+        assert_eq!(
+            context.error_kind,
+            crate::shared::ErrorKind::TemplateRendering
+        );
         assert_eq!(context.base.execution_started_at, started_at);
     }
 
@@ -751,7 +758,10 @@ mod tests {
         let current_step = ProvisionStep::WaitSshConnectivity;
         let context = command.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::WaitSshConnectivity);
-        assert_eq!(context.error_kind, ProvisionErrorKind::NetworkConnectivity);
+        assert_eq!(
+            context.error_kind,
+            crate::shared::ErrorKind::NetworkConnectivity
+        );
         assert_eq!(context.base.execution_started_at, started_at);
     }
 
@@ -792,7 +802,10 @@ mod tests {
         let current_step = ProvisionStep::CloudInitWait;
         let context = command.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::CloudInitWait);
-        assert_eq!(context.error_kind, ProvisionErrorKind::ConfigurationTimeout);
+        assert_eq!(
+            context.error_kind,
+            crate::shared::ErrorKind::CommandExecution
+        );
         assert_eq!(context.base.execution_started_at, started_at);
     }
 
@@ -837,7 +850,7 @@ mod tests {
         assert_eq!(context.failed_step, ProvisionStep::OpenTofuInit);
         assert_eq!(
             context.error_kind,
-            ProvisionErrorKind::InfrastructureProvisioning
+            crate::shared::ErrorKind::InfrastructureOperation
         );
         assert_eq!(context.base.execution_started_at, started_at);
     }

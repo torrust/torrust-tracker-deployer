@@ -107,9 +107,10 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::domain::environment::state::{
-        BaseFailureContext, ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
+        BaseFailureContext, ConfigureFailureContext, ConfigureStep,
     };
     use crate::domain::environment::TraceId;
+    use crate::shared::ErrorKind;
 
     // Test error implementing Traceable
     #[derive(Debug)]
@@ -132,6 +133,10 @@ mod tests {
 
         fn trace_source(&self) -> Option<&dyn Traceable> {
             None
+        }
+
+        fn error_kind(&self) -> crate::shared::ErrorKind {
+            crate::shared::ErrorKind::CommandExecution
         }
     }
 
@@ -173,7 +178,7 @@ mod tests {
         let now = Utc::now();
         ConfigureFailureContext {
             failed_step: ConfigureStep::InstallDocker,
-            error_kind: ConfigureErrorKind::InstallationFailed,
+            error_kind: ErrorKind::CommandExecution,
             base: BaseFailureContext {
                 error_summary: error_summary.to_string(),
                 failed_at: now,
@@ -195,7 +200,7 @@ mod tests {
         let now = Utc::now();
         ConfigureFailureContext {
             failed_step: ConfigureStep::InstallDocker,
-            error_kind: ConfigureErrorKind::InstallationFailed,
+            error_kind: ErrorKind::CommandExecution,
             base: BaseFailureContext {
                 error_summary: error_summary.to_string(),
                 failed_at: now,
@@ -297,7 +302,7 @@ mod tests {
         assert!(trace_content.contains("CONFIGURE FAILURE TRACE"));
         assert!(trace_content.contains(&format!("Trace ID: {trace_id}")));
         assert!(trace_content.contains("Failed Step: InstallDocker"));
-        assert!(trace_content.contains("Error Kind: InstallationFailed"));
+        assert!(trace_content.contains("Error Kind: CommandExecution"));
         assert!(trace_content.contains("Error Summary: Test configure error"));
     }
 

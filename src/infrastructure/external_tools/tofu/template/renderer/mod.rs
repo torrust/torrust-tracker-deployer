@@ -121,6 +121,10 @@ impl crate::shared::Traceable for ProvisionTemplateError {
         // None of the source errors implement Traceable (std::io::Error, TemplateManagerError, etc.)
         None
     }
+
+    fn error_kind(&self) -> crate::shared::ErrorKind {
+        crate::shared::ErrorKind::TemplateRendering
+    }
 }
 
 /// Renders `OpenTofu` provision templates to a build directory

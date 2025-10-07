@@ -65,6 +65,10 @@ impl crate::shared::Traceable for OpenTofuError {
             Self::ParseError(_) => None, // ParseError doesn't implement Traceable
         }
     }
+
+    fn error_kind(&self) -> crate::shared::ErrorKind {
+        crate::shared::ErrorKind::InfrastructureOperation
+    }
 }
 
 /// A specialized `OpenTofu` client for infrastructure management.

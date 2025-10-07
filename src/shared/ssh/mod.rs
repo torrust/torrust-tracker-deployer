@@ -80,4 +80,8 @@ impl crate::shared::Traceable for SshError {
             Self::CommandFailed { source } => Some(source),
         }
     }
+
+    fn error_kind(&self) -> crate::shared::ErrorKind {
+        crate::shared::ErrorKind::NetworkConnectivity
+    }
 }

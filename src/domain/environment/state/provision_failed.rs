@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::environment::state::{AnyEnvironmentState, BaseFailureContext, StateTypeError};
 use crate::domain::environment::Environment;
+use crate::shared::ErrorKind;
 
 // ============================================================================
 // Provision Command Error Context
@@ -30,7 +31,7 @@ pub struct ProvisionFailureContext {
     pub failed_step: ProvisionStep,
 
     /// Error category for type-safe handling
-    pub error_kind: ProvisionErrorKind,
+    pub error_kind: ErrorKind,
 
     /// Base failure context with common fields
     #[serde(flatten)]
@@ -58,19 +59,6 @@ pub enum ProvisionStep {
     WaitSshConnectivity,
     /// Waiting for cloud-init completion
     CloudInitWait,
-}
-
-/// Error categories for provision failures
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ProvisionErrorKind {
-    /// Template rendering failed
-    TemplateRendering,
-    /// Infrastructure provisioning failed (`OpenTofu` operations)
-    InfrastructureProvisioning,
-    /// Network connectivity issues
-    NetworkConnectivity,
-    /// Configuration or initialization timeout
-    ConfigurationTimeout,
 }
 
 /// Error state - Infrastructure provisioning failed
@@ -127,7 +115,7 @@ mod tests {
     fn create_test_context() -> ProvisionFailureContext {
         ProvisionFailureContext {
             failed_step: ProvisionStep::CloudInitWait,
-            error_kind: ProvisionErrorKind::ConfigurationTimeout,
+            error_kind: ErrorKind::Timeout,
             base: BaseFailureContext {
                 error_summary: "cloud_init_timeout".to_string(),
                 failed_at: Utc::now(),
@@ -146,10 +134,7 @@ mod tests {
             context: context.clone(),
         };
         assert_eq!(state.context.failed_step, ProvisionStep::CloudInitWait);
-        assert_eq!(
-            state.context.error_kind,
-            ProvisionErrorKind::ConfigurationTimeout
-        );
+        assert_eq!(state.context.error_kind, ErrorKind::Timeout);
     }
 
     #[test]
@@ -168,7 +153,7 @@ mod tests {
         };
         let json = serde_json::to_string(&state).unwrap();
         assert!(json.contains("CloudInitWait"));
-        assert!(json.contains("ConfigurationTimeout"));
+        assert!(json.contains("Timeout"));
     }
 
     #[test]
@@ -254,7 +239,7 @@ mod tests {
         fn it_should_serialize_provision_failure_context() {
             let context = ProvisionFailureContext {
                 failed_step: ProvisionStep::OpenTofuApply,
-                error_kind: ProvisionErrorKind::InfrastructureProvisioning,
+                error_kind: ErrorKind::InfrastructureOperation,
                 base: BaseFailureContext {
                     error_summary: "Infrastructure provisioning failed".to_string(),
                     failed_at: Utc::now(),
@@ -267,7 +252,7 @@ mod tests {
 
             let json = serde_json::to_string(&context).unwrap();
             assert!(json.contains("OpenTofuApply"));
-            assert!(json.contains("InfrastructureProvisioning"));
+            assert!(json.contains("InfrastructureOperation"));
         }
 
         #[test]
@@ -288,7 +273,7 @@ mod tests {
 
             let context: ProvisionFailureContext = serde_json::from_str(&json).unwrap();
             assert_eq!(context.failed_step, ProvisionStep::RenderOpenTofuTemplates);
-            assert_eq!(context.error_kind, ProvisionErrorKind::TemplateRendering);
+            assert_eq!(context.error_kind, ErrorKind::TemplateRendering);
         }
     }
 }

@@ -5,7 +5,7 @@ use tracing::{info, instrument, warn};
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
-    BaseFailureContext, ConfigureErrorKind, ConfigureFailureContext, ConfigureStep,
+    BaseFailureContext, ConfigureFailureContext, ConfigureStep,
 };
 use crate::domain::environment::{
     ConfigureFailed, Configured, Configuring, Environment, Provisioned, TraceId,
@@ -13,6 +13,7 @@ use crate::domain::environment::{
 use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::command::CommandError;
+use crate::shared::error::Traceable;
 use crate::shared::SystemClock;
 
 /// Comprehensive error type for the `ConfigureCommand`
@@ -34,6 +35,12 @@ impl crate::shared::Traceable for ConfigureCommandError {
     fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
         match self {
             Self::Command(e) => Some(e),
+        }
+    }
+
+    fn error_kind(&self) -> crate::shared::ErrorKind {
+        match self {
+            Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
         }
     }
 }
@@ -250,10 +257,8 @@ impl ConfigureCommand {
         // Step that failed is directly provided - no reverse engineering needed
         let failed_step = current_step;
 
-        // Classify the error kind based on error type
-        let error_kind = match error {
-            ConfigureCommandError::Command(_) => ConfigureErrorKind::InstallationFailed,
-        };
+        // Get error kind from the error itself (errors are self-describing)
+        let error_kind = error.error_kind();
 
         let now = self.clock.now();
         let trace_id = TraceId::new();
@@ -397,7 +402,10 @@ mod tests {
         let current_step = ConfigureStep::InstallDocker;
         let context = command.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ConfigureStep::InstallDocker);
-        assert_eq!(context.error_kind, ConfigureErrorKind::InstallationFailed);
+        assert_eq!(
+            context.error_kind,
+            crate::shared::ErrorKind::CommandExecution
+        );
         assert_eq!(context.base.execution_started_at, started_at);
     }
 }

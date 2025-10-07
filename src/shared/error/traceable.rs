@@ -4,6 +4,8 @@
 //! without requiring them to implement `Serialize`. This decouples error types
 //! from serialization constraints and allows custom formatting per error type.
 
+use super::ErrorKind;
+
 /// Trait for errors that can generate detailed traces
 ///
 /// This trait enables errors to provide custom formatted trace entries and
@@ -67,6 +69,35 @@ pub trait Traceable: std::error::Error {
     ///
     /// An optional reference to the source error as a `Traceable` trait object
     fn trace_source(&self) -> Option<&dyn Traceable>;
+
+    /// Get the error kind for high-level categorization
+    ///
+    /// Returns a high-level category for this error, used in trace files
+    /// and failure context for debugging and potential recovery strategies.
+    ///
+    /// Error kinds provide an easy way to understand what type of error
+    /// occurred without parsing detailed trace files. They serve as a
+    /// high-level summary that can be:
+    ///
+    /// - Displayed to users without technical details
+    /// - Used for filtering/grouping errors
+    /// - Foundation for future retry/recovery strategies based on error category
+    ///
+    /// # Returns
+    ///
+    /// An `ErrorKind` variant representing this error's category
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use torrust_tracker_deploy::shared::{Traceable, ErrorKind};
+    ///
+    /// fn handle_error<E: Traceable>(error: &E) {
+    ///     let kind = error.error_kind();
+    ///     println!("Error category: {:?}", kind);
+    /// }
+    /// ```
+    fn error_kind(&self) -> ErrorKind;
 }
 
 #[cfg(test)]
@@ -99,6 +130,11 @@ mod tests {
                 Self::Root { .. } => None,
                 Self::Wrapped { source, .. } => Some(source.as_ref()),
             }
+        }
+
+        fn error_kind(&self) -> ErrorKind {
+            // Test errors are categorized as general errors
+            ErrorKind::CommandExecution
         }
     }
 

@@ -61,16 +61,12 @@ mod running;
 
 // Re-export state types
 pub use common::BaseFailureContext;
-pub use configure_failed::{
-    ConfigureErrorKind, ConfigureFailed, ConfigureFailureContext, ConfigureStep,
-};
+pub use configure_failed::{ConfigureFailed, ConfigureFailureContext, ConfigureStep};
 pub use configured::Configured;
 pub use configuring::Configuring;
 pub use created::Created;
 pub use destroyed::Destroyed;
-pub use provision_failed::{
-    ProvisionErrorKind, ProvisionFailed, ProvisionFailureContext, ProvisionStep,
-};
+pub use provision_failed::{ProvisionFailed, ProvisionFailureContext, ProvisionStep};
 pub use provisioned::Provisioned;
 pub use provisioning::Provisioning;
 pub use release_failed::ReleaseFailed;
@@ -390,12 +386,13 @@ mod tests {
     /// Helper to create a test `ProvisionFailureContext` with custom error message
     fn create_test_provision_context(error_message: &str) -> ProvisionFailureContext {
         use crate::domain::environment::TraceId;
+        use crate::shared::ErrorKind;
         use chrono::Utc;
         use std::time::Duration;
 
         ProvisionFailureContext {
             failed_step: ProvisionStep::OpenTofuApply,
-            error_kind: ProvisionErrorKind::InfrastructureProvisioning,
+            error_kind: ErrorKind::InfrastructureOperation,
             base: BaseFailureContext {
                 error_summary: error_message.to_string(),
                 failed_at: Utc::now(),
@@ -410,12 +407,13 @@ mod tests {
     /// Helper to create a test `ConfigureFailureContext` with custom error message
     fn create_test_configure_context(error_message: &str) -> ConfigureFailureContext {
         use crate::domain::environment::TraceId;
+        use crate::shared::ErrorKind;
         use chrono::Utc;
         use std::time::Duration;
 
         ConfigureFailureContext {
             failed_step: ConfigureStep::InstallDocker,
-            error_kind: ConfigureErrorKind::InstallationFailed,
+            error_kind: ErrorKind::CommandExecution,
             base: BaseFailureContext {
                 error_summary: error_message.to_string(),
                 failed_at: Utc::now(),
@@ -553,7 +551,7 @@ mod tests {
         };
         let json = serde_json::to_string(&state).unwrap();
         assert!(json.contains("InstallDocker"));
-        assert!(json.contains("InstallationFailed"));
+        assert!(json.contains("CommandExecution"));
         let deserialized: ConfigureFailed = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.context.base.error_summary, "ansible_playbook");
     }
