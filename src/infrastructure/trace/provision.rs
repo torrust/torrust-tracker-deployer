@@ -140,113 +140,128 @@ mod tests {
         }
     }
 
+    // Test helpers - Arrange phase utilities
+
+    /// Create a test error with the given message
+    fn create_test_error(message: &str) -> TestError {
+        TestError {
+            message: message.to_string(),
+            source: None,
+        }
+    }
+
+    /// Create a test writer with a temporary directory
+    ///
+    /// Returns (writer, `temp_dir`, `traces_dir`)
+    /// The `temp_dir` must be kept alive for the duration of the test
+    fn create_test_writer() -> (ProvisionTraceWriter, TempDir, PathBuf) {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let traces_dir = temp_dir.path().join("traces");
+        let writer = ProvisionTraceWriter::new(traces_dir.clone());
+        (writer, temp_dir, traces_dir)
+    }
+
+    /// Create a provision failure context with default test values
+    ///
+    /// # Arguments
+    ///
+    /// * `error_summary` - The error summary message
+    ///
+    /// # Returns
+    ///
+    /// A provision failure context with sensible defaults for testing
+    fn create_test_context(error_summary: &str) -> ProvisionFailureContext {
+        let now = Utc::now();
+        ProvisionFailureContext {
+            failed_step: ProvisionStep::RenderOpenTofuTemplates,
+            error_kind: ProvisionErrorKind::TemplateRendering,
+            base: BaseFailureContext {
+                error_summary: error_summary.to_string(),
+                failed_at: now,
+                execution_started_at: now,
+                execution_duration: Duration::from_secs(5),
+                trace_id: TraceId::new(),
+                trace_file_path: None,
+            },
+        }
+    }
+
+    /// Create a provision failure context with a specific trace ID
+    ///
+    /// Useful when you need to verify trace ID in assertions
+    fn create_test_context_with_trace_id(
+        error_summary: &str,
+        trace_id: TraceId,
+    ) -> ProvisionFailureContext {
+        let now = Utc::now();
+        ProvisionFailureContext {
+            failed_step: ProvisionStep::RenderOpenTofuTemplates,
+            error_kind: ProvisionErrorKind::TemplateRendering,
+            base: BaseFailureContext {
+                error_summary: error_summary.to_string(),
+                failed_at: now,
+                execution_started_at: now,
+                execution_duration: Duration::from_secs(5),
+                trace_id,
+                trace_file_path: None,
+            },
+        }
+    }
+
     #[test]
     fn it_should_create_provision_trace_writer_with_directory() {
-        let temp_dir = TempDir::new().unwrap();
-        let traces_dir = temp_dir.path().join("traces");
+        // Arrange
+        let (writer, _temp_dir, traces_dir) = create_test_writer();
 
-        let writer = ProvisionTraceWriter::new(traces_dir.clone());
-
+        // Assert
         assert_eq!(writer.traces_dir(), traces_dir);
     }
 
     #[test]
     fn it_should_create_traces_directory_on_first_write() {
-        let temp_dir = TempDir::new().unwrap();
-        let traces_dir = temp_dir.path().join("traces");
-
-        let writer = ProvisionTraceWriter::new(traces_dir.clone());
+        // Arrange
+        let (writer, _temp_dir, traces_dir) = create_test_writer();
+        let error = create_test_error("test error");
+        let context = create_test_context(&error.to_string());
 
         // Directory should not exist yet
         assert!(!traces_dir.exists());
 
-        let error = TestError {
-            message: "test error".to_string(),
-            source: None,
-        };
-
-        let now = Utc::now();
-        let context = ProvisionFailureContext {
-            failed_step: ProvisionStep::RenderOpenTofuTemplates,
-            error_kind: ProvisionErrorKind::TemplateRendering,
-            base: crate::domain::environment::state::BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: now,
-                execution_duration: Duration::from_secs(5),
-                trace_id: TraceId::new(),
-                trace_file_path: None,
-            },
-        };
-
+        // Act
         writer.write_trace(&context, &error).unwrap();
 
-        // Directory should now exist
+        // Assert
         assert!(traces_dir.exists());
     }
 
     #[test]
     fn it_should_write_provision_trace_with_correct_naming() {
-        let temp_dir = TempDir::new().unwrap();
-        let traces_dir = temp_dir.path().join("traces");
-        let writer = ProvisionTraceWriter::new(traces_dir.clone());
+        // Arrange
+        let (writer, _temp_dir, _traces_dir) = create_test_writer();
+        let error = create_test_error("provision test error");
+        let context = create_test_context(&error.to_string());
 
-        let error = TestError {
-            message: "provision test error".to_string(),
-            source: None,
-        };
-
-        let now = Utc::now();
-        let context = ProvisionFailureContext {
-            failed_step: ProvisionStep::RenderOpenTofuTemplates,
-            error_kind: ProvisionErrorKind::TemplateRendering,
-            base: BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: now,
-                execution_duration: Duration::from_secs(5),
-                trace_id: TraceId::new(),
-                trace_file_path: None,
-            },
-        };
-
+        // Act
         let trace_file = writer.write_trace(&context, &error).unwrap();
 
-        // Verify file exists
+        // Assert
         assert!(trace_file.exists());
 
-        // Verify filename ends with -provision.log
         let filename = trace_file.file_name().unwrap().to_str().unwrap();
         assert!(filename.ends_with("-provision.log"));
     }
 
     #[test]
     fn it_should_use_timestamp_and_command_as_filename() {
-        let temp_dir = TempDir::new().unwrap();
-        let traces_dir = temp_dir.path().join("traces");
-        let writer = ProvisionTraceWriter::new(traces_dir.clone());
+        // Arrange
+        let (writer, _temp_dir, _traces_dir) = create_test_writer();
+        let error = create_test_error("test error");
+        let context = create_test_context(&error.to_string());
 
-        let error = TestError {
-            message: "test error".to_string(),
-            source: None,
-        };
-
-        let now = Utc::now();
-        let context = ProvisionFailureContext {
-            failed_step: ProvisionStep::RenderOpenTofuTemplates,
-            error_kind: ProvisionErrorKind::TemplateRendering,
-            base: BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: now,
-                execution_duration: Duration::from_secs(5),
-                trace_id: TraceId::new(),
-                trace_file_path: None,
-            },
-        };
-
+        // Act
         let trace_file = writer.write_trace(&context, &error).unwrap();
 
+        // Assert
         let filename = trace_file.file_name().unwrap().to_str().unwrap();
 
         // Verify filename format: {timestamp}-provision.log
@@ -269,34 +284,17 @@ mod tests {
 
     #[test]
     fn it_should_include_trace_metadata_in_provision_trace() {
-        let temp_dir = TempDir::new().unwrap();
-        let traces_dir = temp_dir.path().join("traces");
-        let writer = ProvisionTraceWriter::new(traces_dir);
-
-        let error = TestError {
-            message: "test error".to_string(),
-            source: None,
-        };
-
-        let now = Utc::now();
+        // Arrange
+        let (writer, _temp_dir, _traces_dir) = create_test_writer();
+        let error = create_test_error("test error");
         let trace_id = TraceId::new();
-        let context = ProvisionFailureContext {
-            failed_step: ProvisionStep::RenderOpenTofuTemplates,
-            error_kind: ProvisionErrorKind::TemplateRendering,
-            base: BaseFailureContext {
-                error_summary: "Test error summary".to_string(),
-                failed_at: now,
-                execution_started_at: now,
-                execution_duration: Duration::from_secs(5),
-                trace_id: trace_id.clone(),
-                trace_file_path: None,
-            },
-        };
+        let context = create_test_context_with_trace_id("Test error summary", trace_id.clone());
 
+        // Act
         let trace_file = writer.write_trace(&context, &error).unwrap();
         let trace_data = std::fs::read_to_string(trace_file).unwrap();
 
-        // Verify metadata is included
+        // Assert - Verify metadata is included
         assert!(trace_data.contains("PROVISION FAILURE TRACE"));
         assert!(trace_data.contains(&format!("Trace ID: {trace_id}")));
         assert!(trace_data.contains("Failed Step: RenderOpenTofuTemplates"));
@@ -310,30 +308,12 @@ mod tests {
         // It verifies that trace files are created with correct naming convention
         // and follow the format: {timestamp}-{command}.log
 
-        let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let traces_dir = temp_dir.path().join("traces");
+        // Arrange
+        let (writer, _temp_dir, traces_dir) = create_test_writer();
+        let error = create_test_error("Simulated provision failure");
+        let context = create_test_context(&error.to_string());
 
-        let writer = ProvisionTraceWriter::new(traces_dir.clone());
-
-        let error = TestError {
-            message: "Simulated provision failure".to_string(),
-            source: None,
-        };
-
-        let now = Utc::now();
-        let context = ProvisionFailureContext {
-            failed_step: ProvisionStep::RenderOpenTofuTemplates,
-            error_kind: ProvisionErrorKind::TemplateRendering,
-            base: BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: now,
-                execution_duration: Duration::from_secs(5),
-                trace_id: TraceId::new(),
-                trace_file_path: None,
-            },
-        };
-
+        // Act
         let _trace_path = writer
             .write_trace(&context, &error)
             .expect("Failed to write trace file");
