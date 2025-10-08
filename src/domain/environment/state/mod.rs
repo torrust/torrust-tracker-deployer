@@ -201,7 +201,6 @@ impl AnyEnvironmentState {
     /// # Returns
     ///
     /// A reference to the `EnvironmentContext` contained within the environment.
-    #[allow(dead_code)] // Will be used in Phase 2.2 to simplify field accessors
     fn context(&self) -> &crate::domain::environment::EnvironmentContext {
         match self {
             Self::Created(env) => env.context(),
@@ -230,21 +229,7 @@ impl AnyEnvironmentState {
     /// A reference to the `EnvironmentName` contained within the environment.
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {
-        match self {
-            Self::Created(env) => env.name(),
-            Self::Provisioning(env) => env.name(),
-            Self::Provisioned(env) => env.name(),
-            Self::Configuring(env) => env.name(),
-            Self::Configured(env) => env.name(),
-            Self::Releasing(env) => env.name(),
-            Self::Released(env) => env.name(),
-            Self::Running(env) => env.name(),
-            Self::ProvisionFailed(env) => env.name(),
-            Self::ConfigureFailed(env) => env.name(),
-            Self::ReleaseFailed(env) => env.name(),
-            Self::RunFailed(env) => env.name(),
-            Self::Destroyed(env) => env.name(),
-        }
+        &self.context().name
     }
 
     /// Get the state name as a string
@@ -370,21 +355,7 @@ impl AnyEnvironmentState {
     /// A reference to the `InstanceName` contained within the environment.
     #[must_use]
     pub fn instance_name(&self) -> &crate::domain::environment::InstanceName {
-        match self {
-            Self::Created(env) => env.instance_name(),
-            Self::Provisioning(env) => env.instance_name(),
-            Self::Provisioned(env) => env.instance_name(),
-            Self::Configuring(env) => env.instance_name(),
-            Self::Configured(env) => env.instance_name(),
-            Self::Releasing(env) => env.instance_name(),
-            Self::Released(env) => env.instance_name(),
-            Self::Running(env) => env.instance_name(),
-            Self::ProvisionFailed(env) => env.instance_name(),
-            Self::ConfigureFailed(env) => env.instance_name(),
-            Self::ReleaseFailed(env) => env.instance_name(),
-            Self::RunFailed(env) => env.instance_name(),
-            Self::Destroyed(env) => env.instance_name(),
-        }
+        &self.context().instance_name
     }
 
     /// Get the profile name regardless of current state
@@ -397,21 +368,7 @@ impl AnyEnvironmentState {
     /// A reference to the `ProfileName` contained within the environment.
     #[must_use]
     pub fn profile_name(&self) -> &crate::domain::environment::ProfileName {
-        match self {
-            Self::Created(env) => env.profile_name(),
-            Self::Provisioning(env) => env.profile_name(),
-            Self::Provisioned(env) => env.profile_name(),
-            Self::Configuring(env) => env.profile_name(),
-            Self::Configured(env) => env.profile_name(),
-            Self::Releasing(env) => env.profile_name(),
-            Self::Released(env) => env.profile_name(),
-            Self::Running(env) => env.profile_name(),
-            Self::ProvisionFailed(env) => env.profile_name(),
-            Self::ConfigureFailed(env) => env.profile_name(),
-            Self::ReleaseFailed(env) => env.profile_name(),
-            Self::RunFailed(env) => env.profile_name(),
-            Self::Destroyed(env) => env.profile_name(),
-        }
+        &self.context().profile_name
     }
 
     /// Get the SSH credentials regardless of current state
@@ -424,21 +381,7 @@ impl AnyEnvironmentState {
     /// A reference to the `SshCredentials` contained within the environment.
     #[must_use]
     pub fn ssh_credentials(&self) -> &crate::shared::ssh::SshCredentials {
-        match self {
-            Self::Created(env) => env.ssh_credentials(),
-            Self::Provisioning(env) => env.ssh_credentials(),
-            Self::Provisioned(env) => env.ssh_credentials(),
-            Self::Configuring(env) => env.ssh_credentials(),
-            Self::Configured(env) => env.ssh_credentials(),
-            Self::Releasing(env) => env.ssh_credentials(),
-            Self::Released(env) => env.ssh_credentials(),
-            Self::Running(env) => env.ssh_credentials(),
-            Self::ProvisionFailed(env) => env.ssh_credentials(),
-            Self::ConfigureFailed(env) => env.ssh_credentials(),
-            Self::ReleaseFailed(env) => env.ssh_credentials(),
-            Self::RunFailed(env) => env.ssh_credentials(),
-            Self::Destroyed(env) => env.ssh_credentials(),
-        }
+        &self.context().ssh_credentials
     }
 
     /// Get the SSH port regardless of current state
@@ -451,21 +394,7 @@ impl AnyEnvironmentState {
     /// The SSH port number.
     #[must_use]
     pub fn ssh_port(&self) -> u16 {
-        match self {
-            Self::Created(env) => env.ssh_port(),
-            Self::Provisioning(env) => env.ssh_port(),
-            Self::Provisioned(env) => env.ssh_port(),
-            Self::Configuring(env) => env.ssh_port(),
-            Self::Configured(env) => env.ssh_port(),
-            Self::Releasing(env) => env.ssh_port(),
-            Self::Released(env) => env.ssh_port(),
-            Self::Running(env) => env.ssh_port(),
-            Self::ProvisionFailed(env) => env.ssh_port(),
-            Self::ConfigureFailed(env) => env.ssh_port(),
-            Self::ReleaseFailed(env) => env.ssh_port(),
-            Self::RunFailed(env) => env.ssh_port(),
-            Self::Destroyed(env) => env.ssh_port(),
-        }
+        self.context().ssh_port
     }
 
     /// Get the instance IP address if available, regardless of current state
@@ -479,21 +408,7 @@ impl AnyEnvironmentState {
     /// - `None` if the environment hasn't been provisioned yet
     #[must_use]
     pub fn instance_ip(&self) -> Option<std::net::IpAddr> {
-        match self {
-            Self::Created(env) => env.instance_ip(),
-            Self::Provisioning(env) => env.instance_ip(),
-            Self::Provisioned(env) => env.instance_ip(),
-            Self::Configuring(env) => env.instance_ip(),
-            Self::Configured(env) => env.instance_ip(),
-            Self::Releasing(env) => env.instance_ip(),
-            Self::Released(env) => env.instance_ip(),
-            Self::Running(env) => env.instance_ip(),
-            Self::ProvisionFailed(env) => env.instance_ip(),
-            Self::ConfigureFailed(env) => env.instance_ip(),
-            Self::ReleaseFailed(env) => env.instance_ip(),
-            Self::RunFailed(env) => env.instance_ip(),
-            Self::Destroyed(env) => env.instance_ip(),
-        }
+        self.context().instance_ip
     }
 }
 
