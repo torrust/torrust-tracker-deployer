@@ -210,14 +210,15 @@ async fn run_configuration_tests(test_context: &mut TestContext) -> Result<()> {
 
     // Step 3: Run Ansible configuration with typed environment
     // The TestContext is updated internally with the new environment state
-    run_configure_command(test_context)?;
+    run_configure_command(test_context).map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // Step 4: Run configuration validation
     run_configuration_validation(
         running_container.ssh_socket_addr(),
         test_context.environment.ssh_credentials(),
     )
-    .await?;
+    .await
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // Stop test infrastructure (container) created during this test run
     // This stops the container immediately after tests - deletion is automatic via testcontainers

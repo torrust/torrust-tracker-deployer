@@ -156,7 +156,7 @@ pub async fn main() -> Result<()> {
     let deployment_result = run_full_deployment_test(&mut test_context).await;
 
     let validation_result = match &deployment_result {
-        Ok(()) => run_test_command(&test_context).await,
+        Ok(()) => run_test_command(&test_context).await.map_err(|e| anyhow::anyhow!("{e}")),
         Err(_) => Ok(()), // Skip validation if deployment failed
     };
 
@@ -221,10 +221,12 @@ async fn run_full_deployment_test(test_context: &mut TestContext) -> Result<()> 
     );
 
     // Provision infrastructure - updates TestContext with provisioned state
-    run_provision_command(test_context).await?;
+    run_provision_command(test_context)
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // Configure infrastructure - updates TestContext with configured state
-    run_configure_command(test_context)?;
+    run_configure_command(test_context).map_err(|e| anyhow::anyhow!("{e}"))?;
 
     info!(status = "success", "Deployment completed successfully");
 

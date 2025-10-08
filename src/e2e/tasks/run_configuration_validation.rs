@@ -20,15 +20,121 @@
 //! - Cloud instance deployments
 
 use std::net::SocketAddr;
-
-use anyhow::{Context, Result};
+use thiserror::Error;
 use tracing::info;
 
 use crate::infrastructure::remote_actions::{
-    DockerComposeValidator, DockerValidator, RemoteAction,
+    DockerComposeValidator, DockerValidator, RemoteAction, RemoteActionError,
 };
 use crate::shared::ssh::SshConnection;
 use crate::shared::ssh::SshCredentials;
+
+/// Errors that can occur during configuration validation
+#[derive(Debug, Error)]
+pub enum ConfigurationValidationError {
+    /// Docker validation failed
+    #[error(
+        "Docker validation failed: {source}
+Tip: Ensure Docker is properly installed and the daemon is running"
+    )]
+    DockerValidationFailed {
+        #[source]
+        source: RemoteActionError,
+    },
+
+    /// Docker Compose validation failed
+    #[error(
+        "Docker Compose validation failed: {source}
+Tip: Ensure Docker Compose is properly installed and functional"
+    )]
+    DockerComposeValidationFailed {
+        #[source]
+        source: RemoteActionError,
+    },
+}
+
+impl ConfigurationValidationError {
+    /// Get detailed troubleshooting guidance for this error
+    ///
+    /// This method provides comprehensive troubleshooting steps that can be
+    /// displayed to users when they need more help resolving the error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use torrust_tracker_deploy::e2e::tasks::run_configuration_validation::ConfigurationValidationError;
+    /// # use torrust_tracker_deploy::infrastructure::remote_actions::RemoteActionError;
+    /// # use torrust_tracker_deploy::shared::command::CommandError;
+    /// let error = ConfigurationValidationError::DockerValidationFailed {
+    ///     source: RemoteActionError::SshCommandFailed {
+    ///         action_name: "docker_validation".to_string(),
+    ///         source: CommandError::ExecutionFailed {
+    ///             command: "docker --version".to_string(),
+    ///             exit_code: "1".to_string(),
+    ///             stdout: String::new(),
+    ///             stderr: "command not found".to_string(),
+    ///         },
+    ///     },
+    /// };
+    /// println!("{}", error.help());
+    /// ```
+    #[must_use]
+    pub fn help(&self) -> &'static str {
+        match self {
+            Self::DockerValidationFailed { .. } => {
+                "Docker Validation Failed - Detailed Troubleshooting:
+
+1. Check Docker installation:
+   - SSH to instance: ssh user@instance-ip
+   - Check if Docker is installed: docker --version
+   - Check if Docker daemon is running: sudo systemctl status docker
+
+2. Verify Docker installation process:
+   - Check Ansible logs for installation errors
+   - Verify Docker installation playbook completed successfully
+   - Ensure no package repository connectivity issues during installation
+
+3. Common issues:
+   - Docker installed but daemon not started: sudo systemctl start docker
+   - User not in docker group: sudo usermod -aG docker $USER (requires logout/login)
+   - Docker binary not in PATH: check /usr/bin/docker exists
+   - Insufficient permissions: verify user has sudo access
+
+4. Re-install if needed:
+   - Re-run configuration command to attempt Docker installation again
+   - Or manually install Docker following official documentation
+
+For more information, see docs/e2e-testing.md."
+            }
+
+            Self::DockerComposeValidationFailed { .. } => {
+                "Docker Compose Validation Failed - Detailed Troubleshooting:
+
+1. Check Docker Compose installation:
+   - SSH to instance: ssh user@instance-ip
+   - Check if Docker Compose is installed: docker compose version
+   - Verify Docker Compose plugin is available
+
+2. Verify installation process:
+   - Check Ansible logs for installation errors
+   - Verify Docker Compose installation playbook completed successfully
+   - Ensure Docker is installed (Docker Compose requires Docker)
+
+3. Common issues:
+   - Using old 'docker-compose' syntax instead of 'docker compose'
+   - Docker Compose plugin not installed alongside Docker
+   - Wrong Docker Compose version for current Docker version
+   - Installation failed but was not detected
+
+4. Re-install if needed:
+   - Re-run configuration command to attempt installation again
+   - Or manually install Docker Compose following official documentation
+
+For more information, see docs/e2e-testing.md."
+            }
+        }
+    }
+}
 
 /// Run configuration validation tests on a configured instance
 ///
@@ -79,7 +185,7 @@ use crate::shared::ssh::SshCredentials;
 pub async fn run_configuration_validation(
     socket_addr: SocketAddr,
     ssh_credentials: &SshCredentials,
-) -> Result<()> {
+) -> Result<(), ConfigurationValidationError> {
     info!(
         socket_addr = %socket_addr,
         ssh_user = %ssh_credentials.ssh_username,
@@ -126,7 +232,7 @@ async fn validate_docker_installation(
     ip_addr: std::net::IpAddr,
     ssh_credentials: &SshCredentials,
     port: u16,
-) -> Result<()> {
+) -> Result<(), ConfigurationValidationError> {
     info!("Validating Docker installation");
 
     let ssh_connection =
@@ -136,7 +242,7 @@ async fn validate_docker_installation(
     docker_validator
         .execute(&ip_addr)
         .await
-        .context("Docker validation failed")?;
+        .map_err(|source| ConfigurationValidationError::DockerValidationFailed { source })?;
 
     Ok(())
 }
@@ -165,7 +271,7 @@ async fn validate_docker_compose_installation(
     ip_addr: std::net::IpAddr,
     ssh_credentials: &SshCredentials,
     port: u16,
-) -> Result<()> {
+) -> Result<(), ConfigurationValidationError> {
     info!("Validating Docker Compose installation");
 
     let ssh_connection =
@@ -175,7 +281,7 @@ async fn validate_docker_compose_installation(
     compose_validator
         .execute(&ip_addr)
         .await
-        .context("Docker Compose validation failed")?;
+        .map_err(|source| ConfigurationValidationError::DockerComposeValidationFailed { source })?;
 
     Ok(())
 }
