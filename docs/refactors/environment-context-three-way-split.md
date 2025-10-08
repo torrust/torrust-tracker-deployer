@@ -3,11 +3,10 @@
 **Status**: 📋 Planning  
 **Target**: `src/domain/environment/mod.rs`  
 **Created**: October 8, 2025  
-**Depends On**: [Environment Context Extraction](./environment-context-extraction.md) ⚠️  
 **Impact**: Medium - Improves semantic clarity and separation of concerns  
-**Effort**: Low - Simple refactoring after context extraction is complete
+**Effort**: Low - Simple refactoring building on the existing `EnvironmentContext` structure
 
-> **⚠️ IMPORTANT**: This refactoring **depends on completing** the [Environment Context Extraction](./environment-context-extraction.md) refactoring first. The `EnvironmentContext` struct must exist before it can be split into three semantic types.
+> **📝 NOTE**: This refactoring builds on the completed Environment Context Extraction refactoring. The `EnvironmentContext` struct now exists and can be split into three semantic types.
 
 ## 📋 Overview
 
@@ -660,20 +659,22 @@ mod three_way_split_tests {
 
 ### Dependencies
 
-⚠️ **Critical**: This refactoring depends on completing the [Environment Context Extraction](./environment-context-extraction.md) refactoring first.
+✅ **Prerequisite Complete**: The Environment Context Extraction refactoring has been completed. The `EnvironmentContext` struct exists with all 8 state-independent fields.
 
-**Workflow:**
+**Current State:**
 
-1. Complete all proposals in Environment Context Extraction
-2. Verify all tests pass
-3. Then begin this three-way split refactoring
+1. ✅ `EnvironmentContext` struct created and implemented
+2. ✅ `Environment<S>` refactored to use `context: EnvironmentContext`
+3. ✅ All tests passing (758 unit + 107 doc tests)
+4. ✅ Ready to proceed with three-way semantic split
 
 ### Sprint Planning
 
-This refactoring can be completed in a single sprint after the prerequisite is done:
+This refactoring can be completed in a single sprint (approximately half sprint):
 
-- **Sprint N**: Complete Environment Context Extraction
-- **Sprint N+1**: Complete Three-Way Split (half sprint)
+- **Phase 1**: Create three semantic types (2-4 hours)
+- **Phase 2**: Update documentation and tests (1-2 hours)
+- **Total**: 3-6 hours
 
 ## 🎯 Review Process
 
@@ -703,7 +704,7 @@ This refactoring can be completed in a single sprint after the prerequisite is d
 
 ## 📚 Related Documentation
 
-- [Environment Context Extraction](./environment-context-extraction.md) - **Prerequisite** refactoring
+- ~~[Environment Context Extraction](./environment-context-extraction.md)~~ - ✅ **Completed** prerequisite refactoring
 - [Development Principles](../development-principles.md) - Observability and maintainability
 - [Module Organization](../contributing/module-organization.md) - Code structure conventions
 
