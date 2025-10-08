@@ -9,6 +9,7 @@
 //! - `client` - SSH client implementation for remote command execution
 //! - `connection` - SSH connection configuration and management
 //! - `credentials` - SSH authentication credentials and key management
+//! - `error` - SSH error types and implementations
 //! - `public_key` - SSH public key representation and validation
 //! - `service_checker` - SSH service availability testing without authentication
 //!
@@ -26,62 +27,13 @@
 pub mod client;
 pub mod connection;
 pub mod credentials;
+pub mod error;
 pub mod public_key;
 pub mod service_checker;
 
 pub use client::SshClient;
 pub use connection::{SshConnection, DEFAULT_SSH_PORT};
 pub use credentials::SshCredentials;
+pub use error::SshError;
 pub use public_key::SshPublicKey;
 pub use service_checker::SshServiceChecker;
-
-use thiserror::Error;
-
-use crate::shared::command::CommandError;
-
-/// Errors that can occur during SSH operations
-#[derive(Error, Debug)]
-pub enum SshError {
-    /// SSH connectivity could not be established within the timeout period
-    #[error("SSH connectivity to '{host_ip}' could not be established after {attempts} attempts ({timeout_seconds} seconds)")]
-    ConnectivityTimeout {
-        host_ip: String,
-        attempts: u32,
-        timeout_seconds: u32,
-    },
-
-    /// Underlying command execution failed
-    #[error("SSH command execution failed: {source}")]
-    CommandFailed {
-        #[source]
-        source: CommandError,
-    },
-}
-
-impl crate::shared::Traceable for SshError {
-    fn trace_format(&self) -> String {
-        match self {
-            Self::ConnectivityTimeout {
-                host_ip,
-                attempts,
-                timeout_seconds,
-            } => {
-                format!("SshError: Connectivity timeout to '{host_ip}' after {attempts} attempts ({timeout_seconds} seconds)")
-            }
-            Self::CommandFailed { source } => {
-                format!("SshError: SSH command failed - {source}")
-            }
-        }
-    }
-
-    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
-        match self {
-            Self::ConnectivityTimeout { .. } => None,
-            Self::CommandFailed { source } => Some(source),
-        }
-    }
-
-    fn error_kind(&self) -> crate::shared::ErrorKind {
-        crate::shared::ErrorKind::NetworkConnectivity
-    }
-}
