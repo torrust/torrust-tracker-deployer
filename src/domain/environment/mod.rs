@@ -231,41 +231,13 @@ impl Environment {
     /// This function does not panic. All instance name generation is guaranteed
     /// to succeed for valid environment names.
     #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
     pub fn new(
         name: EnvironmentName,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
     ) -> Environment<Created> {
-        let env_str = name.as_str();
-
-        // Generate instance name: torrust-tracker-vm-{env_name}
-        let instance_name_str = format!("torrust-tracker-vm-{env_str}");
-        let instance_name = InstanceName::new(instance_name_str)
-            .expect("Generated instance name should always be valid");
-
-        // Generate profile name: torrust-profile-{env_name}
-        let profile_name_str = format!("torrust-profile-{env_str}");
-        let profile_name = ProfileName::new(profile_name_str)
-            .expect("Generated profile name should always be valid");
-
-        // Generate environment-specific directories
-        let data_dir = PathBuf::from("data").join(env_str);
-        let build_dir = PathBuf::from("build").join(env_str);
-
-        let context = EnvironmentContext {
-            user_inputs: UserInputs {
-                name,
-                instance_name,
-                profile_name,
-                ssh_credentials,
-                ssh_port,
-            },
-            internal_config: InternalConfig {
-                build_dir,
-                data_dir,
-            },
-            runtime_outputs: RuntimeOutputs { instance_ip: None },
-        };
+        let context = EnvironmentContext::new(&name, ssh_credentials, ssh_port);
 
         Environment {
             context,

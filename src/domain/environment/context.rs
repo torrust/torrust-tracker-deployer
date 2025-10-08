@@ -35,7 +35,8 @@
 //! clear where each piece of information comes from and guide developers on
 //! where to add new fields as the application evolves.
 
-use crate::domain::environment::{InternalConfig, RuntimeOutputs, UserInputs};
+use crate::domain::environment::{EnvironmentName, InternalConfig, RuntimeOutputs, UserInputs};
+use crate::shared::ssh::SshCredentials;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -105,6 +106,60 @@ pub struct EnvironmentContext {
 }
 
 impl EnvironmentContext {
+    /// Creates a new `EnvironmentContext` with auto-generated names and paths
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The validated environment name
+    /// * `ssh_credentials` - SSH credentials for connecting to instances
+    /// * `ssh_port` - SSH port for connecting to instances
+    ///
+    /// # Returns
+    ///
+    /// A new `EnvironmentContext` with:
+    /// - Auto-generated instance name: `torrust-tracker-vm-{env_name}`
+    /// - Auto-generated profile name: `torrust-profile-{env_name}`
+    /// - Auto-generated data and build directories
+    /// - Empty runtime outputs
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deploy::domain::environment::{EnvironmentContext, EnvironmentName};
+    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use std::path::PathBuf;
+    ///
+    /// let env_name = EnvironmentName::new("production".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
+    /// let ssh_credentials = SshCredentials::new(
+    ///     PathBuf::from("keys/prod_rsa"),
+    ///     PathBuf::from("keys/prod_rsa.pub"),
+    ///     ssh_username,
+    /// );
+    ///
+    /// let context = EnvironmentContext::new(&env_name, ssh_credentials, 22);
+    ///
+    /// assert_eq!(context.user_inputs.instance_name.as_str(), "torrust-tracker-vm-production");
+    /// assert_eq!(context.user_inputs.profile_name.as_str(), "torrust-profile-production");
+    /// assert_eq!(context.internal_config.data_dir, PathBuf::from("data/production"));
+    /// assert_eq!(context.internal_config.build_dir, PathBuf::from("build/production"));
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// This function does not panic. All name generation is guaranteed to succeed
+    /// for valid environment names.
+    #[must_use]
+    pub fn new(name: &EnvironmentName, ssh_credentials: SshCredentials, ssh_port: u16) -> Self {
+        Self {
+            user_inputs: UserInputs::new(name, ssh_credentials, ssh_port),
+            internal_config: InternalConfig::new(name),
+            runtime_outputs: RuntimeOutputs { instance_ip: None },
+        }
+    }
+
     /// Returns the SSH username for this environment
     #[must_use]
     pub fn ssh_username(&self) -> &crate::shared::Username {
