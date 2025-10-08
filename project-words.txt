@@ -21,8 +21,11 @@ Crossplane
 dearmor
 debootstrap
 debuginfo
+derefs
 distutils
 Dockerfiles
+doctest
+doctests
 downcasted
 downcasting
 dpkg
@@ -155,8 +158,6 @@ vbqajnc
 viewmodel
 webservers
 writeln
-derefs
-doctests
 значение
 ключ
 конфиг

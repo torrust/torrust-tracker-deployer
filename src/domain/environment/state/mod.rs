@@ -189,6 +189,37 @@ pub enum AnyEnvironmentState {
 
 // Introspection methods for AnyEnvironmentState
 impl AnyEnvironmentState {
+    /// Get a reference to the environment context regardless of current state
+    ///
+    /// This helper method centralizes state matching for accessing
+    /// state-independent data. Instead of pattern matching 6 times
+    /// (once per field accessor), we match once and reuse the result.
+    ///
+    /// This is a private implementation detail that simplifies the
+    /// public accessor methods.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the `EnvironmentContext` contained within the environment.
+    #[allow(dead_code)] // Will be used in Phase 2.2 to simplify field accessors
+    fn context(&self) -> &crate::domain::environment::EnvironmentContext {
+        match self {
+            Self::Created(env) => env.context(),
+            Self::Provisioning(env) => env.context(),
+            Self::Provisioned(env) => env.context(),
+            Self::Configuring(env) => env.context(),
+            Self::Configured(env) => env.context(),
+            Self::Releasing(env) => env.context(),
+            Self::Released(env) => env.context(),
+            Self::Running(env) => env.context(),
+            Self::ProvisionFailed(env) => env.context(),
+            Self::ConfigureFailed(env) => env.context(),
+            Self::ReleaseFailed(env) => env.context(),
+            Self::RunFailed(env) => env.context(),
+            Self::Destroyed(env) => env.context(),
+        }
+    }
+
     /// Get the environment name regardless of current state
     ///
     /// This method provides access to the environment name without needing to

@@ -745,14 +745,15 @@ Tests:
 
 ### Phase 2: Simplify `AnyEnvironmentState` (Sprint 1, Week 2)
 
-#### Proposal #3: Add `core()` Helper to `AnyEnvironmentState`
+#### Proposal #3: Add `context()` Helper to `AnyEnvironmentState`
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Complete  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P1  
 **Depends On**: Proposal #2  
-**Estimated Time**: 1 hour
+**Estimated Time**: 1 hour  
+**Actual Time**: ~30 minutes
 
 ##### Problem
 
@@ -794,11 +795,12 @@ impl AnyEnvironmentState {
 
 ##### Implementation Checklist
 
-- [ ] Add private `core()` method to `AnyEnvironmentState`
-- [ ] Implement 13-arm match expression
-- [ ] Call `env.core()` in each arm
-- [ ] Add inline documentation
-- [ ] Verify it compiles
+- [x] Add private `context()` method to `AnyEnvironmentState`
+- [x] Implement 13-arm match expression
+- [x] Call `env.context()` in each arm
+- [x] Add inline documentation
+- [x] Verify it compiles
+- [x] Add `#[allow(dead_code)]` temporarily (will be removed in Phase 2.2)
 
 #### Proposal #4: Simplify All Field Accessors
 
