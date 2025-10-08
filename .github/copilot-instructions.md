@@ -92,6 +92,8 @@ These principles should guide all development decisions, code reviews, and featu
 
 7. **Before making engineering decisions**: Document significant architectural or design decisions as Architectural Decision Records (ADRs) in `docs/decisions/`. Read [`docs/decisions/README.md`](../docs/decisions/README.md) for the ADR template and guidelines. This ensures decisions are properly documented with context, rationale, and consequences for future reference.
 
+8. **When organizing code within modules**: Follow the module organization conventions in [`docs/contributing/module-organization.md`](../docs/contributing/module-organization.md). Use top-down organization with public items first, high-level abstractions before low-level details, and important responsibilities before secondary concerns like error types.
+
 ## 🧪 Build & Test
 
 - **Lint**: `cargo run --bin linter all` (comprehensive - tests stable & nightly toolchains)
