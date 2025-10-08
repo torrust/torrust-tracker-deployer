@@ -308,19 +308,19 @@ impl<S> Environment<S> {
     /// Returns the SSH username for this environment
     #[must_use]
     pub fn ssh_username(&self) -> &Username {
-        &self.context.ssh_credentials.ssh_username
+        self.context.ssh_username()
     }
 
     /// Returns the SSH private key path for this environment
     #[must_use]
     pub fn ssh_private_key_path(&self) -> &PathBuf {
-        &self.context.ssh_credentials.ssh_priv_key_path
+        self.context.ssh_private_key_path()
     }
 
     /// Returns the SSH public key path for this environment
     #[must_use]
     pub fn ssh_public_key_path(&self) -> &PathBuf {
-        &self.context.ssh_credentials.ssh_pub_key_path
+        self.context.ssh_public_key_path()
     }
 
     /// Returns the build directory for this environment
@@ -451,7 +451,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn templates_dir(&self) -> PathBuf {
-        self.context.data_dir.join("templates")
+        self.context.templates_dir()
     }
 
     /// Returns the traces directory for this environment
@@ -484,7 +484,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn traces_dir(&self) -> PathBuf {
-        self.context.data_dir.join(TRACES_DIR_NAME)
+        self.context.traces_dir()
     }
 
     /// Returns the ansible build directory for this environment
@@ -514,7 +514,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn ansible_build_dir(&self) -> PathBuf {
-        self.context.build_dir.join("ansible")
+        self.context.ansible_build_dir()
     }
 
     /// Returns the tofu build directory for this environment
@@ -544,7 +544,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn tofu_build_dir(&self) -> PathBuf {
-        self.context.build_dir.join("tofu")
+        self.context.tofu_build_dir()
     }
 
     /// Returns the ansible templates directory for this environment
@@ -574,7 +574,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn ansible_templates_dir(&self) -> PathBuf {
-        self.templates_dir().join("ansible")
+        self.context.ansible_templates_dir()
     }
 
     /// Returns the tofu templates directory for this environment
@@ -604,7 +604,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn tofu_templates_dir(&self) -> PathBuf {
-        self.templates_dir().join("tofu")
+        self.context.tofu_templates_dir()
     }
 }
 

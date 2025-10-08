@@ -881,12 +881,13 @@ Apply this pattern to all 6 methods:
 
 #### Proposal #5: Add `EnvironmentContext` Helper Methods
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Complete  
 **Impact**: 🟢🟢 Medium  
 **Effort**: 🔵 Low  
 **Priority**: P2  
 **Depends On**: Proposal #2  
-**Estimated Time**: 2 hours
+**Estimated Time**: 2 hours  
+**Actual Time**: ~30 minutes
 
 ##### Problem
 
@@ -984,12 +985,12 @@ impl<S> Environment<S> {
 
 ##### Implementation Checklist
 
-- [ ] Move derived path methods to `EnvironmentContext` impl block
-- [ ] Add comprehensive documentation for each method
-- [ ] Delegate from `Environment<S>` to `core` methods
-- [ ] Ensure consistency in method naming and return types
-- [ ] Update or add unit tests for `EnvironmentContext` methods
-- [ ] Run all tests to verify functionality
+- [x] Move derived path methods to `EnvironmentContext` impl block (8 methods total)
+- [x] Add comprehensive documentation for each method
+- [x] Delegate from `Environment<S>` to `context` methods
+- [x] Ensure consistency in method naming and return types
+- [x] Update or add unit tests for `EnvironmentContext` methods
+- [x] Run all tests to verify functionality (758 unit + 107 doc tests passing)
 
 ##### Benefits
 

@@ -102,3 +102,71 @@ pub struct EnvironmentContext {
     /// Once set, it's carried through all subsequent state transitions.
     pub(crate) instance_ip: Option<IpAddr>,
 }
+
+impl EnvironmentContext {
+    /// Returns the SSH username for this environment
+    #[must_use]
+    pub fn ssh_username(&self) -> &crate::shared::Username {
+        &self.ssh_credentials.ssh_username
+    }
+
+    /// Returns the SSH private key path for this environment
+    #[must_use]
+    pub fn ssh_private_key_path(&self) -> &PathBuf {
+        &self.ssh_credentials.ssh_priv_key_path
+    }
+
+    /// Returns the SSH public key path for this environment
+    #[must_use]
+    pub fn ssh_public_key_path(&self) -> &PathBuf {
+        &self.ssh_credentials.ssh_pub_key_path
+    }
+
+    /// Returns the templates directory for this environment
+    ///
+    /// Path: `data/{env_name}/templates/`
+    #[must_use]
+    pub fn templates_dir(&self) -> PathBuf {
+        self.data_dir.join("templates")
+    }
+
+    /// Returns the traces directory for this environment
+    ///
+    /// Path: `data/{env_name}/traces/`
+    #[must_use]
+    pub fn traces_dir(&self) -> PathBuf {
+        self.data_dir.join(super::TRACES_DIR_NAME)
+    }
+
+    /// Returns the ansible build directory
+    ///
+    /// Path: `build/{env_name}/ansible`
+    #[must_use]
+    pub fn ansible_build_dir(&self) -> PathBuf {
+        self.build_dir.join("ansible")
+    }
+
+    /// Returns the tofu build directory
+    ///
+    /// Path: `build/{env_name}/tofu`
+    #[must_use]
+    pub fn tofu_build_dir(&self) -> PathBuf {
+        self.build_dir.join("tofu")
+    }
+
+    /// Returns the ansible templates directory
+    ///
+    /// Path: `data/{env_name}/templates/ansible`
+    #[must_use]
+    pub fn ansible_templates_dir(&self) -> PathBuf {
+        self.templates_dir().join("ansible")
+    }
+
+    /// Returns the tofu templates directory
+    ///
+    /// Path: `data/{env_name}/templates/tofu`
+    #[must_use]
+    pub fn tofu_templates_dir(&self) -> PathBuf {
+        self.templates_dir().join("tofu")
+    }
+}
