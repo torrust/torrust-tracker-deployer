@@ -7,13 +7,27 @@
 //! The `Environment` entity uses a two-part design to separate immutable identity
 //! from mutable lifecycle state:
 //!
-//! ### `EnvironmentContext` - Immutable Identity
+//! ### `EnvironmentContext` - Three Semantic Categories
 //!
-//! Contains all data that does not change during the environment's lifecycle:
-//! - **Identity**: `name`, `instance_name`, `profile_name`
-//! - **Configuration**: `ssh_credentials`, `ssh_port`
-//! - **Paths**: `build_dir`, `data_dir`
-//! - **Runtime State**: `instance_ip` (set once after provisioning)
+//! The context is organized into three distinct semantic types, each with a clear purpose:
+//!
+//! #### 1. **User Inputs** (`UserInputs`)
+//! - **Purpose**: Configuration provided when creating an environment
+//! - **Characteristics**: Immutable throughout environment lifecycle
+//! - **Fields**: `name`, `instance_name`, `profile_name`, `ssh_credentials`, `ssh_port`
+//! - **When to add**: User needs to configure something at creation time
+//!
+//! #### 2. **Internal Config** (`InternalConfig`)
+//! - **Purpose**: Derived configuration for internal use
+//! - **Characteristics**: Calculated from user inputs
+//! - **Fields**: `build_dir`, `data_dir`
+//! - **When to add**: Need internal paths or derived configuration
+//!
+//! #### 3. **Runtime Outputs** (`RuntimeOutputs`)
+//! - **Purpose**: Data generated during deployment operations
+//! - **Characteristics**: Mutable as operations progress
+//! - **Fields**: `instance_ip` (more fields expected as deployment evolves)
+//! - **When to add**: Operations produce new data about deployed infrastructure
 //!
 //! ### `state: S` - Mutable Lifecycle State
 //!
@@ -26,11 +40,16 @@
 //! - **Compile-time safety**: Invalid state transitions caught at compile time
 //! - **Reduced pattern matching**: Access common fields without matching on state (83% reduction)
 //! - **Clear separation**: Identity vs. lifecycle are distinct concerns
+//! - **Semantic clarity**: Types document the purpose of each field
+//! - **Developer guidance**: Clear where to add new fields based on their purpose
 //! - **Easy extension**: Adding fields or states is straightforward
 //!
 //! ## Submodules
 //!
-//! - `context` - Environment context holding state-independent data
+//! - `context` - Environment context composing the three semantic types
+//! - `user_inputs` - User-provided configuration
+//! - `internal_config` - Derived paths and internal settings
+//! - `runtime_outputs` - Data generated during deployment
 //! - `name` - Environment name validation and management
 //! - `state` - State marker types and type erasure for environment state machine
 //!
@@ -1198,6 +1217,86 @@ mod tests {
                 let _destroyed = env.destroy();
 
                 assert!(logs_contain("Destroyed"));
+            }
+        }
+
+        // Three-way split tests
+        mod three_way_split {
+            use super::*;
+            use std::net::{IpAddr, Ipv4Addr};
+
+            #[test]
+            fn it_should_separate_user_inputs_from_context() {
+                let env = EnvironmentTestBuilder::new()
+                    .with_name("test-split")
+                    .build();
+
+                // Can access user inputs directly
+                assert_eq!(env.context.user_inputs.name.as_str(), "test-split");
+                assert_eq!(env.context.user_inputs.ssh_port, 22);
+            }
+
+            #[test]
+            fn it_should_derive_internal_config_automatically() {
+                let env = EnvironmentTestBuilder::new()
+                    .with_name("test-derived")
+                    .build();
+
+                // Internal config is derived from name
+                let data_dir = &env.context.internal_config.data_dir;
+                let build_dir = &env.context.internal_config.build_dir;
+
+                assert!(data_dir.to_string_lossy().contains("test-derived"));
+                assert!(build_dir.to_string_lossy().contains("test-derived"));
+            }
+
+            #[test]
+            fn it_should_initialize_runtime_outputs_as_empty() {
+                let env = EnvironmentTestBuilder::new()
+                    .with_name("test-runtime")
+                    .build();
+
+                // Runtime outputs start empty
+                assert_eq!(env.context.runtime_outputs.instance_ip, None);
+            }
+
+            #[test]
+            fn it_should_populate_runtime_outputs_during_operations() {
+                let env = EnvironmentTestBuilder::new()
+                    .with_name("test-populate")
+                    .build();
+
+                // Simulate provisioning operation setting the IP
+                let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1));
+                let env = env.with_instance_ip(ip);
+
+                assert_eq!(env.context.runtime_outputs.instance_ip, Some(ip));
+            }
+
+            #[test]
+            fn it_should_serialize_with_semantic_structure() {
+                let env = EnvironmentTestBuilder::new()
+                    .with_name("test-serialize")
+                    .build();
+
+                let json = serde_json::to_value(&env.context).unwrap();
+
+                // Verify JSON has three top-level keys
+                assert!(json.get("user_inputs").is_some());
+                assert!(json.get("internal_config").is_some());
+                assert!(json.get("runtime_outputs").is_some());
+            }
+
+            #[test]
+            fn it_should_provide_accessor_methods_for_backward_compatibility() {
+                let env = EnvironmentTestBuilder::new()
+                    .with_name("test-accessors")
+                    .build();
+
+                // Accessor methods should work through the context
+                assert_eq!(env.name().as_str(), "test-accessors");
+                assert_eq!(env.ssh_port(), 22);
+                assert_eq!(env.instance_ip(), None);
             }
         }
     }

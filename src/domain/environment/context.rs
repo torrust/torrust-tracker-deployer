@@ -1,22 +1,39 @@
 //! Environment Context Module
 //!
-//! This module contains the `EnvironmentContext` struct which holds all
-//! state-independent environment data.
+//! This module contains the `EnvironmentContext` struct which composes three
+//! semantic types to organize state-independent environment data.
 //!
 //! ## Purpose
 //!
 //! The `EnvironmentContext` separates immutable environment configuration from
-//! the mutable state machine, enabling:
-//! - Reduced pattern matching in `AnyEnvironmentState`
-//! - Clear distinction between constant and changing data
-//! - Simplified state transitions
-//! - Easier extension of environment configuration
+//! the mutable state machine, and further organizes that configuration into
+//! three distinct semantic categories:
 //!
-//! ## Design
+//! 1. **User Inputs** - Configuration provided by users
+//! 2. **Internal Config** - Derived paths for organizing artifacts
+//! 3. **Runtime Outputs** - Data generated during deployment
 //!
-//! By extracting state-independent fields into a dedicated context type,
-//! we eliminate repetitive 13-arm pattern matching across multiple accessor
-//! methods, reducing code duplication by approximately 83%.
+//! ## Benefits
+//!
+//! - **Reduced pattern matching**: Access common fields without matching on state (83% reduction)
+//! - **Clear semantic boundaries**: Types document the purpose of each field
+//! - **Developer guidance**: Clear where to add new fields based on their purpose
+//! - **Simplified state transitions**: Only the state changes, context remains constant
+//! - **Easier extension**: Adding fields is straightforward with clear categorization
+//!
+//! ## Three-Way Semantic Split
+//!
+//! ### When to Add Fields
+//!
+//! - **`UserInputs`**: User needs to configure something at environment creation time
+//! - **`InternalConfig`**: Need internal paths or derived configuration
+//! - **`RuntimeOutputs`**: Operations produce new data about deployed infrastructure
+//!
+//! ### Design Rationale
+//!
+//! By organizing fields into three semantic categories, we make it immediately
+//! clear where each piece of information comes from and guide developers on
+//! where to add new fields as the application evolves.
 
 use crate::domain::environment::{InternalConfig, RuntimeOutputs, UserInputs};
 use serde::{Deserialize, Serialize};
