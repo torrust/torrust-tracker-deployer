@@ -18,33 +18,36 @@
 //! we eliminate repetitive 13-arm pattern matching across multiple accessor
 //! methods, reducing code duplication by approximately 83%.
 
-use crate::domain::{InstanceName, ProfileName};
-use crate::shared::ssh::SshCredentials;
+use crate::domain::environment::{InternalConfig, RuntimeOutputs, UserInputs};
 use serde::{Deserialize, Serialize};
-use std::net::IpAddr;
 use std::path::PathBuf;
 
-/// Core environment data that remains constant across all states
+/// Complete environment context composed of three semantic types
 ///
-/// This struct contains all fields that do not change when the environment
-/// transitions between states. Extracting these fields eliminates repetitive
-/// pattern matching in `AnyEnvironmentState` while maintaining the type-state
-/// pattern's compile-time guarantees.
+/// The context is split into three logical categories:
+/// 1. **User Inputs** (`user_inputs`): Configuration provided by users
+/// 2. **Internal Config** (`internal_config`): Derived paths for organizing artifacts
+/// 3. **Runtime Outputs** (`runtime_outputs`): Data generated during deployment
+///
+/// This separation makes it clear where each piece of information comes from
+/// and helps developers understand where to add new fields.
 ///
 /// # Design Rationale
 ///
-/// By separating state-independent data from the state machine, we:
+/// By separating state-independent data from the state machine and organizing
+/// it into three semantic categories, we:
 /// - Eliminate repetitive pattern matching in `AnyEnvironmentState`
 /// - Make it clear which data is constant vs. state-dependent
+/// - Provide semantic clarity about the purpose of each field
+/// - Guide developers where to add new fields based on their purpose
 /// - Simplify state transitions (only the state field changes)
 /// - Enable easier extension of environment configuration
 ///
-/// # Field Overview
+/// # Three Semantic Categories
 ///
-/// - **Identity**: `name`, `instance_name`, `profile_name`
-/// - **Configuration**: `ssh_credentials`, `ssh_port`
-/// - **Paths**: `build_dir`, `data_dir`
-/// - **Runtime State**: `instance_ip` (populated after provisioning)
+/// - **User Inputs**: Immutable user configuration (name, SSH credentials, port)
+/// - **Internal Config**: Derived paths (`build_dir`, `data_dir`)
+/// - **Runtime Outputs**: Generated during deployment (`instance_ip`, future metrics)
 ///
 /// # Examples
 ///
@@ -74,52 +77,33 @@ use std::path::PathBuf;
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentContext {
-    /// The validated environment name
-    pub(crate) name: crate::domain::environment::EnvironmentName,
+    /// User-provided configuration
+    pub user_inputs: UserInputs,
 
-    /// The instance name for this environment (auto-generated)
-    pub(crate) instance_name: InstanceName,
+    /// Internal paths and derived configuration
+    pub internal_config: InternalConfig,
 
-    /// The profile name for this environment (auto-generated)
-    pub(crate) profile_name: ProfileName,
-
-    /// SSH credentials for connecting to instances in this environment
-    pub(crate) ssh_credentials: SshCredentials,
-
-    /// SSH port for connecting to instances in this environment
-    pub(crate) ssh_port: u16,
-
-    /// Build directory for this environment (auto-generated)
-    pub(crate) build_dir: PathBuf,
-
-    /// Data directory for this environment (auto-generated)
-    pub(crate) data_dir: PathBuf,
-
-    /// Instance IP address (populated after provisioning)
-    ///
-    /// This field stores the IP address of the provisioned instance and is
-    /// `None` until the environment has been successfully provisioned.
-    /// Once set, it's carried through all subsequent state transitions.
-    pub(crate) instance_ip: Option<IpAddr>,
+    /// Runtime outputs from deployment operations
+    pub runtime_outputs: RuntimeOutputs,
 }
 
 impl EnvironmentContext {
     /// Returns the SSH username for this environment
     #[must_use]
     pub fn ssh_username(&self) -> &crate::shared::Username {
-        &self.ssh_credentials.ssh_username
+        &self.user_inputs.ssh_credentials.ssh_username
     }
 
     /// Returns the SSH private key path for this environment
     #[must_use]
     pub fn ssh_private_key_path(&self) -> &PathBuf {
-        &self.ssh_credentials.ssh_priv_key_path
+        &self.user_inputs.ssh_credentials.ssh_priv_key_path
     }
 
     /// Returns the SSH public key path for this environment
     #[must_use]
     pub fn ssh_public_key_path(&self) -> &PathBuf {
-        &self.ssh_credentials.ssh_pub_key_path
+        &self.user_inputs.ssh_credentials.ssh_pub_key_path
     }
 
     /// Returns the templates directory for this environment
@@ -127,7 +111,7 @@ impl EnvironmentContext {
     /// Path: `data/{env_name}/templates/`
     #[must_use]
     pub fn templates_dir(&self) -> PathBuf {
-        self.data_dir.join("templates")
+        self.internal_config.data_dir.join("templates")
     }
 
     /// Returns the traces directory for this environment
@@ -135,7 +119,7 @@ impl EnvironmentContext {
     /// Path: `data/{env_name}/traces/`
     #[must_use]
     pub fn traces_dir(&self) -> PathBuf {
-        self.data_dir.join(super::TRACES_DIR_NAME)
+        self.internal_config.data_dir.join(super::TRACES_DIR_NAME)
     }
 
     /// Returns the ansible build directory
@@ -143,7 +127,7 @@ impl EnvironmentContext {
     /// Path: `build/{env_name}/ansible`
     #[must_use]
     pub fn ansible_build_dir(&self) -> PathBuf {
-        self.build_dir.join("ansible")
+        self.internal_config.build_dir.join("ansible")
     }
 
     /// Returns the tofu build directory
@@ -151,7 +135,7 @@ impl EnvironmentContext {
     /// Path: `build/{env_name}/tofu`
     #[must_use]
     pub fn tofu_build_dir(&self) -> PathBuf {
-        self.build_dir.join("tofu")
+        self.internal_config.build_dir.join("tofu")
     }
 
     /// Returns the ansible templates directory

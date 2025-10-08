@@ -229,7 +229,7 @@ impl AnyEnvironmentState {
     /// A reference to the `EnvironmentName` contained within the environment.
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {
-        &self.context().name
+        &self.context().user_inputs.name
     }
 
     /// Get the state name as a string
@@ -355,7 +355,7 @@ impl AnyEnvironmentState {
     /// A reference to the `InstanceName` contained within the environment.
     #[must_use]
     pub fn instance_name(&self) -> &crate::domain::environment::InstanceName {
-        &self.context().instance_name
+        &self.context().user_inputs.instance_name
     }
 
     /// Get the profile name regardless of current state
@@ -368,7 +368,7 @@ impl AnyEnvironmentState {
     /// A reference to the `ProfileName` contained within the environment.
     #[must_use]
     pub fn profile_name(&self) -> &crate::domain::environment::ProfileName {
-        &self.context().profile_name
+        &self.context().user_inputs.profile_name
     }
 
     /// Get the SSH credentials regardless of current state
@@ -381,7 +381,7 @@ impl AnyEnvironmentState {
     /// A reference to the `SshCredentials` contained within the environment.
     #[must_use]
     pub fn ssh_credentials(&self) -> &crate::shared::ssh::SshCredentials {
-        &self.context().ssh_credentials
+        &self.context().user_inputs.ssh_credentials
     }
 
     /// Get the SSH port regardless of current state
@@ -394,7 +394,7 @@ impl AnyEnvironmentState {
     /// The SSH port number.
     #[must_use]
     pub fn ssh_port(&self) -> u16 {
-        self.context().ssh_port
+        self.context().user_inputs.ssh_port
     }
 
     /// Get the instance IP address if available, regardless of current state
@@ -408,7 +408,7 @@ impl AnyEnvironmentState {
     /// - `None` if the environment hasn't been provisioned yet
     #[must_use]
     pub fn instance_ip(&self) -> Option<std::net::IpAddr> {
-        self.context().instance_ip
+        self.context().runtime_outputs.instance_ip
     }
 }
 

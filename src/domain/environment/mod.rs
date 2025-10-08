@@ -73,10 +73,13 @@
 //! ```
 
 pub mod context;
+pub mod internal_config;
 pub mod name;
 pub mod repository;
+pub mod runtime_outputs;
 pub mod state;
 mod trace_id;
+pub mod user_inputs;
 
 // Test utilities (only available in test configuration)
 #[cfg(test)]
@@ -87,12 +90,15 @@ pub use trace_id::TraceId;
 
 // Re-export commonly used types for convenience
 pub use context::EnvironmentContext;
+pub use internal_config::InternalConfig;
 pub use name::{EnvironmentName, EnvironmentNameError};
+pub use runtime_outputs::RuntimeOutputs;
 pub use state::{
     AnyEnvironmentState, ConfigureFailed, Configured, Configuring, Created, Destroyed,
     ProvisionFailed, Provisioned, Provisioning, ReleaseFailed, Released, Releasing, RunFailed,
     Running,
 };
+pub use user_inputs::UserInputs;
 
 use crate::domain::{InstanceName, ProfileName};
 use crate::shared::{ssh::SshCredentials, Username};
@@ -228,14 +234,18 @@ impl Environment {
         let build_dir = PathBuf::from("build").join(env_str);
 
         let context = EnvironmentContext {
-            name,
-            instance_name,
-            profile_name,
-            ssh_credentials,
-            ssh_port,
-            build_dir,
-            data_dir,
-            instance_ip: None,
+            user_inputs: UserInputs {
+                name,
+                instance_name,
+                profile_name,
+                ssh_credentials,
+                ssh_port,
+            },
+            internal_config: InternalConfig {
+                build_dir,
+                data_dir,
+            },
+            runtime_outputs: RuntimeOutputs { instance_ip: None },
         };
 
         Environment {
@@ -270,8 +280,8 @@ impl<S> Environment<S> {
     fn with_state<T>(self, new_state: T) -> Environment<T> {
         // Log state transition for observability and audit trail
         tracing::info!(
-            environment_name = %self.context.name,
-            instance_name = %self.context.instance_name,
+            environment_name = %self.context.user_inputs.name,
+            instance_name = %self.context.user_inputs.instance_name,
             from_state = std::any::type_name::<S>(),
             to_state = std::any::type_name::<T>(),
             "Environment state transition"
@@ -321,13 +331,13 @@ impl<S> Environment<S> {
     /// Returns the environment name
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {
-        &self.context.name
+        &self.context.user_inputs.name
     }
 
     /// Returns the instance name for this environment
     #[must_use]
     pub fn instance_name(&self) -> &InstanceName {
-        &self.context.instance_name
+        &self.context.user_inputs.instance_name
     }
 
     /// Returns the profile name for this environment
@@ -336,19 +346,19 @@ impl<S> Environment<S> {
     /// to ensure profile isolation between different test environments.
     #[must_use]
     pub fn profile_name(&self) -> &ProfileName {
-        &self.context.profile_name
+        &self.context.user_inputs.profile_name
     }
 
     /// Returns the SSH credentials for this environment
     #[must_use]
     pub fn ssh_credentials(&self) -> &SshCredentials {
-        &self.context.ssh_credentials
+        &self.context.user_inputs.ssh_credentials
     }
 
     /// Returns the SSH port for this environment
     #[must_use]
     pub fn ssh_port(&self) -> u16 {
-        self.context.ssh_port
+        self.context.user_inputs.ssh_port
     }
 
     /// Returns the SSH username for this environment
@@ -372,13 +382,13 @@ impl<S> Environment<S> {
     /// Returns the build directory for this environment
     #[must_use]
     pub fn build_dir(&self) -> &PathBuf {
-        &self.context.build_dir
+        &self.context.internal_config.build_dir
     }
 
     /// Returns the data directory for this environment
     #[must_use]
     pub fn data_dir(&self) -> &PathBuf {
-        &self.context.data_dir
+        &self.context.internal_config.data_dir
     }
 
     /// Returns the instance IP address if available
@@ -420,7 +430,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn instance_ip(&self) -> Option<IpAddr> {
-        self.context.instance_ip
+        self.context.runtime_outputs.instance_ip
     }
 
     /// Sets the instance IP address for this environment
@@ -463,7 +473,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn with_instance_ip(mut self, ip: IpAddr) -> Self {
-        self.context_mut().instance_ip = Some(ip);
+        self.context_mut().runtime_outputs.instance_ip = Some(ip);
         self
     }
 
@@ -789,14 +799,18 @@ mod tests {
             let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
 
             let context = EnvironmentContext {
-                name: env_name,
-                instance_name,
-                profile_name,
-                ssh_credentials,
-                ssh_port: 22,
-                data_dir: data_dir.clone(),
-                build_dir: build_dir.clone(),
-                instance_ip: None,
+                user_inputs: UserInputs {
+                    name: env_name,
+                    instance_name,
+                    profile_name,
+                    ssh_credentials,
+                    ssh_port: 22,
+                },
+                internal_config: InternalConfig {
+                    data_dir: data_dir.clone(),
+                    build_dir: build_dir.clone(),
+                },
+                runtime_outputs: RuntimeOutputs { instance_ip: None },
             };
 
             let environment = Environment {

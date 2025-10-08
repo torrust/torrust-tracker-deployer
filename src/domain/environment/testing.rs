@@ -130,14 +130,18 @@ impl EnvironmentTestBuilder {
         let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
 
         let context = EnvironmentContext {
-            name: env_name,
-            instance_name,
-            profile_name,
-            ssh_credentials,
-            ssh_port: 22,
-            data_dir: data_dir.clone(),
-            build_dir: build_dir.clone(),
-            instance_ip: None,
+            user_inputs: crate::domain::environment::UserInputs {
+                name: env_name,
+                instance_name,
+                profile_name,
+                ssh_credentials,
+                ssh_port: 22,
+            },
+            internal_config: crate::domain::environment::InternalConfig {
+                data_dir: data_dir.clone(),
+                build_dir: build_dir.clone(),
+            },
+            runtime_outputs: crate::domain::environment::RuntimeOutputs { instance_ip: None },
         };
 
         let environment = Environment {
