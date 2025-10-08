@@ -281,25 +281,6 @@ impl OpenTofuClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-    use tempfile::TempDir;
-
-    fn create_test_config_dir() -> TempDir {
-        let temp_dir = TempDir::new().unwrap();
-        let main_tf_content = r#"
-terraform {
-  required_version = ">= 1.0"
-}
-
-resource "null_resource" "test" {
-  provisioner "local-exec" {
-    command = "echo 'test'"
-  }
-}
-"#;
-        fs::write(temp_dir.path().join("main.tf"), main_tf_content).unwrap();
-        temp_dir
-    }
 
     #[test]
     fn it_should_create_opentofu_client_with_valid_parameters() {
@@ -337,50 +318,6 @@ resource "null_resource" "test" {
         let client = OpenTofuClient::new(path);
 
         assert_eq!(client.working_dir(), path);
-    }
-
-    // Integration test that would require OpenTofu to be installed
-    // These tests are more suitable for integration testing in a CI environment
-    #[ignore = "requires OpenTofu installation"]
-    #[test]
-    fn it_should_initialize_opentofu_configuration() {
-        let temp_dir = create_test_config_dir();
-        let client = OpenTofuClient::new(temp_dir.path());
-
-        // This would fail if OpenTofu is not installed, so we ignore it by default
-        match client.init() {
-            Ok(output) => {
-                assert!(
-                    output.contains("Terraform has been successfully initialized")
-                        || output.contains("OpenTofu has been successfully initialized")
-                );
-            }
-            Err(_) => {
-                // Expected if OpenTofu is not installed
-                tracing::warn!("OpenTofu not available for testing");
-            }
-        }
-    }
-
-    #[ignore = "requires OpenTofu installation"]
-    #[test]
-    fn it_should_plan_opentofu_configuration() {
-        let temp_dir = create_test_config_dir();
-        let client = OpenTofuClient::new(temp_dir.path());
-
-        // Initialize first (this would also be ignored if OpenTofu is not available)
-        drop(client.init());
-
-        // This would fail if OpenTofu is not installed, so we ignore it by default
-        match client.plan(&[]) {
-            Ok(_output) => {
-                // Plan succeeded
-            }
-            Err(_) => {
-                // Expected if OpenTofu is not installed
-                tracing::warn!("OpenTofu not available for testing");
-            }
-        }
     }
 
     #[test]

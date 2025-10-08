@@ -146,40 +146,4 @@ mod tests {
         // But this confirms the method signature and basic functionality works
         assert!(result.is_err());
     }
-
-    // Integration tests that would require Ansible to be installed
-    // These tests are more suitable for integration testing in a CI environment
-    #[ignore = "requires Ansible installation"]
-    #[test]
-    fn it_should_execute_ansible_playbook() {
-        use std::fs;
-        use tempfile::TempDir;
-
-        let temp_dir = TempDir::new().unwrap();
-
-        // Create a simple test playbook
-        let playbook_content = r#"
----
-- hosts: localhost
-  gather_facts: no
-  tasks:
-    - name: Test task
-      debug:
-        msg: "Hello from test playbook"
-"#;
-        fs::write(temp_dir.path().join("test-playbook.yml"), playbook_content).unwrap();
-
-        let client = AnsibleClient::new(temp_dir.path());
-
-        // This would fail if Ansible is not installed, so we ignore it by default
-        match client.run_playbook("test-playbook") {
-            Ok(output) => {
-                assert!(output.contains("Hello from test playbook"));
-            }
-            Err(_) => {
-                // Expected if Ansible is not installed
-                tracing::warn!("Ansible not available for testing");
-            }
-        }
-    }
 }
