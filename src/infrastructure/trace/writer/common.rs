@@ -13,6 +13,10 @@ use std::sync::Arc;
 use super::error::TraceWriterError;
 use crate::shared::Clock;
 
+/// Timestamp format for trace filenames: YYYYmmdd-HHMMSS
+/// Example: 20251008-143045
+const TRACE_FILENAME_TIMESTAMP_FORMAT: &str = "%Y%m%d-%H%M%S";
+
 /// Common trace file writer infrastructure
 ///
 /// Provides shared functionality for all command-specific trace writers:
@@ -84,7 +88,7 @@ impl CommonTraceWriter {
     ///
     /// Full path to the trace file
     fn generate_trace_filename(&self, command_name: &str) -> PathBuf {
-        let timestamp = self.clock.now().format("%Y%m%d-%H%M%S");
+        let timestamp = self.clock.now().format(TRACE_FILENAME_TIMESTAMP_FORMAT);
         self.traces_dir
             .join(format!("{timestamp}-{command_name}.log"))
     }
