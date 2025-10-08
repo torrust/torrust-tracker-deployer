@@ -74,6 +74,58 @@ use std::path::PathBuf;
 /// Directory name for trace files within an environment's data directory
 pub const TRACES_DIR_NAME: &str = "traces";
 
+/// Core environment data that remains constant across all states
+///
+/// This struct contains all fields that do not change when the environment
+/// transitions between states. Extracting these fields eliminates repetitive
+/// pattern matching in `AnyEnvironmentState` while maintaining the type-state
+/// pattern's compile-time guarantees.
+///
+/// # Design Rationale
+///
+/// By separating state-independent data from the state machine, we:
+/// - Eliminate repetitive pattern matching in `AnyEnvironmentState`
+/// - Make it clear which data is constant vs. state-dependent
+/// - Simplify state transitions (only the state field changes)
+/// - Enable easier extension of environment configuration
+///
+/// # Field Overview
+///
+/// - **Identity**: `name`, `instance_name`, `profile_name`
+/// - **Configuration**: `ssh_credentials`, `ssh_port`
+/// - **Paths**: `build_dir`, `data_dir`
+/// - **Runtime State**: `instance_ip` (populated after provisioning)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvironmentContext {
+    /// The validated environment name
+    pub(crate) name: EnvironmentName,
+
+    /// The instance name for this environment (auto-generated)
+    pub(crate) instance_name: InstanceName,
+
+    /// The profile name for this environment (auto-generated)
+    pub(crate) profile_name: ProfileName,
+
+    /// SSH credentials for connecting to instances in this environment
+    pub(crate) ssh_credentials: SshCredentials,
+
+    /// SSH port for connecting to instances in this environment
+    pub(crate) ssh_port: u16,
+
+    /// Build directory for this environment (auto-generated)
+    pub(crate) build_dir: PathBuf,
+
+    /// Data directory for this environment (auto-generated)
+    pub(crate) data_dir: PathBuf,
+
+    /// Instance IP address (populated after provisioning)
+    ///
+    /// This field stores the IP address of the provisioned instance and is
+    /// `None` until the environment has been successfully provisioned.
+    /// Once set, it's carried through all subsequent state transitions.
+    pub(crate) instance_ip: Option<IpAddr>,
+}
+
 /// Environment configuration encapsulating all environment-specific settings
 ///
 /// This entity represents a complete environment configuration including naming,
