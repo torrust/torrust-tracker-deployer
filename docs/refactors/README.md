@@ -14,9 +14,11 @@ Refactoring plans serve to:
 
 ## 📁 Active Refactoring Plans
 
-| Document                                                                    | Status      | Target                                 | Created     |
-| --------------------------------------------------------------------------- | ----------- | -------------------------------------- | ----------- |
-| [Command Code Quality Improvements](./command-code-quality-improvements.md) | 📋 Planning | `ProvisionCommand`, `ConfigureCommand` | Oct 7, 2025 |
+| Document                                                                        | Status      | Target                                  | Created     |
+| ------------------------------------------------------------------------------- | ----------- | --------------------------------------- | ----------- |
+| [Environment Context Extraction](./environment-context-extraction.md)           | 📋 Planning | `Environment<S>`, `AnyEnvironmentState` | Oct 8, 2025 |
+| [Environment Context Three-Way Split](./environment-context-three-way-split.md) | 📋 Planning | `EnvironmentContext` ⚠️                 | Oct 8, 2025 |
+| [Command Code Quality Improvements](./command-code-quality-improvements.md)     | 📋 Planning | `ProvisionCommand`, `ConfigureCommand`  | Oct 7, 2025 |
 
 ## ✅ Completed Refactorings
 
