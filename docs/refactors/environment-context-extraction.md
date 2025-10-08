@@ -1000,12 +1000,13 @@ impl<S> Environment<S> {
 
 #### Proposal #6: Update Documentation and Examples
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Complete  
 **Impact**: 🟢 Low  
 **Effort**: 🔵 Low  
 **Priority**: P3  
 **Depends On**: Proposals #1-5  
-**Estimated Time**: 1-2 hours
+**Estimated Time**: 1-2 hours  
+**Actual Time**: ~30 minutes
 
 ##### Problem
 
@@ -1066,21 +1067,21 @@ Example documentation addition:
 
 Module Documentation:
 
-- [ ] Update `src/domain/environment/mod.rs` module-level documentation
-- [ ] Explain the Core + State architecture
-- [ ] Update usage examples to reflect new structure
+- [x] Update `src/domain/environment/mod.rs` module-level documentation
+- [x] Explain the Context + State architecture in module docs
+- [x] Update usage examples to reflect new structure
 
 Struct Documentation:
 
-- [ ] Update `Environment<S>` documentation
-- [ ] Update `EnvironmentContext` documentation
-- [ ] Update `AnyEnvironmentState` documentation
+- [x] Update `Environment<S>` documentation with Context + State explanation
+- [x] Update `EnvironmentContext` documentation (already comprehensive)
+- [x] Update `AnyEnvironmentState` documentation (context() helper documented)
 
 Code Examples:
 
-- [ ] Review and update all doctests in `mod.rs`
-- [ ] Ensure examples compile and pass
-- [ ] Update `README.md` or user guide if affected
+- [x] Review and update all doctests in `mod.rs` (all 107 passing)
+- [x] Ensure examples compile and pass
+- [x] Fix clippy doc_markdown warnings (add backticks to code terms)
 
 ADR Reference:
 
