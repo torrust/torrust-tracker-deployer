@@ -183,7 +183,7 @@ impl EnvironmentContext {
     /// Path: `data/{env_name}/templates/`
     #[must_use]
     pub fn templates_dir(&self) -> PathBuf {
-        self.internal_config.data_dir.join("templates")
+        self.internal_config.templates_dir()
     }
 
     /// Returns the traces directory for this environment
@@ -191,7 +191,7 @@ impl EnvironmentContext {
     /// Path: `data/{env_name}/traces/`
     #[must_use]
     pub fn traces_dir(&self) -> PathBuf {
-        self.internal_config.data_dir.join(super::TRACES_DIR_NAME)
+        self.internal_config.traces_dir()
     }
 
     /// Returns the ansible build directory
@@ -199,7 +199,7 @@ impl EnvironmentContext {
     /// Path: `build/{env_name}/ansible`
     #[must_use]
     pub fn ansible_build_dir(&self) -> PathBuf {
-        self.internal_config.build_dir.join("ansible")
+        self.internal_config.ansible_build_dir()
     }
 
     /// Returns the tofu build directory
@@ -207,7 +207,7 @@ impl EnvironmentContext {
     /// Path: `build/{env_name}/tofu`
     #[must_use]
     pub fn tofu_build_dir(&self) -> PathBuf {
-        self.internal_config.build_dir.join("tofu")
+        self.internal_config.tofu_build_dir()
     }
 
     /// Returns the ansible templates directory
@@ -215,7 +215,7 @@ impl EnvironmentContext {
     /// Path: `data/{env_name}/templates/ansible`
     #[must_use]
     pub fn ansible_templates_dir(&self) -> PathBuf {
-        self.templates_dir().join("ansible")
+        self.internal_config.ansible_templates_dir()
     }
 
     /// Returns the tofu templates directory
@@ -223,6 +223,6 @@ impl EnvironmentContext {
     /// Path: `data/{env_name}/templates/tofu`
     #[must_use]
     pub fn tofu_templates_dir(&self) -> PathBuf {
-        self.templates_dir().join("tofu")
+        self.internal_config.tofu_templates_dir()
     }
 }

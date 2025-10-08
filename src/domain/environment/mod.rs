@@ -128,6 +128,15 @@ use std::path::PathBuf;
 /// Directory name for trace files within an environment's data directory
 pub const TRACES_DIR_NAME: &str = "traces";
 
+/// Directory name for template files within an environment's data directory
+pub const TEMPLATES_DIR_NAME: &str = "templates";
+
+/// Directory name for Ansible-related files
+pub const ANSIBLE_DIR_NAME: &str = "ansible";
+
+/// Directory name for OpenTofu-related files
+pub const TOFU_DIR_NAME: &str = "tofu";
+
 /// Environment configuration encapsulating all environment-specific settings
 ///
 /// This entity represents a complete environment configuration including naming,
