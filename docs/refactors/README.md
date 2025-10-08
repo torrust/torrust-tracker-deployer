@@ -1,6 +1,10 @@
-# Refactoring Plans
+# Refactoring ## 📁 Active Refactoring Plans
 
-This directory contains detailed refactoring plans for improving the codebase. Each document outlines specific improvements, implementation strategies, and progress tracking.
+| Document                                                                    | Status         | Target                                 | Created     |
+| --------------------------------------------------------------------------- | -------------- | -------------------------------------- | ----------- |
+| [Command Code Quality Improvements](./command-code-quality-improvements.md) | 🚧 In Progress | `ProvisionCommand`, `ConfigureCommand` | Oct 7, 2025 |
+
+## ✅ Completed RefactoringsThis directory contains detailed refactoring plans for improving the codebase. Each document outlines specific improvements, implementation strategies, and progress tracking.
 
 ## 📋 Purpose
 
@@ -14,22 +18,22 @@ Refactoring plans serve to:
 
 ## 📁 Active Refactoring Plans
 
-| Document                                                                        | Status      | Target                                  | Created     |
-| ------------------------------------------------------------------------------- | ----------- | --------------------------------------- | ----------- |
-| [Environment Context Extraction](./environment-context-extraction.md)           | 📋 Planning | `Environment<S>`, `AnyEnvironmentState` | Oct 8, 2025 |
-| [Environment Context Three-Way Split](./environment-context-three-way-split.md) | 📋 Planning | `EnvironmentContext` ⚠️                 | Oct 8, 2025 |
-| [Command Code Quality Improvements](./command-code-quality-improvements.md)     | 📋 Planning | `ProvisionCommand`, `ConfigureCommand`  | Oct 7, 2025 |
+| Document                                                                    | Status        | Target                                 | Created     |
+| --------------------------------------------------------------------------- | ------------- | -------------------------------------- | ----------- |
+| [Command Code Quality Improvements](./command-code-quality-improvements.md) | � In Progress | `ProvisionCommand`, `ConfigureCommand` | Oct 7, 2025 |
 
 ## ✅ Completed Refactorings
 
-| Document                                 | Completed   | Target                                 | Notes                                                                                                                                                          |
-| ---------------------------------------- | ----------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| JSON File Repository Improvements        | Oct 3, 2025 | `json_file_repository.rs`              | See git history at `docs/refactors/json-file-repository-improvements.md` for the complete refactoring plan (9 proposals, all completed)                        |
-| File Lock Improvements                   | Oct 3, 2025 | `file_lock.rs`                         | See git history at `docs/refactors/file-lock-improvements.md` for the complete refactoring plan (10 proposals, all completed)                                  |
-| Command Preparation for State Management | Oct 7, 2025 | `ProvisionCommand`, `ConfigureCommand` | See git history at `docs/refactors/command-preparation-for-state-management.md` - Refactored commands to prepare for type-state pattern integration            |
-| Error Context with Trace Files           | Oct 7, 2025 | Error handling infrastructure          | See git history at `docs/refactors/error-context-with-trace-files.md` - Replaced string-based error context with structured, type-safe context and trace files |
-| Error Kind Classification Strategy       | Oct 7, 2025 | `Traceable` trait, error types         | See git history at `docs/refactors/error-kind-classification-strategy.md` - Moved error kind determination into error types via `Traceable` trait              |
-| Step Tracking for Failure Context        | Oct 7, 2025 | Command execution flow                 | See git history at `docs/refactors/step-tracking-for-failure-context.md` - Added explicit step tracking to eliminate reverse engineering from error types      |
+| Document                                 | Completed   | Target                                  | Notes                                                                                                                                                                       |
+| ---------------------------------------- | ----------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Environment Context Three-Way Split      | Oct 8, 2025 | `EnvironmentContext`                    | See git history at `docs/refactors/environment-context-three-way-split.md` - Split context into UserInputs, InternalConfig, and RuntimeOutputs (4 proposals, all completed) |
+| Environment Context Extraction           | Oct 8, 2025 | `Environment<S>`, `AnyEnvironmentState` | See git history at `docs/refactors/environment-context-extraction.md` - Extracted EnvironmentContext from Environment to reduce pattern matching (2 phases, all completed)  |
+| JSON File Repository Improvements        | Oct 3, 2025 | `json_file_repository.rs`               | See git history at `docs/refactors/json-file-repository-improvements.md` for the complete refactoring plan (9 proposals, all completed)                                     |
+| File Lock Improvements                   | Oct 3, 2025 | `file_lock.rs`                          | See git history at `docs/refactors/file-lock-improvements.md` for the complete refactoring plan (10 proposals, all completed)                                               |
+| Command Preparation for State Management | Oct 7, 2025 | `ProvisionCommand`, `ConfigureCommand`  | See git history at `docs/refactors/command-preparation-for-state-management.md` - Refactored commands to prepare for type-state pattern integration                         |
+| Error Context with Trace Files           | Oct 7, 2025 | Error handling infrastructure           | See git history at `docs/refactors/error-context-with-trace-files.md` - Replaced string-based error context with structured, type-safe context and trace files              |
+| Error Kind Classification Strategy       | Oct 7, 2025 | `Traceable` trait, error types          | See git history at `docs/refactors/error-kind-classification-strategy.md` - Moved error kind determination into error types via `Traceable` trait                           |
+| Step Tracking for Failure Context        | Oct 7, 2025 | Command execution flow                  | See git history at `docs/refactors/step-tracking-for-failure-context.md` - Added explicit step tracking to eliminate reverse engineering from error types                   |
 
 ## 🎯 Plan Structure
 
