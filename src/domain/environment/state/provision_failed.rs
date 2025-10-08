@@ -188,7 +188,7 @@ mod tests {
         fn create_test_environment_provision_failed() -> Environment<ProvisionFailed> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds)
+            Environment::new(name, ssh_creds, 22)
                 .start_provisioning()
                 .provision_failed(super::create_test_context())
         }
@@ -213,7 +213,7 @@ mod tests {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
             let context = super::create_test_context();
-            let env = Environment::new(name, ssh_creds)
+            let env = Environment::new(name, ssh_creds, 22)
                 .start_provisioning()
                 .provision_failed(context.clone());
 

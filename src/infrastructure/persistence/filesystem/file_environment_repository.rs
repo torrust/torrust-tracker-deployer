@@ -190,7 +190,7 @@ mod tests {
     fn create_test_environment(name: &str) -> Environment {
         let env_name = EnvironmentName::new(name.to_string()).unwrap();
         let ssh_credentials = create_test_ssh_credentials();
-        Environment::new(env_name, ssh_credentials)
+        Environment::new(env_name, ssh_credentials, 22)
     }
 
     #[test]

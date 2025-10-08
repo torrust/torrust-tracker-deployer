@@ -107,7 +107,7 @@ mod tests {
         fn create_test_environment_provisioning() -> Environment<Provisioning> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds).start_provisioning()
+            Environment::new(name, ssh_creds, 22).start_provisioning()
         }
 
         #[test]
@@ -129,7 +129,7 @@ mod tests {
         fn it_should_fail_converting_created_to_provisioning() {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            let env = Environment::new(name, ssh_creds);
+            let env = Environment::new(name, ssh_creds, 22);
             let any_env = env.into_any();
             let result = any_env.try_into_provisioning();
             assert!(result.is_err());
@@ -159,7 +159,7 @@ mod tests {
         fn create_test_environment_provisioning() -> Environment<Provisioning> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds).start_provisioning()
+            Environment::new(name, ssh_creds, 22).start_provisioning()
         }
 
         #[test]

@@ -83,7 +83,7 @@ use crate::shared::ssh::SshCredentials;
 ///         ssh_public_key_path,
 ///         ssh_user,
 ///     );
-///     let environment = Environment::new(env_name, ssh_credentials);
+///     let environment = Environment::new(env_name, ssh_credentials, 22);
 ///     let test_context = TestContext::from_environment(
 ///         false,
 ///         environment,
@@ -107,6 +107,7 @@ pub async fn run_provision_simulation(
             .instance_name()
             .as_str()
             .to_string(),
+        test_context.environment.ssh_port(),
     )
     .await?;
 
@@ -155,6 +156,7 @@ pub async fn run_provision_simulation(
 /// # Arguments
 ///
 /// * `container_name` - Name for the container. The container will be created with this name.
+/// * `ssh_port` - The internal SSH port to expose from the container
 ///
 /// # Returns
 ///
@@ -170,13 +172,16 @@ pub async fn run_provision_simulation(
 /// - Container creation fails
 /// - Container startup fails
 /// - Docker daemon is not available
-async fn create_and_start_container(container_name: String) -> Result<RunningProvisionedContainer> {
-    info!(container_name = %container_name, "Creating and starting Docker container for E2E testing");
+async fn create_and_start_container(
+    container_name: String,
+    ssh_port: u16,
+) -> Result<RunningProvisionedContainer> {
+    info!(container_name = %container_name, ssh_port = %ssh_port, "Creating and starting Docker container for E2E testing");
 
     let stopped_container = StoppedProvisionedContainer::default();
 
     let running_container = stopped_container
-        .start(Some(container_name.clone()))
+        .start(Some(container_name.clone()), ssh_port)
         .await
         .context("Failed to start provisioned instance container")?;
 

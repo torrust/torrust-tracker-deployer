@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use super::SshCredentials;
 
 /// Default SSH port number.
-const DEFAULT_SSH_PORT: u16 = 22;
+pub const DEFAULT_SSH_PORT: u16 = 22;
 
 /// SSH connection configuration for a specific remote instance.
 ///

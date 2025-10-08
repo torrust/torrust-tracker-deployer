@@ -134,6 +134,7 @@ impl EnvironmentTestBuilder {
             instance_name,
             profile_name,
             ssh_credentials,
+            ssh_port: 22,
             data_dir: data_dir.clone(),
             build_dir: build_dir.clone(),
             instance_ip: None,

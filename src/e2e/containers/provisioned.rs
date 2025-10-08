@@ -33,7 +33,7 @@
 //!     let stopped = StoppedProvisionedContainer::default();
 //!     
 //!     // Transition to running state
-//!     let running = stopped.start(None).await?;
+//!     let running = stopped.start(None, 22).await?;
 //!     
 //!     // Get connection details
 //!     let socket_addr = running.ssh_socket_addr();
@@ -173,6 +173,7 @@ impl StoppedProvisionedContainer {
     /// # Arguments
     ///
     /// * `container_name` - Optional name for the running container. If provided, the container will be named accordingly.
+    /// * `ssh_port` - The internal SSH port to expose from the container
     ///
     /// # Errors
     ///
@@ -183,16 +184,17 @@ impl StoppedProvisionedContainer {
     pub async fn start(
         self,
         container_name: Option<String>,
+        ssh_port: u16,
     ) -> Result<RunningProvisionedContainer> {
         // First build the Docker image if needed
         Self::build_image(self.timeouts.docker_build)?;
 
-        info!("Starting provisioned instance container");
+        info!(ssh_port = %ssh_port, "Starting provisioned instance container");
 
         // Create and start the container using the configuration builder
         let image =
             ContainerConfigBuilder::new(format!("{DEFAULT_IMAGE_NAME}:{DEFAULT_IMAGE_TAG}"))
-                .with_exposed_port(22)
+                .with_exposed_port(ssh_port)
                 .with_wait_condition(WaitFor::message_on_stdout("sshd entered RUNNING state"))
                 .build()
                 .map_err(|source| {
@@ -225,27 +227,29 @@ impl StoppedProvisionedContainer {
         })?;
 
         // Get the actual mapped port from testcontainers
-        let ssh_port = container
-            .get_host_port_ipv4(22.tcp())
-            .await
-            .map_err(|source| {
-                Box::new(ContainerError::ContainerNetworking {
-                    source: ContainerNetworkingError::PortMappingFailed {
-                        container_id: container.id().to_string(),
-                        internal_port: 22,
-                        reason: "Failed to retrieve SSH port mapping from container".to_string(),
-                        source,
-                    },
-                })
-            })?;
+        let mapped_ssh_port =
+            container
+                .get_host_port_ipv4(ssh_port.tcp())
+                .await
+                .map_err(|source| {
+                    Box::new(ContainerError::ContainerNetworking {
+                        source: ContainerNetworkingError::PortMappingFailed {
+                            container_id: container.id().to_string(),
+                            internal_port: ssh_port,
+                            reason: "Failed to retrieve SSH port mapping from container"
+                                .to_string(),
+                            source,
+                        },
+                    })
+                })?;
 
         info!(
             container_id = %container.id(),
-            ssh_port = ssh_port,
+            mapped_ssh_port = mapped_ssh_port,
             "Container started successfully"
         );
 
-        Ok(RunningProvisionedContainer::new(container, ssh_port))
+        Ok(RunningProvisionedContainer::new(container, mapped_ssh_port))
     }
 }
 

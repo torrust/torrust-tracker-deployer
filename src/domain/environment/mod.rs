@@ -35,7 +35,7 @@
 //!     PathBuf::from("fixtures/testing_rsa.pub"),
 //!     ssh_username,
 //! );
-//! let environment = Environment::new(env_name, ssh_credentials);
+//! let environment = Environment::new(env_name, ssh_credentials, 22);
 //!
 //! // Environment automatically generates paths
 //! assert_eq!(*environment.data_dir(), PathBuf::from("data/e2e-config"));
@@ -120,6 +120,9 @@ pub struct Environment<S = Created> {
     /// SSH credentials for connecting to instances in this environment
     ssh_credentials: SshCredentials,
 
+    /// SSH port for connecting to instances in this environment
+    ssh_port: u16,
+
     /// Build directory for this environment (auto-generated)
     build_dir: PathBuf,
 
@@ -144,6 +147,7 @@ impl Environment {
     ///
     /// * `name` - The validated environment name
     /// * `ssh_credentials` - SSH credentials for connecting to instances
+    /// * `ssh_port` - SSH port for connecting to instances
     ///
     /// # Returns
     ///
@@ -164,7 +168,8 @@ impl Environment {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let ssh_port = 22;
+    /// let environment = Environment::new(env_name, ssh_credentials, ssh_port);
     ///
     /// assert_eq!(environment.instance_name().as_str(), "torrust-tracker-vm-production");
     /// assert_eq!(*environment.data_dir(), PathBuf::from("data/production"));
@@ -178,7 +183,11 @@ impl Environment {
     /// This function does not panic. All instance name generation is guaranteed
     /// to succeed for valid environment names.
     #[must_use]
-    pub fn new(name: EnvironmentName, ssh_credentials: SshCredentials) -> Environment<Created> {
+    pub fn new(
+        name: EnvironmentName,
+        ssh_credentials: SshCredentials,
+        ssh_port: u16,
+    ) -> Environment<Created> {
         let env_str = name.as_str();
 
         // Generate instance name: torrust-tracker-vm-{env_name}
@@ -200,6 +209,7 @@ impl Environment {
             instance_name,
             profile_name,
             ssh_credentials,
+            ssh_port,
             build_dir,
             data_dir,
             instance_ip: None,
@@ -245,6 +255,7 @@ impl<S> Environment<S> {
             instance_name: self.instance_name,
             profile_name: self.profile_name,
             ssh_credentials: self.ssh_credentials,
+            ssh_port: self.ssh_port,
             build_dir: self.build_dir,
             data_dir: self.data_dir,
             instance_ip: self.instance_ip,
@@ -296,6 +307,12 @@ impl<S> Environment<S> {
     #[must_use]
     pub fn ssh_credentials(&self) -> &SshCredentials {
         &self.ssh_credentials
+    }
+
+    /// Returns the SSH port for this environment
+    #[must_use]
+    pub fn ssh_port(&self) -> u16 {
+        self.ssh_port
     }
 
     /// Returns the SSH username for this environment
@@ -353,7 +370,7 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/test_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let environment = Environment::new(env_name, ssh_credentials, 22);
     ///
     /// // Before provisioning
     /// assert_eq!(environment.instance_ip(), None);
@@ -398,7 +415,7 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let environment = Environment::new(env_name, ssh_credentials, 22);
     ///
     /// // Set IP after provisioning
     /// let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 42));
@@ -433,7 +450,7 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/staging_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let environment = Environment::new(env_name, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.templates_dir(),
@@ -466,7 +483,7 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let environment = Environment::new(env_name, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.traces_dir(),
@@ -496,7 +513,7 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/dev_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let environment = Environment::new(env_name, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.ansible_build_dir(),
@@ -526,7 +543,7 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/test_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let environment = Environment::new(env_name, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.tofu_build_dir(),
@@ -556,7 +573,7 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/integration_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let environment = Environment::new(env_name, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.ansible_templates_dir(),
@@ -586,7 +603,7 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/load-test-rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let environment = Environment::new(env_name, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.tofu_templates_dir(),
@@ -688,7 +705,9 @@ mod tests {
                 ssh_username,
             );
 
-            Environment::new(env_name, ssh_credentials)
+            let ssh_port = 22;
+
+            Environment::new(env_name, ssh_credentials, ssh_port)
         }
 
         /// Builds an Environment and returns the `TempDir`
@@ -707,7 +726,8 @@ mod tests {
                 ssh_username,
             );
 
-            let environment = Environment::new(env_name, ssh_credentials);
+            let ssh_port = 22;
+            let environment = Environment::new(env_name, ssh_credentials, ssh_port);
             (environment, self.temp_dir)
         }
 
@@ -737,6 +757,7 @@ mod tests {
                 instance_name,
                 profile_name,
                 ssh_credentials,
+                ssh_port: 22,
                 data_dir: data_dir.clone(),
                 build_dir: build_dir.clone(),
                 instance_ip: None,

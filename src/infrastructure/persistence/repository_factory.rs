@@ -159,7 +159,7 @@ mod tests {
             temp_dir.path().join("test_key.pub"),
             Username::new("test_user").expect("Valid username"),
         );
-        let environment = Environment::new(env_name.clone(), ssh_credentials);
+        let environment = Environment::new(env_name.clone(), ssh_credentials, 22);
 
         // Create repository with temp directory as base (not environment-specific directory)
         // The repository will automatically create the environment subdirectory

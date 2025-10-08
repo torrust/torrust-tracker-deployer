@@ -48,7 +48,7 @@ use crate::e2e::containers::RunningProvisionedContainer;
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
 ///     let stopped_container = StoppedProvisionedContainer::default();
-///     let running_container = stopped_container.start(None).await?;
+///     let running_container = stopped_container.start(None, 22).await?;
 ///     
 ///     // ... perform tests ...
 ///     

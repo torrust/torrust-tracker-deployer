@@ -190,7 +190,7 @@ impl TestContext {
     ///     temp_path.join("testing_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials);
+    /// let environment = Environment::new(env_name, ssh_credentials, 22);
     ///
     /// let test_context = TestContext::from_environment(
     ///     false,

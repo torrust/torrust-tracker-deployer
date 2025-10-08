@@ -60,7 +60,10 @@ use torrust_tracker_deploy::e2e::tasks::virtual_machine::{
     run_provision_command::run_provision_command,
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
-use torrust_tracker_deploy::shared::{ssh::SshCredentials, Username};
+use torrust_tracker_deploy::shared::{
+    ssh::{SshCredentials, DEFAULT_SSH_PORT},
+    Username,
+};
 
 #[derive(Parser)]
 #[command(name = "e2e-provision-tests")]
@@ -131,7 +134,8 @@ pub async fn main() -> Result<()> {
         ssh_user.clone(),
     );
 
-    let environment = Environment::new(environment_name, ssh_credentials);
+    let ssh_port = DEFAULT_SSH_PORT;
+    let environment = Environment::new(environment_name, ssh_credentials, ssh_port);
 
     let test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?

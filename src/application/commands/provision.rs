@@ -284,7 +284,8 @@ impl ProvisionCommand {
         let instance_ip = instance_info.ip_address;
 
         let current_step = ProvisionStep::RenderAnsibleTemplates;
-        self.render_ansible_templates(ssh_credentials, instance_ip)
+        let ssh_port = environment.ssh_port();
+        self.render_ansible_templates(ssh_credentials, instance_ip, ssh_port)
             .await
             .map_err(|e| (e, current_step))?;
 
@@ -363,8 +364,9 @@ impl ProvisionCommand {
         &self,
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
+        ssh_port: u16,
     ) -> Result<(), ProvisionCommandError> {
-        let socket_addr = std::net::SocketAddr::new(instance_ip, 22); // Default SSH port for VMs
+        let socket_addr = std::net::SocketAddr::new(instance_ip, ssh_port);
         RenderAnsibleTemplatesStep::new(
             Arc::clone(&self.ansible_template_renderer),
             ssh_credentials.clone(),

@@ -30,7 +30,7 @@ pub mod public_key;
 pub mod service_checker;
 
 pub use client::SshClient;
-pub use connection::SshConnection;
+pub use connection::{SshConnection, DEFAULT_SSH_PORT};
 pub use credentials::SshCredentials;
 pub use public_key::SshPublicKey;
 pub use service_checker::SshServiceChecker;

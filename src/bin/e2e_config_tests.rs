@@ -75,7 +75,10 @@ use torrust_tracker_deploy::e2e::tasks::{
     run_configuration_validation::run_configuration_validation,
 };
 use torrust_tracker_deploy::logging::{self, LogFormat};
-use torrust_tracker_deploy::shared::{ssh::SshCredentials, Username};
+use torrust_tracker_deploy::shared::{
+    ssh::{SshCredentials, DEFAULT_SSH_PORT},
+    Username,
+};
 
 #[derive(Parser)]
 #[command(name = "e2e-config-tests")]
@@ -137,7 +140,8 @@ pub async fn main() -> Result<()> {
         ssh_user.clone(),
     );
 
-    let environment = Environment::new(env_name, ssh_credentials);
+    let ssh_port = DEFAULT_SSH_PORT;
+    let environment = Environment::new(env_name, ssh_credentials, ssh_port);
 
     // Create and initialize TestContext
     let test_context =

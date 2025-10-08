@@ -92,7 +92,7 @@ mod tests {
         fn create_test_environment_running() -> Environment<Running> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds)
+            Environment::new(name, ssh_creds, 22)
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
@@ -121,7 +121,7 @@ mod tests {
         fn it_should_fail_converting_destroyed_to_running() {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            let env = Environment::new(name, ssh_creds).destroy();
+            let env = Environment::new(name, ssh_creds, 22).destroy();
             let any_env = env.into_any();
             let result = any_env.try_into_running();
             assert!(result.is_err());
@@ -147,7 +147,7 @@ mod tests {
                 PathBuf::from("test_key.pub"),
                 ssh_username,
             );
-            Environment::new(env_name, ssh_credentials)
+            Environment::new(env_name, ssh_credentials, 22)
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()

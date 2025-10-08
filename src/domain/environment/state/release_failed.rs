@@ -86,7 +86,7 @@ mod tests {
         fn create_test_environment_release_failed() -> Environment<ReleaseFailed> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds)
+            Environment::new(name, ssh_creds, 22)
                 .start_provisioning()
                 .provisioned()
                 .start_configuring()
