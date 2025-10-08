@@ -129,7 +129,7 @@ impl EnvironmentTestBuilder {
             InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
         let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
 
-        let environment = Environment {
+        let context = EnvironmentContext {
             name: env_name,
             instance_name,
             profile_name,
@@ -138,6 +138,10 @@ impl EnvironmentTestBuilder {
             data_dir: data_dir.clone(),
             build_dir: build_dir.clone(),
             instance_ip: None,
+        };
+
+        let environment = Environment {
+            context,
             state: Created,
         };
 

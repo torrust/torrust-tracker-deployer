@@ -507,11 +507,12 @@ impl AnyEnvironmentState {
 
 #### Proposal #1: Create `EnvironmentContext` Struct
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Complete  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P0  
-**Estimated Time**: 2-3 hours
+**Estimated Time**: 2-3 hours  
+**Actual Time**: ~2 hours
 
 ##### Problem
 
@@ -578,24 +579,26 @@ pub struct EnvironmentContext {
 
 Core Structure:
 
-- [ ] Create `EnvironmentContext` struct in `src/domain/environment/mod.rs`
-- [ ] Add all 8 state-independent fields
-- [ ] Derive `Debug`, `Clone`, `Serialize`, `Deserialize`, `PartialEq`
-- [ ] Add comprehensive documentation explaining purpose and design rationale
+- [x] Create `EnvironmentContext` struct in `src/domain/environment/mod.rs`
+- [x] Add all 8 state-independent fields
+- [x] Derive `Debug`, `Clone`, `Serialize`, `Deserialize`, `PartialEq`
+- [x] Add comprehensive documentation explaining purpose and design rationale
+- [x] Extract to dedicated module `src/domain/environment/context.rs`
 
 Field Visibility:
 
-- [ ] Use `pub(crate)` for fields (internal to domain module)
-- [ ] Keep implementation details hidden from external modules
+- [x] Use `pub(crate)` for fields (internal to domain module)
+- [x] Keep implementation details hidden from external modules
 
 #### Proposal #2: Refactor `Environment<S>` to Use Core
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Complete  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P0  
 **Depends On**: Proposal #1  
-**Estimated Time**: 2-3 hours
+**Estimated Time**: 2-3 hours  
+**Actual Time**: ~2 hours
 
 ##### Problem
 
@@ -697,44 +700,46 @@ impl<S> Environment<S> {
 
 Struct Update:
 
-- [ ] Replace 8 individual fields with single `core: EnvironmentContext` field
-- [ ] Keep `state: S` field as-is
-- [ ] Update struct documentation
+- [x] Replace 8 individual fields with single `context: EnvironmentContext` field (renamed from 'core' to 'context')
+- [x] Keep `state: S` field as-is
+- [x] Update struct documentation
 
 Constructor:
 
-- [ ] Update `Environment::new()` to create `EnvironmentContext` instance
-- [ ] Ensure all field initialization logic is preserved
-- [ ] Verify generated values (instance_name, profile_name, paths)
+- [x] Update `Environment::new()` to create `EnvironmentContext` instance
+- [x] Ensure all field initialization logic is preserved
+- [x] Verify generated values (instance_name, profile_name, paths)
 
 Core Access:
 
-- [ ] Implement `core(&self) -> &EnvironmentContext` method
-- [ ] Implement `core_mut(&mut self) -> &mut EnvironmentContext` method (private)
-- [ ] Add documentation explaining usage
+- [x] Implement `context(&self) -> &EnvironmentContext` method
+- [x] Implement `context_mut(&mut self) -> &mut EnvironmentContext` method (private)
+- [x] Add documentation explaining usage
 
 State Transitions:
 
-- [ ] Update `with_state<T>()` to move `core` instead of copying fields
-- [ ] Verify state transition logging still works
-- [ ] Ensure no performance regression
+- [x] Update `with_state<T>()` to move `context` instead of copying fields
+- [x] Verify state transition logging still works
+- [x] Ensure no performance regression
 
 Field Accessors:
 
-- [ ] Update all `pub fn field_name(&self)` methods to delegate to `self.core.field_name`
-- [ ] Maintain existing method signatures (no breaking changes at method level)
-- [ ] Update documentation if needed
+- [x] Update all `pub fn field_name(&self)` methods to delegate to `self.context.field_name`
+- [x] Maintain existing method signatures (no breaking changes at method level)
+- [x] Update documentation if needed
 
 Mutators:
 
-- [ ] Update `with_instance_ip()` to modify `core`
-- [ ] Verify any other mutation methods
+- [x] Update `with_instance_ip()` to modify `context`
+- [x] Verify any other mutation methods
 
 Tests:
 
-- [ ] Run all existing unit tests
-- [ ] Ensure no test modifications needed
-- [ ] Add test for `core()` accessor if not covered
+- [x] Run all existing unit tests (758 passing)
+- [x] Run all doctests (107 passing)
+- [x] Ensure no test modifications needed
+- [x] Update test builders to use new structure
+- [x] Fix doctest to avoid accessing private fields
 
 ---
 

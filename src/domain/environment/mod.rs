@@ -45,6 +45,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+pub mod context;
 pub mod name;
 pub mod repository;
 pub mod state;
@@ -58,6 +59,7 @@ pub mod testing;
 pub use trace_id::TraceId;
 
 // Re-export commonly used types for convenience
+pub use context::EnvironmentContext;
 pub use name::{EnvironmentName, EnvironmentNameError};
 pub use state::{
     AnyEnvironmentState, ConfigureFailed, Configured, Configuring, Created, Destroyed,
@@ -73,58 +75,6 @@ use std::path::PathBuf;
 
 /// Directory name for trace files within an environment's data directory
 pub const TRACES_DIR_NAME: &str = "traces";
-
-/// Core environment data that remains constant across all states
-///
-/// This struct contains all fields that do not change when the environment
-/// transitions between states. Extracting these fields eliminates repetitive
-/// pattern matching in `AnyEnvironmentState` while maintaining the type-state
-/// pattern's compile-time guarantees.
-///
-/// # Design Rationale
-///
-/// By separating state-independent data from the state machine, we:
-/// - Eliminate repetitive pattern matching in `AnyEnvironmentState`
-/// - Make it clear which data is constant vs. state-dependent
-/// - Simplify state transitions (only the state field changes)
-/// - Enable easier extension of environment configuration
-///
-/// # Field Overview
-///
-/// - **Identity**: `name`, `instance_name`, `profile_name`
-/// - **Configuration**: `ssh_credentials`, `ssh_port`
-/// - **Paths**: `build_dir`, `data_dir`
-/// - **Runtime State**: `instance_ip` (populated after provisioning)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EnvironmentContext {
-    /// The validated environment name
-    pub(crate) name: EnvironmentName,
-
-    /// The instance name for this environment (auto-generated)
-    pub(crate) instance_name: InstanceName,
-
-    /// The profile name for this environment (auto-generated)
-    pub(crate) profile_name: ProfileName,
-
-    /// SSH credentials for connecting to instances in this environment
-    pub(crate) ssh_credentials: SshCredentials,
-
-    /// SSH port for connecting to instances in this environment
-    pub(crate) ssh_port: u16,
-
-    /// Build directory for this environment (auto-generated)
-    pub(crate) build_dir: PathBuf,
-
-    /// Data directory for this environment (auto-generated)
-    pub(crate) data_dir: PathBuf,
-
-    /// Instance IP address (populated after provisioning)
-    ///
-    /// This field stores the IP address of the provisioned instance and is
-    /// `None` until the environment has been successfully provisioned.
-    /// Once set, it's carried through all subsequent state transitions.
-    pub(crate) instance_ip: Option<IpAddr>,
-}
 
 /// Environment configuration encapsulating all environment-specific settings
 ///
@@ -160,33 +110,8 @@ pub struct EnvironmentContext {
 /// This ensures multiple environments can run concurrently without conflicts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Environment<S = Created> {
-    /// The validated environment name
-    name: EnvironmentName,
-
-    /// The instance name for this environment (auto-generated)
-    instance_name: InstanceName,
-
-    /// The profile name for this environment (auto-generated)
-    profile_name: ProfileName,
-
-    /// SSH credentials for connecting to instances in this environment
-    ssh_credentials: SshCredentials,
-
-    /// SSH port for connecting to instances in this environment
-    ssh_port: u16,
-
-    /// Build directory for this environment (auto-generated)
-    build_dir: PathBuf,
-
-    /// Data directory for this environment (auto-generated)
-    data_dir: PathBuf,
-
-    /// Instance IP address (populated after provisioning)
-    ///
-    /// This field stores the IP address of the provisioned instance and is
-    /// `None` until the environment has been successfully provisioned.
-    /// Once set, it's carried through all subsequent state transitions.
-    instance_ip: Option<IpAddr>,
+    /// Core environment data shared across all states
+    context: EnvironmentContext,
 
     /// Current state of the environment in the deployment lifecycle
     state: S,
@@ -256,7 +181,7 @@ impl Environment {
         let data_dir = PathBuf::from("data").join(env_str);
         let build_dir = PathBuf::from("build").join(env_str);
 
-        Environment {
+        let context = EnvironmentContext {
             name,
             instance_name,
             profile_name,
@@ -265,6 +190,10 @@ impl Environment {
             build_dir,
             data_dir,
             instance_ip: None,
+        };
+
+        Environment {
+            context,
             state: Created,
         }
     }
@@ -295,22 +224,15 @@ impl<S> Environment<S> {
     fn with_state<T>(self, new_state: T) -> Environment<T> {
         // Log state transition for observability and audit trail
         tracing::info!(
-            environment_name = %self.name,
-            instance_name = %self.instance_name,
+            environment_name = %self.context.name,
+            instance_name = %self.context.instance_name,
             from_state = std::any::type_name::<S>(),
             to_state = std::any::type_name::<T>(),
             "Environment state transition"
         );
 
         Environment {
-            name: self.name,
-            instance_name: self.instance_name,
-            profile_name: self.profile_name,
-            ssh_credentials: self.ssh_credentials,
-            ssh_port: self.ssh_port,
-            build_dir: self.build_dir,
-            data_dir: self.data_dir,
-            instance_ip: self.instance_ip,
+            context: self.context,
             state: new_state,
         }
     }
@@ -328,6 +250,22 @@ impl<S> Environment<S> {
 // Type Erasure: Typed → Runtime conversions (into_any)
 // Generic implementations for all states
 impl<S> Environment<S> {
+    /// Get a reference to the environment context
+    ///
+    /// Provides access to all state-independent environment data.
+    #[must_use]
+    pub fn context(&self) -> &EnvironmentContext {
+        &self.context
+    }
+
+    /// Get a mutable reference to the environment context
+    ///
+    /// Used for operations that need to modify context data, such as
+    /// setting the instance IP after provisioning.
+    fn context_mut(&mut self) -> &mut EnvironmentContext {
+        &mut self.context
+    }
+
     /// Returns a reference to the current state
     #[must_use]
     pub fn state(&self) -> &S {
@@ -337,13 +275,13 @@ impl<S> Environment<S> {
     /// Returns the environment name
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {
-        &self.name
+        &self.context.name
     }
 
     /// Returns the instance name for this environment
     #[must_use]
     pub fn instance_name(&self) -> &InstanceName {
-        &self.instance_name
+        &self.context.instance_name
     }
 
     /// Returns the profile name for this environment
@@ -352,49 +290,49 @@ impl<S> Environment<S> {
     /// to ensure profile isolation between different test environments.
     #[must_use]
     pub fn profile_name(&self) -> &ProfileName {
-        &self.profile_name
+        &self.context.profile_name
     }
 
     /// Returns the SSH credentials for this environment
     #[must_use]
     pub fn ssh_credentials(&self) -> &SshCredentials {
-        &self.ssh_credentials
+        &self.context.ssh_credentials
     }
 
     /// Returns the SSH port for this environment
     #[must_use]
     pub fn ssh_port(&self) -> u16 {
-        self.ssh_port
+        self.context.ssh_port
     }
 
     /// Returns the SSH username for this environment
     #[must_use]
     pub fn ssh_username(&self) -> &Username {
-        &self.ssh_credentials.ssh_username
+        &self.context.ssh_credentials.ssh_username
     }
 
     /// Returns the SSH private key path for this environment
     #[must_use]
     pub fn ssh_private_key_path(&self) -> &PathBuf {
-        &self.ssh_credentials.ssh_priv_key_path
+        &self.context.ssh_credentials.ssh_priv_key_path
     }
 
     /// Returns the SSH public key path for this environment
     #[must_use]
     pub fn ssh_public_key_path(&self) -> &PathBuf {
-        &self.ssh_credentials.ssh_pub_key_path
+        &self.context.ssh_credentials.ssh_pub_key_path
     }
 
     /// Returns the build directory for this environment
     #[must_use]
     pub fn build_dir(&self) -> &PathBuf {
-        &self.build_dir
+        &self.context.build_dir
     }
 
     /// Returns the data directory for this environment
     #[must_use]
     pub fn data_dir(&self) -> &PathBuf {
-        &self.data_dir
+        &self.context.data_dir
     }
 
     /// Returns the instance IP address if available
@@ -436,7 +374,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn instance_ip(&self) -> Option<IpAddr> {
-        self.instance_ip
+        self.context.instance_ip
     }
 
     /// Sets the instance IP address for this environment
@@ -479,7 +417,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn with_instance_ip(mut self, ip: IpAddr) -> Self {
-        self.instance_ip = Some(ip);
+        self.context_mut().instance_ip = Some(ip);
         self
     }
 
@@ -513,7 +451,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn templates_dir(&self) -> PathBuf {
-        self.data_dir.join("templates")
+        self.context.data_dir.join("templates")
     }
 
     /// Returns the traces directory for this environment
@@ -546,7 +484,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn traces_dir(&self) -> PathBuf {
-        self.data_dir.join(TRACES_DIR_NAME)
+        self.context.data_dir.join(TRACES_DIR_NAME)
     }
 
     /// Returns the ansible build directory for this environment
@@ -576,7 +514,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn ansible_build_dir(&self) -> PathBuf {
-        self.build_dir.join("ansible")
+        self.context.build_dir.join("ansible")
     }
 
     /// Returns the tofu build directory for this environment
@@ -606,7 +544,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn tofu_build_dir(&self) -> PathBuf {
-        self.build_dir.join("tofu")
+        self.context.build_dir.join("tofu")
     }
 
     /// Returns the ansible templates directory for this environment
@@ -804,7 +742,7 @@ mod tests {
                 InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
             let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
 
-            let environment = Environment {
+            let context = EnvironmentContext {
                 name: env_name,
                 instance_name,
                 profile_name,
@@ -813,6 +751,10 @@ mod tests {
                 data_dir: data_dir.clone(),
                 build_dir: build_dir.clone(),
                 instance_ip: None,
+            };
+
+            let environment = Environment {
+                context,
                 state: Created,
             };
 
