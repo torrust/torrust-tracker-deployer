@@ -35,14 +35,20 @@ use crate::e2e::context::TestContext;
 /// Returns an error if:
 /// - `TestCommand` execution fails
 /// - Any validation check fails
-pub async fn run_test_command(env: &TestContext, instance_ip: &IpAddr) -> Result<()> {
+pub async fn run_test_command(test_context: &TestContext, instance_ip: &IpAddr) -> Result<()> {
     info!("Starting deployment validation");
 
-    // Use the new TestCommand to handle all infrastructure validation steps
-    let test_command = TestCommand::new(env.environment.ssh_credentials().clone(), *instance_ip);
+    // Ensure environment has the instance IP set (clone since we're borrowing)
+    let environment = test_context
+        .environment
+        .clone()
+        .with_instance_ip(*instance_ip);
+
+    // Use TestCommand to handle all infrastructure validation steps
+    let test_command = TestCommand::new();
 
     test_command
-        .execute()
+        .execute(&environment)
         .await
         .map_err(anyhow::Error::from)
         .context("Failed to validate deployment")?;

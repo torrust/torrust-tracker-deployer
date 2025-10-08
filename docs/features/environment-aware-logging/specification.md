@@ -201,16 +201,18 @@ pub fn execute(&self, environment_name: &str) -> Result<Environment<Created>> {
 
 ### Commands Requiring Environment Context
 
-| Command        | Requires Environment? | Reason                                               | Status     |
-| -------------- | --------------------- | ---------------------------------------------------- | ---------- |
-| `provision`    | ✅ Yes                | Provisions infrastructure for environment            | ✅ Has it  |
-| `configure`    | ✅ Yes                | Configures software for environment                  | ✅ Has it  |
-| `deploy`       | ✅ Yes                | Deploys application to environment                   | ⚠️ Verify  |
-| `destroy`      | ✅ Yes                | Destroys environment infrastructure                  | ⚠️ Verify  |
-| `test`         | ✅ Yes                | Tests environment deployment                         | ❌ Missing |
-| `create`       | ✅ Yes                | Creates new environment (use name being created)     | ⚠️ Verify  |
-| `check`        | ❌ No                 | Checks system dependencies (generic, no environment) | N/A        |
-| Internal tools | ❌ No                 | Linters, tests, etc.                                 | N/A        |
+| Command        | Requires Environment? | Reason                                               | Status    |
+| -------------- | --------------------- | ---------------------------------------------------- | --------- |
+| `provision`    | ✅ Yes                | Provisions infrastructure for environment            | ✅ Has it |
+| `configure`    | ✅ Yes                | Configures software for environment                  | ✅ Has it |
+| `test`         | ✅ Yes                | Tests environment deployment                         | ✅ Has it |
+| `deploy`       | ✅ Yes                | Deploys application to environment                   | N/A       |
+| `destroy`      | ✅ Yes                | Destroys environment infrastructure                  | N/A       |
+| `create`       | ✅ Yes                | Creates new environment (use name being created)     | N/A       |
+| `check`        | ❌ No                 | Checks system dependencies (generic, no environment) | N/A       |
+| Internal tools | ❌ No                 | Linters, tests, etc.                                 | N/A       |
+
+**Note**: Only `provision`, `configure`, and `test` commands exist currently (Oct 8, 2025). Other commands listed are planned but not yet implemented.
 
 ### Abstraction Layers
 
@@ -270,13 +272,13 @@ pub fn execute(&self, environment_name: &str) -> Result<Environment<Created>> {
 
 ## ✅ Definition of Done
 
-### Phase 1: Command Spans (Priority)
+### Phase 1: Command Spans (Priority) ✅ COMPLETED
 
-- [ ] All commands audited for environment field in `#[instrument]` macro
-- [ ] `TestCommand` updated with environment field
-- [ ] Other commands verified/updated as needed
-- [ ] E2E tests run successfully with improved environment visibility
-- [ ] Manual verification that logs show environment where expected
+- [x] All commands audited for environment field in `#[instrument]` macro
+- [x] `TestCommand` updated with environment field
+- [x] Other commands verified/updated as needed (only 3 commands exist: provision, configure, test - all have environment field)
+- [x] E2E tests run successfully with improved environment visibility
+- [x] Manual verification that logs show environment where expected
 
 ### Phase 2: Strategic Log Enhancement (Optional/Incremental)
 

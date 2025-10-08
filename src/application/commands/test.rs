@@ -12,16 +12,16 @@
 //! The command provides comprehensive error reporting and logging to help
 //! diagnose deployment issues.
 
-use std::net::IpAddr;
 use tracing::{info, instrument};
 
 use crate::application::steps::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,
 };
+use crate::domain::environment::Environment;
 use crate::infrastructure::remote_actions::RemoteActionError;
 use crate::shared::command::CommandError;
-use crate::shared::ssh::{credentials::SshCredentials, SshConnection};
+use crate::shared::ssh::SshConnection;
 
 /// Comprehensive error type for the `TestCommand`
 #[derive(Debug, thiserror::Error)]
@@ -31,49 +31,84 @@ pub enum TestCommandError {
 
     #[error("Remote action failed: {0}")]
     RemoteAction(#[from] RemoteActionError),
+
+    #[error("Environment '{environment_name}' does not have an instance IP set. The environment must be provisioned before running tests.")]
+    MissingInstanceIp { environment_name: String },
 }
 
 /// `TestCommand` orchestrates the complete infrastructure testing and validation workflow
 ///
-/// The `TestCommand` orchestrates the complete infrastructure testing and validation workflow.
+/// The `TestCommand` validates that an environment is properly set up with all required
+/// infrastructure components.
 ///
-/// This command handles all steps required to validate infrastructure:
+/// ## Validation Steps
+///
 /// 1. Validate cloud-init completion
 /// 2. Validate Docker installation
 /// 3. Validate Docker Compose installation
-pub struct TestCommand {
-    ssh_credentials: SshCredentials,
-    instance_ip: IpAddr,
+///
+/// ## Design Rationale
+///
+/// This command accepts an `Environment<S>` (any state) in its `execute` method to provide
+/// flexibility for testing environments at different stages. This design:
+///
+/// - Aligns with `ProvisionCommand`, `ConfigureCommand` patterns (accept environment in execute)
+/// - Allows testing environments regardless of compile-time state (runtime validation)
+/// - Requires the environment to have an instance IP set (checked at runtime)
+/// - Enables use in E2E tests where state tracking may not be enforced
+pub struct TestCommand;
+
+impl Default for TestCommand {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TestCommand {
     /// Create a new `TestCommand`
     #[must_use]
-    pub fn new(ssh_credentials: SshCredentials, instance_ip: IpAddr) -> Self {
-        Self {
-            ssh_credentials,
-            instance_ip,
-        }
+    pub const fn new() -> Self {
+        Self
     }
 
     /// Execute the complete testing and validation workflow
     ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment to test (must have instance IP set)
+    ///
     /// # Errors
     ///
-    /// Returns an error if any step in the validation workflow fails:
-    /// * Cloud-init completion validation fails
-    /// * Docker installation validation fails
-    /// * Docker Compose installation validation fails
-    #[instrument(name = "test_command", skip_all, fields(command_type = "test"))]
-    pub async fn execute(&self) -> Result<(), TestCommandError> {
+    /// Returns an error if:
+    /// * Environment does not have an instance IP set
+    /// * Any step in the validation workflow fails:
+    ///   - Cloud-init completion validation fails
+    ///   - Docker installation validation fails
+    ///   - Docker Compose installation validation fails
+    #[instrument(
+        name = "test_command",
+        skip_all,
+        fields(
+            command_type = "test",
+            environment = %environment.name()
+        )
+    )]
+    pub async fn execute<S>(&self, environment: &Environment<S>) -> Result<(), TestCommandError> {
         info!(
             command = "test",
-            instance_ip = %self.instance_ip,
+            environment = %environment.name(),
+            instance_ip = ?environment.instance_ip(),
             "Starting complete infrastructure testing workflow"
         );
 
+        let instance_ip =
+            environment
+                .instance_ip()
+                .ok_or_else(|| TestCommandError::MissingInstanceIp {
+                    environment_name: environment.name().to_string(),
+                })?;
         let ssh_connection =
-            SshConnection::with_default_port(self.ssh_credentials.clone(), self.instance_ip);
+            SshConnection::with_default_port(environment.ssh_credentials().clone(), instance_ip);
 
         ValidateCloudInitCompletionStep::new(ssh_connection.clone())
             .execute()
@@ -89,7 +124,8 @@ impl TestCommand {
 
         info!(
             command = "test",
-            instance_ip = %self.instance_ip,
+            environment = %environment.name(),
+            instance_ip = ?environment.instance_ip(),
             "Infrastructure testing workflow completed successfully"
         );
 
@@ -100,39 +136,13 @@ impl TestCommand {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::net::{IpAddr, Ipv4Addr};
-    use tempfile::TempDir;
-
-    use crate::shared::Username;
-
-    // Helper function to create mock dependencies for testing
-    fn create_mock_dependencies() -> (SshCredentials, IpAddr, TempDir) {
-        let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let ssh_key_path = temp_dir.path().join("test_key");
-        let ssh_pub_key_path = temp_dir.path().join("test_key.pub");
-        let ssh_credentials = SshCredentials::new(
-            ssh_key_path,
-            ssh_pub_key_path,
-            Username::new("test_user").unwrap(),
-        );
-        let instance_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
-
-        (ssh_credentials, instance_ip, temp_dir)
-    }
 
     #[test]
-    fn it_should_create_test_command_with_ssh_credentials_and_ip() {
-        let (ssh_credentials, instance_ip, _temp_dir) = create_mock_dependencies();
-
-        let command = TestCommand::new(ssh_credentials.clone(), instance_ip);
+    fn it_should_create_test_command() {
+        let _command = TestCommand::new();
 
         // Verify the command was created (basic structure test)
-        // This test just verifies that the command can be created with the dependencies
-        assert_eq!(command.instance_ip, instance_ip);
-        assert_eq!(
-            command.ssh_credentials.ssh_username,
-            ssh_credentials.ssh_username
-        );
+        // TestCommand is now a zero-sized type that takes environment in execute()
     }
 
     #[test]
