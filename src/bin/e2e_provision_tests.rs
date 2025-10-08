@@ -137,7 +137,7 @@ pub async fn main() -> Result<()> {
     let ssh_port = DEFAULT_SSH_PORT;
     let environment = Environment::new(environment_name, ssh_credentials, ssh_port);
 
-    let test_context =
+    let mut test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
             .init()?;
 
@@ -147,7 +147,7 @@ pub async fn main() -> Result<()> {
 
     let test_start = Instant::now();
 
-    let provision_result = run_provisioning_test(&test_context).await;
+    let provision_result = run_provisioning_test(&mut test_context).await;
 
     // Always cleanup test infrastructure created during this test run
     // This ensures proper resource cleanup regardless of test success or failure
@@ -195,16 +195,18 @@ pub async fn main() -> Result<()> {
 /// 2. **Basic Validation**: Verifies infrastructure is ready (cloud-init completed)
 ///
 /// Returns the provisioned instance IP address on success.
-async fn run_provisioning_test(env: &TestContext) -> Result<IpAddr> {
+async fn run_provisioning_test(env: &mut TestContext) -> Result<IpAddr> {
     info!(
         test_type = "provision_only",
         workflow = "infrastructure_provisioning",
         "Starting infrastructure provisioning E2E test"
     );
 
-    let provisioned_env = run_provision_command(env).await?;
+    run_provision_command(env).await?;
 
-    let instance_ip = provisioned_env
+    // Extract instance IP from the updated TestContext
+    let instance_ip = env
+        .environment
         .instance_ip()
         .expect("Instance IP must be set after successful provisioning");
 

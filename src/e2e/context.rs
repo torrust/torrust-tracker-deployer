@@ -25,6 +25,7 @@ use tracing::{info, warn};
 
 use crate::config::Config;
 use crate::container::Services;
+use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::Environment;
 use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 
@@ -71,8 +72,10 @@ pub enum TestContextType {
 pub struct TestContext {
     pub config: Config,
     pub services: Services,
-    /// The complete environment configuration containing instance name, SSH keys, and paths
-    pub environment: Environment,
+    /// The complete environment configuration containing instance name, SSH keys, and paths.
+    /// Stored as `AnyEnvironmentState` to track the actual current state throughout the
+    /// deployment lifecycle (Created → Provisioning → Provisioned → Configuring → Configured, etc.)
+    pub environment: AnyEnvironmentState,
     /// Whether to keep the deployment environment after completion.
     ///
     /// When `false`, the environment will be automatically cleaned up (destroyed)
@@ -135,7 +138,7 @@ impl TestContext {
         let env = Self {
             config,
             services,
-            environment,
+            environment: environment.into_any(), // Convert to AnyEnvironmentState for runtime state tracking
             keep_env,
             temp_dir: Some(temp_dir),
             context_type,
@@ -305,6 +308,62 @@ impl TestContext {
     #[must_use]
     pub fn temp_dir_path(&self) -> Option<&std::path::Path> {
         self.temp_dir.as_ref().map(tempfile::TempDir::path)
+    }
+
+    /// Updates the test context environment from a provisioned environment
+    ///
+    /// This method updates the internal environment state after provisioning
+    /// completes, ensuring the `TestContext` maintains the latest and accurate environment state.
+    ///
+    /// # Arguments
+    ///
+    /// * `provisioned_env` - The provisioned environment returned by `ProvisionCommand`
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use torrust_tracker_deploy::e2e::context::TestContext;
+    /// # use torrust_tracker_deploy::domain::Environment;
+    /// # fn example(test_context: &mut TestContext, provisioned_env: Environment<torrust_tracker_deploy::domain::environment::Provisioned>) {
+    /// // After provisioning succeeds, update the test context
+    /// test_context.update_from_provisioned(provisioned_env);
+    /// # }
+    /// ```
+    pub fn update_from_provisioned(
+        &mut self,
+        provisioned_env: crate::domain::Environment<crate::domain::environment::Provisioned>,
+    ) {
+        // Replace the environment with the provisioned state using type erasure
+        // This properly represents the actual state (Provisioned) rather than keeping it in Created state
+        self.environment = provisioned_env.into_any();
+    }
+
+    /// Updates the test context environment from a configured environment
+    ///
+    /// This method updates the internal environment state after configuration
+    /// completes, ensuring the `TestContext` maintains the latest and accurate environment state.
+    ///
+    /// # Arguments
+    ///
+    /// * `configured_env` - The configured environment returned by `ConfigureCommand`
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use torrust_tracker_deploy::e2e::context::TestContext;
+    /// # use torrust_tracker_deploy::domain::Environment;
+    /// # fn example(test_context: &mut TestContext, configured_env: Environment<torrust_tracker_deploy::domain::environment::Configured>) {
+    /// // After configuration succeeds, update the test context
+    /// test_context.update_from_configured(configured_env);
+    /// # }
+    /// ```
+    pub fn update_from_configured(
+        &mut self,
+        configured_env: crate::domain::Environment<crate::domain::environment::Configured>,
+    ) {
+        // Replace the environment with the configured state using type erasure
+        // This properly represents the actual state (Configured) rather than keeping it in Created state
+        self.environment = configured_env.into_any();
     }
 
     /// Creates a repository for the current environment

@@ -31,8 +31,9 @@ use crate::e2e::context::TestContext;
 
 /// Provision infrastructure using `OpenTofu` and prepare for configuration
 ///
-/// Returns the provisioned environment with the instance IP stored in its context.
-/// Callers can extract the IP address using `environment.instance_ip()`.
+/// This function updates the `TestContext`'s internal environment to reflect the
+/// provisioned state, ensuring consistency throughout the test lifecycle. Callers
+/// can access the provisioned environment and its instance IP through the `TestContext`.
 ///
 /// # Errors
 ///
@@ -40,9 +41,7 @@ use crate::e2e::context::TestContext;
 /// - `ProvisionCommand` execution fails
 /// - Infrastructure provisioning fails
 /// - IP address cannot be obtained from `OpenTofu` outputs
-pub async fn run_provision_command(
-    test_context: &TestContext,
-) -> Result<crate::domain::Environment<crate::domain::environment::Provisioned>> {
+pub async fn run_provision_command(test_context: &mut TestContext) -> Result<()> {
     info!("Provisioning test infrastructure");
 
     // Create repository for this environment
@@ -59,8 +58,15 @@ pub async fn run_provision_command(
     );
 
     // Execute provisioning with environment in Created state
+    // Extract the Created environment from AnyEnvironmentState
+    let created_env = test_context
+        .environment
+        .clone()
+        .try_into_created()
+        .context("Environment must be in Created state to provision")?;
+
     let provisioned_env = provision_command
-        .execute(test_context.environment.clone())
+        .execute(created_env)
         .await
         .map_err(anyhow::Error::from)
         .context("Failed to provision infrastructure")?;
@@ -72,5 +78,8 @@ pub async fn run_provision_command(
         "Instance provisioned successfully"
     );
 
-    Ok(provisioned_env)
+    // Update the test context with the provisioned environment state
+    test_context.update_from_provisioned(provisioned_env);
+
+    Ok(())
 }

@@ -55,7 +55,6 @@
 
 use anyhow::Result;
 use clap::Parser;
-use std::net::IpAddr;
 use std::time::Instant;
 use tracing::{error, info};
 
@@ -144,7 +143,7 @@ pub async fn main() -> Result<()> {
     let ssh_port = DEFAULT_SSH_PORT;
     let environment = Environment::new(environment_name, ssh_credentials, ssh_port);
 
-    let test_context =
+    let mut test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
             .init()?;
 
@@ -154,10 +153,10 @@ pub async fn main() -> Result<()> {
 
     let test_start = Instant::now();
 
-    let deployment_result = run_full_deployment_test(&test_context).await;
+    let deployment_result = run_full_deployment_test(&mut test_context).await;
 
     let validation_result = match &deployment_result {
-        Ok(instance_ip) => run_test_command(&test_context, instance_ip).await,
+        Ok(()) => run_test_command(&test_context).await,
         Err(_) => Ok(()), // Skip validation if deployment failed
     };
 
@@ -176,7 +175,7 @@ pub async fn main() -> Result<()> {
 
     // Handle all 4 combinations of deployment and validation results
     match (deployment_result, validation_result) {
-        (Ok(_), Ok(())) => {
+        (Ok(()), Ok(())) => {
             info!(
                 test_suite = "e2e_tests",
                 status = "success",
@@ -184,7 +183,7 @@ pub async fn main() -> Result<()> {
             );
             Ok(())
         }
-        (Ok(_), Err(validation_err)) => {
+        (Ok(()), Err(validation_err)) => {
             error!(
                 test_suite = "e2e_tests",
                 status = "failed",
@@ -214,24 +213,18 @@ pub async fn main() -> Result<()> {
     }
 }
 
-async fn run_full_deployment_test(env: &TestContext) -> Result<IpAddr> {
+async fn run_full_deployment_test(test_context: &mut TestContext) -> Result<()> {
     info!(
         test_type = "full_deployment",
         workflow = "template_based",
         "Starting full deployment E2E test"
     );
 
-    // Provision infrastructure - returns typed Environment<Provisioned>
-    let provisioned_env = run_provision_command(env).await?;
+    // Provision infrastructure - updates TestContext with provisioned state
+    run_provision_command(test_context).await?;
 
-    // Extract instance IP from the provisioned environment
-    let instance_ip = provisioned_env
-        .instance_ip()
-        .expect("Instance IP must be set after successful provisioning");
-
-    // Configure infrastructure - requires Environment<Provisioned>, returns Environment<Configured>
-    // This demonstrates compile-time type safety: cannot call configure without provisioning first
-    let _configured_env = run_configure_command(env, provisioned_env)?;
+    // Configure infrastructure - updates TestContext with configured state
+    run_configure_command(test_context)?;
 
     info!(status = "success", "Deployment completed successfully");
 
@@ -242,6 +235,5 @@ async fn run_full_deployment_test(env: &TestContext) -> Result<IpAddr> {
         "Full deployment E2E test completed successfully"
     );
 
-    // Return the instance IP for validation in main
-    Ok(instance_ip)
+    Ok(())
 }

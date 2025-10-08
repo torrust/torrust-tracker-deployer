@@ -36,18 +36,28 @@ use crate::e2e::context::TestContext;
 /// Configure infrastructure using Ansible playbooks
 ///
 /// This function executes Ansible configuration using the `ConfigureCommand` for E2E tests.
-/// It requires a provisioned environment to ensure type-safe state transitions.
+/// It extracts the provisioned environment from the `TestContext` and applies configuration,
+/// ensuring type-safe state transitions.
+///
+/// This function updates the `TestContext`'s internal environment to reflect the
+/// configured state, ensuring consistency throughout the test lifecycle. Callers
+/// can access the configured environment through the `TestContext`.
 ///
 /// # Errors
 ///
 /// Returns an error if:
+/// - Environment is not in Provisioned state
 /// - `ConfigureCommand` execution fails
 /// - Infrastructure configuration fails
-pub fn run_configure_command(
-    test_context: &TestContext,
-    provisioned_env: crate::domain::Environment<crate::domain::environment::Provisioned>,
-) -> Result<crate::domain::Environment<crate::domain::environment::Configured>> {
+pub fn run_configure_command(test_context: &mut TestContext) -> Result<()> {
     info!("Configuring test infrastructure");
+
+    // Extract provisioned environment from TestContext for configuration
+    let provisioned_env = test_context
+        .environment
+        .clone()
+        .try_into_provisioned()
+        .context("Environment must be in Provisioned state after successful provisioning")?;
 
     // Create repository for this environment
     let repository = test_context.create_repository();
@@ -70,5 +80,8 @@ pub fn run_configure_command(
         "Infrastructure configuration completed successfully"
     );
 
-    Ok(configured_env)
+    // Update the test context with the configured environment state
+    test_context.update_from_configured(configured_env);
+
+    Ok(())
 }

@@ -22,10 +22,10 @@
 //! functional environment ready for application deployment.
 
 use anyhow::{Context, Result};
-use std::net::IpAddr;
 use tracing::info;
 
 use crate::application::commands::TestCommand;
+use crate::domain::environment::state::AnyEnvironmentState;
 use crate::e2e::context::TestContext;
 
 /// Validate deployment by running infrastructure validation tests
@@ -35,21 +35,43 @@ use crate::e2e::context::TestContext;
 /// Returns an error if:
 /// - `TestCommand` execution fails
 /// - Any validation check fails
-pub async fn run_test_command(test_context: &TestContext, instance_ip: &IpAddr) -> Result<()> {
+/// - Environment does not have instance IP set
+pub async fn run_test_command(test_context: &TestContext) -> Result<()> {
     info!("Starting deployment validation");
 
-    // Ensure environment has the instance IP set (clone since we're borrowing)
-    let environment = test_context
+    // The environment in TestContext should already have the instance IP set after provisioning
+    let instance_ip = test_context
         .environment
-        .clone()
-        .with_instance_ip(*instance_ip);
+        .instance_ip()
+        .context("Environment does not have instance IP set")?;
+
+    info!(
+        instance_ip = %instance_ip,
+        "Validating deployment on instance"
+    );
 
     // Use TestCommand to handle all infrastructure validation steps
     let test_command = TestCommand::new();
 
-    test_command
-        .execute(&environment)
-        .await
+    // TestCommand::execute is generic over state, so we need to match on AnyEnvironmentState
+    // and pass the typed environment. Since we're just reading, any state works.
+    let result = match &test_context.environment {
+        AnyEnvironmentState::Created(env) => test_command.execute(env).await,
+        AnyEnvironmentState::Provisioning(env) => test_command.execute(env).await,
+        AnyEnvironmentState::Provisioned(env) => test_command.execute(env).await,
+        AnyEnvironmentState::Configuring(env) => test_command.execute(env).await,
+        AnyEnvironmentState::Configured(env) => test_command.execute(env).await,
+        AnyEnvironmentState::Releasing(env) => test_command.execute(env).await,
+        AnyEnvironmentState::Released(env) => test_command.execute(env).await,
+        AnyEnvironmentState::Running(env) => test_command.execute(env).await,
+        AnyEnvironmentState::ProvisionFailed(env) => test_command.execute(env).await,
+        AnyEnvironmentState::ConfigureFailed(env) => test_command.execute(env).await,
+        AnyEnvironmentState::ReleaseFailed(env) => test_command.execute(env).await,
+        AnyEnvironmentState::RunFailed(env) => test_command.execute(env).await,
+        AnyEnvironmentState::Destroyed(env) => test_command.execute(env).await,
+    };
+
+    result
         .map_err(anyhow::Error::from)
         .context("Failed to validate deployment")?;
 

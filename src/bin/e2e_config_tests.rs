@@ -58,7 +58,7 @@
 //! - `RunningProvisionedContainer` - Running state, can be queried, configured, and stopped
 //! - State transitions are enforced at compile time through different types
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::time::Instant;
 use torrust_tracker_deploy::e2e::tasks::run_configure_command::run_configure_command;
@@ -144,14 +144,14 @@ pub async fn main() -> Result<()> {
     let environment = Environment::new(env_name, ssh_credentials, ssh_port);
 
     // Create and initialize TestContext
-    let test_context =
+    let mut test_context =
         TestContext::from_environment(false, environment, TestContextType::Container)?.init()?;
 
     // Cleanup any artifacts from previous test runs that may have failed to clean up
     // This ensures a clean slate before starting new tests
     preflight_cleanup::preflight_cleanup_previous_resources(&test_context)?;
 
-    let test_result = run_configuration_tests(&test_context).await;
+    let test_result = run_configuration_tests(&mut test_context).await;
 
     // Cleanup test infrastructure created during this test run
     // For containers, this is automatic via testcontainers (no-op), but called for symmetry with VMs
@@ -189,7 +189,7 @@ pub async fn main() -> Result<()> {
 }
 
 /// Run the complete configuration tests using extracted tasks
-async fn run_configuration_tests(test_context: &TestContext) -> Result<()> {
+async fn run_configuration_tests(test_context: &mut TestContext) -> Result<()> {
     info!("Starting configuration tests with Docker container");
 
     // Step 1: Run provision simulation (includes container setup and SSH connectivity)
@@ -198,14 +198,19 @@ async fn run_configuration_tests(test_context: &TestContext) -> Result<()> {
     // Step 2: Create a simulated provisioned environment for type-safe configuration
     // In config-only tests, we simulate the provisioned state since we use Docker containers
     // instead of actual VM provisioning
-    let provisioned_env = test_context
+    let created_env = test_context
         .environment
         .clone()
-        .start_provisioning()
-        .provisioned();
+        .try_into_created()
+        .context("Environment must be in Created state for config tests")?;
+    let provisioned_env = created_env.start_provisioning().provisioned();
+
+    // Update TestContext with the simulated provisioned environment
+    test_context.update_from_provisioned(provisioned_env);
 
     // Step 3: Run Ansible configuration with typed environment
-    let _configured_env = run_configure_command(test_context, provisioned_env)?;
+    // The TestContext is updated internally with the new environment state
+    run_configure_command(test_context)?;
 
     // Step 4: Run configuration validation
     run_configuration_validation(
