@@ -33,13 +33,17 @@ use crate::e2e::context::TestContext;
 #[derive(Debug, Error)]
 pub enum TestTaskError {
     /// Environment does not have an instance IP set
-    #[error("Environment does not have instance IP set, state: {state_type}
-Tip: Ensure the environment is provisioned before running validation tests")]
+    #[error(
+        "Environment does not have instance IP set, state: {state_type}
+Tip: Ensure the environment is provisioned before running validation tests"
+    )]
     MissingInstanceIp { state_type: String },
 
     /// Test command execution failed
-    #[error("Failed to validate deployment: {source}
-Tip: Check that all required services are installed and running on the instance")]
+    #[error(
+        "Failed to validate deployment: {source}
+Tip: Check that all required services are installed and running on the instance"
+    )]
     ValidationFailed {
         #[source]
         source: TestCommandError,
@@ -131,12 +135,13 @@ pub async fn run_test_command(test_context: &TestContext) -> Result<(), TestTask
     info!("Starting deployment validation");
 
     // The environment in TestContext should already have the instance IP set after provisioning
-    let instance_ip = test_context
-        .environment
-        .instance_ip()
-        .ok_or_else(|| TestTaskError::MissingInstanceIp {
-            state_type: test_context.environment.state_name().to_string(),
-        })?;
+    let instance_ip =
+        test_context
+            .environment
+            .instance_ip()
+            .ok_or_else(|| TestTaskError::MissingInstanceIp {
+                state_type: test_context.environment.state_name().to_string(),
+            })?;
 
     info!(
         instance_ip = %instance_ip,

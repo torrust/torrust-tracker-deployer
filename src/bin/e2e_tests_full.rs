@@ -156,7 +156,9 @@ pub async fn main() -> Result<()> {
     let deployment_result = run_full_deployment_test(&mut test_context).await;
 
     let validation_result = match &deployment_result {
-        Ok(()) => run_test_command(&test_context).await.map_err(|e| anyhow::anyhow!("{e}")),
+        Ok(()) => run_test_command(&test_context)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}")),
         Err(_) => Ok(()), // Skip validation if deployment failed
     };
 
