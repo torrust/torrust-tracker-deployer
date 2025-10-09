@@ -13,18 +13,18 @@ Feature documentation serves to:
 
 ## 📁 Active Features
 
-| Feature                                                                               | Status         | Priority | Created      |
-| ------------------------------------------------------------------------------------- | -------------- | -------- | ------------ |
-| [Persistent Logging with Optional Stderr](./persistent-logging-with-optional-stderr/) | 📋 Specified   | High     | Oct 9, 2025  |
-| [Linter Auto-fix](./linter-auto-fix/README.md)                                        | 📋 Specified   | Medium   | Oct 9, 2025  |
-| [Linter Parallel Execution](./linter-parallel-execution/README.md)                    | ⏸️ Deferred    | Low      | Oct 9, 2025  |
-| [Environment State Management](./environment-state-management/)                       | 🔄 Refactoring | High     | Sept 9, 2025 |
+| Feature                                                            | Status         | Priority | Created      |
+| ------------------------------------------------------------------ | -------------- | -------- | ------------ |
+| [Linter Auto-fix](./linter-auto-fix/README.md)                     | 📋 Specified   | Medium   | Oct 9, 2025  |
+| [Linter Parallel Execution](./linter-parallel-execution/README.md) | ⏸️ Deferred    | Low      | Oct 9, 2025  |
+| [Environment State Management](./environment-state-management/)    | 🔄 Refactoring | High     | Sept 9, 2025 |
 
 ## ✅ Completed Features
 
-| Feature                                                            | Completed   | Description                                                 |
-| ------------------------------------------------------------------ | ----------- | ----------------------------------------------------------- |
-| [Environment-Aware Logging](./environment-aware-logging/README.md) | Oct 9, 2025 | Multi-environment log visibility with proper span hierarchy |
+| Feature                                                            | Completed   | Description                                                         |
+| ------------------------------------------------------------------ | ----------- | ------------------------------------------------------------------- |
+| Persistent Logging with Optional Stderr                            | Oct 9, 2025 | LoggingBuilder with fluent API for file and optional stderr logging |
+| [Environment-Aware Logging](./environment-aware-logging/README.md) | Oct 9, 2025 | Multi-environment log visibility with proper span hierarchy         |
 
 **Note**: Completed features remain in the repository for reference. Full implementation history is available in git history.
 
