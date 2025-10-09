@@ -1,7 +1,5 @@
 # Feature Development
 
-This directory contains detailed feature specifications and development documentation for new capabilities in the Torrust Tracker Deploy project.
-
 ## 📋 Purpose
 
 Feature documentation serves to:
