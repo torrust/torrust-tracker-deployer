@@ -289,13 +289,13 @@ pub fn execute(&self, environment_name: &str) -> Result<Environment<Created>> {
 
 ### Documentation
 
-- [ ] Update [Logging Guide](../../contributing/logging-guide.md) with:
-  - [ ] When to include environment field in command spans
-  - [ ] When to include environment field in logs
-  - [ ] Examples of proper vs improper environment usage
-  - [ ] Abstraction layer guidelines (infrastructure stays environment-agnostic)
-- [ ] Update this specification with final implementation details
-- [ ] Update README with completion status
+- [x] Update [Logging Guide](../../contributing/logging-guide.md) with:
+  - [x] When to include environment field in command spans
+  - [x] When to include environment field in logs
+  - [x] Examples of proper vs improper environment usage
+  - [x] Abstraction layer guidelines (infrastructure stays environment-agnostic)
+- [x] Update this specification with final implementation details
+- [x] Update README with completion status
 
 ### Testing
 

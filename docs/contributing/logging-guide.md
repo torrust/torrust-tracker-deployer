@@ -141,6 +141,216 @@ When you execute operations, you'll see nested spans in your logs:
   - Values: `"cloud_init"`, `"docker"`, `"docker_compose"`
 - **server_ip**: The target server IP address
 
+## Environment Field Usage
+
+The application supports multi-environment deployments (e.g., `e2e-full`, `e2e-config`, `e2e-provision`). The `environment` field helps identify which environment a log entry belongs to, especially important when debugging multiple environments concurrently.
+
+### When to Include Environment Field
+
+#### ✅ Always Include in Command Spans
+
+All commands that operate on environments **must** include the environment field in their `#[instrument]` macro:
+
+```rust
+#[instrument(
+    name = "provision_command",
+    skip_all,
+    fields(
+        command_type = "provision",
+        environment = %environment.name()  // ✅ Required
+    )
+)]
+pub async fn execute(
+    &self,
+    environment: Environment<Created>,
+) -> Result<Environment<Provisioned>, ProvisionCommandError> {
+    // Command implementation...
+}
+```
+
+**Commands that require environment field:**
+
+- `ProvisionCommand` ✅
+- `ConfigureCommand` ✅
+- `TestCommand` ✅
+- `DestroyCommand` (when implemented)
+- `CreateCommand` (when implemented - use the name being created)
+
+**Commands that do NOT require environment field:**
+
+- `CheckCommand` - Generic system checks, no specific environment
+- Internal tools - Linters, formatters, etc.
+
+#### ✅ Include in High-Value Application Layer Logs
+
+Add environment field to important logs in the **application layer** where environment context is available and adds value:
+
+```rust
+// Command-level logs
+info!(
+    command = "provision",
+    environment = %environment.name(),  // ✅ Include for visibility
+    "Starting complete infrastructure provisioning workflow"
+);
+
+// Step-level logs with significant operations
+info!(
+    step = "install_docker",
+    environment = %environment.name(),  // ✅ Useful for debugging
+    "Installing Docker via Ansible"
+);
+```
+
+**Good candidates for environment field:**
+
+- Command start/completion messages
+- Step-level operations where environment provides context
+- Error logs where environment helps identify the issue
+- State transition logs
+
+#### ❌ Do NOT Include in Infrastructure Layer
+
+Infrastructure layer components should remain **environment-agnostic** to maintain proper abstraction:
+
+```rust
+// Infrastructure adapter - NO environment field
+impl TofuClient {
+    pub fn apply(&self, working_dir: &Path) -> Result<Output> {
+        info!(
+            working_dir = %working_dir.display(),
+            // ❌ NO environment field - adapter is generic
+            "Applying infrastructure changes"
+        );
+    }
+}
+
+// SSH client - NO environment field
+impl SshClient {
+    pub fn execute(&self, host: &str, command: &str) -> Result<Output> {
+        info!(
+            host = %host,
+            command = %command,
+            // ❌ NO environment field - client is generic
+            "Executing SSH command"
+        );
+    }
+}
+```
+
+**Never include environment in:**
+
+- External tool adapters (`TofuClient`, `AnsibleClient`, `SshClient`)
+- Infrastructure clients and wrappers
+- Shared utilities (SSH, file operations, etc.)
+- Generic helpers that don't operate on environments
+
+### Abstraction Layers
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│ Application Layer (Environment-Aware)                   │
+│ - Commands: provision, configure, test                  │
+│ - Steps: infrastructure setup, software installation    │
+│ ✅ Include environment field in spans and key logs      │
+├─────────────────────────────────────────────────────────┤
+│ Domain Layer (Business Logic)                           │
+│ - Environment, State, Repository abstractions           │
+│ ✅ Include environment field where it makes sense       │
+├─────────────────────────────────────────────────────────┤
+│ Infrastructure Layer (Environment-Agnostic)             │
+│ - Adapters: TofuClient, AnsibleClient, SshClient        │
+│ - External tool wrappers                                │
+│ ❌ NEVER include environment field                      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Examples from Codebase
+
+#### ✅ Good: Command Span with Environment
+
+```rust
+// src/application/commands/provision.rs
+#[instrument(
+    name = "provision_command",
+    skip_all,
+    fields(
+        command_type = "provision",
+        environment = %environment.name()  // ✅ Correct
+    )
+)]
+pub async fn execute(
+    &self,
+    environment: Environment<Created>,
+) -> Result<Environment<Provisioned>, ProvisionCommandError> {
+    info!(
+        command = "provision",
+        environment = %environment.name(),  // ✅ Explicit for visibility
+        "Starting complete infrastructure provisioning workflow"
+    );
+    // ...
+}
+```
+
+#### ✅ Good: Infrastructure Layer Without Environment
+
+```rust
+// src/infrastructure/external_tools/tofu/adapter/client.rs
+impl OpenTofuClient {
+    pub fn apply(&self, working_dir: &Path, auto_approve: bool) -> Result<Output> {
+        info!(
+            working_dir = %working_dir.display(),
+            auto_approve = %auto_approve,
+            // ✅ No environment - stays generic
+            "Applying infrastructure changes"
+        );
+        // ...
+    }
+}
+```
+
+#### ❌ Bad: Environment in Infrastructure Layer
+
+```rust
+// src/infrastructure/external_tools/tofu/adapter/client.rs
+impl OpenTofuClient {
+    pub fn apply(
+        &self,
+        working_dir: &Path,
+        environment: &str  // ❌ Wrong - breaks abstraction
+    ) -> Result<Output> {
+        info!(
+            working_dir = %working_dir.display(),
+            environment = %environment,  // ❌ Wrong - adapter should be generic
+            "Applying infrastructure changes"
+        );
+        // ...
+    }
+}
+```
+
+### Visibility Through Span Hierarchy
+
+Remember: Logs within command spans automatically inherit environment context. You don't need to add environment field to every log if the span hierarchy provides it:
+
+```text
+2025-10-08T09:35:40.731158Z  INFO torrust_tracker_deploy::application::steps::software::docker: Installing Docker via Ansible
+  at src/application/steps/software/docker.rs:62
+  in torrust_tracker_deploy::application::steps::software::docker::install_docker with step_type: "software", component: "docker"
+  in torrust_tracker_deploy::application::commands::configure::configure_command with command_type: "configure", environment: e2e-full
+```
+
+**When to be explicit:**
+
+- High-level command logs (start/completion)
+- Error logs where environment is critical for diagnosis
+- Logs that might be viewed outside span context (JSON aggregation)
+
+**When to rely on span inheritance:**
+
+- Nested step logs within command execution
+- Infrastructure layer operations (no environment at all)
+- Debug/trace logs where span context is sufficient
+
 ## Environment Variables
 
 Control logging behavior with environment variables:
