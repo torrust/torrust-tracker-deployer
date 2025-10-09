@@ -13,11 +13,12 @@ Feature documentation serves to:
 
 ## 📁 Active Features
 
-| Feature                                                            | Status         | Priority | Created      |
-| ------------------------------------------------------------------ | -------------- | -------- | ------------ |
-| [Linter Auto-fix](./linter-auto-fix/README.md)                     | 📋 Specified   | Medium   | Oct 9, 2025  |
-| [Linter Parallel Execution](./linter-parallel-execution/README.md) | ⏸️ Deferred    | Low      | Oct 9, 2025  |
-| [Environment State Management](./environment-state-management/)    | 🔄 Refactoring | High     | Sept 9, 2025 |
+| Feature                                                                               | Status         | Priority | Created      |
+| ------------------------------------------------------------------------------------- | -------------- | -------- | ------------ |
+| [Persistent Logging with Optional Stderr](./persistent-logging-with-optional-stderr/) | 📋 Specified   | High     | Oct 9, 2025  |
+| [Linter Auto-fix](./linter-auto-fix/README.md)                                        | 📋 Specified   | Medium   | Oct 9, 2025  |
+| [Linter Parallel Execution](./linter-parallel-execution/README.md)                    | ⏸️ Deferred    | Low      | Oct 9, 2025  |
+| [Environment State Management](./environment-state-management/)                       | 🔄 Refactoring | High     | Sept 9, 2025 |
 
 ## ✅ Completed Features
 
