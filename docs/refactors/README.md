@@ -157,38 +157,6 @@ Update progress regularly:
 - **Suggest improvements** - what's missing?
 - **Approve clearly** - signal when implementation can begin
 
-## 🔗 Examples
-
-### Proposal Format Example
-
-```markdown
-### Proposal #X: Clear Descriptive Title
-
-**Status**: ⏳ Not Started
-**Impact**: 🟢🟢🟢 High
-**Effort**: 🔵🔵 Medium
-**Priority**: P1
-**Depends On**: Proposal #Y (if applicable)
-
-#### Problem
-
-[Clear description of the issue]
-
-#### Proposed Solution
-
-[Detailed solution with code examples]
-
-#### Benefits
-
-- ✅ Benefit 1
-- ✅ Benefit 2
-
-#### Implementation Checklist
-
-- [ ] Step 1
-- [ ] Step 2
-```
-
 ## 📞 Questions?
 
 - Open a GitHub issue with label `refactoring`
