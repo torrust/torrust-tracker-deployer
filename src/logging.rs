@@ -7,8 +7,11 @@
 //!
 //! ## Persistent Logging
 //!
-//! All logs are always written to `./data/logs/log.txt` for persistent storage.
+//! All logs are always written to a log file for persistent storage.
 //! This enables post-mortem analysis and troubleshooting of production deployments.
+//!
+//! By default, logs are written to `./data/logs/log.txt` in production environments.
+//! For testing, a different log directory can be specified to avoid polluting production data.
 //!
 //! ## Optional Stderr Output
 //!
@@ -21,17 +24,25 @@
 //! ## Examples
 //!
 //! ```rust,no_run
+//! use std::path::Path;
 //! use torrust_tracker_deploy::logging::{LogOutput, init_compact};
 //!
-//! // E2E tests - enable stderr visibility
-//! init_compact(LogOutput::FileAndStderr);
+//! // E2E tests - enable stderr visibility with production log location
+//! init_compact(Path::new("./data/logs"), LogOutput::FileAndStderr);
 //!
 //! // Production - file only
-//! init_compact(LogOutput::FileOnly);
+//! init_compact(Path::new("./data/logs"), LogOutput::FileOnly);
+//!
+//! // Integration tests - isolated temp directory
+//! init_compact(Path::new("/tmp/test-xyz/data/logs"), LogOutput::FileAndStderr);
 //! ```
 
 use std::io;
+use std::path::Path;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+/// Log file name used by the logging system
+pub const LOG_FILE_NAME: &str = "log.txt";
 
 /// Output target for logging
 #[derive(Clone, Copy, Debug, clap::ValueEnum)]
@@ -53,22 +64,30 @@ pub enum LogFormat {
     Compact,
 }
 
-/// Create the log file appender that writes to `./data/logs/log.txt`
+/// Create the log file appender that writes to `{log_dir}/log.txt`
 ///
 /// This function creates the log directory if it doesn't exist and returns
 /// a file appender that will append to the log file.
+///
+/// # Arguments
+///
+/// * `log_dir` - Directory where log files should be written (e.g., `./data/logs` for production)
 ///
 /// # Panics
 ///
 /// Panics if the log directory cannot be created. This is intentional as
 /// logging is critical for observability.
-fn create_log_file_appender() -> tracing_appender::non_blocking::NonBlocking {
+fn create_log_file_appender(log_dir: &Path) -> tracing_appender::non_blocking::NonBlocking {
     // Create directory if it doesn't exist
-    std::fs::create_dir_all("./data/logs")
-        .expect("Failed to create log directory: ./data/logs - check filesystem permissions");
+    std::fs::create_dir_all(log_dir).unwrap_or_else(|_| {
+        panic!(
+            "Failed to create log directory: {} - check filesystem permissions",
+            log_dir.display()
+        )
+    });
 
     // Create file appender (appends to existing file)
-    let file_appender = tracing_appender::rolling::never("./data/logs", "log.txt");
+    let file_appender = tracing_appender::rolling::never(log_dir, LOG_FILE_NAME);
 
     // Use non-blocking writer for better performance
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
@@ -82,7 +101,7 @@ fn create_log_file_appender() -> tracing_appender::non_blocking::NonBlocking {
 /// Initialize the tracing subscriber with default pretty formatting
 ///
 /// Sets up structured logging with:
-/// - File output to `./data/logs/log.txt` (always enabled)
+/// - File output to `{log_dir}/log.txt` (always enabled)
 /// - Optional stderr output based on `output` parameter
 /// - Pretty-printed format for development
 /// - Environment-based filtering via `RUST_LOG`
@@ -90,6 +109,7 @@ fn create_log_file_appender() -> tracing_appender::non_blocking::NonBlocking {
 ///
 /// # Arguments
 ///
+/// * `log_dir` - Directory where log files should be written (e.g., `./data/logs` for production)
 /// * `output` - Where to write logs (file only or file + stderr)
 ///
 /// # Panics
@@ -99,16 +119,20 @@ fn create_log_file_appender() -> tracing_appender::non_blocking::NonBlocking {
 ///
 /// # Example
 /// ```rust,no_run
+/// use std::path::Path;
 /// use torrust_tracker_deploy::logging::{LogOutput, init};
 ///
-/// // E2E tests - enable stderr visibility
-/// init(LogOutput::FileAndStderr);
+/// // E2E tests - enable stderr visibility with production location
+/// init(Path::new("./data/logs"), LogOutput::FileAndStderr);
 ///
 /// // Production - file only
-/// init(LogOutput::FileOnly);
+/// init(Path::new("./data/logs"), LogOutput::FileOnly);
+///
+/// // Testing - isolated temp directory
+/// init(Path::new("/tmp/test-xyz/data/logs"), LogOutput::FileAndStderr);
 /// ```
-pub fn init(output: LogOutput) {
-    let file_appender = create_log_file_appender();
+pub fn init(log_dir: &Path, output: LogOutput) {
+    let file_appender = create_log_file_appender(log_dir);
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     match output {
@@ -136,7 +160,7 @@ pub fn init(output: LogOutput) {
 /// Initialize the tracing subscriber with JSON formatting
 ///
 /// Sets up structured logging with:
-/// - File output to `./data/logs/log.txt` (always enabled)
+/// - File output to `{log_dir}/log.txt` (always enabled)
 /// - Optional stderr output based on `output` parameter
 /// - JSON output format for production environments
 /// - Environment-based filtering via `RUST_LOG`
@@ -144,6 +168,7 @@ pub fn init(output: LogOutput) {
 ///
 /// # Arguments
 ///
+/// * `log_dir` - Directory where log files should be written (e.g., `./data/logs` for production)
 /// * `output` - Where to write logs (file only or file + stderr)
 ///
 /// # Panics
@@ -153,16 +178,20 @@ pub fn init(output: LogOutput) {
 ///
 /// # Example
 /// ```rust,no_run
+/// use std::path::Path;
 /// use torrust_tracker_deploy::logging::{LogOutput, init_json};
 ///
-/// // E2E tests - enable stderr visibility
-/// init_json(LogOutput::FileAndStderr);
+/// // E2E tests - enable stderr visibility with production location
+/// init_json(Path::new("./data/logs"), LogOutput::FileAndStderr);
 ///
 /// // Production - file only
-/// init_json(LogOutput::FileOnly);
+/// init_json(Path::new("./data/logs"), LogOutput::FileOnly);
+///
+/// // Testing - isolated temp directory
+/// init_json(Path::new("/tmp/test-xyz/data/logs"), LogOutput::FileAndStderr);
 /// ```
-pub fn init_json(output: LogOutput) {
-    let file_appender = create_log_file_appender();
+pub fn init_json(log_dir: &Path, output: LogOutput) {
+    let file_appender = create_log_file_appender(log_dir);
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     match output {
@@ -190,7 +219,7 @@ pub fn init_json(output: LogOutput) {
 /// Initialize the tracing subscriber with compact formatting
 ///
 /// Sets up structured logging with:
-/// - File output to `./data/logs/log.txt` (always enabled)
+/// - File output to `{log_dir}/log.txt` (always enabled)
 /// - Optional stderr output based on `output` parameter
 /// - Compact console output for minimal verbosity
 /// - Environment-based filtering via `RUST_LOG`
@@ -198,6 +227,7 @@ pub fn init_json(output: LogOutput) {
 ///
 /// # Arguments
 ///
+/// * `log_dir` - Directory where log files should be written (e.g., `./data/logs` for production)
 /// * `output` - Where to write logs (file only or file + stderr)
 ///
 /// # Panics
@@ -207,16 +237,20 @@ pub fn init_json(output: LogOutput) {
 ///
 /// # Example
 /// ```rust,no_run
+/// use std::path::Path;
 /// use torrust_tracker_deploy::logging::{LogOutput, init_compact};
 ///
-/// // E2E tests - enable stderr visibility
-/// init_compact(LogOutput::FileAndStderr);
+/// // E2E tests - enable stderr visibility with production location
+/// init_compact(Path::new("./data/logs"), LogOutput::FileAndStderr);
 ///
 /// // Production - file only
-/// init_compact(LogOutput::FileOnly);
+/// init_compact(Path::new("./data/logs"), LogOutput::FileOnly);
+///
+/// // Testing - isolated temp directory
+/// init_compact(Path::new("/tmp/test-xyz/data/logs"), LogOutput::FileAndStderr);
 /// ```
-pub fn init_compact(output: LogOutput) {
-    let file_appender = create_log_file_appender();
+pub fn init_compact(log_dir: &Path, output: LogOutput) {
+    let file_appender = create_log_file_appender(log_dir);
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     match output {
@@ -248,6 +282,7 @@ pub fn init_compact(output: LogOutput) {
 ///
 /// # Arguments
 ///
+/// * `log_dir` - Directory where log files should be written (e.g., `./data/logs` for production)
 /// * `output` - Where to write logs (file only or file + stderr)
 /// * `format` - The logging format to use
 ///
@@ -258,18 +293,22 @@ pub fn init_compact(output: LogOutput) {
 ///
 /// # Example
 /// ```rust,no_run
+/// use std::path::Path;
 /// use torrust_tracker_deploy::logging::{LogFormat, LogOutput, init_with_format};
 ///
-/// // Initialize with JSON format for E2E tests
-/// init_with_format(LogOutput::FileAndStderr, &LogFormat::Json);
+/// // Initialize with JSON format for E2E tests with production location
+/// init_with_format(Path::new("./data/logs"), LogOutput::FileAndStderr, &LogFormat::Json);
 ///
 /// // Initialize with compact format for production
-/// init_with_format(LogOutput::FileOnly, &LogFormat::Compact);
+/// init_with_format(Path::new("./data/logs"), LogOutput::FileOnly, &LogFormat::Compact);
+///
+/// // Initialize for testing with isolated directory
+/// init_with_format(Path::new("/tmp/test-xyz/data/logs"), LogOutput::FileAndStderr, &LogFormat::Pretty);
 /// ```
-pub fn init_with_format(output: LogOutput, format: &LogFormat) {
+pub fn init_with_format(log_dir: &Path, output: LogOutput, format: &LogFormat) {
     match format {
-        LogFormat::Pretty => init(output),
-        LogFormat::Json => init_json(output),
-        LogFormat::Compact => init_compact(output),
+        LogFormat::Pretty => init(log_dir, output),
+        LogFormat::Json => init_json(log_dir, output),
+        LogFormat::Compact => init_compact(log_dir, output),
     }
 }

@@ -17,6 +17,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use tempfile::TempDir;
+use torrust_tracker_deploy::logging::LOG_FILE_NAME;
 
 /// Helper struct to manage test execution and cleanup
 struct LoggingTest {
@@ -33,7 +34,7 @@ impl LoggingTest {
         let temp_dir = TempDir::new().expect("Failed to create temp directory for test");
         let test_dir = temp_dir.path().to_path_buf();
 
-        let log_file_path = test_dir.join("data/logs/log.txt");
+        let log_file_path = test_dir.join("data/logs").join(LOG_FILE_NAME);
 
         let instance = Self {
             temp_dir,
@@ -60,8 +61,18 @@ impl LoggingTest {
             .expect("Failed to get deps parent directory")
             .join("test_logging");
 
+        // Use isolated temp directory for logs (follows testing conventions)
+        let log_dir = self.test_dir.join("data/logs");
+
         let output = Command::new(&binary_path)
-            .args(["--format", format, "--output", output])
+            .args([
+                "--format",
+                format,
+                "--output",
+                output,
+                "--log-dir",
+                &log_dir.to_string_lossy(),
+            ])
             .current_dir(&self.test_dir)
             .output()
             .expect("Failed to execute test_logging binary");
@@ -73,10 +84,41 @@ impl LoggingTest {
         }
     }
 
-    /// Read the log file contents
+    /// Read the log file contents, waiting for it to be written by the non-blocking logger
+    ///
+    /// The logging system uses `tracing_appender::non_blocking` which writes logs
+    /// via a background thread. This method polls the file until it has content,
+    /// avoiding unnecessary delays when logs are already written while handling
+    /// the race condition when the test reads before the background thread writes.
     fn read_log_file(&self) -> String {
-        fs::read_to_string(&self.log_file_path)
-            .expect("Failed to read log file - it should exist after running test_logging")
+        use std::time::Duration;
+
+        const MAX_RETRIES: u32 = 20;
+        const RETRY_DELAY_MS: u64 = 50;
+        const INITIAL_WAIT_MS: u64 = 10;
+
+        // Small initial wait to allow the non-blocking writer's background thread to start
+        std::thread::sleep(Duration::from_millis(INITIAL_WAIT_MS));
+
+        for attempt in 0..MAX_RETRIES {
+            if let Ok(content) = fs::read_to_string(&self.log_file_path) {
+                if !content.is_empty() {
+                    return content;
+                }
+            }
+
+            // If file is empty or doesn't exist yet, wait and retry
+            if attempt < MAX_RETRIES - 1 {
+                std::thread::sleep(Duration::from_millis(RETRY_DELAY_MS));
+            }
+        }
+
+        panic!(
+            "Log file at {} never received content after {} retries ({}ms total wait)",
+            self.log_file_path.display(),
+            MAX_RETRIES,
+            INITIAL_WAIT_MS + (u64::from(MAX_RETRIES) * RETRY_DELAY_MS)
+        );
     }
 
     /// Check if log file exists

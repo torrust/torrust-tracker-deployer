@@ -117,7 +117,12 @@ pub async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging based on the chosen format with stderr output for test visibility
-    logging::init_with_format(logging::LogOutput::FileAndStderr, &cli.log_format);
+    // E2E tests use production log location: ./data/logs
+    logging::init_with_format(
+        std::path::Path::new("./data/logs"),
+        logging::LogOutput::FileAndStderr,
+        &cli.log_format,
+    );
 
     info!(
         application = "torrust_tracker_deploy",
