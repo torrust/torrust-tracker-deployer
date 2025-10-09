@@ -32,6 +32,10 @@ path = "src/bin/e2e_provision_tests.rs"
 name = "linter"
 path = "src/bin/linter.rs"
 
+[[bin]]
+name = "test_logging"
+path = "src/bin/test_logging.rs"
+
 [dependencies]
 tokio = { version = "1.0", features = [ "full" ] }
 anyhow = "1.0"

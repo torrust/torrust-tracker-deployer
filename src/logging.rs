@@ -34,7 +34,7 @@ use std::io;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 /// Output target for logging
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, clap::ValueEnum)]
 pub enum LogOutput {
     /// Write logs to file only (production mode)
     FileOnly,
