@@ -21,7 +21,22 @@
 //! - `LogOutput::FileOnly` - Production mode: logs to file only
 //! - `LogOutput::FileAndStderr` - Development/testing: logs to both file and stderr
 //!
-//! ## Examples
+//! ## Usage
+//!
+//! ### Builder Pattern (Recommended)
+//!
+//! ```rust,no_run
+//! use std::path::Path;
+//! use torrust_tracker_deploy::logging::{LogOutput, LogFormat, LoggingBuilder};
+//!
+//! // Flexible builder API
+//! LoggingBuilder::new(Path::new("./data/logs"))
+//!     .with_format(LogFormat::Compact)
+//!     .with_output(LogOutput::FileAndStderr)
+//!     .init();
+//! ```
+//!
+//! ### Convenience Functions
 //!
 //! ```rust,no_run
 //! use std::path::Path;
@@ -64,10 +79,172 @@ pub enum LogFormat {
     Compact,
 }
 
+// ============================================================================
+// BUILDER PATTERN - Core Implementation
+// ============================================================================
+
+/// Builder for constructing a tracing subscriber with flexible configuration
+///
+/// This builder provides a fluent API for configuring logging with different
+/// formats and output targets. It eliminates code duplication by centralizing
+/// layer creation and subscriber initialization.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use std::path::Path;
+/// use torrust_tracker_deploy::logging::{LogOutput, LogFormat, LoggingBuilder};
+///
+/// // Basic usage with defaults (Compact format, FileAndStderr output)
+/// LoggingBuilder::new(Path::new("./data/logs")).init();
+///
+/// // Custom configuration
+/// LoggingBuilder::new(Path::new("./data/logs"))
+///     .with_format(LogFormat::Json)
+///     .with_output(LogOutput::FileOnly)
+///     .init();
+/// ```
+pub struct LoggingBuilder {
+    log_dir: std::path::PathBuf,
+    format: LogFormat,
+    output: LogOutput,
+}
+
+impl LoggingBuilder {
+    /// Create a new logging builder with default settings
+    ///
+    /// Default configuration:
+    /// - Format: `LogFormat::Compact`
+    /// - Output: `LogOutput::FileAndStderr`
+    ///
+    /// # Arguments
+    ///
+    /// * `log_dir` - Directory where log files should be written (e.g., `./data/logs`)
+    #[must_use]
+    pub fn new(log_dir: &Path) -> Self {
+        Self {
+            log_dir: log_dir.to_path_buf(),
+            format: LogFormat::Compact,
+            output: LogOutput::FileAndStderr,
+        }
+    }
+
+    /// Set the logging format
+    ///
+    /// # Arguments
+    ///
+    /// * `format` - The desired logging format (Pretty, Json, or Compact)
+    #[must_use]
+    pub fn with_format(mut self, format: LogFormat) -> Self {
+        self.format = format;
+        self
+    }
+
+    /// Set the output target
+    ///
+    /// # Arguments
+    ///
+    /// * `output` - Where to write logs (`FileOnly` or `FileAndStderr`)
+    #[must_use]
+    pub fn with_output(mut self, output: LogOutput) -> Self {
+        self.output = output;
+        self
+    }
+
+    /// Initialize the global tracing subscriber with the configured settings
+    ///
+    /// This consumes the builder and sets up the global logging infrastructure.
+    /// After calling this, all logging macros (`tracing::info!`, etc.) will use
+    /// this configuration.
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    /// - Log directory cannot be created (filesystem permissions issue)
+    /// - Subscriber initialization fails (usually means it was already initialized)
+    ///
+    /// Both panics are intentional as logging is critical for observability.
+    pub fn init(self) {
+        init_subscriber(&self.log_dir, self.output, &self.format);
+    }
+}
+
+// ============================================================================
+// INTERNAL INITIALIZATION - Single Source of Truth
+// ============================================================================
+
+/// Internal initialization function that handles all subscriber setup
+///
+/// This is the single source of truth for subscriber initialization.
+/// All public init functions delegate to this to eliminate duplication.
+///
+/// Note: We cannot extract the format-specific layer creation into a separate
+/// function because each format (Pretty, Json, Compact) creates a different
+/// concrete type, and Rust's type system requires all match arms to return
+/// the same type. Type erasure with boxed layers would work but adds runtime
+/// overhead for a one-time initialization cost.
+fn init_subscriber(log_dir: &Path, output: LogOutput, format: &LogFormat) {
+    let file_appender = create_log_file_appender(log_dir);
+    let env_filter = create_env_filter();
+
+    match (format, output) {
+        // Pretty format
+        (LogFormat::Pretty, LogOutput::FileOnly) => {
+            tracing_subscriber::registry()
+                .with(fmt::layer().pretty().with_writer(file_appender))
+                .with(env_filter)
+                .init();
+        }
+        (LogFormat::Pretty, LogOutput::FileAndStderr) => {
+            tracing_subscriber::registry()
+                .with(fmt::layer().pretty().with_writer(file_appender))
+                .with(fmt::layer().pretty().with_writer(io::stderr))
+                .with(env_filter)
+                .init();
+        }
+        // JSON format
+        (LogFormat::Json, LogOutput::FileOnly) => {
+            tracing_subscriber::registry()
+                .with(fmt::layer().json().with_writer(file_appender))
+                .with(env_filter)
+                .init();
+        }
+        (LogFormat::Json, LogOutput::FileAndStderr) => {
+            tracing_subscriber::registry()
+                .with(fmt::layer().json().with_writer(file_appender))
+                .with(fmt::layer().json().with_writer(io::stderr))
+                .with(env_filter)
+                .init();
+        }
+        // Compact format
+        (LogFormat::Compact, LogOutput::FileOnly) => {
+            tracing_subscriber::registry()
+                .with(fmt::layer().compact().with_writer(file_appender))
+                .with(env_filter)
+                .init();
+        }
+        (LogFormat::Compact, LogOutput::FileAndStderr) => {
+            tracing_subscriber::registry()
+                .with(fmt::layer().compact().with_writer(file_appender))
+                .with(fmt::layer().compact().with_writer(io::stderr))
+                .with(env_filter)
+                .init();
+        }
+    }
+}
+
+/// Create the environment filter from `RUST_LOG` or default to "info"
+///
+/// This reads the `RUST_LOG` environment variable to determine the log level.
+/// If not set, defaults to "info" level logging.
+fn create_env_filter() -> EnvFilter {
+    EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
+}
+
 /// Create the log file appender that writes to `{log_dir}/log.txt`
 ///
 /// This function creates the log directory if it doesn't exist and returns
-/// a file appender that will append to the log file.
+/// a non-blocking file appender that will append to the log file.
 ///
 /// # Arguments
 ///
@@ -98,7 +275,14 @@ fn create_log_file_appender(log_dir: &Path) -> tracing_appender::non_blocking::N
     non_blocking
 }
 
+// ============================================================================
+// CONVENIENCE FUNCTIONS - Thin Wrappers for Backward Compatibility
+// ============================================================================
+
 /// Initialize the tracing subscriber with default pretty formatting
+///
+/// This is a convenience wrapper around `LoggingBuilder` for backward compatibility.
+/// Consider using `LoggingBuilder` directly for more flexibility.
 ///
 /// Sets up structured logging with:
 /// - File output to `{log_dir}/log.txt` (always enabled)
@@ -132,32 +316,16 @@ fn create_log_file_appender(log_dir: &Path) -> tracing_appender::non_blocking::N
 /// init(Path::new("/tmp/test-xyz/data/logs"), LogOutput::FileAndStderr);
 /// ```
 pub fn init(log_dir: &Path, output: LogOutput) {
-    let file_appender = create_log_file_appender(log_dir);
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    match output {
-        LogOutput::FileOnly => {
-            // File output only
-            tracing_subscriber::registry()
-                .with(fmt::layer().pretty().with_writer(file_appender))
-                .with(env_filter)
-                .init();
-        }
-        LogOutput::FileAndStderr => {
-            // File + stderr output
-            let file_layer = fmt::layer().pretty().with_writer(file_appender);
-            let stderr_layer = fmt::layer().pretty().with_writer(io::stderr);
-
-            tracing_subscriber::registry()
-                .with(file_layer)
-                .with(stderr_layer)
-                .with(env_filter)
-                .init();
-        }
-    }
+    LoggingBuilder::new(log_dir)
+        .with_format(LogFormat::Pretty)
+        .with_output(output)
+        .init();
 }
 
 /// Initialize the tracing subscriber with JSON formatting
+///
+/// This is a convenience wrapper around `LoggingBuilder` for backward compatibility.
+/// Consider using `LoggingBuilder` directly for more flexibility.
 ///
 /// Sets up structured logging with:
 /// - File output to `{log_dir}/log.txt` (always enabled)
@@ -191,32 +359,16 @@ pub fn init(log_dir: &Path, output: LogOutput) {
 /// init_json(Path::new("/tmp/test-xyz/data/logs"), LogOutput::FileAndStderr);
 /// ```
 pub fn init_json(log_dir: &Path, output: LogOutput) {
-    let file_appender = create_log_file_appender(log_dir);
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    match output {
-        LogOutput::FileOnly => {
-            // File output only
-            tracing_subscriber::registry()
-                .with(fmt::layer().json().with_writer(file_appender))
-                .with(env_filter)
-                .init();
-        }
-        LogOutput::FileAndStderr => {
-            // File + stderr output
-            let file_layer = fmt::layer().json().with_writer(file_appender);
-            let stderr_layer = fmt::layer().json().with_writer(io::stderr);
-
-            tracing_subscriber::registry()
-                .with(file_layer)
-                .with(stderr_layer)
-                .with(env_filter)
-                .init();
-        }
-    }
+    LoggingBuilder::new(log_dir)
+        .with_format(LogFormat::Json)
+        .with_output(output)
+        .init();
 }
 
 /// Initialize the tracing subscriber with compact formatting
+///
+/// This is a convenience wrapper around `LoggingBuilder` for backward compatibility.
+/// Consider using `LoggingBuilder` directly for more flexibility.
 ///
 /// Sets up structured logging with:
 /// - File output to `{log_dir}/log.txt` (always enabled)
@@ -250,35 +402,16 @@ pub fn init_json(log_dir: &Path, output: LogOutput) {
 /// init_compact(Path::new("/tmp/test-xyz/data/logs"), LogOutput::FileAndStderr);
 /// ```
 pub fn init_compact(log_dir: &Path, output: LogOutput) {
-    let file_appender = create_log_file_appender(log_dir);
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    match output {
-        LogOutput::FileOnly => {
-            // File output only
-            tracing_subscriber::registry()
-                .with(fmt::layer().compact().with_writer(file_appender))
-                .with(env_filter)
-                .init();
-        }
-        LogOutput::FileAndStderr => {
-            // File + stderr output
-            let file_layer = fmt::layer().compact().with_writer(file_appender);
-            let stderr_layer = fmt::layer().compact().with_writer(io::stderr);
-
-            tracing_subscriber::registry()
-                .with(file_layer)
-                .with(stderr_layer)
-                .with(env_filter)
-                .init();
-        }
-    }
+    LoggingBuilder::new(log_dir)
+        .with_format(LogFormat::Compact)
+        .with_output(output)
+        .init();
 }
 
 /// Initialize logging based on the chosen format and output target
 ///
-/// This is a convenience function that calls the appropriate initialization
-/// function based on the provided `LogFormat` and `LogOutput`.
+/// This is a convenience wrapper around `LoggingBuilder` for backward compatibility.
+/// Consider using `LoggingBuilder` directly for more flexibility.
 ///
 /// # Arguments
 ///
@@ -306,9 +439,8 @@ pub fn init_compact(log_dir: &Path, output: LogOutput) {
 /// init_with_format(Path::new("/tmp/test-xyz/data/logs"), LogOutput::FileAndStderr, &LogFormat::Pretty);
 /// ```
 pub fn init_with_format(log_dir: &Path, output: LogOutput, format: &LogFormat) {
-    match format {
-        LogFormat::Pretty => init(log_dir, output),
-        LogFormat::Json => init_json(log_dir, output),
-        LogFormat::Compact => init_compact(log_dir, output),
-    }
+    LoggingBuilder::new(log_dir)
+        .with_format(format.clone())
+        .with_output(output)
+        .init();
 }

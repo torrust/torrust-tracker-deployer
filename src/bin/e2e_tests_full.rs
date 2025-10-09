@@ -70,7 +70,7 @@ use torrust_tracker_deploy::e2e::tasks::{
         run_provision_command::run_provision_command,
     },
 };
-use torrust_tracker_deploy::logging::{self, LogFormat};
+use torrust_tracker_deploy::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deploy::shared::{
     ssh::{SshCredentials, DEFAULT_SSH_PORT},
     Username,
@@ -117,12 +117,11 @@ pub async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging based on the chosen format with stderr output for test visibility
-    // E2E tests use production log location: ./data/logs
-    logging::init_with_format(
-        std::path::Path::new("./data/logs"),
-        logging::LogOutput::FileAndStderr,
-        &cli.log_format,
-    );
+    // E2E tests use production log location: ./data/logs using the builder pattern
+    LoggingBuilder::new(std::path::Path::new("./data/logs"))
+        .with_format(cli.log_format.clone())
+        .with_output(LogOutput::FileAndStderr)
+        .init();
 
     info!(
         application = "torrust_tracker_deploy",

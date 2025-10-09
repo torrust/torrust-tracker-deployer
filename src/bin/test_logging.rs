@@ -31,7 +31,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use torrust_tracker_deploy::logging::{LogFormat, LogOutput};
+use torrust_tracker_deploy::logging::{LogFormat, LogOutput, LoggingBuilder};
 use tracing::{debug, error, info, trace, warn};
 
 #[derive(Parser)]
@@ -54,8 +54,11 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
-    // Initialize logging with the specified configuration
-    torrust_tracker_deploy::logging::init_with_format(&cli.log_dir, cli.output, &cli.format);
+    // Initialize logging with the specified configuration using the builder pattern
+    LoggingBuilder::new(&cli.log_dir)
+        .with_format(cli.format)
+        .with_output(cli.output)
+        .init();
 
     // Emit one log message at each level for testing
     trace!("This is a TRACE level message");

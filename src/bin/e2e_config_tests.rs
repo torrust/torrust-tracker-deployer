@@ -74,7 +74,7 @@ use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup,
     run_configuration_validation::run_configuration_validation,
 };
-use torrust_tracker_deploy::logging::{self, LogFormat};
+use torrust_tracker_deploy::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deploy::shared::{
     ssh::{SshCredentials, DEFAULT_SSH_PORT},
     Username,
@@ -114,12 +114,11 @@ struct CliArgs {
 pub async fn main() -> Result<()> {
     let cli = CliArgs::parse();
 
-    // Initialize logging with production log location for E2E tests
-    logging::init_with_format(
-        std::path::Path::new("./data/logs"),
-        logging::LogOutput::FileAndStderr,
-        &cli.log_format,
-    );
+    // Initialize logging with production log location for E2E tests using the builder pattern
+    LoggingBuilder::new(std::path::Path::new("./data/logs"))
+        .with_format(cli.log_format.clone())
+        .with_output(LogOutput::FileAndStderr)
+        .init();
 
     info!(
         application = "torrust_tracker_deploy",
