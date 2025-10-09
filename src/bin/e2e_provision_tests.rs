@@ -110,8 +110,8 @@ struct Cli {
 pub async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Initialize logging based on the chosen format
-    logging::init_with_format(&cli.log_format);
+    // Initialize logging based on the chosen format with stderr output for test visibility
+    logging::init_with_format(logging::LogOutput::FileAndStderr, &cli.log_format);
 
     info!(
         application = "torrust_tracker_deploy",

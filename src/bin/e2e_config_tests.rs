@@ -114,7 +114,7 @@ struct CliArgs {
 pub async fn main() -> Result<()> {
     let cli = CliArgs::parse();
 
-    logging::init_with_format(&cli.log_format);
+    logging::init_with_format(logging::LogOutput::FileAndStderr, &cli.log_format);
 
     info!(
         application = "torrust_tracker_deploy",

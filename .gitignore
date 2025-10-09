@@ -56,7 +56,12 @@ Cargo.lock
 # Template build directory (runtime-generated configs)
 build/
 
-# Template data directory (runtime-generated templates)
+# Template data directory (runtime-generated templates, environment state, and logs)
+# Includes:
+# - data/logs/ - Persistent application logs
+# - data/*/environment.json - Environment state files
+# - data/*/templates/ - Rendered templates
+# - data/*/traces/ - Execution traces
 data/
 
 # Meson build directory
