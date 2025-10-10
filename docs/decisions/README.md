@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status      | Date       | Decision                                                                                            | Summary                                                                                   |
 | ----------- | ---------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ✅ Accepted | 2025-10-10 | [Repository Rename to Deployer](./repository-rename-to-deployer.md)                                 | Rename from "Torrust Tracker Deploy" to "Torrust Tracker Deployer" for production use     |
 | ✅ Accepted | 2025-10-03 | [Error Context Strategy](./error-context-strategy.md)                                               | Use structured error context with trace files for complete error information              |
 | ✅ Accepted | 2025-10-03 | [Command State Return Pattern](./command-state-return-pattern.md)                                   | Commands return typed states (Environment<S> → Environment<T>) for compile-time safety    |
 | ✅ Accepted | 2025-10-03 | [Actionable Error Messages](./actionable-error-messages.md)                                         | Use tiered help system with brief tips + .help() method for detailed troubleshooting      |
