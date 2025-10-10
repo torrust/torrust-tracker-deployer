@@ -220,8 +220,10 @@ impl TestContext {
     ///
     /// Returns an error if:
     /// - Template preparation fails
+    /// - Environment persistence fails
     pub fn init(self) -> Result<Self, TestContextError> {
         Self::prepare_environment(&self.services)?;
+        self.persist_initial_environment_state()?;
         self.log_environment_info();
         Ok(self)
     }
@@ -266,6 +268,28 @@ impl TestContext {
                 source: anyhow::anyhow!(e),
             })?;
         Ok(())
+    }
+
+    /// Persists the environment immediately after creation
+    ///
+    /// This method ensures the environment is saved in its initial Created state
+    /// before any commands are executed that might change the state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if environment persistence fails
+    fn persist_initial_environment_state(&self) -> Result<(), TestContextError> {
+        let repository = self.create_repository();
+        info!(
+            environment = %self.environment.name(),
+            state = %self.environment.state_name(),
+            "Persisting initial environment state"
+        );
+        repository
+            .save(&self.environment)
+            .map_err(|e| TestContextError::ContextPreparationError {
+                source: anyhow::anyhow!("Failed to persist initial environment state: {e}"),
+            })
     }
 
     /// Logs environment information
