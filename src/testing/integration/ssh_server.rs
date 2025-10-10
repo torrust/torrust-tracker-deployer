@@ -219,9 +219,9 @@ impl RealSshServerContainer {
 /// use torrust_tracker_deployer::testing::integration::ssh_server::print_docker_debug_info;
 ///
 /// // In a test when SSH connectivity fails:
-/// print_docker_debug_info(ssh_container.ssh_port()).await;
+/// print_docker_debug_info(2222);
 /// ```
-pub async fn print_docker_debug_info(container_port: u16) {
+pub fn print_docker_debug_info(container_port: u16) {
     println!("\n=== Docker Debug Information ===");
 
     // Check if Docker is running and list all containers
@@ -240,7 +240,7 @@ pub async fn print_docker_debug_info(container_port: u16) {
             }
         }
         Err(e) => {
-            println!("Failed to run 'docker ps -a': {}", e);
+            println!("Failed to run 'docker ps -a': {e}");
         }
     }
 
@@ -254,7 +254,7 @@ pub async fn print_docker_debug_info(container_port: u16) {
             println!("{}", String::from_utf8_lossy(&output.stdout));
         }
         Err(e) => {
-            println!("Failed to run 'docker images': {}", e);
+            println!("Failed to run 'docker images': {e}");
         }
     }
 
@@ -272,7 +272,7 @@ pub async fn print_docker_debug_info(container_port: u16) {
             if let Some(line) = stdout_str.lines().nth(1) {
                 // Skip header, get first container
                 if let Some(container_id) = line.split_whitespace().next() {
-                    println!("\nContainer logs for {}:", container_id);
+                    println!("\nContainer logs for {container_id}:");
                     match std::process::Command::new("docker")
                         .args(["logs", "--tail", "20", container_id])
                         .output()
@@ -287,14 +287,14 @@ pub async fn print_docker_debug_info(container_port: u16) {
                             }
                         }
                         Err(e) => {
-                            println!("Failed to get container logs: {}", e);
+                            println!("Failed to get container logs: {e}");
                         }
                     }
                 }
             }
         }
         Err(e) => {
-            println!("Failed to filter Docker containers: {}", e);
+            println!("Failed to filter Docker containers: {e}");
         }
     }
 
@@ -309,7 +309,7 @@ pub async fn print_docker_debug_info(container_port: u16) {
             let output_str = String::from_utf8_lossy(&output.stdout);
             for line in output_str.lines() {
                 if line.contains(&container_port.to_string()) {
-                    println!("Port {} usage: {}", container_port, line);
+                    println!("Port {container_port} usage: {line}");
                 }
             }
         }
@@ -320,15 +320,12 @@ pub async fn print_docker_debug_info(container_port: u16) {
                     let output_str = String::from_utf8_lossy(&output.stdout);
                     for line in output_str.lines() {
                         if line.contains(&container_port.to_string()) {
-                            println!("Port {} usage (ss): {}", container_port, line);
+                            println!("Port {container_port} usage (ss): {line}");
                         }
                     }
                 }
                 Err(e) => {
-                    println!(
-                        "Failed to check port usage (netstat/ss not available): {}",
-                        e
-                    );
+                    println!("Failed to check port usage (netstat/ss not available): {e}");
                 }
             }
         }

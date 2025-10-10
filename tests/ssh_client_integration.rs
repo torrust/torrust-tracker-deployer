@@ -299,7 +299,7 @@ async fn it_should_connect_to_real_ssh_server_and_test_connectivity() {
         println!("SSH connectivity failed with error (container may not be ready): {e}");
 
         // Print debug information to help diagnose the issue
-        print_docker_debug_info(ssh_container.ssh_port()).await;
+        print_docker_debug_info(ssh_container.ssh_port());
 
         // Still verify timeout behavior
         assert!(
@@ -314,7 +314,7 @@ async fn it_should_connect_to_real_ssh_server_and_test_connectivity() {
         );
 
         // Print debug information to help diagnose the issue
-        print_docker_debug_info(ssh_container.ssh_port()).await;
+        print_docker_debug_info(ssh_container.ssh_port());
 
         panic!("SSH connectivity should succeed with real server after retries, but failed after {elapsed:?}");
     }
