@@ -1,8 +1,8 @@
 # Dockerfile for SSH Server Testing
-# Minimal Ubuntu container with SSH server for testing SSH client functionality
+# Minimal Alpine container with SSH server for testing SSH client functionality
 # This container is used in integration tests to verify SSH connectivity and command execution
 
-FROM ubuntu:24.04
+FROM alpine:3.22
 
 # Metadata
 LABEL description="Minimal SSH server for integration testing"
@@ -10,12 +10,8 @@ LABEL maintainer="Torrust Development Team"
 LABEL version="1.0.0"
 LABEL purpose="ssh-integration-testing"
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=UTC
-
-# Update package list and install essential packages
-RUN apt-get update && apt-get install -y \
+# Install essential packages
+RUN apk add --no-cache \
     # SSH server for connectivity testing
     openssh-server \
     # Sudo for testing command execution
@@ -23,17 +19,19 @@ RUN apt-get update && apt-get install -y \
     # Basic utilities for command testing
     curl \
     wget \
-    net-tools \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    # Network tools for testing
+    net-tools
+
+# Generate SSH host keys
+RUN ssh-keygen -A
 
 # Create test user for SSH authentication
-RUN useradd -m -s /bin/bash testuser && \
+RUN adduser -D -s /bin/sh testuser && \
     echo 'testuser:testpass' | chpasswd && \
-    usermod -aG sudo testuser
+    addgroup testuser wheel
 
 # Configure SSH daemon
-RUN mkdir /var/run/sshd && \
+RUN mkdir -p /run/sshd && \
     # Enable password authentication for testing
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
     # Enable public key authentication
@@ -60,7 +58,7 @@ RUN echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCw16sai+XVnawp/P/Q23kcXKekygZ6AL
 RUN ssh-keygen -A
 
 # Create a simple entrypoint script
-RUN echo '#!/bin/bash\n\
+RUN echo '#!/bin/sh\n\
 # Start SSH daemon in foreground\n\
 exec /usr/sbin/sshd -D\n\
 ' > /entrypoint.sh && chmod +x /entrypoint.sh

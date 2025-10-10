@@ -1,4 +1,6 @@
 AAAAB
+addgroup
+adduser
 appender
 appendonly
 architecting
