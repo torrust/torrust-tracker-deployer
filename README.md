@@ -2,46 +2,65 @@
 
 # Torrust Tracker Deployer
 
-This Rust application provides automated deployment infrastructure for Torrust tracker projects. It manages VM provisioning and
-cloud-init execution using LXD containers, with the goal of finding the best solution for
-creating VMs that support cloud-init both locally (development) and in CI environments (GitHub Actions).
+> ⚠️ **DEVELOPMENT STATUS: Not Production-Ready**
+>
+> This project is currently in **active development** and is **not production-ready**. It currently only supports **local deployment** using LXD virtualization for development and testing purposes.
+>
+> **Current Scope:**
+>
+> - ✅ Local LXD virtual machine provisioning
+> - ✅ Development and testing workflows
+> - ❌ **No real cloud provider support** (AWS, GCP, Azure, Hetzner, etc.)
+> - ❌ **No production deployment capabilities**
+>
+> 📋 **MVP Goal:** After completing the [roadmap](docs/roadmap.md), we will have a Minimum Viable Product (MVP) that supports real cloud providers and production deployments.
+
+This Rust application provides automated deployment infrastructure for Torrust tracker projects. Currently focused on **local development and testing**, it manages VM provisioning and cloud-init execution using LXD virtual machines. The goal is to establish the foundational deployment patterns that will later support real cloud providers.
 
 ## 🎯 Project Goals
 
-- ✅ **Create VMs supporting cloud-init** locally and in GitHub runners
-- ✅ **Test cloud-init execution and verification**
-- ✅ **Support Docker Compose** inside VMs (planned)
-- ✅ **Fast, easy to install and use** solutions
-- ❌ **No nested virtualization dependency** (CI compatibility)
+**Current Development Phase:**
 
-## 🔧 Available Approaches
+- ✅ **Create local VMs supporting cloud-init** for development and CI testing
+- ✅ **Test cloud-init execution and verification** in controlled environments
+- ✅ **Support Docker Compose** inside VMs for application stacks
+- ✅ **Fast, easy to install and use** local development solution
+- ✅ **No nested virtualization dependency** (CI compatibility)
 
-This repository uses LXD containers for virtualization:
+**Future MVP Goals:** (See [roadmap](docs/roadmap.md))
 
-### ☁️ **LXD Containers (`templates/tofu/lxd/`)** - **OFFICIAL**
+- 🔄 **Real cloud provider support** (Hetzner, AWS, GCP, Azure)
+- 🔄 **Production deployment capabilities**
+- 🔄 **Multi-environment management**
 
-- **Technology**: System containers with cloud-init support
-- **Status**: ✅ Official provider - Guaranteed GitHub Actions compatibility
-- **Best for**: CI/CD environments, fast provisioning, local development
+## 🔧 Local Development Approach
+
+This repository uses LXD virtual machines for local virtualization and development:
+
+### ☁️ **LXD Virtual Machines (`templates/tofu/lxd/`)** - **LOCAL DEVELOPMENT**
+
+- **Technology**: Virtual machines with cloud-init support
+- **Status**: ✅ Production-ready for local development and CI testing
+- **Best for**: Local development, CI/CD environments, fast iteration
 - **Requirements**: No special virtualization needed
 
 **[📖 See detailed documentation →](docs/tofu-lxd-configuration.md)**
 
-## � Provider Comparison
+## 📊 LXD Benefits
 
 **[📖 See detailed comparison →](docs/vm-providers.md)**
 
-| Feature                    | LXD (Official)   | Multipass (Experimental) |
-| -------------------------- | ---------------- | ------------------------ |
-| **GitHub Actions Support** | ✅ Guaranteed    | ⚠️ Undocumented          |
-| **Nested Virtualization**  | ❌ Not needed    | ✅ Required              |
-| **Boot Time**              | ✅ ~5-10s        | ❌ ~30-60s               |
-| **Resource Usage**         | ✅ Lower         | ❌ Higher                |
-| **Isolation Level**        | 🔶 Process-level | ✅ Hardware-level        |
+| Feature                    | LXD Virtual Machines |
+| -------------------------- | -------------------- |
+| **GitHub Actions Support** | ✅ Guaranteed        |
+| **Nested Virtualization**  | ❌ Not needed        |
+| **Boot Time**              | ✅ Fast (~5-10s)     |
+| **Resource Usage**         | ✅ Efficient         |
+| **Installation**           | ✅ Simple setup      |
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### 📋 Prerequisites
 
 This is a Rust application that automates deployment infrastructure using OpenTofu and Ansible.
 
@@ -73,9 +92,9 @@ curl -fsSL https://get.opentofu.org/install-opentofu.sh | sudo bash
 sudo apt install ansible
 ```
 
-### Usage
+### 💻 Usage
 
-#### Main Application
+#### 🚀 Main Application
 
 The main application provides usage instructions:
 
@@ -85,10 +104,10 @@ cargo run
 
 # Or install and run directly
 cargo install --path .
-torrust-tracker-deploy
+torrust-tracker-deployer
 ```
 
-#### Development Tasks
+#### 🔧 Development Tasks
 
 This project includes convenient scripts for common development tasks:
 
@@ -103,6 +122,7 @@ Or run individual linters:
 cargo run --bin linter markdown    # Markdown linting
 cargo run --bin linter yaml        # YAML linting
 cargo run --bin linter toml        # TOML linting
+cargo run --bin linter cspell      # Spell checking
 cargo run --bin linter clippy      # Rust code analysis
 cargo run --bin linter rustfmt     # Rust formatting check
 cargo run --bin linter shellcheck  # Shell script linting
@@ -110,16 +130,21 @@ cargo run --bin linter shellcheck  # Shell script linting
 
 **[📖 See linting documentation →](docs/linting.md)**
 
-#### Running E2E Tests
+#### 🧪 Running E2E Tests
 
-Use the E2E tests binary to run automated infrastructure tests:
+Use the E2E test binaries to run automated infrastructure tests with hardcoded environments:
 
 ```bash
-# Run the comprehensive E2E tests
+# Run comprehensive E2E tests (LOCAL ONLY - connectivity issues in GitHub runners)
 cargo run --bin e2e-tests-full
 
-# Keep the test environment after completion
+# Run individual E2E test suites
+cargo run --bin e2e-config-tests      # Configuration generation and validation tests
+cargo run --bin e2e-provision-tests   # Infrastructure provisioning tests
+
+# Keep the test environment after completion for inspection
 cargo run --bin e2e-tests-full -- --keep
+cargo run --bin e2e-provision-tests -- --keep
 
 # Use custom templates directory
 cargo run --bin e2e-tests-full -- --templates-dir ./custom/templates
@@ -128,55 +153,102 @@ cargo run --bin e2e-tests-full -- --templates-dir ./custom/templates
 cargo run --bin e2e-tests-full -- --help
 ```
 
-### Manual Deployment Steps
+> **⚠️ Important Notes:**
+>
+> - E2E tests create **hardcoded environments** with predefined configurations
+> - Use `--keep` flag to inspect generated `data/` and `build/` directories after tests
+> - `e2e-tests-full` can **only run locally** due to connectivity issues in GitHub runners
+> - To see final OpenTofu and Ansible templates, check `build/` directories after running with `--keep`
 
-If you prefer manual deployment instead of using the E2E tests:
+### 📖 ~~Manual Deployment Steps~~ _(Not Currently Supported)_
 
-#### 1. Deploy Infrastructure
+> **⚠️ Manual deployment is not currently possible.** The application only supports E2E tests with hardcoded environments.
+>
+> **To explore the deployment process:**
+>
+> 1. Run E2E tests with `--keep` flag: `cargo run --bin e2e-tests-full -- --keep`
+> 2. Inspect generated templates in `build/` directories
+> 3. Review environment data in `data/` directories
+>
+> **Manual deployment commands will be available after completing the [roadmap](docs/roadmap.md).**
 
-```bash
-# Navigate to LXD configuration
-cd templates/tofu/lxd
+<details>
+<summary>📋 <strong>Reference: Experimenting with OpenTofu and Ansible manually</strong></summary>
 
-# Initialize and deploy
-tofu init && tofu apply
-```
+If you want to experiment with OpenTofu and Ansible commands directly using the generated templates:
 
-#### 2. Configure with Ansible
-
-```bash
-# Navigate to Ansible configuration
-cd ../../ansible
-
-# Update inventory.yml with the VM's IP from step 1
-# Then run the verification playbook
-ansible-playbook wait-cloud-init.yml
-
-# Install Docker on the VM
-ansible-playbook install-docker.yml
-
-# Install Docker Compose on the VM (optional)
-ansible-playbook install-docker-compose.yml
-```
-
-#### 3. Verify Deployment
+#### 1️⃣ Generate Resolved Templates
 
 ```bash
-lxc list torrust-tracker-vm
+# Run E2E tests but keep the infrastructure for manual experimentation
+cargo run --bin e2e-tests-full -- --keep
 
-# Access the container directly
-lxc exec torrust-tracker-vm -- /bin/bash
-
-# Test SSH connection
-ssh -i ~/.ssh/testing_rsa torrust@<VM_IP>
-
-# Verify Docker installation
-lxc exec torrust-vm -- docker --version
-lxc exec torrust-vm -- docker run --rm hello-world
-
-# Verify Docker Compose installation (if installed)
-lxc exec torrust-vm -- docker-compose --version
+# This creates resolved templates (no variables) in build/ directories
+# ✅ Verified: Creates build/e2e-full/tofu/lxd/ and build/e2e-full/ansible/
 ```
+
+#### 2️⃣ Navigate to Generated Templates
+
+```bash
+# Navigate to the specific environment's resolved OpenTofu templates
+cd build/e2e-full/tofu/lxd/
+
+# Or navigate to resolved Ansible templates
+cd build/e2e-full/ansible/
+
+# Other available environments:
+# cd build/e2e-provision/tofu/lxd/
+# cd build/e2e-provision/ansible/
+# cd build/e2e-config/ansible/   # (config tests don't create tofu resources)
+```
+
+#### 3️⃣ Execute Commands Manually
+
+```bash
+# From build/e2e-full/tofu/lxd/ - Execute OpenTofu commands
+tofu plan -var-file=variables.tfvars    # ✅ Verified: Works with resolved templates
+tofu validate                           # Validate configuration
+tofu output -json                       # View current outputs
+# Note: tofu apply already executed during E2E test
+
+# From build/e2e-full/ansible/ - Execute Ansible commands
+ansible-playbook --list-hosts -i inventory.yml wait-cloud-init.yml  # ✅ Verified: Works
+ansible-playbook -i inventory.yml wait-cloud-init.yml              # Run playbook
+ansible-playbook -i inventory.yml install-docker.yml               # Install Docker
+```
+
+#### 4️⃣ Connect to the Instance
+
+```bash
+# Connect to the running LXD instance directly
+lxc exec torrust-tracker-vm-e2e-full -- /bin/bash
+
+# Or via SSH (IP may vary, check tofu output)
+ssh -i fixtures/testing_rsa torrust@$(cd build/e2e-full/tofu/lxd && tofu output -json | jq -r '.instance_info.value.ip_address')
+```
+
+#### 5️⃣ Destroy Infrastructure
+
+```bash
+# ✅ Verified: Destroy the infrastructure when done experimenting
+cd build/e2e-full/tofu/lxd/
+tofu destroy -var-file=variables.tfvars -auto-approve
+
+# ✅ Verified: This removes both the VM instance and the LXD profile
+# Alternative: Use LXD commands directly
+# lxc delete torrust-tracker-vm-e2e-full --force
+# lxc profile delete torrust-profile-e2e-full
+```
+
+> **⚠️ Important:** Currently there's no application command to destroy infrastructure manually. You must use either:
+>
+> 1. **OpenTofu destroy** (recommended) - Uses resolved templates in `build/` directories
+> 2. **LXD commands** - Direct LXD resource management
+> 3. **Re-run E2E tests** - Automatically destroys and recreates infrastructure
+
+> **📖 For comprehensive LXD commands and examples, see [LXD documentation](docs/tech-stack/lxd.md)**
+
+</details>
 
 ## 🎭 Infrastructure Workflow
 
@@ -196,59 +268,62 @@ lxc exec torrust-vm -- docker-compose --version
 
 The repository includes comprehensive GitHub Actions workflows for CI testing:
 
-- **`.github/workflows/test-e2e.yml`** - **End-to-End Tests** - Runs automated E2E tests using the Rust binary
-- **`.github/workflows/test-lxd-provision.yml`** - Tests LXD container provisioning
+- **`.github/workflows/linting.yml`** - **Code Quality** - Runs all linters (markdown, YAML, TOML, Rust, shell scripts)
+- **`.github/workflows/testing.yml`** - **Unit Tests** - Runs Rust unit tests and basic validation
+- **`.github/workflows/test-e2e-config.yml`** - **E2E Config Tests** - Tests configuration generation and validation
+- **`.github/workflows/test-e2e-provision.yml`** - **E2E Provision Tests** - Tests infrastructure provisioning workflows
+- **`.github/workflows/test-lxd-provision.yml`** - **LXD Provisioning** - Tests LXD VM provisioning specifically
 
-## 📊 Current Status
+> **Note:** The full E2E tests (`e2e-tests-full`) can only be executed locally due to connectivity issues documented in [`docs/github-actions-issues/`](docs/github-actions-issues/).
 
-### ✅ Completed
+## � Roadmap
 
-- [x] LXD container provisioning (local + GitHub Actions)
-- [x] Cloud-init support for LXD containers
-- [x] OpenTofu infrastructure as code
-- [x] Ansible configuration management setup
-- [x] Basic cloud-init verification playbook
-- [x] Docker installation playbook
-- [x] Docker Compose installation playbook
-- [x] Automated testing workflows
-- [x] End-to-End (E2E) deployment infrastructure and workflows
+This project follows a structured development roadmap to evolve from the current local development focus to a production-ready deployment solution.
 
-### 🔄 In Progress
+**Current Development Status:**
 
-- [ ] Extended Ansible playbooks for application deployment
-- [ ] Performance benchmarking
-- [ ] Official GitHub Actions nested virtualization clarification
+- ✅ **Local LXD Infrastructure**: VM provisioning, cloud-init, E2E testing
+- ✅ **Development Workflows**: Linting, testing, CI/CD automation
+- ✅ **Foundation Layer**: OpenTofu + Ansible + Docker integration
 
-### 📋 Planned
+**Next Major Milestones:**
 
-- [ ] Additional VM providers evaluation
-- [ ] Integration with Torrust application testing
-- [ ] Multi-architecture support (ARM64)
+- 🔄 **Main Application Commands**: `create`, `deploy`, `destroy`, `status`
+- � **Real Cloud Providers**: Starting with Hetzner, expanding to AWS/GCP/Azure
+- 🔄 **Production Features**: HTTPS, backups, monitoring stack
+
+**[📖 See complete roadmap →](docs/roadmap.md)**
 
 ## 📁 Repository Structure
 
 ```text
 ├── .github/                  # CI/CD workflows and GitHub configuration
 │   └── workflows/           # GitHub Actions workflow files
-├── .vscode/                 # VS Code workspace configuration
 ├── build/                   # 📁 Generated runtime configs (git-ignored)
-│   ├── tofu/                # 🏗️ Runtime OpenTofu configs
-│   └── ansible/             # 🤖 Runtime Ansible configs
-├── data/                    # Data files and templates
-│   └── templates/           # Template sources for generation
-│       ├── ansible/         # Ansible template sources
-│       └── tofu/            # OpenTofu template sources
+│   ├── e2e-config/          # E2E config test runtime files
+│   ├── e2e-full/            # E2E full test runtime files
+│   └── e2e-provision/       # E2E provision test runtime files
+├── data/                    # Environment-specific data and configurations
+│   ├── e2e-config/          # E2E config test environment data
+│   ├── e2e-full/            # E2E full test environment data
+│   ├── e2e-provision/       # E2E provision test environment data
+│   └── logs/                # Application logs
+├── docker/                  # Docker-related configurations
+│   └── provisioned-instance/ # Docker setup for provisioned instances
 ├── docs/                    # 📖 Detailed documentation
 │   ├── tech-stack/          # Technology-specific documentation
 │   │   ├── opentofu.md      # OpenTofu installation and usage
 │   │   ├── ansible.md       # Ansible installation and usage
-│   │   └── lxd.md          # LXD system containers
+│   │   └── lxd.md          # LXD virtual machines
 │   ├── decisions/           # Architecture Decision Records (ADRs)
 │   ├── contributing/        # Contributing guidelines and conventions
 │   │   ├── README.md        # Main contributing guide
 │   │   ├── branching.md     # Git branching conventions
 │   │   ├── commit-process.md # Commit process and pre-commit checks
+│   │   ├── error-handling.md # Error handling principles
+│   │   ├── module-organization.md # Module organization conventions
 │   │   └── testing.md       # Testing conventions
+│   ├── features/            # Feature specifications and documentation
 │   ├── research/            # Research and analysis documents
 │   └── *.md                 # Various documentation files
 ├── examples/                # Example configurations and usage
@@ -260,24 +335,24 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 │       └── src/            # Linting implementation source code
 ├── scripts/                 # Development and utility scripts
 │   └── setup/              # Installation scripts for dependencies
-├── src/                     # 🦀 Main Rust application source code
+├── src/                     # 🦀 Main Rust application source code (DDD Architecture)
 │   ├── main.rs             # Main application binary entry point
 │   ├── lib.rs              # Library root module
+│   ├── container.rs        # Dependency injection container
+│   ├── logging.rs          # Logging configuration
 │   ├── bin/                # Binary executables
 │   │   ├── linter.rs       # Unified linting command interface
-│   │   └── e2e_tests.rs    # End-to-end testing binary
-│   ├── ansible/            # Ansible integration modules
-│   ├── command_wrappers/   # External command wrapper modules
-│   ├── commands/           # CLI command implementations
+│   │   └── e2e*.rs         # End-to-end testing binaries
+│   ├── application/        # Application layer (use cases, commands)
+│   ├── domain/             # Domain layer (business logic, entities)
+│   ├── infrastructure/     # Infrastructure layer (external systems)
+│   ├── shared/             # Shared utilities and common code
+│   ├── testing/            # Testing utilities and mocks
 │   ├── config/             # Configuration handling
-│   ├── e2e/                # End-to-end testing infrastructure
-│   ├── remote_actions/     # Remote system management actions
-│   ├── steps/              # Deployment step implementations
-│   ├── template/           # Template processing and rendering
-│   └── tofu/               # OpenTofu integration modules
+│   └── e2e/                # End-to-end testing infrastructure
 ├── templates/               # 📁 Template configurations (git-tracked)
 │   ├── tofu/               # 🏗️ OpenTofu/Terraform templates
-│   │   └── lxd/            # LXD container template configuration
+│   │   └── lxd/            # LXD VM template configuration
 │   └── ansible/            # 🤖 Ansible playbook templates
 ├── tests/                  # Integration and system tests
 ├── target/                 # 🦀 Rust build artifacts (git-ignored)
@@ -296,18 +371,22 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 ## 📚 Documentation
 
 - **[🤝 Contributing Guide](docs/contributing/README.md)** - Git workflow, commit process, and linting conventions
-- **[📖 Documentation Organization Guide](docs/documentation.md)** - How documentation is organized and where to contribute
-- **[📋 Structured Logging Implementation Plan](docs/structured-logging-implementation-plan.md)** - Implementation plan for hierarchical logging with tracing spans
+- **[� Roadmap](docs/roadmap.md)** - Development roadmap and MVP goals
+- **[�📖 Documentation Organization Guide](docs/documentation.md)** - How documentation is organized and where to contribute
 - **[📖 OpenTofu Setup Guide](docs/tech-stack/opentofu.md)** - Installation, common commands, and best practices
 - **[📖 Ansible Setup Guide](docs/tech-stack/ansible.md)** - Installation, configuration, and project usage
 - **[📖 VM Providers Comparison](docs/vm-providers.md)** - Detailed comparison and decision rationale
 
 ## 🔮 Next Steps
 
-This is a basic setup. Future enhancements could include:
+This project is currently focused on local development. The path to production-ready deployment is outlined in our [📋 **Roadmap**](docs/roadmap.md).
 
-- Multiple VMs for different testing scenarios
-- Custom images with pre-installed Torrust components
-- Network configuration for multi-VM setups
-- Enhanced CI/CD integration with nested virtualization
-- Automated testing scripts for Torrust applications
+**Key upcoming milestones:**
+
+- **Real Cloud Provider Support**: Starting with Hetzner, then expanding to AWS, GCP, and Azure
+- **Production Commands**: `create`, `deploy`, `destroy`, and `status` commands for production environments
+- **Application Stack Management**: Complete Docker Compose stacks with Torrust Tracker, MySQL, Prometheus, and Grafana
+- **HTTPS Support**: SSL/TLS configuration for all services
+- **Backup & Recovery**: Database backups and disaster recovery procedures
+
+**[📖 See full roadmap →](docs/roadmap.md)**
