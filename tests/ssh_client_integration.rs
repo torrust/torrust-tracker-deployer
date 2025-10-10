@@ -36,7 +36,7 @@ use std::time::Duration;
 use torrust_tracker_deployer::shared::ssh::{SshClient, SshConfig, SshCredentials};
 use torrust_tracker_deployer::shared::Username;
 use torrust_tracker_deployer::testing::integration::ssh_server::{
-    MockSshServerContainer, RealSshServerContainer,
+    print_docker_debug_info, MockSshServerContainer, RealSshServerContainer,
 };
 
 /// Test that SSH client can establish connectivity to a mock SSH server.
@@ -254,34 +254,69 @@ async fn it_should_connect_to_real_ssh_server_and_test_connectivity() {
 
     let ssh_client = SshClient::new(ssh_config);
 
-    // Test connectivity
+    // Test connectivity with retry logic for CI environments
+    // In CI, containers may need extra time for SSH daemon to fully initialize
     let start_time = std::time::Instant::now();
-    let connectivity_result = ssh_client.test_connectivity();
+
+    // Try connectivity with manual retry logic similar to wait_for_connectivity
+    // but with shorter timeout for testing purposes
+    let mut connectivity_succeeded = false;
+    let mut last_error = None;
+
+    for attempt in 0..10 {
+        // Try up to 10 times (20 seconds total)
+        match ssh_client.test_connectivity() {
+            Ok(true) => {
+                connectivity_succeeded = true;
+                break;
+            }
+            Ok(false) => {
+                // Connection failed, wait and retry
+                if attempt < 9 {
+                    // Don't sleep on last attempt
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                }
+            }
+            Err(e) => {
+                last_error = Some(e);
+                break;
+            }
+        }
+    }
+
     let elapsed = start_time.elapsed();
 
-    match connectivity_result {
-        Ok(true) => {
-            println!("Real SSH connectivity test passed in {elapsed:?}");
+    if connectivity_succeeded {
+        println!("Real SSH connectivity test passed in {elapsed:?}");
 
-            // With a real SSH server, connectivity should be faster than timeout
-            assert!(
-                elapsed.as_secs() <= 5,
-                "SSH connection should complete quickly, took {elapsed:?}"
-            );
-        }
-        Ok(false) => {
-            panic!("SSH connectivity should succeed with real server");
-        }
-        Err(e) => {
-            // This might happen if the container isn't ready yet or password auth isn't working
-            println!("SSH connectivity failed (container may not be ready): {e}");
+        // With a real SSH server, connectivity should eventually succeed within reasonable time
+        assert!(
+            elapsed.as_secs() <= 20,
+            "SSH connection should complete within 20 seconds, took {elapsed:?}"
+        );
+    } else if let Some(e) = last_error {
+        // This might happen if the container isn't ready yet or there's a connection error
+        println!("SSH connectivity failed with error (container may not be ready): {e}");
 
-            // Still verify timeout behavior
-            assert!(
-                elapsed.as_secs() <= 10,
-                "SSH timeout should complete within 10 seconds, took {elapsed:?}"
-            );
-        }
+        // Print debug information to help diagnose the issue
+        print_docker_debug_info(ssh_container.ssh_port()).await;
+
+        // Still verify timeout behavior
+        assert!(
+            elapsed.as_secs() <= 20,
+            "SSH timeout should complete within 20 seconds, took {elapsed:?}"
+        );
+    } else {
+        // Connection failed after all retries without errors (Ok(false) case)
+        println!(
+            "SSH connectivity failed after {} retries (no errors, but Ok(false))",
+            10
+        );
+
+        // Print debug information to help diagnose the issue
+        print_docker_debug_info(ssh_container.ssh_port()).await;
+
+        panic!("SSH connectivity should succeed with real server after retries, but failed after {elapsed:?}");
     }
 }
 
