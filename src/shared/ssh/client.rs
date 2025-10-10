@@ -50,6 +50,14 @@ impl SshClient {
         }
     }
 
+    /// Get the SSH configuration
+    ///
+    /// Returns a reference to the SSH configuration used by this client.
+    #[must_use]
+    pub fn ssh_config(&self) -> &SshConfig {
+        &self.ssh_config
+    }
+
     /// Build SSH arguments for a connection
     fn build_ssh_args(&self, remote_command: &str, additional_options: &[&str]) -> Vec<String> {
         let mut args = vec![
@@ -65,6 +73,10 @@ impl SshClient {
             // Disable known hosts file to avoid host key conflicts in automation
             "-o".to_string(),
             "UserKnownHostsFile=/dev/null".to_string(),
+            // Set connection timeout for automation (prevents hanging)
+            // TODO: Make this configurable via SshConfig constructor
+            "-o".to_string(),
+            "ConnectTimeout=5".to_string(),
             // Specify the SSH port to connect to
             "-p".to_string(),
             self.ssh_config.ssh_port().to_string(),
