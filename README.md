@@ -245,7 +245,7 @@ tofu destroy -var-file=variables.tfvars -auto-approve
 > 1. **OpenTofu destroy** (recommended) - Uses resolved templates in `build/` directories
 > 2. **LXD commands** - Direct LXD resource management
 > 3. **Re-run E2E tests** - Automatically destroys and recreates infrastructure
-
+>
 > **📖 For comprehensive LXD commands and examples, see [LXD documentation](docs/tech-stack/lxd.md)**
 
 </details>
