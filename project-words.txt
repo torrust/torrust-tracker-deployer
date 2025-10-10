@@ -165,3 +165,6 @@ writeln
 ключ
 конфиг
 файл
+testpass
+rootpass
+preconfigured

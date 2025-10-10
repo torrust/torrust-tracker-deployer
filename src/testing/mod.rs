@@ -4,6 +4,7 @@
 //! various components of the application.
 
 pub mod fixtures;
+pub mod integration;
 pub mod mock_clock;
 
 // Re-export commonly used testing types
