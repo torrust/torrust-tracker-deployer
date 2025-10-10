@@ -15,6 +15,7 @@
         "target",
         "data",
         "build",
-        "/project-words.txt"
+        "/project-words.txt",
+        "repomix-output.xml"
     ]
 }
