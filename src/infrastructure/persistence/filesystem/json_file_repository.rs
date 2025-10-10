@@ -467,13 +467,6 @@ impl JsonFileRepository {
     /// * `error` - The lock error to convert
     /// * `file_path` - Path to the file being locked
     /// * `operation` - Description of the operation being performed (e.g., "save", "load", "delete")
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// let _lock = FileLock::acquire(file_path, self.lock_timeout)
-    ///     .map_err(|e| Self::convert_lock_error(e, file_path, "save"))?;
-    /// ```
     fn convert_lock_error(
         error: FileLockError,
         file_path: &Path,
