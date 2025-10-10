@@ -15,7 +15,7 @@
 //! ## Usage Example
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deploy::e2e::containers::config_builder::ContainerConfigBuilder;
+//! use torrust_tracker_deployer::e2e::containers::config_builder::ContainerConfigBuilder;
 //! use testcontainers::core::WaitFor;
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -90,7 +90,7 @@ impl ContainerConfigBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::config_builder::ContainerConfigBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::config_builder::ContainerConfigBuilder;
     ///
     /// let builder = ContainerConfigBuilder::new("torrust-provisioned-instance:latest");
     /// ```
@@ -112,7 +112,7 @@ impl ContainerConfigBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::config_builder::ContainerConfigBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::config_builder::ContainerConfigBuilder;
     ///
     /// let builder = ContainerConfigBuilder::new("torrust-provisioned-instance:latest")
     ///     .with_exposed_port(22)
@@ -144,7 +144,7 @@ impl ContainerConfigBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::config_builder::ContainerConfigBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::config_builder::ContainerConfigBuilder;
     ///
     /// let builder = ContainerConfigBuilder::new("torrust-provisioned-instance:latest")
     ///     .with_container_name("my-custom-container-name");
@@ -164,7 +164,7 @@ impl ContainerConfigBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::config_builder::ContainerConfigBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::config_builder::ContainerConfigBuilder;
     /// use testcontainers::core::WaitFor;
     ///
     /// let builder = ContainerConfigBuilder::new("torrust-provisioned-instance:latest")
@@ -196,7 +196,7 @@ impl ContainerConfigBuilder {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deploy::e2e::containers::config_builder::ContainerConfigBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::config_builder::ContainerConfigBuilder;
     /// use testcontainers::core::WaitFor;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {

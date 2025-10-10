@@ -1,6 +1,6 @@
 # Known Issues and Expected Behaviors
 
-This document describes known issues, expected errors, and normal behaviors that may appear alarming but are actually under control in the Torrust Tracker Deploy project.
+This document describes known issues, expected errors, and normal behaviors that may appear alarming but are actually under control in the Torrust Tracker Deployer project.
 
 ## 🟡 Expected Warnings During Operation
 

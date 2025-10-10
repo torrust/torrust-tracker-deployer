@@ -1,6 +1,6 @@
 # Development Principles
 
-This document outlines the fundamental principles that guide the development of the Torrust Tracker Deploy application. These principles ensure the application is maintainable, reliable, and user-friendly.
+This document outlines the fundamental principles that guide the development of the Torrust Tracker Deployer application. These principles ensure the application is maintainable, reliable, and user-friendly.
 
 ## 🔍 Observability
 
@@ -116,4 +116,4 @@ These principles should evolve based on:
 - Developer experience and maintainability insights
 - Industry best practices and tooling improvements
 
-By following these principles, we ensure that the Torrust Tracker Deploy application remains reliable, maintainable, and user-focused throughout its development and operation.
+By following these principles, we ensure that the Torrust Tracker Deployer application remains reliable, maintainable, and user-focused throughout its development and operation.

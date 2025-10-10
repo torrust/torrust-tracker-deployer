@@ -26,7 +26,7 @@ use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
 
-use torrust_tracker_deploy::infrastructure::persistence::filesystem::file_lock::FileLock;
+use torrust_tracker_deployer::infrastructure::persistence::filesystem::file_lock::FileLock;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();

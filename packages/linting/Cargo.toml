@@ -2,7 +2,7 @@
 name = "torrust-linting"
 version = "0.1.0"
 edition = "2021"
-description = "Linting utilities for the Torrust Tracker Deploy project"
+description = "Linting utilities for the Torrust Tracker Deployer project"
 license = "MIT"
 
 [lib]

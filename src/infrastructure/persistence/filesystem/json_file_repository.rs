@@ -19,7 +19,7 @@
 //! ```rust,no_run
 //! use std::path::PathBuf;
 //! use std::time::Duration;
-//! use torrust_tracker_deploy::infrastructure::persistence::filesystem::json_file_repository::JsonFileRepository;
+//! use torrust_tracker_deployer::infrastructure::persistence::filesystem::json_file_repository::JsonFileRepository;
 //! use serde::{Deserialize, Serialize};
 //!
 //! #[derive(Serialize, Deserialize)]
@@ -49,7 +49,7 @@
 //! ```rust,no_run
 //! use std::path::{Path, PathBuf};
 //! use std::time::Duration;
-//! use torrust_tracker_deploy::infrastructure::persistence::filesystem::json_file_repository::{
+//! use torrust_tracker_deployer::infrastructure::persistence::filesystem::json_file_repository::{
 //!     JsonFileRepository, JsonFileError
 //! };
 //! use serde::{Deserialize, Serialize};
@@ -232,7 +232,7 @@ impl JsonFileRepository {
     ///
     /// ```rust
     /// use std::time::Duration;
-    /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::json_file_repository::JsonFileRepository;
+    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::json_file_repository::JsonFileRepository;
     ///
     /// let repo = JsonFileRepository::new(Duration::from_secs(10));
     /// ```
@@ -258,7 +258,7 @@ impl JsonFileRepository {
     /// ```rust,no_run
     /// use std::path::PathBuf;
     /// use std::time::Duration;
-    /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::json_file_repository::JsonFileRepository;
+    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::json_file_repository::JsonFileRepository;
     /// use serde::{Deserialize, Serialize};
     ///
     /// #[derive(Serialize, Deserialize)]

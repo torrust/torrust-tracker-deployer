@@ -16,7 +16,7 @@
 //! ```rust,no_run
 //! use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 //! use std::time::Duration;
-//! use torrust_tracker_deploy::shared::PortChecker;
+//! use torrust_tracker_deployer::shared::PortChecker;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let checker = PortChecker::new();

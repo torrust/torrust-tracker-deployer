@@ -21,7 +21,7 @@ use crate::shared::Clock;
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deploy::testing::MockClock;
+/// use torrust_tracker_deployer::testing::MockClock;
 /// use chrono::{TimeZone, Utc};
 ///
 /// let fixed_time = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
@@ -48,7 +48,7 @@ impl MockClock {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::testing::MockClock;
+    /// use torrust_tracker_deployer::testing::MockClock;
     /// use chrono::{TimeZone, Utc};
     ///
     /// let fixed_time = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
@@ -71,7 +71,7 @@ impl MockClock {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::testing::MockClock;
+    /// use torrust_tracker_deployer::testing::MockClock;
     /// use chrono::{Duration, TimeZone, Utc};
     ///
     /// let initial = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
@@ -93,7 +93,7 @@ impl MockClock {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::testing::MockClock;
+    /// use torrust_tracker_deployer::testing::MockClock;
     /// use chrono::{TimeZone, Utc};
     ///
     /// let initial = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
@@ -117,7 +117,7 @@ impl MockClock {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::testing::MockClock;
+    /// use torrust_tracker_deployer::testing::MockClock;
     /// use chrono::{TimeZone, Utc};
     ///
     /// let initial = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();

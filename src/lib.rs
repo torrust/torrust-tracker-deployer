@@ -1,4 +1,4 @@
-//! Torrust Tracker Deploy
+//! Torrust Tracker Deployer
 //!
 //! Main library for torrust-tracker-deploy with complete DDD layer-based architecture.
 //!

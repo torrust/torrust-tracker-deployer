@@ -6,15 +6,23 @@
 
 ## 📋 Research Overview
 
-This research investigates whether the **Model-View-ViewModel (MVVM)** architectural pattern fits well with the Torrust Tracker Deploy Rust application, following a colleague's suggestion that the application architecture aligns with MVVM principles.
+This research investigates whether the **Model-View-ViewModel (MVVM)** architectural pattern fits well with the Torrust Tracker Deployer Rust application, following a colleague's suggestion that the application architecture aligns with MVVM principles.
 
 **Research Conclusion**: After comprehensive analysis including authoritative source research and detailed application evaluation, **MVVM does not fit this application's domain and requirements**. The current **Three-Level Architecture Pattern** is more appropriate for this CLI-based deployment automation tool.
 
 ## 📊 Technical Summary
 
-### Research Question
+## MVVM Pattern Analysis for Torrust Tracker Deployer
 
-Should we adopt the MVVM architectural pattern for the Torrust Tracker Deploy Rust application?
+## Executive Summary
+
+This research investigates whether the **Model-View-ViewModel (MVVM)** architectural pattern fits well with the Torrust Tracker Deployer Rust application, following a colleague's suggestion that the application architecture aligns with MVVM principles.
+
+**Result**: After comprehensive analysis, **MVVM does not naturally fit this application's domain and requirements**.
+
+## Research Question
+
+Should we adopt the MVVM architectural pattern for the Torrust Tracker Deployer Rust application?
 
 ### Answer: **NO** - MVVM is not suitable for this application
 

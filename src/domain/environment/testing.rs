@@ -19,7 +19,7 @@ use tempfile::TempDir;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deploy::domain::environment::testing::EnvironmentTestBuilder;
+/// use torrust_tracker_deployer::domain::environment::testing::EnvironmentTestBuilder;
 ///
 /// // Simple environment with defaults
 /// let (env, _temp_dir) = EnvironmentTestBuilder::new()
@@ -100,7 +100,7 @@ impl EnvironmentTestBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::environment::testing::EnvironmentTestBuilder;
+    /// use torrust_tracker_deployer::domain::environment::testing::EnvironmentTestBuilder;
     ///
     /// let (env, data_dir, build_dir, _temp_dir) = EnvironmentTestBuilder::new()
     ///     .with_name("my-test")

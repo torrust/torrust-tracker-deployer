@@ -1,6 +1,6 @@
 # Spelling Guide
 
-This document explains how we handle spelling in the Torrust Tracker Deploy project using CSpell.
+This document explains how we handle spelling in the Torrust Tracker Deployer project using CSpell.
 
 ## 🎯 Overview
 

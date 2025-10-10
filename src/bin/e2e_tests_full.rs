@@ -1,4 +1,4 @@
-//! Full End-to-End Testing Binary for Torrust Tracker Deploy (LOCAL DEVELOPMENT ONLY)
+//! Full End-to-End Testing Binary for Torrust Tracker Deployer (LOCAL DEVELOPMENT ONLY)
 //!
 //! This binary provides complete end-to-end testing by combining infrastructure provisioning
 //! and configuration management in a single LXD VM. It's designed for local development
@@ -59,9 +59,9 @@ use std::time::Instant;
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
-use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deploy::e2e::tasks::{
+use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+use torrust_tracker_deployer::e2e::context::{TestContext, TestContextType};
+use torrust_tracker_deployer::e2e::tasks::{
     run_configure_command::run_configure_command,
     run_test_command::run_test_command,
     virtual_machine::{
@@ -70,15 +70,15 @@ use torrust_tracker_deploy::e2e::tasks::{
         run_provision_command::run_provision_command,
     },
 };
-use torrust_tracker_deploy::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deploy::shared::{
+use torrust_tracker_deployer::logging::{LogFormat, LogOutput, LoggingBuilder};
+use torrust_tracker_deployer::shared::{
     ssh::{SshCredentials, DEFAULT_SSH_PORT},
     Username,
 };
 
 #[derive(Parser)]
 #[command(name = "e2e-tests")]
-#[command(about = "E2E tests for Torrust Tracker Deploy")]
+#[command(about = "E2E tests for Torrust Tracker Deployer")]
 struct Cli {
     /// Keep the test environment after completion
     #[arg(long)]
@@ -124,7 +124,7 @@ pub async fn main() -> Result<()> {
         .init();
 
     info!(
-        application = "torrust_tracker_deploy",
+        application = "torrust_tracker_deployer",
         test_suite = "e2e_tests",
         log_format = ?cli.log_format,
         "Starting E2E tests"

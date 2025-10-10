@@ -1,6 +1,6 @@
 # E2E Testing Guide
 
-This guide explains how to run and understand the End-to-End (E2E) tests for the Torrust Tracker Deploy project.
+This guide explains how to run and understand the End-to-End (E2E) tests for the Torrust Tracker Deployer project.
 
 ## 🧪 What are E2E Tests?
 

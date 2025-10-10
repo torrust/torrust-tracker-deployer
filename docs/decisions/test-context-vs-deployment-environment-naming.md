@@ -10,7 +10,7 @@ Accepted
 
 ## Context
 
-The Torrust Tracker Deploy project has two distinct concepts that both could be called "environment":
+The Torrust Tracker Deployer project has two distinct concepts that both could be called "environment":
 
 1. **Testing Context (Current `TestEnvironment`)**: A test harness managing temporary resources, SSH keys, services, and cleanup for end-to-end testing.
 

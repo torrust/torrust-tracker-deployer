@@ -1,12 +1,12 @@
-# MVVM Pattern Analysis for Torrust Tracker Deploy
+# MVVM Pattern Analysis for Torrust Tracker Deployer
 
 **Version**: 0.2.0  
 **Date**: September 19, 2025  
 **Status**: Enhanced Analysis Complete
 
-## 📋 Executive Summary
+## Executive Summary
 
-After conducting a comprehensive analysis of the **Model-View-ViewModel (MVVM)** pattern and examining the Torrust Tracker Deploy application architecture, **MVVM does not naturally fit this application's domain and requirements**.
+After conducting a comprehensive analysis of the **Model-View-ViewModel (MVVM)** pattern and examining the Torrust Tracker Deployer application architecture, **MVVM does not naturally fit this application's domain and requirements**.
 
 The application is a **deployment automation tool** rather than an interactive application with complex user interfaces. The current **Three-Level Architecture Pattern** (Commands → Steps → Remote Actions) is more appropriate and well-suited for the deployment automation domain.
 
@@ -14,7 +14,7 @@ The application is a **deployment automation tool** rather than an interactive a
 
 ### Application Domain: Deployment Automation
 
-The Torrust Tracker Deploy application is a **CLI-based infrastructure deployment automation tool** that orchestrates:
+The Torrust Tracker Deployer application is a **CLI-based infrastructure deployment automation tool** that orchestrates:
 
 - Infrastructure provisioning using OpenTofu (Terraform)
 - Configuration management with Ansible
@@ -384,7 +384,7 @@ The architecture shows strong **Domain-Driven Design** characteristics:
 
 ## 📝 Conclusion
 
-After comprehensive analysis using authoritative MVVM research and applying formal decision frameworks, the MVVM pattern is **fundamentally inappropriate** for the Torrust Tracker Deploy application.
+After comprehensive analysis using authoritative MVVM research and applying formal decision frameworks, the MVVM pattern is **fundamentally inappropriate** for the Torrust Tracker Deployer application.
 
 ### Authoritative Evidence Against MVVM
 
@@ -427,4 +427,4 @@ The colleague's MVVM suggestion, while well-intentioned, represents a **category
 3. **Evidence-Based Decisions**: Objective analysis over subjective pattern preferences
 4. **Domain Expertise**: Understanding when patterns are fundamentally inappropriate
 
-The Torrust Tracker Deploy architecture exemplifies excellent engineering practices within the appropriate domain context, and adopting MVVM would introduce complexity without benefits while violating the creator's own usage guidelines.
+The Torrust Tracker Deployer architecture exemplifies excellent engineering practices within the appropriate domain context, and adopting MVVM would introduce complexity without benefits while violating the creator's own usage guidelines.

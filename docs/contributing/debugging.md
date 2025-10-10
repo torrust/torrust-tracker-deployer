@@ -1,6 +1,6 @@
 # Debugging Guide
 
-This document outlines basic debugging techniques for the Torrust Tracker Deploy project.
+This document outlines basic debugging techniques for the Torrust Tracker Deployer project.
 
 ## 🔍 E2E Test Debugging
 

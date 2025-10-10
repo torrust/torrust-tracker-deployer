@@ -5,7 +5,7 @@
 
 ## 📋 Problem Statement
 
-Currently, the Torrust Tracker Deploy application assumes that all deployment operations succeed. When operations fail during any deployment phase, the application halts and shows error logs, but the deployment state is not persisted.
+Currently, the Torrust Tracker Deployer application assumes that all deployment operations succeed. When operations fail during any deployment phase, the application halts and shows error logs, but the deployment state is not persisted.
 
 ### Current Issues
 
@@ -278,4 +278,4 @@ impl ProvisionCommand {
 // configure_cmd.execute(created_env); // ERROR: expects Environment<Provisioned>
 ```
 
-This feature will significantly improve the observability and user experience of the Torrust Tracker Deploy application by providing clear visibility into deployment state and better guidance during error scenarios.
+This feature will significantly improve the observability and user experience of the Torrust Tracker Deployer application by providing clear visibility into deployment state and better guidance during error scenarios.

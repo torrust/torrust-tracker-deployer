@@ -43,7 +43,7 @@ use thiserror::Error;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deploy::domain::EnvironmentName;
+/// use torrust_tracker_deployer::domain::EnvironmentName;
 ///
 /// // Valid environment names
 /// let dev = EnvironmentName::new("dev".to_string())?;
@@ -75,7 +75,7 @@ impl EnvironmentName {
     /// # Examples
     ///
     /// ```rust
-    /// # use torrust_tracker_deploy::domain::EnvironmentName;
+    /// # use torrust_tracker_deployer::domain::EnvironmentName;
     /// // Valid names - accepts various string types
     /// assert!(EnvironmentName::new("dev").is_ok());
     /// assert!(EnvironmentName::new("e2e-config".to_string()).is_ok());
@@ -103,7 +103,7 @@ impl EnvironmentName {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::EnvironmentName;
+    /// use torrust_tracker_deployer::domain::EnvironmentName;
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
     /// assert_eq!(env_name.as_str(), "production");

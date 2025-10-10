@@ -20,8 +20,8 @@
 //!
 //! ```rust,no_run
 //! use std::path::PathBuf;
-//! use torrust_tracker_deploy::infrastructure::persistence::filesystem::file_environment_repository::FileEnvironmentRepository;
-//! use torrust_tracker_deploy::domain::environment::repository::EnvironmentRepository;
+//! use torrust_tracker_deployer::infrastructure::persistence::filesystem::file_environment_repository::FileEnvironmentRepository;
+//! use torrust_tracker_deployer::domain::environment::repository::EnvironmentRepository;
 //!
 //! let repo = FileEnvironmentRepository::new(PathBuf::from("./data"));
 //!
@@ -71,7 +71,7 @@ impl FileEnvironmentRepository {
     ///
     /// ```rust
     /// use std::path::PathBuf;
-    /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::file_environment_repository::FileEnvironmentRepository;
+    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::file_environment_repository::FileEnvironmentRepository;
     ///
     /// let repo = FileEnvironmentRepository::new(PathBuf::from("./data"));
     /// ```
@@ -94,7 +94,7 @@ impl FileEnvironmentRepository {
     /// ```rust
     /// use std::path::PathBuf;
     /// use std::time::Duration;
-    /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::file_environment_repository::FileEnvironmentRepository;
+    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::file_environment_repository::FileEnvironmentRepository;
     ///
     /// let repo = FileEnvironmentRepository::new(PathBuf::from("./data"))
     ///     .with_lock_timeout(Duration::from_secs(30));

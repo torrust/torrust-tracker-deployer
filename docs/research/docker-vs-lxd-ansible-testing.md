@@ -542,7 +542,7 @@ time ansible-playbook -i inventory-docker.yml deploy-app-config.yml       # 4.6s
 
 ## Final Recommendation
 
-**Use LXD exclusively for all Ansible playbook testing** in the Torrust Tracker Deploy project because:
+**Use LXD exclusively for all Ansible playbook testing** in the Torrust Tracker Deployer project because:
 
 1. ✅ **Complete functionality**: Supports all required features (systemd, Docker daemon, networking)
 2. ✅ **Real testing**: Can validate actual service deployment and functionality

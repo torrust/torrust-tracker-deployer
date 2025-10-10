@@ -1,6 +1,6 @@
 # Setup Scripts
 
-This directory contains installation and configuration scripts for the tools required by the Torrust Tracker Deploy project.
+This directory contains installation and configuration scripts for the tools required by the Torrust Tracker Deployer project.
 
 ## Available Scripts
 

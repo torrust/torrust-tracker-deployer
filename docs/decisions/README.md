@@ -1,6 +1,6 @@
 # Architectural Decision Records (ADRs)
 
-This directory contains architectural decision records for the Torrust Tracker Deploy project. Each ADR documents an important architectural decision, the context that led to it, and the consequences of the decision.
+This directory contains architectural decision records for the Torrust Tracker Deployer project. Each ADR documents an important architectural decision, the context that led to it, and the consequences of the decision.
 
 ## Decision Index
 

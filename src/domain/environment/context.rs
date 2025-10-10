@@ -72,8 +72,8 @@ use std::path::PathBuf;
 /// `EnvironmentContext` is typically created internally by `Environment::new()`:
 ///
 /// ```rust
-/// use torrust_tracker_deploy::domain::environment::{Environment, EnvironmentName};
-/// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+/// use torrust_tracker_deployer::domain::environment::{Environment, EnvironmentName};
+/// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
 /// use std::path::PathBuf;
 ///
 /// let env_name = EnvironmentName::new("production".to_string())?;
@@ -125,8 +125,8 @@ impl EnvironmentContext {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::environment::{EnvironmentContext, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::environment::{EnvironmentContext, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;

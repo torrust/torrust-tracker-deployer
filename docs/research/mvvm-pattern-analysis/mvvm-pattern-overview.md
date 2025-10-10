@@ -84,7 +84,7 @@ This enhanced document now provides:
 - **Decision framework** for determining MVVM's appropriateness
 - **Comprehensive comparison** with alternative architectural patterns
 
-The research establishes a solid foundation for analyzing whether MVVM is suitable for the Torrust Tracker Deploy Rust application architecture.
+The research establishes a solid foundation for analyzing whether MVVM is suitable for the Torrust Tracker Deployer Rust application architecture.
 
 ## 📋 Introduction
 

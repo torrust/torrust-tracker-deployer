@@ -70,8 +70,8 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use torrust_tracker_deploy::domain::environment::{Environment, name::EnvironmentName};
-//! use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+//! use torrust_tracker_deployer::domain::environment::{Environment, name::EnvironmentName};
+//! use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
 //! use std::path::PathBuf;
 //!
 //! let env_name = EnvironmentName::new("e2e-config".to_string())?;
@@ -214,8 +214,8 @@ impl Environment {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
@@ -404,8 +404,8 @@ impl<S> Environment<S> {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     /// use std::net::{IpAddr, Ipv4Addr};
     ///
@@ -449,8 +449,8 @@ impl<S> Environment<S> {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     /// use std::net::{IpAddr, Ipv4Addr};
     ///
@@ -485,8 +485,8 @@ impl<S> Environment<S> {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("staging".to_string())?;
@@ -518,8 +518,8 @@ impl<S> Environment<S> {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
@@ -548,8 +548,8 @@ impl<S> Environment<S> {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("dev".to_string())?;
@@ -578,8 +578,8 @@ impl<S> Environment<S> {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("test".to_string())?;
@@ -608,8 +608,8 @@ impl<S> Environment<S> {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("integration".to_string())?;
@@ -638,8 +638,8 @@ impl<S> Environment<S> {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deploy::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("load-test".to_string())?;

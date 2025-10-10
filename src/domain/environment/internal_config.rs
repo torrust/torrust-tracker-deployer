@@ -31,7 +31,7 @@ use std::path::PathBuf;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deploy::domain::environment::internal_config::InternalConfig;
+/// use torrust_tracker_deployer::domain::environment::internal_config::InternalConfig;
 /// use std::path::PathBuf;
 ///
 /// let internal_config = InternalConfig {
@@ -64,8 +64,8 @@ impl InternalConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::environment::internal_config::InternalConfig;
-    /// use torrust_tracker_deploy::domain::environment::EnvironmentName;
+    /// use torrust_tracker_deployer::domain::environment::internal_config::InternalConfig;
+    /// use torrust_tracker_deployer::domain::environment::EnvironmentName;
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;

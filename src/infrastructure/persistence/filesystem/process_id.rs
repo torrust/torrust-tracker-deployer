@@ -13,7 +13,7 @@
 //! # Usage
 //!
 //! ```rust
-//! use torrust_tracker_deploy::infrastructure::persistence::filesystem::process_id::ProcessId;
+//! use torrust_tracker_deployer::infrastructure::persistence::filesystem::process_id::ProcessId;
 //!
 //! // Get the current process ID
 //! let current_pid = ProcessId::current();
@@ -39,7 +39,7 @@ use super::platform;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deploy::infrastructure::persistence::filesystem::process_id::ProcessId;
+/// use torrust_tracker_deployer::infrastructure::persistence::filesystem::process_id::ProcessId;
 ///
 /// // Get current process ID
 /// let pid = ProcessId::current();
@@ -62,7 +62,7 @@ impl ProcessId {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::process_id::ProcessId;
+    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::process_id::ProcessId;
     ///
     /// let current = ProcessId::current();
     /// assert!(current.is_alive());
@@ -77,7 +77,7 @@ impl ProcessId {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::process_id::ProcessId;
+    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::process_id::ProcessId;
     ///
     /// let pid = ProcessId::from_raw(12345);
     /// assert_eq!(pid.as_u32(), 12345);
@@ -92,7 +92,7 @@ impl ProcessId {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::process_id::ProcessId;
+    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::process_id::ProcessId;
     ///
     /// let pid = ProcessId::from_raw(12345);
     /// assert_eq!(pid.as_u32(), 12345);
@@ -109,7 +109,7 @@ impl ProcessId {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::infrastructure::persistence::filesystem::process_id::ProcessId;
+    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::process_id::ProcessId;
     ///
     /// let current = ProcessId::current();
     /// assert!(current.is_alive());

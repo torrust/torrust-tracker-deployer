@@ -17,7 +17,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use tempfile::TempDir;
-use torrust_tracker_deploy::logging::LOG_FILE_NAME;
+use torrust_tracker_deployer::logging::LOG_FILE_NAME;
 
 /// Helper struct to manage test execution and cleanup
 struct LoggingTest {

@@ -122,8 +122,8 @@ impl ConfigureTaskError {
     /// # Example
     ///
     /// ```rust
-    /// # use torrust_tracker_deploy::e2e::tasks::run_configure_command::ConfigureTaskError;
-    /// # use torrust_tracker_deploy::domain::environment::state::StateTypeError;
+    /// # use torrust_tracker_deployer::e2e::tasks::run_configure_command::ConfigureTaskError;
+    /// # use torrust_tracker_deployer::domain::environment::state::StateTypeError;
     /// let error = ConfigureTaskError::InvalidState {
     ///     state_type: "Created".to_string(),
     ///     source: StateTypeError::UnexpectedState {

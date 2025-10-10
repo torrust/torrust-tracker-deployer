@@ -1,7 +1,7 @@
-# Console Commands - Torrust Tracker Deploy
+# Console Commands - Torrust Tracker Deployer
 
-> **⚠️ DRAFT DOCUMENTATION**  
-> This document describes the planned console commands for the Torrust Tracker Deploy tool. Most functionality is **not yet implemented** in production code.
+> **Note**: This document is part of the architecture planning and specification phase.
+> This document describes the planned console commands for the Torrust Tracker Deployer tool. Most functionality is **not yet implemented** in production code.
 
 ## Current Implementation Status
 

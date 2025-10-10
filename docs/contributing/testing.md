@@ -1,6 +1,6 @@
 # Testing Conventions
 
-This document outlines the testing conventions for the Torrust Tracker Deploy project.
+This document outlines the testing conventions for the Torrust Tracker Deployer project.
 
 ## 🧪 Unit Test Naming Style
 

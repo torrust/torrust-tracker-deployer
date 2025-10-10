@@ -1,6 +1,6 @@
-# Structured Logging Guide
+# Logging Guide
 
-This guide explains the structured logging implementation in the Torrust Tracker Deploy project, which uses hierarchical structured logging.
+This guide explains the structured logging implementation in the Torrust Tracker Deployer project, which uses hierarchical structured logging.
 
 ## JSON Output Format
 

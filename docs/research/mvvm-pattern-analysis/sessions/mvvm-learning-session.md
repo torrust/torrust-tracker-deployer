@@ -3,7 +3,7 @@
 **Version**: 0.1.0  
 **Date**: September 19, 2025  
 **Session Type**: Interactive Q&A  
-**Purpose**: Deep dive into MVVM pattern concepts to better understand its applicability to the Torrust Tracker Deploy project
+**Purpose**: Deep dive into MVVM pattern concepts to better understand its applicability to the Torrust Tracker Deployer project
 
 **Note**: This session documents the learning phase of MVVM research. The exploratory conclusions here suggested potential benefits for CLI applications. However, subsequent detailed architectural analysis (see `application-mvvm-analysis.md`) determined that MVVM is not suitable for this specific application's domain and requirements.
 
@@ -90,7 +90,7 @@ When people say "our app follows MVVM architecture," they usually mean:
 2. The overall app might use Clean Architecture, DDD, etc.
 3. MVVM handles the UI concerns within that larger architectural context
 
-This distinction is crucial for your Torrust Tracker Deploy analysis - you'll want to identify if the presentation aspects could benefit from MVVM organization, while recognizing that the overall application architecture likely follows different patterns (possibly Clean Architecture or layered architecture).
+This distinction is crucial for your Torrust Tracker Deployer analysis - you'll want to identify if the presentation aspects could benefit from MVVM organization, while recognizing that the overall application architecture likely follows different patterns (possibly Clean Architecture or layered architecture).
 
 ---
 
@@ -410,7 +410,7 @@ Excellent question! CLI applications present a fascinating challenge for MVVM be
 
 #### **CLI MVVM in Practice**
 
-Here's how your Torrust Tracker Deploy could apply MVVM:
+Here's how your Torrust Tracker Deployer could apply MVVM:
 
 ```rust
 // View Layer - Terminal Output
@@ -626,7 +626,7 @@ impl DeploymentViewModel {
 
 #### **Key Insight for Your Project**
 
-Your Torrust Tracker Deploy application could benefit from MVVM by:
+Your Torrust Tracker Deployer application could benefit from MVVM by:
 
 1. **Separating formatting logic** from business logic
 2. **Making output formatting testable** and configurable

@@ -16,8 +16,8 @@ use super::ErrorKind;
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deploy::shared::error::Traceable;
-/// use torrust_tracker_deploy::shared::ErrorKind;
+/// use torrust_tracker_deployer::shared::error::Traceable;
+/// use torrust_tracker_deployer::shared::ErrorKind;
 ///
 /// #[derive(Debug, thiserror::Error)]
 /// enum MyError {
@@ -97,7 +97,7 @@ pub trait Traceable: std::error::Error {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::shared::{Traceable, ErrorKind};
+    /// use torrust_tracker_deployer::shared::{Traceable, ErrorKind};
     ///
     /// fn handle_error<E: Traceable>(error: &E) {
     ///     let kind = error.error_kind();

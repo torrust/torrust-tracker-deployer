@@ -12,7 +12,7 @@ This research examines how popular console applications handle the challenge of 
 Console applications need to handle multiple types of output:
 
 1. **User output**: Results, data, final outcomes meant for end users
-2. **Progress information**: Status updates, progress indicators  
+2. **Progress information**: Status updates, progress indicators
 3. **Diagnostic logs**: Debug info, internal operations, detailed execution traces
 4. **Error messages**: User-facing errors vs. technical diagnostic errors
 5. **Warnings and info**: Various levels of informational messages
@@ -38,7 +38,7 @@ The traditional Unix approach is simple and clear:
 ls /some/directory > files.txt    # Results go to file
 ls /nonexistent 2> errors.txt     # Errors go to file
 
-# grep - matches to stdout, errors to stderr  
+# grep - matches to stdout, errors to stderr
 cat file.txt | grep "pattern" | sort   # Clean pipeline
 grep "pattern" /nonexistent 2>/dev/null # Suppress errors
 
@@ -75,7 +75,7 @@ docker run -d nginx                       # Daemon mode, logs separate
 **Key insights from Docker:**
 
 - Container output (the actual result) goes to stdout
-- Docker's operational messages go to stderr  
+- Docker's operational messages go to stderr
 - Supports structured logging with different drivers
 - Daemon mode completely separates logging from user interaction
 
@@ -186,7 +186,7 @@ curl https://api.example.com/data -o file.json   # Body to file, progress to std
 ```bash
 curl -v https://api.example.com/data
 * Connected to api.example.com    # Debug info to stderr
-* SSL connection established       # Debug info to stderr  
+* SSL connection established       # Debug info to stderr
 {"result": "data"}                # Response body still to stdout
 ```
 
@@ -247,21 +247,25 @@ terraform apply
 ### Common Strategies Identified
 
 1. **Pure Unix Convention** (ls, cat, grep)
+
    - stdout: Command results/output
    - stderr: Errors only
    - Simple and predictable
 
 2. **Progress/Results Separation** (curl, cargo, npm)
+
    - stdout: Final results/data
    - stderr: Progress, status, metadata
    - Excellent for piping and automation
 
 3. **Context-Dependent** (git)
+
    - Query commands: Results to stdout
    - Action commands: Progress to stderr, results to stdout
    - More complex but intuitive per command
 
 4. **Structured Logging** (docker, terraform)
+
    - Support for log drivers/files
    - Environment variable control
    - Separate logging infrastructure
@@ -277,7 +281,7 @@ Most modern CLI tools follow this pattern:
 
 - **Default**: Essential user information only
 - **-v/--verbose**: Operational details, progress info
-- **-vv**: Debug information, internal operations  
+- **-vv**: Debug information, internal operations
 - **-vvv**: Trace-level, all internal details
 - **-q/--quiet**: Suppress all non-essential output
 
@@ -295,7 +299,7 @@ Based on this research, here are the identified best practices:
 ```bash
 myapp command              # Essential info only
 myapp command -v           # + Progress/status
-myapp command -vv          # + Debug info  
+myapp command -vv          # + Debug info
 myapp command -vvv         # + Trace/all details
 myapp command -q           # Minimal output
 ```
@@ -320,21 +324,24 @@ myapp command -q           # Minimal output
 
 ## Application to Torrust Deployer
 
-For the Torrust Tracker Deploy application, these patterns suggest:
+For the Torrust Tracker Deployer application, these patterns suggest:
 
 ### Recommended Approach
 
 1. **User Output** (stdout):
+
    - Deployment results
    - Configuration summaries
    - Final status reports
 
 2. **Progress/Operational** (stderr):
+
    - Step progress ("Provisioning instance...")
    - Status updates ("Instance ready")
    - Non-critical warnings
 
 3. **Debug Logs** (stderr + optional files):
+
    - Detailed operation logs
    - Ansible/Terraform output
    - System diagnostics
@@ -351,10 +358,10 @@ torrust-deploy provision env1
 ✓ Instance provisioned successfully    # to stderr (progress)
 Instance: env1-tracker (192.168.1.100) # to stdout (result)
 
-# Verbose - show operational details  
+# Verbose - show operational details
 torrust-deploy provision env1 -v
 → Creating LXD instance...              # to stderr
-→ Configuring network...               # to stderr  
+→ Configuring network...               # to stderr
 → Installing packages...               # to stderr
 ✓ Instance provisioned successfully    # to stderr
 Instance: env1-tracker (192.168.1.100) # to stdout

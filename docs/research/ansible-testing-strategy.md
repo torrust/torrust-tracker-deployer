@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the testing strategy for Ansible playbooks in the Torrust Tracker Deploy project. Based on comprehensive research and the implementation of **E2E Test Split Architecture**, we have established a **phase-specific testing approach** that uses both LXD containers and Docker containers optimally for different deployment phases.
+This document outlines the testing strategy for Ansible playbooks in the Torrust Tracker Deployer project. Based on comprehensive research and the implementation of **E2E Test Split Architecture**, we have established a **phase-specific testing approach** that uses both LXD containers and Docker containers optimally for different deployment phases.
 
 ## Updated Strategy (September 2025)
 

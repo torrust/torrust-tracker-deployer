@@ -14,7 +14,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use torrust_tracker_deploy::domain::template::file::File;
+//! use torrust_tracker_deployer::domain::template::file::File;
 //!
 //! // Create DTO for static YAML file
 //! let static_file = File::new("config/app.yml", "key: value".to_string())?;
@@ -152,16 +152,16 @@ impl Display for Extension {
 /// # Examples
 ///
 /// ```rust
-/// # use torrust_tracker_deploy::domain::template::file::File;
+/// # use torrust_tracker_deployer::domain::template::file::File;
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // Create DTO for a static YAML file
 /// let static_file = File::new("config/app.yml", "key: value".to_string())?;
-/// assert_eq!(static_file.engine(), &torrust_tracker_deploy::domain::template::file::Engine::Static);
+/// assert_eq!(static_file.engine(), &torrust_tracker_deployer::domain::template::file::Engine::Static);
 ///
 /// // Create DTO for a Tera template that outputs YAML
 /// let template_file = File::new("templates/inventory.yml.tera", "host: {{ vm_ip }}".to_string())?;
-/// assert_eq!(template_file.engine(), &torrust_tracker_deploy::domain::template::file::Engine::Tera);
-/// assert_eq!(template_file.inner_format(), Some(&torrust_tracker_deploy::domain::template::file::Format::Yml));
+/// assert_eq!(template_file.engine(), &torrust_tracker_deployer::domain::template::file::Engine::Tera);
+/// assert_eq!(template_file.inner_format(), Some(&torrust_tracker_deployer::domain::template::file::Format::Yml));
 /// # Ok(())
 /// # }
 /// ```
@@ -206,7 +206,7 @@ impl File {
     ///
     /// # Examples
     /// ```
-    /// # use torrust_tracker_deploy::domain::template::file::File;
+    /// # use torrust_tracker_deployer::domain::template::file::File;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let file = File::new("templates/ansible/inventory.yml.tera", "content here".to_string())?;
     /// // This creates a Tera template with yml inner format

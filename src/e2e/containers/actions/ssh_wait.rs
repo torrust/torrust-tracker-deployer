@@ -80,7 +80,7 @@ pub type Result<T> = std::result::Result<T, SshWaitError>;
 /// ## Usage
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deploy::e2e::containers::actions::SshWaitAction;
+/// use torrust_tracker_deployer::e2e::containers::actions::SshWaitAction;
 /// use std::time::Duration;
 /// use std::net::SocketAddr;
 ///

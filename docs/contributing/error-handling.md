@@ -1,6 +1,6 @@
 # Error Handling Guide
 
-This guide establishes principles and best practices for error handling in the Torrust Tracker Deploy application, aligning with our [development principles](../development-principles.md) of observability, traceability, and actionability.
+This guide establishes principles and best practices for error handling in the Torrust Tracker Deployer application, aligning with our [development principles](../development-principles.md) of observability, traceability, and actionability.
 
 ## 🎯 Core Principles
 
@@ -614,4 +614,4 @@ Look for error handling examples in:
 6. **Test error paths**: Write tests for error scenarios
 7. **Document error types**: Document when and why specific errors occur
 
-By following these guidelines, we ensure that errors in the Torrust Tracker Deploy application are not just informative, but truly helpful in guiding users toward solutions.
+By following these guidelines, we ensure that errors in the Torrust Tracker Deployer application are not just informative, but truly helpful in guiding users toward solutions.

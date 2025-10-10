@@ -53,7 +53,7 @@ pub enum ProfileNameError {
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deploy::domain::ProfileName;
+/// use torrust_tracker_deployer::domain::ProfileName;
 ///
 /// // Valid profile names - accepts both &str and String
 /// let profile1 = ProfileName::new("test-profile")?;
@@ -95,7 +95,7 @@ impl ProfileName {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::ProfileName;
+    /// use torrust_tracker_deployer::domain::ProfileName;
     ///
     /// // Valid names - accepts both &str and String
     /// let name1 = ProfileName::new("test-profile")?;

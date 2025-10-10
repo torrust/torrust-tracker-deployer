@@ -1,6 +1,6 @@
 # Linting Conventions and Tools
 
-This document covers the linting tools, configurations, and conventions used in the Torrust Tracker Deploy project.
+This document covers the linting tools, configurations, and conventions used in the Torrust Tracker Deployer project.
 
 ## 🔧 Linting Tools Overview
 

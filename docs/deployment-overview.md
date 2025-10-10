@@ -1,7 +1,7 @@
 # Deployment Lifecycle & Command Overview
 
 > **🎯 Quick Reference**  
-> Overview of the Torrust Tracker deployment lifecycle, states, and command relationships.
+> Overview of the Torrust Tracker Deployer lifecycle, states, and command relationships.
 
 ## Deployment States
 

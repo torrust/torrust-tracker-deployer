@@ -48,8 +48,8 @@ git push origin 42-add-your-feature-name
 
 ## 🤝 Getting Help
 
-- **Issues**: Check existing [GitHub issues](https://github.com/torrust/torrust-tracker-deploy-rust-poc/issues)
-- **Discussions**: Start a [GitHub discussion](https://github.com/torrust/torrust-tracker-deploy-rust-poc/discussions)
+- **Issues**: Check existing [GitHub issues](https://github.com/torrust/torrust-tracker-deployer/issues)
+- **Discussions**: Start a [GitHub discussion](https://github.com/torrust/torrust-tracker-deployer/discussions)
 - **Documentation**: Review the [docs folder](../) for detailed information
 
 Thank you for contributing! 🎉

@@ -13,9 +13,9 @@
 //! ## Example Usage
 //!
 //! ```rust
-//! use torrust_tracker_deploy::infrastructure::external_tools::tofu::template::wrappers::lxd::variables::VariablesContext;
-//! use torrust_tracker_deploy::infrastructure::external_tools::lxd::adapter::instance::InstanceName;
-//! use torrust_tracker_deploy::domain::ProfileName;
+//! use torrust_tracker_deployer::infrastructure::external_tools::tofu::template::wrappers::lxd::variables::VariablesContext;
+//! use torrust_tracker_deployer::infrastructure::external_tools::lxd::adapter::instance::InstanceName;
+//! use torrust_tracker_deployer::domain::ProfileName;
 //!
 //! let context = VariablesContext::builder()
 //!     .with_instance_name(InstanceName::new("my-test-vm".to_string()).unwrap())

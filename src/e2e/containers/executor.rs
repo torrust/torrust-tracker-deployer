@@ -18,7 +18,7 @@ use testcontainers::TestcontainersError;
 /// tightly coupled to the container implementation:
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deploy::e2e::containers::ContainerExecutor;
+/// use torrust_tracker_deployer::e2e::containers::ContainerExecutor;
 /// use testcontainers::core::ExecCommand;
 ///
 /// async fn setup_something<T: ContainerExecutor>(container: &T) -> Result<(), Box<dyn std::error::Error>> {

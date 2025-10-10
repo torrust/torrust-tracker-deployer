@@ -64,7 +64,7 @@ pub enum InstanceNameError {
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deploy::domain::InstanceName;
+/// use torrust_tracker_deployer::domain::InstanceName;
 ///
 /// // Valid instance names - accepts both &str and String
 /// let vm_instance = InstanceName::new("torrust-vm-prod")?;
@@ -109,7 +109,7 @@ impl InstanceName {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::domain::InstanceName;
+    /// use torrust_tracker_deployer::domain::InstanceName;
     ///
     /// // Valid names for VMs and containers - accepts both &str and String
     /// let vm_name = InstanceName::new("torrust-vm-prod")?;

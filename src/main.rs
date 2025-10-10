@@ -1,9 +1,9 @@
-//! Main binary entry point for Torrust Tracker Deploy.
+//! Main binary entry point for Torrust Tracker Deployer.
 //!
 //! This binary provides a simple information display about the deployment infrastructure.
 
 fn main() {
-    println!("🏗️  Torrust Tracker Deploy");
+    println!("🏗️  Torrust Tracker Deployer");
     println!("=========================");
     println!();
     println!("This repository provides automated deployment infrastructure for Torrust tracker projects.");

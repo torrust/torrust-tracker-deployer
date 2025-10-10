@@ -53,7 +53,7 @@ impl Config {
     ///
     /// ```rust
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deploy::config::Config;
+    /// # use torrust_tracker_deployer::config::Config;
     /// let config = Config::new(
     ///     PathBuf::from("/home/user/project/templates"),
     ///     PathBuf::from("/home/user/project"),

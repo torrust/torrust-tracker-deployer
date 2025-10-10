@@ -24,7 +24,7 @@
 //! functionality at the top level:
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deploy::e2e::containers::{
+//! use torrust_tracker_deployer::e2e::containers::{
 //!     StoppedProvisionedContainer, RunningProvisionedContainer, ContainerError,
 //!     ContainerImageBuilder, ContainerConfigBuilder
 //! };

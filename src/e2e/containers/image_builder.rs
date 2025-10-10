@@ -9,7 +9,7 @@
 //! The builder follows the standard Rust builder pattern with method chaining:
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
+//! use torrust_tracker_deployer::e2e::containers::ContainerImageBuilder;
 //! use std::path::PathBuf;
 //! use std::time::Duration;
 //!
@@ -144,7 +144,7 @@ impl ContainerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::ContainerImageBuilder;
     ///
     /// let builder = ContainerImageBuilder::new();
     /// ```
@@ -168,7 +168,7 @@ impl ContainerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::ContainerImageBuilder;
     ///
     /// let builder = ContainerImageBuilder::new()
     ///     .with_name("my-custom-image");
@@ -188,7 +188,7 @@ impl ContainerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::ContainerImageBuilder;
     ///
     /// let builder = ContainerImageBuilder::new()
     ///     .with_tag("v1.0.0");
@@ -208,7 +208,7 @@ impl ContainerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::ContainerImageBuilder;
     /// use std::path::PathBuf;
     ///
     /// let builder = ContainerImageBuilder::new()
@@ -229,7 +229,7 @@ impl ContainerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::ContainerImageBuilder;
     /// use std::path::PathBuf;
     ///
     /// let builder = ContainerImageBuilder::new()
@@ -250,7 +250,7 @@ impl ContainerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::ContainerImageBuilder;
     /// use std::time::Duration;
     ///
     /// let builder = ContainerImageBuilder::new()
@@ -278,7 +278,7 @@ impl ContainerImageBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::ContainerImageBuilder;
     /// use std::path::PathBuf;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -366,7 +366,7 @@ impl ContainerImageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deploy::e2e::containers::ContainerImageBuilder;
+    /// use torrust_tracker_deployer::e2e::containers::ContainerImageBuilder;
     ///
     /// let builder = ContainerImageBuilder::new()
     ///     .with_name("my-app")

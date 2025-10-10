@@ -1,6 +1,6 @@
 # Module Organization
 
-This document outlines the conventions for organizing items within Rust modules in the Torrust Tracker Deploy project.
+This document outlines the conventions for organizing items within Rust modules in the Torrust Tracker Deployer project.
 
 ## 📚 Background
 
@@ -461,4 +461,4 @@ Use your judgment, but **always prioritize readability and maintainability**.
 - [Effective Rust](https://www.lurklurk.org/effective-rust/) - Best practices for Rust code organization
 - Clean Code principles applied to Rust development
 
-By following these conventions, we ensure that modules in the Torrust Tracker Deploy project are consistent, readable, and maintainable for all contributors.
+By following these conventions, we ensure that modules in the Torrust Tracker Deployer project are consistent, readable, and maintainable for all contributors.

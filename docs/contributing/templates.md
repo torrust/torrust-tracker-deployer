@@ -1,6 +1,6 @@
 # Tera Template Variable Syntax
 
-This document explains the correct syntax for defining variables in Tera templates used in the Torrust Tracker Deploy project.
+This document explains the correct syntax for defining variables in Tera templates used in the Torrust Tracker Deployer project.
 
 ## 📝 Correct Variable Syntax
 

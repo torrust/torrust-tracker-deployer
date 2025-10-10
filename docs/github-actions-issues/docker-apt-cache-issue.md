@@ -8,7 +8,7 @@ When running the E2E configuration tests in GitHub Actions, the Ansible playbook
 
 ```text
 2025-09-24T06:46:09.136842Z  INFO e2e_config_tests: status: "expected_failure", error: Command execution failed: Command 'ansible-playbook -v install-docker.yml' failed with exit code 2
-Stdout: Using /home/runner/work/torrust-tracker-deploy-rust-poc/torrust-tracker-deploy-rust-poc/build/ansible/ansible.cfg as config file
+Stdout: Using /home/runner/work/torrust-tracker-deployer/torrust-tracker-deployer/build/ansible/ansible.cfg as config file
 
 PLAY [Install Docker (Simplified for E2E)] *************************************
 
@@ -30,7 +30,7 @@ ok: [torrust-tracker-vm] => {
 }
 
 TASK [Install Docker from Ubuntu repositories] *********************************
-task path: /home/runner/work/torrust-tracker-deploy-rust-poc/torrust-tracker-deploy-rust-poc/build/ansible/install-docker.yml:26
+task path: /home/runner/work/torrust-tracker-deployer/torrust-tracker-deployer/build/ansible/install-docker.yml:26
 fatal: [torrust-tracker-vm]: FAILED! => {
     "changed": false
 }
@@ -97,7 +97,7 @@ The fix was implemented in `templates/ansible/install-docker.yml`:
 
 ## Commit Reference
 
-**Fixed in commit**: [`f697165`](https://github.com/torrust/torrust-tracker-deploy-rust-poc/commit/f697165f2580a2c450fb4cf26fb49457c583ff60)
+**Fixed in commit**: [`f697165`](https://github.com/torrust/torrust-tracker-deployer/commit/f697165f2580a2c450fb4cf26fb49457c583ff60)
 
 **Commit message**: `fix: force apt cache update in Docker installation for GitHub Actions containers`
 

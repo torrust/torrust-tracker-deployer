@@ -1,6 +1,6 @@
-# Console Applications: stdout and stderr Channel Handling
+# Console stdout/stderr Handling Design
 
-This document analyzes how console applications handle stdout and stderr output channels and their implications for user experience in the Torrust Tracker Deploy project.
+This document analyzes how console applications handle stdout and stderr output channels and their implications for user experience in the Torrust Tracker Deployer project.
 
 ## 📋 Overview
 

@@ -18,7 +18,7 @@
 //! ```rust,no_run
 //! use std::time::Duration;
 //! use std::path::PathBuf;
-//! use torrust_tracker_deploy::infrastructure::persistence::repository_factory::RepositoryFactory;
+//! use torrust_tracker_deployer::infrastructure::persistence::repository_factory::RepositoryFactory;
 //!
 //! // Create factory at application startup
 //! let factory = RepositoryFactory::new(Duration::from_secs(30));
@@ -56,7 +56,7 @@ impl RepositoryFactory {
     ///
     /// ```rust
     /// use std::time::Duration;
-    /// use torrust_tracker_deploy::infrastructure::persistence::repository_factory::RepositoryFactory;
+    /// use torrust_tracker_deployer::infrastructure::persistence::repository_factory::RepositoryFactory;
     ///
     /// let factory = RepositoryFactory::new(Duration::from_secs(30));
     /// ```
@@ -80,7 +80,7 @@ impl RepositoryFactory {
     /// ```rust
     /// use std::time::Duration;
     /// use std::path::PathBuf;
-    /// use torrust_tracker_deploy::infrastructure::persistence::repository_factory::RepositoryFactory;
+    /// use torrust_tracker_deployer::infrastructure::persistence::repository_factory::RepositoryFactory;
     ///
     /// let factory = RepositoryFactory::new(Duration::from_secs(30));
     /// let repo = factory.create(PathBuf::from("data/production"));

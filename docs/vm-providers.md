@@ -103,7 +103,7 @@ tofu init && tofu apply
 ### ~~Multipass Quick Start~~ (Deprecated)
 
 > **Note**: Multipass support has been removed from this project as of the LXD over Multipass decision.
-> For Multipass-related documentation and examples, see: https://github.com/torrust/torrust-tracker-deploy-rust-poc
+> For Multipass-related documentation and examples, see: https://github.com/torrust/torrust-tracker-deployer
 
 ```bash
 # Multipass is no longer supported in this repository

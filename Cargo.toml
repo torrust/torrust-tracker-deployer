@@ -5,15 +5,15 @@ members = [
 resolver = "2"
 
 [package]
-name = "torrust-tracker-deploy"
+name = "torrust-tracker-deployer"
 version = "0.1.0"
 edition = "2021"
-description = "Torrust Tracker Deployment Infrastructure with Ansible and OpenTofu"
+description = "Torrust Tracker Deployer - Deployment Infrastructure with Ansible and OpenTofu"
 license = "MIT"
-default-run = "torrust-tracker-deploy"
+default-run = "torrust-tracker-deployer"
 
 [[bin]]
-name = "torrust-tracker-deploy"
+name = "torrust-tracker-deployer"
 path = "src/main.rs"
 
 [[bin]]

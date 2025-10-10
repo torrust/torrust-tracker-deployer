@@ -90,8 +90,8 @@ pub type Result<T> = std::result::Result<T, SshKeySetupError>;
 /// ## Usage
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deploy::e2e::containers::{ContainerExecutor, actions::SshKeySetupAction};
-/// use torrust_tracker_deploy::shared::ssh::SshCredentials;
+/// use torrust_tracker_deployer::e2e::containers::{ContainerExecutor, actions::SshKeySetupAction};
+/// use torrust_tracker_deployer::shared::ssh::SshCredentials;
 ///
 /// async fn setup_ssh<T: ContainerExecutor>(
 ///     container: &T,

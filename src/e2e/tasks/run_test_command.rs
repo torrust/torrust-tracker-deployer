@@ -59,7 +59,7 @@ impl TestTaskError {
     /// # Example
     ///
     /// ```rust
-    /// # use torrust_tracker_deploy::e2e::tasks::run_test_command::TestTaskError;
+    /// # use torrust_tracker_deployer::e2e::tasks::run_test_command::TestTaskError;
     /// let error = TestTaskError::MissingInstanceIp {
     ///     state_type: "Created".to_string(),
     /// };

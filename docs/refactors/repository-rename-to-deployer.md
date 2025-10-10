@@ -6,7 +6,16 @@ This refactoring implements the repository rename from "Torrust Tracker Deploy" 
 
 **Target Components:**
 
-- Repository name and URL references
+- Repository name and URL r### Proposal #3: Update Build Configuration
+
+**Status**: ✅ Completed  
+**Impact**: 🟢🟢 Medium  
+**Effort**: 🔵 Low  
+**Priority**: P1  
+**Depends On**: Proposal #2  
+**Completed**: 2025-10-10  
+**Commit**: Multiple commits in package rename refactor
+
 - Project name in documentation
 - Package names and descriptions
 - Code comments and module documentation
@@ -25,17 +34,17 @@ This refactoring implements the repository rename from "Torrust Tracker Deploy" 
 **Total Active Proposals**: 5
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 0
-**In Progress**: 0
-**Not Started**: 5
+**Completed**: 4
+**In Progress**: 1
+**Not Started**: 0
 
 ### Phase Summary
 
-- **Phase 0 - GitHub Repository Rename (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 1 - Documentation Updates (High Impact, Medium Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 2 - Code References (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 3 - Build Configuration (Medium Impact, Low Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 4 - PoC Deprecation Notices (Medium Impact, Low Effort)**: ⏳ 0/1 completed (0%)
+- **Phase 0 - GitHub Repository Rename (High Impact, Low Effort)**: ✅ 1/1 completed (100%)
+- **Phase 1 - Documentation Updates (High Impact, Medium Effort)**: ✅ 1/1 completed (100%)
+- **Phase 2 - Code References (High Impact, Low Effort)**: ✅ 1/1 completed (100%)
+- **Phase 3 - Build Configuration (Medium Impact, Low Effort)**: ✅ 1/1 completed (100%)
+- **Phase 4 - PoC Deprecation Notices (Medium Impact, Low Effort)**: 🚧 0/1 in progress (pending)
 
 ## 🎯 Key Changes Required
 
@@ -64,13 +73,13 @@ This must be done first on GitHub as it affects all other changes. GitHub automa
 
 ### Proposal #0: Rename GitHub Repository
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0  
 **Depends On**: N/A  
-**Completed**: -  
-**Commit**: -
+**Completed**: 2025-10-10  
+**Commit**: Multiple commits in package rename refactor
 
 #### Problem
 
@@ -103,12 +112,12 @@ git remote set-url origin git@github.com:torrust/torrust-tracker-deployer.git
 
 #### Implementation Checklist
 
-- [ ] Create backup of local repository
-- [ ] Rename repository on GitHub (Settings → Repository name)
-- [ ] Verify automatic redirect works (test old URL)
-- [ ] Update local repository remote URL
-- [ ] Verify git operations work with new URL
-- [ ] Notify team members to update their local clones
+- [x] Create backup of local repository
+- [x] Rename repository on GitHub (Settings → Repository name)
+- [x] Verify automatic redirect works (test old URL)
+- [x] Update local repository remote URL
+- [x] Verify git operations work with new URL
+- [x] Notify team members to update their local clones
 
 ---
 
@@ -118,13 +127,13 @@ Update all documentation files to reference the new repository name and URL.
 
 ### Proposal #1: Update Documentation Files
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P1  
 **Depends On**: Proposal #0  
-**Completed**: -  
-**Commit**: -
+**Completed**: 2025-10-10  
+**Commit**: Multiple commits in package rename refactor
 
 #### Problem
 
@@ -232,18 +241,18 @@ Special cases:
 
 #### Implementation Checklist
 
-- [ ] Update README.md (badges and heading)
-- [ ] Update all docs/contributing/\*.md files
-- [ ] Update all docs/\*.md files
-- [ ] Update docs/research/ subdirectories
-- [ ] Update docs/features/ files
-- [ ] Update docs/decisions/ files (preserve historical context)
-- [ ] Update docs/github-actions-issues/ files
-- [ ] Update scripts/setup/README.md
-- [ ] Update templates/ansible/README.md
-- [ ] Search for any missed references
-- [ ] Run markdown linter
-- [ ] Verify all internal links still work
+- [x] Update README.md (badges and heading)
+- [x] Update all docs/contributing/\*.md files
+- [x] Update all docs/\*.md files
+- [x] Update docs/research/ subdirectories
+- [x] Update docs/features/ files
+- [x] Update docs/decisions/ files (preserve historical context)
+- [x] Update docs/github-actions-issues/ files
+- [x] Update scripts/setup/README.md
+- [x] Update templates/ansible/README.md
+- [x] Search for any missed references
+- [x] Run markdown linter
+- [x] Verify all internal links still work
 
 ---
 
@@ -253,13 +262,13 @@ Update code comments, module documentation, and user-facing strings.
 
 ### Proposal #2: Update Code References
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P1  
 **Depends On**: Proposal #0  
-**Completed**: -  
-**Commit**: -
+**Completed**: 2025-10-10  
+**Commit**: Multiple commits in package rename refactor
 
 #### Problem
 
@@ -338,15 +347,15 @@ println!("🏗️  Torrust Tracker Deployer");
 
 #### Implementation Checklist
 
-- [ ] Update src/lib.rs module doc
-- [ ] Update src/main.rs module doc and println!
-- [ ] Update all src/bin/\*.rs files
-- [ ] Update file_lock.rs issue URL
-- [ ] Run cargo clippy
-- [ ] Run cargo fmt
-- [ ] Run cargo test
-- [ ] Test CLI output manually
-- [ ] Generate and verify cargo doc
+- [x] Update src/lib.rs module doc
+- [x] Update src/main.rs module doc and println!
+- [x] Update all src/bin/\*.rs files
+- [x] Update file_lock.rs issue URL
+- [x] Run cargo clippy
+- [x] Run cargo fmt
+- [x] Run cargo test
+- [x] Test CLI output manually
+- [x] Generate and verify cargo doc
 
 ---
 
@@ -416,12 +425,12 @@ description = "Linting utilities for the Torrust Tracker Deployer project"
 
 #### Implementation Checklist
 
-- [ ] Update main Cargo.toml description
-- [ ] Update packages/linting/Cargo.toml description
-- [ ] Run cargo check
-- [ ] Run cargo build
-- [ ] Verify cargo metadata output
-- [ ] Consider implications if published to crates.io
+- [x] Update main Cargo.toml description
+- [x] Update packages/linting/Cargo.toml description
+- [x] Run cargo check
+- [x] Run cargo build
+- [x] Verify cargo metadata output
+- [x] Consider implications if published to crates.io
 
 ---
 

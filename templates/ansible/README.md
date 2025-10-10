@@ -1,6 +1,6 @@
-# Ansible Playbooks
+# Ansible Templates
 
-This directory contains Ansible playbook templates for the Torrust Tracker Deploy project.
+This directory contains Ansible playbook templates for the Torrust Tracker Deployer project.
 
 ## Playbooks
 

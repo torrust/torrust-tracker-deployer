@@ -1,4 +1,4 @@
-//! End-to-End Configuration Testing Binary for Torrust Tracker Deploy
+//! End-to-End Configuration Testing Binary for Torrust Tracker Deployer
 //!
 //! This binary orchestrates configuration, release, and run phase testing of the deployment
 //! infrastructure using Docker containers instead of VMs. It replaces infrastructure
@@ -61,12 +61,12 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::time::Instant;
-use torrust_tracker_deploy::e2e::tasks::run_configure_command::run_configure_command;
+use torrust_tracker_deployer::e2e::tasks::run_configure_command::run_configure_command;
 use tracing::{error, info};
 
-use torrust_tracker_deploy::domain::{Environment, EnvironmentName};
-use torrust_tracker_deploy::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deploy::e2e::tasks::{
+use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
+use torrust_tracker_deployer::e2e::context::{TestContext, TestContextType};
+use torrust_tracker_deployer::e2e::tasks::{
     container::{
         cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},
         run_provision_simulation::run_provision_simulation,
@@ -74,15 +74,15 @@ use torrust_tracker_deploy::e2e::tasks::{
     preflight_cleanup,
     run_configuration_validation::run_configuration_validation,
 };
-use torrust_tracker_deploy::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deploy::shared::{
+use torrust_tracker_deployer::logging::{LogFormat, LogOutput, LoggingBuilder};
+use torrust_tracker_deployer::shared::{
     ssh::{SshCredentials, DEFAULT_SSH_PORT},
     Username,
 };
 
 #[derive(Parser)]
 #[command(name = "e2e-config-tests")]
-#[command(about = "E2E configuration tests for Torrust Tracker Deploy using Docker containers")]
+#[command(about = "E2E configuration tests for Torrust Tracker Deployer using Docker containers")]
 struct CliArgs {
     /// Logging format to use
     #[arg(
@@ -121,7 +121,7 @@ pub async fn main() -> Result<()> {
         .init();
 
     info!(
-        application = "torrust_tracker_deploy",
+        application = "torrust_tracker_deployer",
         test_suite = "e2e_config_tests",
         log_format = ?cli.log_format,
         "Starting E2E configuration tests with Docker containers"

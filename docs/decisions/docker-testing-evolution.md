@@ -16,7 +16,7 @@ This document chronicles the complete evolution of our Docker container testing 
 
 ### Original Problem
 
-During the development of the Torrust Tracker Deploy project, we needed to establish a testing strategy for Ansible playbooks. The initial hypothesis was that Docker containers could provide faster testing cycles compared to full VMs or LXD containers, potentially offering significant development velocity improvements.
+During the development of the Torrust Tracker Deployer project, we needed to establish a testing strategy for Ansible playbooks. The initial hypothesis was that Docker containers could provide faster testing cycles compared to full VMs or LXD containers, potentially offering significant development velocity improvements.
 
 The core question was: **Should we use lightweight Docker containers for Ansible playbook testing to achieve faster feedback loops?**
 

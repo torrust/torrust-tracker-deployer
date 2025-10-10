@@ -20,9 +20,9 @@
 //! # use tempfile::TempDir;
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! use torrust_tracker_deploy::infrastructure::external_tools::ansible::template::renderer::AnsibleTemplateRenderer;
-//! use torrust_tracker_deploy::domain::template::TemplateManager;
-//! use torrust_tracker_deploy::infrastructure::external_tools::ansible::template::wrappers::inventory::{
+//! use torrust_tracker_deployer::infrastructure::external_tools::ansible::template::renderer::AnsibleTemplateRenderer;
+//! use torrust_tracker_deployer::domain::template::TemplateManager;
+//! use torrust_tracker_deployer::infrastructure::external_tools::ansible::template::wrappers::inventory::{
 //!     InventoryContext, AnsibleHost, AnsiblePort, SshPrivateKeyFile
 //! };
 //!
