@@ -26,7 +26,7 @@ use tracing::{info, instrument, warn};
 
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
 use crate::shared::ssh::SshClient;
-use crate::shared::ssh::SshConnection;
+use crate::shared::ssh::SshConfig;
 
 /// Action that validates Docker installation and daemon status on the server
 pub struct DockerValidator {
@@ -37,10 +37,10 @@ impl DockerValidator {
     /// Create a new `DockerValidator` with the specified SSH configuration
     ///
     /// # Arguments
-    /// * `ssh_connection` - SSH connection configuration containing credentials and host IP
+    /// * `ssh_config` - SSH connection configuration containing credentials and host IP
     #[must_use]
-    pub fn new(ssh_connection: SshConnection) -> Self {
-        let ssh_client = SshClient::new(ssh_connection);
+    pub fn new(ssh_config: SshConfig) -> Self {
+        let ssh_client = SshClient::new(ssh_config);
         Self { ssh_client }
     }
 }

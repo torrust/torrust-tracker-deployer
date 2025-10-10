@@ -36,7 +36,7 @@ use crate::infrastructure::external_tools::tofu::adapter::client::{InstanceInfo,
 use crate::infrastructure::external_tools::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 use crate::shared::command::CommandError;
 use crate::shared::error::Traceable;
-use crate::shared::ssh::{SshConnection, SshCredentials, SshError};
+use crate::shared::ssh::{SshConfig, SshCredentials, SshError};
 
 /// Comprehensive error type for the `ProvisionCommand`
 #[derive(Debug, thiserror::Error)]
@@ -394,8 +394,8 @@ impl ProvisionCommand {
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
     ) -> Result<(), ProvisionCommandError> {
-        let ssh_connection = SshConnection::with_default_port(ssh_credentials.clone(), instance_ip);
-        WaitForSSHConnectivityStep::new(ssh_connection)
+        let ssh_config = SshConfig::with_default_port(ssh_credentials.clone(), instance_ip);
+        WaitForSSHConnectivityStep::new(ssh_config)
             .execute()
             .await?;
 

@@ -20,7 +20,7 @@ use tracing::{info, warn};
 
 use crate::shared::command::{CommandError, CommandExecutor};
 
-use super::{SshConnection, SshError};
+use super::{SshConfig, SshError};
 
 /// A specialized SSH client with predefined security settings
 ///
@@ -32,7 +32,7 @@ use super::{SshConnection, SshError};
 ///
 /// Uses `CommandExecutor` as a collaborator for actual command execution.
 pub struct SshClient {
-    ssh_connection: SshConnection,
+    ssh_config: SshConfig,
     command_executor: CommandExecutor,
 }
 
@@ -41,11 +41,11 @@ impl SshClient {
     ///
     /// # Arguments
     ///
-    /// * `ssh_connection` - SSH connection configuration containing credentials and host IP
+    /// * `ssh_config` - SSH connection configuration containing credentials and host IP
     #[must_use]
-    pub fn new(ssh_connection: SshConnection) -> Self {
+    pub fn new(ssh_config: SshConfig) -> Self {
         Self {
-            ssh_connection,
+            ssh_config,
             command_executor: CommandExecutor::new(),
         }
     }
@@ -53,30 +53,36 @@ impl SshClient {
     /// Build SSH arguments for a connection
     fn build_ssh_args(&self, remote_command: &str, additional_options: &[&str]) -> Vec<String> {
         let mut args = vec![
+            // Specify the private key file for authentication
             "-i".to_string(),
-            self.ssh_connection
+            self.ssh_config
                 .ssh_priv_key_path()
                 .to_string_lossy()
                 .to_string(),
+            // Disable strict host key checking for automation
             "-o".to_string(),
             "StrictHostKeyChecking=no".to_string(),
+            // Disable known hosts file to avoid host key conflicts in automation
             "-o".to_string(),
             "UserKnownHostsFile=/dev/null".to_string(),
+            // Specify the SSH port to connect to
             "-p".to_string(),
-            self.ssh_connection.ssh_port().to_string(),
+            self.ssh_config.ssh_port().to_string(),
         ];
 
-        // Add additional SSH options
+        // Add additional SSH options with explicit option flag
         for option in additional_options {
             args.push("-o".to_string());
             args.push((*option).to_string());
         }
 
+        // SSH target: username@hostname
         args.push(format!(
             "{}@{}",
-            self.ssh_connection.ssh_username(),
-            self.ssh_connection.host_ip()
+            self.ssh_config.ssh_username(),
+            self.ssh_config.host_ip()
         ));
+        // Remote command to execute
         args.push(remote_command.to_string());
 
         args
@@ -155,7 +161,7 @@ impl SshClient {
             if trimmed_line.starts_with("Warning:") {
                 warn!(
                     operation = "ssh_warning",
-                    host_ip = %self.ssh_connection.host_ip(),
+                    host_ip = %self.ssh_config.host_ip(),
                     message = %trimmed_line,
                     "SSH warning detected"
                 );
@@ -243,7 +249,7 @@ impl SshClient {
     pub async fn wait_for_connectivity(&self) -> Result<(), SshError> {
         info!(
             operation = "ssh_connectivity",
-            host_ip = %self.ssh_connection.host_ip(),
+            host_ip = %self.ssh_config.host_ip(),
             "Waiting for SSH connectivity"
         );
 
@@ -258,7 +264,7 @@ impl SshClient {
                 Ok(true) => {
                     info!(
                         operation = "ssh_connectivity",
-                        host_ip = %self.ssh_connection.host_ip(),
+                        host_ip = %self.ssh_config.host_ip(),
                         status = "success",
                         "SSH connectivity established"
                     );
@@ -269,7 +275,7 @@ impl SshClient {
                     if (attempt + 1) % 5 == 0 {
                         info!(
                             operation = "ssh_connectivity",
-                            host_ip = %self.ssh_connection.host_ip(),
+                            host_ip = %self.ssh_config.host_ip(),
                             attempt = attempt + 1,
                             max_attempts = max_attempts,
                             "Still waiting for SSH connectivity"
@@ -286,7 +292,7 @@ impl SshClient {
         }
 
         Err(SshError::ConnectivityTimeout {
-            host_ip: self.ssh_connection.host_ip().to_string(),
+            host_ip: self.ssh_config.host_ip().to_string(),
             attempts: max_attempts,
             timeout_seconds,
         })
@@ -295,7 +301,7 @@ impl SshClient {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{SshConnection, SshCredentials};
+    use super::super::SshCredentials;
     use super::*;
     use std::net::{IpAddr, Ipv4Addr};
     use std::path::PathBuf;
@@ -310,18 +316,15 @@ mod tests {
             PathBuf::from("/path/to/key.pub"),
             Username::new("testuser").unwrap(),
         );
-        let ssh_connection = SshConnection::with_default_port(credentials, host_ip);
-        let ssh_client = SshClient::new(ssh_connection);
+        let ssh_config = SshConfig::with_default_port(credentials, host_ip);
+        let ssh_client = SshClient::new(ssh_config);
 
         assert_eq!(
-            ssh_client
-                .ssh_connection
-                .ssh_priv_key_path()
-                .to_string_lossy(),
+            ssh_client.ssh_config.ssh_priv_key_path().to_string_lossy(),
             "/path/to/key"
         );
-        assert_eq!(ssh_client.ssh_connection.ssh_username(), "testuser");
-        assert_eq!(ssh_client.ssh_connection.host_ip(), host_ip);
+        assert_eq!(ssh_client.ssh_config.ssh_username(), "testuser");
+        assert_eq!(ssh_client.ssh_config.host_ip(), host_ip);
         // Note: verbose is now encapsulated in the CommandExecutor collaborator
     }
 
@@ -333,18 +336,15 @@ mod tests {
             PathBuf::from("/path/to/key.pub"),
             Username::new("testuser").unwrap(),
         );
-        let ssh_connection = SshConnection::with_default_port(credentials, host_ip);
-        let ssh_client = SshClient::new(ssh_connection);
+        let ssh_config = SshConfig::with_default_port(credentials, host_ip);
+        let ssh_client = SshClient::new(ssh_config);
 
         assert_eq!(
-            ssh_client
-                .ssh_connection
-                .ssh_priv_key_path()
-                .to_string_lossy(),
+            ssh_client.ssh_config.ssh_priv_key_path().to_string_lossy(),
             "/path/to/key"
         );
-        assert_eq!(ssh_client.ssh_connection.ssh_username(), "testuser");
-        assert_eq!(ssh_client.ssh_connection.host_ip(), host_ip);
+        assert_eq!(ssh_client.ssh_config.ssh_username(), "testuser");
+        assert_eq!(ssh_client.ssh_config.host_ip(), host_ip);
         // Note: logging is now handled by the tracing crate via CommandExecutor
     }
 
@@ -356,8 +356,8 @@ mod tests {
             PathBuf::from("/path/to/key.pub"),
             Username::new("testuser").unwrap(),
         );
-        let ssh_connection = SshConnection::with_default_port(credentials, host_ip);
-        let ssh_client = SshClient::new(ssh_connection);
+        let ssh_config = SshConfig::with_default_port(credentials, host_ip);
+        let ssh_client = SshClient::new(ssh_config);
 
         // Test stderr with SSH warning
         let stderr_with_warning =

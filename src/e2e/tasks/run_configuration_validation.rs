@@ -26,7 +26,7 @@ use tracing::info;
 use crate::infrastructure::remote_actions::{
     DockerComposeValidator, DockerValidator, RemoteAction, RemoteActionError,
 };
-use crate::shared::ssh::SshConnection;
+use crate::shared::ssh::SshConfig;
 use crate::shared::ssh::SshCredentials;
 
 /// Errors that can occur during configuration validation
@@ -235,10 +235,9 @@ async fn validate_docker_installation(
 ) -> Result<(), ConfigurationValidationError> {
     info!("Validating Docker installation");
 
-    let ssh_connection =
-        SshConnection::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
+    let ssh_config = SshConfig::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
 
-    let docker_validator = DockerValidator::new(ssh_connection);
+    let docker_validator = DockerValidator::new(ssh_config);
     docker_validator
         .execute(&ip_addr)
         .await
@@ -274,10 +273,9 @@ async fn validate_docker_compose_installation(
 ) -> Result<(), ConfigurationValidationError> {
     info!("Validating Docker Compose installation");
 
-    let ssh_connection =
-        SshConnection::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
+    let ssh_config = SshConfig::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
 
-    let compose_validator = DockerComposeValidator::new(ssh_connection);
+    let compose_validator = DockerComposeValidator::new(ssh_config);
     compose_validator
         .execute(&ip_addr)
         .await

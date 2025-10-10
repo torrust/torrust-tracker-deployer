@@ -21,17 +21,17 @@
 use tracing::{info, instrument};
 
 use crate::infrastructure::remote_actions::{CloudInitValidator, RemoteAction, RemoteActionError};
-use crate::shared::ssh::SshConnection;
+use crate::shared::ssh::SshConfig;
 
 /// Step that validates cloud-init completion on a remote host
 pub struct ValidateCloudInitCompletionStep {
-    ssh_connection: SshConnection,
+    ssh_config: SshConfig,
 }
 
 impl ValidateCloudInitCompletionStep {
     #[must_use]
-    pub fn new(ssh_connection: SshConnection) -> Self {
-        Self { ssh_connection }
+    pub fn new(ssh_config: SshConfig) -> Self {
+        Self { ssh_config }
     }
 
     /// Execute the cloud-init completion validation step
@@ -59,10 +59,10 @@ impl ValidateCloudInitCompletionStep {
     pub async fn execute(&self) -> Result<(), RemoteActionError> {
         info!(component = "cloud_init", "Validating cloud-init completion");
 
-        let cloud_init_validator = CloudInitValidator::new(self.ssh_connection.clone());
+        let cloud_init_validator = CloudInitValidator::new(self.ssh_config.clone());
 
         cloud_init_validator
-            .execute(&self.ssh_connection.host_ip())
+            .execute(&self.ssh_config.host_ip())
             .await?;
 
         Ok(())
@@ -87,11 +87,11 @@ mod tests {
             Username::new("test_user").unwrap(),
         );
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let ssh_connection = SshConnection::with_default_port(ssh_credentials, host_ip);
+        let ssh_config = SshConfig::with_default_port(ssh_credentials, host_ip);
 
-        let step = ValidateCloudInitCompletionStep::new(ssh_connection);
+        let step = ValidateCloudInitCompletionStep::new(ssh_config);
 
         // Test that the step can be created successfully
-        assert_eq!(step.ssh_connection.host_ip(), host_ip);
+        assert_eq!(step.ssh_config.host_ip(), host_ip);
     }
 }

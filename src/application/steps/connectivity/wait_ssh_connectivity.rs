@@ -20,17 +20,17 @@
 
 use tracing::{info, instrument};
 
-use crate::shared::ssh::{SshClient, SshConnection, SshError};
+use crate::shared::ssh::{SshClient, SshConfig, SshError};
 
 /// Step that waits for SSH connectivity to be established on a remote host
 pub struct WaitForSSHConnectivityStep {
-    ssh_connection: SshConnection,
+    ssh_config: SshConfig,
 }
 
 impl WaitForSSHConnectivityStep {
     #[must_use]
-    pub fn new(ssh_connection: SshConnection) -> Self {
-        Self { ssh_connection }
+    pub fn new(ssh_config: SshConfig) -> Self {
+        Self { ssh_config }
     }
 
     /// Execute the SSH connectivity wait step
@@ -52,20 +52,20 @@ impl WaitForSSHConnectivityStep {
     pub async fn execute(&self) -> Result<(), SshError> {
         info!(
             step = "wait_ssh_connectivity",
-            instance_ip = %self.ssh_connection.host_ip(),
-            username = %self.ssh_connection.ssh_username(),
+            instance_ip = %self.ssh_config.host_ip(),
+            username = %self.ssh_config.ssh_username(),
             "Waiting for SSH connectivity to be established"
         );
 
         // Create SSH client
-        let ssh_client = SshClient::new(self.ssh_connection.clone());
+        let ssh_client = SshClient::new(self.ssh_config.clone());
 
         // Wait for connectivity
         ssh_client.wait_for_connectivity().await?;
 
         info!(
             step = "wait_ssh_connectivity",
-            instance_ip = %self.ssh_connection.host_ip(),
+            instance_ip = %self.ssh_config.host_ip(),
             status = "success",
             "SSH connectivity successfully established"
         );
@@ -78,7 +78,7 @@ impl WaitForSSHConnectivityStep {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr};
 
-    use crate::shared::ssh::{SshConnection, SshCredentials};
+    use crate::shared::ssh::{SshConfig, SshCredentials};
     use crate::shared::Username;
 
     use super::*;
@@ -91,16 +91,16 @@ mod tests {
             "/tmp/test_key.pub".into(),
             Username::new("testuser").unwrap(),
         );
-        let ssh_connection = SshConnection::with_default_port(credentials, instance_ip);
+        let ssh_config = SshConfig::with_default_port(credentials, instance_ip);
 
-        let step = WaitForSSHConnectivityStep::new(ssh_connection);
+        let step = WaitForSSHConnectivityStep::new(ssh_config);
 
         assert_eq!(
-            step.ssh_connection.ssh_priv_key_path().to_string_lossy(),
+            step.ssh_config.ssh_priv_key_path().to_string_lossy(),
             "/tmp/test_key"
         );
-        assert_eq!(step.ssh_connection.ssh_username(), "testuser");
-        assert_eq!(step.ssh_connection.host_ip(), instance_ip);
+        assert_eq!(step.ssh_config.ssh_username(), "testuser");
+        assert_eq!(step.ssh_config.host_ip(), instance_ip);
     }
 
     #[test]
@@ -111,16 +111,16 @@ mod tests {
             "/home/user/.ssh/id_rsa.pub".into(),
             Username::new("torrust").unwrap(),
         );
-        let ssh_connection = SshConnection::with_default_port(credentials, instance_ip);
+        let ssh_config = SshConfig::with_default_port(credentials, instance_ip);
 
-        let step = WaitForSSHConnectivityStep::new(ssh_connection);
+        let step = WaitForSSHConnectivityStep::new(ssh_config);
 
         assert_eq!(
-            step.ssh_connection.ssh_priv_key_path().to_string_lossy(),
+            step.ssh_config.ssh_priv_key_path().to_string_lossy(),
             "/home/user/.ssh/id_rsa"
         );
-        assert_eq!(step.ssh_connection.ssh_username(), "torrust");
-        assert_eq!(step.ssh_connection.host_ip(), instance_ip);
+        assert_eq!(step.ssh_config.ssh_username(), "torrust");
+        assert_eq!(step.ssh_config.host_ip(), instance_ip);
     }
 
     #[test]
@@ -131,15 +131,15 @@ mod tests {
             "/path/to/ssh/key.pub".into(),
             Username::new("admin").unwrap(),
         );
-        let ssh_connection = SshConnection::with_default_port(credentials, instance_ip);
+        let ssh_config = SshConfig::with_default_port(credentials, instance_ip);
 
-        let step = WaitForSSHConnectivityStep::new(ssh_connection);
+        let step = WaitForSSHConnectivityStep::new(ssh_config);
 
         assert_eq!(
-            step.ssh_connection.ssh_priv_key_path().to_string_lossy(),
+            step.ssh_config.ssh_priv_key_path().to_string_lossy(),
             "/path/to/ssh/key"
         );
-        assert_eq!(step.ssh_connection.ssh_username(), "admin");
-        assert_eq!(step.ssh_connection.host_ip(), instance_ip);
+        assert_eq!(step.ssh_config.ssh_username(), "admin");
+        assert_eq!(step.ssh_config.host_ip(), instance_ip);
     }
 }

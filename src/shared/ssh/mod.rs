@@ -7,7 +7,7 @@
 //! ## Module Components
 //!
 //! - `client` - SSH client implementation for remote command execution
-//! - `connection` - SSH connection configuration and management
+//! - `config` - SSH configuration and management
 //! - `credentials` - SSH authentication credentials and key management
 //! - `error` - SSH error types and implementations
 //! - `public_key` - SSH public key representation and validation
@@ -25,14 +25,14 @@
 //! secure remote access is essential for configuration and management tasks.
 
 pub mod client;
-pub mod connection;
+pub mod config;
 pub mod credentials;
 pub mod error;
 pub mod public_key;
 pub mod service_checker;
 
 pub use client::SshClient;
-pub use connection::{SshConnection, DEFAULT_SSH_PORT};
+pub use config::{SshConfig, DEFAULT_SSH_PORT};
 pub use credentials::SshCredentials;
 pub use error::SshError;
 pub use public_key::SshPublicKey;

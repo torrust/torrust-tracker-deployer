@@ -21,7 +21,7 @@ use crate::application::steps::{
 use crate::domain::environment::Environment;
 use crate::infrastructure::remote_actions::RemoteActionError;
 use crate::shared::command::CommandError;
-use crate::shared::ssh::SshConnection;
+use crate::shared::ssh::SshConfig;
 
 /// Comprehensive error type for the `TestCommand`
 #[derive(Debug, thiserror::Error)]
@@ -107,18 +107,18 @@ impl TestCommand {
                 .ok_or_else(|| TestCommandError::MissingInstanceIp {
                     environment_name: environment.name().to_string(),
                 })?;
-        let ssh_connection =
-            SshConnection::with_default_port(environment.ssh_credentials().clone(), instance_ip);
+        let ssh_config =
+            SshConfig::with_default_port(environment.ssh_credentials().clone(), instance_ip);
 
-        ValidateCloudInitCompletionStep::new(ssh_connection.clone())
+        ValidateCloudInitCompletionStep::new(ssh_config.clone())
             .execute()
             .await?;
 
-        ValidateDockerInstallationStep::new(ssh_connection.clone())
+        ValidateDockerInstallationStep::new(ssh_config.clone())
             .execute()
             .await?;
 
-        ValidateDockerComposeInstallationStep::new(ssh_connection)
+        ValidateDockerComposeInstallationStep::new(ssh_config)
             .execute()
             .await?;
 

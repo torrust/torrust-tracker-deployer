@@ -1,6 +1,6 @@
-//! SSH connection configuration and management
+//! SSH configuration and management
 //!
-//! This module provides the `SshConnection` struct which encapsulates all the information
+//! This module provides the `SshConfig` struct which encapsulates all the information
 //! needed to establish an SSH connection to a remote host, including credentials and
 //! target host socket address.
 //!
@@ -26,7 +26,7 @@ pub const DEFAULT_SSH_PORT: u16 = 22;
 /// Contains both the SSH credentials and the target host socket address,
 /// representing everything needed to establish an SSH connection.
 #[derive(Clone)]
-pub struct SshConnection {
+pub struct SshConfig {
     /// SSH authentication credentials.
     pub credentials: SshCredentials,
 
@@ -37,20 +37,20 @@ pub struct SshConnection {
     pub socket_addr: SocketAddr,
 }
 
-impl SshConnection {
+impl SshConfig {
     /// Creates a new SSH connection configuration with the provided parameters.
     ///
     /// ```rust
     /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deployer::shared::{Username, ssh::{SshCredentials, SshConnection}};
+    /// # use torrust_tracker_deployer::shared::{Username, ssh::{SshCredentials, SshConfig}};
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
     ///     Username::new("ubuntu").unwrap(),
     /// );
     /// let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)), 22);
-    /// let connection = SshConnection::new(
+    /// let config = SshConfig::new(
     ///     credentials,
     ///     socket_addr,
     /// );
@@ -70,13 +70,13 @@ impl SshConnection {
     /// ```rust
     /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deployer::shared::{Username, ssh::{SshCredentials, SshConnection}};
+    /// # use torrust_tracker_deployer::shared::{Username, ssh::{SshCredentials, SshConfig}};
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
     ///     Username::new("ubuntu").unwrap(),
     /// );
-    /// let connection = SshConnection::with_default_port(
+    /// let config = SshConfig::with_default_port(
     ///     credentials,
     ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
     /// );
