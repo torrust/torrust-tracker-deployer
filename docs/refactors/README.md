@@ -14,23 +14,31 @@ Refactoring plans serve to:
 
 ## 📁 Active Refactoring Plans
 
-| Document                                                                    | Status         | Target                                 | Created     |
-| --------------------------------------------------------------------------- | -------------- | -------------------------------------- | ----------- |
-| [Command Code Quality Improvements](./command-code-quality-improvements.md) | 🚧 In Progress | `ProvisionCommand`, `ConfigureCommand` | Oct 7, 2025 |
+See [active-refactorings.md](./active-refactorings.md) for the current list of ongoing refactoring work.
 
 ## ✅ Completed Refactorings
 
-| Document                                 | Completed    | Target                                  | Notes                                                                                                                                                                                       |
-| ---------------------------------------- | ------------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository Rename to Deployer            | Oct 10, 2025 | Repository and package names            | Renamed from "Torrust Tracker Deploy" to "Torrust Tracker Deployer" - Updated all references, package names, and added deprecation notices to PoC repositories (5 proposals, all completed) |
-| Environment Context Three-Way Split      | Oct 8, 2025  | `EnvironmentContext`                    | See git history at `docs/refactors/environment-context-three-way-split.md` - Split context into UserInputs, InternalConfig, and RuntimeOutputs (4 proposals, all completed)                 |
-| Environment Context Extraction           | Oct 8, 2025  | `Environment<S>`, `AnyEnvironmentState` | See git history at `docs/refactors/environment-context-extraction.md` - Extracted EnvironmentContext from Environment to reduce pattern matching (2 phases, all completed)                  |
-| JSON File Repository Improvements        | Oct 3, 2025  | `json_file_repository.rs`               | See git history at `docs/refactors/json-file-repository-improvements.md` for the complete refactoring plan (9 proposals, all completed)                                                     |
-| File Lock Improvements                   | Oct 3, 2025  | `file_lock.rs`                          | See git history at `docs/refactors/file-lock-improvements.md` for the complete refactoring plan (10 proposals, all completed)                                                               |
-| Command Preparation for State Management | Oct 7, 2025  | `ProvisionCommand`, `ConfigureCommand`  | See git history at `docs/refactors/command-preparation-for-state-management.md` - Refactored commands to prepare for type-state pattern integration                                         |
-| Error Context with Trace Files           | Oct 7, 2025  | Error handling infrastructure           | See git history at `docs/refactors/error-context-with-trace-files.md` - Replaced string-based error context with structured, type-safe context and trace files                              |
-| Error Kind Classification Strategy       | Oct 7, 2025  | `Traceable` trait, error types          | See git history at `docs/refactors/error-kind-classification-strategy.md` - Moved error kind determination into error types via `Traceable` trait                                           |
-| Step Tracking for Failure Context        | Oct 7, 2025  | Command execution flow                  | See git history at `docs/refactors/step-tracking-for-failure-context.md` - Added explicit step tracking to eliminate reverse engineering from error types                                   |
+See [completed-refactorings.md](./completed-refactorings.md) for the complete history of finished refactoring work.
+
+## 📂 File Management
+
+**Refactoring Lists:**
+
+- `active-refactorings.md` - Current ongoing refactoring work
+- `completed-refactorings.md` - Historical record of finished refactorings
+
+**Individual Plan Documents:**
+
+- Each refactoring has a detailed plan document (e.g., `command-code-quality-improvements.md`)
+- These contain the full implementation details, progress tracking, and technical specifications
+- When refactoring is complete, the plan document is typically deleted or archived
+
+**List Management Process:**
+
+1. **New refactoring**: Add entry to `active-refactorings.md` with status 📋 Planning
+2. **Start work**: Update status to 🚧 In Progress in `active-refactorings.md`
+3. **Complete work**: Move entry from `active-refactorings.md` to `completed-refactorings.md`
+4. **Cleanup**: Delete the detailed plan document (work is now in git history)
 
 ## 🎯 Plan Structure
 
@@ -59,6 +67,7 @@ Each refactoring plan follows this structure:
 2. Create detailed plan document in this directory
 3. Organize proposals by impact/effort ratio
 4. Add implementation checklists and timeline
+5. **Add entry to [active-refactorings.md](./active-refactorings.md) with status 📋 Planning**
 
 ### 2. Review and Approval
 
@@ -69,18 +78,21 @@ Each refactoring plan follows this structure:
 
 ### 3. Implementation
 
-1. Create tracking issue (optional)
-2. Create feature branch
-3. Implement proposals in priority order
-4. Update progress in plan document
-5. Run tests and linters after each change
+1. **Update status to 🚧 In Progress in [active-refactorings.md](./active-refactorings.md)**
+2. Create tracking issue (optional)
+3. Create feature branch
+4. Implement proposals in priority order
+5. Update progress in plan document
+6. Run tests and linters after each change
 
 ### 4. Completion
 
 1. Final verification of all changes
 2. Update plan document status to ✅ Completed
-3. Create pull request
-4. Merge after review approval
+3. **Move refactoring entry from [active-refactorings.md](./active-refactorings.md) to [completed-refactorings.md](./completed-refactorings.md)**
+4. Delete the refactoring plan document (or archive if needed for reference)
+5. Create pull request
+6. Merge after review approval
 
 ## 🎓 Best Practices
 
@@ -162,4 +174,4 @@ Update progress regularly:
 
 ---
 
-**Last Updated**: October 2, 2025
+**Last Updated**: October 10, 2025
