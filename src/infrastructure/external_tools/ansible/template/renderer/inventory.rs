@@ -14,9 +14,9 @@
 //! ```rust
 //! # use std::sync::Arc;
 //! # use tempfile::TempDir;
-//! use torrust_tracker_deployer::infrastructure::external_tools::ansible::template::renderer::inventory::InventoryTemplateRenderer;
-//! use torrust_tracker_deployer::domain::template::TemplateManager;
-//! use torrust_tracker_deployer::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContext;
+//! use torrust_tracker_deployer_lib::infrastructure::external_tools::ansible::template::renderer::inventory::InventoryTemplateRenderer;
+//! use torrust_tracker_deployer_lib::domain::template::TemplateManager;
+//! use torrust_tracker_deployer_lib::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContext;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let temp_dir = TempDir::new()?;

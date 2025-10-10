@@ -61,10 +61,10 @@ use crate::shared::ssh::SshCredentials;
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
-/// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
-/// use torrust_tracker_deployer::e2e::context::{TestContext, TestContextType};
-/// use torrust_tracker_deployer::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
+/// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+/// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
+/// use torrust_tracker_deployer_lib::e2e::context::{TestContext, TestContextType};
+/// use torrust_tracker_deployer_lib::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
 /// use std::path::PathBuf;
 /// use tempfile::TempDir;
 ///

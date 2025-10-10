@@ -76,7 +76,7 @@ impl Username {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer::shared::Username;
+    /// use torrust_tracker_deployer_lib::shared::Username;
     ///
     /// // Valid usernames - accepts both &str and String
     /// let user1 = Username::new("torrust")?;

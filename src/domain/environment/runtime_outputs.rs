@@ -45,7 +45,7 @@ use std::net::IpAddr;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer::domain::environment::runtime_outputs::RuntimeOutputs;
+/// use torrust_tracker_deployer_lib::domain::environment::runtime_outputs::RuntimeOutputs;
 /// use std::net::{IpAddr, Ipv4Addr};
 ///
 /// let runtime_outputs = RuntimeOutputs {

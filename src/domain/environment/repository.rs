@@ -96,7 +96,7 @@ pub trait EnvironmentRepository {
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer::domain::environment::repository::{EnvironmentRepository, RepositoryError};
+/// use torrust_tracker_deployer_lib::domain::environment::repository::{EnvironmentRepository, RepositoryError};
 ///
 /// fn handle_repository_error(err: RepositoryError) {
 ///     match err {

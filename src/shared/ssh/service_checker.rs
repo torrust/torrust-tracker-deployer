@@ -15,7 +15,7 @@
 //!
 //! ```rust,no_run
 //! use std::net::{SocketAddr, IpAddr, Ipv4Addr};
-//! use torrust_tracker_deployer::shared::ssh::SshServiceChecker;
+//! use torrust_tracker_deployer_lib::shared::ssh::SshServiceChecker;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let checker = SshServiceChecker::new();

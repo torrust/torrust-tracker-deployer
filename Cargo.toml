@@ -12,6 +12,9 @@ description = "Torrust Tracker Deployer - Deployment Infrastructure with Ansible
 license = "MIT"
 default-run = "torrust-tracker-deployer"
 
+[lib]
+name = "torrust_tracker_deployer_lib"
+
 [[bin]]
 name = "torrust-tracker-deployer"
 path = "src/main.rs"

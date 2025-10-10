@@ -32,7 +32,7 @@ use std::thread;
 use std::time::Duration;
 
 use tempfile::TempDir;
-use torrust_tracker_deployer::infrastructure::persistence::filesystem::file_lock::{
+use torrust_tracker_deployer_lib::infrastructure::persistence::filesystem::file_lock::{
     FileLock, FileLockError,
 };
 
@@ -238,7 +238,7 @@ fn it_should_allow_sequential_acquisition_by_different_processes() {
 #[cfg(unix)] // Process states are platform-specific
 fn it_should_detect_stale_locks_with_dead_process_ids() {
     use std::fs;
-    use torrust_tracker_deployer::infrastructure::persistence::filesystem::process_id::ProcessId;
+    use torrust_tracker_deployer_lib::infrastructure::persistence::filesystem::process_id::ProcessId;
 
     // Arrange
     let temp_dir = TempDir::new().expect("Failed to create temp dir");

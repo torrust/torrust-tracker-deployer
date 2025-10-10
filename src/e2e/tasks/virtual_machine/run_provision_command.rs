@@ -65,8 +65,8 @@ impl ProvisionTaskError {
     /// # Example
     ///
     /// ```rust
-    /// # use torrust_tracker_deployer::e2e::tasks::virtual_machine::run_provision_command::ProvisionTaskError;
-    /// # use torrust_tracker_deployer::domain::environment::state::StateTypeError;
+    /// # use torrust_tracker_deployer_lib::e2e::tasks::virtual_machine::run_provision_command::ProvisionTaskError;
+    /// # use torrust_tracker_deployer_lib::domain::environment::state::StateTypeError;
     /// let error = ProvisionTaskError::InvalidState {
     ///     state_type: "Provisioned".to_string(),
     ///     source: StateTypeError::UnexpectedState {

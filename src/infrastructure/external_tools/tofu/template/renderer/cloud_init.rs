@@ -19,9 +19,9 @@
 //! ```rust
 //! # use std::sync::Arc;
 //! # use std::path::Path;
-//! # use torrust_tracker_deployer::infrastructure::external_tools::tofu::template::renderer::cloud_init::CloudInitTemplateRenderer;
-//! # use torrust_tracker_deployer::domain::template::TemplateManager;
-//! # use torrust_tracker_deployer::shared::{Username, ssh::credentials::SshCredentials};
+//! # use torrust_tracker_deployer_lib::infrastructure::external_tools::tofu::template::renderer::cloud_init::CloudInitTemplateRenderer;
+//! # use torrust_tracker_deployer_lib::domain::template::TemplateManager;
+//! # use torrust_tracker_deployer_lib::shared::{Username, ssh::credentials::SshCredentials};
 //! # use std::path::PathBuf;
 //! #
 //! # #[tokio::main]

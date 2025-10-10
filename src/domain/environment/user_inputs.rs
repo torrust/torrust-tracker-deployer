@@ -32,9 +32,9 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer::domain::{InstanceName, ProfileName, EnvironmentName};
-/// use torrust_tracker_deployer::domain::environment::user_inputs::UserInputs;
-/// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
+/// use torrust_tracker_deployer_lib::domain::{InstanceName, ProfileName, EnvironmentName};
+/// use torrust_tracker_deployer_lib::domain::environment::user_inputs::UserInputs;
+/// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
 /// use std::path::PathBuf;
 ///
 /// let user_inputs = UserInputs {
@@ -86,8 +86,8 @@ impl UserInputs {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer::domain::environment::{EnvironmentName, UserInputs};
-    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer_lib::domain::environment::{EnvironmentName, UserInputs};
+    /// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;

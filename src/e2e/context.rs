@@ -176,9 +176,9 @@ impl TestContext {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
-    /// use torrust_tracker_deployer::e2e::context::{TestContext, TestContextType};
+    /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer_lib::e2e::context::{TestContext, TestContextType};
     /// use std::path::PathBuf;
     /// use tempfile::TempDir;
     ///
@@ -346,9 +346,9 @@ impl TestContext {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use torrust_tracker_deployer::e2e::context::TestContext;
-    /// # use torrust_tracker_deployer::domain::Environment;
-    /// # fn example(test_context: &mut TestContext, provisioned_env: Environment<torrust_tracker_deployer::domain::environment::Provisioned>) {
+    /// # use torrust_tracker_deployer_lib::e2e::context::TestContext;
+    /// # use torrust_tracker_deployer_lib::domain::Environment;
+    /// # fn example(test_context: &mut TestContext, provisioned_env: Environment<torrust_tracker_deployer_lib::domain::environment::Provisioned>) {
     /// // After provisioning succeeds, update the test context
     /// test_context.update_from_provisioned(provisioned_env);
     /// # }
@@ -374,9 +374,9 @@ impl TestContext {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use torrust_tracker_deployer::e2e::context::TestContext;
-    /// # use torrust_tracker_deployer::domain::Environment;
-    /// # fn example(test_context: &mut TestContext, configured_env: Environment<torrust_tracker_deployer::domain::environment::Configured>) {
+    /// # use torrust_tracker_deployer_lib::e2e::context::TestContext;
+    /// # use torrust_tracker_deployer_lib::domain::Environment;
+    /// # fn example(test_context: &mut TestContext, configured_env: Environment<torrust_tracker_deployer_lib::domain::environment::Configured>) {
     /// // After configuration succeeds, update the test context
     /// test_context.update_from_configured(configured_env);
     /// # }
@@ -404,7 +404,7 @@ impl TestContext {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use torrust_tracker_deployer::e2e::context::TestContext;
+    /// # use torrust_tracker_deployer_lib::e2e::context::TestContext;
     /// # fn example(test_context: &TestContext) {
     /// let repository = test_context.create_repository();
     /// // Use repository for state persistence...

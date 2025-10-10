@@ -18,7 +18,7 @@
 //! ```rust,no_run
 //! use std::path::Path;
 //! use std::time::Duration;
-//! use torrust_tracker_deployer::infrastructure::persistence::filesystem::file_lock::FileLock;
+//! use torrust_tracker_deployer_lib::infrastructure::persistence::filesystem::file_lock::FileLock;
 //!
 //! let state_file = Path::new("./data/test-env/state.json");
 //! let lock = FileLock::acquire(state_file, Duration::from_secs(5))?;
@@ -99,7 +99,7 @@ impl FileLock {
     /// ```rust,no_run
     /// use std::path::Path;
     /// use std::time::Duration;
-    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::file_lock::FileLock;
+    /// use torrust_tracker_deployer_lib::infrastructure::persistence::filesystem::file_lock::FileLock;
     ///
     /// let file_path = Path::new("./data/test/state.json");
     /// let timeout = Duration::from_secs(10);
@@ -217,7 +217,7 @@ impl FileLock {
     /// ```rust,no_run
     /// use std::path::Path;
     /// use std::time::Duration;
-    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::file_lock::FileLock;
+    /// use torrust_tracker_deployer_lib::infrastructure::persistence::filesystem::file_lock::FileLock;
     ///
     /// let lock = FileLock::acquire(Path::new("test.json"), Duration::from_secs(5))?;
     /// // ... perform operations ...
@@ -574,7 +574,7 @@ impl FileLockError {
     /// ```rust,no_run
     /// use std::path::Path;
     /// use std::time::Duration;
-    /// use torrust_tracker_deployer::infrastructure::persistence::filesystem::file_lock::FileLock;
+    /// use torrust_tracker_deployer_lib::infrastructure::persistence::filesystem::file_lock::FileLock;
     ///
     /// if let Err(e) = FileLock::acquire(Path::new("test.json"), Duration::from_secs(5)) {
     ///     eprintln!("Error: {e}");

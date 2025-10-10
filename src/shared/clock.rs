@@ -20,7 +20,7 @@
 //! ## In Production Code
 //!
 //! ```rust
-//! use torrust_tracker_deployer::shared::Clock;
+//! use torrust_tracker_deployer_lib::shared::Clock;
 //!
 //! fn record_event(clock: &dyn Clock) {
 //!     let timestamp = clock.now();
@@ -34,7 +34,7 @@
 //! // Note: MockClock is only available in test builds
 //! # #[cfg(test)]
 //! # {
-//! use torrust_tracker_deployer::testing::MockClock;
+//! use torrust_tracker_deployer_lib::testing::MockClock;
 //! use chrono::{DateTime, TimeZone, Utc};
 //!
 //! let fixed_time = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
@@ -72,7 +72,7 @@ pub trait Clock: Send + Sync {
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deployer::shared::{Clock, SystemClock};
+/// use torrust_tracker_deployer_lib::shared::{Clock, SystemClock};
 ///
 /// let clock = SystemClock;
 /// let now = clock.now();

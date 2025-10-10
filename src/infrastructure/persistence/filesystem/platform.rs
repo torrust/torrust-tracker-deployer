@@ -41,7 +41,7 @@ use super::process_id::ProcessId;
 /// # Examples
 ///
 /// ```rust,no_run
-/// # use torrust_tracker_deployer::infrastructure::persistence::filesystem::process_id::ProcessId;
+/// # use torrust_tracker_deployer_lib::infrastructure::persistence::filesystem::process_id::ProcessId;
 /// # // Note: platform module is private, this example is for documentation only
 /// # fn is_process_alive(pid: ProcessId) -> bool { true }
 /// let current_pid = ProcessId::current();

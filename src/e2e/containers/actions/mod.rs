@@ -19,8 +19,8 @@
 //! ## Usage Examples
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deployer::e2e::containers::{ContainerExecutor, actions::{SshKeySetupAction, SshWaitAction}};
-//! use torrust_tracker_deployer::shared::ssh::SshCredentials;
+//! use torrust_tracker_deployer_lib::e2e::containers::{ContainerExecutor, actions::{SshKeySetupAction, SshWaitAction}};
+//! use torrust_tracker_deployer_lib::shared::ssh::SshCredentials;
 //! use std::time::Duration;
 //! use std::net::SocketAddr;
 //!

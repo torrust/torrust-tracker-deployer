@@ -216,7 +216,7 @@ impl RealSshServerContainer {
 /// diagnose what's happening with the Docker containers in CI environments.
 ///
 /// ```rust
-/// use torrust_tracker_deployer::testing::integration::ssh_server::print_docker_debug_info;
+/// use torrust_tracker_deployer_lib::testing::integration::ssh_server::print_docker_debug_info;
 ///
 /// // In a test when SSH connectivity fails:
 /// print_docker_debug_info(2222);

@@ -33,9 +33,9 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::time::Duration;
 
-use torrust_tracker_deployer::shared::ssh::{SshClient, SshConfig, SshCredentials};
-use torrust_tracker_deployer::shared::Username;
-use torrust_tracker_deployer::testing::integration::ssh_server::{
+use torrust_tracker_deployer_lib::shared::ssh::{SshClient, SshConfig, SshCredentials};
+use torrust_tracker_deployer_lib::shared::Username;
+use torrust_tracker_deployer_lib::testing::integration::ssh_server::{
     print_docker_debug_info, MockSshServerContainer, RealSshServerContainer,
 };
 

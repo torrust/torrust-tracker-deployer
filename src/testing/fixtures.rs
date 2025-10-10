@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer::testing::fixtures::TestEntity;
+/// use torrust_tracker_deployer_lib::testing::fixtures::TestEntity;
 ///
 /// // Create with default values
 /// let entity = TestEntity::default();
@@ -56,7 +56,7 @@ impl TestEntity {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer::testing::fixtures::TestEntity;
+    /// use torrust_tracker_deployer_lib::testing::fixtures::TestEntity;
     ///
     /// let entity = TestEntity::new("my-id", 100);
     /// assert_eq!(entity.id, "my-id");

@@ -19,11 +19,11 @@
 //! ## Usage
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deployer::e2e::containers::{
+//! use torrust_tracker_deployer_lib::e2e::containers::{
 //!     StoppedProvisionedContainer, ContainerError,
 //!     actions::{SshWaitAction, SshKeySetupAction}
 //! };
-//! use torrust_tracker_deployer::shared::{Username, ssh::SshCredentials};
+//! use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
 //! use std::path::PathBuf;
 //! use std::time::Duration;
 //! use std::net::SocketAddr;
@@ -108,7 +108,7 @@ impl StoppedProvisionedContainer {
     ///
     /// # Example
     /// ```rust,no_run
-    /// use torrust_tracker_deployer::e2e::containers::{StoppedProvisionedContainer, ContainerTimeouts};
+    /// use torrust_tracker_deployer_lib::e2e::containers::{StoppedProvisionedContainer, ContainerTimeouts};
     /// use std::time::Duration;
     ///
     /// let mut timeouts = ContainerTimeouts::default();
@@ -130,7 +130,7 @@ impl StoppedProvisionedContainer {
     ///
     /// # Example
     /// ```rust,no_run
-    /// use torrust_tracker_deployer::e2e::containers::StoppedProvisionedContainer;
+    /// use torrust_tracker_deployer_lib::e2e::containers::StoppedProvisionedContainer;
     /// use std::time::Duration;
     ///
     /// let container = StoppedProvisionedContainer::with_ssh_ready_timeout(

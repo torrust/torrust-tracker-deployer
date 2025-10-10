@@ -16,7 +16,7 @@ use uuid::Uuid;
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deployer::domain::environment::TraceId;
+/// use torrust_tracker_deployer_lib::domain::environment::TraceId;
 ///
 /// let trace_id = TraceId::new();
 /// println!("Trace ID: {}", trace_id);
@@ -30,7 +30,7 @@ impl TraceId {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deployer::domain::environment::TraceId;
+    /// use torrust_tracker_deployer_lib::domain::environment::TraceId;
     ///
     /// let id1 = TraceId::new();
     /// let id2 = TraceId::new();
@@ -46,7 +46,7 @@ impl TraceId {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deployer::domain::environment::TraceId;
+    /// use torrust_tracker_deployer_lib::domain::environment::TraceId;
     ///
     /// let trace_id = TraceId::new();
     /// let uuid = trace_id.inner();

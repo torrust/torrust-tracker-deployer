@@ -62,9 +62,9 @@ impl ConfigurationValidationError {
     /// # Example
     ///
     /// ```rust
-    /// # use torrust_tracker_deployer::e2e::tasks::run_configuration_validation::ConfigurationValidationError;
-    /// # use torrust_tracker_deployer::infrastructure::remote_actions::RemoteActionError;
-    /// # use torrust_tracker_deployer::shared::command::CommandError;
+    /// # use torrust_tracker_deployer_lib::e2e::tasks::run_configuration_validation::ConfigurationValidationError;
+    /// # use torrust_tracker_deployer_lib::infrastructure::remote_actions::RemoteActionError;
+    /// # use torrust_tracker_deployer_lib::shared::command::CommandError;
     /// let error = ConfigurationValidationError::DockerValidationFailed {
     ///     source: RemoteActionError::SshCommandFailed {
     ///         action_name: "docker_validation".to_string(),
@@ -163,9 +163,9 @@ For more information, see docs/e2e-testing.md."
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deployer::e2e::tasks::run_configuration_validation::run_configuration_validation;
-/// use torrust_tracker_deployer::shared::ssh::SshCredentials;
-/// use torrust_tracker_deployer::shared::username::Username;
+/// use torrust_tracker_deployer_lib::e2e::tasks::run_configuration_validation::run_configuration_validation;
+/// use torrust_tracker_deployer_lib::shared::ssh::SshCredentials;
+/// use torrust_tracker_deployer_lib::shared::username::Username;
 /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 ///
 /// #[tokio::main]

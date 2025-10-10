@@ -33,7 +33,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use torrust_tracker_deployer::domain::environment::state::{Created, Provisioning};
+//! use torrust_tracker_deployer_lib::domain::environment::state::{Created, Provisioning};
 //!
 //! // State types are used as type parameters for Environment<S>
 //! // let env: Environment<Created> = Environment::new(name, credentials);
@@ -83,7 +83,7 @@ pub use running::Running;
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deployer::domain::environment::state::AnyEnvironmentState;
+/// use torrust_tracker_deployer_lib::domain::environment::state::AnyEnvironmentState;
 ///
 /// // let any_env = AnyEnvironmentState::Provisioned(...);
 /// // // This will fail because any_env is Provisioned, not Created
@@ -125,7 +125,7 @@ use crate::domain::environment::{Environment, EnvironmentName};
 /// ## Usage Example
 ///
 /// ```rust
-/// use torrust_tracker_deployer::domain::environment::state::AnyEnvironmentState;
+/// use torrust_tracker_deployer_lib::domain::environment::state::AnyEnvironmentState;
 ///
 /// // Type erasure: typed -> runtime
 /// // let env: Environment<Provisioned> = ...;

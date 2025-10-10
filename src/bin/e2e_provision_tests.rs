@@ -52,15 +52,15 @@ use std::time::Instant;
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
-use torrust_tracker_deployer::domain::{Environment, EnvironmentName};
-use torrust_tracker_deployer::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deployer::e2e::tasks::virtual_machine::{
+use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+use torrust_tracker_deployer_lib::e2e::context::{TestContext, TestContextType};
+use torrust_tracker_deployer_lib::e2e::tasks::virtual_machine::{
     cleanup_infrastructure::cleanup_test_infrastructure,
     preflight_cleanup::preflight_cleanup_previous_resources,
     run_provision_command::run_provision_command,
 };
-use torrust_tracker_deployer::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer::shared::{
+use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
+use torrust_tracker_deployer_lib::shared::{
     ssh::{SshCredentials, DEFAULT_SSH_PORT},
     Username,
 };

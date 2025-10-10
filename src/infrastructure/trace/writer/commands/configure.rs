@@ -23,8 +23,8 @@ use super::super::sections::TraceSections;
 /// ```no_run
 /// use std::path::PathBuf;
 /// use std::sync::Arc;
-/// use torrust_tracker_deployer::infrastructure::trace::ConfigureTraceWriter;
-/// use torrust_tracker_deployer::shared::SystemClock;
+/// use torrust_tracker_deployer_lib::infrastructure::trace::ConfigureTraceWriter;
+/// use torrust_tracker_deployer_lib::shared::SystemClock;
 ///
 /// let traces_dir = PathBuf::from("data/my-env/traces");
 /// let clock = Arc::new(SystemClock);
