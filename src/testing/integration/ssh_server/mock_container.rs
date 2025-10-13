@@ -2,7 +2,9 @@
 
 use std::net::{IpAddr, Ipv4Addr};
 
-use super::constants::{DEFAULT_TEST_PASSWORD, DEFAULT_TEST_USERNAME, MOCK_SSH_PORT};
+use super::config::SshServerConfig;
+use super::constants::MOCK_SSH_PORT;
+use super::error::SshServerError;
 
 /// Mock SSH server container for fast testing
 ///
@@ -17,10 +19,50 @@ pub struct MockSshServerContainer {
 }
 
 impl MockSshServerContainer {
-    /// Create a new mock SSH server container
+    /// Create a mock SSH server container with custom configuration
     ///
     /// This doesn't start any actual container, making it very fast for tests
     /// that don't need real SSH connectivity.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Configuration for the mock container
+    ///
+    /// # Returns
+    ///
+    /// A mock container configured with the provided settings.
+    ///
+    /// # Errors
+    ///
+    /// This function is infallible but returns a Result to match the interface
+    /// of `RealSshServerContainer::start_with_config()`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::testing::integration::ssh_server::{
+    ///     MockSshServerContainer, SshServerConfig
+    /// };
+    ///
+    /// let config = SshServerConfig::builder()
+    ///     .username("customuser")
+    ///     .password("custompass")
+    ///     .build();
+    ///
+    /// let container = MockSshServerContainer::start_with_config(config).unwrap();
+    /// ```
+    pub fn start_with_config(config: SshServerConfig) -> Result<Self, SshServerError> {
+        Ok(Self {
+            host_ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            ssh_port: MOCK_SSH_PORT,
+            test_username: config.username,
+            test_password: config.password,
+        })
+    }
+
+    /// Create a mock SSH server container with default configuration
+    ///
+    /// This is a convenience method that uses default configuration values.
     ///
     /// # Returns
     ///
@@ -30,13 +72,16 @@ impl MockSshServerContainer {
     ///
     /// This function is infallible but returns a Result to match the interface
     /// of `RealSshServerContainer::start()`.
-    pub fn start() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
-        Ok(Self {
-            host_ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
-            ssh_port: MOCK_SSH_PORT,
-            test_username: DEFAULT_TEST_USERNAME.to_string(),
-            test_password: DEFAULT_TEST_PASSWORD.to_string(),
-        })
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::testing::integration::ssh_server::MockSshServerContainer;
+    ///
+    /// let container = MockSshServerContainer::start().unwrap();
+    /// ```
+    pub fn start() -> Result<Self, SshServerError> {
+        Self::start_with_config(SshServerConfig::default())
     }
 
     /// Get the SSH port mapped by the container

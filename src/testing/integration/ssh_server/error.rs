@@ -71,16 +71,17 @@ impl SshServerError {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::testing::integration::ssh_server::RealSshServerContainer;
     ///
-    /// # tokio_test::block_on(async {
+    /// # async fn example() {
     /// if let Err(e) = RealSshServerContainer::start().await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
-    /// # });
+    /// # }
     /// ```
+    #[must_use]
     pub fn help(&self) -> &'static str {
         match self {
             Self::DockerfileNotFound { .. } => {

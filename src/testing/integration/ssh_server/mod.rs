@@ -11,12 +11,14 @@
 
 use std::net::IpAddr;
 
+mod config;
 mod constants;
 mod debug;
 mod error;
 mod mock_container;
 mod real_container;
 
+pub use config::{SshServerConfig, SshServerConfigBuilder};
 pub use debug::print_docker_debug_info;
 pub use error::SshServerError;
 pub use mock_container::MockSshServerContainer;

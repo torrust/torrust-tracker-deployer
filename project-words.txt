@@ -8,6 +8,8 @@ autorestart
 Avalonia
 buildx
 chdir
+custompass
+customuser
 childlogdir
 chkdsk
 chrono
