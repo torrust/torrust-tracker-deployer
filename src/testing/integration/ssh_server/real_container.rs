@@ -12,6 +12,7 @@ use super::constants::{
     CONTAINER_STARTUP_WAIT_SECS, DEFAULT_TEST_PASSWORD, DEFAULT_TEST_USERNAME, DOCKERFILE_DIR,
     SSH_CONTAINER_PORT, SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG,
 };
+use super::error::SshServerError;
 
 /// Real SSH server container using Docker
 ///
@@ -50,17 +51,15 @@ impl RealSshServerContainer {
     /// # Panics
     ///
     /// Panics if the dockerfile directory path contains invalid UTF-8 characters.
-    pub async fn start() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn start() -> Result<Self, SshServerError> {
         // Build the SSH server image from Dockerfile
         // This ensures tests are self-contained and work in CI
         let dockerfile_dir = std::path::Path::new(DOCKERFILE_DIR);
 
         if !dockerfile_dir.exists() || !dockerfile_dir.join("Dockerfile").exists() {
-            return Err(format!(
-                "SSH server Dockerfile not found. Expected: {}/Dockerfile",
-                dockerfile_dir.display()
-            )
-            .into());
+            return Err(SshServerError::DockerfileNotFound {
+                expected_path: dockerfile_dir.join("Dockerfile"),
+            });
         }
 
         // Build the Docker image using docker CLI
@@ -70,15 +69,32 @@ impl RealSshServerContainer {
         );
 
         let image_tag = format!("{SSH_SERVER_IMAGE_NAME}:{SSH_SERVER_IMAGE_TAG}");
+
+        let dockerfile_dir_str =
+            dockerfile_dir
+                .to_str()
+                .ok_or_else(|| SshServerError::InvalidUtf8InPath {
+                    path: dockerfile_dir.display().to_string(),
+                })?;
+
         let build_output = Command::new("docker")
-            .args(["build", "-t", &image_tag, dockerfile_dir.to_str().unwrap()])
+            .args(["build", "-t", &image_tag, dockerfile_dir_str])
             .output()
-            .map_err(|e| format!("Failed to execute docker build command: {e}"))?;
+            .map_err(|source| SshServerError::DockerCommandFailed {
+                command: format!("docker build -t {image_tag} {dockerfile_dir_str}"),
+                source,
+            })?;
 
         if !build_output.status.success() {
-            let stderr = String::from_utf8_lossy(&build_output.stderr);
-            let stdout = String::from_utf8_lossy(&build_output.stdout);
-            return Err(format!("Docker build failed:\nSTDOUT: {stdout}\nSTDERR: {stderr}").into());
+            let stderr = String::from_utf8_lossy(&build_output.stderr).to_string();
+            let stdout = String::from_utf8_lossy(&build_output.stdout).to_string();
+            return Err(SshServerError::DockerBuildFailed {
+                image_name: SSH_SERVER_IMAGE_NAME.to_string(),
+                image_tag: SSH_SERVER_IMAGE_TAG.to_string(),
+                dockerfile_dir: dockerfile_dir_str.to_string(),
+                stdout,
+                stderr,
+            });
         }
 
         println!("SSH server Docker image built successfully");
@@ -88,10 +104,16 @@ impl RealSshServerContainer {
             .with_exposed_port(SSH_CONTAINER_PORT.tcp())
             .with_wait_for(WaitFor::seconds(CONTAINER_STARTUP_WAIT_SECS));
 
-        let container = image.start().await?;
+        let container = image
+            .start()
+            .await
+            .map_err(|source| SshServerError::ContainerStartFailed { source })?;
 
         // Get the mapped SSH port
-        let ssh_port = container.get_host_port_ipv4(SSH_CONTAINER_PORT).await?;
+        let ssh_port = container
+            .get_host_port_ipv4(SSH_CONTAINER_PORT)
+            .await
+            .map_err(|source| SshServerError::PortMappingFailed { source })?;
 
         Ok(Self {
             container,

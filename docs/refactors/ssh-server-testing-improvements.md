@@ -408,7 +408,7 @@ pub const DOCKERFILE_DIR: &str = "docker/ssh-server";
 
 ### Proposal #3: Add Explicit Error Types with Thiserror
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0  
@@ -615,17 +615,17 @@ This is typically a configuration or system encoding issue."
 
 #### Implementation Checklist
 
-- [ ] Create error types with `thiserror` derive macros
-- [ ] Add `#[error]` attributes with brief, clear messages
-- [ ] Include tips in error messages
-- [ ] Implement `.help()` method with detailed troubleshooting
-- [ ] Add `#[source]` attributes for error chaining
-- [ ] Update all `Result` return types to use `SshServerError`
-- [ ] Replace all `.into()` error conversions with explicit error constructors
-- [ ] Add error-specific context (paths, commands, etc.)
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
-- [ ] Update documentation with error handling examples
+- [x] Create error types with `thiserror` derive macros
+- [x] Add `#[error]` attributes with brief, clear messages
+- [x] Include tips in error messages
+- [x] Implement `.help()` method with detailed troubleshooting
+- [x] Add `#[source]` attributes for error chaining
+- [x] Update all `Result` return types to use `SshServerError`
+- [x] Replace all `.into()` error conversions with explicit error constructors
+- [x] Add error-specific context (paths, commands, etc.)
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
+- [x] Update documentation with error handling examples
 
 #### Testing Strategy
 
