@@ -638,7 +638,7 @@ This is typically a configuration or system encoding issue."
 
 ### Proposal #4: Replace Unwrap with Proper Error Handling
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (done together with Proposal #3)  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0  
@@ -702,12 +702,14 @@ let build_output = Command::new("docker")
 
 #### Implementation Checklist
 
-- [ ] Identify all `.unwrap()` calls in the module
-- [ ] Replace each with appropriate error handling
-- [ ] Use error types from Proposal #2
-- [ ] Add proper error context to each conversion
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Identify all `.unwrap()` calls in the module
+- [x] Replace each with appropriate error handling
+- [x] Use error types from Proposal #3
+- [x] Add proper error context to each conversion
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
+
+**Note**: This was completed together with Proposal #3. The `.unwrap()` call on `dockerfile_dir.to_str()` was replaced with `ok_or_else()` and the `InvalidUtf8InPath` error variant.
 
 #### Testing Strategy
 
