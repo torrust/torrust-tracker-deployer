@@ -723,7 +723,7 @@ let build_output = Command::new("docker")
 
 High-impact improvements that require moderate effort and build on Phase 0 foundations.
 
-### Proposal #5: Create General Docker Command Adapter
+### Proposal #5: Create General Docker Command Client
 
 **Status**: ⏳ Not Started  
 **Impact**: 🟢🟢🟢 High  
@@ -733,7 +733,7 @@ High-impact improvements that require moderate effort and build on Phase 0 found
 
 #### Problem
 
-Docker operations are directly embedded in `RealSshServerContainer` using raw `Command` execution, making them impossible to unit test and not reusable across the project. We make heavy use of Docker throughout the project and would benefit from a general-purpose Docker adapter following the same pattern as our Ansible, OpenTofu, and LXD adapters.
+Docker operations are directly embedded in `RealSshServerContainer` using raw `Command` execution, making them impossible to unit test and not reusable across the project. We make heavy use of Docker throughout the project and would benefit from a general-purpose Docker client following the same pattern as our Ansible, OpenTofu, and LXD clients.
 
 ```rust
 // Current: Raw Docker commands in production code
@@ -750,147 +750,193 @@ impl RealSshServerContainer {
 
 #### Proposed Solution
 
-Create a general Docker adapter in `src/shared/docker` following the same pattern as our other external tool adapters (Ansible, OpenTofu, LXD). The adapter will use our `CommandExecutor` wrapper and provide a clean, testable interface for Docker operations.
+Create a simplified `DockerClient` in `src/shared/docker` with one method per Docker subcommand. This keeps the implementation simple while still being testable and reusable. In the future, if the client becomes too large, we can refactor to extract command builders.
 
 **Module Structure:**
 
 ```text
 src/shared/docker/
-    mod.rs          - Module exports and documentation
-    adapter/
-        mod.rs      - Adapter re-exports
-        client.rs   - DockerAdapter implementation
-        errors.rs   - Docker-specific error types
-    commands/
-        mod.rs      - Command builders re-exports
-        build.rs    - docker build command
-        images.rs   - docker images command
-        ps.rs       - docker ps command
-        logs.rs     - docker logs command
+    mod.rs    - Module exports and documentation
+    client.rs - DockerClient implementation with one method per subcommand
+    error.rs  - Docker-specific error types
 ```
 
-**Docker Adapter (`src/shared/docker/adapter/client.rs`):**
+**Docker Client (`src/shared/docker/client.rs`):**
 
 ```rust
-use crate::shared::command::CommandExecutor;
+use crate::shared::command_executor::CommandExecutor;
+use crate::shared::docker::error::DockerError;
 use std::path::Path;
 use std::sync::Arc;
 
-/// Adapter for Docker CLI operations
+/// Client for executing Docker CLI commands
 ///
-/// This adapter wraps Docker CLI commands using our CommandExecutor,
-/// following the same pattern as Ansible, OpenTofu, and LXD adapters.
-pub struct DockerAdapter {
+/// This client wraps Docker CLI operations using our `CommandExecutor` abstraction,
+/// enabling testability and consistency with other external tool clients (Ansible,
+/// OpenTofu, LXD). Each Docker subcommand is exposed as a separate method.
+///
+/// # Future Refactoring
+///
+/// If this client becomes too large, we can extract command builders to separate
+/// files (e.g., build.rs, images.rs, ps.rs, logs.rs) as originally proposed.
+/// For now, keeping everything in one file maintains simplicity.
+pub struct DockerClient {
     executor: Arc<dyn CommandExecutor>,
 }
 
-impl DockerAdapter {
+impl DockerClient {
     pub fn new(executor: Arc<dyn CommandExecutor>) -> Self {
         Self { executor }
     }
 
-    /// Build a Docker image from a Dockerfile
-    pub fn build_image(
+    /// Build a Docker image from a Dockerfile directory
+    ///
+    /// # Arguments
+    ///
+    /// * `dockerfile_dir` - Path to directory containing the Dockerfile
+    /// * `image_name` - Name for the Docker image (e.g., "my-ssh-server")
+    /// * `image_tag` - Tag for the image (e.g., "latest")
+    ///
+    /// # Returns
+    ///
+    /// The build output on success
+    pub async fn build_image<P: AsRef<Path>>(
         &self,
-        dockerfile_dir: &Path,
+        dockerfile_dir: P,
         image_name: &str,
-        tag: &str,
-    ) -> Result<BuildOutput, DockerError> {
-        let build_cmd = BuildCommand::new(dockerfile_dir, image_name, tag);
-        let output = self.executor.execute(build_cmd.to_command())?;
+        image_tag: &str,
+    ) -> Result<String, DockerError> {
+        let args = vec![
+            "build".to_string(),
+            "-t".to_string(),
+            format!("{}:{}", image_name, image_tag),
+            dockerfile_dir.as_ref().display().to_string(),
+        ];
 
-        if !output.status.success() {
-            return Err(DockerError::BuildFailed {
-                image: format!("{}:{}", image_name, tag),
-                stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-            });
-        }
-
-        Ok(BuildOutput::from(output))
+        self.executor
+            .execute_with_args("docker", &args)
+            .await
+            .map_err(|source| DockerError::BuildFailed {
+                image: format!("{}:{}", image_name, image_tag),
+                source,
+            })
     }
 
-    /// List Docker images
-    pub fn list_images(&self, filter: Option<&str>) -> Result<Vec<ImageInfo>, DockerError> {
-        let images_cmd = ImagesCommand::new().with_filter(filter);
-        let output = self.executor.execute(images_cmd.to_command())?;
+    /// List Docker images with optional repository filter
+    ///
+    /// # Arguments
+    ///
+    /// * `repository` - Optional repository name to filter by
+    ///
+    /// # Returns
+    ///
+    /// A vector of image information strings in format:
+    /// "repository:tag|id|size"
+    pub async fn list_images(
+        &self,
+        repository: Option<&str>,
+    ) -> Result<Vec<String>, DockerError> {
+        let mut args = vec![
+            "images".to_string(),
+            "--format".to_string(),
+            "{{.Repository}}:{{.Tag}}|{{.ID}}|{{.Size}}".to_string(),
+        ];
 
-        ImageInfo::parse_from_output(&output.stdout)
+        if let Some(repo) = repository {
+            args.push(repo.to_string());
+        }
+
+        let output = self.executor
+            .execute_with_args("docker", &args)
+            .await
+            .map_err(DockerError::ListImagesFailed)?;
+
+        Ok(output.lines().map(|s| s.to_string()).collect())
     }
 
     /// List Docker containers
-    pub fn list_containers(&self, all: bool) -> Result<Vec<ContainerInfo>, DockerError> {
-        let ps_cmd = PsCommand::new().all(all);
-        let output = self.executor.execute(ps_cmd.to_command())?;
+    ///
+    /// # Arguments
+    ///
+    /// * `all` - If true, shows all containers (including stopped ones)
+    ///
+    /// # Returns
+    ///
+    /// A vector of container information strings in format:
+    /// "id|name|status"
+    pub async fn list_containers(
+        &self,
+        all: bool,
+    ) -> Result<Vec<String>, DockerError> {
+        let mut args = vec![
+            "ps".to_string(),
+            "--format".to_string(),
+            "{{.ID}}|{{.Names}}|{{.Status}}".to_string(),
+        ];
 
-        ContainerInfo::parse_from_output(&output.stdout)
+        if all {
+            args.push("-a".to_string());
+        }
+
+        let output = self.executor
+            .execute_with_args("docker", &args)
+            .await
+            .map_err(DockerError::ListContainersFailed)?;
+
+        Ok(output.lines().map(|s| s.to_string()).collect())
     }
 
-    /// Get logs from a container
-    pub fn get_logs(
+    /// Get logs from a Docker container
+    ///
+    /// # Arguments
+    ///
+    /// * `container_id` - ID or name of the container
+    ///
+    /// # Returns
+    ///
+    /// The container's logs as a string
+    pub async fn get_container_logs(
         &self,
         container_id: &str,
-        tail: Option<usize>,
     ) -> Result<String, DockerError> {
-        let logs_cmd = LogsCommand::new(container_id).tail(tail);
-        let output = self.executor.execute(logs_cmd.to_command())?;
+        let args = vec!["logs".to_string(), container_id.to_string()];
 
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        self.executor
+            .execute_with_args("docker", &args)
+            .await
+            .map_err(|source| DockerError::GetLogsFailed {
+                container_id: container_id.to_string(),
+                source,
+            })
     }
 
     /// Check if a Docker image exists locally
-    pub fn image_exists(&self, image_name: &str, tag: &str) -> Result<bool, DockerError> {
-        let filter = format!("{}:{}", image_name, tag);
-        let images = self.list_images(Some(&filter))?;
+    ///
+    /// # Arguments
+    ///
+    /// * `image_name` - Name of the image
+    /// * `image_tag` - Tag of the image
+    ///
+    /// # Returns
+    ///
+    /// `true` if the image exists, `false` otherwise
+    pub async fn image_exists(
+        &self,
+        image_name: &str,
+        image_tag: &str,
+    ) -> Result<bool, DockerError> {
+        let filter = format!("{}:{}", image_name, image_tag);
+        let images = self.list_images(Some(&filter)).await?;
         Ok(!images.is_empty())
     }
 }
 ```
 
-**Command Builders (`src/shared/docker/commands/`):**
-
-```rust
-// build.rs
-pub struct BuildCommand {
-    dockerfile_dir: PathBuf,
-    image_name: String,
-    tag: String,
-    no_cache: bool,
-}
-
-impl BuildCommand {
-    pub fn new(dockerfile_dir: &Path, image_name: &str, tag: &str) -> Self {
-        Self {
-            dockerfile_dir: dockerfile_dir.to_path_buf(),
-            image_name: image_name.to_string(),
-            tag: tag.to_string(),
-            no_cache: false,
-        }
-    }
-
-    pub fn no_cache(mut self, enabled: bool) -> Self {
-        self.no_cache = enabled;
-        self
-    }
-
-    pub fn to_command(&self) -> Command {
-        let mut cmd = Command::new("docker");
-        cmd.args(["build", "-t", &format!("{}:{}", self.image_name, self.tag)]);
-
-        if self.no_cache {
-            cmd.arg("--no-cache");
-        }
-
-        cmd.arg(&self.dockerfile_dir);
-        cmd
-    }
-}
-```
-
-**Error Types (`src/shared/docker/adapter/errors.rs`):**
+**Error Types (`src/shared/docker/error.rs`):**
 
 ```rust
 use thiserror::Error;
+use crate::shared::command_executor::CommandExecutorError;
 
 #[derive(Debug, Error)]
 pub enum DockerError {
@@ -898,24 +944,24 @@ pub enum DockerError {
 Tip: Run the build command manually to see detailed output")]
     BuildFailed {
         image: String,
-        stdout: String,
-        stderr: String,
+        #[source]
+        source: CommandExecutorError,
     },
 
-    #[error("Docker command execution failed: {command}
+    #[error("Failed to list Docker images
 Tip: Verify Docker is installed and running: 'docker ps'")]
-    CommandFailed {
-        command: String,
-        #[source]
-        source: std::io::Error,
-    },
+    ListImagesFailed(#[source] CommandExecutorError),
 
-    #[error("Failed to parse Docker command output
-Tip: Docker CLI output format may have changed")]
-    ParseError {
-        output: String,
+    #[error("Failed to list Docker containers
+Tip: Verify Docker is installed and running: 'docker ps'")]
+    ListContainersFailed(#[source] CommandExecutorError),
+
+    #[error("Failed to get logs for container '{container_id}'
+Tip: Verify the container exists: 'docker ps -a'")]
+    GetLogsFailed {
+        container_id: String,
         #[source]
-        source: Box<dyn std::error::Error + Send + Sync>,
+        source: CommandExecutorError,
     },
 }
 
@@ -934,8 +980,8 @@ impl DockerError {
 For more information, see Docker documentation."
             }
 
-            Self::CommandFailed { .. } => {
-                "Docker Command Failed - Detailed Troubleshooting:
+            Self::ListImagesFailed(_) | Self::ListContainersFailed(_) => {
+                "Docker List Command Failed - Detailed Troubleshooting:
 
 1. Verify Docker is installed: docker --version
 2. Check Docker daemon is running: docker ps
@@ -946,14 +992,15 @@ For more information, see Docker documentation."
 For more information, see Docker installation guide."
             }
 
-            Self::ParseError { .. } => {
-                "Docker Output Parse Error - Detailed Troubleshooting:
+            Self::GetLogsFailed { .. } => {
+                "Docker Logs Failed - Detailed Troubleshooting:
 
-1. Check Docker CLI version compatibility
-2. Verify output format hasn't changed: docker version
-3. Report issue with Docker and application versions
+1. Check if container exists: docker ps -a
+2. Verify container ID or name is correct
+3. Try viewing logs with docker CLI directly:
+   docker logs <container-id>
 
-This may indicate a Docker CLI version incompatibility."
+If the container doesn't exist, it may have been removed."
             }
         }
     }
@@ -963,47 +1010,51 @@ This may indicate a Docker CLI version incompatibility."
 **Usage in `RealSshServerContainer`:**
 
 ```rust
-use crate::shared::docker::DockerAdapter;
-use crate::shared::command::DefaultCommandExecutor;
+use crate::shared::docker::DockerClient;
+use crate::shared::command_executor::DefaultCommandExecutor;
+use std::sync::Arc;
 
 impl RealSshServerContainer {
-    pub async fn start_with_adapter(
-        docker: Arc<DockerAdapter>,
+    pub async fn start_with_client(
+        docker: Arc<DockerClient>,
+        config: SshServerConfig,
     ) -> Result<Self, SshServerError> {
-        // Use the Docker adapter instead of raw commands
+        // Use the Docker client instead of raw commands
         docker.build_image(
-            Path::new(DOCKERFILE_DIR),
-            SSH_SERVER_IMAGE_NAME,
-            SSH_SERVER_IMAGE_TAG,
-        )?;
+            &config.dockerfile_dir,
+            &config.image_name,
+            &config.image_tag,
+        ).await?;
 
-        // Start container with built image
+        // Start container with testcontainers using the built image
         // ...
     }
 
     pub async fn start() -> Result<Self, SshServerError> {
         let executor = Arc::new(DefaultCommandExecutor::new());
-        let docker = Arc::new(DockerAdapter::new(executor));
-        Self::start_with_adapter(docker).await
+        let docker = Arc::new(DockerClient::new(executor));
+        let config = SshServerConfig::default();
+        Self::start_with_client(docker, config).await
     }
 }
 ```
 
-**Benefits of `DockerDebugInfo` Using Docker Adapter:**
+**Benefits of `DockerDebugInfo` Using Docker Client:**
 
-The `DockerDebugInfo` type from Proposal #6 can then use the Docker adapter as a collaborator:
+The debug info collection (from Proposal #7) can use the Docker client as a collaborator:
 
 ```rust
 impl DockerDebugInfo {
-    pub fn collect_with_adapter(
-        docker: &DockerAdapter,
+    pub async fn collect_with_client(
+        docker: &DockerClient,
         container_port: u16,
     ) -> Self {
         Self {
-            all_containers: docker.list_containers(true)
-                .map(|containers| format!("{:?}", containers))
-                .map_err(|e| e.to_string()),
-            // ... use adapter for all Docker operations
+            all_containers: match docker.list_containers(true).await {
+                Ok(containers) => Ok(containers.join("\n")),
+                Err(e) => Err(e.to_string()),
+            },
+            // ... use client for all Docker operations
         }
     }
 }
@@ -1011,7 +1062,7 @@ impl DockerDebugInfo {
 
 #### Rationale
 
-- **Follows Project Patterns**: Uses the same adapter pattern as Ansible, OpenTofu, LXD
+- **Follows Project Patterns**: Uses the same client pattern as Ansible, OpenTofu, LXD
 - **Uses CommandExecutor**: Leverages our existing command execution wrapper
 - **Reusable**: Can be used throughout the project wherever Docker is needed
 - **Testable**: Easy to mock with a test implementation of CommandExecutor
@@ -1024,7 +1075,7 @@ impl DockerDebugInfo {
 - ✅ Follows established project patterns for external tools
 - ✅ Reusable across the entire project (not just SSH tests)
 - ✅ Testable through CommandExecutor mocking
-- ✅ Consistent with Ansible, OpenTofu, and LXD adapters
+- ✅ Consistent with Ansible, OpenTofu, and LXD clients
 - ✅ Clean separation of concerns
 - ✅ Easy to extend with new Docker operations
 - ✅ Better error handling with specific error types
@@ -1033,37 +1084,42 @@ impl DockerDebugInfo {
 #### Implementation Checklist
 
 - [ ] Create `src/shared/docker/` module structure
-- [ ] Implement `DockerAdapter` in `src/shared/docker/adapter/client.rs`
-- [ ] Create `DockerError` types in `src/shared/docker/adapter/errors.rs`
-- [ ] Implement command builders in `src/shared/docker/commands/`
-  - [ ] `BuildCommand` for docker build
-  - [ ] `ImagesCommand` for docker images
-  - [ ] `PsCommand` for docker ps
-  - [ ] `LogsCommand` for docker logs
-- [ ] Add output parsing types (`ImageInfo`, `ContainerInfo`, etc.)
-- [ ] Update `RealSshServerContainer` to use `DockerAdapter`
-- [ ] Add unit tests for Docker adapter using mock `CommandExecutor`
+  - [ ] `mod.rs` - Module exports and documentation
+  - [ ] `client.rs` - DockerClient implementation
+  - [ ] `error.rs` - DockerError types with thiserror
+- [ ] Implement `DockerClient` with methods:
+  - [ ] `build_image()` - Builds Docker images
+  - [ ] `list_images()` - Lists images with optional filter
+  - [ ] `list_containers()` - Lists containers (all or running)
+  - [ ] `get_container_logs()` - Gets container logs
+  - [ ] `image_exists()` - Checks if image exists locally
+- [ ] Implement `DockerError` enum with variants and `.help()` method
+- [ ] Update `RealSshServerContainer`:
+  - [ ] Add `start_with_client()` accepting Docker client and config
+  - [ ] Update `start()` to use client with default config
+  - [ ] Remove direct Command usage for Docker operations
+- [ ] Add unit tests for Docker client using mock `CommandExecutor`
 - [ ] Add integration tests with real Docker
-- [ ] Update `DockerDebugInfo` to use `DockerAdapter` as collaborator
+- [ ] Update debug info collection to use `DockerClient` (Proposal #7)
 - [ ] Verify all tests pass
 - [ ] Run linter and fix any issues
 - [ ] Update documentation
 
 #### Testing Strategy
 
-- Unit test `DockerAdapter` methods with mock `CommandExecutor`
-- Unit test command builders produce correct arguments
-- Unit test output parsing logic
-- Integration test with real Docker daemon
-- Test error scenarios and error messages
-- Verify `RealSshServerContainer` works with adapter
-
-#### Testing Strategy
-
-- Unit test `DockerCliBuilder` methods with mock filesystem/commands
-- Unit test `RealSshServerContainer` with `MockDockerBuilder`
-- Add tests for Docker build failure scenarios
-- Verify integration tests still pass with real Docker
+- **Unit Tests**: Test `DockerClient` methods with mock `CommandExecutor`
+  - Verify correct arguments are passed to executor
+  - Test error handling and error message clarity
+  - Test output parsing (lines to Vec<String>)
+- **Integration Tests**: Test with real Docker daemon
+  - Test building actual images
+  - Test listing real containers and images
+  - Test getting logs from real containers
+- **Error Scenario Tests**: Test failure cases
+  - Docker not installed or not running
+  - Invalid image names or tags
+  - Missing containers
+- **Compatibility Tests**: Verify `RealSshServerContainer` still works
 
 ---
 
