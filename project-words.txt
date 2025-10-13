@@ -46,6 +46,7 @@ eprintln
 exitcode
 getent
 Gossman
+handleable
 Hostnames
 hotfixes
 htdocs
@@ -91,6 +92,7 @@ pidfile
 pids
 pipefail
 postconditions
+preconfigured
 prereq
 println
 publickey
@@ -101,6 +103,7 @@ Repomix
 reqwest
 resolv
 rgba
+rootpass
 rpcinterface
 rstest
 runcmd
@@ -143,10 +146,12 @@ Testcontainers
 testhost
 Testinfra
 testkey
+testpass
 testuser
 tfstate
 tfvars
 thiserror
+tlnp
 tlsv
 tmpfiles
 tmpfs
@@ -167,7 +172,3 @@ writeln
 ключ
 конфиг
 файл
-testpass
-rootpass
-preconfigured
-tlnp
