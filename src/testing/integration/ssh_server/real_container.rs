@@ -17,12 +17,11 @@ use super::error::SshServerError;
 /// for full integration testing. Use this when you need to test actual SSH
 /// protocol connectivity and command execution.
 pub struct RealSshServerContainer {
+    config: SshServerConfig,
     #[allow(dead_code)]
     container: ContainerAsync<GenericImage>,
     host_ip: IpAddr,
     ssh_port: u16,
-    test_username: String,
-    test_password: String,
 }
 
 impl RealSshServerContainer {
@@ -113,11 +112,10 @@ impl RealSshServerContainer {
             .map_err(|source| SshServerError::PortMappingFailed { source })?;
 
         Ok(Self {
+            config,
             container,
             host_ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
             ssh_port,
-            test_username: config.username,
-            test_password: config.password,
         })
     }
 
@@ -162,13 +160,13 @@ impl RealSshServerContainer {
     /// Get the test username configured in the container
     #[must_use]
     pub fn test_username(&self) -> &str {
-        &self.test_username
+        &self.config.username
     }
 
     /// Get the test password configured in the container
     #[must_use]
     pub fn test_password(&self) -> &str {
-        &self.test_password
+        &self.config.password
     }
 }
 
@@ -182,10 +180,10 @@ impl super::SshServerContainer for RealSshServerContainer {
     }
 
     fn test_username(&self) -> &str {
-        &self.test_username
+        &self.config.username
     }
 
     fn test_password(&self) -> &str {
-        &self.test_password
+        &self.config.password
     }
 }

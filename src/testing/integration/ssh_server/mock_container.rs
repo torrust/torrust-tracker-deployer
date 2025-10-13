@@ -12,10 +12,9 @@ use super::error::SshServerError;
 /// interface as a real SSH server. Use this for tests that only need to verify
 /// configuration, timeouts, or client behavior without actual SSH connectivity.
 pub struct MockSshServerContainer {
+    config: SshServerConfig,
     host_ip: IpAddr,
     ssh_port: u16,
-    test_username: String,
-    test_password: String,
 }
 
 impl MockSshServerContainer {
@@ -53,10 +52,9 @@ impl MockSshServerContainer {
     /// ```
     pub fn start_with_config(config: SshServerConfig) -> Result<Self, SshServerError> {
         Ok(Self {
+            config,
             host_ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
             ssh_port: MOCK_SSH_PORT,
-            test_username: config.username,
-            test_password: config.password,
         })
     }
 
@@ -103,13 +101,13 @@ impl MockSshServerContainer {
     /// Get the test username configured in the container
     #[must_use]
     pub fn test_username(&self) -> &str {
-        &self.test_username
+        &self.config.username
     }
 
     /// Get the test password configured in the container
     #[must_use]
     pub fn test_password(&self) -> &str {
-        &self.test_password
+        &self.config.password
     }
 }
 
@@ -123,10 +121,10 @@ impl super::SshServerContainer for MockSshServerContainer {
     }
 
     fn test_username(&self) -> &str {
-        &self.test_username
+        &self.config.username
     }
 
     fn test_password(&self) -> &str {
-        &self.test_password
+        &self.config.password
     }
 }
