@@ -347,40 +347,32 @@ async fn it_should_handle_connectivity_timeouts() {
 /// 3. Demonstrates configuration validation patterns
 #[tokio::test]
 async fn it_should_store_ssh_configuration_correctly() {
-    // Define test parameters
+    // Arrange: Set up test parameters and SSH client
     let test_ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 100));
     let test_port = 2222;
     let test_username = "testuser";
+    let private_key_path = PathBuf::from("/path/to/private_key");
+    let public_key_path = PathBuf::from("/path/to/public_key.pub");
 
-    // Create SSH credentials
     let ssh_credentials = SshCredentials::new(
-        PathBuf::from("/path/to/private_key"),
-        PathBuf::from("/path/to/public_key.pub"),
+        private_key_path.clone(),
+        public_key_path.clone(),
         Username::new(test_username).unwrap(),
     );
-
-    // Create SSH configuration
     let ssh_config = SshConfig::new(ssh_credentials, SocketAddr::new(test_ip, test_port));
-
-    // Create SSH client
     let ssh_client = SshClient::new(ssh_config);
 
-    // Verify configuration is stored correctly
+    // Act: Configuration is stored during client creation (no explicit action needed)
+
+    // Assert: Verify all configuration values are stored correctly
     assert_eq!(ssh_client.ssh_config().host_ip(), test_ip);
     assert_eq!(ssh_client.ssh_config().ssh_port(), test_port);
     assert_eq!(ssh_client.ssh_config().ssh_username(), test_username);
-
-    // Verify key paths are stored correctly
     assert_eq!(
         ssh_client.ssh_config().ssh_priv_key_path(),
-        &PathBuf::from("/path/to/private_key")
+        &private_key_path
     );
-    assert_eq!(
-        ssh_client.ssh_config().ssh_pub_key_path(),
-        &PathBuf::from("/path/to/public_key.pub")
-    );
-
-    println!("SSH configuration validation completed successfully");
+    assert_eq!(ssh_client.ssh_config().ssh_pub_key_path(), &public_key_path);
 }
 
 // =============================================================================
@@ -435,37 +427,11 @@ async fn it_should_connect_to_real_ssh_server_and_test_connectivity() {
 /// timeouts work in a real Docker environment.
 #[tokio::test]
 async fn it_should_timeout_when_connecting_to_unreachable_host_with_real_ssh_infrastructure() {
-    // Use an unreachable IP address (RFC 5737 TEST-NET-1)
-    let unreachable_ip = IpAddr::V4("192.0.2.1".parse().unwrap());
+    // Arrange: Set up SSH client configured to connect to unreachable host
+    let client = SshTestBuilder::new().with_unreachable_host().build_client();
 
-    let ssh_credentials = SshCredentials::new(
-        PathBuf::from("/nonexistent/key"),     // Not used for password auth
-        PathBuf::from("/nonexistent/key.pub"), // Not used for password auth
-        Username::new("testuser").unwrap(),
-    );
-
-    let ssh_config = SshConfig::new(ssh_credentials, SocketAddr::new(unreachable_ip, 22));
-
-    let ssh_client = SshClient::new(ssh_config);
-
-    // Measure timeout duration
-    let start = std::time::Instant::now();
-    let result = ssh_client.test_connectivity();
-    let duration = start.elapsed();
-
-    // Verify timeout behavior
-    assert!(
-        result.is_err() || !result.unwrap(),
-        "Connection to unreachable host should fail"
-    );
-
-    // Should timeout around 5 seconds (with some tolerance for system variations)
-    assert!(
-        duration >= Duration::from_secs(4) && duration <= Duration::from_secs(10),
-        "Timeout should be around 5 seconds, was: {duration:?}"
-    );
-
-    println!("Real SSH infrastructure timeout test completed in {duration:?}");
+    // Act & Assert: Test connectivity should fail quickly for unreachable host
+    assert_connectivity_fails_quickly(&client, 10);
 }
 
 /// Test remote command execution using a real Docker SSH server
@@ -492,7 +458,7 @@ async fn it_should_timeout_when_connecting_to_unreachable_host_with_real_ssh_inf
 /// The test will skip gracefully if Docker is not available or the image is not built.
 #[tokio::test]
 async fn it_should_execute_remote_command_on_real_ssh_server() {
-    // Start real SSH server container
+    // Arrange: Set up real SSH server container and client
     let ssh_container = match RealSshServerContainer::start().await {
         Ok(container) => container,
         Err(e) => {
@@ -502,24 +468,12 @@ async fn it_should_execute_remote_command_on_real_ssh_server() {
         }
     };
 
-    // Create SSH credentials using the test SSH keys
-    // NOTE: These keys must match the hardcoded public key in the SSH server Dockerfile
-    let ssh_credentials = SshCredentials::new(
-        PathBuf::from("fixtures/testing_rsa"),     // Test private key
-        PathBuf::from("fixtures/testing_rsa.pub"), // Test public key (hardcoded in Docker image)
-        Username::new(ssh_container.test_username()).unwrap(),
-    );
+    let client = SshTestBuilder::new()
+        .with_real_container(&ssh_container)
+        .build_client();
 
-    // Create SSH configuration
-    let ssh_config = SshConfig::new(
-        ssh_credentials,
-        SocketAddr::new(ssh_container.host_ip(), ssh_container.ssh_port()),
-    );
-
-    let ssh_client = SshClient::new(ssh_config);
-
-    // Wait for SSH connectivity to be established
-    match ssh_client.wait_for_connectivity().await {
+    // Ensure SSH connectivity before command execution
+    match client.wait_for_connectivity().await {
         Ok(()) => {
             println!("SSH connectivity established successfully");
         }
@@ -529,32 +483,29 @@ async fn it_should_execute_remote_command_on_real_ssh_server() {
         }
     }
 
-    // Execute a simple echo command
+    // Act: Execute commands via SSH
     let test_message = "Hello SSH Integration Test";
-    let command = format!("echo '{test_message}'");
+    let echo_command = format!("echo '{test_message}'");
+    let echo_result = client.execute(&echo_command);
+    let whoami_result = client.execute("whoami");
 
-    match ssh_client.execute(&command) {
+    // Assert: Verify command execution results
+    match echo_result {
         Ok(output) => {
             let trimmed_output = output.trim();
-            println!("Command '{command}' executed successfully. Output: '{trimmed_output}'");
-
-            // Verify the output matches our expected message
             assert_eq!(
                 trimmed_output, test_message,
-                "Command output should match expected message"
+                "Echo command output should match expected message"
             );
         }
         Err(e) => {
-            panic!("SSH command execution should succeed with real server: {e}");
+            panic!("Echo command execution should succeed with real server: {e}");
         }
     }
 
-    // Execute another command to verify multiple executions work
-    let whoami_result = ssh_client.execute("whoami");
     match whoami_result {
         Ok(output) => {
             let username = output.trim();
-            println!("whoami command output: '{username}'");
             assert_eq!(
                 username,
                 ssh_container.test_username(),
