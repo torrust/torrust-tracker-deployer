@@ -65,3 +65,21 @@ impl MockSshServerContainer {
         &self.test_password
     }
 }
+
+impl super::SshServerContainer for MockSshServerContainer {
+    fn ssh_port(&self) -> u16 {
+        self.ssh_port
+    }
+
+    fn host_ip(&self) -> IpAddr {
+        self.host_ip
+    }
+
+    fn test_username(&self) -> &str {
+        &self.test_username
+    }
+
+    fn test_password(&self) -> &str {
+        &self.test_password
+    }
+}
