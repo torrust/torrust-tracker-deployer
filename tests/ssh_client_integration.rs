@@ -36,7 +36,7 @@ use std::time::Duration;
 use torrust_tracker_deployer_lib::shared::ssh::{SshClient, SshConfig, SshCredentials};
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::integration::ssh_server::{
-    print_docker_debug_info, MockSshServerContainer, RealSshServerContainer,
+    MockSshServerContainer, RealSshServerContainer,
 };
 
 /// SSH test constants following testing conventions
@@ -177,6 +177,126 @@ impl SshTestBuilder {
     }
 }
 
+/// Result of connectivity testing with timing and error information
+///
+/// This struct provides comprehensive information about SSH connectivity
+/// test results, enabling consistent handling across different test scenarios.
+#[derive(Debug, Clone)]
+struct ConnectivityTestResult {
+    pub succeeded: bool,
+    pub duration: Duration,
+    pub error: Option<String>,
+}
+
+impl ConnectivityTestResult {
+    fn new(succeeded: bool, duration: Duration, error: Option<String>) -> Self {
+        Self {
+            succeeded,
+            duration,
+            error,
+        }
+    }
+}
+
+/// Test connectivity with retry logic for CI environments
+///
+/// This function encapsulates the common pattern of testing SSH connectivity
+/// with retry logic, particularly useful for real SSH servers that may need
+/// time to fully initialize in CI environments.
+///
+/// # Parameters
+/// * `client` - SSH client to test
+/// * `max_attempts` - Maximum number of retry attempts
+/// * `retry_delay` - Delay between retry attempts
+///
+/// # Returns
+/// `ConnectivityTestResult` with success status, duration, and any error
+async fn test_connectivity_with_retry(
+    client: &SshClient,
+    max_attempts: u32,
+    retry_delay: Duration,
+) -> ConnectivityTestResult {
+    let start_time = std::time::Instant::now();
+    let mut last_error = None;
+
+    for attempt in 0..max_attempts {
+        match client.test_connectivity() {
+            Ok(true) => {
+                return ConnectivityTestResult::new(true, start_time.elapsed(), None);
+            }
+            Ok(false) => {
+                if attempt < max_attempts - 1 {
+                    tokio::time::sleep(retry_delay).await;
+                }
+            }
+            Err(e) => {
+                last_error = Some(e.to_string());
+                break;
+            }
+        }
+    }
+
+    ConnectivityTestResult::new(false, start_time.elapsed(), last_error)
+}
+
+/// Assert timeout duration is within expected range
+///
+/// This function provides consistent timeout assertions across SSH tests,
+/// with clear error messages that include actual vs expected timing.
+///
+/// # Parameters
+/// * `duration` - Actual duration to check
+/// * `min_secs` - Minimum expected seconds (inclusive)
+/// * `max_secs` - Maximum expected seconds (exclusive)
+fn assert_timeout_duration(duration: Duration, min_secs: u64, max_secs: u64) {
+    let actual_secs = duration.as_secs();
+    assert!(
+        actual_secs >= min_secs && actual_secs < max_secs,
+        "Timeout should be in range [{min_secs}s, {max_secs}s), was: {actual_secs}s ({duration:?})"
+    );
+}
+
+/// Assert connectivity fails quickly (for unreachable hosts and mock servers)
+///
+/// This helper function tests that SSH connectivity fails quickly for
+/// scenarios where connection should not succeed (mock servers, unreachable hosts).
+/// Mock servers may fail in milliseconds while unreachable hosts typically take seconds.
+///
+/// # Parameters
+/// * `client` - SSH client to test
+/// * `max_seconds` - Maximum time allowed for failure (exclusive)
+fn assert_connectivity_fails_quickly(client: &SshClient, max_seconds: u64) {
+    let start_time = std::time::Instant::now();
+    let result = client.test_connectivity();
+    let duration = start_time.elapsed();
+
+    assert!(
+        result.is_err() || !result.unwrap(),
+        "Expected connectivity to fail for unreachable/mock server"
+    );
+
+    // Mock servers can fail very quickly (milliseconds), so set minimum to 0
+    assert_timeout_duration(duration, 0, max_seconds + 1);
+}
+
+/// Assert connectivity succeeds eventually (for real servers)
+///
+/// This helper function tests that SSH connectivity eventually succeeds
+/// for real SSH servers, with appropriate retry logic for CI environments.
+///
+/// # Parameters
+/// * `client` - SSH client to test
+/// * `max_attempts` - Maximum retry attempts
+async fn assert_connectivity_succeeds_eventually(client: &SshClient, max_attempts: u32) {
+    let result = test_connectivity_with_retry(client, max_attempts, Duration::from_secs(2)).await;
+
+    assert!(
+        result.succeeded,
+        "Expected connectivity to succeed within {} attempts, failed after {:?}: {:?}",
+        max_attempts, result.duration, result.error
+    );
+}
+
 /// Test that SSH client can establish connectivity to a mock SSH server.
 ///
 /// This test uses `MockSshServerContainer` for fast execution without Docker dependencies.
@@ -199,35 +319,8 @@ async fn it_should_establish_ssh_connectivity_with_mock_server() {
         .with_mock_container(&container)
         .build_client();
 
-    // Act: Test connectivity and measure duration
-    let start_time = std::time::Instant::now();
-    let result = client.test_connectivity();
-    let duration = start_time.elapsed();
-
-    // Assert: Verify expected failure and quick timeout
-    match result {
-        Ok(true) => {
-            println!("SSH connectivity test passed in {duration:?}");
-        }
-        Ok(false) => {
-            println!("SSH connectivity test failed as expected (mock server) in {duration:?}");
-            // Verify it completed reasonably quickly
-            assert!(
-                duration.as_secs() <= 10,
-                "SSH timeout should complete within 10 seconds, took {duration:?}"
-            );
-        }
-        Err(e) => {
-            println!(
-                "SSH connectivity test failed with error (expected for mock server) in {duration:?}: {e}"
-            );
-            // This is expected for a mock server that doesn't actually run SSH
-            assert!(
-                duration.as_secs() <= 10,
-                "SSH timeout should complete within 10 seconds, took {duration:?}"
-            );
-        }
-    }
+    // Act & Assert: Test connectivity should fail quickly for mock server
+    assert_connectivity_fails_quickly(&client, 10);
 }
 
 /// Test that SSH client handles connection timeouts appropriately.
@@ -242,33 +335,8 @@ async fn it_should_handle_connectivity_timeouts() {
     // Arrange: Set up SSH client with unreachable host
     let client = SshTestBuilder::new().with_unreachable_host().build_client();
 
-    // Act: Test connectivity and measure duration
-    let start_time = std::time::Instant::now();
-    let result = client.test_connectivity();
-    let duration = start_time.elapsed();
-
-    // Assert: Verify that the connection attempt failed as expected
-    match result {
-        Ok(true) => {
-            panic!("Expected connectivity to fail for unreachable host, but it succeeded");
-        }
-        Ok(false) => {
-            println!("Connectivity correctly failed for unreachable host in {duration:?}");
-            // Verify it completed reasonably quickly (should be around 5 seconds due to ConnectTimeout=5)
-            assert!(
-                duration.as_secs() <= 10,
-                "SSH timeout should complete within 10 seconds, took {duration:?}"
-            );
-        }
-        Err(e) => {
-            println!("Connectivity failed with error in {duration:?}: {e}");
-            // This is also acceptable - some systems might return an error instead of false
-            assert!(
-                duration.as_secs() <= 10,
-                "SSH timeout should complete within 10 seconds, took {duration:?}"
-            );
-        }
-    }
+    // Act & Assert: Test connectivity should fail quickly for unreachable host
+    assert_connectivity_fails_quickly(&client, 10);
 }
 
 /// Test that SSH configuration properly stores connection parameters.
@@ -355,68 +423,8 @@ async fn it_should_connect_to_real_ssh_server_and_test_connectivity() {
         .with_real_container(&container)
         .build_client();
 
-    // Act: Test connectivity with retry logic for CI environments
-    // In CI, containers may need extra time for SSH daemon to fully initialize
-    let start_time = std::time::Instant::now();
-    let mut connectivity_succeeded = false;
-    let mut last_error = None;
-
-    for attempt in 0..10 {
-        // Try up to 10 times (20 seconds total)
-        match client.test_connectivity() {
-            Ok(true) => {
-                connectivity_succeeded = true;
-                break;
-            }
-            Ok(false) => {
-                // Connection failed, wait and retry
-                if attempt < 9 {
-                    // Don't sleep on last attempt
-                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-                }
-            }
-            Err(e) => {
-                last_error = Some(e);
-                break;
-            }
-        }
-    }
-
-    let duration = start_time.elapsed();
-
-    // Assert: Verify connectivity results and timeout behavior
-    if connectivity_succeeded {
-        println!("Real SSH connectivity test passed in {duration:?}");
-
-        // With a real SSH server, connectivity should eventually succeed within reasonable time
-        assert!(
-            duration.as_secs() <= 20,
-            "SSH connection should complete within 20 seconds, took {duration:?}"
-        );
-    } else if let Some(e) = last_error {
-        // This might happen if the container isn't ready yet or there's a connection error
-        println!("SSH connectivity failed with error (container may not be ready): {e}");
-
-        // Print debug information to help diagnose the issue
-        print_docker_debug_info(container.ssh_port());
-
-        // Still verify timeout behavior
-        assert!(
-            duration.as_secs() <= 20,
-            "SSH timeout should complete within 20 seconds, took {duration:?}"
-        );
-    } else {
-        // Connection failed after all retries without errors (Ok(false) case)
-        println!(
-            "SSH connectivity failed after {} retries (no errors, but Ok(false))",
-            10
-        );
-
-        // Print debug information to help diagnose the issue
-        print_docker_debug_info(container.ssh_port());
-
-        panic!("SSH connectivity should succeed with real server after retries, but failed after {duration:?}");
-    }
+    // Act & Assert: Test connectivity should succeed eventually for real server
+    assert_connectivity_succeeds_eventually(&client, 10).await;
 }
 
 /// Test SSH connectivity timeout behavior with real SSH infrastructure available

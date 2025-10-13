@@ -176,7 +176,7 @@ pub const REAL_SSH_PUBLIC_KEY: &str = "fixtures/testing_rsa.pub";
 
 ### Proposal #2: Extract Timeout and Connectivity Helpers
 
-**Status**: 📋 Not Started  
+**Status**: ✅ COMPLETED  
 **Impact**: 🟢🟢🟢🟢 High  
 **Effort**: 🔵🔵 Low  
 **Priority**: P0 (Foundation for cleaner test assertions)
