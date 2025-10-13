@@ -2,6 +2,8 @@
 
 use std::net::{IpAddr, Ipv4Addr};
 
+use super::constants::{DEFAULT_TEST_PASSWORD, DEFAULT_TEST_USERNAME, MOCK_SSH_PORT};
+
 /// Mock SSH server container for fast testing
 ///
 /// This implementation doesn't start a real container but provides the same
@@ -31,9 +33,9 @@ impl MockSshServerContainer {
     pub fn start() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         Ok(Self {
             host_ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
-            ssh_port: 2222, // Mock port
-            test_username: "testuser".to_string(),
-            test_password: "testpass".to_string(),
+            ssh_port: MOCK_SSH_PORT,
+            test_username: DEFAULT_TEST_USERNAME.to_string(),
+            test_password: DEFAULT_TEST_PASSWORD.to_string(),
         })
     }
 

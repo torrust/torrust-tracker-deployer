@@ -11,6 +11,7 @@
 
 use std::net::IpAddr;
 
+mod constants;
 mod debug;
 mod mock_container;
 mod real_container;

@@ -8,6 +8,11 @@ use testcontainers::{
     ContainerAsync, GenericImage,
 };
 
+use super::constants::{
+    CONTAINER_STARTUP_WAIT_SECS, DEFAULT_TEST_PASSWORD, DEFAULT_TEST_USERNAME, DOCKERFILE_DIR,
+    SSH_CONTAINER_PORT, SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG,
+};
+
 /// Real SSH server container using Docker
 ///
 /// This implementation starts an actual Docker container running SSH server
@@ -48,7 +53,7 @@ impl RealSshServerContainer {
     pub async fn start() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         // Build the SSH server image from Dockerfile
         // This ensures tests are self-contained and work in CI
-        let dockerfile_dir = std::path::Path::new("docker/ssh-server");
+        let dockerfile_dir = std::path::Path::new(DOCKERFILE_DIR);
 
         if !dockerfile_dir.exists() || !dockerfile_dir.join("Dockerfile").exists() {
             return Err(format!(
@@ -64,13 +69,9 @@ impl RealSshServerContainer {
             dockerfile_dir.display()
         );
 
+        let image_tag = format!("{SSH_SERVER_IMAGE_NAME}:{SSH_SERVER_IMAGE_TAG}");
         let build_output = Command::new("docker")
-            .args([
-                "build",
-                "-t",
-                "torrust-ssh-server:latest",
-                dockerfile_dir.to_str().unwrap(),
-            ])
+            .args(["build", "-t", &image_tag, dockerfile_dir.to_str().unwrap()])
             .output()
             .map_err(|e| format!("Failed to execute docker build command: {e}"))?;
 
@@ -83,21 +84,21 @@ impl RealSshServerContainer {
         println!("SSH server Docker image built successfully");
 
         // Start the container using the built image
-        let image = GenericImage::new("torrust-ssh-server", "latest")
-            .with_exposed_port(22_u16.tcp())
-            .with_wait_for(WaitFor::seconds(10)); // Wait longer for SSH daemon to start up in CI environments
+        let image = GenericImage::new(SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG)
+            .with_exposed_port(SSH_CONTAINER_PORT.tcp())
+            .with_wait_for(WaitFor::seconds(CONTAINER_STARTUP_WAIT_SECS));
 
         let container = image.start().await?;
 
         // Get the mapped SSH port
-        let ssh_port = container.get_host_port_ipv4(22).await?;
+        let ssh_port = container.get_host_port_ipv4(SSH_CONTAINER_PORT).await?;
 
         Ok(Self {
             container,
             host_ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
             ssh_port,
-            test_username: "testuser".to_string(),
-            test_password: "testpass".to_string(),
+            test_username: DEFAULT_TEST_USERNAME.to_string(),
+            test_password: DEFAULT_TEST_PASSWORD.to_string(),
         })
     }
 

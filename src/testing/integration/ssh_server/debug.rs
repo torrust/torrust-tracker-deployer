@@ -1,5 +1,7 @@
 //! Debug utilities for Docker container troubleshooting
 
+use super::constants::{SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG};
+
 /// Debug helper function to collect Docker container information for troubleshooting
 ///
 /// This function runs various Docker commands to help diagnose issues when SSH
@@ -46,11 +48,11 @@ pub fn print_docker_debug_info(container_port: u16) {
 
     // Check Docker images
     match std::process::Command::new("docker")
-        .args(["images", "torrust-ssh-server"])
+        .args(["images", SSH_SERVER_IMAGE_NAME])
         .output()
     {
         Ok(output) => {
-            println!("\nDocker images for torrust-ssh-server:");
+            println!("\nDocker images for {SSH_SERVER_IMAGE_NAME}:");
             println!("{}", String::from_utf8_lossy(&output.stdout));
         }
         Err(e) => {
@@ -59,12 +61,14 @@ pub fn print_docker_debug_info(container_port: u16) {
     }
 
     // Try to find containers with the SSH image
+    let image_tag = format!("{SSH_SERVER_IMAGE_NAME}:{SSH_SERVER_IMAGE_TAG}");
+    let filter = format!("ancestor={image_tag}");
     match std::process::Command::new("docker")
-        .args(["ps", "-a", "--filter", "ancestor=torrust-ssh-server:latest"])
+        .args(["ps", "-a", "--filter", &filter])
         .output()
     {
         Ok(output) => {
-            println!("\nContainers using torrust-ssh-server:latest:");
+            println!("\nContainers using {image_tag}:");
             println!("{}", String::from_utf8_lossy(&output.stdout));
 
             // Get container logs if there are any containers
