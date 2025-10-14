@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use super::constants::{
     CONTAINER_STARTUP_WAIT_SECS, DEFAULT_TEST_PASSWORD, DEFAULT_TEST_USERNAME, DOCKERFILE_DIR,
-    MOCK_SSH_PORT, SSH_CONTAINER_PORT, SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG,
+    MOCK_SSH_PORT, SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG,
 };
 
 /// Configuration for SSH server containers
@@ -35,9 +35,6 @@ pub struct SshServerConfig {
 
     /// Docker image tag for the SSH server
     pub image_tag: String,
-
-    /// SSH port inside the container
-    pub container_port: u16,
 
     /// Test username configured in the SSH server
     pub username: String,
@@ -79,17 +76,17 @@ impl Default for SshServerConfig {
     ///
     /// Default values:
     /// - Image: `torrust-ssh-server:latest`
-    /// - Port: 22
     /// - Username: `testuser`
     /// - Password: `testpass`
     /// - Startup wait: 10 seconds
     /// - Dockerfile: `docker/ssh-server`
     /// - Mock port: 2222
+    ///
+    /// Note: The SSH container always uses port 22 internally (this is not configurable)
     fn default() -> Self {
         Self {
             image_name: SSH_SERVER_IMAGE_NAME.to_string(),
             image_tag: SSH_SERVER_IMAGE_TAG.to_string(),
-            container_port: SSH_CONTAINER_PORT,
             username: DEFAULT_TEST_USERNAME.to_string(),
             password: DEFAULT_TEST_PASSWORD.to_string(),
             startup_wait_secs: CONTAINER_STARTUP_WAIT_SECS,
@@ -121,7 +118,6 @@ impl Default for SshServerConfig {
 pub struct SshServerConfigBuilder {
     image_name: Option<String>,
     image_tag: Option<String>,
-    container_port: Option<u16>,
     username: Option<String>,
     password: Option<String>,
     startup_wait_secs: Option<u64>,
@@ -141,13 +137,6 @@ impl SshServerConfigBuilder {
     #[must_use]
     pub fn image_tag(mut self, tag: impl Into<String>) -> Self {
         self.image_tag = Some(tag.into());
-        self
-    }
-
-    /// Set the SSH port inside the container
-    #[must_use]
-    pub fn container_port(mut self, port: u16) -> Self {
-        self.container_port = Some(port);
         self
     }
 
@@ -195,7 +184,6 @@ impl SshServerConfigBuilder {
         SshServerConfig {
             image_name: self.image_name.unwrap_or(defaults.image_name),
             image_tag: self.image_tag.unwrap_or(defaults.image_tag),
-            container_port: self.container_port.unwrap_or(defaults.container_port),
             username: self.username.unwrap_or(defaults.username),
             password: self.password.unwrap_or(defaults.password),
             startup_wait_secs: self.startup_wait_secs.unwrap_or(defaults.startup_wait_secs),
@@ -215,7 +203,6 @@ mod tests {
 
         assert_eq!(config.image_name, "torrust-ssh-server");
         assert_eq!(config.image_tag, "latest");
-        assert_eq!(config.container_port, 22);
         assert_eq!(config.username, "testuser");
         assert_eq!(config.password, "testpass");
         assert_eq!(config.startup_wait_secs, 10);
@@ -228,7 +215,6 @@ mod tests {
         let config = SshServerConfig::builder()
             .image_name("custom-ssh")
             .image_tag("v2.0")
-            .container_port(2222)
             .username("admin")
             .password("secret")
             .startup_wait_secs(15)
@@ -238,7 +224,6 @@ mod tests {
 
         assert_eq!(config.image_name, "custom-ssh");
         assert_eq!(config.image_tag, "v2.0");
-        assert_eq!(config.container_port, 2222);
         assert_eq!(config.username, "admin");
         assert_eq!(config.password, "secret");
         assert_eq!(config.startup_wait_secs, 15);
@@ -256,7 +241,6 @@ mod tests {
         // Default values for unset fields
         assert_eq!(config.image_name, "torrust-ssh-server");
         assert_eq!(config.image_tag, "latest");
-        assert_eq!(config.container_port, 22);
         assert_eq!(config.password, "testpass");
         assert_eq!(config.startup_wait_secs, 10);
         assert_eq!(config.mock_port, 2222);

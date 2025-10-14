@@ -8,6 +8,7 @@ use testcontainers::{
 };
 
 use super::config::SshServerConfig;
+use super::constants::SSH_CONTAINER_PORT;
 use super::error::SshServerError;
 use crate::shared::docker::DockerClient;
 
@@ -78,8 +79,9 @@ impl RealSshServerContainer {
         println!("SSH server Docker image built successfully");
 
         // Start the container using the built image
+        // Note: SSH always runs on port 22 inside the container
         let image = GenericImage::new(&config.image_name, &config.image_tag)
-            .with_exposed_port(config.container_port.tcp())
+            .with_exposed_port(SSH_CONTAINER_PORT.tcp())
             .with_wait_for(WaitFor::seconds(config.startup_wait_secs));
 
         let container = image
@@ -87,9 +89,9 @@ impl RealSshServerContainer {
             .await
             .map_err(|source| SshServerError::ContainerStartFailed { source })?;
 
-        // Get the mapped SSH port
+        // Get the mapped SSH port (testcontainers maps to random host port)
         let ssh_port: u16 = container
-            .get_host_port_ipv4(config.container_port)
+            .get_host_port_ipv4(SSH_CONTAINER_PORT)
             .await
             .map_err(|source| SshServerError::PortMappingFailed { source })?;
 

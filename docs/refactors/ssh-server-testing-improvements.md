@@ -27,9 +27,9 @@ This refactoring addresses code quality, maintainability, and testability issues
 **Total Active Proposals**: 15
 **Total Postponed**: 3
 **Total Rejected**: 1
-**Completed**: 12
+**Completed**: 13
 **In Progress**: 0
-**Not Started**: 2
+**Not Started**: 1
 
 ### Phase Summary
 
@@ -47,12 +47,12 @@ This refactoring addresses code quality, maintainability, and testability issues
 - **Phase 2 - Enhanced Testing (Medium Impact, Medium Effort)**: ✅ 1/1 completed (100%)
   - ✅ #9: Add Tests for Error Scenarios
   - ❌ #10: Implement Cleanup Methods (Rejected - redundant with testcontainers Drop)
-- **Phase 3 - Dependency Injection & Reusability (High Impact, Low-Medium Effort)**: ⏳ 4/5 completed (80%)
+- **Phase 3 - Dependency Injection & Reusability (High Impact, Low-Medium Effort)**: ✅ 5/5 completed (100%)
   - ✅ #11: Inject DockerClient into DockerDebugInfo
   - ✅ #12: Make Mock SSH Port Configurable
   - ✅ #13: Extract Port-Checking Logic to Separate Module
   - ✅ #14: Remove Direct Constant Usage in debug.rs
-  - ⏳ #15: Remove Container Port Field from Config
+  - ✅ #15: Remove Container Port Field from Config
 
 ### Postponed Proposals
 
@@ -2401,7 +2401,7 @@ All 35 SSH server tests passing. The debug info struct is now self-contained and
 
 ### Proposal #15: Remove Container Port Field from Config
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (2025-10-14)  
 **Impact**: 🟢 Low  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P2
@@ -2471,17 +2471,96 @@ impl SshServerConfigBuilder {
 
 #### Implementation Checklist
 
-- [ ] Remove `container_port` field from `SshServerConfig`
-- [ ] Remove `container_port` from `Default` impl
-- [ ] Remove `container_port()` method from `SshServerConfigBuilder`
-- [ ] Update all code that references `config.container_port`
-- [ ] Update documentation
-- [ ] Update tests to not reference container_port
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Remove `container_port` field from `SshServerConfig`
+- [x] Remove `container_port` from `Default` impl
+- [x] Remove `container_port()` method from `SshServerConfigBuilder`
+- [x] Update all code that references `config.container_port`
+- [x] Update documentation (added note about SSH always using port 22)
+- [x] Update tests to not reference container_port
+- [x] Verify all tests pass (35 SSH tests + 804 total unit tests)
+- [x] Run linter and fix any issues
+
+#### Rationale for Removal
+
+The `container_port` field was removed because it creates a false impression of configurability:
+
+**Current Reality:**
+
+- The SSH daemon inside the container is hardcoded to listen on port 22 in `docker/ssh-server/Dockerfile`
+- The Dockerfile installs and configures OpenSSH with default settings (port 22)
+- Changing `container_port` in the config would not actually change the SSH daemon's listening port
+- This makes the config option misleading and non-functional
+
+**Why Not Just Rename?**
+
+- Renaming to `exposed_internal_container_port` would still be misleading
+- The real issue is that the value is not truly configurable without modifying the Dockerfile
+- Configuration should reflect actual control, not hardcoded constants
+
+**When This Could Be Re-added:**
+
+This field could be meaningfully re-added in the future if:
+
+1. The `docker/ssh-server/Dockerfile` is modified to accept a configurable SSH port
+2. The SSH daemon configuration inside the container supports dynamic port assignment
+3. The Docker image build process can parameterize the SSH port
+
+Until then, keeping it hardcoded as `SSH_CONTAINER_PORT = 22` constant is more honest about what we actually support.
+
+#### Completion Notes
+
+Successfully removed the misleading `container_port` configuration field:
+
+- **Config Changes**:
+
+  - Removed `container_port: u16` field from `SshServerConfig` struct
+  - Removed from `Default` impl
+  - Updated documentation to note that SSH always uses port 22 internally
+  - Removed `SSH_CONTAINER_PORT` import (no longer needed in config)
+
+- **Builder Changes**:
+
+  - Removed `container_port: Option<u16>` field from builder struct
+  - Removed `container_port()` builder method
+  - Removed `container_port` from `build()` method
+
+- **Real Container Changes**:
+
+  - Added `use super::constants::SSH_CONTAINER_PORT` import
+  - Replaced `config.container_port` with `SSH_CONTAINER_PORT` constant
+  - Added clarifying comments about SSH always using port 22
+
+- **Test Updates**:
+  - Removed `container_port` assertions from all config tests
+  - `it_should_create_config_with_default_values()` - removed container_port check
+  - `it_should_build_config_with_custom_values()` - removed container_port setting and check
+  - `it_should_use_defaults_for_unset_builder_fields()` - removed container_port check
+
+All 35 SSH server tests passing. The configuration is now clearer and doesn't expose non-functional settings.
 
 ---
 
 **Created**: 2025-10-13  
 **Last Updated**: 2025-10-14  
-**Status**: � In Progress - Phase 3
+**Status: ✅ Complete - All 13 active proposals implemented
+
+## 🎉 Refactor Summary
+
+All active proposals (13/15) have been successfully implemented:
+
+- **5 proposals** in Phase 0 (Quick Wins) - 100% complete
+- **4 proposals** in Phase 1 (Core Improvements) - 100% complete
+- **1 proposal** in Phase 2 (Enhanced Testing) - 100% complete
+- **5 proposals** in Phase 3 (Dependency Injection & Reusability) - 100% complete
+- **3 proposals** postponed for future consideration
+- **1 proposal** rejected as redundant
+
+The SSH server testing module now has:
+
+- ✅ Clear trait-based abstraction (`SshServerContainer`)
+- ✅ Proper error handling with actionable messages
+- ✅ Configurable and testable components
+- ✅ No code duplication (DRY compliant)
+- ✅ Comprehensive test coverage (35 SSH server tests)
+- ✅ Reusable utilities (port usage checker, Docker debug info)
+- ✅ Clean separation of concerns
