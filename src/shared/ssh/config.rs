@@ -28,7 +28,7 @@ pub const DEFAULT_CONNECT_TIMEOUT_SECS: u32 = 5;
 pub const DEFAULT_MAX_RETRY_ATTEMPTS: u32 = 30;
 
 /// Default retry interval in seconds
-pub const DEFAULT_RETRY_INTERVAL_SECS: u64 = 2;
+pub const DEFAULT_RETRY_INTERVAL_SECS: u32 = 2;
 
 /// Default retry log frequency (log every N attempts)
 pub const DEFAULT_RETRY_LOG_FREQUENCY: u32 = 5;
@@ -63,7 +63,7 @@ pub struct SshConnectionConfig {
     /// Maximum number of connection retry attempts
     pub max_retry_attempts: u32,
     /// Seconds to wait between retry attempts
-    pub retry_interval_secs: u64,
+    pub retry_interval_secs: u32,
     /// Log progress every N retry attempts
     pub retry_log_frequency: u32,
 }
@@ -93,7 +93,7 @@ impl SshConnectionConfig {
     pub fn new(
         connect_timeout_secs: u32,
         max_retry_attempts: u32,
-        retry_interval_secs: u64,
+        retry_interval_secs: u32,
         retry_log_frequency: u32,
     ) -> Self {
         Self {
@@ -118,8 +118,8 @@ impl SshConnectionConfig {
     /// assert_eq!(config.total_timeout_secs(), 60); // 30 attempts × 2 seconds
     /// ```
     #[must_use]
-    pub fn total_timeout_secs(&self) -> u64 {
-        u64::from(self.max_retry_attempts) * self.retry_interval_secs
+    pub fn total_timeout_secs(&self) -> u32 {
+        self.max_retry_attempts * self.retry_interval_secs
     }
 }
 

@@ -261,7 +261,7 @@ impl SshClient {
     /// # Errors
     ///
     /// This function will return an error if:
-    /// * SSH connectivity cannot be established after 30 attempts (60 seconds total)
+    /// * SSH connectivity cannot be established after the configured maximum attempts
     pub async fn wait_for_connectivity(&self) -> Result<(), SshError> {
         info!(
             operation = "ssh_connectivity",
@@ -269,8 +269,9 @@ impl SshClient {
             "Waiting for SSH connectivity"
         );
 
-        let max_attempts = 30;
-        let timeout_seconds = 60;
+        let conn_config = &self.ssh_config.connection_config;
+        let max_attempts = conn_config.max_retry_attempts;
+        let timeout_seconds = conn_config.total_timeout_secs();
         let mut attempt = 0;
 
         while attempt < max_attempts {
@@ -288,7 +289,7 @@ impl SshClient {
                 }
                 Ok(false) => {
                     // Connection failed, continue trying
-                    if (attempt + 1) % 5 == 0 {
+                    if (attempt + 1) % conn_config.retry_log_frequency == 0 {
                         info!(
                             operation = "ssh_connectivity",
                             host_ip = %self.ssh_config.host_ip(),
@@ -298,7 +299,10 @@ impl SshClient {
                         );
                     }
 
-                    tokio::time::sleep(Duration::from_secs(2)).await;
+                    tokio::time::sleep(Duration::from_secs(u64::from(
+                        conn_config.retry_interval_secs,
+                    )))
+                    .await;
                     attempt += 1;
                 }
                 Err(e) => {
