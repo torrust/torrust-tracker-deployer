@@ -27,9 +27,9 @@ This refactoring addresses code quality, maintainability, and testability issues
 **Total Active Proposals**: 15
 **Total Postponed**: 3
 **Total Rejected**: 1
-**Completed**: 9
+**Completed**: 10
 **In Progress**: 0
-**Not Started**: 5
+**Not Started**: 4
 
 ### Phase Summary
 
@@ -47,9 +47,9 @@ This refactoring addresses code quality, maintainability, and testability issues
 - **Phase 2 - Enhanced Testing (Medium Impact, Medium Effort)**: ✅ 1/1 completed (100%)
   - ✅ #9: Add Tests for Error Scenarios
   - ❌ #10: Implement Cleanup Methods (Rejected - redundant with testcontainers Drop)
-- **Phase 3 - Dependency Injection & Reusability (High Impact, Low-Medium Effort)**: ⏳ 0/5 completed (0%)
-  - ⏳ #11: Inject DockerClient into DockerDebugInfo
-  - ⏳ #12: Make Mock SSH Port Configurable
+- **Phase 3 - Dependency Injection & Reusability (High Impact, Low-Medium Effort)**: ⏳ 2/5 completed (40%)
+  - ✅ #11: Inject DockerClient into DockerDebugInfo
+  - ✅ #12: Make Mock SSH Port Configurable
   - ⏳ #13: Extract Port-Checking Logic to Separate Module
   - ⏳ #14: Remove Direct Constant Usage in debug.rs
   - ⏳ #15: Remove Container Port Field from Config
@@ -2038,7 +2038,7 @@ All changes verified with cargo check and unit tests passing.
 
 ### Proposal #12: Make Mock SSH Port Configurable
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (2025-10-14)  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0
@@ -2119,13 +2119,38 @@ impl SshServerConfigBuilder {
 
 #### Implementation Checklist
 
-- [ ] Add `mock_port: u16` field to `SshServerConfig`
-- [ ] Set `mock_port: MOCK_SSH_PORT` in `SshServerConfig::default()`
-- [ ] Add `mock_port()` method to `SshServerConfigBuilder`
-- [ ] Update `MockSshServerContainer::start_with_config()` to use `config.mock_port`
-- [ ] Add test with custom mock port
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Add `mock_port: u16` field to `SshServerConfig`
+- [x] Set `mock_port: MOCK_SSH_PORT` in `SshServerConfig::default()`
+- [x] Add `mock_port()` method to `SshServerConfigBuilder`
+- [x] Update `MockSshServerContainer::start_with_config()` to use `config.mock_port`
+- [x] Add test with custom mock port
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
+
+#### Completion Notes
+
+Successfully implemented configurable mock port functionality:
+
+- **Configuration Changes**:
+  - Added `mock_port: u16` field to `SshServerConfig` struct
+  - Updated `Default` implementation to use `MOCK_SSH_PORT` constant
+  - Added `mock_port()` builder method to `SshServerConfigBuilder`
+  - Updated builder's `build()` method to include `mock_port` field
+- **Mock Container Changes**:
+
+  - Removed `use super::constants::MOCK_SSH_PORT` import (no longer needed in runtime code)
+  - Updated `start_with_config()` to use `config.mock_port` instead of hardcoded constant
+  - Constant is now only used as default value in `SshServerConfig::default()`
+
+- **Test Coverage**:
+  - Updated all existing config tests to verify `mock_port` field
+  - Added `it_should_allow_customizing_mock_port()` test in config.rs
+  - Added three new tests in mock_container.rs:
+    - `it_should_use_default_mock_port_with_default_config()` - verifies default behavior
+    - `it_should_use_custom_mock_port_from_config()` - verifies custom port usage
+    - `it_should_allow_testing_with_different_port_configurations()` - verifies multiple ports
+
+All 35 tests passing. The constant is now properly used only as a default value, and the mock container respects the configured port value.
 
 ---
 

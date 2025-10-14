@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use super::constants::{
     CONTAINER_STARTUP_WAIT_SECS, DEFAULT_TEST_PASSWORD, DEFAULT_TEST_USERNAME, DOCKERFILE_DIR,
-    SSH_CONTAINER_PORT, SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG,
+    MOCK_SSH_PORT, SSH_CONTAINER_PORT, SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG,
 };
 
 /// Configuration for SSH server containers
@@ -50,6 +50,9 @@ pub struct SshServerConfig {
 
     /// Path to the Dockerfile directory
     pub dockerfile_dir: PathBuf,
+
+    /// Port to use for mock container (default: 2222)
+    pub mock_port: u16,
 }
 
 impl SshServerConfig {
@@ -81,6 +84,7 @@ impl Default for SshServerConfig {
     /// - Password: `testpass`
     /// - Startup wait: 10 seconds
     /// - Dockerfile: `docker/ssh-server`
+    /// - Mock port: 2222
     fn default() -> Self {
         Self {
             image_name: SSH_SERVER_IMAGE_NAME.to_string(),
@@ -90,6 +94,7 @@ impl Default for SshServerConfig {
             password: DEFAULT_TEST_PASSWORD.to_string(),
             startup_wait_secs: CONTAINER_STARTUP_WAIT_SECS,
             dockerfile_dir: PathBuf::from(DOCKERFILE_DIR),
+            mock_port: MOCK_SSH_PORT,
         }
     }
 }
@@ -121,6 +126,7 @@ pub struct SshServerConfigBuilder {
     password: Option<String>,
     startup_wait_secs: Option<u64>,
     dockerfile_dir: Option<PathBuf>,
+    mock_port: Option<u16>,
 }
 
 impl SshServerConfigBuilder {
@@ -173,6 +179,13 @@ impl SshServerConfigBuilder {
         self
     }
 
+    /// Set the mock SSH server port
+    #[must_use]
+    pub fn mock_port(mut self, port: u16) -> Self {
+        self.mock_port = Some(port);
+        self
+    }
+
     /// Build the configuration
     ///
     /// Any fields not explicitly set will use default values from constants.
@@ -187,6 +200,7 @@ impl SshServerConfigBuilder {
             password: self.password.unwrap_or(defaults.password),
             startup_wait_secs: self.startup_wait_secs.unwrap_or(defaults.startup_wait_secs),
             dockerfile_dir: self.dockerfile_dir.unwrap_or(defaults.dockerfile_dir),
+            mock_port: self.mock_port.unwrap_or(defaults.mock_port),
         }
     }
 }
@@ -206,6 +220,7 @@ mod tests {
         assert_eq!(config.password, "testpass");
         assert_eq!(config.startup_wait_secs, 10);
         assert_eq!(config.dockerfile_dir, PathBuf::from("docker/ssh-server"));
+        assert_eq!(config.mock_port, 2222);
     }
 
     #[test]
@@ -218,6 +233,7 @@ mod tests {
             .password("secret")
             .startup_wait_secs(15)
             .dockerfile_dir("custom/path")
+            .mock_port(3333)
             .build();
 
         assert_eq!(config.image_name, "custom-ssh");
@@ -227,6 +243,7 @@ mod tests {
         assert_eq!(config.password, "secret");
         assert_eq!(config.startup_wait_secs, 15);
         assert_eq!(config.dockerfile_dir, PathBuf::from("custom/path"));
+        assert_eq!(config.mock_port, 3333);
     }
 
     #[test]
@@ -242,6 +259,7 @@ mod tests {
         assert_eq!(config.container_port, 22);
         assert_eq!(config.password, "testpass");
         assert_eq!(config.startup_wait_secs, 10);
+        assert_eq!(config.mock_port, 2222);
     }
 
     #[test]
@@ -265,5 +283,16 @@ mod tests {
         let config2 = config1.clone();
 
         assert_eq!(config1, config2);
+    }
+
+    #[test]
+    fn it_should_allow_customizing_mock_port() {
+        let config = SshServerConfig::builder().mock_port(5555).build();
+
+        assert_eq!(config.mock_port, 5555);
+
+        // Other fields should use defaults
+        assert_eq!(config.username, "testuser");
+        assert_eq!(config.password, "testpass");
     }
 }

@@ -3,7 +3,6 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 use super::config::SshServerConfig;
-use super::constants::MOCK_SSH_PORT;
 use super::error::SshServerError;
 
 /// Mock SSH server container for fast testing
@@ -51,10 +50,11 @@ impl MockSshServerContainer {
     /// let container = MockSshServerContainer::start_with_config(config).unwrap();
     /// ```
     pub fn start_with_config(config: SshServerConfig) -> Result<Self, SshServerError> {
+        let ssh_port = config.mock_port;
         Ok(Self {
             config,
             host_ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
-            ssh_port: MOCK_SSH_PORT,
+            ssh_port,
         })
     }
 
@@ -126,5 +126,41 @@ impl super::SshServerContainer for MockSshServerContainer {
 
     fn test_password(&self) -> &str {
         &self.config.password
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_should_use_default_mock_port_with_default_config() {
+        let container = MockSshServerContainer::start().expect("Failed to create mock container");
+
+        assert_eq!(container.ssh_port(), 2222);
+    }
+
+    #[test]
+    fn it_should_use_custom_mock_port_from_config() {
+        let config = SshServerConfig::builder().mock_port(5555).build();
+
+        let container = MockSshServerContainer::start_with_config(config)
+            .expect("Failed to create mock container");
+
+        assert_eq!(container.ssh_port(), 5555);
+    }
+
+    #[test]
+    fn it_should_allow_testing_with_different_port_configurations() {
+        let ports = vec![3000, 4000, 5000];
+
+        for port in ports {
+            let config = SshServerConfig::builder().mock_port(port).build();
+
+            let container = MockSshServerContainer::start_with_config(config)
+                .expect("Failed to create mock container");
+
+            assert_eq!(container.ssh_port(), port);
+        }
     }
 }
