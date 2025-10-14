@@ -1,9 +1,9 @@
 //! Debug utilities for Docker container troubleshooting
 
-use std::process::Command;
 use std::sync::Arc;
 
 use crate::shared::docker::DockerClient;
+use crate::shared::port_usage_checker::PortUsageChecker;
 
 // Import constants only for the convenience function
 use super::constants::{SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG};
@@ -110,7 +110,8 @@ impl DockerDebugInfo {
         instance.all_containers = instance.list_all_containers();
         instance.ssh_images = instance.list_ssh_images(&instance.image_name.clone());
         instance.ssh_containers = instance.find_ssh_containers();
-        instance.port_usage = Self::check_port_usage(container_port);
+        instance.port_usage =
+            PortUsageChecker::check_port(container_port).map_err(|e| e.to_string());
 
         instance
     }
@@ -175,58 +176,6 @@ impl DockerDebugInfo {
         self.docker
             .get_container_logs(container_id)
             .map_err(|e| format!("Failed to get container logs: {e}"))
-    }
-
-    /// Check port usage for the SSH port
-    ///
-    /// Tries to find processes using the specified port using `netstat` or `ss`.
-    fn check_port_usage(port: u16) -> Result<Vec<String>, String> {
-        // Try netstat first, fallback to ss
-        Self::check_port_with_netstat(port).or_else(|_| Self::check_port_with_ss(port))
-    }
-
-    /// Check port usage using netstat command
-    fn check_port_with_netstat(port: u16) -> Result<Vec<String>, String> {
-        let output = Command::new("netstat")
-            .args(["-tlnp"])
-            .output()
-            .map_err(|e| format!("netstat command failed: {e}"))?;
-
-        let output_str = String::from_utf8_lossy(&output.stdout);
-        let port_str = port.to_string();
-        let matches: Vec<String> = output_str
-            .lines()
-            .filter(|line| line.contains(&port_str))
-            .map(ToString::to_string)
-            .collect();
-
-        if matches.is_empty() {
-            Err(format!("Port {port} not found in netstat output"))
-        } else {
-            Ok(matches)
-        }
-    }
-
-    /// Check port usage using ss command (fallback for systems without netstat)
-    fn check_port_with_ss(port: u16) -> Result<Vec<String>, String> {
-        let output = Command::new("ss")
-            .args(["-tlnp"])
-            .output()
-            .map_err(|e| format!("ss command failed: {e}"))?;
-
-        let output_str = String::from_utf8_lossy(&output.stdout);
-        let port_str = port.to_string();
-        let matches: Vec<String> = output_str
-            .lines()
-            .filter(|line| line.contains(&port_str))
-            .map(ToString::to_string)
-            .collect();
-
-        if matches.is_empty() {
-            Err(format!("Port {port} not found in ss output"))
-        } else {
-            Ok(matches)
-        }
     }
 
     /// Get a reference to the Docker client

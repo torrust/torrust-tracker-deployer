@@ -9,6 +9,7 @@ pub mod command;
 pub mod docker;
 pub mod error;
 pub mod port_checker;
+pub mod port_usage_checker;
 pub mod ssh;
 pub mod username;
 
@@ -17,4 +18,5 @@ pub use clock::{Clock, SystemClock};
 pub use command::{CommandError, CommandExecutor, CommandResult};
 pub use error::{ErrorKind, Traceable};
 pub use port_checker::{PortChecker, PortCheckerError};
+pub use port_usage_checker::{PortUsageChecker, PortUsageError};
 pub use username::{Username, UsernameError};

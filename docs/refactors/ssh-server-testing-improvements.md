@@ -27,9 +27,9 @@ This refactoring addresses code quality, maintainability, and testability issues
 **Total Active Proposals**: 15
 **Total Postponed**: 3
 **Total Rejected**: 1
-**Completed**: 11
+**Completed**: 12
 **In Progress**: 0
-**Not Started**: 3
+**Not Started**: 2
 
 ### Phase Summary
 
@@ -47,10 +47,10 @@ This refactoring addresses code quality, maintainability, and testability issues
 - **Phase 2 - Enhanced Testing (Medium Impact, Medium Effort)**: ✅ 1/1 completed (100%)
   - ✅ #9: Add Tests for Error Scenarios
   - ❌ #10: Implement Cleanup Methods (Rejected - redundant with testcontainers Drop)
-- **Phase 3 - Dependency Injection & Reusability (High Impact, Low-Medium Effort)**: ⏳ 3/5 completed (60%)
+- **Phase 3 - Dependency Injection & Reusability (High Impact, Low-Medium Effort)**: ⏳ 4/5 completed (80%)
   - ✅ #11: Inject DockerClient into DockerDebugInfo
   - ✅ #12: Make Mock SSH Port Configurable
-  - ⏳ #13: Extract Port-Checking Logic to Separate Module
+  - ✅ #13: Extract Port-Checking Logic to Separate Module
   - ✅ #14: Remove Direct Constant Usage in debug.rs
   - ⏳ #15: Remove Container Port Field from Config
 
@@ -2156,7 +2156,7 @@ All 35 tests passing. The constant is now properly used only as a default value,
 
 ### Proposal #13: Extract Port-Checking Logic to Separate Module
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (2025-10-14)  
 **Impact**: 🟢🟢 Medium  
 **Effort**: 🔵 Low  
 **Priority**: P0
@@ -2242,16 +2242,16 @@ impl DockerDebugInfo {
 
 #### Implementation Checklist
 
-- [ ] Create `src/shared/port_checker.rs` module
-- [ ] Define `PortChecker` struct with static methods
-- [ ] Define `PortCheckError` enum with thiserror
-- [ ] Move `check_port_with_netstat()` logic
-- [ ] Move `check_port_with_ss()` logic
-- [ ] Update `DockerDebugInfo` to use `PortChecker`
-- [ ] Add unit tests for `PortChecker`
-- [ ] Add documentation and examples
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Create `src/shared/port_usage_checker.rs` module (note: named `port_usage_checker` to avoid conflict with existing `port_checker`)
+- [x] Define `PortUsageChecker` struct with static methods
+- [x] Define `PortUsageError` enum with thiserror
+- [x] Move `check_port_with_netstat()` logic
+- [x] Move `check_port_with_ss()` logic
+- [x] Update `DockerDebugInfo` to use `PortUsageChecker`
+- [x] Add unit tests for `PortUsageChecker`
+- [x] Add documentation and examples
+- [x] Verify all tests pass (804 unit tests + 143 doctests + 6 integration tests)
+- [x] Run linter and fix any issues
 
 ---
 
