@@ -250,24 +250,56 @@ impl SshClient {
         args
     }
 
-    /// Execute a command on a remote host via SSH with additional SSH options
+    /// Execute a command with additional SSH options
+    ///
+    /// This method allows passing custom SSH options for specific commands,
+    /// useful for advanced scenarios like connection keep-alive or custom timeouts.
     ///
     /// # Arguments
     ///
     /// * `remote_command` - Command to execute on the remote host
-    /// * `additional_options` - Additional SSH options (e.g., `["ConnectTimeout=5"]`)
+    /// * `additional_options` - SSH options (e.g., `["ServerAliveInterval=60"]`)
     ///
-    /// # Returns
+    /// # Examples
     ///
-    /// * `Ok(String)` - The stdout output if the command succeeds
-    /// * `Err(CommandError)` - Error describing what went wrong
+    /// ```no_run
+    /// use torrust_tracker_deployer_lib::shared::ssh::{SshClient, SshConfig, SshCredentials};
+    /// use torrust_tracker_deployer_lib::shared::Username;
+    /// use std::path::PathBuf;
+    /// use std::net::{IpAddr, Ipv4Addr};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let credentials = SshCredentials::new(
+    ///     PathBuf::from("/path/to/key"),
+    ///     PathBuf::from("/path/to/key.pub"),
+    ///     Username::new("user")?,
+    /// );
+    /// let config = SshConfig::with_default_port(
+    ///     credentials,
+    ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100))
+    /// );
+    /// let client = SshClient::new(config);
+    ///
+    /// // Keep connection alive during long-running command
+    /// let output = client.execute_with_options(
+    ///     "long_running_task",
+    ///     &["ServerAliveInterval=60", "ServerAliveCountMax=3"]
+    /// )?;
+    ///
+    /// // Use custom connection timeout for specific command
+    /// let output = client.execute_with_options(
+    ///     "quick_check",
+    ///     &["ConnectTimeout=2"]
+    /// )?;
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
-    /// This function will return an error if:
-    /// * The SSH connection cannot be established
-    /// * The remote command execution fails with a non-zero exit code
-    fn execute_with_options(
+    /// Returns `CommandError::ExecutionFailed` if the command exits with non-zero status,
+    /// or `CommandError::IoError` if SSH execution fails.
+    pub fn execute_with_options(
         &self,
         remote_command: &str,
         additional_options: &[&str],
@@ -283,23 +315,56 @@ impl SshClient {
         Ok(result.stdout)
     }
 
-    /// Check if a command succeeds on a remote host with additional SSH options
+    /// Check if a command succeeds with additional SSH options
+    ///
+    /// Wrapper around [`execute_with_options`] that returns `true` if the command
+    /// exits with code 0, `false` otherwise. Ideal for service checks and validation.
     ///
     /// # Arguments
     ///
     /// * `remote_command` - Command to execute on the remote host
-    /// * `additional_options` - Additional SSH options (e.g., `["ConnectTimeout=5"]`)
+    /// * `additional_options` - SSH options (e.g., `["ConnectTimeout=2"]`)
     ///
-    /// # Returns
+    /// # Examples
     ///
-    /// * `Ok(bool)` - true if command succeeded (exit code 0), false otherwise
-    /// * `Err(CommandError)` - Error if SSH connection could not be established
+    /// ```no_run
+    /// use torrust_tracker_deployer_lib::shared::ssh::{SshClient, SshConfig, SshCredentials};
+    /// use torrust_tracker_deployer_lib::shared::Username;
+    /// use std::path::PathBuf;
+    /// use std::net::{IpAddr, Ipv4Addr};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let credentials = SshCredentials::new(
+    ///     PathBuf::from("/path/to/key"),
+    ///     PathBuf::from("/path/to/key.pub"),
+    ///     Username::new("user")?,
+    /// );
+    /// let config = SshConfig::with_default_port(
+    ///     credentials,
+    ///     IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100))
+    /// );
+    /// let client = SshClient::new(config);
+    ///
+    /// // Quick service check with short timeout
+    /// let is_running = client.check_command_with_options(
+    ///     "systemctl is-active myservice",
+    ///     &["ConnectTimeout=2"]
+    /// )?;
+    ///
+    /// if is_running {
+    ///     println!("Service is running");
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
-    /// This function will return an error if:
-    /// * The SSH connection cannot be established
-    fn check_command_with_options(
+    /// Returns `CommandError::IoError` if SSH connection fails.
+    /// Command failures (non-zero exit) return `Ok(false)`, not an error.
+    ///
+    /// [`execute_with_options`]: Self::execute_with_options
+    pub fn check_command_with_options(
         &self,
         remote_command: &str,
         additional_options: &[&str],
