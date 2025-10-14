@@ -17,7 +17,6 @@ build/
 # Documentation (except what's needed)
 docs/
 !docs/research/e2e-docker-config-testing.md
-!docs/refactors/split-e2e-tests-provision-vs-configuration.md
 
 # Examples and fixtures (except SSH keys)
 examples/

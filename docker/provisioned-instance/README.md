@@ -175,6 +175,5 @@ This container configuration supports the E2E test split architecture:
 
 ## Related Documentation
 
-- [E2E Tests Split Plan](../../docs/refactors/split-e2e-tests-provision-vs-configuration.md)
 - [Docker Configuration Testing Research](../../docs/research/e2e-docker-config-testing.md)
 - [E2E Testing Guide](../../docs/e2e-testing.md)

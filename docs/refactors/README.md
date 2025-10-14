@@ -20,25 +20,37 @@ See [active-refactorings.md](./active-refactorings.md) for the current list of o
 
 See [completed-refactorings.md](./completed-refactorings.md) for the complete history of finished refactoring work.
 
-## 📂 File Management
+## 📂 Directory Structure
 
-**Refactoring Lists:**
+```text
+docs/refactors/
+├── README.md                    # This file - refactoring process documentation
+├── TEMPLATE.md                  # Template for creating new refactoring plans
+├── active-refactorings.md       # Index of ongoing refactoring work
+├── completed-refactorings.md    # Historical record of completed refactorings
+└── plans/                       # Directory containing detailed refactoring plan documents
+    └── command-code-quality-improvements.md
+```
 
-- `active-refactorings.md` - Current ongoing refactoring work
+**Meta-Documentation (at root):**
+
+- `README.md` - Explains the refactoring process and conventions
+- `TEMPLATE.md` - Template for creating new refactoring plan documents
+- `active-refactorings.md` - Index of current ongoing refactoring work
 - `completed-refactorings.md` - Historical record of finished refactorings
 
-**Individual Plan Documents:**
+**Refactoring Plan Documents (`plans/` subdirectory):**
 
-- Each refactoring has a detailed plan document (e.g., `command-code-quality-improvements.md`)
+- Each active refactoring has a detailed plan document in `plans/` (e.g., `plans/command-code-quality-improvements.md`)
 - These contain the full implementation details, progress tracking, and technical specifications
 - When refactoring is complete, the plan document is typically deleted or archived
 
-**List Management Process:**
+**File Management Process:**
 
-1. **New refactoring**: Add entry to `active-refactorings.md` with status 📋 Planning
+1. **New refactoring**: Create plan document in `plans/`, add entry to `active-refactorings.md` with status 📋 Planning
 2. **Start work**: Update status to 🚧 In Progress in `active-refactorings.md`
 3. **Complete work**: Move entry from `active-refactorings.md` to `completed-refactorings.md`
-4. **Cleanup**: Delete the detailed plan document (work is now in git history)
+4. **Cleanup**: Delete the detailed plan document from `plans/` (work is now in git history)
 
 ## 🎯 Plan Structure
 
