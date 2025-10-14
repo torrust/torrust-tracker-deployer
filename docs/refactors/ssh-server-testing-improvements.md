@@ -26,10 +26,10 @@ This refactoring addresses code quality, maintainability, and testability issues
 
 **Total Active Proposals**: 10
 **Total Postponed**: 3
-**Total Discarded**: 0
+**Total Rejected**: 1
 **Completed**: 9
 **In Progress**: 0
-**Not Started**: 1
+**Not Started**: 0
 
 ### Phase Summary
 
@@ -44,9 +44,9 @@ This refactoring addresses code quality, maintainability, and testability issues
   - ✅ #6: Add Configuration Struct
   - ✅ #7: Refactor Debug Function into Testable Components
   - ✅ #8: Improve Error Messages with Actionable Guidance
-- **Phase 2 - Enhanced Testing (Medium Impact, Medium Effort)**: ⏳ 1/2 completed (50%)
+- **Phase 2 - Enhanced Testing (Medium Impact, Medium Effort)**: ✅ 1/1 completed (100%)
   - ✅ #9: Add Tests for Error Scenarios
-  - ⏳ #10: Implement Cleanup Methods
+  - ❌ #10: Implement Cleanup Methods (Rejected - redundant with testcontainers Drop)
 
 ### Postponed Proposals
 
@@ -1710,7 +1710,7 @@ All tests pass with full pre-commit validation (clippy, rustfmt, all unit tests,
 
 ### Proposal #10: Implement Cleanup Methods
 
-**Status**: ⏳ Not Started  
+**Status**: ❌ Rejected (2025-10-14)  
 **Impact**: 🟢 Low  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P2  
@@ -1720,77 +1720,49 @@ All tests pass with full pre-commit validation (clippy, rustfmt, all unit tests,
 
 Containers have no explicit cleanup or stop methods. Resource cleanup relies entirely on Drop implementation, which may not be sufficient in all scenarios.
 
-#### Proposed Solution
+#### Rejection Rationale
 
-Add explicit cleanup methods to the trait and implementations:
+After implementation review, explicit `stop()` and `is_running()` methods were determined to be redundant and provide no additional value:
+
+**For Real Containers:**
+
+- The testcontainers library already handles cleanup automatically via `Drop`
+- Adding explicit `stop()` methods would duplicate functionality
+- Methods would be no-ops since testcontainers manages lifecycle
+- Cannot synchronously query actual container state
+- Explicit stop could interfere with Drop's cleanup
+
+**For Mock Containers:**
+
+- Mock containers have no actual resources to clean up
+- Methods would always be no-ops
+- Always return "running" since there's no real lifecycle
+
+**Conclusion:**
+
+- Cleanup methods add complexity without benefit
+- Testcontainers' Drop-based cleanup is sufficient
+- Trust the library's resource management
+- Keep the code clean and avoid unnecessary abstractions
+
+#### Alternative Approach
+
+Instead of explicit cleanup methods, rely on Rust's Drop trait and testcontainers' automatic cleanup:
 
 ```rust
-pub trait SshServerContainer {
-    // ... existing methods
-
-    /// Stop and remove the container
-    fn stop(&mut self) -> Result<(), SshServerError>;
-
-    /// Check if container is still running
-    fn is_running(&self) -> bool;
-}
-
-impl SshServerContainer for RealSshServerContainer {
-    fn stop(&mut self) -> Result<(), SshServerError> {
-        // Stop and remove the container
-        // testcontainers should handle this, but we can be explicit
-        Ok(())
-    }
-
-    fn is_running(&self) -> bool {
-        // Check container status
-        true  // testcontainers manages lifecycle
-    }
-}
-
-impl SshServerContainer for MockSshServerContainer {
-    fn stop(&mut self) -> Result<(), SshServerError> {
-        // No-op for mock
-        Ok(())
-    }
-
-    fn is_running(&self) -> bool {
-        true  // Mock always "running"
-    }
-}
+// Container is automatically cleaned up when dropped
+{
+    let container = RealSshServerContainer::start().await?;
+    // Use container...
+} // <- Container automatically stopped and removed here
 ```
 
-#### Rationale
+This approach is:
 
-- Makes cleanup explicit and controllable
-- Enables cleanup verification in tests
-- Provides better control over resource lifecycle
-- Documents cleanup behavior clearly
-
-#### Benefits
-
-- ✅ Explicit control over container lifecycle
-- ✅ Better resource management in tests
-- ✅ Clearer contract for cleanup behavior
-- ✅ Enables cleanup verification
-
-#### Implementation Checklist
-
-- [ ] Add `stop()` method to `SshServerContainer` trait
-- [ ] Add `is_running()` method to trait
-- [ ] Implement methods for `RealSshServerContainer`
-- [ ] Implement methods for `MockSshServerContainer`
-- [ ] Add tests verifying cleanup behavior
-- [ ] Update documentation
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
-
-#### Testing Strategy
-
-- Test `stop()` can be called successfully
-- Verify `is_running()` reflects container state
-- Test cleanup in Drop implementation still works
-- Verify no resource leaks in tests
+- Simpler and cleaner
+- More idiomatic Rust
+- Relies on proven testcontainers cleanup
+- Avoids redundant code
 
 ---
 
