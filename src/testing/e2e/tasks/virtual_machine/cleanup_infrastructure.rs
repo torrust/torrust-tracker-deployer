@@ -21,7 +21,7 @@
 
 use tracing::{info, warn};
 
-use crate::e2e::context::TestContext;
+use crate::testing::e2e::context::TestContext;
 
 /// Clean up test infrastructure created during VM-based E2E tests
 ///

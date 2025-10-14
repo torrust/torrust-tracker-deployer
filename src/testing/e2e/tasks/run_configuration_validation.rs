@@ -62,7 +62,7 @@ impl ConfigurationValidationError {
     /// # Example
     ///
     /// ```rust
-    /// # use torrust_tracker_deployer_lib::e2e::tasks::run_configuration_validation::ConfigurationValidationError;
+    /// # use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configuration_validation::ConfigurationValidationError;
     /// # use torrust_tracker_deployer_lib::infrastructure::remote_actions::RemoteActionError;
     /// # use torrust_tracker_deployer_lib::shared::command::CommandError;
     /// let error = ConfigurationValidationError::DockerValidationFailed {
@@ -163,7 +163,7 @@ For more information, see docs/e2e-testing.md."
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deployer_lib::e2e::tasks::run_configuration_validation::run_configuration_validation;
+/// use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configuration_validation::run_configuration_validation;
 /// use torrust_tracker_deployer_lib::shared::ssh::SshCredentials;
 /// use torrust_tracker_deployer_lib::shared::username::Username;
 /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};

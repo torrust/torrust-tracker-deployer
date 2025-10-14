@@ -29,7 +29,7 @@ use tracing::info;
 use crate::application::commands::provision::ProvisionCommandError;
 use crate::application::commands::ProvisionCommand;
 use crate::domain::environment::state::StateTypeError;
-use crate::e2e::context::TestContext;
+use crate::testing::e2e::context::TestContext;
 
 /// Errors that can occur during the provision task
 #[derive(Debug, Error)]
@@ -65,7 +65,7 @@ impl ProvisionTaskError {
     /// # Example
     ///
     /// ```rust
-    /// # use torrust_tracker_deployer_lib::e2e::tasks::virtual_machine::run_provision_command::ProvisionTaskError;
+    /// # use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::run_provision_command::ProvisionTaskError;
     /// # use torrust_tracker_deployer_lib::domain::environment::state::StateTypeError;
     /// let error = ProvisionTaskError::InvalidState {
     ///     state_type: "Provisioned".to_string(),

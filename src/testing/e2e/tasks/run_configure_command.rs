@@ -31,7 +31,7 @@ use tracing::info;
 use crate::application::commands::configure::ConfigureCommandError;
 use crate::application::commands::ConfigureCommand;
 use crate::domain::environment::state::StateTypeError;
-use crate::e2e::context::TestContext;
+use crate::testing::e2e::context::TestContext;
 
 /// Configure infrastructure using Ansible playbooks
 ///
@@ -122,7 +122,7 @@ impl ConfigureTaskError {
     /// # Example
     ///
     /// ```rust
-    /// # use torrust_tracker_deployer_lib::e2e::tasks::run_configure_command::ConfigureTaskError;
+    /// # use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configure_command::ConfigureTaskError;
     /// # use torrust_tracker_deployer_lib::domain::environment::state::StateTypeError;
     /// let error = ConfigureTaskError::InvalidState {
     ///     state_type: "Created".to_string(),

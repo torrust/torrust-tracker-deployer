@@ -25,12 +25,12 @@ use tracing::info;
 
 use crate::application::steps::RenderAnsibleTemplatesStep;
 use crate::container::Services;
-use crate::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
-use crate::e2e::containers::timeout::ContainerTimeouts;
-use crate::e2e::containers::{RunningProvisionedContainer, StoppedProvisionedContainer};
-use crate::e2e::context::TestContext;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::shared::ssh::SshCredentials;
+use crate::testing::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
+use crate::testing::e2e::containers::timeout::ContainerTimeouts;
+use crate::testing::e2e::containers::{RunningProvisionedContainer, StoppedProvisionedContainer};
+use crate::testing::e2e::context::TestContext;
 
 /// Run provision simulation to prepare templates for container-based testing
 ///
@@ -63,8 +63,8 @@ use crate::shared::ssh::SshCredentials;
 /// ```rust,no_run
 /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 /// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
-/// use torrust_tracker_deployer_lib::e2e::context::{TestContext, TestContextType};
-/// use torrust_tracker_deployer_lib::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
+/// use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
+/// use torrust_tracker_deployer_lib::testing::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
 /// use std::path::PathBuf;
 /// use tempfile::TempDir;
 ///

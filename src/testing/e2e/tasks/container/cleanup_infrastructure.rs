@@ -22,7 +22,7 @@
 
 use tracing::info;
 
-use crate::e2e::containers::RunningProvisionedContainer;
+use crate::testing::e2e::containers::RunningProvisionedContainer;
 
 /// Stop a running Docker container
 ///
@@ -42,8 +42,8 @@ use crate::e2e::containers::RunningProvisionedContainer;
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deployer_lib::e2e::tasks::container::cleanup_infrastructure::stop_test_infrastructure;
-/// use torrust_tracker_deployer_lib::e2e::containers::StoppedProvisionedContainer;
+/// use torrust_tracker_deployer_lib::testing::e2e::tasks::container::cleanup_infrastructure::stop_test_infrastructure;
+/// use torrust_tracker_deployer_lib::testing::e2e::containers::StoppedProvisionedContainer;
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {

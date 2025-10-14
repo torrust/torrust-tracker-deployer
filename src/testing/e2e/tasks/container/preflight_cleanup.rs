@@ -5,11 +5,11 @@
 //! testcontainers and automatically cleaned up, this module only handles
 //! directory cleanup operations.
 
-use crate::e2e::context::TestContext;
-use crate::e2e::tasks::preflight_cleanup::{
+use crate::shared::command::CommandExecutor;
+use crate::testing::e2e::context::TestContext;
+use crate::testing::e2e::tasks::preflight_cleanup::{
     cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
 };
-use crate::shared::command::CommandExecutor;
 use tracing::{info, warn};
 
 /// Performs pre-flight cleanup for Docker-based E2E tests

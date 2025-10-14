@@ -60,8 +60,13 @@ use tracing::{error, info};
 
 // Import E2E testing infrastructure
 use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
-use torrust_tracker_deployer_lib::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deployer_lib::e2e::tasks::{
+use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
+use torrust_tracker_deployer_lib::shared::{
+    ssh::{SshCredentials, DEFAULT_SSH_PORT},
+    Username,
+};
+use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
+use torrust_tracker_deployer_lib::testing::e2e::tasks::{
     run_configure_command::run_configure_command,
     run_test_command::run_test_command,
     virtual_machine::{
@@ -69,11 +74,6 @@ use torrust_tracker_deployer_lib::e2e::tasks::{
         preflight_cleanup::preflight_cleanup_previous_resources,
         run_provision_command::run_provision_command,
     },
-};
-use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::shared::{
-    ssh::{SshCredentials, DEFAULT_SSH_PORT},
-    Username,
 };
 
 #[derive(Parser)]

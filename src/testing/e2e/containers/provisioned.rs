@@ -19,7 +19,7 @@
 //! ## Usage
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deployer_lib::e2e::containers::{
+//! use torrust_tracker_deployer_lib::testing::e2e::containers::{
 //!     StoppedProvisionedContainer, ContainerError,
 //!     actions::{SshWaitAction, SshKeySetupAction}
 //! };
@@ -108,7 +108,7 @@ impl StoppedProvisionedContainer {
     ///
     /// # Example
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::e2e::containers::{StoppedProvisionedContainer, ContainerTimeouts};
+    /// use torrust_tracker_deployer_lib::testing::e2e::containers::{StoppedProvisionedContainer, ContainerTimeouts};
     /// use std::time::Duration;
     ///
     /// let mut timeouts = ContainerTimeouts::default();
@@ -130,7 +130,7 @@ impl StoppedProvisionedContainer {
     ///
     /// # Example
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::e2e::containers::StoppedProvisionedContainer;
+    /// use torrust_tracker_deployer_lib::testing::e2e::containers::StoppedProvisionedContainer;
     /// use std::time::Duration;
     ///
     /// let container = StoppedProvisionedContainer::with_ssh_ready_timeout(
@@ -317,7 +317,7 @@ mod tests {
                 image_name: "test-image".to_string(),
                 image_tag: "test-tag".to_string(),
                 reason: "Docker build compilation failed".to_string(),
-                source: crate::e2e::containers::image_builder::ContainerBuildError::ContainerBuildFailed {
+                source: crate::testing::e2e::containers::image_builder::ContainerBuildError::ContainerBuildFailed {
                     image_name: "test-image".to_string(),
                     tag: "test-tag".to_string(),
                     dockerfile_path: "/path/to/Dockerfile".to_string(),
@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn it_should_convert_docker_build_error_to_provisioned_container_error() {
-        use crate::e2e::containers::image_builder::ContainerBuildError;
+        use crate::testing::e2e::containers::image_builder::ContainerBuildError;
 
         let docker_build_error = ContainerBuildError::ContainerBuildFailed {
             image_name: "test-image".to_string(),
@@ -440,7 +440,7 @@ mod tests {
             image_name: "test".to_string(),
             image_tag: "latest".to_string(),
             reason: "Build failed".to_string(),
-            source: crate::e2e::containers::image_builder::ContainerBuildError::ImageNameRequired,
+            source: crate::testing::e2e::containers::image_builder::ContainerBuildError::ImageNameRequired,
         };
         let error = ContainerError::ContainerImage {
             source: image_error,

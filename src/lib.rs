@@ -20,15 +20,14 @@
 //! ## Other Modules
 //! - `config` - Configuration management for deployment environments
 //! - `container` - Service container for dependency injection
-//! - `e2e` - End-to-end testing utilities
 //! - `logging` - Logging configuration and utilities
 //! - `shared` - Shared modules used across different layers
+//! - `testing` - Testing utilities (unit, integration, and end-to-end)
 
 pub mod application;
 pub mod config;
 pub mod container;
 pub mod domain;
-pub mod e2e;
 pub mod infrastructure;
 pub mod logging;
 pub mod shared;

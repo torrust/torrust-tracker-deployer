@@ -4,13 +4,13 @@
 //! for VM-based E2E testing using LXD and `OpenTofu`. It handles cleanup of
 //! infrastructure resources including `OpenTofu` state and LXD instances.
 
-use crate::e2e::context::TestContext;
-use crate::e2e::tasks::preflight_cleanup::{
-    cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
-};
 use crate::infrastructure::external_tools::lxd::adapter::client::LxdClient;
 use crate::infrastructure::external_tools::tofu::adapter;
 use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
+use crate::testing::e2e::context::TestContext;
+use crate::testing::e2e::tasks::preflight_cleanup::{
+    cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
+};
 use tracing::{info, warn};
 
 /// Performs comprehensive pre-flight cleanup for VM-based E2E tests

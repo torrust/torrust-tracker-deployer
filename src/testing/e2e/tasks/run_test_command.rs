@@ -27,7 +27,7 @@ use tracing::info;
 use crate::application::commands::test::TestCommandError;
 use crate::application::commands::TestCommand;
 use crate::domain::environment::state::AnyEnvironmentState;
-use crate::e2e::context::TestContext;
+use crate::testing::e2e::context::TestContext;
 
 /// Errors that can occur during the test/validation task
 #[derive(Debug, Error)]
@@ -59,7 +59,7 @@ impl TestTaskError {
     /// # Example
     ///
     /// ```rust
-    /// # use torrust_tracker_deployer_lib::e2e::tasks::run_test_command::TestTaskError;
+    /// # use torrust_tracker_deployer_lib::testing::e2e::tasks::run_test_command::TestTaskError;
     /// let error = TestTaskError::MissingInstanceIp {
     ///     state_type: "Created".to_string(),
     /// };

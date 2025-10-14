@@ -61,23 +61,23 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::time::Instant;
-use torrust_tracker_deployer_lib::e2e::tasks::run_configure_command::run_configure_command;
+use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configure_command::run_configure_command;
 use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
-use torrust_tracker_deployer_lib::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deployer_lib::e2e::tasks::{
+use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
+use torrust_tracker_deployer_lib::shared::{
+    ssh::{SshCredentials, DEFAULT_SSH_PORT},
+    Username,
+};
+use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
+use torrust_tracker_deployer_lib::testing::e2e::tasks::{
     container::{
         cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},
         run_provision_simulation::run_provision_simulation,
     },
     preflight_cleanup,
     run_configuration_validation::run_configuration_validation,
-};
-use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::shared::{
-    ssh::{SshCredentials, DEFAULT_SSH_PORT},
-    Username,
 };
 
 #[derive(Parser)]
