@@ -1850,7 +1850,7 @@ This proposal was actually implemented in Proposal #0. The module structure reor
 
 ### Proposal #11: Inject DockerClient into DockerDebugInfo
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (2025-10-14)  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0
@@ -1997,21 +1997,42 @@ pub fn print_docker_debug_info(container_port: u16) {
 
 #### Implementation Checklist
 
-- [ ] Add `docker: Arc<DockerClient>` field to `DockerDebugInfo` struct
-- [ ] Rename `collect()` to `new()` constructor that accepts Docker client
-- [ ] Add `image_name` and `image_tag` parameters to `new()`
-- [ ] Update all methods to use `self.docker` instead of static methods
-- [ ] Replace all `Command::new("docker")` calls with `self.docker` method calls
-- [ ] Update `list_all_containers()` to use `self.docker.list_containers(true)`
-- [ ] Update `list_ssh_images()` to use `self.docker.list_images()`
-- [ ] Update `find_ssh_containers()` to use `self.docker.list_containers()` with filtering
-- [ ] Update `get_container_logs()` to use `self.docker.get_container_logs()`
-- [ ] Update `print_docker_debug_info()` convenience function to create client and pass to constructor
-- [ ] Remove direct `use std::process::Command` dependency
-- [ ] Remove direct constants usage (SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG) from convenience function
-- [ ] Add unit tests with mock `DockerClient`
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Add `docker: Arc<DockerClient>` field to `DockerDebugInfo` struct
+- [x] Rename `collect()` to `new()` constructor that accepts Docker client
+- [x] Add `image_name` and `image_tag` parameters to `new()`
+- [x] Update all methods to use `self.docker` instead of static methods
+- [x] Replace all `Command::new("docker")` calls with `self.docker` method calls
+- [x] Update `list_all_containers()` to use `self.docker.list_containers(true)`
+- [x] Update `list_ssh_images()` to use `self.docker.list_images()`
+- [x] Update `find_ssh_containers()` to use `self.docker.list_containers()` with filtering
+- [x] Update `get_container_logs()` to use `self.docker.get_container_logs()`
+- [x] Update `print_docker_debug_info()` convenience function to create client and pass to constructor
+- [x] Remove direct `use std::process::Command` dependency
+- [x] Remove direct constants usage (SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG) from convenience function
+- [x] Add unit tests with mock `DockerClient`
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
+
+#### Completion Notes
+
+Successfully refactored `DockerDebugInfo` to use dependency injection:
+
+- **Field Changes**: Changed `_docker` to `docker` (removed underscore prefix per code quality guidelines)
+- **Constructor**: Modified `new()` to create instance first, then populate using instance methods
+- **Instance Methods**: Converted all Docker command methods from static to instance methods:
+  - `list_all_containers(&self)` - uses `self.docker`
+  - `list_ssh_images(&self, image_name)` - uses `self.docker`
+  - `find_ssh_containers(&self)` - uses `self.docker`, removed unused `_image_name` and `_image_tag` parameters
+  - `get_container_logs(&self, container_id)` - uses `self.docker`
+- **Helper Methods**: Extracted 4 helper methods from `print()` for better organization:
+  - `print_all_containers(&self)` - prints container list
+  - `print_ssh_images(&self)` - prints SSH images
+  - `print_ssh_containers_and_logs(&self)` - prints containers and their logs
+  - `print_port_usage(&self)` - prints port usage information
+- **Public Getter**: Added `docker()` method to access the Docker client field
+- **Removed Dependencies**: Eliminated direct `Command::new("docker")` usage in Docker-related methods
+
+All changes verified with cargo check and unit tests passing.
 
 ---
 

@@ -33,6 +33,7 @@ use crate::shared::command::CommandExecutor;
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct DockerClient {
     command_executor: CommandExecutor,
 }

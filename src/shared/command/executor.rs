@@ -11,6 +11,7 @@ use super::error::CommandError;
 use super::result::CommandResult;
 
 /// A command executor that can run shell commands
+#[derive(Debug)]
 pub struct CommandExecutor {}
 
 impl Default for CommandExecutor {

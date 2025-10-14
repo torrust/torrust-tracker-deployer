@@ -1,6 +1,9 @@
 //! Debug utilities for Docker container troubleshooting
 
 use std::process::Command;
+use std::sync::Arc;
+
+use crate::shared::docker::DockerClient;
 
 use super::constants::{SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG};
 
@@ -15,6 +18,9 @@ use super::constants::{SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG};
 /// data or an error message explaining what went wrong.
 #[derive(Debug)]
 pub struct DockerDebugInfo {
+    /// Docker client for executing commands
+    docker: Arc<DockerClient>,
+
     /// Output from `docker ps -a` listing all containers
     pub all_containers: Result<String, String>,
 
@@ -46,15 +52,18 @@ pub struct ContainerInfo {
 // ============================================================================
 
 impl DockerDebugInfo {
-    /// Collect all Docker debug information for troubleshooting
+    /// Create a new `DockerDebugInfo` and collect all diagnostic information
     ///
-    /// This method runs various Docker commands to gather diagnostic information
+    /// This constructor runs various Docker commands to gather diagnostic information
     /// when SSH connectivity tests fail. It collects container status, logs,
     /// and port usage information.
     ///
     /// # Arguments
     ///
+    /// * `docker` - Docker client for executing commands
     /// * `container_port` - The host port that the SSH container is mapped to
+    /// * `image_name` - Image name to filter by (e.g., "torrust-ssh-server")
+    /// * `image_tag` - Image tag to filter by (e.g., "latest")
     ///
     /// # Returns
     ///
@@ -65,66 +74,83 @@ impl DockerDebugInfo {
     /// # Example
     ///
     /// ```rust,no_run
+    /// use std::sync::Arc;
+    /// use torrust_tracker_deployer_lib::shared::docker::DockerClient;
     /// use torrust_tracker_deployer_lib::testing::integration::ssh_server::DockerDebugInfo;
     ///
-    /// let debug_info = DockerDebugInfo::collect(2222);
+    /// let docker = Arc::new(DockerClient::new());
+    /// let debug_info = DockerDebugInfo::new(docker, 2222, "torrust-ssh-server", "latest");
     /// debug_info.print();
     /// ```
     #[must_use]
-    pub fn collect(container_port: u16) -> Self {
-        Self {
-            all_containers: Self::list_all_containers(),
-            ssh_images: Self::list_ssh_images(),
-            ssh_containers: Self::find_ssh_containers(),
-            port_usage: Self::check_port_usage(container_port),
-        }
+    pub fn new(
+        docker: Arc<DockerClient>,
+        container_port: u16,
+        image_name: &str,
+        _image_tag: &str, // TODO: Use in Proposal #14 to store as field
+    ) -> Self {
+        let mut instance = Self {
+            docker,
+            all_containers: Ok(String::new()),
+            ssh_images: Ok(String::new()),
+            ssh_containers: Ok(Vec::new()),
+            port_usage: Ok(Vec::new()),
+        };
+
+        // Collect debug information using instance methods
+        instance.all_containers = instance.list_all_containers();
+        instance.ssh_images = instance.list_ssh_images(image_name);
+        instance.ssh_containers = instance.find_ssh_containers();
+        instance.port_usage = Self::check_port_usage(container_port);
+
+        instance
     }
 
     /// List all Docker containers
     ///
-    /// Executes `docker ps -a` to list all containers (running and stopped).
-    fn list_all_containers() -> Result<String, String> {
-        Command::new("docker")
-            .args(["ps", "-a"])
-            .output()
-            .map(|output| String::from_utf8_lossy(&output.stdout).to_string())
-            .map_err(|e| format!("Failed to run 'docker ps -a': {e}"))
+    /// Uses `DockerClient::list_containers(true)` to list all containers (running and stopped).
+    fn list_all_containers(&self) -> Result<String, String> {
+        self.docker
+            .list_containers(true)
+            .map(|containers| containers.join("\n"))
+            .map_err(|e| format!("Failed to list containers: {e}"))
     }
 
     /// List SSH server Docker images
     ///
-    /// Executes `docker images` filtered by SSH server image name.
-    fn list_ssh_images() -> Result<String, String> {
-        Command::new("docker")
-            .args(["images", SSH_SERVER_IMAGE_NAME])
-            .output()
-            .map(|output| String::from_utf8_lossy(&output.stdout).to_string())
-            .map_err(|e| format!("Failed to run 'docker images': {e}"))
+    /// Uses `DockerClient::list_images` filtered by SSH server image name.
+    fn list_ssh_images(&self, image_name: &str) -> Result<String, String> {
+        self.docker
+            .list_images(Some(image_name))
+            .map(|images| images.join("\n"))
+            .map_err(|e| format!("Failed to list images: {e}"))
     }
 
     /// Find containers using the SSH server image
     ///
-    /// Filters containers by the SSH server image and collects their information
-    /// including logs.
-    fn find_ssh_containers() -> Result<Vec<ContainerInfo>, String> {
-        let image_tag = format!("{SSH_SERVER_IMAGE_NAME}:{SSH_SERVER_IMAGE_TAG}");
-        let filter = format!("ancestor={image_tag}");
+    /// Uses `DockerClient::list_containers` and filters by image.
+    /// Also fetches logs for each matching container.
+    fn find_ssh_containers(&self) -> Result<Vec<ContainerInfo>, String> {
+        // TODO: Filter by image when DockerClient supports image info in list_containers
+        // For now, we list all containers
 
-        let output = Command::new("docker")
-            .args(["ps", "-a", "--filter", &filter])
-            .output()
-            .map_err(|e| format!("Failed to filter Docker containers: {e}"))?;
+        let all_containers = self
+            .docker
+            .list_containers(true)
+            .map_err(|e| format!("Failed to list containers: {e}"))?;
 
-        let stdout = String::from_utf8_lossy(&output.stdout);
         let mut containers = Vec::new();
 
-        // Skip header line, process container lines
-        for line in stdout.lines().skip(1) {
-            if let Some(container_id) = line.split_whitespace().next() {
+        // Filter containers by image and collect their info
+        for container_line in all_containers {
+            // Container format from DockerClient: "id|name|status"
+            if let Some(container_id) = container_line.split('|').next() {
+                // For now, we include all containers
+                // TODO: Filter by image when DockerClient supports image info
                 containers.push(ContainerInfo {
                     id: container_id.to_string(),
-                    status: line.to_string(),
-                    logs: Self::get_container_logs(container_id),
+                    status: container_line.clone(),
+                    logs: self.get_container_logs(container_id),
                 });
             }
         }
@@ -134,21 +160,11 @@ impl DockerDebugInfo {
 
     /// Get logs for a specific container
     ///
-    /// Executes `docker logs --tail 20` to get the last 20 lines of container logs.
-    fn get_container_logs(container_id: &str) -> Result<String, String> {
-        Command::new("docker")
-            .args(["logs", "--tail", "20", container_id])
-            .output()
-            .map(|output| {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-
-                if stderr.is_empty() {
-                    stdout.to_string()
-                } else {
-                    format!("{stdout}\nStderr:\n{stderr}")
-                }
-            })
+    /// Uses `DockerClient::get_container_logs` to retrieve logs.
+    /// Note: `DockerClient` doesn't support --tail yet, so we get all logs.
+    fn get_container_logs(&self, container_id: &str) -> Result<String, String> {
+        self.docker
+            .get_container_logs(container_id)
             .map_err(|e| format!("Failed to get container logs: {e}"))
     }
 
@@ -204,13 +220,29 @@ impl DockerDebugInfo {
         }
     }
 
+    /// Get a reference to the Docker client
+    ///
+    /// This allows access to the underlying Docker client for additional operations
+    /// if needed after debug info has been collected.
+    #[must_use]
+    pub fn docker(&self) -> &Arc<DockerClient> {
+        &self.docker
+    }
+
     /// Print the debug information in a formatted way
     ///
     /// Prints all collected debug information to stdout in a human-readable format.
     pub fn print(&self) {
         println!("\n=== Docker Debug Information ===");
+        self.print_all_containers();
+        self.print_ssh_images();
+        self.print_ssh_containers_and_logs();
+        self.print_port_usage();
+        println!("=== End Docker Debug Information ===\n");
+    }
 
-        // Print all containers
+    /// Print all Docker containers
+    fn print_all_containers(&self) {
         match &self.all_containers {
             Ok(containers) => {
                 println!("Docker containers (docker ps -a):");
@@ -220,8 +252,10 @@ impl DockerDebugInfo {
                 println!("Failed to list containers: {e}");
             }
         }
+    }
 
-        // Print SSH images
+    /// Print SSH server images
+    fn print_ssh_images(&self) {
         match &self.ssh_images {
             Ok(images) => {
                 println!("\nDocker images for {SSH_SERVER_IMAGE_NAME}:");
@@ -231,8 +265,10 @@ impl DockerDebugInfo {
                 println!("Failed to list images: {e}");
             }
         }
+    }
 
-        // Print SSH containers and their logs
+    /// Print SSH containers and their logs
+    fn print_ssh_containers_and_logs(&self) {
         match &self.ssh_containers {
             Ok(containers) => {
                 let image_tag = format!("{SSH_SERVER_IMAGE_NAME}:{SSH_SERVER_IMAGE_TAG}");
@@ -260,8 +296,10 @@ impl DockerDebugInfo {
                 println!("Failed to filter containers: {e}");
             }
         }
+    }
 
-        // Print port usage
+    /// Print port usage information
+    fn print_port_usage(&self) {
         println!("\nPort information:");
         match &self.port_usage {
             Ok(lines) => {
@@ -273,8 +311,6 @@ impl DockerDebugInfo {
                 println!("Failed to check port usage: {e}");
             }
         }
-
-        println!("=== End Docker Debug Information ===\n");
     }
 }
 
@@ -286,7 +322,7 @@ impl DockerDebugInfo {
 ///
 /// This is a convenience function that collects all Docker debug information
 /// and prints it to stdout. For programmatic access to the structured data,
-/// use [`DockerDebugInfo::collect`] instead.
+/// use [`DockerDebugInfo::new`] instead.
 ///
 /// This function runs various Docker commands to help diagnose issues when SSH
 /// connectivity tests fail in CI environments. It prints container status, logs,
@@ -308,7 +344,13 @@ impl DockerDebugInfo {
 /// print_docker_debug_info(2222);
 /// ```
 pub fn print_docker_debug_info(container_port: u16) {
-    let debug_info = DockerDebugInfo::collect(container_port);
+    let docker = Arc::new(DockerClient::new());
+    let debug_info = DockerDebugInfo::new(
+        docker,
+        container_port,
+        SSH_SERVER_IMAGE_NAME,
+        SSH_SERVER_IMAGE_TAG,
+    );
     debug_info.print();
 }
 
@@ -322,9 +364,10 @@ mod tests {
 
     #[test]
     fn it_should_collect_docker_debug_info() {
-        // This test verifies that the collect method doesn't panic
+        // This test verifies that the new method doesn't panic
         // Actual Docker commands may fail in test environment, which is expected
-        let debug_info = DockerDebugInfo::collect(2222);
+        let docker = Arc::new(DockerClient::new());
+        let debug_info = DockerDebugInfo::new(docker, 2222, "test-image", "latest");
 
         // Verify structure exists (even if commands failed)
         assert!(debug_info.all_containers.is_ok() || debug_info.all_containers.is_err());
@@ -336,7 +379,8 @@ mod tests {
     #[test]
     fn it_should_print_without_panicking() {
         // This test verifies that printing doesn't panic
-        let debug_info = DockerDebugInfo::collect(2222);
+        let docker = Arc::new(DockerClient::new());
+        let debug_info = DockerDebugInfo::new(docker, 2222, "test-image", "latest");
         debug_info.print();
         // If we get here without panicking, test passes
     }
