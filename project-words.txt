@@ -55,6 +55,7 @@ htdocs
 hugepages
 impls
 journalctl
+keepalive
 keygen
 keyrings
 larstobi

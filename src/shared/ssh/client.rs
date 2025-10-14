@@ -205,7 +205,57 @@ impl SshClient {
     // PRIVATE - Helper Methods
     // ============================================================================
 
+    /// Build default SSH options for automation
+    ///
+    /// Returns a map of default SSH option keys to their values:
+    /// - `StrictHostKeyChecking`: `no` (disable host key verification)
+    /// - `UserKnownHostsFile`: `/dev/null` (ignore known hosts file)
+    /// - `ConnectTimeout`: configured timeout (prevents hanging)
+    ///
+    /// These defaults ensure reliable automation but can be overridden by
+    /// user-provided options in `additional_options`.
+    fn build_default_ssh_options(&self) -> std::collections::HashMap<String, String> {
+        let mut defaults = std::collections::HashMap::new();
+        defaults.insert("StrictHostKeyChecking".to_string(), "no".to_string());
+        defaults.insert("UserKnownHostsFile".to_string(), "/dev/null".to_string());
+        defaults.insert(
+            "ConnectTimeout".to_string(),
+            self.ssh_config
+                .connection_config
+                .connect_timeout_secs
+                .to_string(),
+        );
+        defaults
+    }
+
+    /// Extract SSH option key from an option string
+    ///
+    /// Parses option strings in formats like:
+    /// - `"Key=value"` → `"Key"`
+    /// - `"Key"` → `"Key"`
+    ///
+    /// Returns `None` if the option string is empty or malformed.
+    fn extract_option_key(option: &str) -> Option<String> {
+        option.split('=').next().map(|s| s.trim().to_string())
+    }
+
     /// Build SSH arguments for a connection
+    ///
+    /// Constructs the complete SSH command arguments including:
+    /// 1. Authentication credentials (private key)
+    /// 2. User-provided additional options (take precedence)
+    /// 3. Default options (only if not overridden by user)
+    /// 4. Connection details (port, host)
+    /// 5. Remote command to execute
+    ///
+    /// ## Option Override Behavior
+    ///
+    /// User-provided options in `additional_options` take precedence over defaults:
+    /// - If a user provides `StrictHostKeyChecking=yes`, it will override the default `no`
+    /// - If a user provides `ConnectTimeout=30`, it will override the configured default
+    /// - Default options are only added if the user hasn't provided them
+    ///
+    /// This allows users full control while providing sensible defaults for automation.
     fn build_ssh_args(&self, remote_command: &str, additional_options: &[&str]) -> Vec<String> {
         let mut args = vec![
             // Specify the private key file for authentication
@@ -214,27 +264,31 @@ impl SshClient {
                 .ssh_priv_key_path()
                 .to_string_lossy()
                 .to_string(),
-            // Disable strict host key checking for automation
-            "-o".to_string(),
-            "StrictHostKeyChecking=no".to_string(),
-            // Disable known hosts file to avoid host key conflicts in automation
-            "-o".to_string(),
-            "UserKnownHostsFile=/dev/null".to_string(),
-            // Set connection timeout for automation (prevents hanging)
-            "-o".to_string(),
-            format!(
-                "ConnectTimeout={}",
-                self.ssh_config.connection_config.connect_timeout_secs
-            ),
-            // Specify the SSH port to connect to
-            "-p".to_string(),
-            self.ssh_config.ssh_port().to_string(),
         ];
 
-        // Add additional SSH options with explicit option flag
+        // Build default options map
+        let mut defaults = self.build_default_ssh_options();
+
+        // Specify the SSH port to connect to
+        args.push("-p".to_string());
+        args.push(self.ssh_config.ssh_port().to_string());
+
+        // Add user-provided options FIRST (they take precedence)
+        // and remove them from defaults so we don't add them twice
         for option in additional_options {
             args.push("-o".to_string());
             args.push((*option).to_string());
+
+            // Remove this option key from defaults to prevent duplication
+            if let Some(key) = Self::extract_option_key(option) {
+                defaults.remove(&key);
+            }
+        }
+
+        // Add remaining default options (those not overridden by user)
+        for (key, value) in defaults {
+            args.push("-o".to_string());
+            args.push(format!("{key}={value}"));
         }
 
         // SSH target: username@hostname
@@ -512,5 +566,106 @@ mod tests {
         ssh_client.process_ssh_warnings("");
 
         // TempDir automatically cleans up when dropped
+    }
+
+    #[test]
+    fn it_should_build_default_ssh_options_as_hashmap() {
+        // Arrange
+        let (_temp_dir, credentials) = create_test_ssh_credentials();
+        let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let ssh_config = SshConfig::with_default_port(credentials, host_ip);
+        let expected_timeout = ssh_config.connection_config.connect_timeout_secs;
+        let ssh_client = SshClient::new(ssh_config);
+
+        // Act
+        let default_options = ssh_client.build_default_ssh_options();
+
+        // Assert: Should contain 3 key-value pairs
+        assert_eq!(default_options.len(), 3);
+
+        // Verify expected keys and values
+        assert_eq!(
+            default_options.get("StrictHostKeyChecking"),
+            Some(&"no".to_string())
+        );
+        assert_eq!(
+            default_options.get("UserKnownHostsFile"),
+            Some(&"/dev/null".to_string())
+        );
+        assert_eq!(
+            default_options.get("ConnectTimeout"),
+            Some(&expected_timeout.to_string())
+        );
+    }
+
+    #[test]
+    fn it_should_build_ssh_args_with_user_options_before_defaults() {
+        // Arrange
+        let (_temp_dir, credentials) = create_test_ssh_credentials();
+        let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let ssh_config = SshConfig::with_default_port(credentials, host_ip);
+        let ssh_client = SshClient::new(ssh_config);
+
+        // Act
+        let args = ssh_client.build_ssh_args("echo test", &["ServerAliveInterval=60"]);
+
+        // Assert: User options should appear before default options
+        let args_string = args.join(" ");
+
+        // Find positions of key options
+        let server_alive_pos = args
+            .iter()
+            .position(|s| s == "ServerAliveInterval=60")
+            .expect("ServerAliveInterval should be present");
+
+        let strict_pos = args
+            .iter()
+            .position(|s| s == "StrictHostKeyChecking=no")
+            .expect("StrictHostKeyChecking should be present");
+
+        // User option should come before default option (SSH uses first-occurrence-wins)
+        assert!(
+            server_alive_pos < strict_pos,
+            "User-provided options should appear before defaults for first-occurrence-wins precedence"
+        );
+
+        // Verify command structure
+        assert!(args_string.contains("-i")); // Private key
+        assert!(args_string.contains("StrictHostKeyChecking=no")); // Default option
+        assert!(args_string.contains("ServerAliveInterval=60")); // User option
+        assert!(args_string.contains("-p")); // Port
+        assert!(args_string.contains("testuser@")); // Username
+        assert!(args_string.contains("echo test")); // Command
+    }
+
+    #[test]
+    fn it_should_allow_users_to_override_default_options() {
+        // Arrange
+        let (_temp_dir, credentials) = create_test_ssh_credentials();
+        let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let ssh_config = SshConfig::with_default_port(credentials, host_ip);
+        let ssh_client = SshClient::new(ssh_config);
+
+        // Act: Override default StrictHostKeyChecking
+        let args = ssh_client.build_ssh_args("echo test", &["StrictHostKeyChecking=yes"]);
+
+        // Assert: Only user-provided option should be present (not the default)
+        let strict_yes_count = args
+            .iter()
+            .filter(|s| *s == "StrictHostKeyChecking=yes")
+            .count();
+        let strict_no_count = args
+            .iter()
+            .filter(|s| *s == "StrictHostKeyChecking=no")
+            .count();
+
+        assert_eq!(
+            strict_yes_count, 1,
+            "User-provided StrictHostKeyChecking=yes should be present"
+        );
+        assert_eq!(
+            strict_no_count, 0,
+            "Default StrictHostKeyChecking=no should be excluded when user provides override"
+        );
     }
 }
