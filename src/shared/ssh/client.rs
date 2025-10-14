@@ -37,6 +37,10 @@ pub struct SshClient {
 }
 
 impl SshClient {
+    // ============================================================================
+    // PUBLIC API - Constructors
+    // ============================================================================
+
     /// Creates a new `SshClient`
     ///
     /// # Arguments
@@ -50,6 +54,10 @@ impl SshClient {
         }
     }
 
+    // ============================================================================
+    // PUBLIC API - Accessors
+    // ============================================================================
+
     /// Get the SSH configuration
     ///
     /// Returns a reference to the SSH configuration used by this client.
@@ -58,50 +66,9 @@ impl SshClient {
         &self.ssh_config
     }
 
-    /// Build SSH arguments for a connection
-    fn build_ssh_args(&self, remote_command: &str, additional_options: &[&str]) -> Vec<String> {
-        let mut args = vec![
-            // Specify the private key file for authentication
-            "-i".to_string(),
-            self.ssh_config
-                .ssh_priv_key_path()
-                .to_string_lossy()
-                .to_string(),
-            // Disable strict host key checking for automation
-            "-o".to_string(),
-            "StrictHostKeyChecking=no".to_string(),
-            // Disable known hosts file to avoid host key conflicts in automation
-            "-o".to_string(),
-            "UserKnownHostsFile=/dev/null".to_string(),
-            // Set connection timeout for automation (prevents hanging)
-            "-o".to_string(),
-            format!(
-                "ConnectTimeout={}",
-                self.ssh_config.connection_config.connect_timeout_secs
-            ),
-            // Specify the SSH port to connect to
-            "-p".to_string(),
-            self.ssh_config.ssh_port().to_string(),
-        ];
-
-        // Add additional SSH options with explicit option flag
-        for option in additional_options {
-            args.push("-o".to_string());
-            args.push((*option).to_string());
-        }
-
-        // SSH target: username@hostname
-        args.push(format!(
-            "{}@{}",
-            self.ssh_config.ssh_username(),
-            self.ssh_config.host_ip()
-        ));
-
-        // Remote command to execute
-        args.push(remote_command.to_string());
-
-        args
-    }
+    // ============================================================================
+    // PUBLIC API - Command Execution
+    // ============================================================================
 
     /// Execute a command on a remote host via SSH
     ///
@@ -123,67 +90,6 @@ impl SshClient {
         self.execute_with_options(remote_command, &[])
     }
 
-    /// Execute a command on a remote host via SSH with additional SSH options
-    ///
-    /// # Arguments
-    ///
-    /// * `remote_command` - Command to execute on the remote host
-    /// * `additional_options` - Additional SSH options (e.g., `["ConnectTimeout=5"]`)
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(String)` - The stdout output if the command succeeds
-    /// * `Err(CommandError)` - Error describing what went wrong
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if:
-    /// * The SSH connection cannot be established
-    /// * The remote command execution fails with a non-zero exit code
-    fn execute_with_options(
-        &self,
-        remote_command: &str,
-        additional_options: &[&str],
-    ) -> Result<String, CommandError> {
-        let args = self.build_ssh_args(remote_command, additional_options);
-        let args_str: Vec<&str> = args.iter().map(std::string::String::as_str).collect();
-
-        let result = self.command_executor.run_command("ssh", &args_str, None)?;
-
-        // Process stderr for SSH warnings and log them
-        self.process_ssh_warnings(&result.stderr);
-
-        Ok(result.stdout)
-    }
-
-    /// Process SSH stderr output to detect and log warnings
-    ///
-    /// SSH writes various informational messages to stderr, including host key
-    /// warnings. This method detects these warnings and logs them appropriately
-    /// using the tracing framework so they are visible to users at warn level.
-    ///
-    /// # Arguments
-    ///
-    /// * `stderr` - The stderr output from the SSH command
-    fn process_ssh_warnings(&self, stderr: &str) {
-        if stderr.trim().is_empty() {
-            return;
-        }
-
-        // Split stderr into lines and check each line for warnings
-        for line in stderr.lines() {
-            let trimmed_line = line.trim();
-            if trimmed_line.starts_with("Warning:") {
-                warn!(
-                    operation = "ssh_warning",
-                    host_ip = %self.ssh_config.host_ip(),
-                    message = %trimmed_line,
-                    "SSH warning detected"
-                );
-            }
-        }
-    }
-
     /// Check if a command succeeds on a remote host (returns only status)
     ///
     /// # Arguments
@@ -203,33 +109,9 @@ impl SshClient {
         self.check_command_with_options(remote_command, &[])
     }
 
-    /// Check if a command succeeds on a remote host with additional SSH options
-    ///
-    /// # Arguments
-    ///
-    /// * `remote_command` - Command to execute on the remote host
-    /// * `additional_options` - Additional SSH options (e.g., `["ConnectTimeout=5"]`)
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(bool)` - true if command succeeded (exit code 0), false otherwise  
-    /// * `Err(CommandError)` - Error if SSH connection could not be established
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if:
-    /// * The SSH connection cannot be established
-    fn check_command_with_options(
-        &self,
-        remote_command: &str,
-        additional_options: &[&str],
-    ) -> Result<bool, CommandError> {
-        match self.execute_with_options(remote_command, additional_options) {
-            Ok(_) => Ok(true),
-            Err(CommandError::ExecutionFailed { .. }) => Ok(false),
-            Err(other) => Err(other),
-        }
-    }
+    // ============================================================================
+    // PUBLIC API - Connectivity Testing
+    // ============================================================================
 
     /// Test SSH connectivity to a host
     ///
@@ -317,6 +199,144 @@ impl SshClient {
             attempts: max_attempts,
             timeout_seconds,
         })
+    }
+
+    // ============================================================================
+    // PRIVATE - Helper Methods
+    // ============================================================================
+
+    /// Build SSH arguments for a connection
+    fn build_ssh_args(&self, remote_command: &str, additional_options: &[&str]) -> Vec<String> {
+        let mut args = vec![
+            // Specify the private key file for authentication
+            "-i".to_string(),
+            self.ssh_config
+                .ssh_priv_key_path()
+                .to_string_lossy()
+                .to_string(),
+            // Disable strict host key checking for automation
+            "-o".to_string(),
+            "StrictHostKeyChecking=no".to_string(),
+            // Disable known hosts file to avoid host key conflicts in automation
+            "-o".to_string(),
+            "UserKnownHostsFile=/dev/null".to_string(),
+            // Set connection timeout for automation (prevents hanging)
+            "-o".to_string(),
+            format!(
+                "ConnectTimeout={}",
+                self.ssh_config.connection_config.connect_timeout_secs
+            ),
+            // Specify the SSH port to connect to
+            "-p".to_string(),
+            self.ssh_config.ssh_port().to_string(),
+        ];
+
+        // Add additional SSH options with explicit option flag
+        for option in additional_options {
+            args.push("-o".to_string());
+            args.push((*option).to_string());
+        }
+
+        // SSH target: username@hostname
+        args.push(format!(
+            "{}@{}",
+            self.ssh_config.ssh_username(),
+            self.ssh_config.host_ip()
+        ));
+
+        // Remote command to execute
+        args.push(remote_command.to_string());
+
+        args
+    }
+
+    /// Execute a command on a remote host via SSH with additional SSH options
+    ///
+    /// # Arguments
+    ///
+    /// * `remote_command` - Command to execute on the remote host
+    /// * `additional_options` - Additional SSH options (e.g., `["ConnectTimeout=5"]`)
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(String)` - The stdout output if the command succeeds
+    /// * `Err(CommandError)` - Error describing what went wrong
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// * The SSH connection cannot be established
+    /// * The remote command execution fails with a non-zero exit code
+    fn execute_with_options(
+        &self,
+        remote_command: &str,
+        additional_options: &[&str],
+    ) -> Result<String, CommandError> {
+        let args = self.build_ssh_args(remote_command, additional_options);
+        let args_str: Vec<&str> = args.iter().map(std::string::String::as_str).collect();
+
+        let result = self.command_executor.run_command("ssh", &args_str, None)?;
+
+        // Process stderr for SSH warnings and log them
+        self.process_ssh_warnings(&result.stderr);
+
+        Ok(result.stdout)
+    }
+
+    /// Check if a command succeeds on a remote host with additional SSH options
+    ///
+    /// # Arguments
+    ///
+    /// * `remote_command` - Command to execute on the remote host
+    /// * `additional_options` - Additional SSH options (e.g., `["ConnectTimeout=5"]`)
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(bool)` - true if command succeeded (exit code 0), false otherwise
+    /// * `Err(CommandError)` - Error if SSH connection could not be established
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// * The SSH connection cannot be established
+    fn check_command_with_options(
+        &self,
+        remote_command: &str,
+        additional_options: &[&str],
+    ) -> Result<bool, CommandError> {
+        match self.execute_with_options(remote_command, additional_options) {
+            Ok(_) => Ok(true),
+            Err(CommandError::ExecutionFailed { .. }) => Ok(false),
+            Err(other) => Err(other),
+        }
+    }
+
+    /// Process SSH stderr output to detect and log warnings
+    ///
+    /// SSH writes various informational messages to stderr, including host key
+    /// warnings. This method detects these warnings and logs them appropriately
+    /// using the tracing framework so they are visible to users at warn level.
+    ///
+    /// # Arguments
+    ///
+    /// * `stderr` - The stderr output from the SSH command
+    fn process_ssh_warnings(&self, stderr: &str) {
+        if stderr.trim().is_empty() {
+            return;
+        }
+
+        // Split stderr into lines and check each line for warnings
+        for line in stderr.lines() {
+            let trimmed_line = line.trim();
+            if trimmed_line.starts_with("Warning:") {
+                warn!(
+                    operation = "ssh_warning",
+                    host_ip = %self.ssh_config.host_ip(),
+                    message = %trimmed_line,
+                    "SSH warning detected"
+                );
+            }
+        }
     }
 }
 
