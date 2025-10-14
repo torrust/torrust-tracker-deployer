@@ -74,9 +74,11 @@ impl SshClient {
             "-o".to_string(),
             "UserKnownHostsFile=/dev/null".to_string(),
             // Set connection timeout for automation (prevents hanging)
-            // TODO: Make this configurable via SshConfig constructor
             "-o".to_string(),
-            "ConnectTimeout=5".to_string(),
+            format!(
+                "ConnectTimeout={}",
+                self.ssh_config.connection_config.connect_timeout_secs
+            ),
             // Specify the SSH port to connect to
             "-p".to_string(),
             self.ssh_config.ssh_port().to_string(),
@@ -230,6 +232,8 @@ impl SshClient {
 
     /// Test SSH connectivity to a host
     ///
+    /// Uses the connection timeout configured in `SshConfig`.
+    ///
     /// # Returns
     ///
     /// * `Ok(bool)` - true if SSH connection succeeds, false otherwise
@@ -240,7 +244,7 @@ impl SshClient {
     /// This function will return an error if:
     /// * The SSH command could not be started
     pub fn test_connectivity(&self) -> Result<bool, CommandError> {
-        self.check_command_with_options("echo 'SSH connected'", &["ConnectTimeout=5"])
+        self.check_command("echo 'SSH connected'")
     }
 
     /// Wait for SSH connectivity to be established with retry logic

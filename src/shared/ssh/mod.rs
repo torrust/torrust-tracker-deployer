@@ -32,7 +32,10 @@ pub mod public_key;
 pub mod service_checker;
 
 pub use client::SshClient;
-pub use config::{SshConfig, DEFAULT_SSH_PORT};
+pub use config::{
+    SshConfig, SshConnectionConfig, DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_MAX_RETRY_ATTEMPTS,
+    DEFAULT_RETRY_INTERVAL_SECS, DEFAULT_RETRY_LOG_FREQUENCY, DEFAULT_SSH_PORT,
+};
 pub use credentials::SshCredentials;
 pub use error::SshError;
 pub use public_key::SshPublicKey;
