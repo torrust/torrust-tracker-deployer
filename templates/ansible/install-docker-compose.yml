@@ -31,12 +31,18 @@
         state: directory
         mode: '0755'
 
+    # Download with retries to handle transient network failures
+    # Retries help prevent flaky E2E tests when GitHub or network is temporarily slow
     - name: Download Docker Compose v2 plugin
       get_url:
         url: "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-linux-x86_64"
         dest: /usr/local/lib/docker/cli-plugins/docker-compose
         mode: '0755'
-        timeout: 30
+        timeout: 60
+      retries: 3
+      delay: 5
+      register: download_result
+      until: download_result is succeeded
 
     - name: Test Docker Compose installation
       command: docker compose version
