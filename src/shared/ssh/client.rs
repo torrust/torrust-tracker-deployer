@@ -96,6 +96,7 @@ impl SshClient {
             self.ssh_config.ssh_username(),
             self.ssh_config.host_ip()
         ));
+
         // Remote command to execute
         args.push(remote_command.to_string());
 
@@ -323,59 +324,89 @@ impl SshClient {
 mod tests {
     use super::super::SshCredentials;
     use super::*;
+    use std::fs;
     use std::net::{IpAddr, Ipv4Addr};
-    use std::path::PathBuf;
+    use tempfile::TempDir;
 
     use crate::shared::Username;
 
-    #[test]
-    fn it_should_create_ssh_client_with_valid_parameters() {
-        let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+    /// Helper to create test SSH credentials with temporary key files
+    ///
+    /// Creates a temporary directory with actual (fake) SSH key files for testing.
+    /// The temporary directory is automatically cleaned up when the returned `TempDir` is dropped.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of (`TempDir`, `SshCredentials`) where:
+    /// - `TempDir` must be kept alive to prevent cleanup during the test
+    /// - `SshCredentials` contains paths to the temporary key files
+    fn create_test_ssh_credentials() -> (TempDir, SshCredentials) {
+        let temp_dir =
+            TempDir::new().expect("Failed to create temp directory for SSH key test files");
+
+        let priv_key_path = temp_dir.path().join("test_key");
+        let pub_key_path = temp_dir.path().join("test_key.pub");
+
+        // Create actual (empty) key files for realism
+        fs::write(&priv_key_path, "fake private key content")
+            .expect("Failed to write test private key");
+        fs::write(&pub_key_path, "fake public key content")
+            .expect("Failed to write test public key");
+
         let credentials = SshCredentials::new(
-            PathBuf::from("/path/to/key"),
-            PathBuf::from("/path/to/key.pub"),
+            priv_key_path,
+            pub_key_path,
             Username::new("testuser").unwrap(),
         );
+
+        (temp_dir, credentials)
+    }
+
+    #[test]
+    fn it_should_create_ssh_client_with_valid_parameters() {
+        // Arrange
+        let (_temp_dir, credentials) = create_test_ssh_credentials();
+        let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
         let ssh_config = SshConfig::with_default_port(credentials, host_ip);
+
+        // Act
         let ssh_client = SshClient::new(ssh_config);
 
-        assert_eq!(
-            ssh_client.ssh_config.ssh_priv_key_path().to_string_lossy(),
-            "/path/to/key"
-        );
+        // Assert
+        assert!(ssh_client.ssh_config.ssh_priv_key_path().exists());
+        assert!(ssh_client.ssh_config.ssh_pub_key_path().exists());
         assert_eq!(ssh_client.ssh_config.ssh_username(), "testuser");
         assert_eq!(ssh_client.ssh_config.host_ip(), host_ip);
         // Note: verbose is now encapsulated in the CommandExecutor collaborator
+
+        // TempDir automatically cleans up when dropped
     }
 
     #[test]
     fn it_should_create_ssh_client_with_connection_details() {
+        // Arrange
+        let (_temp_dir, credentials) = create_test_ssh_credentials();
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let credentials = SshCredentials::new(
-            PathBuf::from("/path/to/key"),
-            PathBuf::from("/path/to/key.pub"),
-            Username::new("testuser").unwrap(),
-        );
         let ssh_config = SshConfig::with_default_port(credentials, host_ip);
+
+        // Act
         let ssh_client = SshClient::new(ssh_config);
 
-        assert_eq!(
-            ssh_client.ssh_config.ssh_priv_key_path().to_string_lossy(),
-            "/path/to/key"
-        );
+        // Assert
+        assert!(ssh_client.ssh_config.ssh_priv_key_path().exists());
+        assert!(ssh_client.ssh_config.ssh_pub_key_path().exists());
         assert_eq!(ssh_client.ssh_config.ssh_username(), "testuser");
         assert_eq!(ssh_client.ssh_config.host_ip(), host_ip);
         // Note: logging is now handled by the tracing crate via CommandExecutor
+
+        // TempDir automatically cleans up when dropped
     }
 
     #[test]
     fn it_should_detect_ssh_warnings_in_stderr() {
+        // Arrange
+        let (_temp_dir, credentials) = create_test_ssh_credentials();
         let host_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let credentials = SshCredentials::new(
-            PathBuf::from("/path/to/key"),
-            PathBuf::from("/path/to/key.pub"),
-            Username::new("testuser").unwrap(),
-        );
         let ssh_config = SshConfig::with_default_port(credentials, host_ip);
         let ssh_client = SshClient::new(ssh_config);
 
@@ -394,5 +425,7 @@ mod tests {
 
         // Test empty stderr
         ssh_client.process_ssh_warnings("");
+
+        // TempDir automatically cleans up when dropped
     }
 }
