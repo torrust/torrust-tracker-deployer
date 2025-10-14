@@ -24,23 +24,23 @@ This refactoring plan addresses code quality, maintainability, readability, test
 
 ## 📊 Progress Tracking
 
-**Total Active Proposals**: 9
+**Total Active Proposals**: 8
 **Total Postponed**: 0
-**Total Discarded**: 0
+**Total Discarded**: 1
 **Completed**: 3
 **In Progress**: 0
-**Not Started**: 6
+**Not Started**: 5
 
 ### Phase Summary
 
 - **Phase 0 - Configuration Magic Numbers (High Impact, Low Effort)**: ✅ **3/3 completed (100%)** 🎉
-- **Phase 1 - Test Quality Improvements (High Impact, Low Effort)**: ⏳ 0/2 completed (0%)
+- **Phase 1 - Test Quality Improvements (High Impact, Low Effort)**: ⏳ 0/1 completed (0%) _(1 discarded)_
 - **Phase 2 - Code Organization and Duplication (Medium Impact, Medium Effort)**: ⏳ 0/3 completed (0%)
 - **Phase 3 - Advanced Improvements (Medium Impact, Medium Effort)**: ⏳ 0/1 completed (0%)
 
 ### Discarded Proposals
 
-None yet.
+- **Proposal #1.1**: Add Assertions to SSH Warning Detection Test - Testing tracing output is too complex due to global state issues
 
 ### Postponed Proposals
 
@@ -683,10 +683,12 @@ Improve test code to be more maintainable, readable, and actually verify behavio
 
 ### Proposal #1.1: Add Assertions to SSH Warning Detection Test
 
-**Status**: ⏳ Not Started  
+**Status**: ❌ **DISCARDED** (Oct 14, 2025)  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0
+
+**Reason for Discarding**: Testing tracing output is very hard because tracing uses global state. Experience from other projects shows this approach doesn't work well. The current test already verifies the important behavior: that the method correctly recognizes warning lines in SSH command output without panicking. Adding assertions for tracing output would add complexity and fragility without sufficient benefit.
 
 #### Problem
 
