@@ -1,7 +1,6 @@
 //! Real SSH server container using Docker
 
 use std::net::{IpAddr, Ipv4Addr};
-use std::process::Command;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
     runners::AsyncRunner,
@@ -10,6 +9,7 @@ use testcontainers::{
 
 use super::config::SshServerConfig;
 use super::error::SshServerError;
+use crate::shared::docker::DockerClient;
 
 /// Real SSH server container using Docker
 ///
@@ -64,34 +64,16 @@ impl RealSshServerContainer {
             dockerfile_dir.display()
         );
 
-        let image_tag = format!("{}:{}", config.image_name, config.image_tag);
-
-        let dockerfile_dir_str =
-            dockerfile_dir
-                .to_str()
-                .ok_or_else(|| SshServerError::InvalidUtf8InPath {
-                    path: dockerfile_dir.display().to_string(),
-                })?;
-
-        let build_output = Command::new("docker")
-            .args(["build", "-t", &image_tag, dockerfile_dir_str])
-            .output()
-            .map_err(|source| SshServerError::DockerCommandFailed {
-                command: format!("docker build -t {image_tag} {dockerfile_dir_str}"),
-                source,
+        let docker_client = DockerClient::new();
+        docker_client
+            .build_image(
+                &config.dockerfile_dir,
+                &config.image_name,
+                &config.image_tag,
+            )
+            .map_err(|source| SshServerError::DockerClientError {
+                source: Box::new(source),
             })?;
-
-        if !build_output.status.success() {
-            let stderr = String::from_utf8_lossy(&build_output.stderr).to_string();
-            let stdout = String::from_utf8_lossy(&build_output.stdout).to_string();
-            return Err(SshServerError::DockerBuildFailed {
-                image_name: config.image_name.clone(),
-                image_tag: config.image_tag.clone(),
-                dockerfile_dir: dockerfile_dir_str.to_string(),
-                stdout,
-                stderr,
-            });
-        }
 
         println!("SSH server Docker image built successfully");
 

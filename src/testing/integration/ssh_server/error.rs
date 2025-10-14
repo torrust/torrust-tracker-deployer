@@ -3,6 +3,8 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
+use crate::shared::docker::DockerError;
+
 /// Errors that can occur when working with SSH server containers
 #[derive(Debug, Error)]
 pub enum SshServerError {
@@ -61,6 +63,16 @@ Tip: Verify Docker is installed and accessible: 'docker --version'"
 Tip: Avoid non-ASCII characters in file paths"
     )]
     InvalidUtf8InPath { path: String },
+
+    /// Docker client operation failed
+    #[error(
+        "Docker client operation failed
+Tip: Check Docker daemon status with 'docker ps'"
+    )]
+    DockerClientError {
+        #[source]
+        source: Box<DockerError>,
+    },
 }
 
 impl SshServerError {
@@ -189,6 +201,27 @@ For more information, see Docker installation documentation."
 3. Use ASCII characters for file and directory names
 
 This is typically a configuration or system encoding issue."
+            }
+
+            Self::DockerClientError { .. } => {
+                "Docker Client Operation Failed - Detailed Troubleshooting:
+
+1. Verify Docker daemon is running:
+   docker ps
+
+2. Check Docker system status:
+   docker info
+
+3. Review Docker logs:
+   journalctl -u docker  # Linux systemd
+   docker system events  # Real-time events
+
+4. Verify user permissions:
+   groups  # Check if user is in 'docker' group
+   sudo usermod -aG docker $USER  # Add user to docker group
+   # Log out and log back in for group changes to take effect
+
+For more information, see the source error details and Docker documentation."
             }
         }
     }
