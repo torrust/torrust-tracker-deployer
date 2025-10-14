@@ -6,6 +6,7 @@
 
 pub mod clock;
 pub mod command;
+pub mod docker;
 pub mod error;
 pub mod port_checker;
 pub mod ssh;
