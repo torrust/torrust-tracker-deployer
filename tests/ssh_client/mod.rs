@@ -13,7 +13,9 @@ use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use torrust_tracker_deployer_lib::shared::ssh::{SshClient, SshConfig, SshCredentials};
+use torrust_tracker_deployer_lib::shared::ssh::{
+    SshClient, SshConfig, SshConnectionConfig, SshCredentials,
+};
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::integration::ssh_server::{
     MockSshServerContainer, RealSshServerContainer,
@@ -127,58 +129,6 @@ impl Default for SshTestBuilder {
 // SSH CONNECTIVITY HELPERS
 // =============================================================================
 
-/// Result of a connectivity test with retry logic
-#[derive(Debug, Clone)]
-pub struct ConnectivityTestResult {
-    pub succeeded: bool,
-    pub duration: Duration,
-    pub error: Option<String>,
-}
-
-impl ConnectivityTestResult {
-    /// Create a new connectivity test result
-    pub fn new(succeeded: bool, duration: Duration, error: Option<String>) -> Self {
-        Self {
-            succeeded,
-            duration,
-            error,
-        }
-    }
-}
-
-/// Test connectivity with retry logic for CI environments
-///
-/// This helper function implements retry logic for connectivity testing,
-/// which is useful in CI environments where network operations might
-/// be unreliable or containers might need time to fully start.
-pub async fn test_connectivity_with_retry(
-    client: &SshClient,
-    max_attempts: u32,
-    retry_delay: Duration,
-) -> ConnectivityTestResult {
-    let start_time = Instant::now();
-    let mut last_error = None;
-
-    for attempt in 0..max_attempts {
-        match client.test_connectivity() {
-            Ok(true) => {
-                return ConnectivityTestResult::new(true, start_time.elapsed(), None);
-            }
-            Ok(false) => {
-                if attempt < max_attempts - 1 {
-                    tokio::time::sleep(retry_delay).await;
-                }
-            }
-            Err(e) => {
-                last_error = Some(e.to_string());
-                break;
-            }
-        }
-    }
-
-    ConnectivityTestResult::new(false, start_time.elapsed(), last_error)
-}
-
 /// Assert connectivity fails quickly (for unreachable hosts and mock servers)
 ///
 /// This helper verifies that SSH connectivity attempts fail within a reasonable
@@ -205,20 +155,37 @@ pub fn assert_connectivity_fails_quickly(client: &SshClient, max_seconds: u64) {
 ///
 /// This helper verifies that SSH connectivity eventually succeeds for real servers,
 /// accounting for container startup time and SSH service initialization.
+///
+/// This function leverages the SSH client's built-in `wait_for_connectivity` method
+/// with test-specific retry configuration, eliminating duplication of retry logic.
 pub async fn assert_connectivity_succeeds_eventually(client: &SshClient, max_seconds: u64) {
-    let retry_delay = Duration::from_millis(500);
-    let max_attempts = u64::try_from(u128::from(max_seconds * 1000) / retry_delay.as_millis())
-        .expect("max_attempts should fit in u64");
-    let result = test_connectivity_with_retry(
-        client,
-        u32::try_from(max_attempts).expect("max_attempts should fit in u32"),
-        retry_delay,
-    )
-    .await;
+    // Create a test client with custom retry configuration
+    // Using 1-second intervals to balance test speed with reliability
+    let retry_interval_secs = 1;
+    let max_attempts = u32::try_from(max_seconds / u64::from(retry_interval_secs))
+        .expect("max_attempts should fit in u32");
+
+    // Create custom connection config optimized for tests
+    let connection_config = SshConnectionConfig::new(
+        1, // Short connection timeout for tests
+        max_attempts,
+        retry_interval_secs,
+        2, // Log every 2 attempts for test visibility
+    );
+
+    // Build a new client with the custom retry configuration
+    let test_client = SshClient::new(SshConfig::with_connection_config(
+        client.ssh_config().credentials.clone(),
+        client.ssh_config().socket_addr,
+        connection_config,
+    ));
+
+    // Use the built-in wait_for_connectivity method
+    let result = test_client.wait_for_connectivity().await;
 
     assert!(
-        result.succeeded,
-        "Expected connectivity to succeed eventually. Duration: {:?}, Error: {:?}",
-        result.duration, result.error
+        result.is_ok(),
+        "Expected connectivity to succeed eventually within {max_seconds}s, but got error: {:?}",
+        result.err()
     );
 }
