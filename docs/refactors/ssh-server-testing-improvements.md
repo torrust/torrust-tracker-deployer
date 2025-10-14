@@ -24,12 +24,12 @@ This refactoring addresses code quality, maintainability, and testability issues
 
 ## 📊 Progress Tracking
 
-**Total Active Proposals**: 10
+**Total Active Proposals**: 15
 **Total Postponed**: 3
 **Total Rejected**: 1
 **Completed**: 9
 **In Progress**: 0
-**Not Started**: 0
+**Not Started**: 5
 
 ### Phase Summary
 
@@ -47,6 +47,12 @@ This refactoring addresses code quality, maintainability, and testability issues
 - **Phase 2 - Enhanced Testing (Medium Impact, Medium Effort)**: ✅ 1/1 completed (100%)
   - ✅ #9: Add Tests for Error Scenarios
   - ❌ #10: Implement Cleanup Methods (Rejected - redundant with testcontainers Drop)
+- **Phase 3 - Dependency Injection & Reusability (High Impact, Low-Medium Effort)**: ⏳ 0/5 completed (0%)
+  - ⏳ #11: Inject DockerClient into DockerDebugInfo
+  - ⏳ #12: Make Mock SSH Port Configurable
+  - ⏳ #13: Extract Port-Checking Logic to Separate Module
+  - ⏳ #14: Remove Direct Constant Usage in debug.rs
+  - ⏳ #15: Remove Container Port Field from Config
 
 ### Postponed Proposals
 
@@ -1840,6 +1846,569 @@ This proposal was actually implemented in Proposal #0. The module structure reor
 
 ---
 
+## Phase 3: Dependency Injection & Reusability
+
+### Proposal #11: Inject DockerClient into DockerDebugInfo
+
+**Status**: ⏳ Not Started  
+**Impact**: 🟢🟢🟢 High  
+**Effort**: 🔵 Low  
+**Priority**: P0
+
+#### Problem
+
+The `DockerDebugInfo` module directly executes Docker commands using `std::process::Command`, duplicating functionality already available in our `DockerClient`. This violates DRY and misses an opportunity to reuse tested infrastructure.
+
+**Issues:**
+
+- Duplicates Docker command execution logic
+- Not using our tested `DockerClient` infrastructure
+- Harder to test (requires mocking `Command`)
+- Inconsistent with project patterns (we use clients for external tools)
+
+#### Proposed Solution
+
+Refactor `DockerDebugInfo` to store `DockerClient` as a field and use it in all methods:
+
+```rust
+use crate::shared::docker::DockerClient;
+use std::sync::Arc;
+
+pub struct DockerDebugInfo {
+    docker: Arc<DockerClient>,
+    pub all_containers: Result<String, String>,
+    pub ssh_images: Result<String, String>,
+    pub ssh_containers: Result<Vec<ContainerInfo>, String>,
+    pub port_usage: Result<Vec<String>, String>,
+}
+
+impl DockerDebugInfo {
+    /// Collect Docker debug information using the provided Docker client
+    ///
+    /// # Arguments
+    ///
+    /// * `docker` - Docker client for executing commands
+    /// * `container_port` - The host port mapped to SSH
+    /// * `image_name` - Image name to filter by (e.g., "torrust-ssh-server")
+    /// * `image_tag` - Image tag to filter by (e.g., "latest")
+    pub fn new(
+        docker: Arc<DockerClient>,
+        container_port: u16,
+        image_name: &str,
+        image_tag: &str,
+    ) -> Self {
+        let mut debug_info = Self {
+            docker: docker.clone(),
+            all_containers: Ok(String::new()),
+            ssh_images: Ok(String::new()),
+            ssh_containers: Ok(Vec::new()),
+            port_usage: Ok(Vec::new()),
+        };
+
+        // Collect all debug information
+        debug_info.all_containers = debug_info.list_all_containers();
+        debug_info.ssh_images = debug_info.list_ssh_images(image_name);
+        debug_info.ssh_containers = debug_info.find_ssh_containers(image_name, image_tag);
+        debug_info.port_usage = Self::check_port_usage(container_port);
+
+        debug_info
+    }
+
+    fn list_all_containers(&self) -> Result<String, String> {
+        self.docker
+            .list_containers(true) // all=true
+            .map(|lines| lines.join("\n"))
+            .map_err(|e| format!("Failed to list containers: {e}"))
+    }
+
+    fn list_ssh_images(&self, image_name: &str) -> Result<String, String> {
+        self.docker
+            .list_images(Some(image_name))
+            .map(|lines| lines.join("\n"))
+            .map_err(|e| format!("Failed to list images: {e}"))
+    }
+
+    fn find_ssh_containers(
+        &self,
+        image_name: &str,
+        image_tag: &str,
+    ) -> Result<Vec<ContainerInfo>, String> {
+        // Use docker client to list and filter containers
+        let filter = format!("ancestor={}:{}", image_name, image_tag);
+        self.docker
+            .list_containers(true)
+            .map(|lines| {
+                lines
+                    .into_iter()
+                    .map(|line| {
+                        let parts: Vec<&str> = line.split('|').collect();
+                        let id = parts.first().unwrap_or(&"unknown");
+                        ContainerInfo {
+                            id: id.to_string(),
+                            status: line.clone(),
+                            logs: self.get_container_logs(id),
+                        }
+                    })
+                    .collect()
+            })
+            .map_err(|e| format!("Failed to filter containers: {e}"))
+    }
+
+    fn get_container_logs(&self, container_id: &str) -> Result<String, String> {
+        self.docker
+            .get_container_logs(container_id)
+            .map_err(|e| format!("Failed to get logs: {e}"))
+    }
+
+    // Port checking remains static (doesn't use Docker)
+    fn check_port_usage(port: u16) -> Result<Vec<String>, String> {
+        // Existing port checking logic (netstat/ss)
+        // This will be moved to PortChecker in Proposal #13
+    }
+}
+
+// Convenience function maintains backward compatibility
+pub fn print_docker_debug_info(container_port: u16) {
+    let docker = Arc::new(DockerClient::new());
+    let debug_info = DockerDebugInfo::new(
+        docker,
+        container_port,
+        SSH_SERVER_IMAGE_NAME,
+        SSH_SERVER_IMAGE_TAG,
+    );
+    debug_info.print();
+}
+```
+
+#### Rationale
+
+- **Reuses Existing Infrastructure**: Leverages tested `DockerClient` instead of duplicating logic
+- **Dependency Injection**: Makes `DockerDebugInfo` testable with mock clients
+- **Consistency**: Follows project pattern of using clients for external tools
+- **Parameters Instead of Constants**: Image name and tag can be injected, not hardcoded
+
+#### Benefits
+
+- ✅ Eliminates code duplication
+- ✅ Makes `DockerDebugInfo` fully testable with mock Docker client
+- ✅ Consistent with project patterns (Ansible, OpenTofu, LXD clients)
+- ✅ Single source of truth for Docker operations
+- ✅ Removes tight coupling to constants (image name/tag are parameters)
+
+#### Implementation Checklist
+
+- [ ] Add `docker: Arc<DockerClient>` field to `DockerDebugInfo` struct
+- [ ] Rename `collect()` to `new()` constructor that accepts Docker client
+- [ ] Add `image_name` and `image_tag` parameters to `new()`
+- [ ] Update all methods to use `self.docker` instead of static methods
+- [ ] Replace all `Command::new("docker")` calls with `self.docker` method calls
+- [ ] Update `list_all_containers()` to use `self.docker.list_containers(true)`
+- [ ] Update `list_ssh_images()` to use `self.docker.list_images()`
+- [ ] Update `find_ssh_containers()` to use `self.docker.list_containers()` with filtering
+- [ ] Update `get_container_logs()` to use `self.docker.get_container_logs()`
+- [ ] Update `print_docker_debug_info()` convenience function to create client and pass to constructor
+- [ ] Remove direct `use std::process::Command` dependency
+- [ ] Remove direct constants usage (SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG) from convenience function
+- [ ] Add unit tests with mock `DockerClient`
+- [ ] Verify all tests pass
+- [ ] Run linter and fix any issues
+
+---
+
+### Proposal #12: Make Mock SSH Port Configurable
+
+**Status**: ⏳ Not Started  
+**Impact**: 🟢🟢🟢 High  
+**Effort**: 🔵 Low  
+**Priority**: P0
+
+#### Problem
+
+`MockSshServerContainer` hardcodes the SSH port using `MOCK_SSH_PORT` constant (2222), making it impossible to test with different port configurations without modifying constants.
+
+**Issues:**
+
+- Cannot test with custom mock ports
+- Configuration is ignored for port
+- Inconsistent: real container uses dynamic ports, mock uses fixed port
+- Violates principle: constants should only be default values
+
+#### Proposed Solution
+
+Use the port from configuration, only falling back to constant for `Default`:
+
+```rust
+impl MockSshServerContainer {
+    /// Create mock with custom configuration
+    pub fn start_with_config(config: SshServerConfig) -> Result<Self, SshServerError> {
+        Ok(Self {
+            ssh_port: config.mock_port, // Use configured port
+            config,
+            host_ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
+        })
+    }
+
+    /// Create mock with default configuration (uses MOCK_SSH_PORT=2222)
+    pub fn start() -> Result<Self, SshServerError> {
+        Self::start_with_config(SshServerConfig::default())
+    }
+}
+
+// In SshServerConfig:
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SshServerConfig {
+    // ... existing fields
+
+    /// Port to use for mock container (default: 2222)
+    pub mock_port: u16,
+}
+
+impl Default for SshServerConfig {
+    fn default() -> Self {
+        Self {
+            // ... existing fields
+            mock_port: MOCK_SSH_PORT,  // Constant only used here
+        }
+    }
+}
+
+// Builder support
+impl SshServerConfigBuilder {
+    pub fn mock_port(mut self, port: u16) -> Self {
+        self.mock_port = Some(port);
+        self
+    }
+}
+```
+
+#### Rationale
+
+- **Flexible Testing**: Enables testing with different mock ports
+- **Consistent Pattern**: Configuration drives behavior, constants are defaults
+- **Backward Compatible**: Default behavior unchanged
+- **Single Responsibility**: Constants are only for defaults, not business logic
+
+#### Benefits
+
+- ✅ Mock containers can use any port
+- ✅ Enables testing port conflict scenarios
+- ✅ Constants only used as defaults (proper separation)
+- ✅ Backward compatible with existing code
+- ✅ Consistent with configuration-driven design
+
+#### Implementation Checklist
+
+- [ ] Add `mock_port: u16` field to `SshServerConfig`
+- [ ] Set `mock_port: MOCK_SSH_PORT` in `SshServerConfig::default()`
+- [ ] Add `mock_port()` method to `SshServerConfigBuilder`
+- [ ] Update `MockSshServerContainer::start_with_config()` to use `config.mock_port`
+- [ ] Add test with custom mock port
+- [ ] Verify all tests pass
+- [ ] Run linter and fix any issues
+
+---
+
+### Proposal #13: Extract Port-Checking Logic to Separate Module
+
+**Status**: ⏳ Not Started  
+**Impact**: 🟢🟢 Medium  
+**Effort**: 🔵 Low  
+**Priority**: P0
+
+#### Problem
+
+Port-checking logic in `DockerDebugInfo` is useful functionality but buried in debug code. It could be reused elsewhere (e.g., in port health checks, pre-flight validation).
+
+**Issues:**
+
+- Useful utility buried in debug-specific code
+- Cannot be reused in other contexts
+- Mixing concerns: debug info + port checking
+
+#### Proposed Solution
+
+Extract port-checking to a reusable utility module:
+
+```rust
+// src/shared/port_checker.rs (or src/testing/port_checker.rs)
+
+/// Check which process is using a specific port
+pub struct PortChecker;
+
+impl PortChecker {
+    /// Check if a port is in use and by what process
+    ///
+    /// Tries `netstat` first, falls back to `ss` on systems without netstat.
+    pub fn check_port(port: u16) -> Result<Vec<String>, PortCheckError> {
+        Self::check_with_netstat(port)
+            .or_else(|_| Self::check_with_ss(port))
+    }
+
+    fn check_with_netstat(port: u16) -> Result<Vec<String>, PortCheckError> {
+        // Implementation
+    }
+
+    fn check_with_ss(port: u16) -> Result<Vec<String>, PortCheckError> {
+        // Implementation
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum PortCheckError {
+    #[error("Command execution failed: {command}")]
+    CommandFailed {
+        command: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("Port {port} not in use")]
+    PortNotInUse { port: u16 },
+}
+```
+
+Then use in `DockerDebugInfo`:
+
+```rust
+use crate::shared::port_checker::PortChecker;
+
+impl DockerDebugInfo {
+    fn check_port_usage(port: u16) -> Result<Vec<String>, String> {
+        PortChecker::check_port(port)
+            .map_err(|e| format!("Port check failed: {e}"))
+    }
+}
+```
+
+#### Rationale
+
+- **Reusability**: Port checking logic can be used elsewhere
+- **Separation of Concerns**: Debug info focuses on Docker, port checking is separate
+- **Testability**: `PortChecker` can be tested independently
+- **Proper Error Types**: Custom error type instead of String
+
+#### Benefits
+
+- ✅ Reusable port-checking utility
+- ✅ Better separation of concerns
+- ✅ Independently testable
+- ✅ Proper error types with context
+
+#### Implementation Checklist
+
+- [ ] Create `src/shared/port_checker.rs` module
+- [ ] Define `PortChecker` struct with static methods
+- [ ] Define `PortCheckError` enum with thiserror
+- [ ] Move `check_port_with_netstat()` logic
+- [ ] Move `check_port_with_ss()` logic
+- [ ] Update `DockerDebugInfo` to use `PortChecker`
+- [ ] Add unit tests for `PortChecker`
+- [ ] Add documentation and examples
+- [ ] Verify all tests pass
+- [ ] Run linter and fix any issues
+
+---
+
+### Proposal #14: Remove Direct Constant Usage in debug.rs
+
+**Status**: ⏳ Not Started  
+**Impact**: 🟢🟢 Medium  
+**Effort**: 🔵🔵 Medium  
+**Priority**: P1  
+**Depends On**: Proposal #11 (DockerClient injection)
+
+#### Problem
+
+After implementing Proposal #11, `debug.rs` still directly uses `SSH_SERVER_IMAGE_NAME` and `SSH_SERVER_IMAGE_TAG` constants in the `print()` method, creating tight coupling to specific constants.
+
+**Issues:**
+
+- Tight coupling to specific constants
+- Cannot debug different images
+- Inconsistent: `collect()` accepts parameters but `print()` uses constants
+
+#### Proposed Solution
+
+Store image information in `DockerDebugInfo` struct (this builds on Proposal #11 which stores DockerClient as a field):
+
+```rust
+use std::sync::Arc;
+use crate::shared::docker::DockerClient;
+
+pub struct DockerDebugInfo {
+    docker: Arc<DockerClient>,
+    pub all_containers: Result<String, String>,
+    pub ssh_images: Result<String, String>,
+    pub ssh_containers: Result<Vec<ContainerInfo>, String>,
+    pub port_usage: Result<Vec<String>, String>,
+
+    // New: Store the image information we collected for
+    pub image_name: String,
+    pub image_tag: String,
+}
+
+impl DockerDebugInfo {
+    pub fn new(
+        docker: Arc<DockerClient>,
+        container_port: u16,
+        image_name: &str,
+        image_tag: &str,
+    ) -> Self {
+        let mut debug_info = Self {
+            docker: docker.clone(),
+            all_containers: Ok(String::new()),
+            ssh_images: Ok(String::new()),
+            ssh_containers: Ok(Vec::new()),
+            port_usage: Ok(Vec::new()),
+            image_name: image_name.to_string(),
+            image_tag: image_tag.to_string(),
+        };
+
+        // Collect all debug information
+        debug_info.all_containers = debug_info.list_all_containers();
+        debug_info.ssh_images = debug_info.list_ssh_images(&debug_info.image_name.clone());
+        debug_info.ssh_containers = debug_info.find_ssh_containers(
+            &debug_info.image_name.clone(),
+            &debug_info.image_tag.clone()
+        );
+        debug_info.port_usage = Self::check_port_usage(container_port);
+
+        debug_info
+    }
+
+    pub fn print(&self) {
+        println!("\n=== Docker Debug Information ===");
+        // ... existing code ...
+
+        match &self.ssh_images {
+            Ok(images) => {
+                println!("\nDocker images for {}:", self.image_name);
+                println!("{images}");
+            }
+            // ...
+        }
+
+        match &self.ssh_containers {
+            Ok(containers) => {
+                println!("\nContainers using {}:{}:", self.image_name, self.image_tag);
+                // ...
+            }
+            // ...
+        }
+    }
+}
+```
+
+#### Rationale
+
+- **Consistency**: Debug info knows what it collected for
+- **Flexibility**: Can debug any image, not just SSH server
+- **No Constants**: Removes last direct constant usage from debug.rs
+- **Self-Documenting**: The struct contains its context
+
+#### Benefits
+
+- ✅ Removes all constant dependencies from debug.rs
+- ✅ Debug info is self-contained
+- ✅ Can be used for any Docker image
+- ✅ More flexible and reusable
+
+#### Implementation Checklist
+
+- [ ] Add `image_name: String` field to `DockerDebugInfo`
+- [ ] Add `image_tag: String` field to `DockerDebugInfo`
+- [ ] Update `collect()` to store image info
+- [ ] Update `print()` to use `self.image_name` and `self.image_tag`
+- [ ] Remove `use super::constants` from debug.rs
+- [ ] Update tests to verify image info is stored correctly
+- [ ] Verify all tests pass
+- [ ] Run linter and fix any issues
+
+---
+
+### Proposal #15: Remove Container Port Field from Config
+
+**Status**: ⏳ Not Started  
+**Impact**: 🟢 Low  
+**Effort**: 🔵🔵 Medium  
+**Priority**: P2
+
+#### Problem
+
+The `SshServerConfig` has a `container_port` field, but changing it doesn't work correctly with testcontainers, and the purpose is unclear. Is it meant to change the internal container port (22) or something else? This field is misleading and doesn't actually control container behavior.
+
+**Issues:**
+
+- Unclear purpose of `container_port` config field
+- Doesn't actually change container behavior
+- Testcontainers manages port mapping automatically
+- Misleading configuration that confuses users
+
+#### Proposed Solution
+
+Remove the field from `SshServerConfig` since it doesn't serve a meaningful purpose:
+
+```rust
+// Remove the container_port field:
+pub struct SshServerConfig {
+    pub image_name: String,
+    pub image_tag: String,
+    // REMOVED: pub container_port: u16,  // Not actually configurable
+    pub username: String,
+    pub password: String,
+    pub startup_wait_secs: u64,
+    pub dockerfile_dir: PathBuf,
+    pub mock_port: u16,  // Only mock needs configurable port
+}
+
+impl Default for SshServerConfig {
+    fn default() -> Self {
+        Self {
+            image_name: SSH_SERVER_IMAGE_NAME.to_string(),
+            image_tag: SSH_SERVER_IMAGE_TAG.to_string(),
+            // REMOVED: container_port: SSH_CONTAINER_PORT,
+            username: DEFAULT_TEST_USERNAME.to_string(),
+            password: DEFAULT_TEST_PASSWORD.to_string(),
+            startup_wait_secs: CONTAINER_STARTUP_WAIT_SECS,
+            dockerfile_dir: PathBuf::from(DOCKERFILE_DIR),
+            mock_port: MOCK_SSH_PORT,
+        }
+    }
+}
+
+// Also remove from builder:
+impl SshServerConfigBuilder {
+    // REMOVED: container_port() method
+}
+```
+
+#### Rationale
+
+- **Clarity**: Only expose configuration that actually works
+- **Simplicity**: Remove misleading or non-functional config
+- **Maintainability**: Less to explain and maintain
+- **Honesty**: Don't pretend we can configure things we can't
+
+#### Benefits
+
+- ✅ Clearer configuration surface
+- ✅ Removes potential confusion
+- ✅ Simpler config struct
+- ✅ No false promises about configurability
+
+#### Implementation Checklist
+
+- [ ] Remove `container_port` field from `SshServerConfig`
+- [ ] Remove `container_port` from `Default` impl
+- [ ] Remove `container_port()` method from `SshServerConfigBuilder`
+- [ ] Update all code that references `config.container_port`
+- [ ] Update documentation
+- [ ] Update tests to not reference container_port
+- [ ] Verify all tests pass
+- [ ] Run linter and fix any issues
+
+---
+
 **Created**: 2025-10-13  
-**Last Updated**: 2025-10-13  
-**Status**: 📋 Planning
+**Last Updated**: 2025-10-14  
+**Status**: � In Progress - Phase 3
