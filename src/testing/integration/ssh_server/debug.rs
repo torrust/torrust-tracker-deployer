@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use crate::shared::docker::DockerClient;
 
+// Import constants only for the convenience function
 use super::constants::{SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG};
 
 // ============================================================================
@@ -32,6 +33,12 @@ pub struct DockerDebugInfo {
 
     /// Port usage information for the SSH port
     pub port_usage: Result<Vec<String>, String>,
+
+    /// Docker image name that was searched for
+    image_name: String,
+
+    /// Docker image tag that was searched for
+    image_tag: String,
 }
 
 /// Information about a specific Docker container
@@ -87,7 +94,7 @@ impl DockerDebugInfo {
         docker: Arc<DockerClient>,
         container_port: u16,
         image_name: &str,
-        _image_tag: &str, // TODO: Use in Proposal #14 to store as field
+        image_tag: &str,
     ) -> Self {
         let mut instance = Self {
             docker,
@@ -95,11 +102,13 @@ impl DockerDebugInfo {
             ssh_images: Ok(String::new()),
             ssh_containers: Ok(Vec::new()),
             port_usage: Ok(Vec::new()),
+            image_name: image_name.to_string(),
+            image_tag: image_tag.to_string(),
         };
 
         // Collect debug information using instance methods
         instance.all_containers = instance.list_all_containers();
-        instance.ssh_images = instance.list_ssh_images(image_name);
+        instance.ssh_images = instance.list_ssh_images(&instance.image_name.clone());
         instance.ssh_containers = instance.find_ssh_containers();
         instance.port_usage = Self::check_port_usage(container_port);
 
@@ -258,7 +267,7 @@ impl DockerDebugInfo {
     fn print_ssh_images(&self) {
         match &self.ssh_images {
             Ok(images) => {
-                println!("\nDocker images for {SSH_SERVER_IMAGE_NAME}:");
+                println!("\nDocker images for {}:", self.image_name);
                 println!("{images}");
             }
             Err(e) => {
@@ -271,7 +280,7 @@ impl DockerDebugInfo {
     fn print_ssh_containers_and_logs(&self) {
         match &self.ssh_containers {
             Ok(containers) => {
-                let image_tag = format!("{SSH_SERVER_IMAGE_NAME}:{SSH_SERVER_IMAGE_TAG}");
+                let image_tag = format!("{}:{}", self.image_name, self.image_tag);
                 println!("\nContainers using {image_tag}:");
 
                 if containers.is_empty() {

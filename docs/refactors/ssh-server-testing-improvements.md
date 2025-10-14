@@ -27,9 +27,9 @@ This refactoring addresses code quality, maintainability, and testability issues
 **Total Active Proposals**: 15
 **Total Postponed**: 3
 **Total Rejected**: 1
-**Completed**: 10
+**Completed**: 11
 **In Progress**: 0
-**Not Started**: 4
+**Not Started**: 3
 
 ### Phase Summary
 
@@ -47,11 +47,11 @@ This refactoring addresses code quality, maintainability, and testability issues
 - **Phase 2 - Enhanced Testing (Medium Impact, Medium Effort)**: ✅ 1/1 completed (100%)
   - ✅ #9: Add Tests for Error Scenarios
   - ❌ #10: Implement Cleanup Methods (Rejected - redundant with testcontainers Drop)
-- **Phase 3 - Dependency Injection & Reusability (High Impact, Low-Medium Effort)**: ⏳ 2/5 completed (40%)
+- **Phase 3 - Dependency Injection & Reusability (High Impact, Low-Medium Effort)**: ⏳ 3/5 completed (60%)
   - ✅ #11: Inject DockerClient into DockerDebugInfo
   - ✅ #12: Make Mock SSH Port Configurable
   - ⏳ #13: Extract Port-Checking Logic to Separate Module
-  - ⏳ #14: Remove Direct Constant Usage in debug.rs
+  - ✅ #14: Remove Direct Constant Usage in debug.rs
   - ⏳ #15: Remove Container Port Field from Config
 
 ### Postponed Proposals
@@ -2257,7 +2257,7 @@ impl DockerDebugInfo {
 
 ### Proposal #14: Remove Direct Constant Usage in debug.rs
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (2025-10-14)  
 **Impact**: 🟢🟢 Medium  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P1  
@@ -2361,14 +2361,41 @@ impl DockerDebugInfo {
 
 #### Implementation Checklist
 
-- [ ] Add `image_name: String` field to `DockerDebugInfo`
-- [ ] Add `image_tag: String` field to `DockerDebugInfo`
-- [ ] Update `collect()` to store image info
-- [ ] Update `print()` to use `self.image_name` and `self.image_tag`
-- [ ] Remove `use super::constants` from debug.rs
-- [ ] Update tests to verify image info is stored correctly
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Add `image_name: String` field to `DockerDebugInfo`
+- [x] Add `image_tag: String` field to `DockerDebugInfo`
+- [x] Update `new()` to store image info (removed unused parameter comment)
+- [x] Update `print()` methods to use `self.image_name` and `self.image_tag`
+- [x] Keep `use super::constants` only for convenience function
+- [x] Update tests to verify image info is stored correctly
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
+
+#### Completion Notes
+
+Successfully removed direct constant usage from `DockerDebugInfo` implementation:
+
+- **Struct Changes**:
+
+  - Added `image_name: String` field
+  - Added `image_tag: String` field
+  - These fields store the image information passed to `new()`
+
+- **Constructor Changes**:
+
+  - Removed `_image_tag` unused parameter comment (now used)
+  - Store `image_name` and `image_tag` in the struct
+  - Pass stored image name to internal methods
+
+- **Print Method Changes**:
+
+  - `print_ssh_images()` now uses `self.image_name` instead of `SSH_SERVER_IMAGE_NAME`
+  - `print_ssh_containers_and_logs()` now uses `self.image_name` and `self.image_tag` instead of constants
+
+- **Import Changes**:
+  - Constants import kept only for the `print_docker_debug_info()` convenience function
+  - Added clarifying comment: "Import constants only for the convenience function"
+
+All 35 SSH server tests passing. The debug info struct is now self-contained and can be used to debug any Docker image, not just the SSH server.
 
 ---
 
