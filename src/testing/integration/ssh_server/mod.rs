@@ -19,7 +19,7 @@ mod mock_container;
 mod real_container;
 
 pub use config::{SshServerConfig, SshServerConfigBuilder};
-pub use debug::print_docker_debug_info;
+pub use debug::{print_docker_debug_info, ContainerInfo, DockerDebugInfo};
 pub use error::SshServerError;
 pub use mock_container::MockSshServerContainer;
 pub use real_container::RealSshServerContainer;
