@@ -18,12 +18,14 @@
 //!   - `template` - Template rendering delivery mechanisms (wrappers)
 //!
 //! ## Other Modules
+//! - `adapters` - External tool adapters (thin CLI wrappers)
 //! - `config` - Configuration management for deployment environments
 //! - `container` - Service container for dependency injection
 //! - `logging` - Logging configuration and utilities
 //! - `shared` - Shared modules used across different layers
 //! - `testing` - Testing utilities (unit, integration, and end-to-end)
 
+pub mod adapters;
 pub mod application;
 pub mod config;
 pub mod container;
