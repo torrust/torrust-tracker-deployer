@@ -76,6 +76,50 @@ Add GitHub Actions workflow that tests:
 Closes #23"
 ```
 
+### ⚠️ Important: Hashtag Usage in Commit Messages
+
+**Only use the `#` character when intentionally referencing a GitHub issue.**
+
+GitHub automatically links any `#NUMBER` pattern in commit messages to the corresponding issue. This means:
+
+- ✅ **Correct**: `feat: [#42] add new feature` - Links to issue #42 (intentional)
+- ✅ **Correct**: `Closes #23` in commit body/footer - Links to issue #23 (intentional)
+- ❌ **Incorrect**: `fix: update config #1 priority` - Accidentally links to issue #1
+- ❌ **Incorrect**: `docs: add section #3 to guide` - Accidentally links to issue #3
+- ❌ **Incorrect**: `test: verify test case #5 works` - Accidentally links to issue #5
+
+**Common Mistakes to Avoid:**
+
+```bash
+# Bad: Accidentally links to issue #1
+git commit -m "fix: make feature #1 priority"
+
+# Good: Use alternative wording
+git commit -m "fix: make feature top priority"
+git commit -m "fix: make feature number one priority"
+
+# Bad: Accidentally links to issue #3
+git commit -m "docs: add section #3 about deployment"
+
+# Good: Use alternative formatting
+git commit -m "docs: add section 3 about deployment"
+git commit -m "docs: add third section about deployment"
+```
+
+**When you DO want to reference an issue:**
+
+```bash
+# Correct: Issue reference in standardized format
+git commit -m "feat: [#42] add new feature"
+
+# Correct: Issue reference in footer
+git commit -m "feat: add new feature
+
+Closes #42"
+```
+
+If you accidentally link a commit to an issue, you'll need to amend the commit message to remove the unintended `#NUMBER` pattern.
+
 ## ✅ Pre-commit Checklist
 
 Before committing any changes, you **MUST** run the pre-commit verification script:
