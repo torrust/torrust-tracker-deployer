@@ -1,23 +1,30 @@
-//! External Tools Integration
+//! External Tools Integration - Application-Specific Configuration
 //!
-//! This module contains integration adapters and delivery mechanisms for external
-//! third-party console tools used in the deployment infrastructure.
+//! This module contains application-specific configuration and template rendering
+//! for external CLI tools used in the deployment infrastructure.
 //!
-//! Each tool module contains all related functionality for that specific tool:
-//! - Adapter (command-line wrapper)
-//! - Template renderers and wrappers (for tools that use templates)
+//! ## Architecture Note
+//!
+//! **Generic CLI Adapters** (thin wrappers for external tools) have been moved to
+//! `crate::adapters`. This module now contains only **application-specific logic**
+//! such as template rendering and context management.
+//!
+//! - **`crate::adapters`**: Generic CLI tool wrappers (reusable across projects)
+//! - **This module**: Application-specific tool configuration and templates
 //!
 //! ## Components
 //!
-//! - `ansible` - Ansible configuration management tool
-//!   - `adapter` - Ansible command wrapper
-//!   - `template` - Template renderers and context wrappers
-//! - `lxd` - LXD container/VM management tool
-//!   - `adapter` - LXD command wrapper
-//! - `tofu` - `OpenTofu` infrastructure provisioning tool
-//!   - `adapter` - `OpenTofu` command wrapper
-//!   - `template` - Template renderers and context wrappers
+//! - `ansible` - Ansible configuration management integration
+//!   - `template` - Template renderers for Ansible inventory and playbooks
+//! - `tofu` - `OpenTofu` infrastructure provisioning integration
+//!   - `template` - Template renderers for `OpenTofu` configuration files
+//!
+//! ## Template Rendering
+//!
+//! Each tool module provides template renderers that:
+//! - Generate tool-specific configuration files from `.tera` templates
+//! - Manage template contexts with runtime values
+//! - Handle template validation and error reporting
 
 pub mod ansible;
-pub mod lxd;
 pub mod tofu;

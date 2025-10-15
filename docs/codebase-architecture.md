@@ -258,36 +258,36 @@ Steps are the core building blocks of deployment workflows, providing reusable, 
 
 ### Infrastructure Layer
 
-**External Tool Integration:**
+**External Tool Adapters:**
 
-Adapters for external deployment tools, handling command execution, output parsing, and error management.
+Generic CLI wrappers for external tools (moved from shared/ and infrastructure/):
 
-**Ansible Integration:**
+- ✅ `src/adapters/mod.rs` - Adapter module root with re-exports
+- ✅ `src/adapters/ansible/mod.rs` - Ansible CLI wrapper
+- ✅ `src/adapters/docker/` - Docker CLI wrapper
+- ✅ `src/adapters/lxd/` - LXD CLI wrapper (client, instance management, JSON parsing)
+- ✅ `src/adapters/ssh/` - SSH client wrapper
+- ✅ `src/adapters/tofu/` - OpenTofu CLI wrapper (client, JSON parsing)
+
+**External Tool Configuration (Application-Specific):**
+
+Application-specific template rendering and configuration for external tools:
+
+**Ansible Configuration:**
 
 - ✅ `src/infrastructure/external_tools/ansible/mod.rs` - Ansible integration root
-- ✅ `src/infrastructure/external_tools/ansible/adapter.rs` - Ansible client adapter
 - ✅ `src/infrastructure/external_tools/ansible/template/mod.rs` - Ansible templates
 - ✅ `src/infrastructure/external_tools/ansible/template/renderer/mod.rs` - Template rendering
 - ✅ `src/infrastructure/external_tools/ansible/template/renderer/inventory.rs` - Inventory rendering
 - ✅ `src/infrastructure/external_tools/ansible/template/wrappers/inventory/` - Inventory template wrappers
 
-**OpenTofu Integration:**
+**OpenTofu Configuration:**
 
 - ✅ `src/infrastructure/external_tools/tofu/mod.rs` - OpenTofu integration root
-- ✅ `src/infrastructure/external_tools/tofu/adapter/mod.rs` - OpenTofu adapter
-- ✅ `src/infrastructure/external_tools/tofu/adapter/client.rs` - OpenTofu client
-- ✅ `src/infrastructure/external_tools/tofu/adapter/json_parser.rs` - Parse OpenTofu output
 - ✅ `src/infrastructure/external_tools/tofu/template/mod.rs` - OpenTofu templates
 - ✅ `src/infrastructure/external_tools/tofu/template/renderer/mod.rs` - Template rendering
 - ✅ `src/infrastructure/external_tools/tofu/template/renderer/cloud_init.rs` - Cloud-init rendering
 - ✅ `src/infrastructure/external_tools/tofu/template/wrappers/lxd/` - LXD template wrappers
-
-**LXD Integration:**
-
-- ✅ `src/infrastructure/external_tools/lxd/mod.rs` - LXD integration root
-- ✅ `src/infrastructure/external_tools/lxd/adapter/mod.rs` - LXD adapter
-- ✅ `src/infrastructure/external_tools/lxd/adapter/client.rs` - LXD client
-- ✅ `src/infrastructure/external_tools/lxd/adapter/json_parser.rs` - Parse LXD output
 
 **Level 3: Remote System Operations:**
 
@@ -316,15 +316,17 @@ Adapters for external deployment tools, handling command execution, output parsi
 
 **Cross-Cutting Concerns:**
 
+Generic utilities used across all layers:
+
 - ✅ `src/shared/mod.rs` - Shared utilities root
-- ✅ `src/shared/command/mod.rs` - Command execution utilities
+- ✅ `src/shared/command/mod.rs` - Command execution utilities (used by all adapters)
+- ✅ `src/shared/clock.rs` - Time abstraction for deterministic testing
 - ✅ `src/shared/error/mod.rs` - Shared error types
 - ✅ `src/shared/port_checker.rs` - Network port checking
-- ✅ `src/shared/ssh/mod.rs` - SSH utilities
-- ✅ `src/shared/ssh/client.rs` - SSH client wrapper
-- ✅ `src/shared/ssh/public_key.rs` - SSH public key handling
-- ✅ `src/shared/ssh/service_checker.rs` - SSH service validation
+- ✅ `src/shared/port_usage_checker.rs` - Port usage validation
 - ✅ `src/shared/username.rs` - Username value object
+
+Note: SSH and Docker adapters have been moved to `src/adapters/`
 
 ### Testing Infrastructure
 
