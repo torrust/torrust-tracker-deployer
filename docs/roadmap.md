@@ -21,7 +21,9 @@ When starting work on a new feature:
 
 ### 1. Add scaffolding for main app
 
-- [ ] **1.1** Setup logging
+**Epic Issue**: [#2 - Scaffolding for main app](https://github.com/torrust/torrust-tracker-deployer/issues/2)
+
+- [ ] **1.1** Setup logging - [Issue #3](https://github.com/torrust/torrust-tracker-deployer/issues/3)
 - [ ] **1.2** Create command `torrust-tracker-deployer destroy` to destroy an environment
   - It will depend on the environment status. For example, if it has not been provisioned we only have to delete the persistent data.
   - For manual testing we can create envs with the E2E full test (there is an option to keep the infra after testing)
