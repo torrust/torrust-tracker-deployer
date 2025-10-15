@@ -107,43 +107,7 @@ cargo install --path .
 torrust-tracker-deployer
 ```
 
-#### 📊 Logging Configuration
-
-The application includes comprehensive logging for observability and troubleshooting:
-
-```bash
-# Default behavior (production) - logs to file only in compact format
-torrust-tracker-deployer
-
-# Development mode - show logs on stderr in real-time
-torrust-tracker-deployer --log-output file-and-stderr
-
-# Use pretty format for readability during development
-torrust-tracker-deployer --log-format pretty --log-output file-and-stderr
-
-# JSON format for production monitoring and log aggregation
-torrust-tracker-deployer --log-format json
-
-# Custom log directory
-torrust-tracker-deployer --log-dir /var/log/deployer
-
-# Control log level with RUST_LOG environment variable
-RUST_LOG=debug torrust-tracker-deployer --log-output file-and-stderr
-RUST_LOG=trace torrust-tracker-deployer --log-output file-and-stderr
-```
-
-**Log Format Options:**
-
-- `compact` (default) - Space-efficient, readable format for production
-- `pretty` - Detailed, formatted output for development
-- `json` - Machine-readable format for log aggregation systems
-
-**Log Output Modes:**
-
-- `file-only` (default) - Write logs to `./data/logs/log.txt` only (production mode)
-- `file-and-stderr` - Write logs to both file and stderr (development/testing mode)
-
-**[📖 See detailed logging documentation →](docs/user-guide/logging.md)**
+The application includes comprehensive logging with configurable format, output mode, and directory. See **[📖 Logging Guide](docs/user-guide/logging.md)** for details on logging configuration options.
 
 #### 🔧 Development Tasks
 
