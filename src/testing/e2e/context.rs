@@ -446,11 +446,7 @@ impl Drop for TestContext {
                     // Using emergency_destroy for consistent OpenTofu handling
                     let tofu_dir = self.config.build_dir.join(OPENTOFU_SUBFOLDER);
 
-                    if let Err(e) =
-                        crate::infrastructure::external_tools::tofu::adapter::emergency_destroy(
-                            &tofu_dir,
-                        )
-                    {
+                    if let Err(e) = crate::adapters::tofu::emergency_destroy(&tofu_dir) {
                         eprintln!("Warning: Failed to cleanup OpenTofu resources during TestContext drop: {e}");
                     }
                 }

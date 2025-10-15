@@ -322,7 +322,7 @@ mod tests {
 
     #[test]
     fn it_should_wrap_parse_error_in_opentofu_error() {
-        use crate::infrastructure::external_tools::tofu::adapter::json_parser::OpenTofuJsonParser;
+        use crate::adapters::tofu::json_parser::OpenTofuJsonParser;
 
         let invalid_json = "not valid json";
 

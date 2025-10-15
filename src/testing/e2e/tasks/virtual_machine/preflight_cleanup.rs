@@ -4,8 +4,8 @@
 //! for VM-based E2E testing using LXD and `OpenTofu`. It handles cleanup of
 //! infrastructure resources including `OpenTofu` state and LXD instances.
 
-use crate::infrastructure::external_tools::lxd::adapter::client::LxdClient;
-use crate::infrastructure::external_tools::tofu::adapter;
+use crate::adapters::lxd::client::LxdClient;
+use crate::adapters::tofu;
 use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 use crate::testing::e2e::context::TestContext;
 use crate::testing::e2e::tasks::preflight_cleanup::{
@@ -104,7 +104,7 @@ fn cleanup_opentofu_infrastructure(
     );
 
     // Use emergency_destroy which is designed to handle cases where resources may not exist
-    match adapter::emergency_destroy(&tofu_dir) {
+    match tofu::emergency_destroy(&tofu_dir) {
         Ok(()) => {
             info!(
                 operation = "opentofu_infrastructure_cleanup",

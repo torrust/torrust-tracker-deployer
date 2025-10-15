@@ -1,17 +1,16 @@
 //! Ansible integration for configuration management
 //!
 //! This module provides Ansible-specific functionality for the deployment system,
-//! including command-line wrapper and template rendering.
+//! including template rendering for Ansible configuration files.
 //!
 //! ## Components
 //!
-//! - `adapter` - Ansible command-line tool wrapper (`AnsibleClient`)
 //! - `template` - Template renderers and context wrappers for Ansible configuration files
+//!
+//! Note: The Ansible adapter (`AnsibleClient`) has been moved to `crate::adapters::ansible`
 
-pub mod adapter;
 pub mod template;
 
-pub use adapter::AnsibleClient;
 pub use template::{AnsibleTemplateRenderer, InventoryTemplateRenderer};
 
 /// Subdirectory name for Ansible-related files within the build directory.

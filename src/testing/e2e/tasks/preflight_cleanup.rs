@@ -6,7 +6,7 @@
 
 use std::fmt;
 
-use crate::infrastructure::external_tools::tofu::adapter::EmergencyDestroyError;
+use crate::adapters::tofu::EmergencyDestroyError;
 use crate::testing::e2e::context::TestContext;
 use tracing::{info, warn};
 

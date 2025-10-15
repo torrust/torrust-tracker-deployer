@@ -13,15 +13,15 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::adapters::ansible::AnsibleClient;
+use crate::adapters::lxd::LxdClient;
 use crate::adapters::ssh::SshCredentials;
+use crate::adapters::tofu::OpenTofuClient;
 use crate::config::Config;
 use crate::domain::template::TemplateManager;
 use crate::domain::{InstanceName, ProfileName};
-use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::ansible::ANSIBLE_SUBFOLDER;
-use crate::infrastructure::external_tools::lxd::adapter::LxdClient;
-use crate::infrastructure::external_tools::tofu::adapter::OpenTofuClient;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;

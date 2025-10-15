@@ -17,7 +17,9 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::adapters::ansible::AnsibleClient;
 use crate::adapters::ssh::{SshConfig, SshCredentials, SshError};
+use crate::adapters::tofu::client::{InstanceInfo, OpenTofuError};
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep,
@@ -31,9 +33,7 @@ use crate::domain::environment::state::{
 use crate::domain::environment::{Created, Environment, Provisioned, Provisioning, TraceId};
 #[allow(unused_imports)]
 use crate::domain::{InstanceName, ProfileName};
-use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
-use crate::infrastructure::external_tools::tofu::adapter::client::{InstanceInfo, OpenTofuError};
 use crate::infrastructure::external_tools::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 use crate::shared::command::CommandError;
 use crate::shared::error::Traceable;
@@ -137,8 +137,7 @@ pub struct ProvisionCommand {
     tofu_template_renderer: Arc<TofuTemplateRenderer>,
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
     ansible_client: Arc<AnsibleClient>,
-    opentofu_client:
-        Arc<crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient>,
+    opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
     clock: Arc<dyn crate::shared::Clock>,
     repository: Arc<dyn EnvironmentRepository>,
 }
@@ -150,9 +149,7 @@ impl ProvisionCommand {
         tofu_template_renderer: Arc<TofuTemplateRenderer>,
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
         ansible_client: Arc<AnsibleClient>,
-        opentofu_client: Arc<
-            crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient,
-        >,
+        opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
         clock: Arc<dyn crate::shared::Clock>,
         repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
@@ -556,11 +553,9 @@ mod tests {
 
             let ansible_client = Arc::new(AnsibleClient::new(self.temp_dir.path()));
 
-            let opentofu_client = Arc::new(
-                crate::infrastructure::external_tools::tofu::adapter::client::OpenTofuClient::new(
-                    self.temp_dir.path(),
-                ),
-            );
+            let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
+                self.temp_dir.path(),
+            ));
 
             let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 

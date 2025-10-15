@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use tracing::{info, instrument, warn};
 
+use crate::adapters::ansible::AnsibleClient;
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::{
     BaseFailureContext, ConfigureFailureContext, ConfigureStep,
 };
 use crate::domain::environment::{Configured, Configuring, Environment, Provisioned, TraceId};
-use crate::infrastructure::external_tools::ansible::adapter::AnsibleClient;
 use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::command::CommandError;
 use crate::shared::error::Traceable;
