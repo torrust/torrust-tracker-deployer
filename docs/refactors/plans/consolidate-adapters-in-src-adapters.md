@@ -32,14 +32,14 @@ This refactoring consolidates all external tool adapters (SSH, Docker, Ansible, 
 **Total Active Proposals**: 4
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 0
+**Completed**: 2
 **In Progress**: 0
-**Not Started**: 4
+**Not Started**: 2
 
 ### Phase Summary
 
-- **Phase 0 - Foundation (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 1 - Adapters Migration (High Impact, Medium Effort)**: ⏳ 0/2 completed (0%)
+- **Phase 0 - Foundation (High Impact, Low Effort)**: ✅ 1/1 completed (100%)
+- **Phase 1 - Adapters Migration (High Impact, Medium Effort)**: ⚡ 1/2 completed (50%)
 - **Phase 2 - Cleanup (Medium Impact, Low Effort)**: ⏳ 0/1 completed (0%)
 
 ### Discarded Proposals
@@ -78,7 +78,7 @@ Create the new module structure and prepare for migration.
 
 ### Proposal #0: Create src/adapters/ Module Structure
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (Commit: 996cf96)
 **Impact**: 🟢🟢🟢 High (Foundation for all other work)  
 **Effort**: 🔵 Low (Just directory and module setup)  
 **Priority**: P0  
@@ -98,16 +98,16 @@ Need to create the new `src/adapters/` module structure before moving any code.
 
 #### Implementation Checklist
 
-- [ ] Create `src/adapters/` directory
-- [ ] Create `src/adapters/mod.rs` with module documentation
-- [ ] Create placeholder submodule files:
-  - [ ] `src/adapters/ansible.rs`
-  - [ ] `src/adapters/docker.rs`
-  - [ ] `src/adapters/lxd.rs`
-  - [ ] `src/adapters/ssh.rs`
-  - [ ] `src/adapters/tofu.rs`
-- [ ] Add `pub mod adapters;` to `src/lib.rs`
-- [ ] Run `cargo check` to verify compilation
+- [x] Create `src/adapters/` directory
+- [x] Create `src/adapters/mod.rs` with module documentation
+- [x] Create placeholder submodule files:
+  - [x] `src/adapters/ansible.rs`
+  - [x] `src/adapters/docker.rs`
+  - [x] `src/adapters/lxd.rs`
+  - [x] `src/adapters/ssh.rs`
+  - [x] `src/adapters/tofu.rs`
+- [x] Add `pub mod adapters;` to `src/lib.rs`
+- [x] Run `cargo check` to verify compilation
 
 ---
 
@@ -117,7 +117,7 @@ Move adapters and update all imports.
 
 ### Proposal #1: Move Docker and SSH Adapters from src/shared/
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (Commit: 4e2a961)
 **Impact**: 🟢🟢🟢 High (Used in many places)  
 **Effort**: 🔵🔵 Medium (Need to update ~23 imports)  
 **Priority**: P1  
@@ -141,25 +141,27 @@ Docker and SSH adapters are in `src/shared/` but are infrastructure concerns, no
 
 #### Implementation Checklist
 
-- [ ] **SSH Migration**:
-  - [ ] Move directory: `src/shared/ssh/` → `src/adapters/ssh/`
-  - [ ] Update `src/adapters/mod.rs` to include `pub mod ssh;`
-  - [ ] Update imports in domain layer (~4 files)
-  - [ ] Update imports in application layer (~4 files)
-  - [ ] Update imports in infrastructure layer (~8 files)
-  - [ ] Update imports in testing layer (~4 files)
-  - [ ] Update integration tests if needed
-  - [ ] Run `cargo check` and fix any remaining import issues
-- [ ] **Docker Migration**:
-  - [ ] Move directory: `src/shared/docker/` → `src/adapters/docker/`
-  - [ ] Update `src/adapters/mod.rs` to include `pub mod docker;`
-  - [ ] Update imports in `src/testing/integration/ssh_server/` (~3 files)
-  - [ ] Run `cargo check` and fix any remaining import issues
-- [ ] **Cleanup src/shared/mod.rs**:
-  - [ ] Remove `pub mod ssh;` and SSH re-exports
-  - [ ] Remove `pub mod docker;` and Docker re-exports
-  - [ ] Verify `command` module remains in shared
-- [ ] Run full test suite: `cargo test`
+- [x] **SSH Migration**:
+  - [x] Move directory: `src/shared/ssh/` → `src/adapters/ssh/`
+  - [x] Update `src/adapters/mod.rs` to include `pub mod ssh;`
+  - [x] Update imports in domain layer (~4 files)
+  - [x] Update imports in application layer (~4 files)
+  - [x] Update imports in infrastructure layer (~8 files)
+  - [x] Update imports in testing layer (~4 files)
+  - [x] Update integration tests if needed
+  - [x] Run `cargo check` and fix any remaining import issues
+- [x] **Docker Migration**:
+  - [x] Move directory: `src/shared/docker/` → `src/adapters/docker/`
+  - [x] Update `src/adapters/mod.rs` to include `pub mod docker;`
+  - [x] Update imports in `src/testing/integration/ssh_server/` (~3 files)
+  - [x] Run `cargo check` and fix any remaining import issues
+- [x] **Cleanup src/shared/mod.rs**:
+  - [x] Remove `pub mod ssh;` and SSH re-exports
+  - [x] Remove `pub mod docker;` and Docker re-exports
+  - [x] Verify `command` module remains in shared
+- [x] Run full test suite: `cargo test`
+- [x] Fixed all doctest import statements (150 doctests passing)
+- [x] All pre-commit checks passing (linters, clippy, rustfmt, E2E tests)
 
 ### Proposal #2: Move Adapters from src/infrastructure/external_tools/
 
