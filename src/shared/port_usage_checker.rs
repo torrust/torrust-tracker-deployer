@@ -10,6 +10,153 @@ use thiserror::Error;
 
 use crate::adapters::network::{NetstatClient, NetworkError, SsClient};
 
+// ============================================================================
+// PUBLIC API - Main Types
+// ============================================================================
+
+/// Utility for checking which processes are using specific ports
+///
+/// This struct provides methods to query the operating system about port usage.
+/// It tries multiple commands (`netstat`, `ss`) to be compatible with different systems.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use torrust_tracker_deployer_lib::shared::port_usage_checker::PortUsageChecker;
+///
+/// // Check if port 22 is in use
+/// match PortUsageChecker::check_port(22) {
+///     Ok(lines) => {
+///         println!("Port 22 is in use:");
+///         for line in lines {
+///             println!("  {}", line);
+///         }
+///     }
+///     Err(e) => eprintln!("Could not check port: {}", e),
+/// }
+/// ```
+pub struct PortUsageChecker;
+
+impl PortUsageChecker {
+    /// Check which processes are using the specified port
+    ///
+    /// This method tries `netstat` first, then falls back to `ss` if `netstat` fails.
+    /// Both commands are commonly available on Unix-like systems.
+    ///
+    /// # Arguments
+    ///
+    /// * `port` - The port number to check
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Vec<String>)` - Lines from command output showing processes using the port
+    /// * `Err(PortUsageError)` - If both commands failed or port is not in use
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - Both `netstat` and `ss` commands fail to execute or are not available
+    /// - The port is not found in the output of either command (not in use)
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use torrust_tracker_deployer_lib::shared::port_usage_checker::PortUsageChecker;
+    ///
+    /// match PortUsageChecker::check_port(8080) {
+    ///     Ok(lines) => {
+    ///         println!("Port 8080 usage:");
+    ///         for line in &lines {
+    ///             println!("{}", line);
+    ///         }
+    ///     }
+    ///     Err(e) => eprintln!("Error: {}", e),
+    /// }
+    /// ```
+    pub fn check_port(port: u16) -> Result<Vec<String>, PortUsageError> {
+        // Try netstat first, fallback to ss
+        match Self::check_port_with_netstat(port) {
+            Ok(lines) => Ok(lines),
+            Err(netstat_error) => Self::check_port_with_ss(port).map_err(|ss_error| {
+                PortUsageError::BothCommandsFailed {
+                    port,
+                    netstat_error: Box::new(netstat_error),
+                    ss_error: Box::new(ss_error),
+                }
+            }),
+        }
+    }
+
+    /// Check port usage using netstat command
+    ///
+    /// Uses `netstat -tlnp` to list TCP listening ports with process information.
+    ///
+    /// # Arguments
+    ///
+    /// * `port` - The port number to check
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Vec<String>)` - Lines from netstat output containing the port
+    /// * `Err(PortUsageError)` - If command failed or port not found
+    fn check_port_with_netstat(port: u16) -> Result<Vec<String>, PortUsageError> {
+        let netstat = NetstatClient::new();
+        let output = netstat
+            .list_tcp_listening_ports()
+            .map_err(|source| PortUsageError::NetstatFailed { port, source })?;
+
+        let port_str = port.to_string();
+        let matches: Vec<String> = output
+            .lines()
+            .filter(|line| line.contains(&port_str))
+            .map(ToString::to_string)
+            .collect();
+
+        if matches.is_empty() {
+            Err(PortUsageError::PortNotFound { port })
+        } else {
+            Ok(matches)
+        }
+    }
+
+    /// Check port usage using ss command (fallback for systems without netstat)
+    ///
+    /// Uses `ss -tlnp` to list TCP listening ports with process information.
+    /// This is a modern alternative to `netstat` available on most Linux systems.
+    ///
+    /// # Arguments
+    ///
+    /// * `port` - The port number to check
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Vec<String>)` - Lines from ss output containing the port
+    /// * `Err(PortUsageError)` - If command failed or port not found
+    fn check_port_with_ss(port: u16) -> Result<Vec<String>, PortUsageError> {
+        let ss = SsClient::new();
+        let output = ss
+            .list_tcp_listening_ports()
+            .map_err(|source| PortUsageError::SsFailed { port, source })?;
+
+        let port_str = port.to_string();
+        let matches: Vec<String> = output
+            .lines()
+            .filter(|line| line.contains(&port_str))
+            .map(ToString::to_string)
+            .collect();
+
+        if matches.is_empty() {
+            Err(PortUsageError::PortNotFound { port })
+        } else {
+            Ok(matches)
+        }
+    }
+}
+
+// ============================================================================
+// ERROR TYPES - Secondary Concerns
+// ============================================================================
+
 /// Error type for port usage checking operations
 #[derive(Debug, Error)]
 pub enum PortUsageError {
@@ -174,145 +321,6 @@ If you expected a service to be running on this port:
 
 For more information, see your service's documentation."
             }
-        }
-    }
-}
-
-/// Utility for checking which processes are using specific ports
-///
-/// This struct provides methods to query the operating system about port usage.
-/// It tries multiple commands (`netstat`, `ss`) to be compatible with different systems.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use torrust_tracker_deployer_lib::shared::port_usage_checker::PortUsageChecker;
-///
-/// // Check if port 22 is in use
-/// match PortUsageChecker::check_port(22) {
-///     Ok(lines) => {
-///         println!("Port 22 is in use:");
-///         for line in lines {
-///             println!("  {}", line);
-///         }
-///     }
-///     Err(e) => eprintln!("Could not check port: {}", e),
-/// }
-/// ```
-pub struct PortUsageChecker;
-
-impl PortUsageChecker {
-    /// Check which processes are using the specified port
-    ///
-    /// This method tries `netstat` first, then falls back to `ss` if `netstat` fails.
-    /// Both commands are commonly available on Unix-like systems.
-    ///
-    /// # Arguments
-    ///
-    /// * `port` - The port number to check
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(Vec<String>)` - Lines from command output showing processes using the port
-    /// * `Err(PortUsageError)` - If both commands failed or port is not in use
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if:
-    /// - Both `netstat` and `ss` commands fail to execute or are not available
-    /// - The port is not found in the output of either command (not in use)
-    ///
-    /// # Example
-    ///
-    /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::shared::port_usage_checker::PortUsageChecker;
-    ///
-    /// match PortUsageChecker::check_port(8080) {
-    ///     Ok(lines) => {
-    ///         println!("Port 8080 usage:");
-    ///         for line in &lines {
-    ///             println!("{}", line);
-    ///         }
-    ///     }
-    ///     Err(e) => eprintln!("Error: {}", e),
-    /// }
-    /// ```
-    pub fn check_port(port: u16) -> Result<Vec<String>, PortUsageError> {
-        // Try netstat first, fallback to ss
-        match Self::check_port_with_netstat(port) {
-            Ok(lines) => Ok(lines),
-            Err(netstat_error) => Self::check_port_with_ss(port).map_err(|ss_error| {
-                PortUsageError::BothCommandsFailed {
-                    port,
-                    netstat_error: Box::new(netstat_error),
-                    ss_error: Box::new(ss_error),
-                }
-            }),
-        }
-    }
-
-    /// Check port usage using netstat command
-    ///
-    /// Uses `netstat -tlnp` to list TCP listening ports with process information.
-    ///
-    /// # Arguments
-    ///
-    /// * `port` - The port number to check
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(Vec<String>)` - Lines from netstat output containing the port
-    /// * `Err(PortUsageError)` - If command failed or port not found
-    fn check_port_with_netstat(port: u16) -> Result<Vec<String>, PortUsageError> {
-        let netstat = NetstatClient::new();
-        let output = netstat
-            .list_tcp_listening_ports()
-            .map_err(|source| PortUsageError::NetstatFailed { port, source })?;
-
-        let port_str = port.to_string();
-        let matches: Vec<String> = output
-            .lines()
-            .filter(|line| line.contains(&port_str))
-            .map(ToString::to_string)
-            .collect();
-
-        if matches.is_empty() {
-            Err(PortUsageError::PortNotFound { port })
-        } else {
-            Ok(matches)
-        }
-    }
-
-    /// Check port usage using ss command (fallback for systems without netstat)
-    ///
-    /// Uses `ss -tlnp` to list TCP listening ports with process information.
-    /// This is a modern alternative to `netstat` available on most Linux systems.
-    ///
-    /// # Arguments
-    ///
-    /// * `port` - The port number to check
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(Vec<String>)` - Lines from ss output containing the port
-    /// * `Err(PortUsageError)` - If command failed or port not found
-    fn check_port_with_ss(port: u16) -> Result<Vec<String>, PortUsageError> {
-        let ss = SsClient::new();
-        let output = ss
-            .list_tcp_listening_ports()
-            .map_err(|source| PortUsageError::SsFailed { port, source })?;
-
-        let port_str = port.to_string();
-        let matches: Vec<String> = output
-            .lines()
-            .filter(|line| line.contains(&port_str))
-            .map(ToString::to_string)
-            .collect();
-
-        if matches.is_empty() {
-            Err(PortUsageError::PortNotFound { port })
-        } else {
-            Ok(matches)
         }
     }
 }
