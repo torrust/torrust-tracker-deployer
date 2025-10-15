@@ -32,14 +32,14 @@ This refactoring consolidates all external tool adapters (SSH, Docker, Ansible, 
 **Total Active Proposals**: 4
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 2
+**Completed**: 3
 **In Progress**: 0
-**Not Started**: 2
+**Not Started**: 1
 
 ### Phase Summary
 
 - **Phase 0 - Foundation (High Impact, Low Effort)**: ✅ 1/1 completed (100%)
-- **Phase 1 - Adapters Migration (High Impact, Medium Effort)**: ⚡ 1/2 completed (50%)
+- **Phase 1 - Adapters Migration (High Impact, Medium Effort)**: ✅ 2/2 completed (100%)
 - **Phase 2 - Cleanup (Medium Impact, Low Effort)**: ⏳ 0/1 completed (0%)
 
 ### Discarded Proposals
@@ -165,7 +165,7 @@ Docker and SSH adapters are in `src/shared/` but are infrastructure concerns, no
 
 ### Proposal #2: Move Adapters from src/infrastructure/external_tools/
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (Commit: fdf5e71)
 **Impact**: 🟢🟢🟢 High (Core infrastructure)  
 **Effort**: 🔵🔵 Medium (Need to separate adapters from templates)  
 **Priority**: P1  
@@ -187,22 +187,27 @@ Ansible, LXD, and OpenTofu adapters are in `src/infrastructure/external_tools/` 
 
 #### Implementation Checklist
 
-- [ ] **Ansible Adapter**:
-  - [ ] Move directory: `src/infrastructure/external_tools/ansible/adapter/` → `src/adapters/ansible/`
-  - [ ] Update `src/adapters/mod.rs` to include `pub mod ansible;`
-  - [ ] Update imports in application layer (~3 files)
-  - [ ] Run `cargo check` and fix import issues
-- [ ] **LXD Adapter**:
-  - [ ] Move directory: `src/infrastructure/external_tools/lxd/adapter/` → `src/adapters/lxd/`
-  - [ ] Update `src/adapters/mod.rs` to include `pub mod lxd;`
-  - [ ] Update imports if any (search codebase)
-  - [ ] Run `cargo check` and fix import issues
-- [ ] **OpenTofu Adapter**:
-  - [ ] Move directory: `src/infrastructure/external_tools/tofu/adapter/` → `src/adapters/tofu/`
-  - [ ] Update `src/adapters/mod.rs` to include `pub mod tofu;`
-  - [ ] Update imports in application layer (~6 files)
-  - [ ] Run `cargo check` and fix import issues
-- [ ] Run full test suite: `cargo test`
+- [x] **Ansible Adapter**:
+  - [x] Move directory: `src/infrastructure/external_tools/ansible/adapter/` → `src/adapters/ansible/`
+  - [x] Update `src/adapters/mod.rs` to include `pub mod ansible;`
+  - [x] Update imports in application layer (~6 files)
+  - [x] Run `cargo check` and fix import issues
+- [x] **LXD Adapter**:
+  - [x] Move directory: `src/infrastructure/external_tools/lxd/adapter/` → `src/adapters/lxd/`
+  - [x] Update `src/adapters/mod.rs` to include `pub mod lxd;`
+  - [x] Update imports (1 file in testing + 1 doctest)
+  - [x] Run `cargo check` and fix import issues
+- [x] **OpenTofu Adapter**:
+  - [x] Move directory: `src/infrastructure/external_tools/tofu/adapter/` → `src/adapters/tofu/`
+  - [x] Update `src/adapters/mod.rs` to include `pub mod tofu;`
+  - [x] Update imports in application layer (~15 files including doctests)
+  - [x] Run `cargo check` and fix import issues
+- [x] **Update infrastructure module files**:
+  - [x] Remove adapter declarations from ansible/mod.rs
+  - [x] Remove adapter declarations from lxd/mod.rs
+  - [x] Remove adapter declarations from tofu/mod.rs
+- [x] Run full test suite: `cargo test`
+- [x] All pre-commit checks passing (linters, clippy, rustfmt, E2E tests)
 
 ---
 
