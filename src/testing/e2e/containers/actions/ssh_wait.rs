@@ -32,7 +32,8 @@ use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
-use crate::shared::{ssh::SshServiceChecker, PortChecker};
+use crate::adapters::ssh::SshServiceChecker;
+use crate::shared::PortChecker;
 
 /// Specific error types for SSH wait operations
 #[derive(Debug, thiserror::Error)]

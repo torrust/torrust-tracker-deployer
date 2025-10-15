@@ -177,7 +177,8 @@ impl TestContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
-    /// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer_lib::shared::Username;
+    /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
     /// use std::path::PathBuf;
     /// use tempfile::TempDir;

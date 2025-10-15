@@ -64,12 +64,10 @@ use std::time::Instant;
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configure_command::run_configure_command;
 use tracing::{error, info};
 
+use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PORT};
 use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::shared::{
-    ssh::{SshCredentials, DEFAULT_SSH_PORT},
-    Username,
-};
+use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::{
     container::{

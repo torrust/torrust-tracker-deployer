@@ -20,7 +20,7 @@
 //!
 //! ```rust,no_run
 //! use torrust_tracker_deployer_lib::testing::e2e::containers::{ContainerExecutor, actions::{SshKeySetupAction, SshWaitAction}};
-//! use torrust_tracker_deployer_lib::shared::ssh::SshCredentials;
+//! use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 //! use std::time::Duration;
 //! use std::net::SocketAddr;
 //!

@@ -8,7 +8,7 @@ use std::fs;
 use std::path::Path;
 use thiserror::Error;
 
-use crate::shared::ssh::SshPublicKey;
+use crate::adapters::ssh::SshPublicKey;
 use crate::shared::Username;
 
 /// Errors that can occur when creating a `CloudInitContext`

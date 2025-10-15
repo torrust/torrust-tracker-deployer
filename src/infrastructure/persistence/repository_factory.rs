@@ -142,10 +142,10 @@ mod tests {
 
     #[test]
     fn it_should_create_repository_that_can_save_and_load_environment() {
+        use crate::adapters::ssh::SshCredentials;
         #[allow(unused_imports)] // Needed for trait methods on Arc<dyn EnvironmentRepository>
         use crate::domain::environment::repository::EnvironmentRepository;
         use crate::domain::environment::{Environment, EnvironmentName};
-        use crate::shared::ssh::SshCredentials;
         use crate::shared::Username;
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");

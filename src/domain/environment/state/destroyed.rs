@@ -60,8 +60,8 @@ mod tests {
 
     mod conversion_tests {
         use super::*;
+        use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
-        use crate::shared::ssh::SshCredentials;
         use crate::shared::Username;
         use std::path::PathBuf;
 

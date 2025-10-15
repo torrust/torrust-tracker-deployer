@@ -380,7 +380,7 @@ impl AnyEnvironmentState {
     ///
     /// A reference to the `SshCredentials` contained within the environment.
     #[must_use]
-    pub fn ssh_credentials(&self) -> &crate::shared::ssh::SshCredentials {
+    pub fn ssh_credentials(&self) -> &crate::adapters::ssh::SshCredentials {
         &self.context().user_inputs.ssh_credentials
     }
 
@@ -443,8 +443,8 @@ impl std::fmt::Display for AnyEnvironmentState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::adapters::ssh::SshCredentials;
     use crate::domain::environment::name::EnvironmentName;
-    use crate::shared::ssh::SshCredentials;
     use crate::shared::Username;
     use std::path::PathBuf;
 

@@ -23,11 +23,11 @@ use std::net::SocketAddr;
 use thiserror::Error;
 use tracing::info;
 
+use crate::adapters::ssh::SshConfig;
+use crate::adapters::ssh::SshCredentials;
 use crate::infrastructure::remote_actions::{
     DockerComposeValidator, DockerValidator, RemoteAction, RemoteActionError,
 };
-use crate::shared::ssh::SshConfig;
-use crate::shared::ssh::SshCredentials;
 
 /// Errors that can occur during configuration validation
 #[derive(Debug, Error)]
@@ -164,7 +164,7 @@ For more information, see docs/e2e-testing.md."
 ///
 /// ```rust,no_run
 /// use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configuration_validation::run_configuration_validation;
-/// use torrust_tracker_deployer_lib::shared::ssh::SshCredentials;
+/// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 /// use torrust_tracker_deployer_lib::shared::username::Username;
 /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 ///

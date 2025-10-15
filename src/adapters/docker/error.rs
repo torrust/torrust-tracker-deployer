@@ -53,7 +53,7 @@ impl DockerError {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+    /// use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
     ///
     /// # fn example() {
     /// let docker = DockerClient::new();

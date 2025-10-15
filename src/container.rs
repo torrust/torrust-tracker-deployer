@@ -13,6 +13,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::adapters::ssh::SshCredentials;
 use crate::config::Config;
 use crate::domain::template::TemplateManager;
 use crate::domain::{InstanceName, ProfileName};
@@ -24,7 +25,6 @@ use crate::infrastructure::external_tools::tofu::adapter::OpenTofuClient;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::shared::ssh::SshCredentials;
 use crate::shared::Clock;
 
 /// Default lock timeout for repository operations

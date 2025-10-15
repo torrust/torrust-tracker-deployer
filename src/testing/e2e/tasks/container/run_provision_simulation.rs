@@ -23,10 +23,10 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use tracing::info;
 
+use crate::adapters::ssh::SshCredentials;
 use crate::application::steps::RenderAnsibleTemplatesStep;
 use crate::container::Services;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
-use crate::shared::ssh::SshCredentials;
 use crate::testing::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
 use crate::testing::e2e::containers::timeout::ContainerTimeouts;
 use crate::testing::e2e::containers::{RunningProvisionedContainer, StoppedProvisionedContainer};
@@ -62,7 +62,8 @@ use crate::testing::e2e::context::TestContext;
 ///
 /// ```rust,no_run
 /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
-/// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
+/// use torrust_tracker_deployer_lib::shared::Username;
+/// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 /// use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
 /// use torrust_tracker_deployer_lib::testing::e2e::tasks::container::run_provision_simulation::run_provision_simulation;
 /// use std::path::PathBuf;

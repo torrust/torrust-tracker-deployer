@@ -12,7 +12,7 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+//! use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let docker = DockerClient::new();

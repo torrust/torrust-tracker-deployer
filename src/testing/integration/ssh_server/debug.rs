@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::shared::docker::DockerClient;
+use crate::adapters::docker::DockerClient;
 use crate::shared::port_usage_checker::PortUsageChecker;
 
 // Import constants only for the convenience function
@@ -82,7 +82,7 @@ impl DockerDebugInfo {
     ///
     /// ```rust,no_run
     /// use std::sync::Arc;
-    /// use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+    /// use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
     /// use torrust_tracker_deployer_lib::testing::integration::ssh_server::DockerDebugInfo;
     ///
     /// let docker = Arc::new(DockerClient::new());

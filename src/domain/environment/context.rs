@@ -35,8 +35,8 @@
 //! clear where each piece of information comes from and guide developers on
 //! where to add new fields as the application evolves.
 
+use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::{EnvironmentName, InternalConfig, RuntimeOutputs, UserInputs};
-use crate::shared::ssh::SshCredentials;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -73,7 +73,8 @@ use std::path::PathBuf;
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::domain::environment::{Environment, EnvironmentName};
-/// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
+/// use torrust_tracker_deployer_lib::shared::Username;
+/// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 /// use std::path::PathBuf;
 ///
 /// let env_name = EnvironmentName::new("production".to_string())?;
@@ -126,7 +127,8 @@ impl EnvironmentContext {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::environment::{EnvironmentContext, EnvironmentName};
-    /// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer_lib::shared::Username;
+    /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;

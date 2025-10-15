@@ -13,7 +13,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use torrust_tracker_deployer_lib::shared::ssh::{
+use torrust_tracker_deployer_lib::adapters::ssh::{
     SshClient, SshConfig, SshConnectionConfig, SshCredentials,
 };
 use torrust_tracker_deployer_lib::shared::Username;

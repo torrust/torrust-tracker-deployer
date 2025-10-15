@@ -6,11 +6,9 @@
 
 pub mod clock;
 pub mod command;
-pub mod docker;
 pub mod error;
 pub mod port_checker;
 pub mod port_usage_checker;
-pub mod ssh;
 pub mod username;
 
 // Re-export commonly used types for convenience

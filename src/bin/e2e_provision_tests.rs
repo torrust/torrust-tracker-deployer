@@ -52,12 +52,10 @@ use std::time::Instant;
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
+use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PORT};
 use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::shared::{
-    ssh::{SshCredentials, DEFAULT_SSH_PORT},
-    Username,
-};
+use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::{
     cleanup_infrastructure::cleanup_test_infrastructure,

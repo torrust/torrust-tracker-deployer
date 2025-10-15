@@ -14,6 +14,7 @@
 
 use tracing::{info, instrument};
 
+use crate::adapters::ssh::SshConfig;
 use crate::application::steps::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,
@@ -21,7 +22,6 @@ use crate::application::steps::{
 use crate::domain::environment::Environment;
 use crate::infrastructure::remote_actions::RemoteActionError;
 use crate::shared::command::CommandError;
-use crate::shared::ssh::SshConfig;
 
 /// Comprehensive error type for the `TestCommand`
 #[derive(Debug, thiserror::Error)]

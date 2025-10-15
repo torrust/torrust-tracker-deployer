@@ -24,9 +24,9 @@
 use std::net::IpAddr;
 use tracing::{info, instrument, warn};
 
+use crate::adapters::ssh::SshClient;
+use crate::adapters::ssh::SshConfig;
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
-use crate::shared::ssh::SshClient;
-use crate::shared::ssh::SshConfig;
 
 /// Action that validates Docker installation and daemon status on the server
 pub struct DockerValidator {

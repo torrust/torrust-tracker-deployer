@@ -63,9 +63,11 @@ pub mod lxd;
 pub mod ssh;
 pub mod tofu;
 
-// Re-exports will be added as adapters are migrated
+// Re-exports for migrated adapters
+pub use docker::DockerClient;
+pub use ssh::{SshClient, SshConfig, SshConnectionConfig, SshCredentials, SshPublicKey};
+
+// Re-exports pending migration
 // pub use ansible::AnsibleClient;
-// pub use docker::DockerClient;
 // pub use lxd::LxdClient;
-// pub use ssh::SshClient;
 // pub use tofu::OpenTofuClient;

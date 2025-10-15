@@ -23,7 +23,8 @@
 //!     StoppedProvisionedContainer, ContainerError,
 //!     actions::{SshWaitAction, SshKeySetupAction}
 //! };
-//! use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
+//! use torrust_tracker_deployer_lib::shared::Username;
+//! use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 //! use std::path::PathBuf;
 //! use std::time::Duration;
 //! use std::net::SocketAddr;

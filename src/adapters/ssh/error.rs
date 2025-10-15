@@ -45,7 +45,7 @@ impl SshError {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::ssh::SshError;
+    /// use torrust_tracker_deployer_lib::adapters::ssh::SshError;
     ///
     /// let error = SshError::ConnectivityTimeout {
     ///     host_ip: "192.168.1.100".to_string(),

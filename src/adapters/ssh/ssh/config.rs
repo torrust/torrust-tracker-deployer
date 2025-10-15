@@ -45,7 +45,7 @@ pub const DEFAULT_RETRY_LOG_FREQUENCY: u32 = 5;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::shared::ssh::SshConnectionConfig;
+/// use torrust_tracker_deployer_lib::adapters::ssh::SshConnectionConfig;
 ///
 /// // Use default configuration
 /// let config = SshConnectionConfig::default();
@@ -81,7 +81,7 @@ impl SshConnectionConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::ssh::SshConnectionConfig;
+    /// use torrust_tracker_deployer_lib::adapters::ssh::SshConnectionConfig;
     ///
     /// // Fast configuration for testing
     /// let fast = SshConnectionConfig::new(1, 5, 1, 2);
@@ -112,7 +112,7 @@ impl SshConnectionConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::ssh::SshConnectionConfig;
+    /// use torrust_tracker_deployer_lib::adapters::ssh::SshConnectionConfig;
     ///
     /// let config = SshConnectionConfig::default();
     /// assert_eq!(config.total_timeout_secs(), 60); // 30 attempts × 2 seconds
@@ -169,7 +169,8 @@ impl SshConfig {
     /// ```rust
     /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deployer_lib::shared::{Username, ssh::{SshCredentials, SshConfig}};
+    /// # use torrust_tracker_deployer_lib::shared::Username;
+    /// # use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, SshConfig};
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
@@ -198,7 +199,8 @@ impl SshConfig {
     /// ```rust
     /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deployer_lib::shared::{Username, ssh::{SshCredentials, SshConfig, SshConnectionConfig}};
+    /// # use torrust_tracker_deployer_lib::shared::Username;
+    /// # use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, SshConfig, SshConnectionConfig};
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),
@@ -234,7 +236,8 @@ impl SshConfig {
     /// ```rust
     /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     /// # use std::path::PathBuf;
-    /// # use torrust_tracker_deployer_lib::shared::{Username, ssh::{SshCredentials, SshConfig}};
+    /// # use torrust_tracker_deployer_lib::shared::Username;
+    /// # use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, SshConfig};
     /// let credentials = SshCredentials::new(
     ///     PathBuf::from("/home/user/.ssh/deploy_key"),
     ///     PathBuf::from("/home/user/.ssh/deploy_key.pub"),

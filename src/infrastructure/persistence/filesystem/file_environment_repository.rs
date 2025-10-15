@@ -170,8 +170,8 @@ impl EnvironmentRepository for FileEnvironmentRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::adapters::ssh::credentials::SshCredentials;
     use crate::domain::environment::Environment;
-    use crate::shared::ssh::credentials::SshCredentials;
     use crate::shared::Username;
     use rstest::rstest;
     use std::error::Error as StdError;

@@ -10,7 +10,7 @@ use testcontainers::{
 use super::config::SshServerConfig;
 use super::constants::SSH_CONTAINER_PORT;
 use super::error::SshServerError;
-use crate::shared::docker::DockerClient;
+use crate::adapters::docker::DockerClient;
 
 /// Real SSH server container using Docker
 ///

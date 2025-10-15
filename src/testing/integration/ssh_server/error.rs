@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
-use crate::shared::docker::DockerError;
+use crate::adapters::docker::DockerError;
 
 /// Errors that can occur when working with SSH server containers
 #[derive(Debug, Error)]

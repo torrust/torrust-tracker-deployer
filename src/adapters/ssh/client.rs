@@ -317,7 +317,7 @@ impl SshClient {
     /// # Examples
     ///
     /// ```no_run
-    /// use torrust_tracker_deployer_lib::shared::ssh::{SshClient, SshConfig, SshCredentials};
+    /// use torrust_tracker_deployer_lib::adapters::ssh::{SshClient, SshConfig, SshCredentials};
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use std::path::PathBuf;
     /// use std::net::{IpAddr, Ipv4Addr};
@@ -382,7 +382,7 @@ impl SshClient {
     /// # Examples
     ///
     /// ```no_run
-    /// use torrust_tracker_deployer_lib::shared::ssh::{SshClient, SshConfig, SshCredentials};
+    /// use torrust_tracker_deployer_lib::adapters::ssh::{SshClient, SshConfig, SshCredentials};
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use std::path::PathBuf;
     /// use std::net::{IpAddr, Ipv4Addr};

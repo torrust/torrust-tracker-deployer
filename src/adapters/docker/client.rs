@@ -19,7 +19,7 @@ use crate::shared::command::CommandExecutor;
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+/// use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
 ///
 /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let docker = DockerClient::new();
@@ -50,7 +50,7 @@ impl DockerClient {
     /// # Example
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+    /// use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
     ///
     /// let docker = DockerClient::new();
     /// ```
@@ -82,7 +82,7 @@ impl DockerClient {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+    /// # use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let docker = DockerClient::new();
     /// docker.build_image("docker/ssh-server", "my-ssh", "latest")?;
@@ -125,7 +125,7 @@ impl DockerClient {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+    /// # use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let docker = DockerClient::new();
     /// // List all images
@@ -172,7 +172,7 @@ impl DockerClient {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+    /// # use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let docker = DockerClient::new();
     /// // List only running containers
@@ -218,7 +218,7 @@ impl DockerClient {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+    /// # use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let docker = DockerClient::new();
     /// let logs = docker.get_container_logs("my-container")?;
@@ -258,7 +258,7 @@ impl DockerClient {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use torrust_tracker_deployer_lib::shared::docker::DockerClient;
+    /// # use torrust_tracker_deployer_lib::adapters::docker::DockerClient;
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let docker = DockerClient::new();
     /// if docker.image_exists("ubuntu", "latest")? {

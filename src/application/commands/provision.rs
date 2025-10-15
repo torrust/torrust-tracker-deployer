@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::adapters::ssh::{SshConfig, SshCredentials, SshError};
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep,
@@ -36,7 +37,6 @@ use crate::infrastructure::external_tools::tofu::adapter::client::{InstanceInfo,
 use crate::infrastructure::external_tools::tofu::{ProvisionTemplateError, TofuTemplateRenderer};
 use crate::shared::command::CommandError;
 use crate::shared::error::Traceable;
-use crate::shared::ssh::{SshConfig, SshCredentials, SshError};
 
 /// Comprehensive error type for the `ProvisionCommand`
 #[derive(Debug, thiserror::Error)]

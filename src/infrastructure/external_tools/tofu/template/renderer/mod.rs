@@ -44,6 +44,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
 
+use crate::adapters::ssh::credentials::SshCredentials;
 use crate::domain::template::{TemplateManager, TemplateManagerError};
 use crate::domain::{InstanceName, ProfileName};
 use crate::infrastructure::external_tools::tofu::template::renderer::cloud_init::{
@@ -52,7 +53,6 @@ use crate::infrastructure::external_tools::tofu::template::renderer::cloud_init:
 use crate::infrastructure::external_tools::tofu::template::wrappers::lxd::variables::{
     VariablesContextBuilder, VariablesTemplate, VariablesTemplateError,
 };
-use crate::shared::ssh::credentials::SshCredentials;
 
 /// Errors that can occur during provision template rendering
 #[derive(Error, Debug)]

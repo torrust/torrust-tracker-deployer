@@ -4,8 +4,8 @@
 //! instances in tests with proper isolation using temporary directories.
 
 use super::*;
+use crate::adapters::ssh::SshCredentials;
 use crate::domain::EnvironmentName;
-use crate::shared::ssh::SshCredentials;
 use crate::shared::Username;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;

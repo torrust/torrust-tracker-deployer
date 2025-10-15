@@ -18,9 +18,9 @@
 //!
 //! Add new fields here when: User needs to configure something at environment creation time.
 
+use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::EnvironmentName;
 use crate::domain::{InstanceName, ProfileName};
-use crate::shared::ssh::SshCredentials;
 use serde::{Deserialize, Serialize};
 
 /// User-provided configuration when creating an environment
@@ -34,7 +34,8 @@ use serde::{Deserialize, Serialize};
 /// ```rust
 /// use torrust_tracker_deployer_lib::domain::{InstanceName, ProfileName, EnvironmentName};
 /// use torrust_tracker_deployer_lib::domain::environment::user_inputs::UserInputs;
-/// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
+/// use torrust_tracker_deployer_lib::shared::Username;
+/// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 /// use std::path::PathBuf;
 ///
 /// let user_inputs = UserInputs {
@@ -87,7 +88,8 @@ impl UserInputs {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::environment::{EnvironmentName, UserInputs};
-    /// use torrust_tracker_deployer_lib::shared::{Username, ssh::SshCredentials};
+    /// use torrust_tracker_deployer_lib::shared::Username;
+    /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
