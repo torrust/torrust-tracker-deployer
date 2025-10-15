@@ -8,8 +8,6 @@ autorestart
 Avalonia
 buildx
 chdir
-custompass
-customuser
 childlogdir
 chkdsk
 chrono
@@ -18,12 +16,15 @@ clippy
 clonable
 cloneable
 cloudinit
+Cockburn
 concepsts
 connrefused
 containerd
 cpus
 creds
 Crossplane
+custompass
+customuser
 dearmor
 debootstrap
 debuginfo
