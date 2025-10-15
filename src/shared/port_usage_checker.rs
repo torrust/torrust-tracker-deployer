@@ -6,8 +6,9 @@
 //! This is different from [`crate::shared::port_checker`] which checks TCP connectivity
 //! to a port. This module checks which process is actually bound to a port.
 
-use std::process::Command;
 use thiserror::Error;
+
+use crate::adapters::network::{NetstatClient, SsClient};
 
 /// Error type for port usage checking operations
 #[derive(Debug, Error)]
@@ -109,14 +110,13 @@ impl PortUsageChecker {
     /// * `Ok(Vec<String>)` - Lines from netstat output containing the port
     /// * `Err(String)` - If command failed or port not found
     fn check_port_with_netstat(port: u16) -> Result<Vec<String>, String> {
-        let output = Command::new("netstat")
-            .args(["-tlnp"])
-            .output()
+        let netstat = NetstatClient::new();
+        let output = netstat
+            .list_tcp_listening_ports()
             .map_err(|e| format!("netstat command failed: {e}"))?;
 
-        let output_str = String::from_utf8_lossy(&output.stdout);
         let port_str = port.to_string();
-        let matches: Vec<String> = output_str
+        let matches: Vec<String> = output
             .lines()
             .filter(|line| line.contains(&port_str))
             .map(ToString::to_string)
@@ -143,14 +143,13 @@ impl PortUsageChecker {
     /// * `Ok(Vec<String>)` - Lines from ss output containing the port
     /// * `Err(String)` - If command failed or port not found
     fn check_port_with_ss(port: u16) -> Result<Vec<String>, String> {
-        let output = Command::new("ss")
-            .args(["-tlnp"])
-            .output()
+        let ss = SsClient::new();
+        let output = ss
+            .list_tcp_listening_ports()
             .map_err(|e| format!("ss command failed: {e}"))?;
 
-        let output_str = String::from_utf8_lossy(&output.stdout);
         let port_str = port.to_string();
-        let matches: Vec<String> = output_str
+        let matches: Vec<String> = output
             .lines()
             .filter(|line| line.contains(&port_str))
             .map(ToString::to_string)

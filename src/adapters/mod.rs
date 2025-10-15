@@ -27,6 +27,7 @@
 //! - **`ansible`** - Ansible configuration management tool wrapper
 //! - **`docker`** - Docker container platform wrapper
 //! - **`lxd`** - LXD container and VM management wrapper
+//! - **`network`** - Network diagnostic tools (netstat, ss) wrappers
 //! - **`ssh`** - SSH secure shell client wrapper
 //! - **`tofu`** - `OpenTofu` infrastructure provisioning wrapper
 //!
@@ -60,6 +61,7 @@
 pub mod ansible;
 pub mod docker;
 pub mod lxd;
+pub mod network;
 pub mod ssh;
 pub mod tofu;
 
@@ -67,5 +69,6 @@ pub mod tofu;
 pub use ansible::AnsibleClient;
 pub use docker::DockerClient;
 pub use lxd::LxdClient;
+pub use network::{NetstatClient, SsClient};
 pub use ssh::{SshClient, SshConfig, SshConnectionConfig, SshCredentials, SshPublicKey};
 pub use tofu::OpenTofuClient;
