@@ -64,6 +64,9 @@ build/
 # - data/*/traces/ - Execution traces
 data/
 
+# Test log directories (created during manual testing)
+custom-logs/
+
 # Meson build directory
 builddir/
 

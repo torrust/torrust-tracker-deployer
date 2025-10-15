@@ -14,6 +14,7 @@ use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder
 #[command(name = "torrust-tracker-deployer")]
 #[command(about = "Automated deployment infrastructure for Torrust Tracker")]
 #[command(version)]
+#[allow(clippy::struct_field_names)] // CLI arguments intentionally share 'log_' prefix for clarity
 pub struct Cli {
     /// Logging format (default: compact)
     ///
