@@ -2,6 +2,63 @@
 
 This guide explains the structured logging implementation in the Torrust Tracker Deployer project, which uses hierarchical structured logging.
 
+## Main Application Logging
+
+The main CLI application (`src/main.rs` → `src/app.rs`) initializes logging at startup with user-configurable options. This provides a consistent logging infrastructure for all operations.
+
+### Application Logging Setup
+
+The main application uses `LoggingBuilder` with CLI arguments for configuration:
+
+```rust
+// src/app.rs
+use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
+
+pub fn run() {
+    let cli = Cli::parse();
+
+    // Initialize logging FIRST before any other logic
+    LoggingBuilder::new(&cli.log_dir)
+        .with_format(cli.log_format)
+        .with_output(cli.log_output)
+        .init();
+
+    // Log startup with context
+    info!(
+        app = "torrust-tracker-deployer",
+        version = env!("CARGO_PKG_VERSION"),
+        log_dir = %cli.log_dir.display(),
+        log_format = ?cli.log_format,
+        log_output = ?cli.log_output,
+        "Application started"
+    );
+
+    // ... application logic ...
+
+    info!("Application finished");
+}
+```
+
+### User-Facing Configuration
+
+Users can configure logging via CLI arguments:
+
+```bash
+# Default (production): file-only, compact format
+torrust-tracker-deployer
+
+# Development: stderr output, pretty format
+torrust-tracker-deployer --log-format pretty --log-output file-and-stderr
+
+# Custom log directory
+torrust-tracker-deployer --log-dir /var/log/deployer
+
+# JSON format for log aggregation
+torrust-tracker-deployer --log-format json
+```
+
+See [User Guide: Logging](../user-guide/logging.md) for complete user documentation.
+
 ## JSON Output Format
 
 When using `logging::init_json()` or `LogFormat::Json`, logs are output in JSON format suitable for log aggregation:

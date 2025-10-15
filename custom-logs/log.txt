@@ -1,0 +1,2 @@
+[2m2025-10-15T12:42:14.572174Z[0m [32m INFO[0m [2mtorrust_tracker_deployer::app[0m[2m:[0m Application started [3mapp[0m[2m=[0m"torrust-tracker-deployer" [3mversion[0m[2m=[0m"0.1.0" [3mlog_dir[0m[2m=[0m./custom-logs [3mlog_format[0m[2m=[0mCompact [3mlog_output[0m[2m=[0mFileAndStderr
+[2m2025-10-15T12:42:14.572262Z[0m [32m INFO[0m [2mtorrust_tracker_deployer::app[0m[2m:[0m Application finished

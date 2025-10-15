@@ -35,6 +35,10 @@ pub struct Cli {
     /// Directory where log files will be written. The log file will be
     /// named 'log.txt' inside this directory. Parent directories will be
     /// created automatically if they don't exist.
+    ///
+    /// Note: If the directory cannot be created due to filesystem permissions,
+    /// the application will exit with an error. Logging is critical for
+    /// observability and the application cannot function without it.
     #[arg(long, default_value = "./data/logs", global = true)]
     pub log_dir: PathBuf,
 }
