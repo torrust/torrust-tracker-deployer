@@ -50,6 +50,7 @@ exitcode
 getent
 Gossman
 handleable
+hexdump
 Hostnames
 hotfixes
 htdocs
@@ -69,6 +70,7 @@ maxbytes
 mgmt
 millis
 mocksecret
+mtorrust
 multiprocess
 MVVM
 myapp
