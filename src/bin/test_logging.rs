@@ -38,9 +38,17 @@ use tracing::{debug, error, info, trace, warn};
 #[command(name = "test_logging")]
 #[command(about = "Test binary for logging configuration validation")]
 struct Cli {
-    /// Logging format to use
+    /// Logging format to use (backward compatibility - applies to both file and stderr)
     #[arg(long, value_enum)]
-    format: LogFormat,
+    format: Option<LogFormat>,
+
+    /// Format for file logging (overrides --format for file output)
+    #[arg(long, value_enum)]
+    file_format: Option<LogFormat>,
+
+    /// Format for stderr logging (overrides --format for stderr output)
+    #[arg(long, value_enum)]
+    stderr_format: Option<LogFormat>,
 
     /// Logging output target
     #[arg(long, value_enum)]
@@ -55,10 +63,28 @@ fn main() {
     let cli = Cli::parse();
 
     // Initialize logging with the specified configuration using the builder pattern
-    LoggingBuilder::new(&cli.log_dir)
-        .with_format(cli.format)
-        .with_output(cli.output)
-        .init();
+    let mut builder = LoggingBuilder::new(&cli.log_dir).with_output(cli.output);
+
+    // Handle format arguments (backward compatible)
+    match (cli.format, cli.file_format, cli.stderr_format) {
+        // If only --format is provided, use it for both file and stderr (backward compatibility)
+        (Some(format), None, None) => {
+            builder = builder.with_format(format);
+        }
+        // If file and/or stderr formats are provided, use them specifically
+        (_, file_fmt, stderr_fmt) => {
+            if let Some(fmt) = file_fmt {
+                builder = builder.with_file_format(fmt);
+            }
+            if let Some(fmt) = stderr_fmt {
+                builder = builder.with_stderr_format(fmt);
+            }
+            // If --format is also provided along with specific formats, --format is ignored
+            // (specific formats take precedence)
+        }
+    }
+
+    builder.init();
 
     // Emit one log message at each level for testing
     trace!("This is a TRACE level message");

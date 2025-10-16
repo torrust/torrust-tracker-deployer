@@ -210,7 +210,12 @@ impl LoggingBuilder {
     ///
     /// Both panics are intentional as logging is critical for observability.
     pub fn init(self) {
-        init_subscriber(&self.log_dir, self.output, &self.file_format, &self.stderr_format);
+        init_subscriber(
+            &self.log_dir,
+            self.output,
+            &self.file_format,
+            &self.stderr_format,
+        );
     }
 }
 
@@ -232,7 +237,12 @@ impl LoggingBuilder {
 /// concrete type, and Rust's type system requires all match arms to return
 /// the same type. Type erasure with boxed layers would work but adds runtime
 /// overhead for a one-time initialization cost.
-fn init_subscriber(log_dir: &Path, output: LogOutput, file_format: &LogFormat, stderr_format: &LogFormat) {
+fn init_subscriber(
+    log_dir: &Path,
+    output: LogOutput,
+    file_format: &LogFormat,
+    stderr_format: &LogFormat,
+) {
     let file_appender = create_log_file_appender(log_dir);
     let env_filter = create_env_filter();
 
@@ -242,19 +252,34 @@ fn init_subscriber(log_dir: &Path, output: LogOutput, file_format: &LogFormat, s
             match file_format {
                 LogFormat::Pretty => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().pretty().with_ansi(false).with_writer(file_appender))
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
                         .with(env_filter)
                         .init();
                 }
                 LogFormat::Json => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().json().with_ansi(false).with_writer(file_appender))
+                        .with(
+                            fmt::layer()
+                                .json()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
                         .with(env_filter)
                         .init();
                 }
                 LogFormat::Compact => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().compact().with_ansi(false).with_writer(file_appender))
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
                         .with(env_filter)
                         .init();
                 }
@@ -266,66 +291,141 @@ fn init_subscriber(log_dir: &Path, output: LogOutput, file_format: &LogFormat, s
                 // Pretty file format combinations
                 (LogFormat::Pretty, LogFormat::Pretty) => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().pretty().with_ansi(false).with_writer(file_appender))
-                        .with(fmt::layer().pretty().with_ansi(true).with_writer(io::stderr))
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
                         .with(env_filter)
                         .init();
                 }
                 (LogFormat::Pretty, LogFormat::Json) => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().pretty().with_ansi(false).with_writer(file_appender))
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
                         .with(fmt::layer().json().with_ansi(true).with_writer(io::stderr))
                         .with(env_filter)
                         .init();
                 }
                 (LogFormat::Pretty, LogFormat::Compact) => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().pretty().with_ansi(false).with_writer(file_appender))
-                        .with(fmt::layer().compact().with_ansi(true).with_writer(io::stderr))
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
                         .with(env_filter)
                         .init();
                 }
                 // JSON file format combinations
                 (LogFormat::Json, LogFormat::Pretty) => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().json().with_ansi(false).with_writer(file_appender))
-                        .with(fmt::layer().pretty().with_ansi(true).with_writer(io::stderr))
+                        .with(
+                            fmt::layer()
+                                .json()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
                         .with(env_filter)
                         .init();
                 }
                 (LogFormat::Json, LogFormat::Json) => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().json().with_ansi(false).with_writer(file_appender))
+                        .with(
+                            fmt::layer()
+                                .json()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
                         .with(fmt::layer().json().with_ansi(true).with_writer(io::stderr))
                         .with(env_filter)
                         .init();
                 }
                 (LogFormat::Json, LogFormat::Compact) => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().json().with_ansi(false).with_writer(file_appender))
-                        .with(fmt::layer().compact().with_ansi(true).with_writer(io::stderr))
+                        .with(
+                            fmt::layer()
+                                .json()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
                         .with(env_filter)
                         .init();
                 }
                 // Compact file format combinations
                 (LogFormat::Compact, LogFormat::Pretty) => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().compact().with_ansi(false).with_writer(file_appender))
-                        .with(fmt::layer().pretty().with_ansi(true).with_writer(io::stderr))
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
                         .with(env_filter)
                         .init();
                 }
                 (LogFormat::Compact, LogFormat::Json) => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().compact().with_ansi(false).with_writer(file_appender))
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
                         .with(fmt::layer().json().with_ansi(true).with_writer(io::stderr))
                         .with(env_filter)
                         .init();
                 }
                 (LogFormat::Compact, LogFormat::Compact) => {
                     tracing_subscriber::registry()
-                        .with(fmt::layer().compact().with_ansi(false).with_writer(file_appender))
-                        .with(fmt::layer().compact().with_ansi(true).with_writer(io::stderr))
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
                         .with(env_filter)
                         .init();
                 }
