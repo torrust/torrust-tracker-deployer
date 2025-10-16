@@ -107,6 +107,8 @@ cargo install --path .
 torrust-tracker-deployer
 ```
 
+The application includes comprehensive logging with configurable format, output mode, and directory. See **[📖 Logging Guide](docs/user-guide/logging.md)** for details on logging configuration options.
+
 #### 🔧 Development Tasks
 
 This project includes convenient scripts for common development tasks:
