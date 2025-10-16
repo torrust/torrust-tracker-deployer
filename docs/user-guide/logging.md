@@ -94,6 +94,7 @@ Example file output:
 ```
 
 ✅ Benefits:
+
 - Clean text (no ANSI escape codes)
 - Easy to parse with grep, awk, sed
 - Space-efficient for storage
@@ -121,6 +122,7 @@ Example stderr output (with ANSI colors - shown here without colors for document
 ```
 
 ✅ Benefits:
+
 - Colored terminal output for stderr (enhanced readability)
 - Clean file output without ANSI codes (easy parsing)
 - Multi-line format shows more context
@@ -140,6 +142,7 @@ Example output:
 ```
 
 ✅ Benefits:
+
 - Structured data (easy to parse programmatically)
 - Compatible with log aggregation tools
 - No ANSI codes by design

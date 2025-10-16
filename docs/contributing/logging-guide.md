@@ -63,6 +63,7 @@ torrust-tracker-deployer --log-file-format compact --log-stderr-format compact -
 ```
 
 **ANSI Code Handling:**
+
 - File output: ANSI color codes are automatically **disabled** for clean, parseable logs
 - Stderr output: ANSI color codes are automatically **enabled** for colored terminal output
 
