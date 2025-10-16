@@ -237,6 +237,7 @@ impl LoggingBuilder {
 /// concrete type, and Rust's type system requires all match arms to return
 /// the same type. Type erasure with boxed layers would work but adds runtime
 /// overhead for a one-time initialization cost.
+#[allow(clippy::too_many_lines)]
 fn init_subscriber(
     log_dir: &Path,
     output: LogOutput,
