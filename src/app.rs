@@ -16,13 +16,27 @@ use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder
 #[command(version)]
 #[allow(clippy::struct_field_names)] // CLI arguments intentionally share 'log_' prefix for clarity
 pub struct Cli {
-    /// Logging format (default: compact)
+    /// Format for file logging (default: compact, without ANSI codes)
     ///
-    /// - pretty: Pretty-printed output for development
-    /// - json: JSON output for production environments
-    /// - compact: Compact output for minimal verbosity
+    /// - pretty: Pretty-printed output for development (no ANSI in files)
+    /// - json: JSON output for production environments (no ANSI)
+    /// - compact: Compact output for minimal verbosity (no ANSI in files)
+    ///
+    /// Note: ANSI color codes are automatically disabled for file output
+    /// to ensure logs are easily parsed with standard text tools (grep, awk, sed).
     #[arg(long, value_enum, default_value = "compact", global = true)]
-    pub log_format: LogFormat,
+    pub log_file_format: LogFormat,
+
+    /// Format for stderr logging (default: pretty, with ANSI codes)
+    ///
+    /// - pretty: Pretty-printed output with colors for development
+    /// - json: JSON output for machine processing
+    /// - compact: Compact output with colors for minimal verbosity
+    ///
+    /// Note: ANSI color codes are automatically enabled for stderr output
+    /// to provide colored terminal output for better readability.
+    #[arg(long, value_enum, default_value = "pretty", global = true)]
+    pub log_stderr_format: LogFormat,
 
     /// Log output mode (default: file-only for production)
     ///
@@ -60,13 +74,15 @@ pub fn run() {
     let cli = Cli::parse();
 
     // Clone values for logging before moving them
-    let log_format = cli.log_format.clone();
+    let log_file_format = cli.log_file_format.clone();
+    let log_stderr_format = cli.log_stderr_format.clone();
     let log_output = cli.log_output;
     let log_dir = cli.log_dir.clone();
 
     // Initialize logging FIRST before any other logic
     LoggingBuilder::new(&cli.log_dir)
-        .with_format(cli.log_format)
+        .with_file_format(cli.log_file_format)
+        .with_stderr_format(cli.log_stderr_format)
         .with_output(cli.log_output)
         .init();
 
@@ -75,7 +91,8 @@ pub fn run() {
         app = "torrust-tracker-deployer",
         version = env!("CARGO_PKG_VERSION"),
         log_dir = %log_dir.display(),
-        log_format = ?log_format,
+        log_file_format = ?log_file_format,
+        log_stderr_format = ?log_stderr_format,
         log_output = ?log_output,
         "Application started"
     );

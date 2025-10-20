@@ -431,3 +431,128 @@ fn it_should_create_log_directory_automatically() {
         "log file should be created inside the logs directory"
     );
 }
+
+#[test]
+fn it_should_not_include_ansi_codes_in_file_output_compact_format() {
+    let test = LoggingTest::new();
+
+    let output = test.run_test_logging("compact", "file-only");
+    assert!(
+        output.success,
+        "test_logging binary should execute successfully"
+    );
+
+    // Read raw bytes from log file
+    let log_bytes = fs::read(&test.log_file_path).expect("Failed to read log file");
+
+    // Check for ANSI escape sequence marker (0x1B)
+    assert!(
+        !log_bytes.contains(&0x1B),
+        "log file should not contain ANSI escape sequences (0x1B) in compact format"
+    );
+
+    // Verify log content is still present
+    let log_content = String::from_utf8_lossy(&log_bytes);
+    assert!(
+        log_content.contains("INFO"),
+        "log file should still contain INFO level logs"
+    );
+    assert!(
+        log_content.contains("WARN"),
+        "log file should still contain WARN level logs"
+    );
+    assert!(
+        log_content.contains("ERROR"),
+        "log file should still contain ERROR level logs"
+    );
+}
+
+#[test]
+fn it_should_not_include_ansi_codes_in_file_output_pretty_format() {
+    let test = LoggingTest::new();
+
+    let output = test.run_test_logging("pretty", "file-only");
+    assert!(
+        output.success,
+        "test_logging binary should execute successfully"
+    );
+
+    // Read raw bytes from log file
+    let log_bytes = fs::read(&test.log_file_path).expect("Failed to read log file");
+
+    // Check for ANSI escape sequence marker (0x1B)
+    assert!(
+        !log_bytes.contains(&0x1B),
+        "log file should not contain ANSI escape sequences (0x1B) in pretty format"
+    );
+
+    // Verify log content is still present
+    let log_content = String::from_utf8_lossy(&log_bytes);
+    assert!(
+        log_content.contains("INFO"),
+        "log file should still contain INFO level logs"
+    );
+    assert!(
+        log_content.contains("WARN"),
+        "log file should still contain WARN level logs"
+    );
+    assert!(
+        log_content.contains("ERROR"),
+        "log file should still contain ERROR level logs"
+    );
+}
+
+#[test]
+fn it_should_not_include_ansi_codes_in_file_output_json_format() {
+    let test = LoggingTest::new();
+
+    let output = test.run_test_logging("json", "file-only");
+    assert!(
+        output.success,
+        "test_logging binary should execute successfully"
+    );
+
+    // Read raw bytes from log file
+    let log_bytes = fs::read(&test.log_file_path).expect("Failed to read log file");
+
+    // Check for ANSI escape sequence marker (0x1B)
+    assert!(
+        !log_bytes.contains(&0x1B),
+        "log file should not contain ANSI escape sequences (0x1B) in JSON format"
+    );
+
+    // Verify JSON structure is valid
+    let log_content = String::from_utf8_lossy(&log_bytes);
+    assert!(
+        log_content.contains(r#""level":"INFO"#) || log_content.contains(r#""level":"info"#),
+        "JSON logs should contain INFO level"
+    );
+}
+
+#[test]
+fn it_should_not_include_ansi_codes_in_file_output_dual_mode() {
+    let test = LoggingTest::new();
+
+    // Run with file-and-stderr mode to test dual output
+    let output = test.run_test_logging("compact", "file-and-stderr");
+    assert!(
+        output.success,
+        "test_logging binary should execute successfully"
+    );
+
+    // Read raw bytes from log file
+    let log_bytes = fs::read(&test.log_file_path).expect("Failed to read log file");
+
+    // File output should NOT contain ANSI codes
+    assert!(
+        !log_bytes.contains(&0x1B),
+        "log file should not contain ANSI escape sequences (0x1B) in file-and-stderr mode"
+    );
+
+    // Verify log content is still present in file
+    let log_content = String::from_utf8_lossy(&log_bytes);
+    assert!(
+        log_content.contains("INFO"),
+        "log file should still contain INFO level logs"
+    );
+}

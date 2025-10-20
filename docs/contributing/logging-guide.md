@@ -19,7 +19,8 @@ pub fn run() {
 
     // Initialize logging FIRST before any other logic
     LoggingBuilder::new(&cli.log_dir)
-        .with_format(cli.log_format)
+        .with_file_format(cli.log_file_format)
+        .with_stderr_format(cli.log_stderr_format)
         .with_output(cli.log_output)
         .init();
 
@@ -28,7 +29,8 @@ pub fn run() {
         app = "torrust-tracker-deployer",
         version = env!("CARGO_PKG_VERSION"),
         log_dir = %cli.log_dir.display(),
-        log_format = ?cli.log_format,
+        log_file_format = ?cli.log_file_format,
+        log_stderr_format = ?cli.log_stderr_format,
         log_output = ?cli.log_output,
         "Application started"
     );
@@ -41,21 +43,31 @@ pub fn run() {
 
 ### User-Facing Configuration
 
-Users can configure logging via CLI arguments:
+Users can configure logging via CLI arguments with independent format control for file and stderr outputs:
 
 ```bash
-# Default (production): file-only, compact format
+# Default (production): file-only, compact format for files, pretty for stderr
 torrust-tracker-deployer
 
-# Development: stderr output, pretty format
-torrust-tracker-deployer --log-format pretty --log-output file-and-stderr
+# Development: stderr output, pretty format for both
+torrust-tracker-deployer --log-output file-and-stderr
 
 # Custom log directory
 torrust-tracker-deployer --log-dir /var/log/deployer
 
-# JSON format for log aggregation
-torrust-tracker-deployer --log-format json
+# JSON format for files (log aggregation), pretty for stderr (debugging)
+torrust-tracker-deployer --log-file-format json --log-stderr-format pretty --log-output file-and-stderr
+
+# Compact format for both file and stderr
+torrust-tracker-deployer --log-file-format compact --log-stderr-format compact --log-output file-and-stderr
 ```
+
+**ANSI Code Handling:**
+
+- File output: ANSI color codes are automatically **disabled** for clean, parseable logs
+- Stderr output: ANSI color codes are automatically **enabled** for colored terminal output
+
+This ensures log files can be easily processed with standard text tools (grep, awk, sed) while maintaining colored output for real-time terminal viewing.
 
 See [User Guide: Logging](../user-guide/logging.md) for complete user documentation.
 
@@ -125,21 +137,45 @@ fn main() {
 For CLI applications that want to support multiple formats:
 
 ```rust
-use torrust_tracker_deploy::logging::{self, LogFormat};
+use torrust_tracker_deployer_lib::logging::{self, LogFormat, LogOutput, LoggingBuilder};
 use clap::Parser;
+use std::path::Path;
 
 #[derive(Parser)]
 struct Cli {
+    #[arg(long, default_value = "compact")]
+    log_file_format: LogFormat,
+    
     #[arg(long, default_value = "pretty")]
-    log_format: LogFormat,
+    log_stderr_format: LogFormat,
+    
+    #[arg(long, default_value = "file-only")]
+    log_output: LogOutput,
 }
 
 fn main() {
     let cli = Cli::parse();
-    logging::init_with_format(&cli.log_format);
+    
+    // Use LoggingBuilder for independent format control
+    LoggingBuilder::new(Path::new("./data/logs"))
+        .with_file_format(cli.log_file_format)
+        .with_stderr_format(cli.log_stderr_format)
+        .with_output(cli.log_output)
+        .init();
 
     // Your application code...
 }
+```
+
+**Backward Compatibility:**
+If you want to apply the same format to both file and stderr (old behavior), use `.with_format()`:
+
+```rust
+// Apply same format to both outputs (backward compatible)
+LoggingBuilder::new(Path::new("./data/logs"))
+    .with_format(cli.log_format)
+    .with_output(cli.log_output)
+    .init();
 ```
 
 ## Span Hierarchy Examples

@@ -89,24 +89,35 @@ pub enum LogFormat {
 /// formats and output targets. It eliminates code duplication by centralizing
 /// layer creation and subscriber initialization.
 ///
+/// Supports independent format control for file and stderr outputs, with
+/// automatic ANSI code handling (disabled for files, enabled for stderr).
+///
 /// # Examples
 ///
 /// ```rust,no_run
 /// use std::path::Path;
 /// use torrust_tracker_deployer_lib::logging::{LogOutput, LogFormat, LoggingBuilder};
 ///
-/// // Basic usage with defaults (Compact format, FileAndStderr output)
+/// // Basic usage with defaults (Compact file format, Pretty stderr format, FileAndStderr output)
 /// LoggingBuilder::new(Path::new("./data/logs")).init();
 ///
-/// // Custom configuration
+/// // Custom configuration with independent formats
 /// LoggingBuilder::new(Path::new("./data/logs"))
-///     .with_format(LogFormat::Json)
+///     .with_file_format(LogFormat::Json)
+///     .with_stderr_format(LogFormat::Pretty)
+///     .with_output(LogOutput::FileAndStderr)
+///     .init();
+///
+/// // Backward compatible with single format for both outputs
+/// LoggingBuilder::new(Path::new("./data/logs"))
+///     .with_format(LogFormat::Compact)
 ///     .with_output(LogOutput::FileOnly)
 ///     .init();
 /// ```
 pub struct LoggingBuilder {
     log_dir: std::path::PathBuf,
-    format: LogFormat,
+    file_format: LogFormat,
+    stderr_format: LogFormat,
     output: LogOutput,
 }
 
@@ -114,7 +125,8 @@ impl LoggingBuilder {
     /// Create a new logging builder with default settings
     ///
     /// Default configuration:
-    /// - Format: `LogFormat::Compact`
+    /// - File Format: `LogFormat::Compact` (no ANSI codes)
+    /// - Stderr Format: `LogFormat::Pretty` (with ANSI codes)
     /// - Output: `LogOutput::FileAndStderr`
     ///
     /// # Arguments
@@ -124,19 +136,52 @@ impl LoggingBuilder {
     pub fn new(log_dir: &Path) -> Self {
         Self {
             log_dir: log_dir.to_path_buf(),
-            format: LogFormat::Compact,
+            file_format: LogFormat::Compact,
+            stderr_format: LogFormat::Pretty,
             output: LogOutput::FileAndStderr,
         }
     }
 
-    /// Set the logging format
+    /// Set the logging format for both file and stderr outputs
+    ///
+    /// This is a convenience method for backward compatibility.
+    /// For independent format control, use `with_file_format()` and `with_stderr_format()`.
     ///
     /// # Arguments
     ///
     /// * `format` - The desired logging format (Pretty, Json, or Compact)
     #[must_use]
     pub fn with_format(mut self, format: LogFormat) -> Self {
-        self.format = format;
+        self.file_format = format.clone();
+        self.stderr_format = format;
+        self
+    }
+
+    /// Set the logging format for file output
+    ///
+    /// ANSI codes are automatically disabled for file output to ensure
+    /// logs are easily parsed with standard text tools (grep, awk, sed).
+    ///
+    /// # Arguments
+    ///
+    /// * `format` - The desired logging format for files (Pretty, Json, or Compact)
+    #[must_use]
+    pub fn with_file_format(mut self, format: LogFormat) -> Self {
+        self.file_format = format;
+        self
+    }
+
+    /// Set the logging format for stderr output
+    ///
+    /// ANSI codes are automatically enabled for stderr output to provide
+    /// colored terminal output for better readability.
+    ///
+    /// # Arguments
+    ///
+    /// * `format` - The desired logging format for stderr (Pretty, Json, or Compact)
+    #[must_use]
+    pub fn with_stderr_format(mut self, format: LogFormat) -> Self {
+        self.stderr_format = format;
         self
     }
 
@@ -165,7 +210,12 @@ impl LoggingBuilder {
     ///
     /// Both panics are intentional as logging is critical for observability.
     pub fn init(self) {
-        init_subscriber(&self.log_dir, self.output, &self.format);
+        init_subscriber(
+            &self.log_dir,
+            self.output,
+            &self.file_format,
+            &self.stderr_format,
+        );
     }
 }
 
@@ -178,57 +228,209 @@ impl LoggingBuilder {
 /// This is the single source of truth for subscriber initialization.
 /// All public init functions delegate to this to eliminate duplication.
 ///
+/// Automatically configures ANSI codes:
+/// - File output: ANSI codes disabled (clean text for parsing)
+/// - Stderr output: ANSI codes enabled (colored terminal output)
+///
 /// Note: We cannot extract the format-specific layer creation into a separate
 /// function because each format (Pretty, Json, Compact) creates a different
 /// concrete type, and Rust's type system requires all match arms to return
 /// the same type. Type erasure with boxed layers would work but adds runtime
 /// overhead for a one-time initialization cost.
-fn init_subscriber(log_dir: &Path, output: LogOutput, format: &LogFormat) {
+#[allow(clippy::too_many_lines)]
+fn init_subscriber(
+    log_dir: &Path,
+    output: LogOutput,
+    file_format: &LogFormat,
+    stderr_format: &LogFormat,
+) {
     let file_appender = create_log_file_appender(log_dir);
     let env_filter = create_env_filter();
 
-    match (format, output) {
-        // Pretty format
-        (LogFormat::Pretty, LogOutput::FileOnly) => {
-            tracing_subscriber::registry()
-                .with(fmt::layer().pretty().with_writer(file_appender))
-                .with(env_filter)
-                .init();
+    match output {
+        LogOutput::FileOnly => {
+            // File-only mode: single layer with ANSI disabled
+            match file_format {
+                LogFormat::Pretty => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(env_filter)
+                        .init();
+                }
+                LogFormat::Json => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .json()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(env_filter)
+                        .init();
+                }
+                LogFormat::Compact => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(env_filter)
+                        .init();
+                }
+            }
         }
-        (LogFormat::Pretty, LogOutput::FileAndStderr) => {
-            tracing_subscriber::registry()
-                .with(fmt::layer().pretty().with_writer(file_appender))
-                .with(fmt::layer().pretty().with_writer(io::stderr))
-                .with(env_filter)
-                .init();
-        }
-        // JSON format
-        (LogFormat::Json, LogOutput::FileOnly) => {
-            tracing_subscriber::registry()
-                .with(fmt::layer().json().with_writer(file_appender))
-                .with(env_filter)
-                .init();
-        }
-        (LogFormat::Json, LogOutput::FileAndStderr) => {
-            tracing_subscriber::registry()
-                .with(fmt::layer().json().with_writer(file_appender))
-                .with(fmt::layer().json().with_writer(io::stderr))
-                .with(env_filter)
-                .init();
-        }
-        // Compact format
-        (LogFormat::Compact, LogOutput::FileOnly) => {
-            tracing_subscriber::registry()
-                .with(fmt::layer().compact().with_writer(file_appender))
-                .with(env_filter)
-                .init();
-        }
-        (LogFormat::Compact, LogOutput::FileAndStderr) => {
-            tracing_subscriber::registry()
-                .with(fmt::layer().compact().with_writer(file_appender))
-                .with(fmt::layer().compact().with_writer(io::stderr))
-                .with(env_filter)
-                .init();
+        LogOutput::FileAndStderr => {
+            // Dual output mode: file layer (no ANSI) + stderr layer (with ANSI)
+            match (file_format, stderr_format) {
+                // Pretty file format combinations
+                (LogFormat::Pretty, LogFormat::Pretty) => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
+                        .with(env_filter)
+                        .init();
+                }
+                (LogFormat::Pretty, LogFormat::Json) => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(fmt::layer().json().with_ansi(true).with_writer(io::stderr))
+                        .with(env_filter)
+                        .init();
+                }
+                (LogFormat::Pretty, LogFormat::Compact) => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
+                        .with(env_filter)
+                        .init();
+                }
+                // JSON file format combinations
+                (LogFormat::Json, LogFormat::Pretty) => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .json()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
+                        .with(env_filter)
+                        .init();
+                }
+                (LogFormat::Json, LogFormat::Json) => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .json()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(fmt::layer().json().with_ansi(true).with_writer(io::stderr))
+                        .with(env_filter)
+                        .init();
+                }
+                (LogFormat::Json, LogFormat::Compact) => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .json()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
+                        .with(env_filter)
+                        .init();
+                }
+                // Compact file format combinations
+                (LogFormat::Compact, LogFormat::Pretty) => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .pretty()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
+                        .with(env_filter)
+                        .init();
+                }
+                (LogFormat::Compact, LogFormat::Json) => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(fmt::layer().json().with_ansi(true).with_writer(io::stderr))
+                        .with(env_filter)
+                        .init();
+                }
+                (LogFormat::Compact, LogFormat::Compact) => {
+                    tracing_subscriber::registry()
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(false)
+                                .with_writer(file_appender),
+                        )
+                        .with(
+                            fmt::layer()
+                                .compact()
+                                .with_ansi(true)
+                                .with_writer(io::stderr),
+                        )
+                        .with(env_filter)
+                        .init();
+                }
+            }
         }
     }
 }
@@ -413,11 +615,15 @@ pub fn init_compact(log_dir: &Path, output: LogOutput) {
 /// This is a convenience wrapper around `LoggingBuilder` for backward compatibility.
 /// Consider using `LoggingBuilder` directly for more flexibility.
 ///
+/// This function applies the same format to both file and stderr outputs.
+/// For independent format control, use `LoggingBuilder` with `with_file_format()`
+/// and `with_stderr_format()`.
+///
 /// # Arguments
 ///
 /// * `log_dir` - Directory where log files should be written (e.g., `./data/logs` for production)
 /// * `output` - Where to write logs (file only or file + stderr)
-/// * `format` - The logging format to use
+/// * `format` - The logging format to use for both outputs
 ///
 /// # Panics
 ///

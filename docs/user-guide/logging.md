@@ -11,6 +11,9 @@ The application provides comprehensive structured logging for observability and 
 - **Always persistent**: Logs are always written to files for post-mortem analysis
 - **Configurable output**: Choose between file-only (production) or file+stderr (development)
 - **Multiple formats**: Pretty, JSON, or compact formatting to suit your needs
+- **Independent format control**: Separate format settings for file and stderr outputs
+- **ANSI-free files**: File logs automatically exclude ANSI color codes for clean parsing
+- **Colored terminals**: Stderr output automatically includes ANSI colors for readability
 - **Environment-based filtering**: Use `RUST_LOG` to control log verbosity
 
 ## Quick Start
@@ -26,8 +29,9 @@ torrust-tracker-deployer
 This configuration:
 
 - Writes logs to `./data/logs/log.txt`
-- Uses **compact** format (space-efficient, readable)
-- **File-only** output (no stderr pollution)
+- Uses **compact** format for files (space-efficient, no ANSI codes)
+- Uses **pretty** format for stderr (colored output, if enabled)
+- **File-only** output (no stderr pollution by default)
 - **Info** level logging (controlled by `RUST_LOG`)
 
 ### Development Mode
@@ -42,59 +46,120 @@ This shows log events in real-time on your terminal while still writing to the l
 
 ### Pretty Format for Debugging
 
-For maximum readability during development:
+For maximum readability during development with pretty format in both file and stderr:
 
 ```bash
-torrust-tracker-deployer --log-format pretty --log-output file-and-stderr
+torrust-tracker-deployer --log-file-format pretty --log-stderr-format pretty --log-output file-and-stderr
+```
+
+Or use the same format for both outputs (backward compatible):
+
+```bash
+# JSON to files (for aggregation), pretty to terminal (for debugging)
+torrust-tracker-deployer --log-file-format json --log-stderr-format pretty --log-output file-and-stderr
 ```
 
 ## Configuration Options
 
-### Log Format (`--log-format`)
+### Independent Format Control
 
-Controls how log entries are formatted:
+The application supports independent format control for file and stderr outputs:
 
-#### Compact (Default)
+- `--log-file-format`: Controls the format for log files (default: compact)
+- `--log-stderr-format`: Controls the format for stderr output (default: pretty)
 
-Space-efficient single-line format, ideal for production:
+**ANSI Code Handling:**
+
+- **File output**: ANSI color codes are automatically **disabled** for clean, parseable logs
+- **Stderr output**: ANSI color codes are automatically **enabled** for colored terminal display
+
+This ensures log files can be easily processed with standard text tools (grep, awk, sed) while maintaining colored output for real-time terminal viewing.
+
+### Log File Format (`--log-file-format`)
+
+Controls how log entries are formatted in files:
+
+#### Compact (Default for Files)
+
+Space-efficient single-line format, ideal for production (no ANSI codes):
 
 ```bash
-torrust-tracker-deployer --log-format compact
+torrust-tracker-deployer --log-file-format compact
 ```
 
-Example output:
+Example file output:
 
 ```text
 2025-10-15T12:39:22.793955Z  INFO torrust_tracker_deployer::app: Application started app="torrust-tracker-deployer" version="0.1.0"
 ```
 
-#### Pretty
+✅ Benefits:
 
-Multi-line format with visual structure, ideal for development:
+- Clean text (no ANSI escape codes)
+- Easy to parse with grep, awk, sed
+- Space-efficient for storage
+
+#### Pretty (Default for Stderr)
+
+Multi-line format with visual structure, ideal for development (with ANSI colors on stderr):
 
 ```bash
-torrust-tracker-deployer --log-format pretty --log-output file-and-stderr
+torrust-tracker-deployer --log-file-format pretty --log-output file-and-stderr
 ```
 
-Example output:
+Example file output (no ANSI codes):
 
 ```text
   2025-10-15T12:40:36.097921Z  INFO torrust_tracker_deployer::app: Application started, app: "torrust-tracker-deployer", version: "0.1.0"
     at src/app.rs:69
 ```
 
+Example stderr output (with ANSI colors - shown here without colors for documentation):
+
+```text
+  2025-10-15T12:40:36.097921Z  INFO torrust_tracker_deployer::app: Application started, app: "torrust-tracker-deployer", version: "0.1.0"
+    at src/app.rs:69
+```
+
+✅ Benefits:
+
+- Colored terminal output for stderr (enhanced readability)
+- Clean file output without ANSI codes (easy parsing)
+- Multi-line format shows more context
+
 #### JSON
 
-Machine-readable format for log aggregation systems:
+Machine-readable format for log aggregation systems (no ANSI codes):
 
 ```bash
-torrust-tracker-deployer --log-format json
+torrust-tracker-deployer --log-file-format json
 ```
 
 Example output:
 
 ```json
 {"timestamp":"2025-10-15T12:42:34.178335Z","level":"INFO","fields":{"message":"Application started","app":"torrust-tracker-deployer","version":"0.1.0"},"target":"torrust_tracker_deployer::app"}
+```
+
+✅ Benefits:
+
+- Structured data (easy to parse programmatically)
+- Compatible with log aggregation tools
+- No ANSI codes by design
+
+### Log Stderr Format (`--log-stderr-format`)
+
+Controls how log entries are formatted on stderr (terminal output). Uses the same format options as file logging (compact, pretty, json), but automatically enables ANSI color codes for enhanced readability.
+
+```bash
+# Pretty stderr format (default - with colors)
+torrust-tracker-deployer --log-stderr-format pretty --log-output file-and-stderr
+
+# Compact stderr format (with colors)
+torrust-tracker-deployer --log-stderr-format compact --log-output file-and-stderr
+
+# JSON stderr format (with ANSI codes for terminal)
+torrust-tracker-deployer --log-stderr-format json --log-output file-and-stderr
 ```
 
 ### Log Output (`--log-output`)
@@ -227,37 +292,43 @@ torrust-tracker-deployer
 Real-time log visibility with readable format:
 
 ```bash
-torrust-tracker-deployer --log-format pretty --log-output file-and-stderr
+torrust-tracker-deployer --log-output file-and-stderr
 ```
 
-- Logs to `./data/logs/log.txt` and stderr
-- Pretty format
+- Logs to `./data/logs/log.txt` (compact, no ANSI) and stderr (pretty, with ANSI colors)
 - Info level (increase with RUST_LOG if needed)
+
+Or specify both formats explicitly:
+
+```bash
+torrust-tracker-deployer --log-file-format compact --log-stderr-format pretty --log-output file-and-stderr
+```
 
 ### Scenario 3: Troubleshooting Issues
 
 Maximum verbosity for debugging:
 
 ```bash
-RUST_LOG=debug torrust-tracker-deployer --log-format pretty --log-output file-and-stderr
+RUST_LOG=debug torrust-tracker-deployer --log-file-format pretty --log-stderr-format pretty --log-output file-and-stderr
 ```
 
 - Debug level logging
-- Pretty format for readability
-- Real-time visibility on terminal
-- Persistent file for later analysis
+- Pretty format for both file and stderr (file without ANSI, stderr with ANSI colors)
+- Real-time visibility on terminal with colors
+- Persistent file for later analysis (clean, no ANSI codes)
 
 ### Scenario 4: Log Aggregation
 
-JSON format for external monitoring systems:
+JSON format for external monitoring systems with pretty terminal output for debugging:
 
 ```bash
-torrust-tracker-deployer --log-format json --log-dir /var/log/deployer
+torrust-tracker-deployer --log-file-format json --log-stderr-format pretty --log-dir /var/log/deployer --log-output file-and-stderr
 ```
 
-- JSON format for machine parsing
+- JSON format for files (machine parsing, log aggregation)
+- Pretty format for stderr (colored terminal output for debugging)
 - Custom log directory
-- File-only output (monitor the file externally)
+- Both file and stderr output (file for aggregation, stderr for real-time monitoring)
 
 ### Scenario 5: CI/CD Pipeline
 
@@ -357,7 +428,13 @@ torrust-tracker-deployer --log-dir /root/logs
 2. **Use pretty format** for readability:
 
    ```bash
-   torrust-tracker-deployer --log-format pretty --log-output file-and-stderr
+   torrust-tracker-deployer --log-file-format pretty --log-stderr-format pretty --log-output file-and-stderr
+   ```
+
+   Or rely on defaults (compact for files, pretty for stderr):
+
+   ```bash
+   torrust-tracker-deployer --log-output file-and-stderr
    ```
 
 3. **Increase verbosity** when debugging:
@@ -374,10 +451,16 @@ torrust-tracker-deployer --log-dir /root/logs
    torrust-tracker-deployer
    ```
 
-2. **Consider JSON format** for log aggregation:
+2. **Consider JSON format** for file output (log aggregation):
 
    ```bash
-   torrust-tracker-deployer --log-format json
+   torrust-tracker-deployer --log-file-format json
+   ```
+
+   Or combine JSON files with pretty stderr for debugging:
+
+   ```bash
+   torrust-tracker-deployer --log-file-format json --log-stderr-format pretty --log-output file-and-stderr
    ```
 
 3. **Use absolute paths** for log directories:
@@ -396,11 +479,13 @@ torrust-tracker-deployer --log-dir /root/logs
    torrust-tracker-deployer --log-output file-and-stderr
    ```
 
-2. **Use compact format** for space efficiency:
+2. **Use compact format** for space efficiency (or rely on defaults):
 
    ```bash
-   torrust-tracker-deployer --log-format compact --log-output file-and-stderr
+   torrust-tracker-deployer --log-output file-and-stderr
    ```
+
+   This uses compact format for files (default) and pretty for stderr (default).
 
 3. **Archive log files** as build artifacts
 
