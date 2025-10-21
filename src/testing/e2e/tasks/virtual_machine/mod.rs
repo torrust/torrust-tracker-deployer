@@ -7,4 +7,5 @@
 
 pub mod cleanup_infrastructure;
 pub mod preflight_cleanup;
+pub mod run_destroy_command;
 pub mod run_provision_command;

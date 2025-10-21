@@ -10,6 +10,7 @@
 //! ## Available Commands
 //!
 //! - `configure` - Infrastructure configuration and software installation
+//! - `destroy` - Infrastructure destruction and teardown
 //! - `provision` - Infrastructure provisioning using `OpenTofu`
 //! - `test` - Deployment testing and validation
 //!
@@ -17,9 +18,11 @@
 //! error management, and coordination across multiple infrastructure services.
 
 pub mod configure;
+pub mod destroy;
 pub mod provision;
 pub mod test;
 
 pub use configure::ConfigureCommand;
+pub use destroy::DestroyCommand;
 pub use provision::ProvisionCommand;
 pub use test::TestCommand;
