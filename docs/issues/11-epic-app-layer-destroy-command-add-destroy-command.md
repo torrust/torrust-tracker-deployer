@@ -1,5 +1,6 @@
 # Add DestroyCommand in Application Layer
 
+**GitHub Issue**: [#11](https://github.com/torrust/torrust-tracker-deployer/issues/11)  
 **Issue Type**: Sub-issue (9.1)  
 **Parent Epic**: #9 ([`epic-app-layer-destroy-command.md`](https://github.com/torrust/torrust-tracker-deployer/blob/main/docs/issues/9-epic-app-layer-destroy-command.md))  
 **Related Roadmap**: [Section 1.2](https://github.com/torrust/torrust-tracker-deployer/blob/main/docs/roadmap.md#12-create-command-torrust-tracker-deployer-destroy)  
@@ -131,17 +132,31 @@ pub enum DestroyError {
 ### Design Considerations
 
 1. **Idempotency**: Can we safely run destroy multiple times?
+
+   - **Decision**: Yes. The command should check if what we want to destroy already exists and inform the user if it's already destroyed.
+
 2. **State Management**: How do we track which resources exist and need destruction?
+
+   - **Decision**: We do not implement complex resource tracking for now. We only destroy by calling OpenTofu. If something fails, we report to the user and the user has to clean manually the remaining parts.
+
 3. **Partial Failures**: How do we handle cases where some resources are destroyed but others fail?
+
+   - **Decision**: Just inform the user about the failure. The user is responsible for manual cleanup of remaining resources.
+
 4. **Resource Discovery**: How do we detect and handle orphaned resources?
+   - **Decision**: If OpenTofu destroy fails, we should not delete the data related to the environment. This allows the user to finish the job manually with the preserved state information.
 
-### Open Questions
+### Implementation Decisions
 
-1. Should destroy command remove state files or preserve them for auditing?
-2. Should we validate the environment exists before attempting destruction?
-3. How do we handle concurrent access (e.g., another process provisioning while we destroy)?
+1. **State file management**: Remove state files only if everything goes well. If the user wants to preserve that information, they can backup the data or build folders for the environment before executing the destroy command.
 
-### Existing Infrastructure to Leverage
+2. **Environment validation**: Validate that the environment exists, but only using local data (not verifying that the real infrastructure exists).
+
+3. **Concurrent access handling**:
+   - Independent environments: No problem, they can run concurrently
+   - Same environment: We ignore this case for now because we do not expect multiple users using the app simultaneously
+   - The app is multi-environment but not multi-user
+   - A user can run different commands in parallel but must be aware of potential conflicts### Existing Infrastructure to Leverage
 
 - `src/testing/e2e/tasks/virtual_machine/cleanup_infrastructure.rs` - Contains working teardown logic
 - OpenTofu client implementation - Already handles infrastructure operations
@@ -166,4 +181,4 @@ After completing this issue:
 
 ---
 
-**Issue Document**: [docs/issues/epic-app-layer-destroy-command-add-destroy-command.md](https://github.com/torrust/torrust-tracker-deployer/blob/main/docs/issues/epic-app-layer-destroy-command-add-destroy-command.md)
+**Issue Document**: [docs/issues/11-epic-app-layer-destroy-command-add-destroy-command.md](https://github.com/torrust/torrust-tracker-deployer/blob/main/docs/issues/11-epic-app-layer-destroy-command-add-destroy-command.md)

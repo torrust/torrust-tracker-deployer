@@ -319,7 +319,7 @@ docs/
 │   └── commands/
 │       └── destroy.md (new)
 ├── decisions/
-│   └── [any-new-adrs].md (if needed)
+│   └── [any-new-ADRs].md (if needed)
 └── e2e-testing.md (updated)
 ```
 
