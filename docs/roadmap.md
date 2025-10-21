@@ -1,5 +1,7 @@
 # Torrust Tracker Deployer - Roadmap
 
+**GitHub Issue**: [#1 - Roadmap](https://github.com/torrust/torrust-tracker-deployer/issues/1)
+
 This document outlines the development roadmap for the Torrust Tracker Deployer project. Each task is marked with:
 
 - `[ ]` - Not completed
@@ -52,8 +54,9 @@ When starting work on a new feature:
 
 **Note:** These are internal app layer commands (like ProvisionCommand or ConfigureCommand), not console commands. The approach is to slice by functional services rather than deployment stages - we fully deploy a working stack from the beginning and incrementally add new services.
 
-- [ ] **3.1** Finish ConfigureCommand
-  - Add firewall base configuration
+- [ ] **3.1** Finish ConfigureCommand - [Epic #16](https://github.com/torrust/torrust-tracker-deployer/issues/16)
+  - Add system security configuration (automatic updates, UFW firewall)
+  - Refactor Ansible templates to centralized variables pattern
 - [ ] **3.2** Add ReleaseCommand and RunCommand with slices
 
   - [ ] **3.2.1** Run only a docker compose configuration with hello-world docker image

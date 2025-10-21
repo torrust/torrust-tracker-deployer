@@ -178,3 +178,4 @@ writeln
 ключ
 конфиг
 файл
+lineinfile
