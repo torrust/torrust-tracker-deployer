@@ -134,9 +134,14 @@ pub fn run_destroy_command(test_context: &mut TestContext) -> Result<(), Destroy
     // Execute destruction with environment (can be in any state)
     // The DestroyCommand accepts Environment<S> generically, so we need to extract
     // the environment from AnyEnvironmentState. Since destroy works on any state,
-    // we'll use a helper to convert from AnyEnvironmentState.
+    // we handle the special case of already-destroyed environments.
 
     let destroyed_env = match test_context.environment.clone() {
+        AnyEnvironmentState::Destroyed(env) => {
+            // Already destroyed, just return it
+            info!("Environment is already in Destroyed state");
+            Ok(env)
+        }
         AnyEnvironmentState::Created(env) => destroy_command.execute(env),
         AnyEnvironmentState::Provisioning(env) => destroy_command.execute(env),
         AnyEnvironmentState::Provisioned(env) => destroy_command.execute(env),
@@ -149,11 +154,6 @@ pub fn run_destroy_command(test_context: &mut TestContext) -> Result<(), Destroy
         AnyEnvironmentState::ConfigureFailed(env) => destroy_command.execute(env),
         AnyEnvironmentState::ReleaseFailed(env) => destroy_command.execute(env),
         AnyEnvironmentState::RunFailed(env) => destroy_command.execute(env),
-        AnyEnvironmentState::Destroyed(env) => {
-            // Already destroyed, just return it
-            info!("Environment is already in Destroyed state");
-            Ok(env)
-        }
     }
     .map_err(|source| DestroyTaskError::DestructionFailed { source })?;
 

@@ -9,6 +9,7 @@
 //! The command handles the complex interaction with deployment tools and ensures
 //! proper sequencing of destruction steps.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use tracing::{info, instrument};
@@ -30,6 +31,13 @@ pub enum DestroyCommandError {
 
     #[error("Failed to persist environment state: {0}")]
     StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+
+    #[error("Failed to clean up state files at '{path}': {source}")]
+    StateCleanupFailed {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
 }
 
 impl crate::shared::Traceable for DestroyCommandError {
@@ -44,6 +52,12 @@ impl crate::shared::Traceable for DestroyCommandError {
             Self::StatePersistence(e) => {
                 format!("DestroyCommandError: Failed to persist environment state - {e}")
             }
+            Self::StateCleanupFailed { path, source } => {
+                format!(
+                    "DestroyCommandError: Failed to clean up state files at '{}' - {source}",
+                    path.display()
+                )
+            }
         }
     }
 
@@ -51,7 +65,7 @@ impl crate::shared::Traceable for DestroyCommandError {
         match self {
             Self::OpenTofu(e) => Some(e),
             Self::Command(e) => Some(e),
-            Self::StatePersistence(_) => None,
+            Self::StatePersistence(_) | Self::StateCleanupFailed { .. } => None,
         }
     }
 
@@ -59,7 +73,9 @@ impl crate::shared::Traceable for DestroyCommandError {
         match self {
             Self::OpenTofu(_) => crate::shared::ErrorKind::InfrastructureOperation,
             Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
-            Self::StatePersistence(_) => crate::shared::ErrorKind::StatePersistence,
+            Self::StatePersistence(_) | Self::StateCleanupFailed { .. } => {
+                crate::shared::ErrorKind::StatePersistence
+            }
         }
     }
 }
@@ -141,11 +157,15 @@ impl DestroyCommand {
             "Starting complete infrastructure destruction workflow"
         );
 
-        // Execute destruction steps
+        // Execute infrastructure destruction
+        // OpenTofu destroy is idempotent - it will succeed even if infrastructure doesn't exist
         self.destroy_infrastructure()?;
 
         // Transition to Destroyed state
         let destroyed = environment.destroy();
+
+        // Clean up state files only after successful infrastructure destruction
+        Self::cleanup_state_files(&destroyed)?;
 
         // Persist final state
         self.repository.save(&destroyed.clone().into_any())?;
@@ -170,6 +190,55 @@ impl DestroyCommand {
     /// Returns an error if `OpenTofu` destroy fails
     fn destroy_infrastructure(&self) -> Result<(), DestroyCommandError> {
         DestroyInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
+        Ok(())
+    }
+
+    /// Clean up state files after successful infrastructure destruction
+    ///
+    /// Removes the data and build directories for the environment.
+    /// This is only called after infrastructure destruction succeeds.
+    ///
+    /// # Arguments
+    ///
+    /// * `env` - The destroyed environment
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if state file cleanup fails
+    fn cleanup_state_files(env: &Environment<Destroyed>) -> Result<(), DestroyCommandError> {
+        let data_dir = env.data_dir();
+        let build_dir = env.build_dir();
+
+        // Remove data directory if it exists
+        if data_dir.exists() {
+            std::fs::remove_dir_all(data_dir).map_err(|source| {
+                DestroyCommandError::StateCleanupFailed {
+                    path: data_dir.clone(),
+                    source,
+                }
+            })?;
+            info!(
+                command = "destroy",
+                path = %data_dir.display(),
+                "Removed state directory"
+            );
+        }
+
+        // Remove build directory if it exists
+        if build_dir.exists() {
+            std::fs::remove_dir_all(build_dir).map_err(|source| {
+                DestroyCommandError::StateCleanupFailed {
+                    path: build_dir.clone(),
+                    source,
+                }
+            })?;
+            info!(
+                command = "destroy",
+                path = %build_dir.display(),
+                "Removed build directory"
+            );
+        }
+
         Ok(())
     }
 }
