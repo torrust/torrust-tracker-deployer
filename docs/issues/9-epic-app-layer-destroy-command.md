@@ -32,7 +32,7 @@ This follows an **inside-outside approach**: build the core application logic fi
 
 ## 📦 Sub-Issues
 
-### Issue 9.1: Add DestroyCommand in Application Layer
+### Issue #11: Add DestroyCommand in Application Layer
 
 **Description**: Create the `DestroyCommand` struct and implementation in `src/application/commands/destroy/` with complete infrastructure teardown functionality.
 
@@ -62,7 +62,7 @@ This follows an **inside-outside approach**: build the core application logic fi
 
 ---
 
-### Issue 9.2: Update E2E Provision Tests to Include Destroy
+### Issue #12: Update E2E Provision Tests to Include Destroy
 
 **Description**: Modify `src/bin/e2e_provision_tests.rs` binary to use the new destroy command instead of manual cleanup, ensuring CI can run complete provision+destroy cycles.
 
@@ -88,7 +88,7 @@ This follows an **inside-outside approach**: build the core application logic fi
 
 ---
 
-### Issue 9.3: Add Developer Documentation
+### Issue #13: Add Developer Documentation
 
 **Description**: Document the destroy command implementation for developers.
 
@@ -119,9 +119,11 @@ This follows an **inside-outside approach**: build the core application logic fi
 
 **Sub-Issues**:
 
-1. Issue 9.1: Add DestroyCommand in Application Layer (6-8h)
-2. Issue 9.2: Update E2E Provision Tests to Include Destroy (3-4h)
-3. Issue 9.3: Add Developer Documentation (2-3h)## 🔗 Dependencies
+1. Issue #11: Add DestroyCommand in Application Layer (6-8h)
+2. Issue #12: Update E2E Provision Tests to Include Destroy (3-4h)
+3. Issue #13: Add Developer Documentation (2-3h)
+
+## 🔗 Dependencies
 
 - Requires completed: Epic/Issue #2 (Scaffolding for main app)
 - Blocks: Epic #10 (UI Layer Destroy Command)
