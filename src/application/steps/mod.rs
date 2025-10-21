@@ -29,8 +29,8 @@ pub mod validation;
 // Re-export all steps for easy access
 pub use connectivity::WaitForSSHConnectivityStep;
 pub use infrastructure::{
-    ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
-    PlanInfrastructureStep, ValidateInfrastructureStep,
+    ApplyInfrastructureStep, DestroyInfrastructureStep, GetInstanceInfoStep,
+    InitializeInfrastructureStep, PlanInfrastructureStep, ValidateInfrastructureStep,
 };
 pub use rendering::{
     RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
