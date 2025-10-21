@@ -23,9 +23,15 @@ When starting work on a new feature:
 
 **Epic Issue**: [#2 - Scaffolding for main app](https://github.com/torrust/torrust-tracker-deployer/issues/2)
 
-- [ ] **1.1** Setup logging - [Issue #3](https://github.com/torrust/torrust-tracker-deployer/issues/3)
+- [x] **1.1** Setup logging - [Issue #3](https://github.com/torrust/torrust-tracker-deployer/issues/3) ✅ Completed
+  - [x] Setup logging for production CLI - [PR #4](https://github.com/torrust/torrust-tracker-deployer/pull/4)
+  - [x] Remove ANSI codes from file logging - [Issue #5](https://github.com/torrust/torrust-tracker-deployer/issues/5), [PR #7](https://github.com/torrust/torrust-tracker-deployer/pull/7)
 - [ ] **1.2** Create command `torrust-tracker-deployer destroy` to destroy an environment
-  - It will depend on the environment status. For example, if it has not been provisioned we only have to delete the persistent data.
+  - Parent EPIC: [Implement `destroy` Command](https://github.com/torrust/torrust-tracker-deployer/issues/8) - GitHub Issue #8 ([`8-epic-destroy-command.md`](./issues/8-epic-destroy-command.md))
+  - Split into two child EPICs for incremental delivery:
+    - [ ] **Child EPIC #9**: [App Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/9) - Core business logic ([`9-epic-app-layer-destroy-command.md`](./issues/9-epic-app-layer-destroy-command.md))
+    - [ ] **Child EPIC #10**: [UI Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/10) - CLI interface ([`10-epic-ui-layer-destroy-command.md`](./issues/10-epic-ui-layer-destroy-command.md)) (depends on EPIC #9)
+  - **Note:** It will depend on the environment status. For example, if it has not been provisioned we only have to delete the persistent data.
   - For manual testing we can create envs with the E2E full test (there is an option to keep the infra after testing)
 - [ ] **1.3** Refactor extract shared code between testing and production for app bootstrapping
 - [ ] **1.4** Improve command to use better abstraction to handle presentation layer
