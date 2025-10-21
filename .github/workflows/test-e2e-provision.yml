@@ -68,10 +68,15 @@ jobs:
 
       - name: Get test outputs (on success)
         if: success()
-        working-directory: build/e2e-provision/tofu/lxd
         run: |
           echo "=== Infrastructure Outputs ==="
-          sudo -E tofu output || echo "No outputs available"
+          # Only check outputs if build directory still exists (it may be cleaned up by DestroyCommand)
+          if [ -d "build/e2e-provision/tofu/lxd" ]; then
+            cd build/e2e-provision/tofu/lxd
+            sudo -E tofu output || echo "No outputs available"
+          else
+            echo "Build directory not found (likely cleaned up by DestroyCommand)"
+          fi
 
           echo "=== Container Status ==="
           sudo lxc list torrust-tracker-vm-e2e-provision || echo "Container not found"
@@ -86,8 +91,12 @@ jobs:
           sudo lxc list || echo "LXC list failed"
 
           echo "=== OpenTofu State ==="
-          cd build/e2e-provision/tofu/lxd
-          sudo -E tofu show || echo "No state to show"
+          if [ -d "build/e2e-provision/tofu/lxd" ]; then
+            cd build/e2e-provision/tofu/lxd
+            sudo -E tofu show || echo "No state to show"
+          else
+            echo "No OpenTofu state directory found"
+          fi
 
           echo "=== System Resources ==="
           df -h
@@ -96,14 +105,22 @@ jobs:
           echo "=== Recent logs ==="
           sudo journalctl --since "10 minutes ago" --no-pager | tail -50 || echo "Journal logs not available"
 
-      - name: Cleanup infrastructure (always run)
-        if: always()
-        working-directory: build/e2e-provision/tofu/lxd
+      - name: Cleanup infrastructure (on failure only)
+        if: failure()
         run: |
-          echo "Cleaning up test infrastructure..."
-          # Use sudo for CI environment cleanup
-          # NOTE: For local development, use "sg lxd -c 'tofu destroy'" instead
-          sudo -E tofu destroy -auto-approve || echo "Destroy command failed or nothing to destroy"
+          echo "Test failed - attempting emergency cleanup..."
+
+          # Try OpenTofu cleanup only if build directory still exists
+          if [ -d "build/e2e-provision/tofu/lxd" ]; then
+            echo "Found OpenTofu state directory, attempting tofu destroy..."
+            cd build/e2e-provision/tofu/lxd
+            sudo -E tofu destroy -auto-approve || echo "Tofu destroy failed or nothing to destroy"
+          else
+            echo "No OpenTofu state directory found (likely cleaned up by DestroyCommand)"
+          fi
+
+          # Always attempt LXD cleanup (no working directory dependency)
+          echo "Attempting LXD resource cleanup..."
           sudo lxc delete torrust-tracker-vm-e2e-provision --force || echo "Container deletion failed or container doesn't exist"
           sudo lxc profile delete torrust-profile-e2e-provision || echo "Profile deletion failed or profile doesn't exist"
 
