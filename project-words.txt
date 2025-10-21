@@ -179,3 +179,5 @@ writeln
 конфиг
 файл
 lineinfile
+mockall
+runbooks
