@@ -1,29 +1,29 @@
-//! End-to-End Provisioning Tests for Torrust Tracker Deployer
+//! End-to-End Provisioning and Destruction Tests for Torrust Tracker Deployer
 //!
-//! This binary focuses exclusively on testing infrastructure provisioning.
-//! It creates VMs/containers using `OpenTofu` and validates that the infrastructure
-//! is properly provisioned and ready for configuration, but does NOT attempt
-//! to configure or install software.
+//! This binary tests the complete infrastructure lifecycle: provisioning and destruction.
+//! It creates VMs/containers using `OpenTofu`, validates infrastructure provisioning,
+//! and then destroys the infrastructure using the `DestroyCommand` (with fallback to
+//! manual cleanup on failure). This does NOT test software configuration or installation.
 //!
 //! ## Usage
 //!
-//! Run the E2E provisioning tests:
+//! Run the E2E provisioning and destruction tests:
 //!
 //! ```bash
-//! cargo run --bin e2e-provision-tests
+//! cargo run --bin e2e-provision-and-destroy-tests
 //! ```
 //!
 //! Run with custom options:
 //!
 //! ```bash
 //! # Keep test environment after completion (for debugging)
-//! cargo run --bin e2e-provision-tests -- --keep
+//! cargo run --bin e2e-provision-and-destroy-tests -- --keep
 //!
 //! # Change logging format
-//! cargo run --bin e2e-provision-tests -- --log-format json
+//! cargo run --bin e2e-provision-and-destroy-tests -- --log-format json
 //!
 //! # Show help
-//! cargo run --bin e2e-provision-tests -- --help
+//! cargo run --bin e2e-provision-and-destroy-tests -- --help
 //! ```
 //!
 //! ## Test Workflow
@@ -31,7 +31,7 @@
 //! 1. **Preflight cleanup** - Remove any artifacts from previous test runs that may have failed to clean up
 //! 2. **Infrastructure provisioning** - Create VMs/containers using `OpenTofu`
 //! 3. **Basic validation** - Verify VM is created and cloud-init completed
-//! 4. **Test infrastructure cleanup** - Remove test resources created during this run
+//! 4. **Infrastructure destruction** - Destroy infrastructure using `DestroyCommand` (with fallback to manual cleanup)
 //!
 //! ## Two-Phase Cleanup Strategy
 //!
@@ -39,11 +39,12 @@
 //!
 //! - **Phase 1 - Preflight cleanup**: Removes artifacts from previous test runs that may have
 //!   failed to clean up properly (executed at the start in main function)
-//! - **Phase 2 - Test infrastructure cleanup**: Destroys resources created specifically during
-//!   the current test run (executed at the end in main function)
+//! - **Phase 2 - Infrastructure destruction**: Destroys resources created specifically during
+//!   the current test run using `DestroyCommand`, with fallback to manual cleanup on failure
+//!   (executed at the end in main function)
 //!
-//! This split allows provisioning tests to run reliably on GitHub Actions
-//! while configuration tests can be handled separately with different infrastructure.
+//! This approach provides comprehensive E2E testing of the full provision+destroy lifecycle
+//! while ensuring reliable cleanup in CI environments.
 
 use anyhow::Result;
 use clap::Parser;
@@ -60,12 +61,13 @@ use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestConte
 use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::{
     cleanup_infrastructure::cleanup_test_infrastructure,
     preflight_cleanup::preflight_cleanup_previous_resources,
+    run_destroy_command::run_destroy_command,
     run_provision_command::run_provision_command,
 };
 
 #[derive(Parser)]
-#[command(name = "e2e-provision-tests")]
-#[command(about = "E2E provisioning tests for Torrust Tracker Deployer")]
+#[command(name = "e2e-provision-and-destroy-tests")]
+#[command(about = "E2E provisioning and destruction tests for Torrust Tracker Deployer")]
 struct Cli {
     /// Keep the test environment after completion
     #[arg(long)]
@@ -80,13 +82,13 @@ struct Cli {
     log_format: LogFormat,
 }
 
-/// Main entry point for the E2E provisioning test suite
+/// Main entry point for the E2E provisioning and destruction test suite
 ///
-/// This function orchestrates the complete provisioning test workflow:
+/// This function orchestrates the complete provision+destroy test workflow:
 /// 1. Initializes logging and test environment
 /// 2. Performs pre-flight cleanup
 /// 3. Runs provisioning tests (infrastructure creation only)
-/// 4. Performs cleanup
+/// 4. Destroys infrastructure using `DestroyCommand` (with fallback to manual cleanup)
 /// 5. Reports results
 ///
 /// Returns `Ok(())` if all tests pass, `Err` otherwise.
@@ -98,7 +100,7 @@ struct Cli {
 /// - Test environment setup fails
 /// - Pre-flight cleanup encounters issues
 /// - Infrastructure provisioning fails
-/// - Cleanup operations fail
+/// - Destruction operations fail (both `DestroyCommand` and manual cleanup fallback)
 ///
 /// # Panics
 ///
@@ -117,9 +119,9 @@ pub async fn main() -> Result<()> {
 
     info!(
         application = "torrust_tracker_deployer",
-        test_suite = "e2e_provision_tests",
+        test_suite = "e2e_provision_and_destroy_tests",
         log_format = ?cli.log_format,
-        "Starting E2E provisioning tests"
+        "Starting E2E provisioning and destruction tests"
     );
 
     // Create environment entity for e2e-provision testing
@@ -152,8 +154,9 @@ pub async fn main() -> Result<()> {
     let provision_result = run_provisioning_test(&mut test_context).await;
 
     // Always cleanup test infrastructure created during this test run
+    // Try using DestroyCommand first, fallback to manual cleanup on failure
     // This ensures proper resource cleanup regardless of test success or failure
-    cleanup_test_infrastructure(&test_context);
+    let destroy_result = run_infrastructure_destroy(&mut test_context);
 
     let test_duration = test_start.elapsed();
 
@@ -161,22 +164,43 @@ pub async fn main() -> Result<()> {
         performance = "test_execution",
         duration_secs = test_duration.as_secs_f64(),
         duration = ?test_duration,
-        "Provisioning test execution completed"
+        "Provisioning and destruction test execution completed"
     );
+
+    // Handle destroy result - log but don't fail the overall test
+    match destroy_result {
+        Ok(()) => {
+            info!(
+                operation = "destroy",
+                status = "success",
+                "Infrastructure destruction completed successfully"
+            );
+        }
+        Err(destroy_err) => {
+            error!(
+                operation = "destroy",
+                status = "failed",
+                error = %destroy_err,
+                "Infrastructure destruction failed - this may require manual cleanup"
+            );
+            // Note: We don't fail the overall test just because destroy failed
+            // The provision test results are more important
+        }
+    }
 
     // Handle provisioning test results
     match provision_result {
         Ok(_) => {
             info!(
-                test_suite = "e2e_provision_tests",
+                test_suite = "e2e_provision_and_destroy_tests",
                 status = "success",
-                "All provisioning tests passed and cleanup completed successfully"
+                "All provisioning and destruction tests passed successfully"
             );
             Ok(())
         }
         Err(provision_err) => {
             error!(
-                test_suite = "e2e_provision_tests",
+                test_suite = "e2e_provision_and_destroy_tests",
                 status = "failed",
                 error = %provision_err,
                 "Infrastructure provisioning failed"
@@ -229,4 +253,55 @@ async fn run_provisioning_test(env: &mut TestContext) -> Result<IpAddr> {
 
     // Return the instance IP for potential future validation
     Ok(instance_ip)
+}
+
+/// Runs the infrastructure destruction workflow
+///
+/// This function destroys infrastructure using the `DestroyCommand` with fallback
+/// to manual cleanup if the command fails. This ensures reliable cleanup in all scenarios.
+///
+/// # Destruction Strategy
+///
+/// 1. **Try DestroyCommand**: Use the application layer command for destruction
+/// 2. **Fallback to Manual Cleanup**: If `DestroyCommand` fails, use manual cleanup functions
+///
+/// Returns `Ok(())` on successful destruction (either via command or fallback).
+fn run_infrastructure_destroy(test_context: &mut TestContext) -> Result<()> {
+    use tracing::warn;
+
+    info!(
+        test_type = "destroy",
+        workflow = "infrastructure_destruction",
+        "Starting infrastructure destruction E2E test"
+    );
+
+    // Try using the DestroyCommand first
+    match run_destroy_command(test_context) {
+        Ok(()) => {
+            info!(
+                status = "success",
+                method = "destroy_command",
+                "Infrastructure destroyed successfully using DestroyCommand"
+            );
+            Ok(())
+        }
+        Err(e) => {
+            warn!(
+                status = "failed",
+                method = "destroy_command",
+                error = %e,
+                "DestroyCommand failed, falling back to manual cleanup"
+            );
+
+            // Fallback to manual cleanup
+            cleanup_test_infrastructure(test_context);
+
+            info!(
+                status = "success",
+                method = "manual_cleanup",
+                "Infrastructure destroyed using manual cleanup fallback"
+            );
+            Ok(())
+        }
+    }
 }

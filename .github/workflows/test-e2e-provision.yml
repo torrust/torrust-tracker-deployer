@@ -1,6 +1,6 @@
-name: E2E Provision Tests
+name: E2E Provision and Destroy Tests
 
-# This workflow tests ONLY infrastructure provisioning (creating VMs/containers)
+# This workflow tests infrastructure provisioning and destruction (creating and destroying VMs/containers)
 # It does NOT test software configuration/installation to avoid GitHub Actions
 # network connectivity issues with LXD VMs.
 #
@@ -51,17 +51,17 @@ jobs:
           tofu version
           cargo --version
 
-      - name: Build E2E provision tests binary
+      - name: Build E2E provision and destroy tests binary
         run: |
-          cargo build --bin e2e-provision-tests --release
+          cargo build --bin e2e-provision-and-destroy-tests --release
 
-      - name: Run E2E provision test
+      - name: Run E2E provision and destroy test
         run: |
-          # Run the E2E provision test with debug logging for better debugging
+          # Run the E2E provision and destroy test with debug logging for better debugging
           # Use sudo -E and preserve PATH to ensure cargo is accessible
-          echo "🚀 Starting E2E provision test at $(date)"
-          sudo -E env "PATH=$PATH" cargo run --bin e2e-provision-tests
-          echo "✅ E2E provision test completed at $(date)"
+          echo "🚀 Starting E2E provision and destroy test at $(date)"
+          sudo -E env "PATH=$PATH" cargo run --bin e2e-provision-and-destroy-tests
+          echo "✅ E2E provision and destroy test completed at $(date)"
         env:
           # Preserve environment variables for the E2E test
           RUST_LOG: debug
@@ -114,9 +114,9 @@ jobs:
           sudo lxc list
 
           echo "=== Test Summary ==="
-          echo "E2E provision test workflow completed"
+          echo "E2E provision and destroy test workflow completed"
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ All provision tests passed successfully"
+            echo "✅ All provision and destroy tests passed successfully"
           else
-            echo "❌ Some provision tests failed - check logs above"
+            echo "❌ Some provision and destroy tests failed - check logs above"
           fi
