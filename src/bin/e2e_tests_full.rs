@@ -68,9 +68,8 @@ use torrust_tracker_deployer_lib::testing::e2e::tasks::{
     run_configure_command::run_configure_command,
     run_test_command::run_test_command,
     virtual_machine::{
-        cleanup_infrastructure::cleanup_test_infrastructure,
         preflight_cleanup::preflight_cleanup_previous_resources,
-        run_provision_command::run_provision_command,
+        run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
     },
 };
 
@@ -164,9 +163,10 @@ pub async fn main() -> Result<()> {
         Err(_) => Ok(()), // Skip validation if deployment failed
     };
 
-    // Always cleanup test infrastructure created during this test run
+    // Always cleanup test infrastructure created during this test run using DestroyCommand
     // This ensures proper resource cleanup regardless of test success or failure
-    cleanup_test_infrastructure(&test_context);
+    // The keep_env flag is handled inside run_full_destroy_test
+    let destroy_result = run_full_destroy_test(&mut test_context);
 
     let test_duration = test_start.elapsed();
 
@@ -177,7 +177,28 @@ pub async fn main() -> Result<()> {
         "Test execution completed"
     );
 
-    // Handle all 4 combinations of deployment and validation results
+    // Handle all combinations of deployment, validation, and destroy results
+    // Destroy failures are logged but don't override test results
+    match destroy_result {
+        Ok(()) => {
+            info!(
+                operation = "destroy",
+                status = "success",
+                "Infrastructure cleanup completed successfully"
+            );
+        }
+        Err(destroy_err) => {
+            error!(
+                operation = "destroy",
+                status = "failed",
+                error = %destroy_err,
+                "Infrastructure cleanup failed"
+            );
+            // Note: We don't fail the overall test just because cleanup failed
+            // The test results are more important than cleanup results
+        }
+    }
+
     match (deployment_result, validation_result) {
         (Ok(()), Ok(())) => {
             info!(
@@ -241,5 +262,22 @@ async fn run_full_deployment_test(test_context: &mut TestContext) -> Result<()> 
         "Full deployment E2E test completed successfully"
     );
 
+    Ok(())
+}
+
+fn run_full_destroy_test(test_context: &mut TestContext) -> Result<()> {
+    info!(
+        test_type = "full_destroy",
+        workflow = "template_based",
+        "Starting full destroy E2E test"
+    );
+
+    // Call the new run_destroy_command function
+    run_destroy_command(test_context).map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    info!(
+        status = "success",
+        "Infrastructure destruction completed successfully"
+    );
     Ok(())
 }

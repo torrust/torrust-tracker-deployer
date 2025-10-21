@@ -391,6 +391,34 @@ impl TestContext {
         self.environment = configured_env.into_any();
     }
 
+    /// Updates the test context environment from a destroyed environment
+    ///
+    /// This method updates the internal environment state after destruction
+    /// completes, ensuring the `TestContext` maintains the latest and accurate environment state.
+    ///
+    /// # Arguments
+    ///
+    /// * `destroyed_env` - The destroyed environment returned by `DestroyCommand`
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use torrust_tracker_deployer_lib::testing::e2e::context::TestContext;
+    /// # use torrust_tracker_deployer_lib::domain::Environment;
+    /// # fn example(test_context: &mut TestContext, destroyed_env: Environment<torrust_tracker_deployer_lib::domain::environment::Destroyed>) {
+    /// // After destruction succeeds, update the test context
+    /// test_context.update_from_destroyed(destroyed_env);
+    /// # }
+    /// ```
+    pub fn update_from_destroyed(
+        &mut self,
+        destroyed_env: crate::domain::Environment<crate::domain::environment::Destroyed>,
+    ) {
+        // Replace the environment with the destroyed state using type erasure
+        // This properly represents the actual state (Destroyed) rather than keeping it in previous state
+        self.environment = destroyed_env.into_any();
+    }
+
     /// Creates a repository for the current environment
     ///
     /// This is a convenience method that creates an `EnvironmentRepository`
