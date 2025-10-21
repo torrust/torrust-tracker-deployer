@@ -1,5 +1,6 @@
 # Rename and Update E2E Provision Tests to Include Destroy
 
+**GitHub Issue**: [#12](https://github.com/torrust/torrust-tracker-deployer/issues/12)  
 **Issue Type**: Sub-issue (9.2)  
 **Parent Epic**: #9 ([`epic-app-layer-destroy-command.md`](https://github.com/torrust/torrust-tracker-deployer/blob/main/docs/issues/9-epic-app-layer-destroy-command.md))  
 **Related Roadmap**: [Section 1.2](https://github.com/torrust/torrust-tracker-deployer/blob/main/docs/roadmap.md#12-create-command-torrust-tracker-deployer-destroy)  

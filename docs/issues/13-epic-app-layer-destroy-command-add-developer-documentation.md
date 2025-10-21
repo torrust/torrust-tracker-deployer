@@ -1,5 +1,6 @@
 # Add Developer Documentation for Destroy Command
 
+**GitHub Issue**: [#13](https://github.com/torrust/torrust-tracker-deployer/issues/13)  
 **Issue Type**: Sub-issue (9.3)  
 **Parent Epic**: #9 ([`epic-app-layer-destroy-command.md`](https://github.com/torrust/torrust-tracker-deployer/blob/main/docs/issues/9-epic-app-layer-destroy-command.md))  
 **Related Roadmap**: [Section 1.2](https://github.com/torrust/torrust-tracker-deployer/blob/main/docs/roadmap.md#12-create-command-torrust-tracker-deployer-destroy)  

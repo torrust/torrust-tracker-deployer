@@ -1,5 +1,6 @@
 # EPIC: Implement `destroy` Command for Infrastructure Cleanup
 
+**GitHub Issue**: [#8](https://github.com/torrust/torrust-tracker-deployer/issues/8)  
 **Epic Type**: Parent Epic (Task 1.2 from Roadmap)
 **Related Roadmap**: [Section 1.2](../roadmap.md#1-add-scaffolding-for-main-app)
 **Parent Issue**: #2 (Scaffolding for main app)

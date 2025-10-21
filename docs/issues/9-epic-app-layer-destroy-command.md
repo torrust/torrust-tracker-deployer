@@ -1,5 +1,6 @@
 # EPIC: App Layer Destroy Command
 
+**GitHub Issue**: [#9](https://github.com/torrust/torrust-tracker-deployer/issues/9)  
 **Epic Type**: Child Epic #9 (Phase 1 of Task 1.2)
 **Parent Epic**: #8 ([`8-epic-destroy-command.md`](./8-epic-destroy-command.md))
 **Related Roadmap**: [Section 1.2](../roadmap.md#1-add-scaffolding-for-main-app)

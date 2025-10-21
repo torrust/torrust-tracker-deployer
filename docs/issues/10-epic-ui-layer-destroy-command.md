@@ -1,5 +1,6 @@
 # EPIC: UI Layer Destroy Command
 
+**GitHub Issue**: [#10](https://github.com/torrust/torrust-tracker-deployer/issues/10)  
 **Epic Type**: Child Epic #10 (Phase 2 of Task 1.2)
 **Parent Epic**: #8 ([`8-epic-destroy-command.md`](./8-epic-destroy-command.md))
 **Dependencies**: Child Epic #9 ([`9-epic-app-layer-destroy-command.md`](./9-epic-app-layer-destroy-command.md)) must be completed first
