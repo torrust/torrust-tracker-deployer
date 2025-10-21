@@ -77,17 +77,19 @@ After extensive research, testing, and architecture evolution, we have adopted a
 
 ### Testing Workflows
 
-#### 1. Provision Phase Testing (e2e-provision-tests)
+#### 1. Provision and Destroy Phase Testing (e2e-provision-and-destroy-tests)
 
 ```bash
-# Test infrastructure provisioning with LXD VMs
-cargo run --bin e2e-provision-tests
+# Test infrastructure provisioning and destruction lifecycle with LXD VMs
+cargo run --bin e2e-provision-and-destroy-tests
 
 # What this tests:
 # - VM creation via OpenTofu + LXD
 # - Cloud-init completion and user setup
 # - SSH access and connectivity
 # - Basic system state validation
+# - Infrastructure destruction via DestroyCommand
+# - Fallback to manual cleanup on destroy failures
 # Time: ~20-30 seconds
 ```
 
@@ -113,7 +115,7 @@ Both test suites can run independently and in parallel:
 
 ```bash
 # Run both test phases simultaneously
-cargo run --bin e2e-provision-tests &
+cargo run --bin e2e-provision-and-destroy-tests &
 cargo run --bin e2e-config-tests &
 wait
 ```
@@ -284,11 +286,12 @@ Based on comprehensive research, performance testing, and E2E test split impleme
 **Test Execution Patterns**:
 
 ```bash
-# Provision phase (runs independently)
-cargo run --bin e2e-provision-tests
+# Provision and destroy phase (runs independently)
+cargo run --bin e2e-provision-and-destroy-tests
 # - VM creation ~20-30s
 # - Cloud-init validation
 # - SSH connectivity verification
+# - Infrastructure destruction via DestroyCommand
 # - Cleanup and resource management
 
 # Configuration phase (runs independently)
@@ -348,7 +351,7 @@ This strategy addresses our specific needs by leveraging the best aspects of bot
 
 ### Completed ✅
 
-- ✅ **Provision Phase Testing**: `e2e-provision-tests` binary with LXD VM testing
+- ✅ **Provision and Destroy Phase Testing**: `e2e-provision-and-destroy-tests` binary with LXD VM testing
 - ✅ **Docker Container Infrastructure**: `docker/provisioned-instance/` configuration
 - ✅ **SSH Authentication**: Password + SSH key support for container connectivity
 - ✅ **Supervisor Integration**: Container-friendly process management

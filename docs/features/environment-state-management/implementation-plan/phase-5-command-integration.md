@@ -440,7 +440,7 @@ impl ProvisionCommand {
    }
    ```
 
-2. **Update E2E Provision Test binary** (`src/bin/e2e-provision-tests.rs`):
+2. **Update E2E Provision and Destroy Test binary** (`src/bin/e2e-provision-and-destroy-tests.rs`):
 
    ```rust
    async fn run_provision_test() -> Result<(), Box<dyn std::error::Error>> {

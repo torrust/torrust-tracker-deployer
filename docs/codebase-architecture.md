@@ -178,7 +178,7 @@ All modules include comprehensive `//!` documentation with:
 
 - ✅ `src/bin/linter.rs` - Code quality linting binary
 - ✅ `src/bin/e2e-config-tests.rs` - E2E configuration tests
-- ✅ `src/bin/e2e-provision-tests.rs` - E2E provisioning tests
+- ✅ `src/bin/e2e-provision-and-destroy-tests.rs` - E2E provisioning and destruction tests
 - ✅ `src/bin/e2e-tests-full.rs` - Full E2E test suite
 
 ### Domain Layer

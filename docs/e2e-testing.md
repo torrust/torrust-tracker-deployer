@@ -6,7 +6,7 @@ This guide explains how to run and understand the End-to-End (E2E) tests for the
 
 The E2E tests validate the complete deployment process using two independent test suites:
 
-1. **E2E Provision Tests** - Test infrastructure provisioning using LXD VMs
+1. **E2E Provision and Destroy Tests** - Test infrastructure provisioning and destruction lifecycle using LXD VMs
 2. **E2E Configuration Tests** - Test software installation and configuration using Docker containers
 
 This split approach ensures reliable testing in CI environments while maintaining comprehensive coverage.
@@ -15,12 +15,12 @@ This split approach ensures reliable testing in CI environments while maintainin
 
 ### Independent Test Suites
 
-#### Provision Tests
+#### Provision and Destroy Tests
 
-Test infrastructure provisioning only (VM creation and cloud-init):
+Test infrastructure provisioning and destruction lifecycle (VM creation, cloud-init, and destruction):
 
 ```bash
-cargo run --bin e2e-provision-tests
+cargo run --bin e2e-provision-and-destroy-tests
 ```
 
 #### Configuration Tests
@@ -52,8 +52,11 @@ All test binaries support these options:
 ### Examples
 
 ```bash
-# Run provision tests only
-cargo run --bin e2e-provision-tests
+# Run provision and destroy tests
+cargo run --bin e2e-provision-and-destroy-tests
+
+# Run provision and destroy tests with debugging (keep environment)
+cargo run --bin e2e-provision-and-destroy-tests -- --keep
 
 # Run configuration tests with debugging
 cargo run --bin e2e-config-tests -- --keep
@@ -64,25 +67,36 @@ cargo run --bin e2e-tests-full -- --templates-dir ./custom/templates
 
 ## 📋 Test Sequences
 
-### E2E Provision Tests (`e2e-provision-tests`)
+### E2E Provision and Destroy Tests (`e2e-provision-and-destroy-tests`)
 
-Tests infrastructure provisioning using LXD VMs:
+Tests the complete infrastructure lifecycle using LXD VMs:
 
-1. **Infrastructure Provisioning**
+1. **Preflight Cleanup**
+
+   - Removes artifacts from previous test runs that may have failed to clean up
+
+2. **Infrastructure Provisioning**
 
    - Uses OpenTofu configuration from `templates/tofu/lxd/`
    - Creates LXD container with Ubuntu and cloud-init configuration
 
-2. **Cloud-init Completion**
+3. **Cloud-init Completion**
+
    - Waits for cloud-init to finish system initialization
    - Validates user accounts and SSH key setup
    - Verifies basic network interface setup
+
+4. **Infrastructure Destruction**
+   - Destroys infrastructure using `DestroyCommand` (application layer)
+   - Falls back to manual cleanup if `DestroyCommand` fails
+   - Ensures proper resource cleanup regardless of test success or failure
 
 **Validation**:
 
 - ✅ VM is created and running
 - ✅ Cloud-init status is "done"
 - ✅ Boot completion marker file exists (`/var/lib/cloud/instance/boot-finished`)
+- ✅ Infrastructure is properly destroyed after tests complete
 
 ### E2E Configuration Tests (`e2e-config-tests`)
 
