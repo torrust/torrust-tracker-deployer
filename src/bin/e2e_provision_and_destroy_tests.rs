@@ -61,8 +61,7 @@ use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestConte
 use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::{
     cleanup_infrastructure::cleanup_test_infrastructure,
     preflight_cleanup::preflight_cleanup_previous_resources,
-    run_destroy_command::run_destroy_command,
-    run_provision_command::run_provision_command,
+    run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
 };
 
 #[derive(Parser)]
@@ -156,7 +155,7 @@ pub async fn main() -> Result<()> {
     // Always cleanup test infrastructure created during this test run
     // Try using DestroyCommand first, fallback to manual cleanup on failure
     // This ensures proper resource cleanup regardless of test success or failure
-    let destroy_result = run_infrastructure_destroy(&mut test_context);
+    run_infrastructure_destroy(&mut test_context);
 
     let test_duration = test_start.elapsed();
 
@@ -166,27 +165,6 @@ pub async fn main() -> Result<()> {
         duration = ?test_duration,
         "Provisioning and destruction test execution completed"
     );
-
-    // Handle destroy result - log but don't fail the overall test
-    match destroy_result {
-        Ok(()) => {
-            info!(
-                operation = "destroy",
-                status = "success",
-                "Infrastructure destruction completed successfully"
-            );
-        }
-        Err(destroy_err) => {
-            error!(
-                operation = "destroy",
-                status = "failed",
-                error = %destroy_err,
-                "Infrastructure destruction failed - this may require manual cleanup"
-            );
-            // Note: We don't fail the overall test just because destroy failed
-            // The provision test results are more important
-        }
-    }
 
     // Handle provisioning test results
     match provision_result {
@@ -262,11 +240,9 @@ async fn run_provisioning_test(env: &mut TestContext) -> Result<IpAddr> {
 ///
 /// # Destruction Strategy
 ///
-/// 1. **Try DestroyCommand**: Use the application layer command for destruction
+/// 1. **Try `DestroyCommand`**: Use the application layer command for destruction
 /// 2. **Fallback to Manual Cleanup**: If `DestroyCommand` fails, use manual cleanup functions
-///
-/// Returns `Ok(())` on successful destruction (either via command or fallback).
-fn run_infrastructure_destroy(test_context: &mut TestContext) -> Result<()> {
+fn run_infrastructure_destroy(test_context: &mut TestContext) {
     use tracing::warn;
 
     info!(
@@ -283,7 +259,6 @@ fn run_infrastructure_destroy(test_context: &mut TestContext) -> Result<()> {
                 method = "destroy_command",
                 "Infrastructure destroyed successfully using DestroyCommand"
             );
-            Ok(())
         }
         Err(e) => {
             warn!(
@@ -301,7 +276,6 @@ fn run_infrastructure_destroy(test_context: &mut TestContext) -> Result<()> {
                 method = "manual_cleanup",
                 "Infrastructure destroyed using manual cleanup fallback"
             );
-            Ok(())
         }
     }
 }
