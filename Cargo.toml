@@ -28,8 +28,8 @@ name = "e2e-config-tests"
 path = "src/bin/e2e_config_tests.rs"
 
 [[bin]]
-name = "e2e-provision-tests"
-path = "src/bin/e2e_provision_tests.rs"
+name = "e2e-provision-and-destroy-tests"
+path = "src/bin/e2e_provision_and_destroy_tests.rs"
 
 [[bin]]
 name = "linter"

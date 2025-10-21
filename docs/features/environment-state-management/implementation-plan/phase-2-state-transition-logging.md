@@ -127,7 +127,7 @@ mod tests {
 
 Existing E2E tests will automatically capture state transition logs. Verify log output in:
 
-- `cargo run --bin e2e-provision-tests`
+- `cargo run --bin e2e-provision-and-destroy-tests`
 - `cargo run --bin e2e-config-tests`
 - `cargo run --bin e2e-tests-full`
 
