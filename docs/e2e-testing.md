@@ -98,6 +98,55 @@ Tests the complete infrastructure lifecycle using LXD VMs:
 - ✅ Boot completion marker file exists (`/var/lib/cloud/instance/boot-finished`)
 - ✅ Infrastructure is properly destroyed after tests complete
 
+#### DestroyCommand Integration
+
+The provision and destroy tests use the `DestroyCommand` from the application layer to test the complete infrastructure lifecycle. This provides:
+
+- **Application Layer Testing**: Tests the actual command that users will execute
+- **Idempotent Cleanup**: Destroy command can be run multiple times safely
+- **Fallback Strategy**: Manual cleanup if destroy command fails (ensures CI reliability)
+
+**Implementation**:
+
+```rust
+// Import destroy command from application layer
+use torrust_tracker_deployer_lib::application::commands::destroy::DestroyCommand;
+
+// Execute destroy via application command
+async fn cleanup_with_destroy_command(
+    environment: Environment<Provisioned>,
+    opentofu_client: Arc<OpenTofuClient>,
+    repository: Arc<dyn EnvironmentRepository>,
+) -> Result<(), DestroyCommandError> {
+    let destroy_cmd = DestroyCommand::new(opentofu_client, repository);
+    destroy_cmd.execute(environment)?;
+    Ok(())
+}
+```
+
+**Fallback Cleanup**:
+
+If the `DestroyCommand` fails (e.g., due to infrastructure issues), the test suite falls back to manual cleanup:
+
+```rust
+// Try application layer destroy first
+if let Err(e) = run_destroy_command(&context).await {
+    error!("DestroyCommand failed: {}, falling back to manual cleanup", e);
+    cleanup_test_infrastructure(&context).await?;
+}
+```
+
+This ensures:
+
+- CI tests always clean up resources
+- Real-world destroy command is validated
+- Infrastructure issues don't block CI
+
+For detailed destroy command documentation, see:
+
+- [Destroy Command User Guide](user-guide/commands/destroy.md)
+- [Destroy Command Developer Guide](contributing/commands.md#destroycommand)
+
 ### E2E Configuration Tests (`e2e-config-tests`)
 
 Tests software installation and configuration using Docker containers:
