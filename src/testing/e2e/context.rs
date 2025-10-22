@@ -342,7 +342,7 @@ impl TestContext {
     ///
     /// # Arguments
     ///
-    /// * `provisioned_env` - The provisioned environment returned by `ProvisionCommand`
+    /// * `provisioned_env` - The provisioned environment returned by `ProvisionCommandHandler`
     ///
     /// # Examples
     ///
@@ -370,7 +370,7 @@ impl TestContext {
     ///
     /// # Arguments
     ///
-    /// * `configured_env` - The configured environment returned by `ConfigureCommand`
+    /// * `configured_env` - The configured environment returned by `ConfigureCommandHandler`
     ///
     /// # Examples
     ///
@@ -398,7 +398,7 @@ impl TestContext {
     ///
     /// # Arguments
     ///
-    /// * `destroyed_env` - The destroyed environment returned by `DestroyCommand`
+    /// * `destroyed_env` - The destroyed environment returned by `DestroyCommandHandler`
     ///
     /// # Examples
     ///

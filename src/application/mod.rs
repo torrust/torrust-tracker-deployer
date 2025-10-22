@@ -6,11 +6,11 @@
 //!
 //! ## Components
 //!
-//! - `commands` - High-level deployment commands implementing the Command pattern
+//! - `command_handlers` - High-level deployment command handlers implementing the Command Handler pattern
 //! - `steps` - Workflow orchestration and business process coordination
 
-pub mod commands;
+pub mod command_handlers;
 pub mod steps;
 
-// Re-export command types for convenience
-pub use commands::{ConfigureCommand, ProvisionCommand, TestCommand};
+// Re-export command handler types for convenience
+pub use command_handlers::{ConfigureCommandHandler, ProvisionCommandHandler, TestCommandHandler};

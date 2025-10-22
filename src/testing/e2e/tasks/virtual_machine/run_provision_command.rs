@@ -2,11 +2,11 @@
 //!
 //! This module provides the E2E testing task for provisioning infrastructure using
 //! `OpenTofu`. It orchestrates the complete provisioning workflow through the
-//! `ProvisionCommand` and returns the IP address of the provisioned instance.
+//! `ProvisionCommandHandler` and returns the IP address of the provisioned instance.
 //!
 //! ## Key Operations
 //!
-//! - Execute infrastructure provisioning via `ProvisionCommand`
+//! - Execute infrastructure provisioning via `ProvisionCommandHandler`
 //! - Initialize and apply `OpenTofu` configurations
 //! - Render dynamic templates with runtime variables
 //! - Retrieve instance IP addresses from `OpenTofu` outputs
@@ -26,8 +26,8 @@ use std::sync::Arc;
 use thiserror::Error;
 use tracing::info;
 
-use crate::application::commands::provision::ProvisionCommandError;
-use crate::application::commands::ProvisionCommand;
+use crate::application::command_handlers::provision::ProvisionCommandHandlerError;
+use crate::application::command_handlers::ProvisionCommandHandler;
 use crate::domain::environment::state::StateTypeError;
 use crate::testing::e2e::context::TestContext;
 
@@ -52,7 +52,7 @@ Tip: Check OpenTofu logs in the build directory for detailed error information"
     )]
     ProvisioningFailed {
         #[source]
-        source: ProvisionCommandError,
+        source: ProvisionCommandHandlerError,
     },
 }
 
@@ -134,7 +134,7 @@ For more information, see docs/e2e-testing.md and docs/vm-providers.md."
 ///
 /// Returns an error if:
 /// - Environment is not in `Created` state
-/// - `ProvisionCommand` execution fails
+/// - `ProvisionCommandHandler` execution fails
 /// - Infrastructure provisioning fails
 /// - IP address cannot be obtained from `OpenTofu` outputs
 pub async fn run_provision_command(
@@ -145,8 +145,8 @@ pub async fn run_provision_command(
     // Create repository for this environment
     let repository = test_context.create_repository();
 
-    // Use the new ProvisionCommand to handle all infrastructure provisioning steps
-    let provision_command = ProvisionCommand::new(
+    // Use the new ProvisionCommandHandler to handle all infrastructure provisioning steps
+    let provision_command_handler = ProvisionCommandHandler::new(
         Arc::clone(&test_context.services.tofu_template_renderer),
         Arc::clone(&test_context.services.ansible_template_renderer),
         Arc::clone(&test_context.services.ansible_client),
@@ -166,7 +166,7 @@ pub async fn run_provision_command(
             source,
         })?;
 
-    let provisioned_env = provision_command
+    let provisioned_env = provision_command_handler
         .execute(created_env)
         .await
         .map_err(|source| ProvisionTaskError::ProvisioningFailed { source })?;

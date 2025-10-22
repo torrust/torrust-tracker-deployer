@@ -6,7 +6,7 @@
 //!
 //! ## Key Operations
 //!
-//! - Executes Ansible playbooks using the `ConfigureCommand`
+//! - Executes Ansible playbooks using the `ConfigureCommandHandler`
 //! - Handles configuration workflow for both containers and VMs
 //! - Provides structured error handling and reporting
 //!
@@ -15,7 +15,7 @@
 //! This is a generic task that works with infrastructure-agnostic configuration:
 //! - Uses rendered Ansible inventories from provision simulation
 //! - Works with both container and VM-based infrastructure
-//! - Integrates with the existing `ConfigureCommand` workflow
+//! - Integrates with the existing `ConfigureCommandHandler` workflow
 //!
 //! ## E2E Config Tests Integration
 //!
@@ -28,14 +28,14 @@ use std::sync::Arc;
 use thiserror::Error;
 use tracing::info;
 
-use crate::application::commands::configure::ConfigureCommandError;
-use crate::application::commands::ConfigureCommand;
+use crate::application::command_handlers::configure::ConfigureCommandHandlerError;
+use crate::application::command_handlers::ConfigureCommandHandler;
 use crate::domain::environment::state::StateTypeError;
 use crate::testing::e2e::context::TestContext;
 
 /// Configure infrastructure using Ansible playbooks
 ///
-/// This function executes Ansible configuration using the `ConfigureCommand` for E2E tests.
+/// This function executes Ansible configuration using the `ConfigureCommandHandler` for E2E tests.
 /// It extracts the provisioned environment from the `TestContext` and applies configuration,
 /// ensuring type-safe state transitions.
 ///
@@ -47,7 +47,7 @@ use crate::testing::e2e::context::TestContext;
 ///
 /// Returns an error if:
 /// - Environment is not in `Provisioned` state
-/// - `ConfigureCommand` execution fails
+/// - `ConfigureCommandHandler` execution fails
 /// - Infrastructure configuration fails
 pub fn run_configure_command(test_context: &mut TestContext) -> Result<(), ConfigureTaskError> {
     info!("Configuring test infrastructure");
@@ -65,14 +65,14 @@ pub fn run_configure_command(test_context: &mut TestContext) -> Result<(), Confi
     // Create repository for this environment
     let repository = test_context.create_repository();
 
-    // Use the new ConfigureCommand to handle all infrastructure configuration steps
-    let configure_command = ConfigureCommand::new(
+    // Use the new ConfigureCommandHandler to handle all infrastructure configuration steps
+    let configure_command_handler = ConfigureCommandHandler::new(
         Arc::clone(&test_context.services.ansible_client),
         Arc::clone(&test_context.services.clock),
         repository,
     );
 
-    let configured_env = configure_command
+    let configured_env = configure_command_handler
         .execute(provisioned_env)
         .map_err(|source| ConfigureTaskError::ConfigurationFailed { source })?;
 
@@ -109,7 +109,7 @@ Tip: Check Ansible logs for detailed playbook execution errors"
     )]
     ConfigurationFailed {
         #[source]
-        source: ConfigureCommandError,
+        source: ConfigureCommandHandlerError,
     },
 }
 

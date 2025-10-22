@@ -13,9 +13,9 @@ use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::command::CommandError;
 use crate::shared::error::Traceable;
 
-/// Comprehensive error type for the `ConfigureCommand`
+/// Comprehensive error type for the `ConfigureCommandHandler`
 #[derive(Debug, thiserror::Error)]
-pub enum ConfigureCommandError {
+pub enum ConfigureCommandHandlerError {
     #[error("Command execution failed: {0}")]
     Command(#[from] CommandError),
 
@@ -23,14 +23,14 @@ pub enum ConfigureCommandError {
     StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
 }
 
-impl crate::shared::Traceable for ConfigureCommandError {
+impl crate::shared::Traceable for ConfigureCommandHandlerError {
     fn trace_format(&self) -> String {
         match self {
             Self::Command(e) => {
-                format!("ConfigureCommandError: Command execution failed - {e}")
+                format!("ConfigureCommandHandlerError: Command execution failed - {e}")
             }
             Self::StatePersistence(e) => {
-                format!("ConfigureCommandError: Failed to persist environment state - {e}")
+                format!("ConfigureCommandHandlerError: Failed to persist environment state - {e}")
             }
         }
     }
@@ -50,9 +50,9 @@ impl crate::shared::Traceable for ConfigureCommandError {
     }
 }
 
-/// `ConfigureCommand` orchestrates the complete infrastructure configuration workflow
+/// `ConfigureCommandHandler` orchestrates the complete infrastructure configuration workflow
 ///
-/// The `ConfigureCommand` orchestrates the complete infrastructure configuration workflow.
+/// The `ConfigureCommandHandler` orchestrates the complete infrastructure configuration workflow.
 ///
 /// This command handles all steps required to configure infrastructure:
 /// 1. Install Docker
@@ -68,14 +68,14 @@ impl crate::shared::Traceable for ConfigureCommandError {
 ///
 /// State is persisted after each transition using the injected repository.
 /// Persistence failures are logged but don't fail the command (state remains valid in memory).
-pub struct ConfigureCommand {
+pub struct ConfigureCommandHandler {
     ansible_client: Arc<AnsibleClient>,
     clock: Arc<dyn crate::shared::Clock>,
     repository: Arc<dyn EnvironmentRepository>,
 }
 
-impl ConfigureCommand {
-    /// Create a new `ConfigureCommand`
+impl ConfigureCommandHandler {
+    /// Create a new `ConfigureCommandHandler`
     #[must_use]
     pub fn new(
         ansible_client: Arc<AnsibleClient>,
@@ -117,7 +117,7 @@ impl ConfigureCommand {
     pub fn execute(
         &self,
         environment: Environment<Provisioned>,
-    ) -> Result<Environment<Configured>, ConfigureCommandError> {
+    ) -> Result<Environment<Configured>, ConfigureCommandHandlerError> {
         info!(
             command = "configure",
             environment = %environment.name(),
@@ -174,7 +174,7 @@ impl ConfigureCommand {
     fn execute_configuration_with_tracking(
         &self,
         environment: &Environment<Configuring>,
-    ) -> Result<Environment<Configured>, (ConfigureCommandError, ConfigureStep)> {
+    ) -> Result<Environment<Configured>, (ConfigureCommandHandlerError, ConfigureStep)> {
         // Track current step and execute each step
         // If an error occurs, we return it along with the current step
 
@@ -217,7 +217,7 @@ impl ConfigureCommand {
     fn build_failure_context(
         &self,
         environment: &Environment<Configuring>,
-        error: &ConfigureCommandError,
+        error: &ConfigureCommandHandlerError,
         current_step: ConfigureStep,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> ConfigureFailureContext {
@@ -284,28 +284,28 @@ mod tests {
         )
     }
 
-    /// Test builder for `ConfigureCommand` that manages dependencies and lifecycle
+    /// Test builder for `ConfigureCommandHandler` that manages dependencies and lifecycle
     ///
     /// This builder simplifies test setup by:
     /// - Managing `TempDir` lifecycle
     /// - Providing sensible defaults for all dependencies
     /// - Returning only the command and necessary test artifacts
-    pub struct ConfigureCommandTestBuilder {
+    pub struct ConfigureCommandHandlerTestBuilder {
         temp_dir: TempDir,
     }
 
-    impl ConfigureCommandTestBuilder {
+    impl ConfigureCommandHandlerTestBuilder {
         /// Create a new test builder with default configuration
         pub fn new() -> Self {
             let temp_dir = TempDir::new().expect("Failed to create temp dir");
             Self { temp_dir }
         }
 
-        /// Build the `ConfigureCommand` with all dependencies
+        /// Build the `ConfigureCommandHandler` with all dependencies
         ///
         /// Returns: (`command`, `temp_dir`)
         /// The `temp_dir` must be kept alive for the duration of the test.
-        pub fn build(self) -> (ConfigureCommand, TempDir) {
+        pub fn build(self) -> (ConfigureCommandHandler, TempDir) {
             let ansible_client = Arc::new(AnsibleClient::new(self.temp_dir.path()));
             let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 
@@ -315,29 +315,29 @@ mod tests {
                 );
             let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-            let command = ConfigureCommand::new(ansible_client, clock, repository);
+            let command_handler = ConfigureCommandHandler::new(ansible_client, clock, repository);
 
-            (command, self.temp_dir)
+            (command_handler, self.temp_dir)
         }
     }
 
     #[test]
-    fn it_should_create_configure_command_with_all_dependencies() {
-        let (command, _temp_dir) = ConfigureCommandTestBuilder::new().build();
+    fn it_should_create_configure_command_handler_with_all_dependencies() {
+        let (command_handler, _temp_dir) = ConfigureCommandHandlerTestBuilder::new().build();
 
-        // Verify the command was created (basic structure test)
-        // This test just verifies that the command can be created with the dependencies
-        assert_eq!(Arc::strong_count(&command.ansible_client), 1);
+        // Verify the command handler was created (basic structure test)
+        // This test just verifies that the command handler can be created with the dependencies
+        assert_eq!(Arc::strong_count(&command_handler.ansible_client), 1);
     }
 
     #[test]
     fn it_should_have_correct_error_type_conversions() {
-        // Test that all error types can convert to ConfigureCommandError
+        // Test that all error types can convert to ConfigureCommandHandlerError
         let command_error = CommandError::StartupFailed {
             command: "test".to_string(),
             source: std::io::Error::new(std::io::ErrorKind::NotFound, "test"),
         };
-        let configure_error: ConfigureCommandError = command_error.into();
+        let configure_error: ConfigureCommandHandlerError = command_error.into();
         drop(configure_error);
     }
 
@@ -345,12 +345,12 @@ mod tests {
     fn it_should_build_failure_context_from_command_error() {
         use chrono::{TimeZone, Utc};
 
-        let (command, temp_dir) = ConfigureCommandTestBuilder::new().build();
+        let (command, temp_dir) = ConfigureCommandHandlerTestBuilder::new().build();
 
         // Create test environment for trace generation
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
-        let error = ConfigureCommandError::Command(CommandError::ExecutionFailed {
+        let error = ConfigureCommandHandlerError::Command(CommandError::ExecutionFailed {
             command: "test".to_string(),
             exit_code: "1".to_string(),
             stdout: String::new(),

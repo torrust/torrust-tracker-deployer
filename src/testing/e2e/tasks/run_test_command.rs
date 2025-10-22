@@ -2,7 +2,7 @@
 //!
 //! This module provides comprehensive deployment validation functionality for E2E
 //! testing. It verifies that deployed infrastructure is working correctly by
-//! running a series of validation checks through the `TestCommand`.
+//! running a series of validation checks through the `TestCommandHandler`.
 //!
 //! ## Validation Areas
 //!
@@ -13,7 +13,7 @@
 //!
 //! ## Key Features
 //!
-//! - Comprehensive validation via `TestCommand` orchestration
+//! - Comprehensive validation via `TestCommandHandler` orchestration
 //! - Async execution for efficient testing workflows
 //! - Detailed logging and error reporting
 //! - Integration with E2E testing pipeline
@@ -24,8 +24,8 @@
 use thiserror::Error;
 use tracing::info;
 
-use crate::application::commands::test::TestCommandError;
-use crate::application::commands::TestCommand;
+use crate::application::command_handlers::test::TestCommandHandlerError;
+use crate::application::command_handlers::TestCommandHandler;
 use crate::domain::environment::state::AnyEnvironmentState;
 use crate::testing::e2e::context::TestContext;
 
@@ -46,7 +46,7 @@ Tip: Check that all required services are installed and running on the instance"
     )]
     ValidationFailed {
         #[source]
-        source: TestCommandError,
+        source: TestCommandHandlerError,
     },
 }
 
@@ -129,7 +129,7 @@ For more information, see docs/e2e-testing.md."
 ///
 /// Returns an error if:
 /// - Environment does not have instance IP set
-/// - `TestCommand` execution fails
+/// - `TestCommandHandler` execution fails
 /// - Any validation check fails
 pub async fn run_test_command(test_context: &TestContext) -> Result<(), TestTaskError> {
     info!("Starting deployment validation");
@@ -148,25 +148,25 @@ pub async fn run_test_command(test_context: &TestContext) -> Result<(), TestTask
         "Validating deployment on instance"
     );
 
-    // Use TestCommand to handle all infrastructure validation steps
-    let test_command = TestCommand::new();
+    // Use TestCommandHandler to handle all infrastructure validation steps
+    let test_command_handler = TestCommandHandler::new();
 
-    // TestCommand::execute is generic over state, so we need to match on AnyEnvironmentState
+    // TestCommandHandler::execute is generic over state, so we need to match on AnyEnvironmentState
     // and pass the typed environment. Since we're just reading, any state works.
     let result = match &test_context.environment {
-        AnyEnvironmentState::Created(env) => test_command.execute(env).await,
-        AnyEnvironmentState::Provisioning(env) => test_command.execute(env).await,
-        AnyEnvironmentState::Provisioned(env) => test_command.execute(env).await,
-        AnyEnvironmentState::Configuring(env) => test_command.execute(env).await,
-        AnyEnvironmentState::Configured(env) => test_command.execute(env).await,
-        AnyEnvironmentState::Releasing(env) => test_command.execute(env).await,
-        AnyEnvironmentState::Released(env) => test_command.execute(env).await,
-        AnyEnvironmentState::Running(env) => test_command.execute(env).await,
-        AnyEnvironmentState::ProvisionFailed(env) => test_command.execute(env).await,
-        AnyEnvironmentState::ConfigureFailed(env) => test_command.execute(env).await,
-        AnyEnvironmentState::ReleaseFailed(env) => test_command.execute(env).await,
-        AnyEnvironmentState::RunFailed(env) => test_command.execute(env).await,
-        AnyEnvironmentState::Destroyed(env) => test_command.execute(env).await,
+        AnyEnvironmentState::Created(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::Provisioning(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::Provisioned(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::Configuring(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::Configured(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::Releasing(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::Released(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::Running(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::ProvisionFailed(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::ConfigureFailed(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::ReleaseFailed(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::RunFailed(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::Destroyed(env) => test_command_handler.execute(env).await,
     };
 
     result.map_err(|source| TestTaskError::ValidationFailed { source })?;

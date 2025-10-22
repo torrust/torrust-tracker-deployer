@@ -1,12 +1,12 @@
-//! Infrastructure destruction command
+//! Infrastructure destruction command handler
 //!
-//! This module contains the `DestroyCommand` which orchestrates the complete infrastructure
+//! This module contains the `DestroyCommandHandler` which orchestrates the complete infrastructure
 //! teardown workflow including:
 //!
 //! - Infrastructure destruction via `OpenTofu`
 //! - State cleanup and resource verification
 //!
-//! The command handles the complex interaction with deployment tools and ensures
+//! The command handler handles the complex interaction with deployment tools and ensures
 //! proper sequencing of destruction steps.
 
 use std::path::PathBuf;
@@ -20,9 +20,9 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Destroyed, Environment};
 use crate::shared::command::CommandError;
 
-/// Comprehensive error type for the `DestroyCommand`
+/// Comprehensive error type for the `DestroyCommandHandler`
 #[derive(Debug, thiserror::Error)]
-pub enum DestroyCommandError {
+pub enum DestroyCommandHandlerError {
     #[error("OpenTofu command failed: {0}")]
     OpenTofu(#[from] OpenTofuError),
 
@@ -40,21 +40,21 @@ pub enum DestroyCommandError {
     },
 }
 
-impl crate::shared::Traceable for DestroyCommandError {
+impl crate::shared::Traceable for DestroyCommandHandlerError {
     fn trace_format(&self) -> String {
         match self {
             Self::OpenTofu(e) => {
-                format!("DestroyCommandError: OpenTofu command failed - {e}")
+                format!("DestroyCommandHandlerError: OpenTofu command failed - {e}")
             }
             Self::Command(e) => {
-                format!("DestroyCommandError: Command execution failed - {e}")
+                format!("DestroyCommandHandlerError: Command execution failed - {e}")
             }
             Self::StatePersistence(e) => {
-                format!("DestroyCommandError: Failed to persist environment state - {e}")
+                format!("DestroyCommandHandlerError: Failed to persist environment state - {e}")
             }
             Self::StateCleanupFailed { path, source } => {
                 format!(
-                    "DestroyCommandError: Failed to clean up state files at '{}' - {source}",
+                    "DestroyCommandHandlerError: Failed to clean up state files at '{}' - {source}",
                     path.display()
                 )
             }
@@ -80,17 +80,17 @@ impl crate::shared::Traceable for DestroyCommandError {
     }
 }
 
-/// `DestroyCommand` orchestrates the complete infrastructure destruction workflow
+/// `DestroyCommandHandler` orchestrates the complete infrastructure destruction workflow
 ///
-/// The `DestroyCommand` orchestrates the complete infrastructure teardown workflow.
+/// The `DestroyCommandHandler` orchestrates the complete infrastructure teardown workflow.
 ///
-/// This command handles all steps required to destroy infrastructure:
+/// This command handler handles all steps required to destroy infrastructure:
 /// 1. Destroy infrastructure via `OpenTofu`
 /// 2. Transition environment to `Destroyed` state
 ///
 /// # State Management
 ///
-/// The command integrates with the type-state pattern for environment lifecycle:
+/// The command handler integrates with the type-state pattern for environment lifecycle:
 /// - Accepts `Environment<S>` (any state) as input
 /// - Returns `Environment<Destroyed>` on success
 ///
@@ -103,13 +103,13 @@ impl crate::shared::Traceable for DestroyCommandError {
 /// - Succeed if the infrastructure is already destroyed
 /// - Report appropriate status to the user
 /// - Not fail due to missing resources
-pub struct DestroyCommand {
+pub struct DestroyCommandHandler {
     opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
     repository: Arc<dyn EnvironmentRepository>,
 }
 
-impl DestroyCommand {
-    /// Create a new `DestroyCommand`
+impl DestroyCommandHandler {
+    /// Create a new `DestroyCommandHandler`
     #[must_use]
     pub fn new(
         opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
@@ -150,7 +150,7 @@ impl DestroyCommand {
     pub fn execute<S>(
         &self,
         environment: Environment<S>,
-    ) -> Result<Environment<Destroyed>, DestroyCommandError> {
+    ) -> Result<Environment<Destroyed>, DestroyCommandHandlerError> {
         info!(
             command = "destroy",
             environment = %environment.name(),
@@ -188,7 +188,7 @@ impl DestroyCommand {
     /// # Errors
     ///
     /// Returns an error if `OpenTofu` destroy fails
-    fn destroy_infrastructure(&self) -> Result<(), DestroyCommandError> {
+    fn destroy_infrastructure(&self) -> Result<(), DestroyCommandHandlerError> {
         DestroyInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
         Ok(())
     }
@@ -205,14 +205,14 @@ impl DestroyCommand {
     /// # Errors
     ///
     /// Returns an error if state file cleanup fails
-    fn cleanup_state_files(env: &Environment<Destroyed>) -> Result<(), DestroyCommandError> {
+    fn cleanup_state_files(env: &Environment<Destroyed>) -> Result<(), DestroyCommandHandlerError> {
         let data_dir = env.data_dir();
         let build_dir = env.build_dir();
 
         // Remove data directory if it exists
         if data_dir.exists() {
             std::fs::remove_dir_all(data_dir).map_err(|source| {
-                DestroyCommandError::StateCleanupFailed {
+                DestroyCommandHandlerError::StateCleanupFailed {
                     path: data_dir.clone(),
                     source,
                 }
@@ -227,7 +227,7 @@ impl DestroyCommand {
         // Remove build directory if it exists
         if build_dir.exists() {
             std::fs::remove_dir_all(build_dir).map_err(|source| {
-                DestroyCommandError::StateCleanupFailed {
+                DestroyCommandHandlerError::StateCleanupFailed {
                     path: build_dir.clone(),
                     source,
                 }
@@ -248,29 +248,29 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    /// Test builder for `DestroyCommand` that manages dependencies and lifecycle
+    /// Test builder for `DestroyCommandHandler` that manages dependencies and lifecycle
     ///
     /// This builder simplifies test setup by:
     /// - Managing `TempDir` lifecycle
     /// - Providing sensible defaults for all dependencies
     /// - Allowing selective customization of dependencies
-    /// - Returning only the command and necessary test artifacts
-    pub struct DestroyCommandTestBuilder {
+    /// - Returning only the command handler and necessary test artifacts
+    pub struct DestroyCommandHandlerTestBuilder {
         temp_dir: TempDir,
     }
 
-    impl DestroyCommandTestBuilder {
+    impl DestroyCommandHandlerTestBuilder {
         /// Create a new test builder with default configuration
         pub fn new() -> Self {
             let temp_dir = TempDir::new().expect("Failed to create temp dir");
             Self { temp_dir }
         }
 
-        /// Build the `DestroyCommand` with all dependencies
+        /// Build the `DestroyCommandHandler` with all dependencies
         ///
-        /// Returns: (`command`, `temp_dir`)
+        /// Returns: (`command_handler`, `temp_dir`)
         /// The `temp_dir` must be kept alive for the duration of the test.
-        pub fn build(self) -> (DestroyCommand, TempDir) {
+        pub fn build(self) -> (DestroyCommandHandler, TempDir) {
             let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
                 self.temp_dir.path(),
             ));
@@ -281,30 +281,30 @@ mod tests {
                 );
             let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-            let command = DestroyCommand::new(opentofu_client, repository);
+            let command_handler = DestroyCommandHandler::new(opentofu_client, repository);
 
-            (command, self.temp_dir)
+            (command_handler, self.temp_dir)
         }
     }
 
     #[test]
-    fn it_should_create_destroy_command_with_all_dependencies() {
-        let (command, _temp_dir) = DestroyCommandTestBuilder::new().build();
+    fn it_should_create_destroy_command_handler_with_all_dependencies() {
+        let (command_handler, _temp_dir) = DestroyCommandHandlerTestBuilder::new().build();
 
-        // Verify the command was created (basic structure test)
-        // This test just verifies that the command can be created with the dependencies
-        assert_eq!(Arc::strong_count(&command.opentofu_client), 1);
+        // Verify the command handler was created (basic structure test)
+        // This test just verifies that the command handler can be created with the dependencies
+        assert_eq!(Arc::strong_count(&command_handler.opentofu_client), 1);
     }
 
     #[test]
     fn it_should_have_correct_error_type_conversions() {
-        // Test that all error types can convert to DestroyCommandError
+        // Test that all error types can convert to DestroyCommandHandlerError
         let command_error = CommandError::StartupFailed {
             command: "test".to_string(),
             source: std::io::Error::new(std::io::ErrorKind::NotFound, "test"),
         };
         let opentofu_error = OpenTofuError::CommandError(command_error);
-        let destroy_error: DestroyCommandError = opentofu_error.into();
+        let destroy_error: DestroyCommandHandlerError = opentofu_error.into();
         drop(destroy_error);
 
         let command_error_direct = CommandError::ExecutionFailed {
@@ -313,7 +313,7 @@ mod tests {
             stdout: String::new(),
             stderr: "test error".to_string(),
         };
-        let destroy_error: DestroyCommandError = command_error_direct.into();
+        let destroy_error: DestroyCommandHandlerError = command_error_direct.into();
         drop(destroy_error);
     }
 }
