@@ -1,12 +1,12 @@
 //! Infrastructure destruction task for E2E testing
 //!
 //! This module provides the E2E testing task for destroying infrastructure using
-//! the `DestroyCommand`. It orchestrates the complete infrastructure teardown workflow
+//! the `DestroyCommandHandler`. It orchestrates the complete infrastructure teardown workflow
 //! through the application layer command.
 //!
 //! ## Key Operations
 //!
-//! - Execute infrastructure destruction via `DestroyCommand`
+//! - Execute infrastructure destruction via `DestroyCommandHandler`
 //! - Destroy infrastructure using `OpenTofu` operations
 //! - Transition environment to `Destroyed` state
 //! - Update test context with final state
@@ -20,8 +20,8 @@ use std::sync::Arc;
 use thiserror::Error;
 use tracing::info;
 
-use crate::application::commands::destroy::DestroyCommandError;
-use crate::application::commands::DestroyCommand;
+use crate::application::command_handlers::destroy::DestroyCommandHandlerError;
+use crate::application::command_handlers::DestroyCommandHandler;
 use crate::testing::e2e::context::TestContext;
 
 /// Errors that can occur during the destroy task
@@ -34,7 +34,7 @@ Tip: Check OpenTofu logs in the build directory for detailed error information"
     )]
     DestructionFailed {
         #[source]
-        source: DestroyCommandError,
+        source: DestroyCommandHandlerError,
     },
 }
 
@@ -48,10 +48,10 @@ impl DestroyTaskError {
     ///
     /// ```rust,no_run
     /// # use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::run_destroy_command::DestroyTaskError;
-    /// # use torrust_tracker_deployer_lib::application::commands::destroy::DestroyCommandError;
+    /// # use torrust_tracker_deployer_lib::application::command_handlers::destroy::DestroyCommandHandlerError;
     /// # use torrust_tracker_deployer_lib::shared::command::CommandError;
     /// let error = DestroyTaskError::DestructionFailed {
-    ///     source: DestroyCommandError::Command(CommandError::StartupFailed {
+    ///     source: DestroyCommandHandlerError::Command(CommandError::StartupFailed {
     ///         command: "tofu".to_string(),
     ///         source: std::io::Error::new(std::io::ErrorKind::NotFound, "test"),
     ///     }),
@@ -89,7 +89,7 @@ For more information, see docs/e2e-testing.md and docs/vm-providers.md."
     }
 }
 
-/// Destroy infrastructure using `DestroyCommand`
+/// Destroy infrastructure using `DestroyCommandHandler`
 ///
 /// This function updates the `TestContext`'s internal environment to reflect the
 /// destroyed state, ensuring consistency throughout the test lifecycle. Callers
@@ -101,7 +101,7 @@ For more information, see docs/e2e-testing.md and docs/vm-providers.md."
 /// # Errors
 ///
 /// Returns an error if:
-/// - `DestroyCommand` execution fails
+/// - `DestroyCommandHandler` execution fails
 /// - Infrastructure destruction fails
 /// - `OpenTofu` destroy operations fail
 pub fn run_destroy_command(test_context: &mut TestContext) -> Result<(), DestroyTaskError> {
@@ -125,14 +125,14 @@ pub fn run_destroy_command(test_context: &mut TestContext) -> Result<(), Destroy
     // Create repository for this environment
     let repository = test_context.create_repository();
 
-    // Use the new DestroyCommand to handle all infrastructure destruction steps
-    let destroy_command = DestroyCommand::new(
+    // Use the new DestroyCommandHandler to handle all infrastructure destruction steps
+    let destroy_command_handler = DestroyCommandHandler::new(
         Arc::clone(&test_context.services.opentofu_client),
         repository,
     );
 
     // Execute destruction with environment (can be in any state)
-    // The DestroyCommand accepts Environment<S> generically, so we need to extract
+    // The DestroyCommandHandler accepts Environment<S> generically, so we need to extract
     // the environment from AnyEnvironmentState. Since destroy works on any state,
     // we handle the special case of already-destroyed environments.
 
@@ -142,18 +142,18 @@ pub fn run_destroy_command(test_context: &mut TestContext) -> Result<(), Destroy
             info!("Environment is already in Destroyed state");
             Ok(env)
         }
-        AnyEnvironmentState::Created(env) => destroy_command.execute(env),
-        AnyEnvironmentState::Provisioning(env) => destroy_command.execute(env),
-        AnyEnvironmentState::Provisioned(env) => destroy_command.execute(env),
-        AnyEnvironmentState::Configuring(env) => destroy_command.execute(env),
-        AnyEnvironmentState::Configured(env) => destroy_command.execute(env),
-        AnyEnvironmentState::Releasing(env) => destroy_command.execute(env),
-        AnyEnvironmentState::Released(env) => destroy_command.execute(env),
-        AnyEnvironmentState::Running(env) => destroy_command.execute(env),
-        AnyEnvironmentState::ProvisionFailed(env) => destroy_command.execute(env),
-        AnyEnvironmentState::ConfigureFailed(env) => destroy_command.execute(env),
-        AnyEnvironmentState::ReleaseFailed(env) => destroy_command.execute(env),
-        AnyEnvironmentState::RunFailed(env) => destroy_command.execute(env),
+        AnyEnvironmentState::Created(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::Provisioning(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::Provisioned(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::Configuring(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::Configured(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::Releasing(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::Released(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::Running(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::ProvisionFailed(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::ConfigureFailed(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::ReleaseFailed(env) => destroy_command_handler.execute(env),
+        AnyEnvironmentState::RunFailed(env) => destroy_command_handler.execute(env),
     }
     .map_err(|source| DestroyTaskError::DestructionFailed { source })?;
 

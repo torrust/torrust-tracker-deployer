@@ -1,6 +1,6 @@
-//! Infrastructure provisioning command
+//! Infrastructure provisioning command handler
 //!
-//! This module contains the `ProvisionCommand` which orchestrates the complete infrastructure
+//! This module contains the `ProvisionCommandHandler` which orchestrates the complete infrastructure
 //! provisioning workflow including:
 //!
 //! - Template rendering for `OpenTofu` configuration
@@ -9,7 +9,7 @@
 //! - Ansible template rendering with dynamic VM data
 //! - System readiness validation (cloud-init, SSH connectivity)
 //!
-//! The command handles the complex interaction between different deployment tools
+//! The command handler handles the complex interaction between different deployment tools
 //! and ensures proper sequencing of provisioning steps.
 
 use std::net::IpAddr;
@@ -38,9 +38,9 @@ use crate::infrastructure::external_tools::tofu::{ProvisionTemplateError, TofuTe
 use crate::shared::command::CommandError;
 use crate::shared::error::Traceable;
 
-/// Comprehensive error type for the `ProvisionCommand`
+/// Comprehensive error type for the `ProvisionCommandHandler`
 #[derive(Debug, thiserror::Error)]
-pub enum ProvisionCommandError {
+pub enum ProvisionCommandHandlerError {
     #[error("OpenTofu template rendering failed: {0}")]
     OpenTofuTemplateRendering(#[from] ProvisionTemplateError),
 
@@ -60,26 +60,26 @@ pub enum ProvisionCommandError {
     StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
 }
 
-impl crate::shared::Traceable for ProvisionCommandError {
+impl crate::shared::Traceable for ProvisionCommandHandlerError {
     fn trace_format(&self) -> String {
         match self {
             Self::OpenTofuTemplateRendering(e) => {
-                format!("ProvisionCommandError: OpenTofu template rendering failed - {e}")
+                format!("ProvisionCommandHandlerError: OpenTofu template rendering failed - {e}")
             }
             Self::AnsibleTemplateRendering(e) => {
-                format!("ProvisionCommandError: Ansible template rendering failed - {e}")
+                format!("ProvisionCommandHandlerError: Ansible template rendering failed - {e}")
             }
             Self::OpenTofu(e) => {
-                format!("ProvisionCommandError: OpenTofu command failed - {e}")
+                format!("ProvisionCommandHandlerError: OpenTofu command failed - {e}")
             }
             Self::Command(e) => {
-                format!("ProvisionCommandError: Command execution failed - {e}")
+                format!("ProvisionCommandHandlerError: Command execution failed - {e}")
             }
             Self::SshConnectivity(e) => {
-                format!("ProvisionCommandError: SSH connectivity failed - {e}")
+                format!("ProvisionCommandHandlerError: SSH connectivity failed - {e}")
             }
             Self::StatePersistence(e) => {
-                format!("ProvisionCommandError: Failed to persist environment state - {e}")
+                format!("ProvisionCommandHandlerError: Failed to persist environment state - {e}")
             }
         }
     }
@@ -108,11 +108,11 @@ impl crate::shared::Traceable for ProvisionCommandError {
     }
 }
 
-/// `ProvisionCommand` orchestrates the complete infrastructure provisioning workflow
+/// `ProvisionCommandHandler` orchestrates the complete infrastructure provisioning workflow
 ///
-/// The `ProvisionCommand` orchestrates the complete infrastructure provisioning workflow.
+/// The `ProvisionCommandHandler` orchestrates the complete infrastructure provisioning workflow.
 ///
-/// This command handles all steps required to provision infrastructure:
+/// This command handler handles all steps required to provision infrastructure:
 /// 1. Render `OpenTofu` templates
 /// 2. Initialize `OpenTofu`
 /// 3. Validate configuration syntax and consistency
@@ -125,15 +125,15 @@ impl crate::shared::Traceable for ProvisionCommandError {
 ///
 /// # State Management
 ///
-/// The command integrates with the type-state pattern for environment lifecycle:
+/// The command handler integrates with the type-state pattern for environment lifecycle:
 /// - Accepts `Environment<Created>` as input
 /// - Transitions to `Environment<Provisioning>` at start
 /// - Returns `Environment<Provisioned>` on success
 /// - Transitions to `Environment<ProvisionFailed>` on error
 ///
 /// State is persisted after each transition using the injected repository.
-/// Persistence failures are logged but don't fail the command (state remains valid in memory).
-pub struct ProvisionCommand {
+/// Persistence failures are logged but don't fail the command handler (state remains valid in memory).
+pub struct ProvisionCommandHandler {
     tofu_template_renderer: Arc<TofuTemplateRenderer>,
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
     ansible_client: Arc<AnsibleClient>,
@@ -142,8 +142,8 @@ pub struct ProvisionCommand {
     repository: Arc<dyn EnvironmentRepository>,
 }
 
-impl ProvisionCommand {
-    /// Create a new `ProvisionCommand`
+impl ProvisionCommandHandler {
+    /// Create a new `ProvisionCommandHandler`
     #[must_use]
     pub fn new(
         tofu_template_renderer: Arc<TofuTemplateRenderer>,
@@ -194,7 +194,7 @@ impl ProvisionCommand {
     pub async fn execute(
         &self,
         environment: Environment<Created>,
-    ) -> Result<Environment<Provisioned>, ProvisionCommandError> {
+    ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
         info!(
             command = "provision",
             environment = %environment.name(),
@@ -262,7 +262,7 @@ impl ProvisionCommand {
     async fn execute_provisioning_with_tracking(
         &self,
         environment: &Environment<Provisioning>,
-    ) -> Result<(Environment<Provisioned>, IpAddr), (ProvisionCommandError, ProvisionStep)> {
+    ) -> Result<(Environment<Provisioned>, IpAddr), (ProvisionCommandHandlerError, ProvisionStep)> {
         let ssh_credentials = environment.ssh_credentials();
 
         // Track current step and execute each step
@@ -306,7 +306,7 @@ impl ProvisionCommand {
     /// # Errors
     ///
     /// Returns an error if template rendering fails
-    async fn render_opentofu_templates(&self) -> Result<(), ProvisionCommandError> {
+    async fn render_opentofu_templates(&self) -> Result<(), ProvisionCommandHandlerError> {
         RenderOpenTofuTemplatesStep::new(Arc::clone(&self.tofu_template_renderer))
             .execute()
             .await?;
@@ -324,7 +324,7 @@ impl ProvisionCommand {
     /// # Errors
     ///
     /// Returns an error if any `OpenTofu` operation fails
-    fn create_instance(&self) -> Result<(), ProvisionCommandError> {
+    fn create_instance(&self) -> Result<(), ProvisionCommandHandlerError> {
         InitializeInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
         ValidateInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
         PlanInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
@@ -339,7 +339,7 @@ impl ProvisionCommand {
     /// # Errors
     ///
     /// Returns an error if instance information cannot be retrieved
-    fn get_instance_info(&self) -> Result<InstanceInfo, ProvisionCommandError> {
+    fn get_instance_info(&self) -> Result<InstanceInfo, ProvisionCommandHandlerError> {
         let instance_info =
             GetInstanceInfoStep::new(Arc::clone(&self.opentofu_client)).execute()?;
         Ok(instance_info)
@@ -362,7 +362,7 @@ impl ProvisionCommand {
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
         ssh_port: u16,
-    ) -> Result<(), ProvisionCommandError> {
+    ) -> Result<(), ProvisionCommandHandlerError> {
         let socket_addr = std::net::SocketAddr::new(instance_ip, ssh_port);
         RenderAnsibleTemplatesStep::new(
             Arc::clone(&self.ansible_template_renderer),
@@ -390,7 +390,7 @@ impl ProvisionCommand {
         &self,
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
-    ) -> Result<(), ProvisionCommandError> {
+    ) -> Result<(), ProvisionCommandHandlerError> {
         let ssh_config = SshConfig::with_default_port(ssh_credentials.clone(), instance_ip);
         WaitForSSHConnectivityStep::new(ssh_config)
             .execute()
@@ -420,7 +420,7 @@ impl ProvisionCommand {
     fn build_failure_context(
         &self,
         environment: &Environment<Provisioning>,
-        error: &ProvisionCommandError,
+        error: &ProvisionCommandHandlerError,
         current_step: ProvisionStep,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> ProvisionFailureContext {
@@ -487,19 +487,19 @@ mod tests {
         (env.start_provisioning(), env_temp_dir)
     }
 
-    /// Test builder for `ProvisionCommand` that manages dependencies and lifecycle
+    /// Test builder for `ProvisionCommandHandler` that manages dependencies and lifecycle
     ///
     /// This builder simplifies test setup by:
     /// - Managing `TempDir` lifecycle
     /// - Providing sensible defaults for all dependencies
     /// - Allowing selective customization of dependencies
-    /// - Returning only the command and necessary test artifacts
-    pub struct ProvisionCommandTestBuilder {
+    /// - Returning only the command handler and necessary test artifacts
+    pub struct ProvisionCommandHandlerTestBuilder {
         temp_dir: TempDir,
         ssh_credentials: Option<SshCredentials>,
     }
 
-    impl ProvisionCommandTestBuilder {
+    impl ProvisionCommandHandlerTestBuilder {
         /// Create a new test builder with default configuration
         pub fn new() -> Self {
             let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -516,11 +516,11 @@ mod tests {
             self
         }
 
-        /// Build the `ProvisionCommand` with all dependencies
+        /// Build the `ProvisionCommandHandler` with all dependencies
         ///
-        /// Returns: (`command`, `temp_dir`, `ssh_credentials`)
+        /// Returns: (`command_handler`, `temp_dir`, `ssh_credentials`)
         /// The `temp_dir` must be kept alive for the duration of the test.
-        pub fn build(self) -> (ProvisionCommand, TempDir, SshCredentials) {
+        pub fn build(self) -> (ProvisionCommandHandler, TempDir, SshCredentials) {
             let template_manager = Arc::new(crate::domain::template::TemplateManager::new(
                 self.temp_dir.path(),
             ));
@@ -565,7 +565,7 @@ mod tests {
                 );
             let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-            let command = ProvisionCommand::new(
+            let command_handler = ProvisionCommandHandler::new(
                 tofu_renderer,
                 ansible_renderer,
                 ansible_client,
@@ -574,28 +574,28 @@ mod tests {
                 repository,
             );
 
-            (command, self.temp_dir, ssh_credentials)
+            (command_handler, self.temp_dir, ssh_credentials)
         }
     }
 
     #[test]
-    fn it_should_create_provision_command_with_all_dependencies() {
-        let (command, _temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
+    fn it_should_create_provision_command_handler_with_all_dependencies() {
+        let (command_handler, _temp_dir, _ssh_credentials) = ProvisionCommandHandlerTestBuilder::new().build();
 
-        // Verify the command was created (basic structure test)
-        // This test just verifies that the command can be created with the dependencies
-        assert_eq!(Arc::strong_count(&command.tofu_template_renderer), 1);
-        assert_eq!(Arc::strong_count(&command.ansible_template_renderer), 1);
+        // Verify the command handler was created (basic structure test)
+        // This test just verifies that the command handler can be created with the dependencies
+        assert_eq!(Arc::strong_count(&command_handler.tofu_template_renderer), 1);
+        assert_eq!(Arc::strong_count(&command_handler.ansible_template_renderer), 1);
     }
 
     #[test]
     fn it_should_have_correct_error_type_conversions() {
-        // Test that all error types can convert to ProvisionCommandError
+        // Test that all error types can convert to ProvisionCommandHandlerError
         let template_error = ProvisionTemplateError::DirectoryCreationFailed {
             directory: "/test".to_string(),
             source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
         };
-        let provision_error: ProvisionCommandError = template_error.into();
+        let provision_error: ProvisionCommandHandlerError = template_error.into();
         drop(provision_error);
 
         let command_error = CommandError::StartupFailed {
@@ -603,7 +603,7 @@ mod tests {
             source: std::io::Error::new(std::io::ErrorKind::NotFound, "test"),
         };
         let opentofu_error = OpenTofuError::CommandError(command_error);
-        let provision_error: ProvisionCommandError = opentofu_error.into();
+        let provision_error: ProvisionCommandHandlerError = opentofu_error.into();
         drop(provision_error);
 
         let command_error_direct = CommandError::ExecutionFailed {
@@ -612,7 +612,7 @@ mod tests {
             stdout: String::new(),
             stderr: "test error".to_string(),
         };
-        let provision_error: ProvisionCommandError = command_error_direct.into();
+        let provision_error: ProvisionCommandHandlerError = command_error_direct.into();
         drop(provision_error);
 
         let ssh_error = SshError::ConnectivityTimeout {
@@ -620,7 +620,7 @@ mod tests {
             attempts: 5,
             timeout_seconds: 30,
         };
-        let provision_error: ProvisionCommandError = ssh_error.into();
+        let provision_error: ProvisionCommandHandlerError = ssh_error.into();
         drop(provision_error);
     }
 
@@ -652,18 +652,18 @@ mod tests {
 
     // Note: We don't test AnsibleTemplateRendering errors directly as the error types are complex
     // and deeply nested. The build_failure_context method handles them by matching on the
-    // ProvisionCommandError::AnsibleTemplateRendering variant, which is sufficient for
+    // ProvisionCommandHandlerError::AnsibleTemplateRendering variant, which is sufficient for
     // error context generation.
 
     #[test]
     fn it_should_build_failure_context_from_ssh_connectivity_error() {
         use chrono::{TimeZone, Utc};
 
-        let (command, temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
+        let (command_handler, temp_dir, _ssh_credentials) = ProvisionCommandHandlerTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
-        let error = ProvisionCommandError::SshConnectivity(SshError::ConnectivityTimeout {
+        let error = ProvisionCommandHandlerError::SshConnectivity(SshError::ConnectivityTimeout {
             host_ip: "127.0.0.1".to_string(),
             attempts: 5,
             timeout_seconds: 30,
@@ -671,7 +671,7 @@ mod tests {
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
         let current_step = ProvisionStep::WaitSshConnectivity;
-        let context = command.build_failure_context(&environment, &error, current_step, started_at);
+        let context = command_handler.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::WaitSshConnectivity);
         assert_eq!(
             context.error_kind,
@@ -684,11 +684,11 @@ mod tests {
     fn it_should_build_failure_context_from_command_error() {
         use chrono::{TimeZone, Utc};
 
-        let (command, temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
+        let (command_handler, temp_dir, _ssh_credentials) = ProvisionCommandHandlerTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
-        let error = ProvisionCommandError::Command(CommandError::ExecutionFailed {
+        let error = ProvisionCommandHandlerError::Command(CommandError::ExecutionFailed {
             command: "test".to_string(),
             exit_code: "1".to_string(),
             stdout: String::new(),
@@ -697,7 +697,7 @@ mod tests {
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
         let current_step = ProvisionStep::CloudInitWait;
-        let context = command.build_failure_context(&environment, &error, current_step, started_at);
+        let context = command_handler.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::CloudInitWait);
         assert_eq!(
             context.error_kind,
@@ -710,7 +710,7 @@ mod tests {
     fn it_should_build_failure_context_from_opentofu_error() {
         use chrono::{TimeZone, Utc};
 
-        let (command, temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
+        let (command_handler, temp_dir, _ssh_credentials) = ProvisionCommandHandlerTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
@@ -721,11 +721,11 @@ mod tests {
             stderr: "init failed".to_string(),
         });
 
-        let error = ProvisionCommandError::OpenTofu(opentofu_error);
+        let error = ProvisionCommandHandlerError::OpenTofu(opentofu_error);
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
         let current_step = ProvisionStep::OpenTofuInit;
-        let context = command.build_failure_context(&environment, &error, current_step, started_at);
+        let context = command_handler.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::OpenTofuInit);
         assert_eq!(
             context.error_kind,

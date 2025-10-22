@@ -2,7 +2,7 @@
 //!
 //! This binary tests the complete infrastructure lifecycle: provisioning and destruction.
 //! It creates VMs/containers using `OpenTofu`, validates infrastructure provisioning,
-//! and then destroys the infrastructure using the `DestroyCommand` (with fallback to
+//! and then destroys the infrastructure using the `DestroyCommandHandler` (with fallback to
 //! manual cleanup on failure). This does NOT test software configuration or installation.
 //!
 //! ## Usage
@@ -31,7 +31,7 @@
 //! 1. **Preflight cleanup** - Remove any artifacts from previous test runs that may have failed to clean up
 //! 2. **Infrastructure provisioning** - Create VMs/containers using `OpenTofu`
 //! 3. **Basic validation** - Verify VM is created and cloud-init completed
-//! 4. **Infrastructure destruction** - Destroy infrastructure using `DestroyCommand` (with fallback to manual cleanup)
+//! 4. **Infrastructure destruction** - Destroy infrastructure using `DestroyCommandHandler` (with fallback to manual cleanup)
 //!
 //! ## Two-Phase Cleanup Strategy
 //!
@@ -40,7 +40,7 @@
 //! - **Phase 1 - Preflight cleanup**: Removes artifacts from previous test runs that may have
 //!   failed to clean up properly (executed at the start in main function)
 //! - **Phase 2 - Infrastructure destruction**: Destroys resources created specifically during
-//!   the current test run using `DestroyCommand`, with fallback to manual cleanup on failure
+//!   the current test run using `DestroyCommandHandler`, with fallback to manual cleanup on failure
 //!   (executed at the end in main function)
 //!
 //! This approach provides comprehensive E2E testing of the full provision+destroy lifecycle
@@ -87,7 +87,7 @@ struct Cli {
 /// 1. Initializes logging and test environment
 /// 2. Performs pre-flight cleanup
 /// 3. Runs provisioning tests (infrastructure creation only)
-/// 4. Destroys infrastructure using `DestroyCommand` (with fallback to manual cleanup)
+/// 4. Destroys infrastructure using `DestroyCommandHandler` (with fallback to manual cleanup)
 /// 5. Reports results
 ///
 /// Returns `Ok(())` if all tests pass, `Err` otherwise.
@@ -99,7 +99,7 @@ struct Cli {
 /// - Test environment setup fails
 /// - Pre-flight cleanup encounters issues
 /// - Infrastructure provisioning fails
-/// - Destruction operations fail (both `DestroyCommand` and manual cleanup fallback)
+/// - Destruction operations fail (both `DestroyCommandHandler` and manual cleanup fallback)
 ///
 /// # Panics
 ///
@@ -153,7 +153,7 @@ pub async fn main() -> Result<()> {
     let provision_result = run_provisioning_test(&mut test_context).await;
 
     // Always cleanup test infrastructure created during this test run
-    // Try using DestroyCommand first, fallback to manual cleanup on failure
+    // Try using DestroyCommandHandlerHandler first, fallback to manual cleanup on failure
     // This ensures proper resource cleanup regardless of test success or failure
     run_infrastructure_destroy(&mut test_context);
 
@@ -235,13 +235,13 @@ async fn run_provisioning_test(env: &mut TestContext) -> Result<IpAddr> {
 
 /// Runs the infrastructure destruction workflow
 ///
-/// This function destroys infrastructure using the `DestroyCommand` with fallback
+/// This function destroys infrastructure using the `DestroyCommandHandler` with fallback
 /// to manual cleanup if the command fails. This ensures reliable cleanup in all scenarios.
 ///
 /// # Destruction Strategy
 ///
-/// 1. **Try `DestroyCommand`**: Use the application layer command for destruction
-/// 2. **Fallback to Manual Cleanup**: If `DestroyCommand` fails, use manual cleanup functions
+/// 1. **Try `DestroyCommandHandler`**: Use the application layer command for destruction
+/// 2. **Fallback to Manual Cleanup**: If `DestroyCommandHandler` fails, use manual cleanup functions
 fn run_infrastructure_destroy(test_context: &mut TestContext) {
     use tracing::warn;
 
@@ -251,13 +251,13 @@ fn run_infrastructure_destroy(test_context: &mut TestContext) {
         "Starting infrastructure destruction E2E test"
     );
 
-    // Try using the DestroyCommand first
+    // Try using the DestroyCommandHandler first
     match run_destroy_command(test_context) {
         Ok(()) => {
             info!(
                 status = "success",
                 method = "destroy_command",
-                "Infrastructure destroyed successfully using DestroyCommand"
+                "Infrastructure destroyed successfully using DestroyCommandHandler"
             );
         }
         Err(e) => {
@@ -265,7 +265,7 @@ fn run_infrastructure_destroy(test_context: &mut TestContext) {
                 status = "failed",
                 method = "destroy_command",
                 error = %e,
-                "DestroyCommand failed, falling back to manual cleanup"
+                "DestroyCommandHandler failed, falling back to manual cleanup"
             );
 
             // Fallback to manual cleanup

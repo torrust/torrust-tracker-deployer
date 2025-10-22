@@ -163,7 +163,7 @@ pub async fn main() -> Result<()> {
         Err(_) => Ok(()), // Skip validation if deployment failed
     };
 
-    // Always cleanup test infrastructure created during this test run using DestroyCommand
+    // Always cleanup test infrastructure created during this test run using DestroyCommandHandler
     // This ensures proper resource cleanup regardless of test success or failure
     // The keep_env flag is handled inside run_full_destroy_test
     let destroy_result = run_full_destroy_test(&mut test_context);

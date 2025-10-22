@@ -439,7 +439,7 @@ impl<S> Environment<S> {
 
     /// Sets the instance IP address for this environment
     ///
-    /// This method is typically called by the `ProvisionCommand` after successfully
+    /// This method is typically called by the `ProvisionCommandHandler` after successfully
     /// provisioning the infrastructure and obtaining the instance's IP address.
     ///
     /// # Arguments
