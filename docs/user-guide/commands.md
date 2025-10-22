@@ -1,82 +1,53 @@
 # Command Reference
 
-This guide provides an overview of all available commands in the Torrust Tracker Deployer. Each command manages a specific phase of the deployment lifecycle.
+This guide provides an overview of the planned commands for the Torrust Tracker Deployer.
 
-## Quick Reference
+## ⚠️ Implementation Status
+
+**Current State**: Only the `DestroyCommand` handler exists in the Application layer. The CLI interface is not yet implemented.
+
+- ✅ **Application Layer**: `DestroyCommand` handler implemented
+- ❌ **CLI Interface**: Not yet implemented (coming in [issue #10](https://github.com/torrust/torrust-tracker-deployer/issues/10))
+
+The CLI commands documented here represent the planned MVP implementation.
+
+## Planned Commands (MVP)
 
 ```bash
-# Environment lifecycle commands
-torrust-tracker-deployer provision <env>    # Create infrastructure
-torrust-tracker-deployer configure <env>    # Install software and configure system
-torrust-tracker-deployer destroy <env>      # Remove infrastructure and cleanup
-
-# Future commands
-torrust-tracker-deployer release <env>      # Deploy application (not yet implemented)
-torrust-tracker-deployer run <env>          # Start application services (not yet implemented)
-torrust-tracker-deployer status <env>       # Check environment status (not yet implemented)
+# Planned CLI commands
+torrust-tracker-deployer create <env>     # Future - Create environment configuration
+torrust-tracker-deployer deploy <env>     # Future - Full deployment (provision → configure → release)
+torrust-tracker-deployer run <env>        # Future - Start application services
+torrust-tracker-deployer status <env>     # Future - Check environment status
+torrust-tracker-deployer test <env>       # Future - Run validation tests
+torrust-tracker-deployer destroy <env>    # Destroy infrastructure (App layer exists, CLI coming)
 ```
+
+**Note**: The `deploy` command will internally orchestrate the complete deployment workflow: provision → configure → release. Individual commands for these phases may be added later for advanced users.
 
 ## Available Commands
 
 ### Environment Management
 
-#### [`provision`](commands/provision.md)
-
-Create new infrastructure with virtual machines and networking.
-
-**Status**: ✅ Implemented
-
-**Use when**: Starting a new deployment from scratch
-
-```bash
-torrust-tracker-deployer provision my-environment
-```
-
-Creates:
-
-- LXD virtual machine or container
-- Network configuration
-- SSH access setup
-- Initial system state
-
----
-
-#### [`configure`](commands/configure.md)
-
-Install software and configure the system after provisioning.
-
-**Status**: 🔄 Partially Implemented
-
-**Use when**: Setting up software on provisioned infrastructure
-
-```bash
-torrust-tracker-deployer configure my-environment
-```
-
-Configures:
-
-- Docker and Docker Compose
-- System packages and updates
-- Firewall rules (future)
-- Security settings (future)
-
----
-
 #### [`destroy`](commands/destroy.md)
 
 Remove environment and clean up all resources.
 
-**Status**: ✅ Implemented
+**Status**:
+
+- ✅ Application Layer: `DestroyCommand` implemented
+- ❌ CLI: Not yet implemented (see [issue #10](https://github.com/torrust/torrust-tracker-deployer/issues/10))
 
 **Use when**: Tearing down temporary or failed environments
 
 ```bash
+# Planned CLI usage (not yet available)
 torrust-tracker-deployer destroy my-environment
 ```
 
 Removes:
 
-- All infrastructure resources
+- All infrastructure resources (VMs, networks)
 - Local state files
 - Build artifacts
 
@@ -84,52 +55,60 @@ Removes:
 
 ---
 
-### Application Management
+### Future Commands
 
-#### `release` (Future)
+#### `create` (Planned)
 
-Deploy application files and configuration.
+Create a new environment configuration.
 
 **Status**: ❌ Not Yet Implemented
 
-**Use when**: Deploying or updating the Torrust Tracker application
+**Use when**: Initializing a new deployment environment
 
 ```bash
-torrust-tracker-deployer release my-environment
+# Planned CLI usage
+torrust-tracker-deployer create my-environment
 ```
-
-Will deploy:
-
-- Docker Compose configurations
-- Application configuration files
-- Environment variables
-- Container images
 
 ---
 
-#### `run` (Future)
+#### `deploy` (Planned)
 
-Start application services and validate deployment.
+Complete deployment workflow that orchestrates provision → configure → release.
 
 **Status**: ❌ Not Yet Implemented
 
-**Use when**: Starting the deployed application
+**Use when**: Deploying a new environment from start to finish
 
 ```bash
+# Planned CLI usage
+torrust-tracker-deployer deploy my-environment
+```
+
+This command will internally execute:
+
+1. **Provision**: Create infrastructure (VMs, networks)
+2. **Configure**: Install software and configure system
+3. **Release**: Deploy application files and configuration
+
+---
+
+#### `run` (Planned)
+
+Start application services.
+
+**Status**: ❌ Not Yet Implemented
+
+**Use when**: Starting the Torrust Tracker application
+
+```bash
+# Planned CLI usage
 torrust-tracker-deployer run my-environment
 ```
 
-Will start:
-
-- Docker Compose stack
-- Application services
-- Health monitoring
-
 ---
 
-### Information and Validation
-
-#### `status` (Future)
+#### `status` (Planned)
 
 Display environment status and service health.
 
@@ -138,275 +117,99 @@ Display environment status and service health.
 **Use when**: Checking deployment health and status
 
 ```bash
+# Planned CLI usage
 torrust-tracker-deployer status my-environment
 ```
 
-Will show:
+---
 
-- Current deployment state
-- Infrastructure status
-- Service health
-- Resource usage
+#### `test` (Planned)
+
+Run validation tests on deployed environment.
+
+**Status**: ❌ Not Yet Implemented
+
+**Use when**: Validating deployment functionality
+
+```bash
+# Planned CLI usage
+torrust-tracker-deployer test my-environment
+```
 
 ---
 
-## Command Workflow
+## Deployment Workflow
 
-### Standard Deployment Flow
+### Standard Deployment (Planned)
+
+The recommended workflow once all commands are implemented:
 
 ```bash
-# 1. Create infrastructure
-torrust-tracker-deployer provision production
+# 1. Create environment configuration
+torrust-tracker-deployer create production
 
-# 2. Configure system
-torrust-tracker-deployer configure production
+# 2. Deploy complete stack (provision → configure → release)
+torrust-tracker-deployer deploy production
 
-# 3. Deploy application (future)
-torrust-tracker-deployer release production
-
-# 4. Start services (future)
+# 3. Start services
 torrust-tracker-deployer run production
 
-# 5. Verify deployment (future)
+# 4. Verify deployment
 torrust-tracker-deployer status production
+torrust-tracker-deployer test production
 ```
 
-### Development/Testing Flow
+### Development/Testing Workflow
 
 ```bash
-# Quick setup for testing
-torrust-tracker-deployer provision test-env
-torrust-tracker-deployer configure test-env
+# Quick setup for testing (once implemented)
+torrust-tracker-deployer create test-env
+torrust-tracker-deployer deploy test-env
 
 # Run tests...
 
-# Quick teardown
+# Quick teardown (App layer exists, CLI coming)
 torrust-tracker-deployer destroy test-env
 ```
 
-### Update Existing Deployment
+## Environment States
 
-```bash
-# Update configuration only
-torrust-tracker-deployer configure production
+Environments transition through the following states:
 
-# Update application (future)
-torrust-tracker-deployer release production
-torrust-tracker-deployer run production
+```text
+Created → Provisioned → Configured → Released → Running → Destroyed
 ```
+
+- **Created**: Environment configuration exists
+- **Provisioned**: Infrastructure (VMs, networks) is running
+- **Configured**: System software installed and configured
+- **Released**: Application deployed
+- **Running**: Services are active
+- **Destroyed**: All resources cleaned up
 
 ## Common Options
 
-All commands support these common options:
+All commands (when implemented) will support these options:
 
-### Logging Options
-
-Control log output and format:
-
-```bash
-# Log to file only (default, production-safe)
-torrust-tracker-deployer <command> <env>
-
-# Log to file and display on terminal
-torrust-tracker-deployer <command> <env> --log-output file-and-stderr
-
-# Change log format
-torrust-tracker-deployer <command> <env> --log-format pretty
-torrust-tracker-deployer <command> <env> --log-format json
-torrust-tracker-deployer <command> <env> --log-format compact
-```
-
-**Log Formats**:
-
-- `pretty` - Human-readable with colors (best for development)
-- `json` - Structured JSON logs (best for log aggregation)
-- `compact` - Minimal space usage (best for production files)
-
-For detailed logging configuration, see the [Logging Guide](logging.md).
+- `--help` - Display command help
+- `--log-output <OUTPUT>` - Logging destination (`file-only` or `file-and-stderr`)
+- `--log-format <FORMAT>` - Log format (`pretty`, `json`, or `compact`)
 
 ### Environment Variables
 
-Control behavior through environment variables:
-
-```bash
-# Set log level
-RUST_LOG=debug torrust-tracker-deployer provision my-env
-RUST_LOG=info torrust-tracker-deployer configure my-env
-
-# Detailed component logging
-RUST_LOG=torrust_tracker_deployer::application::commands=trace \
-    torrust-tracker-deployer provision my-env
-```
-
-**Log Levels**:
-
-- `error` - Only errors
-- `warn` - Warnings and errors
-- `info` - General information (default)
-- `debug` - Detailed debugging information
-- `trace` - Very detailed trace information
-
-### Help Information
-
-Get help for any command:
-
-```bash
-torrust-tracker-deployer --help
-torrust-tracker-deployer provision --help
-torrust-tracker-deployer destroy --help
-```
-
-## State Transitions
-
-Commands transition environments through defined states:
-
-```text
-┌─────────┐
-│ Created │ (Initial state)
-└────┬────┘
-     │
-     │ provision
-     ▼
-┌──────────────┐
-│ Provisioned  │ (Infrastructure ready)
-└──────┬───────┘
-       │
-       │ configure
-       ▼
-┌──────────────┐
-│ Configured   │ (System configured)
-└──────┬───────┘
-       │
-       │ release (future)
-       ▼
-┌──────────────┐
-│  Released    │ (Application deployed)
-└──────┬───────┘
-       │
-       │ run (future)
-       ▼
-┌──────────────┐
-│   Running    │ (Services active)
-└──────┬───────┘
-       │
-       │ destroy
-       ▼
-┌──────────────┐
-│  Destroyed   │ (Cleaned up)
-└──────────────┘
-```
-
-Each state represents a checkpoint in the deployment lifecycle.
-
-## Error Handling
-
-All commands provide:
-
-- Clear error messages with context
-- Actionable troubleshooting steps
-- Detailed logs in `data/logs/log.txt`
-- Trace information for complex errors
-
-When a command fails:
-
-1. **Check the error message** for immediate context
-2. **Review logs** in `data/logs/log.txt` for details
-3. **Follow troubleshooting steps** in error output
-4. **Consult command documentation** for specific issues
+- `RUST_LOG` - Control log verbosity (e.g., `RUST_LOG=debug`)
 
 ## Getting Started
 
-### First-Time Users
+Once the CLI is implemented, new users should:
 
-1. **Start with provision**: Create your first environment
-
-   ```bash
-   torrust-tracker-deployer provision my-first-env
-   ```
-
-2. **Configure the system**: Install required software
-
-   ```bash
-   torrust-tracker-deployer configure my-first-env
-   ```
-
-3. **Explore logs**: Check what happened
-
-   ```bash
-   cat data/logs/log.txt
-   ```
-
-4. **Clean up when done**: Remove the test environment
-
-   ```bash
-   torrust-tracker-deployer destroy my-first-env
-   ```
-
-### Prerequisites
-
-Before using any command, ensure you have:
-
-- **LXD** installed and configured (for provision/destroy)
-- **OpenTofu** installed (for infrastructure management)
-- **Ansible** installed (for configuration management)
-- **Docker** installed (for E2E testing and configuration)
-
-See the main README for installation instructions.
-
-## Best Practices
-
-### Production Deployments
-
-1. **Always backup** before running destroy
-2. **Test in non-production** first
-3. **Use file-only logging** for production (default)
-4. **Enable audit logs** for critical environments
-5. **Document your workflows** in runbooks
-
-### Development Workflows
-
-1. **Use file-and-stderr** for real-time feedback
-2. **Set appropriate log levels** with `RUST_LOG`
-3. **Clean up test environments** regularly
-4. **Version control configurations** for reproducibility
-
-### Automation
-
-1. **Handle failures gracefully** in scripts
-2. **Use idempotent commands** (like destroy) safely
-3. **Implement confirmation** for destructive operations
-4. **Log all automation** actions for auditing
-
-## Troubleshooting
-
-### Common Issues
-
-**Command hangs or takes too long**:
-
-- Check `data/logs/log.txt` for progress
-- Verify LXD/OpenTofu is responsive
-- Use `--log-output file-and-stderr` to see real-time updates
-
-**Permission errors**:
-
-- Ensure user is in `lxd` group: `sudo usermod -aG lxd $USER`
-- Check file permissions in `data/` and `build/` directories
-- Verify OpenTofu has write access to state files
-
-**State inconsistencies**:
-
-- Review environment state in `data/state.json`
-- Check OpenTofu state: `cd build/tofu/lxd && tofu show`
-- Use destroy command to clean up and start fresh
+1. Start with the [`destroy` command documentation](commands/destroy.md) to understand the workflow
+2. Review the deployment states and standard workflow
+3. Consult individual command documentation as commands become available
 
 ## Related Documentation
 
-- [Logging Guide](logging.md) - Configure logging and understand log formats
-- [Contributing Guide](../contributing/commands.md) - Developer documentation for commands
-- [E2E Testing Guide](../e2e-testing.md) - How commands are tested
-
-## Next Steps
-
-- Read the [Provision Command](commands/provision.md) guide to create your first environment
-- Learn about [Logging](logging.md) to understand command output
-- Explore [Template Customization](template-customization.md) to customize deployments
+- [Destroy Command](commands/destroy.md) - Detailed destroy command documentation
+- [Logging Guide](../logging.md) - Configure logging output
+- [E2E Testing](../../e2e-testing.md) - Testing infrastructure and commands
+- [Issue #10 - UI Layer Destroy Command](../../issues/10-epic-ui-layer-destroy-command.md) - CLI implementation plan
