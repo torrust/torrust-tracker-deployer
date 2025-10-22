@@ -41,10 +41,15 @@ When starting work on a new feature:
 - [ ] **1.5** Create command `torrust-tracker-deployer create` to create a new environment
   - We need to decide how the user will provide config values.
   - output using println and eprintln
-- [ ] **1.6** Create command `torrust-tracker-deployer deploy` to run the Provision and Configuration commands (full deployment)
+- [ ] **1.6** Create command `torrust-tracker-deployer provision` to provision VM infrastructure (UI layer only)
+  - **Note:** The App layer ProvisionCommand is already implemented, this task focuses on the console subcommand interface
+  - Implementation should call the existing ProvisionCommand business logic
+  - Handle user input, validation, and output presentation
 - [ ] **1.7** Add levels of verbosity as described in the UX research
 
 **Note:** See [`docs/research/UX/`](./research/UX/) for detailed UX research that will be useful to implement the features in this section.
+
+**Future Enhancement:** The `torrust-tracker-deployer deploy` porcelain command (intelligent orchestration of plumbing commands) will be implemented after the core plumbing commands are stable. See [`docs/features/hybrid-command-architecture/`](./features/hybrid-command-architecture/) for the complete specification.
 
 ### 2. Add new infrastructure provider: Hetzner
 
@@ -57,13 +62,16 @@ When starting work on a new feature:
 - [ ] **3.1** Finish ConfigureCommand - [Epic #16](https://github.com/torrust/torrust-tracker-deployer/issues/16)
   - Add system security configuration (automatic updates, UFW firewall)
   - Refactor Ansible templates to centralized variables pattern
-- [ ] **3.2** Add ReleaseCommand and RunCommand with slices
+- [ ] **3.2** Implement ReleaseCommand (App layer business logic)
+  - Core business logic for deploying Torrust Tracker application files and configuration
+  - Template generation and file deployment to provisioned infrastructure
+- [ ] **3.3** Add ReleaseCommand and RunCommand with slices
 
-  - [ ] **3.2.1** Run only a docker compose configuration with hello-world docker image
-  - [ ] **3.2.2** Add MySQL to docker compose stack
-  - [ ] **3.2.3** Add Torrust Tracker to docker compose stack
-  - [ ] **3.2.4** Add Prometheus to docker compose stack
-  - [ ] **3.2.5** Add Grafana to docker compose stack
+  - [ ] **3.3.1** Run only a docker compose configuration with hello-world docker image
+  - [ ] **3.3.2** Add MySQL to docker compose stack
+  - [ ] **3.3.3** Add Torrust Tracker to docker compose stack
+  - [ ] **3.3.4** Add Prometheus to docker compose stack
+  - [ ] **3.3.5** Add Grafana to docker compose stack
 
   **Notes:**
 
