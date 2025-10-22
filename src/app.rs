@@ -114,7 +114,7 @@ pub fn run() {
     // Execute command if provided, otherwise display help
     match cli.command {
         Some(Commands::Destroy { environment }) => {
-            if let Err(e) = handle_destroy_command(environment) {
+            if let Err(e) = handle_destroy_command(&environment) {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
             }
@@ -174,7 +174,7 @@ fn display_help_info() {
 ///
 /// This function will return an error if the environment name is invalid,
 /// the environment cannot be loaded, or the destruction process fails.
-fn handle_destroy_command(environment_name: String) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_destroy_command(environment_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     use std::sync::Arc;
     use std::time::Duration;
     use torrust_tracker_deployer_lib::adapters::tofu::client::OpenTofuClient;
@@ -191,7 +191,7 @@ fn handle_destroy_command(environment_name: String) -> Result<(), Box<dyn std::e
     output.progress(&format!("Destroying environment '{environment_name}'..."));
 
     // Validate environment name
-    let env_name = EnvironmentName::new(environment_name.clone()).map_err(|e| {
+    let env_name = EnvironmentName::new(environment_name.to_string()).map_err(|e| {
         output.error(&format!(
             "Invalid environment name '{environment_name}': {e}"
         ));
@@ -283,12 +283,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_destroy_with_different_environment_names() {
-        let test_cases = vec![
-            "e2e-provision",
-            "production",
-            "test-123",
-            "dev-environment",
-        ];
+        let test_cases = vec!["e2e-provision", "production", "test-123", "dev-environment"];
 
         for env_name in test_cases {
             let args = vec!["torrust-tracker-deployer", "destroy", env_name];
@@ -400,4 +395,3 @@ mod tests {
         );
     }
 }
-

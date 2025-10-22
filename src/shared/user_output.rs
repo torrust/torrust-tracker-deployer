@@ -278,6 +278,7 @@ mod tests {
     /// Helper to create test `UserOutput` with buffer writers
     ///
     /// Returns: (`UserOutput`, Arc to stdout buffer, Arc to stderr buffer)
+    #[allow(clippy::type_complexity)]
     fn create_test_user_output(
         verbosity: VerbosityLevel,
     ) -> (
@@ -307,10 +308,7 @@ mod tests {
 
     impl Write for SharedWriter {
         fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.0
-                .lock()
-                .unwrap()
-                .write(buf)
+            self.0.lock().unwrap().write(buf)
         }
 
         fn flush(&mut self) -> std::io::Result<()> {
@@ -320,8 +318,7 @@ mod tests {
 
     #[test]
     fn it_should_write_progress_messages_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) =
-            create_test_user_output(VerbosityLevel::Normal);
+        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
 
         output.progress("Testing progress message");
 
@@ -336,8 +333,7 @@ mod tests {
 
     #[test]
     fn it_should_write_success_messages_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) =
-            create_test_user_output(VerbosityLevel::Normal);
+        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
 
         output.success("Testing success message");
 
@@ -352,8 +348,7 @@ mod tests {
 
     #[test]
     fn it_should_write_warning_messages_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) =
-            create_test_user_output(VerbosityLevel::Normal);
+        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
 
         output.warn("Testing warning message");
 
@@ -368,8 +363,7 @@ mod tests {
 
     #[test]
     fn it_should_write_error_messages_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) =
-            create_test_user_output(VerbosityLevel::Normal);
+        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
 
         output.error("Testing error message");
 
@@ -384,8 +378,7 @@ mod tests {
 
     #[test]
     fn it_should_write_results_to_stdout() {
-        let (mut output, stdout_buf, stderr_buf) =
-            create_test_user_output(VerbosityLevel::Normal);
+        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
 
         output.result("Test result data");
 
@@ -400,8 +393,7 @@ mod tests {
 
     #[test]
     fn it_should_write_data_to_stdout() {
-        let (mut output, stdout_buf, stderr_buf) =
-            create_test_user_output(VerbosityLevel::Normal);
+        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
 
         output.data(r#"{"status": "destroyed"}"#);
 
