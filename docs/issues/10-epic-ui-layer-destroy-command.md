@@ -3,7 +3,7 @@
 **GitHub Issue**: [#10](https://github.com/torrust/torrust-tracker-deployer/issues/10)  
 **Epic Type**: Child Epic #10 (Phase 2 of Task 1.2)
 **Parent Epic**: #8 ([`8-epic-destroy-command.md`](./8-epic-destroy-command.md))
-**Dependencies**: Child Epic #9 ([`9-epic-app-layer-destroy-command.md`](./9-epic-app-layer-destroy-command.md)) must be completed first
+**Dependencies**: Child Epic #9 ([GitHub Issue #9](https://github.com/torrust/torrust-tracker-deployer/issues/9)) - ✅ **COMPLETED**
 **Related Roadmap**: [Section 1.2](../roadmap.md#1-add-scaffolding-for-main-app)
 **Parent Issue**: #2 (Scaffolding for main app)
 
@@ -17,10 +17,11 @@ This follows an **incremental, lean approach**: start with basic functionality a
 
 ## 🎯 Goals
 
-1. Rename existing app commands to command handlers for clarity
-2. Add Clap subcommand configuration for `destroy`
-3. Implement user-friendly progress messages and feedback
-4. Provide comprehensive user documentation
+1. Fix E2E infrastructure preservation for manual testing workflow
+2. Rename existing app commands to command handlers for clarity
+3. Add Clap subcommand configuration for `destroy`
+4. Implement user-friendly progress messages and feedback
+5. Provide comprehensive user documentation
 
 **Note**: Force flags (`--force`, `--yes`) and skip confirmation features are **out of scope for MVP**. These are easy to implement later and not essential for the initial destroy command functionality.
 
@@ -32,7 +33,23 @@ This follows an **incremental, lean approach**: start with basic functionality a
 
 ## 📦 Sub-Issues
 
-### Issue 10.1: Rename App Commands to Command Handlers
+### Issue #21: Fix E2E Infrastructure Preservation
+
+**GitHub Issue**: [#21](https://github.com/torrust/torrust-tracker-deployer/issues/21)  
+**Specification**: [`21-fix-e2e-infrastructure-preservation.md`](./21-fix-e2e-infrastructure-preservation.md)
+
+**Description**: Restore the `--keep` flag functionality in E2E test binaries to preserve infrastructure for manual testing.
+
+**Problem**: During E2E binary refactoring, the new `run_infrastructure_destroy` function doesn't respect the `--keep` CLI argument. This breaks the ability to preserve test infrastructure for manual verification, which is essential for testing the destroy CLI command.
+
+**Estimated Effort**: 1-2 hours
+
+---
+
+### Issue #22: Rename App Commands to Command Handlers
+
+**GitHub Issue**: [#22](https://github.com/torrust/torrust-tracker-deployer/issues/22)  
+**Specification**: [`22-rename-app-commands-to-command-handlers.md`](./22-rename-app-commands-to-command-handlers.md)
 
 **Description**: Refactor terminology to distinguish between UI commands (Clap) and Application Layer commands (DDD).
 
@@ -59,9 +76,14 @@ This follows an **incremental, lean approach**: start with basic functionality a
 
 ---
 
-### Issue 10.2: Add Clap Subcommand Configuration
+### Issue #23: Add Clap Subcommand Configuration
+
+**GitHub Issue**: [#23](https://github.com/torrust/torrust-tracker-deployer/issues/23)  
+**Specification**: [`23-add-clap-subcommand-configuration.md`](./23-add-clap-subcommand-configuration.md)
 
 **Description**: Implement the `destroy` subcommand in the CLI with basic functionality and UserOutput scaffolding.
+
+**Dependencies**: Issue #21 must be completed first to enable manual testing workflow.
 
 **Scope**:
 
@@ -111,7 +133,10 @@ torrust-tracker-deployer destroy <ENVIRONMENT_NAME>
 
 ---
 
-### Issue 10.3: Add User Documentation
+### Issue #24: Add User Documentation
+
+**GitHub Issue**: [#24](https://github.com/torrust/torrust-tracker-deployer/issues/24)  
+**Specification**: [`24-add-user-documentation.md`](./24-add-user-documentation.md)
 
 **Description**: Create comprehensive user-facing documentation for the destroy command.
 
@@ -138,13 +163,14 @@ torrust-tracker-deployer destroy <ENVIRONMENT_NAME>
 
 ## 📊 Epic Summary
 
-**Total Estimated Effort**: 7-10 hours
+**Total Estimated Effort**: 8-12 hours
 
 **Sub-Issues**:
 
-1. Issue 10.1: Rename App Commands to Command Handlers (2-3h)
-2. Issue 10.2: Add Clap Subcommand Configuration with Basic Progress (3-4h)
-3. Issue 10.3: Add User Documentation (2-3h)
+1. Issue #21: Fix E2E Infrastructure Preservation (1-2h)
+2. Issue #22: Rename App Commands to Command Handlers (2-3h)
+3. Issue #23: Add Clap Subcommand Configuration with Basic Progress (3-4h)
+4. Issue #24: Add User Documentation (2-3h)
 
 **Out of Scope for MVP**: Force flags (`--force`, `--yes`) and skip confirmation features - these can be implemented as separate improvements later.
 
@@ -159,6 +185,7 @@ torrust-tracker-deployer destroy <ENVIRONMENT_NAME>
 
 This epic focuses on the essential functionality for MVP:
 
+- E2E infrastructure preservation for manual testing (prerequisite)
 - Basic destroy subcommand with clear interface
 - UserOutput type and VerbosityLevel enum (scaffolding for future verbosity flags)
 - Essential progress messages using Normal verbosity level
