@@ -35,7 +35,7 @@ This prevents us from:
 
 ### Real-World Scenario
 
-When a user runs `torrust-deploy status`, we need to:
+When a user runs `torrust-tracker-deployer status`, we need to:
 
 1. Load all environments from `./data/` directory
 2. Check each environment's current state

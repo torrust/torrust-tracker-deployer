@@ -34,18 +34,92 @@ The deployment follows a linear state progression:
 
 Each command transitions the deployment to the next state.
 
+## Minimum Deployment Workflow
+
+The essential commands for a complete Torrust Tracker deployment:
+
+```bash
+# 1. Create environment configuration
+torrust-tracker-deployer create myenv
+
+# 2. Provision VM infrastructure
+torrust-tracker-deployer provision myenv
+
+# 3. Configure system (Docker, networking)
+torrust-tracker-deployer configure myenv
+
+# 4. Deploy Torrust Tracker application
+torrust-tracker-deployer release myenv
+
+# At this point, the tracker is deployed and can be started manually
+# Later: torrust-tracker-deployer run myenv (when implemented)
+```
+
+This workflow takes an environment from non-existent to having a fully deployed Torrust Tracker ready to run.
+
+## Hybrid Command Architecture
+
+The deployer implements a **hybrid approach** offering two levels of command interface:
+
+### Plumbing Commands (Low-Level, Implemented First)
+
+Individual commands for precise control over each deployment step:
+
+- `create` → `provision` → `configure` → `release` → `run`
+- Each command performs one specific operation
+- Ideal for CI/CD, automation, debugging, and advanced users
+- **Implementation Priority**: High (these are implemented first)
+
+### Porcelain Commands (High-Level, Implemented Later)
+
+Simplified commands that orchestrate multiple plumbing commands:
+
+- `deploy` - Intelligent deployment from current state to running
+- Automatically determines next steps based on environment state
+- If environment is already provisioned, starts from configure
+- If environment is already configured, starts from release
+- **Implementation Priority**: Medium (after plumbing commands are stable)
+
+### Example Usage Patterns
+
+```bash
+# Porcelain: Simple deployment (future)
+torrust-tracker-deployer create myenv
+torrust-tracker-deployer deploy myenv    # Runs provision→configure→release→run
+
+# Plumbing: Step-by-step control (current focus)
+torrust-tracker-deployer create myenv
+torrust-tracker-deployer provision myenv
+torrust-tracker-deployer configure myenv
+torrust-tracker-deployer release myenv
+torrust-tracker-deployer run myenv
+```
+
+**Note**: Porcelain commands only automate the core deployment workflow (`provision` → `configure` → `release` → `run`). Management commands like `create`, `list`, `check`, `status`, `destroy` remain individual operations.
+
 ## Quick Command Reference
 
 ```bash
-torrust-deploy check           # Validate required tools
-torrust-deploy create <env>    # Create new environment configuration
-torrust-deploy provision <env> # Create VM infrastructure
-torrust-deploy configure <env> # Setup VM (Docker, networking)
-torrust-deploy release <env>   # Deploy application files
-torrust-deploy run <env>       # Start application stack
-torrust-deploy test <env>      # Run smoke tests
-torrust-deploy status <env>    # Show environment info
-torrust-deploy destroy <env>   # Clean up infrastructure
+# Utility Commands
+torrust-tracker-deployer check           # Validate required tools
+torrust-tracker-deployer list            # List all environments
+
+# Environment Management
+torrust-tracker-deployer create <env>    # Create new environment configuration
+torrust-tracker-deployer status <env>    # Show environment info
+torrust-tracker-deployer destroy <env>   # Clean up infrastructure
+
+# Porcelain Commands (High-Level)
+torrust-tracker-deployer deploy <env>    # Smart deployment from current state (future)
+
+# Plumbing Commands (Low-Level)
+torrust-tracker-deployer provision <env> # Create VM infrastructure
+torrust-tracker-deployer configure <env> # Setup VM (Docker, networking)
+torrust-tracker-deployer release <env>   # Deploy application files
+torrust-tracker-deployer run <env>       # Start application stack
+
+# Validation
+torrust-tracker-deployer test <env>      # Run smoke tests
 ```
 
 ## Detailed Command Specifications
@@ -57,7 +131,7 @@ torrust-deploy destroy <env>   # Clean up infrastructure
 **Purpose**: Verify all required third-party tools are installed and properly configured.
 
 ```bash
-torrust-deploy check [OPTIONS]
+torrust-tracker-deployer check [OPTIONS]
 ```
 
 **Validates**:
@@ -88,19 +162,99 @@ torrust-deploy check [OPTIONS]
 
 ---
 
+### `list` - Environment Listing
+
+**Status**: ❌ Not Implemented  
+**State Transition**: None (read-only)  
+**Purpose**: Display a summary of all available deployment environments.
+
+```bash
+torrust-tracker-deployer list [OPTIONS]
+```
+
+**Should Display**:
+
+- Environment name
+- Current deployment state (created, provisioned, configured, etc.)
+- Creation timestamp
+- Last modified timestamp
+- Infrastructure status (if provisioned)
+- Brief resource summary (IP address, instance type)
+
+**Options**:
+
+- `--format <table|json|yaml>` - Output format
+- `--state <state>` - Filter by deployment state
+- `--sort <name|created|modified|state>` - Sort criteria
+
+**Environment Variables**:
+
+- `RUST_LOG=debug` - Show detailed listing information via tracing
+
+**Example Output**:
+
+```text
+NAME          STATE        CREATED      MODIFIED     IP ADDRESS
+e2e-test      provisioned  2 hours ago  30 min ago   10.140.190.14
+production    running      5 days ago   1 hour ago   10.140.192.45
+staging       configured   1 day ago    6 hours ago  10.140.191.23
+development   destroyed    3 days ago   2 days ago   -
+```
+
+---
+
+### `deploy` - Smart Deployment (Porcelain Command)
+
+**Status**: ❌ Not Implemented (future porcelain command)  
+**State Transition**: Current state → `running` (intelligent progression)  
+**Purpose**: Orchestrate the deployment workflow from the current environment state to running.
+
+```bash
+torrust-tracker-deployer deploy <environment> [OPTIONS]
+```
+
+**Intelligent Behavior**:
+
+- **From `created`**: Runs `provision` → `configure` → `release` → `run`
+- **From `provisioned`**: Runs `configure` → `release` → `run`
+- **From `configured`**: Runs `release` → `run`
+- **From `released`**: Runs `run`
+- **From `running`**: Reports already running (no-op)
+
+**Benefits**:
+
+- Simplified user experience for common deployment workflow
+- Automatic state detection and appropriate action selection
+- Reduces need to remember command sequences
+- Ideal for development and testing workflows
+
+**Options**:
+
+- `--skip-run` - Deploy but don't start services
+- `--dry-run` - Show what steps would be executed
+- `--verbose` - Show detailed progress information
+
+**Environment Variables**:
+
+- `RUST_LOG=debug` - Show detailed deployment orchestration via tracing
+
+**Implementation Note**: This is a **porcelain command** that will be implemented after the underlying plumbing commands (`provision`, `configure`, `release`, `run`) are stable.
+
+---
+
 ### `create` - Environment Creation
 
-**Status**: ❌ Not Implemented (concept not supported yet)  
+**Status**: ❌ Not Implemented (essential for deployment)  
 **State Transition**: → `created`  
 **Purpose**: Initialize a new deployment environment configuration.
 
 ```bash
-torrust-deploy create <environment-name> [OPTIONS]
+torrust-tracker-deployer create <environment-name> [OPTIONS]
 ```
 
-**Current Limitation**: Only one hardcoded environment is supported. This command will be implemented when multi-environment support is added.
+**Current Limitation**: Only one hardcoded environment is supported. This command is essential for creating environments and must be implemented for basic deployment functionality.
 
-**Future Functionality**:
+**Essential Functionality**:
 
 - Generate environment configuration files
 - Set up directory structure for the environment
@@ -122,7 +276,7 @@ torrust-deploy create <environment-name> [OPTIONS]
 **Purpose**: Create and initialize VM/container infrastructure.
 
 ```bash
-torrust-deploy provision <environment> [OPTIONS]
+torrust-tracker-deployer provision <environment> [OPTIONS]
 ```
 
 **Current Implementation**:
@@ -158,7 +312,7 @@ torrust-deploy provision <environment> [OPTIONS]
 **Purpose**: Set up the basic system environment and dependencies.
 
 ```bash
-torrust-deploy configure <environment> [OPTIONS]
+torrust-tracker-deployer configure <environment> [OPTIONS]
 ```
 
 **Current Implementation**:
@@ -187,15 +341,15 @@ torrust-deploy configure <environment> [OPTIONS]
 
 ### `release` - Application Deployment
 
-**Status**: ❌ Not Implemented  
+**Status**: ❌ Not Implemented (critical for deployment)  
 **State Transition**: `configured` → `released`  
 **Purpose**: Deploy Torrust Tracker application files and configuration.
 
 ```bash
-torrust-deploy release <environment> [OPTIONS]
+torrust-tracker-deployer release <environment> [OPTIONS]
 ```
 
-**Should Include**:
+**Critical Functionality**:
 
 - Generate Docker Compose configuration for Torrust Tracker
 - Create environment variable files
@@ -218,7 +372,7 @@ torrust-deploy release <environment> [OPTIONS]
 **Purpose**: Start the Torrust Tracker Docker Compose stack.
 
 ```bash
-torrust-deploy run <environment> [OPTIONS]
+torrust-tracker-deployer run <environment> [OPTIONS]
 ```
 
 **Should Include**:
@@ -243,7 +397,7 @@ torrust-deploy run <environment> [OPTIONS]
 **Purpose**: Run smoke tests against a deployed environment.
 
 ```bash
-torrust-deploy test <environment> [OPTIONS]
+torrust-tracker-deployer test <environment> [OPTIONS]
 ```
 
 **Should Include**:
@@ -268,7 +422,7 @@ torrust-deploy test <environment> [OPTIONS]
 **Purpose**: Display comprehensive environment status and information.
 
 ```bash
-torrust-deploy status <environment> [OPTIONS]
+torrust-tracker-deployer status <environment> [OPTIONS]
 ```
 
 **Should Display**:
@@ -289,12 +443,12 @@ torrust-deploy status <environment> [OPTIONS]
 
 ### `destroy` - Infrastructure Cleanup
 
-**Status**: ✅ Implemented (in E2E tests)  
+**Status**: 🔄 Being Implemented  
 **State Transition**: Any state → `destroyed`  
 **Purpose**: Clean up all infrastructure and resources for an environment.
 
 ```bash
-torrust-deploy destroy <environment> [OPTIONS]
+torrust-tracker-deployer destroy <environment> [OPTIONS]
 ```
 
 **Current Implementation**:
@@ -319,25 +473,47 @@ torrust-deploy destroy <environment> [OPTIONS]
 
 ## Implementation Priority
 
-1. **High Priority** (Core functionality)
+### Phase 1: Plumbing Commands (High Priority)
 
-   - `provision` - Move from E2E to production ✅ Partially done
-   - `configure` - Complete system setup 🔄 In progress
-   - `destroy` - Production cleanup logic ✅ Partially done
+Essential low-level commands for the complete deployment workflow:
 
-2. **Medium Priority** (Application deployment)
+- `create` - Environment initialization (required to create environments)
+- `provision` - Move from E2E to production ✅ Partially done
+- `configure` - Complete system setup 🔄 In progress
+- `release` - Application deployment (critical for getting Torrust Tracker on VM)
+- `destroy` - Infrastructure cleanup 🔄 Being implemented
 
-   - `release` - Application deployment pipeline
-   - `run` - Service management
-   - `status` - Environment monitoring
+### Phase 2: Operations Commands (Medium Priority)
 
-3. **Low Priority** (Enhanced functionality)
+Management and operational commands:
 
-   - `create` - Multi-environment support
-   - `test` - Automated validation
-   - `check` - Tool validation
+- `run` - Service management (users can start manually after release)
+- `status` - Environment monitoring
+- `list` - Environment listing and overview
+
+### Phase 3: Porcelain Commands (Medium Priority)
+
+High-level commands built on top of stable plumbing commands:
+
+- `deploy` - Smart deployment orchestration (porcelain command)
+
+### Phase 4: Enhanced Functionality (Low Priority)
+
+Additional features and utilities:
+
+- `test` - Automated validation
+- `check` - Tool validation
 
 ## Notes
+
+### Command Architecture
+
+- **Hybrid approach**: Combines low-level plumbing commands with high-level porcelain commands
+- **Plumbing first**: Individual commands (`provision`, `configure`, etc.) implemented before orchestration commands
+- **Porcelain commands scope**: Only automate the deployment workflow (`provision` → `configure` → `release` → `run`)
+- **Management commands**: `create`, `list`, `check`, `status`, `destroy` remain individual operations
+
+### Technical Implementation
 
 - All commands use the tracing crate for logging (control verbosity with `RUST_LOG` environment variable)
 - Set `RUST_LOG=debug` for detailed output, `RUST_LOG=info` for standard output

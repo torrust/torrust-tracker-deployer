@@ -13,11 +13,11 @@ This research explores logging and output strategies independently of the curren
 
 ```bash
 # Current planned approach (individual commands)
-torrust-deploy create <env>
-torrust-deploy provision <env>
-torrust-deploy configure <env>
-torrust-deploy release <env>
-torrust-deploy run <env>
+torrust-tracker-deployer create <env>
+torrust-tracker-deployer provision <env>
+torrust-tracker-deployer configure <env>
+torrust-tracker-deployer release <env>
+torrust-tracker-deployer run <env>
 ```
 
 The logging and output principles researched here can be applied to **any command structure** - whether using individual step commands, a unified wizard approach, or a hybrid model that combines both.

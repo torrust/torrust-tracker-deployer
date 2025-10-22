@@ -13,17 +13,17 @@ The current project design (documented in [Console Commands](../../console-comma
 
 ```bash
 # Current planned implementation
-torrust-deploy create <env>      # Initialize environment
-torrust-deploy provision <env>   # Create infrastructure
-torrust-deploy configure <env>   # Setup system
-torrust-deploy release <env>     # Deploy application
-torrust-deploy run <env>         # Start services
+torrust-tracker-deployer create <env>      # Initialize environment
+torrust-tracker-deployer provision <env>   # Create infrastructure
+torrust-tracker-deployer configure <env>   # Setup system
+torrust-tracker-deployer release <env>     # Deploy application
+torrust-tracker-deployer run <env>         # Start services
 ```
 
 This research document explores **alternative UX approaches**, including:
 
-- Single-command wizard mode (`torrust-deploy up`)
-- Resumable state management (`torrust-deploy continue`)
+- Single-command wizard mode (`torrust-tracker-deployer up`)
+- Resumable state management (`torrust-tracker-deployer continue`)
 - Hybrid approaches that combine both patterns
 
 The **final implementation may combine elements from both approaches**, offering individual step commands for experienced users alongside simplified workflows for beginners.
@@ -47,7 +47,7 @@ The user experience design is guided by these core objectives:
 
 ### 1. Single Entrypoint / Wizard Mode
 
-**Command**: `torrust-deploy up`
+**Command**: `torrust-tracker-deployer up`
 
 **Functionality**:
 
@@ -64,9 +64,9 @@ The user experience design is guided by these core objectives:
 
 ### 2. Resumable State Management
 
-**State Storage**: `.torrust-deploy/state.json`
+**State Storage**: `.torrust-tracker-deployer/state.json`
 
-**Resume Command**: `torrust-deploy continue`
+**Resume Command**: `torrust-tracker-deployer continue`
 
 **Features**:
 
@@ -129,16 +129,16 @@ The user experience design is guided by these core objectives:
 
 **Beginner-Friendly Commands**:
 
-- `torrust-deploy up <env>` - Full deployment wizard with progress tracking
-- `torrust-deploy continue <env>` - Resume from last completed step
+- `torrust-tracker-deployer up <env>` - Full deployment wizard with progress tracking
+- `torrust-tracker-deployer continue <env>` - Resume from last completed step
 
 **Expert/CI Commands** (matching current design):
 
-- `torrust-deploy create <env>` - Individual step control
-- `torrust-deploy provision <env>`
-- `torrust-deploy configure <env>`
-- `torrust-deploy release <env>`
-- `torrust-deploy run <env>`
+- `torrust-tracker-deployer create <env>` - Individual step control
+- `torrust-tracker-deployer provision <env>`
+- `torrust-tracker-deployer configure <env>`
+- `torrust-tracker-deployer release <env>`
+- `torrust-tracker-deployer run <env>`
 
 **Benefits of Hybrid Approach**:
 
@@ -151,8 +151,8 @@ The user experience design is guided by these core objectives:
 
 **Hybrid Approach** offering multiple recovery paths:
 
-1. **Automatic resume**: `torrust-deploy continue` (recommended for beginners)
-2. **Step-specific restart**: `torrust-deploy provision` (for advanced users)
+1. **Automatic resume**: `torrust-tracker-deployer continue` (recommended for beginners)
+2. **Step-specific restart**: `torrust-tracker-deployer provision` (for advanced users)
 
 **Benefits**:
 
@@ -182,10 +182,10 @@ Your deployment stopped at step [3/6]: install
 You have two options:
 
   1. Fix the issue and resume where you left off:
-       torrust-deploy continue
+       torrust-tracker-deployer continue
 
   2. Re-run only the failed step (install):
-       torrust-deploy install
+       torrust-tracker-deployer install
 
 Use --verbose for more details about the error.
 ```
@@ -242,22 +242,27 @@ Use --verbose for more details about the error.
 - **Health monitoring**: Post-deployment validation and monitoring
 - **Update workflows**: Streamlined processes for upgrading deployments
 
-## Research Status and Next Steps
+## Research Status and Outcome
 
-This UX research explores alternative approaches to the console interface design. The **current project implementation** follows the individual command approach documented in [Console Commands](../../console-commands.md).
+This UX research explored alternative approaches to the console interface design. Based on this research, **a concrete design decision has been made**.
 
-**Key Decision Points**:
+**Decision**: The project will implement a **hybrid command architecture** combining both approaches:
 
-- **Command structure**: Individual commands vs. wizard mode vs. hybrid approach
-- **State management**: How to track and resume deployment progress
-- **User modes**: Whether to implement beginner/expert mode differentiation
-- **Error recovery**: Granular vs. automatic resume strategies
+- **Plumbing commands** (low-level): Individual commands for precise control (`provision`, `configure`, `release`, `run`)
+- **Porcelain commands** (high-level): Orchestration command for simplified workflows (`deploy`)
 
-The **final implementation may combine elements from multiple approaches**, potentially offering:
+**Implementation**: Plumbing commands will be implemented first, followed by porcelain commands built on top of the stable plumbing foundation.
 
-- Individual step commands for experienced users and CI/CD integration
-- Simplified wizard commands (`up`, `continue`) for beginner-friendly workflows
-- Flexible error recovery options accommodating different user preferences
+**Key Differences from Research**:
+
+- **Single porcelain command**: `deploy` instead of `up` and `continue`
+- **Limited scope**: Porcelain only automates deployment workflow, not management commands
+- **State-aware**: The `deploy` command intelligently continues from current environment state
+
+For complete specification details, see:
+
+- [Hybrid Command Architecture Feature](../../features/hybrid-command-architecture/README.md) - Detailed feature specification
+- [Console Commands](../../console-commands.md) - Updated implementation documentation
 
 ## Related Documentation
 

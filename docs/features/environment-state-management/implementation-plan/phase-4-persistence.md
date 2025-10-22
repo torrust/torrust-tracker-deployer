@@ -596,7 +596,7 @@ use crate::infrastructure::repository::file_lock::FileLock;
 /// {
 ///   "Created": {
 ///     "name": "my-env",
-///     "instance_name": "torrust-deploy-my-env",
+///     "instance_name": "torrust-tracker-deployer-my-env",
 ///     "ssh_credentials": { ... },
 ///     "state": {}
 ///   }

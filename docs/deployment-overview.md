@@ -51,23 +51,23 @@ graph LR
 
 ```bash
 # Basic deployment workflow
-torrust-deploy create myenv      # Initialize environment
-torrust-deploy provision myenv   # Create infrastructure
-torrust-deploy configure myenv   # Setup system
-torrust-deploy release myenv     # Deploy application
-torrust-deploy run myenv         # Start services
+torrust-tracker-deployer create myenv      # Initialize environment
+torrust-tracker-deployer provision myenv   # Create infrastructure
+torrust-tracker-deployer configure myenv   # Setup system
+torrust-tracker-deployer release myenv     # Deploy application
+torrust-tracker-deployer run myenv         # Start services
 
 # Management commands
-torrust-deploy status myenv      # Check environment
-torrust-deploy test myenv        # Run validation
-torrust-deploy destroy myenv     # Cleanup everything
+torrust-tracker-deployer status myenv      # Check environment
+torrust-tracker-deployer test myenv        # Run validation
+torrust-tracker-deployer destroy myenv     # Cleanup everything
 ```
 
 ### Utility Commands
 
 ```bash
-torrust-deploy check            # Validate tools installation
-torrust-deploy status           # List all environments (future)
+torrust-tracker-deployer check            # Validate tools installation
+torrust-tracker-deployer list             # List all environments
 ```
 
 ## What Works Today (E2E Tests)

@@ -354,12 +354,12 @@ For the Torrust Tracker Deployer application, these patterns suggest:
 
 ```bash
 # Default - clean user experience
-torrust-deploy provision env1
+torrust-tracker-deployer provision env1
 ✓ Instance provisioned successfully    # to stderr (progress)
 Instance: env1-tracker (192.168.1.100) # to stdout (result)
 
 # Verbose - show operational details
-torrust-deploy provision env1 -v
+torrust-tracker-deployer provision env1 -v
 → Creating LXD instance...              # to stderr
 → Configuring network...               # to stderr
 → Installing packages...               # to stderr
@@ -367,8 +367,8 @@ torrust-deploy provision env1 -v
 Instance: env1-tracker (192.168.1.100) # to stdout
 
 # Piping works cleanly
-torrust-deploy provision env1 | jq .ip_address
-torrust-deploy provision env1 -q > deployment.txt
+torrust-tracker-deployer provision env1 | jq .ip_address
+torrust-tracker-deployer provision env1 -q > deployment.txt
 ```
 
 This approach follows the successful patterns used by cargo, docker, and other modern CLI tools while maintaining Unix convention compatibility.

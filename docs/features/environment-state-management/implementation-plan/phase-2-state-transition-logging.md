@@ -108,7 +108,7 @@ mod tests {
 
         let _provisioning = env.start_provisioning();
 
-        assert!(logs_contain("instance_name=torrust-deploy-test-env"));
+        assert!(logs_contain("instance_name=torrust-tracker-deployer-test-env"));
     }
 
     #[traced_test]
@@ -134,7 +134,7 @@ Existing E2E tests will automatically capture state transition logs. Verify log 
 Expected log output:
 
 ```text
-2025-01-30T10:15:23.456789Z  INFO environment_name=e2e-test instance_name=torrust-deploy-e2e-test from_state=Created to_state=Provisioning: Environment state transition
+2025-01-30T10:15:23.456789Z  INFO environment_name=e2e-test instance_name=torrust-tracker-deployer-e2e-test from_state=Created to_state=Provisioning: Environment state transition
 ```
 
 ## 📦 Deliverables
