@@ -93,7 +93,10 @@ impl TestCommandHandler {
             environment = %environment.name()
         )
     )]
-    pub async fn execute<S>(&self, environment: &Environment<S>) -> Result<(), TestCommandHandlerError> {
+    pub async fn execute<S>(
+        &self,
+        environment: &Environment<S>,
+    ) -> Result<(), TestCommandHandlerError> {
         info!(
             command = "test",
             environment = %environment.name(),
@@ -101,12 +104,11 @@ impl TestCommandHandler {
             "Starting complete infrastructure testing workflow"
         );
 
-        let instance_ip =
-            environment
-                .instance_ip()
-                .ok_or_else(|| TestCommandHandlerError::MissingInstanceIp {
-                    environment_name: environment.name().to_string(),
-                })?;
+        let instance_ip = environment.instance_ip().ok_or_else(|| {
+            TestCommandHandlerError::MissingInstanceIp {
+                environment_name: environment.name().to_string(),
+            }
+        })?;
         let ssh_config =
             SshConfig::with_default_port(environment.ssh_credentials().clone(), instance_ip);
 

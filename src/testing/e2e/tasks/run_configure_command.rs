@@ -15,7 +15,7 @@
 //! This is a generic task that works with infrastructure-agnostic configuration:
 //! - Uses rendered Ansible inventories from provision simulation
 //! - Works with both container and VM-based infrastructure
-//! - Integrates with the existing `ConfigureCommand` workflow
+//! - Integrates with the existing `ConfigureCommandHandler` workflow
 //!
 //! ## E2E Config Tests Integration
 //!
@@ -65,7 +65,7 @@ pub fn run_configure_command(test_context: &mut TestContext) -> Result<(), Confi
     // Create repository for this environment
     let repository = test_context.create_repository();
 
-    // Use the new ConfigureCommand to handle all infrastructure configuration steps
+    // Use the new ConfigureCommandHandler to handle all infrastructure configuration steps
     let configure_command_handler = ConfigureCommandHandler::new(
         Arc::clone(&test_context.services.ansible_client),
         Arc::clone(&test_context.services.clock),

@@ -284,7 +284,7 @@ mod tests {
         )
     }
 
-    /// Test builder for `ConfigureCommand` that manages dependencies and lifecycle
+    /// Test builder for `ConfigureCommandHandler` that manages dependencies and lifecycle
     ///
     /// This builder simplifies test setup by:
     /// - Managing `TempDir` lifecycle
@@ -323,10 +323,10 @@ mod tests {
 
     #[test]
     fn it_should_create_configure_command_handler_with_all_dependencies() {
-        let (command, _temp_dir) = ConfigureCommandHandlerTestBuilder::new().build();
+        let (command_handler, _temp_dir) = ConfigureCommandHandlerTestBuilder::new().build();
 
-        // Verify the command was created (basic structure test)
-        // This test just verifies that the command can be created with the dependencies
+        // Verify the command handler was created (basic structure test)
+        // This test just verifies that the command handler can be created with the dependencies
         assert_eq!(Arc::strong_count(&command_handler.ansible_client), 1);
     }
 

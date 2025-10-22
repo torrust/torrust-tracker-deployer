@@ -262,7 +262,8 @@ impl ProvisionCommandHandler {
     async fn execute_provisioning_with_tracking(
         &self,
         environment: &Environment<Provisioning>,
-    ) -> Result<(Environment<Provisioned>, IpAddr), (ProvisionCommandHandlerError, ProvisionStep)> {
+    ) -> Result<(Environment<Provisioned>, IpAddr), (ProvisionCommandHandlerError, ProvisionStep)>
+    {
         let ssh_credentials = environment.ssh_credentials();
 
         // Track current step and execute each step
@@ -580,12 +581,19 @@ mod tests {
 
     #[test]
     fn it_should_create_provision_command_handler_with_all_dependencies() {
-        let (command_handler, _temp_dir, _ssh_credentials) = ProvisionCommandHandlerTestBuilder::new().build();
+        let (command_handler, _temp_dir, _ssh_credentials) =
+            ProvisionCommandHandlerTestBuilder::new().build();
 
         // Verify the command handler was created (basic structure test)
         // This test just verifies that the command handler can be created with the dependencies
-        assert_eq!(Arc::strong_count(&command_handler.tofu_template_renderer), 1);
-        assert_eq!(Arc::strong_count(&command_handler.ansible_template_renderer), 1);
+        assert_eq!(
+            Arc::strong_count(&command_handler.tofu_template_renderer),
+            1
+        );
+        assert_eq!(
+            Arc::strong_count(&command_handler.ansible_template_renderer),
+            1
+        );
     }
 
     #[test]
@@ -628,11 +636,12 @@ mod tests {
     fn it_should_build_failure_context_from_opentofu_template_error() {
         use chrono::{TimeZone, Utc};
 
-        let (command, temp_dir, _ssh_credentials) = ProvisionCommandTestBuilder::new().build();
+        let (command_handler, temp_dir, _ssh_credentials) =
+            ProvisionCommandHandlerTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
-        let error = ProvisionCommandError::OpenTofuTemplateRendering(
+        let error = ProvisionCommandHandlerError::OpenTofuTemplateRendering(
             ProvisionTemplateError::DirectoryCreationFailed {
                 directory: "/test".to_string(),
                 source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
@@ -641,7 +650,8 @@ mod tests {
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
         let current_step = ProvisionStep::RenderOpenTofuTemplates;
-        let context = command.build_failure_context(&environment, &error, current_step, started_at);
+        let context =
+            command_handler.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::RenderOpenTofuTemplates);
         assert_eq!(
             context.error_kind,
@@ -659,7 +669,8 @@ mod tests {
     fn it_should_build_failure_context_from_ssh_connectivity_error() {
         use chrono::{TimeZone, Utc};
 
-        let (command_handler, temp_dir, _ssh_credentials) = ProvisionCommandHandlerTestBuilder::new().build();
+        let (command_handler, temp_dir, _ssh_credentials) =
+            ProvisionCommandHandlerTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
@@ -671,7 +682,8 @@ mod tests {
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
         let current_step = ProvisionStep::WaitSshConnectivity;
-        let context = command_handler.build_failure_context(&environment, &error, current_step, started_at);
+        let context =
+            command_handler.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::WaitSshConnectivity);
         assert_eq!(
             context.error_kind,
@@ -684,7 +696,8 @@ mod tests {
     fn it_should_build_failure_context_from_command_error() {
         use chrono::{TimeZone, Utc};
 
-        let (command_handler, temp_dir, _ssh_credentials) = ProvisionCommandHandlerTestBuilder::new().build();
+        let (command_handler, temp_dir, _ssh_credentials) =
+            ProvisionCommandHandlerTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
@@ -697,7 +710,8 @@ mod tests {
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
         let current_step = ProvisionStep::CloudInitWait;
-        let context = command_handler.build_failure_context(&environment, &error, current_step, started_at);
+        let context =
+            command_handler.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::CloudInitWait);
         assert_eq!(
             context.error_kind,
@@ -710,7 +724,8 @@ mod tests {
     fn it_should_build_failure_context_from_opentofu_error() {
         use chrono::{TimeZone, Utc};
 
-        let (command_handler, temp_dir, _ssh_credentials) = ProvisionCommandHandlerTestBuilder::new().build();
+        let (command_handler, temp_dir, _ssh_credentials) =
+            ProvisionCommandHandlerTestBuilder::new().build();
 
         let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
 
@@ -725,7 +740,8 @@ mod tests {
 
         let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
         let current_step = ProvisionStep::OpenTofuInit;
-        let context = command_handler.build_failure_context(&environment, &error, current_step, started_at);
+        let context =
+            command_handler.build_failure_context(&environment, &error, current_step, started_at);
         assert_eq!(context.failed_step, ProvisionStep::OpenTofuInit);
         assert_eq!(
             context.error_kind,
