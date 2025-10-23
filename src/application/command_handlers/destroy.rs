@@ -17,6 +17,7 @@ use tracing::{info, instrument};
 use crate::adapters::tofu::client::OpenTofuError;
 use crate::application::steps::DestroyInfrastructureStep;
 use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::state::StateTypeError;
 use crate::domain::environment::{Destroyed, Environment};
 use crate::shared::command::CommandError;
 
@@ -31,6 +32,9 @@ pub enum DestroyCommandHandlerError {
 
     #[error("Failed to persist environment state: {0}")]
     StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+
+    #[error("Invalid state transition: {0}")]
+    StateTransition(#[from] StateTypeError),
 
     #[error("Failed to clean up state files at '{path}': {source}")]
     StateCleanupFailed {
@@ -52,6 +56,9 @@ impl crate::shared::Traceable for DestroyCommandHandlerError {
             Self::StatePersistence(e) => {
                 format!("DestroyCommandHandlerError: Failed to persist environment state - {e}")
             }
+            Self::StateTransition(e) => {
+                format!("DestroyCommandHandlerError: Invalid state transition - {e}")
+            }
             Self::StateCleanupFailed { path, source } => {
                 format!(
                     "DestroyCommandHandlerError: Failed to clean up state files at '{}' - {source}",
@@ -65,7 +72,9 @@ impl crate::shared::Traceable for DestroyCommandHandlerError {
         match self {
             Self::OpenTofu(e) => Some(e),
             Self::Command(e) => Some(e),
-            Self::StatePersistence(_) | Self::StateCleanupFailed { .. } => None,
+            Self::StatePersistence(_)
+            | Self::StateTransition(_)
+            | Self::StateCleanupFailed { .. } => None,
         }
     }
 
@@ -73,6 +82,7 @@ impl crate::shared::Traceable for DestroyCommandHandlerError {
         match self {
             Self::OpenTofu(_) => crate::shared::ErrorKind::InfrastructureOperation,
             Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
+            Self::StateTransition(_) => crate::shared::ErrorKind::Configuration,
             Self::StatePersistence(_) | Self::StateCleanupFailed { .. } => {
                 crate::shared::ErrorKind::StatePersistence
             }
@@ -179,21 +189,7 @@ impl DestroyCommandHandler {
         }
 
         // 4. Get the build directory from the environment context
-        let opentofu_build_dir = match &environment {
-            AnyEnvironmentState::Created(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::Provisioning(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::Provisioned(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::Configuring(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::Configured(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::Releasing(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::Released(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::Running(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::ProvisionFailed(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::ConfigureFailed(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::ReleaseFailed(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::RunFailed(env) => env.tofu_build_dir().join("lxd"),
-            AnyEnvironmentState::Destroyed(_) => unreachable!("Already handled above"),
-        };
+        let opentofu_build_dir = environment.tofu_build_dir()?;
 
         // 5. Create OpenTofu client with correct build directory
         let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
@@ -205,21 +201,7 @@ impl DestroyCommandHandler {
         Self::destroy_infrastructure(&opentofu_client)?;
 
         // 7. Transition to Destroyed state based on current state
-        let destroyed = match environment {
-            AnyEnvironmentState::Created(env) => env.destroy(),
-            AnyEnvironmentState::Provisioning(env) => env.destroy(),
-            AnyEnvironmentState::Provisioned(env) => env.destroy(),
-            AnyEnvironmentState::Configuring(env) => env.destroy(),
-            AnyEnvironmentState::Configured(env) => env.destroy(),
-            AnyEnvironmentState::Releasing(env) => env.destroy(),
-            AnyEnvironmentState::Released(env) => env.destroy(),
-            AnyEnvironmentState::Running(env) => env.destroy(),
-            AnyEnvironmentState::ProvisionFailed(env) => env.destroy(),
-            AnyEnvironmentState::ConfigureFailed(env) => env.destroy(),
-            AnyEnvironmentState::ReleaseFailed(env) => env.destroy(),
-            AnyEnvironmentState::RunFailed(env) => env.destroy(),
-            AnyEnvironmentState::Destroyed(_) => unreachable!("Already handled above"),
-        };
+        let destroyed = environment.destroy()?;
 
         // 8. Clean up state files only after successful infrastructure destruction
         Self::cleanup_state_files(&destroyed)?;
