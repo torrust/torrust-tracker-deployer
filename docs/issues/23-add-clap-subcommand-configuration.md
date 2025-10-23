@@ -57,7 +57,7 @@ pub enum Commands {
 
 ### VerbosityLevel Implementation
 
-Create `src/shared/user_output.rs`:
+Create `src/presentation/user_output.rs`:
 
 ```rust
 /// Verbosity levels for user output
@@ -303,7 +303,7 @@ Update command execution in `src/app.rs`:
 ```rust
 async fn handle_destroy_command(environment: String) -> anyhow::Result<()> {
     use crate::application::command_handlers::destroy::DestroyCommandHandler;
-    use crate::shared::user_output::{UserOutput, VerbosityLevel};
+    use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 
     // Create UserOutput with default stdout/stderr channels
     let mut output = UserOutput::new(VerbosityLevel::Normal);
@@ -405,13 +405,13 @@ output.error("Failed to destroy environment 'my-env': OpenTofu destroy operation
 
 ### Subtask 1: Implement VerbosityLevel and UserOutput (1.5 hours)
 
-- [ ] Create `src/shared/user_output.rs`
-- [ ] Implement `VerbosityLevel` enum with 5 levels
-- [ ] Implement `UserOutput` struct with dual writers (stdout/stderr)
-- [ ] Add methods: `progress`, `success`, `warn`, `error` (stderr), `result`, `data` (stdout)
-- [ ] Add constructor for default channels and testing with custom writers
-- [ ] Document channel usage strategy based on console patterns research
-- [ ] Update `src/shared/mod.rs` to export new module
+- [x] Create `src/presentation/user_output.rs` (moved from shared to presentation layer)
+- [x] Implement `VerbosityLevel` enum with 5 levels
+- [x] Implement `UserOutput` struct with dual writers (stdout/stderr)
+- [x] Add methods: `progress`, `success`, `warn`, `error` (stderr), `result`, `data` (stdout)
+- [x] Add constructor for default channels and testing with custom writers
+- [x] Document channel usage strategy based on console patterns research
+- [x] Update `src/presentation/mod.rs` to export new module
 
 ### Subtask 2: Add Destroy Subcommand to Clap (45 minutes)
 

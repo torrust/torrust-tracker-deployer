@@ -16,7 +16,7 @@
 //! ## Example Usage
 //!
 //! ```rust
-//! use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+//! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 //!
 //! let mut output = UserOutput::new(VerbosityLevel::Normal);
 //!
@@ -49,7 +49,7 @@ use std::io::Write;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::shared::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
 ///
 /// let level = VerbosityLevel::Normal;
 /// assert!(level >= VerbosityLevel::Quiet);
@@ -89,7 +89,7 @@ pub enum VerbosityLevel {
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+/// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 ///
 /// let mut output = UserOutput::new(VerbosityLevel::Normal);
 ///
@@ -111,7 +111,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let output = UserOutput::new(VerbosityLevel::Normal);
     /// ```
@@ -132,7 +132,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     /// use std::io::Cursor;
     ///
     /// let stdout_buf = Vec::new();
@@ -165,7 +165,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.progress("Destroying environment...");
@@ -184,7 +184,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.success("Environment destroyed successfully");
@@ -201,7 +201,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.warn("Infrastructure may already be destroyed");
@@ -220,7 +220,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Quiet);
     /// output.error("Failed to destroy environment");
@@ -238,7 +238,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.result("Deployment complete");
@@ -255,7 +255,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.data(r#"{"status": "destroyed", "environment": "test"}"#);

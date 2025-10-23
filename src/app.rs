@@ -179,7 +179,7 @@ fn handle_destroy_command(environment_name: &str) -> Result<(), Box<dyn std::err
     use torrust_tracker_deployer_lib::application::command_handlers::DestroyCommandHandler;
     use torrust_tracker_deployer_lib::domain::environment::name::EnvironmentName;
     use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-    use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
+    use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 
     // Create user output with default stdout/stderr channels
     let mut output = UserOutput::new(VerbosityLevel::Normal);

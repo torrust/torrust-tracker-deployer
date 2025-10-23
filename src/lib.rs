@@ -16,6 +16,7 @@
 //!   - `ansible` - Ansible delivery mechanism and implementation details
 //!   - `tofu` - `OpenTofu` delivery mechanism and implementation details
 //!   - `template` - Template rendering delivery mechanisms (wrappers)
+//! - `presentation` - Presentation Layer: User-facing output and presentation concerns
 //!
 //! ## Other Modules
 //! - `adapters` - External tool adapters (thin CLI wrappers)
@@ -32,5 +33,6 @@ pub mod container;
 pub mod domain;
 pub mod infrastructure;
 pub mod logging;
+pub mod presentation;
 pub mod shared;
 pub mod testing;

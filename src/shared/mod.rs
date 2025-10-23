@@ -9,7 +9,6 @@ pub mod command;
 pub mod error;
 pub mod port_checker;
 pub mod port_usage_checker;
-pub mod user_output;
 pub mod username;
 
 // Re-export commonly used types for convenience
@@ -18,5 +17,4 @@ pub use command::{CommandError, CommandExecutor, CommandResult};
 pub use error::{ErrorKind, Traceable};
 pub use port_checker::{PortChecker, PortCheckerError};
 pub use port_usage_checker::{PortUsageChecker, PortUsageError};
-pub use user_output::{UserOutput, VerbosityLevel};
 pub use username::{Username, UsernameError};
