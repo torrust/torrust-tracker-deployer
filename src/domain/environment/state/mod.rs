@@ -450,8 +450,8 @@ impl AnyEnvironmentState {
     /// Get the `OpenTofu` build directory path regardless of current state
     ///
     /// This method provides a unified interface to access the build directory
-    /// for `OpenTofu` operations. It encapsulates the repetitive match pattern
-    /// that would otherwise be needed in calling code.
+    /// for `OpenTofu` operations without needing to pattern match on the
+    /// specific state variant.
     ///
     /// The path is returned consistently regardless of the environment's state.
     /// The caller is responsible for determining how to use the path based on
@@ -459,24 +459,10 @@ impl AnyEnvironmentState {
     ///
     /// # Returns
     ///
-    /// The path to the `OpenTofu` build directory (with "lxd" subdirectory).
-    #[must_use = "build directory path should be used for OpenTofu operations"]
+    /// The path to the `OpenTofu` build directory for the LXD provider.
+    #[must_use]
     pub fn tofu_build_dir(&self) -> std::path::PathBuf {
-        match self {
-            Self::Created(env) => env.tofu_build_dir().join("lxd"),
-            Self::Provisioning(env) => env.tofu_build_dir().join("lxd"),
-            Self::Provisioned(env) => env.tofu_build_dir().join("lxd"),
-            Self::Configuring(env) => env.tofu_build_dir().join("lxd"),
-            Self::Configured(env) => env.tofu_build_dir().join("lxd"),
-            Self::Releasing(env) => env.tofu_build_dir().join("lxd"),
-            Self::Released(env) => env.tofu_build_dir().join("lxd"),
-            Self::Running(env) => env.tofu_build_dir().join("lxd"),
-            Self::ProvisionFailed(env) => env.tofu_build_dir().join("lxd"),
-            Self::ConfigureFailed(env) => env.tofu_build_dir().join("lxd"),
-            Self::ReleaseFailed(env) => env.tofu_build_dir().join("lxd"),
-            Self::RunFailed(env) => env.tofu_build_dir().join("lxd"),
-            Self::Destroyed(env) => env.tofu_build_dir().join("lxd"),
-        }
+        self.context().tofu_build_dir()
     }
 }
 
