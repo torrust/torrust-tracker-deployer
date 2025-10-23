@@ -55,11 +55,12 @@ use std::io::Write;
 /// assert!(level >= VerbosityLevel::Quiet);
 /// assert!(level < VerbosityLevel::Verbose);
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum VerbosityLevel {
     /// Minimal output - only errors and final results
     Quiet,
     /// Default level - essential progress and results
+    #[default]
     Normal,
     /// Detailed progress including intermediate steps
     Verbose,
@@ -67,12 +68,6 @@ pub enum VerbosityLevel {
     VeryVerbose,
     /// Maximum detail for troubleshooting
     Debug,
-}
-
-impl Default for VerbosityLevel {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 /// Handles user-facing output separate from internal logging
