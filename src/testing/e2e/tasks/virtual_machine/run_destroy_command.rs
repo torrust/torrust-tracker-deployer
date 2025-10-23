@@ -16,7 +16,6 @@
 //! This task is typically the final step in E2E testing workflows, cleaning up
 //! all provisioned infrastructure after tests complete.
 
-use std::sync::Arc;
 use thiserror::Error;
 use tracing::info;
 
@@ -105,8 +104,6 @@ For more information, see docs/e2e-testing.md and docs/vm-providers.md."
 /// - Infrastructure destruction fails
 /// - `OpenTofu` destroy operations fail
 pub fn run_destroy_command(test_context: &mut TestContext) -> Result<(), DestroyTaskError> {
-    use crate::domain::environment::state::AnyEnvironmentState;
-
     // If keep_env is set, skip destruction and preserve the environment
     if test_context.keep_env {
         let instance_name = &test_context.environment.instance_name();
@@ -126,36 +123,14 @@ pub fn run_destroy_command(test_context: &mut TestContext) -> Result<(), Destroy
     let repository = test_context.create_repository();
 
     // Use the new DestroyCommandHandler to handle all infrastructure destruction steps
-    let destroy_command_handler = DestroyCommandHandler::new(
-        Arc::clone(&test_context.services.opentofu_client),
-        repository,
-    );
+    let destroy_command_handler = DestroyCommandHandler::new(repository);
 
-    // Execute destruction with environment (can be in any state)
-    // The DestroyCommandHandler accepts Environment<S> generically, so we need to extract
-    // the environment from AnyEnvironmentState. Since destroy works on any state,
-    // we handle the special case of already-destroyed environments.
-
-    let destroyed_env = match test_context.environment.clone() {
-        AnyEnvironmentState::Destroyed(env) => {
-            // Already destroyed, just return it
-            info!("Environment is already in Destroyed state");
-            Ok(env)
-        }
-        AnyEnvironmentState::Created(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::Provisioning(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::Provisioned(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::Configuring(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::Configured(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::Releasing(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::Released(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::Running(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::ProvisionFailed(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::ConfigureFailed(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::ReleaseFailed(env) => destroy_command_handler.execute(env),
-        AnyEnvironmentState::RunFailed(env) => destroy_command_handler.execute(env),
-    }
-    .map_err(|source| DestroyTaskError::DestructionFailed { source })?;
+    // Execute destruction using environment name
+    // The DestroyCommandHandler now loads the environment internally and handles all states
+    let env_name = test_context.environment.name();
+    let destroyed_env = destroy_command_handler
+        .execute(env_name)
+        .map_err(|source| DestroyTaskError::DestructionFailed { source })?;
 
     info!(
         status = "complete",

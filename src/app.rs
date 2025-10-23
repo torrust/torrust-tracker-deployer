@@ -175,12 +175,9 @@ fn display_help_info() {
 /// This function will return an error if the environment name is invalid,
 /// the environment cannot be loaded, or the destruction process fails.
 fn handle_destroy_command(environment_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use std::sync::Arc;
     use std::time::Duration;
-    use torrust_tracker_deployer_lib::adapters::tofu::client::OpenTofuClient;
     use torrust_tracker_deployer_lib::application::command_handlers::DestroyCommandHandler;
     use torrust_tracker_deployer_lib::domain::environment::name::EnvironmentName;
-    use torrust_tracker_deployer_lib::domain::environment::state::AnyEnvironmentState;
     use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
     use torrust_tracker_deployer_lib::shared::user_output::{UserOutput, VerbosityLevel};
 
@@ -198,57 +195,17 @@ fn handle_destroy_command(environment_name: &str) -> Result<(), Box<dyn std::err
         format!("Invalid environment name: {e}")
     })?;
 
-    // Build path for the environment
-    let build_dir = PathBuf::from("build").join(env_name.as_str());
-
-    // Create OpenTofu client
-    let opentofu_client = Arc::new(OpenTofuClient::new(build_dir.join("opentofu")));
-
     // Create repository for loading environment state
     let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
-    let repository = repository_factory.create(PathBuf::from("data"));
-
-    // Load the environment from storage
-    let environment = repository.load(&env_name).map_err(|e| {
-        output.error(&format!(
-            "Failed to load environment '{environment_name}': {e}"
-        ));
-        format!("Failed to load environment: {e}")
-    })?;
-
-    // Check if environment exists
-    let environment = environment.ok_or_else(|| {
-        output.error(&format!(
-            "Environment '{environment_name}' not found. Has it been provisioned?"
-        ));
-        format!("Environment '{environment_name}' not found")
-    })?;
+    let repository = repository_factory.create(std::path::PathBuf::from("data"));
 
     // Create and execute destroy command handler
     output.progress("Tearing down infrastructure...");
 
-    let command_handler = DestroyCommandHandler::new(opentofu_client, repository);
+    let command_handler = DestroyCommandHandler::new(repository);
 
-    // Execute destroy based on the environment's current state
-    let _destroyed_env = match environment {
-        AnyEnvironmentState::Destroyed(env) => {
-            output.warn("Environment is already destroyed");
-            Ok(env)
-        }
-        AnyEnvironmentState::Created(env) => command_handler.execute(env),
-        AnyEnvironmentState::Provisioning(env) => command_handler.execute(env),
-        AnyEnvironmentState::Provisioned(env) => command_handler.execute(env),
-        AnyEnvironmentState::Configuring(env) => command_handler.execute(env),
-        AnyEnvironmentState::Configured(env) => command_handler.execute(env),
-        AnyEnvironmentState::Releasing(env) => command_handler.execute(env),
-        AnyEnvironmentState::Released(env) => command_handler.execute(env),
-        AnyEnvironmentState::Running(env) => command_handler.execute(env),
-        AnyEnvironmentState::ProvisionFailed(env) => command_handler.execute(env),
-        AnyEnvironmentState::ConfigureFailed(env) => command_handler.execute(env),
-        AnyEnvironmentState::ReleaseFailed(env) => command_handler.execute(env),
-        AnyEnvironmentState::RunFailed(env) => command_handler.execute(env),
-    }
-    .map_err(|e| {
+    // Execute destroy - the handler will load the environment and handle all states internally
+    let _destroyed_env = command_handler.execute(&env_name).map_err(|e| {
         output.error(&format!(
             "Failed to destroy environment '{environment_name}': {e}"
         ));

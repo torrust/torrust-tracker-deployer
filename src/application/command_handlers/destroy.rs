@@ -104,28 +104,21 @@ impl crate::shared::Traceable for DestroyCommandHandlerError {
 /// - Report appropriate status to the user
 /// - Not fail due to missing resources
 pub struct DestroyCommandHandler {
-    opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
     repository: Arc<dyn EnvironmentRepository>,
 }
 
 impl DestroyCommandHandler {
     /// Create a new `DestroyCommandHandler`
     #[must_use]
-    pub fn new(
-        opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
-        repository: Arc<dyn EnvironmentRepository>,
-    ) -> Self {
-        Self {
-            opentofu_client,
-            repository,
-        }
+    pub fn new(repository: Arc<dyn EnvironmentRepository>) -> Self {
+        Self { repository }
     }
 
     /// Execute the complete destruction workflow
     ///
     /// # Arguments
     ///
-    /// * `environment` - The environment to destroy (can be in any state)
+    /// * `env_name` - The name of the environment to destroy
     ///
     /// # Returns
     ///
@@ -134,6 +127,8 @@ impl DestroyCommandHandler {
     /// # Errors
     ///
     /// Returns an error if any step in the destruction workflow fails:
+    /// * Environment not found or cannot be loaded
+    /// * Environment is in an invalid state for destruction  
     /// * `OpenTofu` destroy fails
     /// * Unable to persist the destroyed state
     ///
@@ -144,30 +139,92 @@ impl DestroyCommandHandler {
         skip_all,
         fields(
             command_type = "destroy",
-            environment = %environment.name()
+            environment = %env_name
         )
     )]
-    pub fn execute<S>(
+    pub fn execute(
         &self,
-        environment: Environment<S>,
-    ) -> Result<Environment<Destroyed>, DestroyCommandHandlerError> {
+        env_name: &crate::domain::environment::name::EnvironmentName,
+    ) -> Result<crate::domain::environment::Environment<Destroyed>, DestroyCommandHandlerError>
+    {
+        use crate::domain::environment::state::AnyEnvironmentState;
+
         info!(
             command = "destroy",
-            environment = %environment.name(),
+            environment = %env_name,
             "Starting complete infrastructure destruction workflow"
         );
 
-        // Execute infrastructure destruction
+        // 1. Load the environment from storage
+        let environment = self
+            .repository
+            .load(env_name)
+            .map_err(DestroyCommandHandlerError::StatePersistence)?;
+
+        // 2. Check if environment exists
+        let environment = environment.ok_or_else(|| {
+            DestroyCommandHandlerError::StatePersistence(
+                crate::domain::environment::repository::RepositoryError::NotFound,
+            )
+        })?;
+
+        // 3. Check if environment is already destroyed
+        if let AnyEnvironmentState::Destroyed(env) = environment {
+            info!(
+                command = "destroy",
+                environment = %env_name,
+                "Environment is already destroyed"
+            );
+            return Ok(env);
+        }
+
+        // 4. Get the build directory from the environment context
+        let opentofu_build_dir = match &environment {
+            AnyEnvironmentState::Created(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::Provisioning(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::Provisioned(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::Configuring(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::Configured(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::Releasing(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::Released(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::Running(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::ProvisionFailed(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::ConfigureFailed(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::ReleaseFailed(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::RunFailed(env) => env.tofu_build_dir().join("lxd"),
+            AnyEnvironmentState::Destroyed(_) => unreachable!("Already handled above"),
+        };
+
+        // 5. Create OpenTofu client with correct build directory
+        let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
+            opentofu_build_dir,
+        ));
+
+        // 6. Execute infrastructure destruction
         // OpenTofu destroy is idempotent - it will succeed even if infrastructure doesn't exist
-        self.destroy_infrastructure()?;
+        Self::destroy_infrastructure(&opentofu_client)?;
 
-        // Transition to Destroyed state
-        let destroyed = environment.destroy();
+        // 7. Transition to Destroyed state based on current state
+        let destroyed = match environment {
+            AnyEnvironmentState::Created(env) => env.destroy(),
+            AnyEnvironmentState::Provisioning(env) => env.destroy(),
+            AnyEnvironmentState::Provisioned(env) => env.destroy(),
+            AnyEnvironmentState::Configuring(env) => env.destroy(),
+            AnyEnvironmentState::Configured(env) => env.destroy(),
+            AnyEnvironmentState::Releasing(env) => env.destroy(),
+            AnyEnvironmentState::Released(env) => env.destroy(),
+            AnyEnvironmentState::Running(env) => env.destroy(),
+            AnyEnvironmentState::ProvisionFailed(env) => env.destroy(),
+            AnyEnvironmentState::ConfigureFailed(env) => env.destroy(),
+            AnyEnvironmentState::ReleaseFailed(env) => env.destroy(),
+            AnyEnvironmentState::RunFailed(env) => env.destroy(),
+            AnyEnvironmentState::Destroyed(_) => unreachable!("Already handled above"),
+        };
 
-        // Clean up state files only after successful infrastructure destruction
+        // 8. Clean up state files only after successful infrastructure destruction
         Self::cleanup_state_files(&destroyed)?;
 
-        // Persist final state
+        // 9. Persist final state
         self.repository.save(&destroyed.clone().into_any())?;
 
         info!(
@@ -185,11 +242,17 @@ impl DestroyCommandHandler {
     ///
     /// Executes the `OpenTofu` destroy workflow to remove all managed infrastructure.
     ///
+    /// # Arguments
+    ///
+    /// * `opentofu_client` - The `OpenTofu` client configured with the correct build directory
+    ///
     /// # Errors
     ///
     /// Returns an error if `OpenTofu` destroy fails
-    fn destroy_infrastructure(&self) -> Result<(), DestroyCommandHandlerError> {
-        DestroyInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
+    fn destroy_infrastructure(
+        opentofu_client: &Arc<crate::adapters::tofu::client::OpenTofuClient>,
+    ) -> Result<(), DestroyCommandHandlerError> {
+        DestroyInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
         Ok(())
     }
 
@@ -271,17 +334,13 @@ mod tests {
         /// Returns: (`command_handler`, `temp_dir`)
         /// The `temp_dir` must be kept alive for the duration of the test.
         pub fn build(self) -> (DestroyCommandHandler, TempDir) {
-            let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
-                self.temp_dir.path(),
-            ));
-
             let repository_factory =
                 crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
                     std::time::Duration::from_secs(30),
                 );
             let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-            let command_handler = DestroyCommandHandler::new(opentofu_client, repository);
+            let command_handler = DestroyCommandHandler::new(repository);
 
             (command_handler, self.temp_dir)
         }
@@ -293,7 +352,7 @@ mod tests {
 
         // Verify the command handler was created (basic structure test)
         // This test just verifies that the command handler can be created with the dependencies
-        assert_eq!(Arc::strong_count(&command_handler.opentofu_client), 1);
+        assert_eq!(Arc::strong_count(&command_handler.repository), 1);
     }
 
     #[test]
