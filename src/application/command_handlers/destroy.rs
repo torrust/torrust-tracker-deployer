@@ -189,7 +189,7 @@ impl DestroyCommandHandler {
         }
 
         // 4. Get the build directory from the environment context
-        let opentofu_build_dir = environment.tofu_build_dir()?;
+        let opentofu_build_dir = environment.tofu_build_dir();
 
         // 5. Create OpenTofu client with correct build directory
         let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(

@@ -453,34 +453,29 @@ impl AnyEnvironmentState {
     /// for `OpenTofu` operations. It encapsulates the repetitive match pattern
     /// that would otherwise be needed in calling code.
     ///
+    /// The path is returned consistently regardless of the environment's state.
+    /// The caller is responsible for determining how to use the path based on
+    /// their specific needs and the environment's current state.
+    ///
     /// # Returns
     ///
-    /// - `Ok(PathBuf)` containing the path to the `OpenTofu` build directory (with "lxd" subdirectory)
-    /// - `Err(StateTypeError)` if called on an environment in the `Destroyed` state
-    ///
-    /// # Errors
-    ///
-    /// Returns `StateTypeError::UnexpectedState` if called on an environment
-    /// in the `Destroyed` state since destroyed environments don't have build directories.
+    /// The path to the `OpenTofu` build directory (with "lxd" subdirectory).
     #[must_use = "build directory path should be used for OpenTofu operations"]
-    pub fn tofu_build_dir(&self) -> Result<std::path::PathBuf, StateTypeError> {
+    pub fn tofu_build_dir(&self) -> std::path::PathBuf {
         match self {
-            Self::Created(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::Provisioning(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::Provisioned(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::Configuring(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::Configured(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::Releasing(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::Released(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::Running(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::ProvisionFailed(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::ConfigureFailed(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::ReleaseFailed(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::RunFailed(env) => Ok(env.tofu_build_dir().join("lxd")),
-            Self::Destroyed(_) => Err(StateTypeError::UnexpectedState {
-                expected: "any state except destroyed",
-                actual: "destroyed".to_string(),
-            }),
+            Self::Created(env) => env.tofu_build_dir().join("lxd"),
+            Self::Provisioning(env) => env.tofu_build_dir().join("lxd"),
+            Self::Provisioned(env) => env.tofu_build_dir().join("lxd"),
+            Self::Configuring(env) => env.tofu_build_dir().join("lxd"),
+            Self::Configured(env) => env.tofu_build_dir().join("lxd"),
+            Self::Releasing(env) => env.tofu_build_dir().join("lxd"),
+            Self::Released(env) => env.tofu_build_dir().join("lxd"),
+            Self::Running(env) => env.tofu_build_dir().join("lxd"),
+            Self::ProvisionFailed(env) => env.tofu_build_dir().join("lxd"),
+            Self::ConfigureFailed(env) => env.tofu_build_dir().join("lxd"),
+            Self::ReleaseFailed(env) => env.tofu_build_dir().join("lxd"),
+            Self::RunFailed(env) => env.tofu_build_dir().join("lxd"),
+            Self::Destroyed(env) => env.tofu_build_dir().join("lxd"),
         }
     }
 }
@@ -1120,7 +1115,7 @@ mod tests {
             let env = super::create_test_environment_created();
             let any_env = AnyEnvironmentState::Created(env);
 
-            let build_dir = any_env.tofu_build_dir().unwrap();
+            let build_dir = any_env.tofu_build_dir();
             assert!(build_dir.ends_with("lxd"));
         }
 
@@ -1140,18 +1135,13 @@ mod tests {
         }
 
         #[test]
-        fn it_should_error_when_accessing_build_dir_of_destroyed_environment() {
+        fn it_should_get_tofu_build_dir_from_destroyed_environment() {
             let env = super::create_test_environment_created().destroy();
             let any_env = AnyEnvironmentState::Destroyed(env);
 
-            // This should return an error
-            let result = any_env.tofu_build_dir();
-            assert!(result.is_err());
-            let error = result.unwrap_err();
-            assert_eq!(
-                error.to_string(),
-                "Expected state 'any state except destroyed', but found 'destroyed'"
-            );
+            // This should now always return the path, even for destroyed environments
+            let build_dir = any_env.tofu_build_dir();
+            assert!(build_dir.ends_with("lxd"));
         }
     }
 
