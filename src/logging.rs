@@ -80,6 +80,61 @@ pub enum LogFormat {
 }
 
 // ============================================================================
+// LOGGING CONFIGURATION - Domain Type
+// ============================================================================
+
+/// Configuration for logging system initialization
+///
+/// This struct represents the domain-specific logging configuration that is
+/// independent of CLI parsing concerns. It can be constructed from CLI arguments
+/// or other configuration sources without creating circular dependencies.
+///
+/// # Design Principles
+///
+/// - **Independence**: No dependency on presentation layer types
+/// - **Reusability**: Can be constructed from various sources (CLI, config files, tests)
+/// - **Clarity**: Clear field names and comprehensive documentation
+#[derive(Debug, Clone)]
+pub struct LoggingConfig {
+    /// Directory where log files will be written
+    pub log_dir: std::path::PathBuf,
+
+    /// Format for file logging output
+    pub file_format: LogFormat,
+
+    /// Format for stderr logging output
+    pub stderr_format: LogFormat,
+
+    /// Output target (file-only vs file-and-stderr)
+    pub output: LogOutput,
+}
+
+impl LoggingConfig {
+    /// Create a new logging configuration
+    ///
+    /// # Arguments
+    ///
+    /// * `log_dir` - Directory for log files
+    /// * `file_format` - Format for file output
+    /// * `stderr_format` - Format for stderr output
+    /// * `output` - Output target configuration
+    #[must_use]
+    pub fn new(
+        log_dir: std::path::PathBuf,
+        file_format: LogFormat,
+        stderr_format: LogFormat,
+        output: LogOutput,
+    ) -> Self {
+        Self {
+            log_dir,
+            file_format,
+            stderr_format,
+            output,
+        }
+    }
+}
+
+// ============================================================================
 // BUILDER PATTERN - Core Implementation
 // ============================================================================
 
@@ -210,23 +265,28 @@ impl LoggingBuilder {
     ///
     /// Both panics are intentional as logging is critical for observability.
     pub fn init(self) {
-        init_subscriber(
-            &self.log_dir,
+        let config = LoggingConfig::new(
+            self.log_dir,
+            self.file_format,
+            self.stderr_format,
             self.output,
-            &self.file_format,
-            &self.stderr_format,
         );
+        init_subscriber(config);
     }
 }
 
 // ============================================================================
-// INTERNAL INITIALIZATION - Single Source of Truth
+// PUBLIC INITIALIZATION FUNCTIONS
 // ============================================================================
 
-/// Internal initialization function that handles all subscriber setup
+/// Initialize logging with the provided configuration
+///
+/// This function takes a `LoggingConfig` and sets up the global logging infrastructure.
+/// After calling this, all logging macros (`tracing::info!`, etc.) will use
+/// this configuration.
 ///
 /// This is the single source of truth for subscriber initialization.
-/// All public init functions delegate to this to eliminate duplication.
+/// All other init functions delegate to this to eliminate duplication.
 ///
 /// Automatically configures ANSI codes:
 /// - File output: ANSI codes disabled (clean text for parsing)
@@ -237,20 +297,43 @@ impl LoggingBuilder {
 /// concrete type, and Rust's type system requires all match arms to return
 /// the same type. Type erasure with boxed layers would work but adds runtime
 /// overhead for a one-time initialization cost.
+///
+/// # Arguments
+///
+/// * `config` - The logging configuration containing all settings
+///
+/// # Panics
+///
+/// Panics if:
+/// - Log directory cannot be created (filesystem permissions issue)
+/// - Subscriber initialization fails (usually means it was already initialized)
+///
+/// Both panics are intentional as logging is critical for observability.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use std::path::PathBuf;
+/// use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingConfig, init_subscriber};
+///
+/// let config = LoggingConfig::new(
+///     PathBuf::from("./data/logs"),
+///     LogFormat::Compact,
+///     LogFormat::Pretty,
+///     LogOutput::FileAndStderr,
+/// );
+///
+/// init_subscriber(config);
+/// ```
 #[allow(clippy::too_many_lines)]
-fn init_subscriber(
-    log_dir: &Path,
-    output: LogOutput,
-    file_format: &LogFormat,
-    stderr_format: &LogFormat,
-) {
-    let file_appender = create_log_file_appender(log_dir);
+pub fn init_subscriber(config: LoggingConfig) {
+    let file_appender = create_log_file_appender(&config.log_dir);
     let env_filter = create_env_filter();
 
-    match output {
+    match config.output {
         LogOutput::FileOnly => {
             // File-only mode: single layer with ANSI disabled
-            match file_format {
+            match config.file_format {
                 LogFormat::Pretty => {
                     tracing_subscriber::registry()
                         .with(
@@ -288,7 +371,7 @@ fn init_subscriber(
         }
         LogOutput::FileAndStderr => {
             // Dual output mode: file layer (no ANSI) + stderr layer (with ANSI)
-            match (file_format, stderr_format) {
+            match (config.file_format, config.stderr_format) {
                 // Pretty file format combinations
                 (LogFormat::Pretty, LogFormat::Pretty) => {
                     tracing_subscriber::registry()

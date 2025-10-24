@@ -139,6 +139,9 @@ pub const ANSIBLE_DIR_NAME: &str = "ansible";
 /// Directory name for OpenTofu-related files
 pub const TOFU_DIR_NAME: &str = "tofu";
 
+/// Provider name for LXD infrastructure
+pub const LXD_PROVIDER_NAME: &str = "lxd";
+
 /// Environment configuration encapsulating all environment-specific settings
 ///
 /// This entity represents a complete environment configuration including naming,
@@ -602,7 +605,7 @@ impl<S> Environment<S> {
     ///
     /// assert_eq!(
     ///     environment.tofu_build_dir(),
-    ///     PathBuf::from("build/test/tofu")
+    ///     PathBuf::from("build/test/tofu/lxd")
     /// );
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -978,7 +981,7 @@ mod tests {
 
         // Assert
         assert_eq!(ansible_dir, build_dir.join("ansible"));
-        assert_eq!(tofu_dir, build_dir.join("tofu"));
+        assert_eq!(tofu_dir, build_dir.join("tofu").join("lxd"));
     }
 
     #[test]

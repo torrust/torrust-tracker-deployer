@@ -111,12 +111,14 @@ impl InternalConfig {
         self.build_dir.join(super::ANSIBLE_DIR_NAME)
     }
 
-    /// Returns the tofu build directory
+    /// Returns the `OpenTofu` build directory for the LXD provider
     ///
-    /// Path: `build/{env_name}/tofu`
+    /// Path: `build/{env_name}/tofu/lxd`
     #[must_use]
     pub fn tofu_build_dir(&self) -> PathBuf {
-        self.build_dir.join(super::TOFU_DIR_NAME)
+        self.build_dir
+            .join(super::TOFU_DIR_NAME)
+            .join(super::LXD_PROVIDER_NAME)
     }
 
     /// Returns the ansible templates directory

@@ -1,67 +1,34 @@
-//! Main application module for the Torrust Tracker Deployer CLI
+//! Main Application Bootstrap
 //!
-//! This module contains the CLI structure and main application logic.
-//! It initializes logging and handles the application lifecycle.
+//! This module provides a thin bootstrap layer for the Torrust Tracker Deployer CLI.
+//! It handles application initialization, logging setup, and command dispatch while
+//! delegating all CLI parsing and business logic to the presentation layer.
+//!
+//! ## Responsibilities
+//!
+//! - **Application Lifecycle**: Initialize and shutdown the application
+//! - **Logging Setup**: Configure logging based on CLI arguments
+//! - **Command Dispatch**: Route commands to the presentation layer for execution
+//! - **Exit Handling**: Manage application exit codes and cleanup
+//!
+//! ## Design Principles
+//!
+//! - **Thin Layer**: Minimal logic, maximum delegation to appropriate layers
+//! - **Single Responsibility**: Focus only on application bootstrap concerns
+//! - **Clean Separation**: No CLI parsing or business logic in this module
 
 use clap::Parser;
-use std::path::PathBuf;
 use tracing::info;
 
-use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
-
-/// Command-line interface for Torrust Tracker Deployer
-#[derive(Parser)]
-#[command(name = "torrust-tracker-deployer")]
-#[command(about = "Automated deployment infrastructure for Torrust Tracker")]
-#[command(version)]
-#[allow(clippy::struct_field_names)] // CLI arguments intentionally share 'log_' prefix for clarity
-pub struct Cli {
-    /// Format for file logging (default: compact, without ANSI codes)
-    ///
-    /// - pretty: Pretty-printed output for development (no ANSI in files)
-    /// - json: JSON output for production environments (no ANSI)
-    /// - compact: Compact output for minimal verbosity (no ANSI in files)
-    ///
-    /// Note: ANSI color codes are automatically disabled for file output
-    /// to ensure logs are easily parsed with standard text tools (grep, awk, sed).
-    #[arg(long, value_enum, default_value = "compact", global = true)]
-    pub log_file_format: LogFormat,
-
-    /// Format for stderr logging (default: pretty, with ANSI codes)
-    ///
-    /// - pretty: Pretty-printed output with colors for development
-    /// - json: JSON output for machine processing
-    /// - compact: Compact output with colors for minimal verbosity
-    ///
-    /// Note: ANSI color codes are automatically enabled for stderr output
-    /// to provide colored terminal output for better readability.
-    #[arg(long, value_enum, default_value = "pretty", global = true)]
-    pub log_stderr_format: LogFormat,
-
-    /// Log output mode (default: file-only for production)
-    ///
-    /// - file-only: Write logs to file only (production mode)
-    /// - file-and-stderr: Write logs to both file and stderr (development/testing mode)
-    #[arg(long, value_enum, default_value = "file-only", global = true)]
-    pub log_output: LogOutput,
-
-    /// Log directory (default: ./data/logs)
-    ///
-    /// Directory where log files will be written. The log file will be
-    /// named 'log.txt' inside this directory. Parent directories will be
-    /// created automatically if they don't exist.
-    ///
-    /// Note: If the directory cannot be created due to filesystem permissions,
-    /// the application will exit with an error. Logging is critical for
-    /// observability and the application cannot function without it.
-    #[arg(long, default_value = "./data/logs", global = true)]
-    pub log_dir: PathBuf,
-}
+use torrust_tracker_deployer_lib::{help, logging, presentation};
 
 /// Main application entry point
 ///
-/// This function initializes logging, displays information to the user,
-/// and prepares the application for future command processing.
+/// This function serves as the application bootstrap, handling:
+/// 1. CLI argument parsing (delegated to presentation layer)
+/// 2. Logging initialization using `LoggingConfig`
+/// 3. Command execution (delegated to presentation layer)
+/// 4. Error handling and exit code management
 ///
 /// # Panics
 ///
@@ -71,51 +38,33 @@ pub struct Cli {
 ///
 /// Both panics are intentional as logging is critical for observability.
 pub fn run() {
-    let cli = Cli::parse();
+    let cli = presentation::Cli::parse();
 
-    // Clone values for logging before moving them
-    let log_file_format = cli.log_file_format.clone();
-    let log_stderr_format = cli.log_stderr_format.clone();
-    let log_output = cli.log_output;
-    let log_dir = cli.log_dir.clone();
+    let logging_config = cli.global.logging_config();
 
-    // Initialize logging FIRST before any other logic
-    LoggingBuilder::new(&cli.log_dir)
-        .with_file_format(cli.log_file_format)
-        .with_stderr_format(cli.log_stderr_format)
-        .with_output(cli.log_output)
-        .init();
+    logging::init_subscriber(logging_config);
 
-    // Log startup event with configuration details
     info!(
         app = "torrust-tracker-deployer",
         version = env!("CARGO_PKG_VERSION"),
-        log_dir = %log_dir.display(),
-        log_file_format = ?log_file_format,
-        log_stderr_format = ?log_stderr_format,
-        log_output = ?log_output,
+        log_dir = %cli.global.log_dir.display(),
+        log_file_format = ?cli.global.log_file_format,
+        log_stderr_format = ?cli.global.log_stderr_format,
+        log_output = ?cli.global.log_output,
         "Application started"
     );
 
-    // Display info to user (keep existing behavior for now)
-    println!("🏗️  Torrust Tracker Deployer");
-    println!("=========================");
-    println!();
-    println!("This repository provides automated deployment infrastructure for Torrust tracker projects.");
-    println!("The infrastructure includes VM provisioning with OpenTofu and configuration");
-    println!("management with Ansible playbooks.");
-    println!();
-    println!("📋 Getting Started:");
-    println!("   Please follow the instructions in the README.md file to:");
-    println!("   1. Set up the required dependencies (OpenTofu, Ansible, LXD)");
-    println!("   2. Provision the deployment infrastructure");
-    println!("   3. Deploy and configure the services");
-    println!();
-    println!("🧪 Running E2E Tests:");
-    println!("   Use the e2e tests binaries to run end-to-end tests:");
-    println!("   cargo e2e-provision && cargo e2e-config");
-    println!();
-    println!("📖 For detailed instructions, see: README.md");
+    match cli.command {
+        Some(command) => {
+            if let Err(e) = presentation::execute(command) {
+                presentation::handle_error(&e);
+                std::process::exit(1);
+            }
+        }
+        None => {
+            help::display_getting_started();
+        }
+    }
 
     info!("Application finished");
 }

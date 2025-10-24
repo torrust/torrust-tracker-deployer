@@ -10,6 +10,14 @@ The project follows **Domain-Driven Design** principles with a layered architect
 
 ```text
 ┌─────────────────────────────────────┐
+│     Presentation Layer              │
+│  (CLI, User Output, Command         │
+│   Dispatch, Error Display)          │
+│  src/presentation/                  │
+└────────────┬────────────────────────┘
+             │ depends on
+             ↓
+┌─────────────────────────────────────┐
 │      Application Layer              │
 │  (Commands, Use Cases, Steps)       │
 │  src/application/                   │
@@ -35,6 +43,18 @@ The project follows **Domain-Driven Design** principles with a layered architect
 
 ### Layer Responsibilities
 
+**Presentation Layer** (`src/presentation/`):
+
+- **Purpose**: User interface and interaction handling
+- **Contains**: CLI parsing, command dispatch, user output, error presentation, help systems
+- **Rules**: Depends on application layer, handles all user-facing concerns
+- **Example**: CLI subcommands calling application command handlers with user-friendly error messages
+- **Module Structure**:
+  - `cli/` - Command-line argument parsing and validation
+  - `commands/` - Command execution handlers and dispatch logic
+  - `errors.rs` - Unified error types with tiered help system
+  - `user_output.rs` - User-facing output management and verbosity control
+
 **Domain Layer** (`src/domain/`):
 
 - **Purpose**: Core business logic and domain entities
@@ -58,14 +78,16 @@ The project follows **Domain-Driven Design** principles with a layered architect
 
 ### Dependency Rule
 
-The fundamental rule is that **dependencies flow inward**:
+The fundamental rule is that **dependencies flow inward toward the domain**:
 
+- Presentation → Application → Domain (✅ Correct)
 - Infrastructure → Domain (✅ Correct)
-- Application → Domain (✅ Correct)
-- Domain → Infrastructure (❌ Forbidden)
 - Domain → Application (❌ Forbidden)
+- Domain → Infrastructure (❌ Forbidden)
+- Domain → Presentation (❌ Forbidden)
+- Application → Presentation (❌ Forbidden)
 
-This ensures the domain layer remains pure business logic, free from technical implementation details.
+This ensures the domain layer remains pure business logic, free from technical implementation details and user interface concerns. The presentation layer orchestrates the application layer but never contains business logic.
 
 ## 🏗️ Three-Level Architecture Pattern
 
@@ -180,6 +202,21 @@ All modules include comprehensive `//!` documentation with:
 - ✅ `src/bin/e2e-config-tests.rs` - E2E configuration tests
 - ✅ `src/bin/e2e-provision-and-destroy-tests.rs` - E2E provisioning and destruction tests
 - ✅ `src/bin/e2e-tests-full.rs` - Full E2E test suite
+
+### Presentation Layer
+
+**CLI Interface and User Interaction:**
+
+- ✅ `src/presentation/mod.rs` - Presentation layer root module with exports
+- ✅ `src/presentation/cli/` - Command-line interface parsing and structure
+  - `cli/mod.rs` - Main Cli struct and global argument definitions
+  - `cli/args.rs` - Global CLI arguments (logging configuration)
+  - `cli/commands.rs` - Subcommand definitions (destroy, future commands)
+- ✅ `src/presentation/commands/` - Command execution handlers
+  - `commands/mod.rs` - Unified command dispatch and error handling
+  - `commands/destroy.rs` - Destroy command handler with error management
+- ✅ `src/presentation/errors.rs` - Unified error types with tiered help system
+- ✅ `src/presentation/user_output.rs` - User-facing output management and verbosity control
 
 ### Domain Layer
 
@@ -381,10 +418,54 @@ The typical deployment flow follows this pattern:
 ## 📊 Module Statistics
 
 - **Total Modules**: ~100+ Rust files
-- **Architecture Layers**: 3 (Domain, Application, Infrastructure) + Shared
+- **Architecture Layers**: 4 (Presentation, Application, Domain, Infrastructure) + Shared
 - **External Tool Integrations**: 3 (OpenTofu, Ansible, LXD)
 - **Step Categories**: 7 (Infrastructure, System, Software, Validation, Connectivity, Application, Rendering)
 - **State Types**: 13+ environment states with type-state pattern
+
+## 🏗️ Architectural Guidance for Development
+
+When working on this codebase, follow these guidelines to maintain architectural integrity:
+
+### Layer Selection Guide
+
+**When creating new functionality, choose the appropriate layer:**
+
+- **Presentation Layer** (`src/presentation/`): CLI commands, user output, error display, input validation
+- **Application Layer** (`src/application/`): Use cases, command orchestration, workflow coordination
+- **Domain Layer** (`src/domain/`): Business entities, value objects, domain rules, state machines
+- **Infrastructure Layer** (`src/infrastructure/`): External tool integration, file operations, remote actions
+
+### Module Placement Rules
+
+1. **CLI and User Interface**: Always in `src/presentation/`
+2. **Business Logic**: Always in `src/domain/`
+3. **Use Case Orchestration**: Always in `src/application/`
+4. **External Integration**: Always in `src/infrastructure/`
+5. **Cross-Layer Utilities**: Only in `src/shared/` (use sparingly)
+
+### Dependency Guidelines
+
+- ✅ **Allowed**: Presentation → Application → Domain ← Infrastructure
+- ❌ **Forbidden**: Domain depending on any other layer
+- ❌ **Forbidden**: Application depending on Presentation or Infrastructure
+- ❌ **Forbidden**: Circular dependencies between any layers
+
+### Implementation Patterns
+
+- **Error Handling**: Use structured enums with `thiserror`, implement tiered help systems
+- **Module Organization**: Follow [docs/contributing/module-organization.md](../docs/contributing/module-organization.md)
+- **Testing**: Layer-appropriate testing (unit tests per layer, integration tests across layers)
+
+### Quality Assurance
+
+Before implementing new features:
+
+1. **Identify the correct layer** based on the functionality's purpose
+2. **Check architectural constraints** - ensure no forbidden dependencies
+3. **Follow module organization** - public before private, important before secondary
+4. **Implement proper error handling** - structured errors with actionable messages
+5. **Add comprehensive tests** - appropriate for the layer and functionality
 
 ## 💡 Key Design Principles
 

@@ -16,11 +16,13 @@
 //!   - `ansible` - Ansible delivery mechanism and implementation details
 //!   - `tofu` - `OpenTofu` delivery mechanism and implementation details
 //!   - `template` - Template rendering delivery mechanisms (wrappers)
+//! - `presentation` - Presentation Layer: User-facing output and presentation concerns
 //!
 //! ## Other Modules
 //! - `adapters` - External tool adapters (thin CLI wrappers)
 //! - `config` - Configuration management for deployment environments
 //! - `container` - Service container for dependency injection
+//! - `help` - Help and usage information display functions
 //! - `logging` - Logging configuration and utilities
 //! - `shared` - Shared modules used across different layers
 //! - `testing` - Testing utilities (unit, integration, and end-to-end)
@@ -30,7 +32,9 @@ pub mod application;
 pub mod config;
 pub mod container;
 pub mod domain;
+pub mod help;
 pub mod infrastructure;
 pub mod logging;
+pub mod presentation;
 pub mod shared;
 pub mod testing;

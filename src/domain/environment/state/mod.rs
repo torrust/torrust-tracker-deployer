@@ -90,7 +90,7 @@ pub use running::Running;
 /// // let result = any_env.try_into_created();
 /// // assert!(result.is_err());
 /// ```
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum StateTypeError {
     /// The environment is in a different state than expected
     #[error("Expected state '{expected}', but found '{actual}'")]
@@ -409,6 +409,60 @@ impl AnyEnvironmentState {
     #[must_use]
     pub fn instance_ip(&self) -> Option<std::net::IpAddr> {
         self.context().runtime_outputs.instance_ip
+    }
+
+    /// Destroy the environment, transitioning it to the Destroyed state
+    ///
+    /// This method provides a unified interface to destroy an environment
+    /// regardless of its current state. It encapsulates the repetitive match
+    /// pattern that would otherwise be needed in calling code.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Environment<Destroyed>)` if the environment was successfully destroyed
+    /// - `Err(StateTypeError)` if the environment is already in the `Destroyed` state
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateTypeError::UnexpectedState` if called on an environment
+    /// already in the `Destroyed` state.
+    pub fn destroy(self) -> Result<Environment<Destroyed>, StateTypeError> {
+        match self {
+            Self::Created(env) => Ok(env.destroy()),
+            Self::Provisioning(env) => Ok(env.destroy()),
+            Self::Provisioned(env) => Ok(env.destroy()),
+            Self::Configuring(env) => Ok(env.destroy()),
+            Self::Configured(env) => Ok(env.destroy()),
+            Self::Releasing(env) => Ok(env.destroy()),
+            Self::Released(env) => Ok(env.destroy()),
+            Self::Running(env) => Ok(env.destroy()),
+            Self::ProvisionFailed(env) => Ok(env.destroy()),
+            Self::ConfigureFailed(env) => Ok(env.destroy()),
+            Self::ReleaseFailed(env) => Ok(env.destroy()),
+            Self::RunFailed(env) => Ok(env.destroy()),
+            Self::Destroyed(_) => Err(StateTypeError::UnexpectedState {
+                expected: "any state except destroyed",
+                actual: "destroyed".to_string(),
+            }),
+        }
+    }
+
+    /// Get the `OpenTofu` build directory path regardless of current state
+    ///
+    /// This method provides a unified interface to access the build directory
+    /// for `OpenTofu` operations without needing to pattern match on the
+    /// specific state variant.
+    ///
+    /// The path is returned consistently regardless of the environment's state.
+    /// The caller is responsible for determining how to use the path based on
+    /// their specific needs and the environment's current state.
+    ///
+    /// # Returns
+    ///
+    /// The path to the `OpenTofu` build directory for the LXD provider.
+    #[must_use]
+    pub fn tofu_build_dir(&self) -> std::path::PathBuf {
+        self.context().tofu_build_dir()
     }
 }
 
@@ -1027,6 +1081,53 @@ mod tests {
                 env_restored.state().context.base.error_summary,
                 error_message
             );
+        }
+
+        // Tests for new utility methods
+
+        #[test]
+        fn it_should_destroy_environment_from_any_state() {
+            let env = super::create_test_environment_created();
+            let any_env = AnyEnvironmentState::Created(env);
+
+            let destroyed = any_env.destroy().unwrap();
+            // Convert back to any state to check state name
+            let destroyed_any = destroyed.into_any();
+            assert_eq!(destroyed_any.state_name(), "destroyed");
+        }
+
+        #[test]
+        fn it_should_get_tofu_build_dir_from_any_state() {
+            let env = super::create_test_environment_created();
+            let any_env = AnyEnvironmentState::Created(env);
+
+            let build_dir = any_env.tofu_build_dir();
+            assert!(build_dir.ends_with("lxd"));
+        }
+
+        #[test]
+        fn it_should_error_when_destroying_already_destroyed_environment() {
+            let env = super::create_test_environment_created().destroy();
+            let any_env = AnyEnvironmentState::Destroyed(env);
+
+            // This should return an error
+            let result = any_env.destroy();
+            assert!(result.is_err());
+            let error = result.unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                "Expected state 'any state except destroyed', but found 'destroyed'"
+            );
+        }
+
+        #[test]
+        fn it_should_get_tofu_build_dir_from_destroyed_environment() {
+            let env = super::create_test_environment_created().destroy();
+            let any_env = AnyEnvironmentState::Destroyed(env);
+
+            // This should now always return the path, even for destroyed environments
+            let build_dir = any_env.tofu_build_dir();
+            assert!(build_dir.ends_with("lxd"));
         }
     }
 
