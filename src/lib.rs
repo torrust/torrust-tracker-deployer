@@ -22,6 +22,7 @@
 //! - `adapters` - External tool adapters (thin CLI wrappers)
 //! - `config` - Configuration management for deployment environments
 //! - `container` - Service container for dependency injection
+//! - `help` - Help and usage information display functions
 //! - `logging` - Logging configuration and utilities
 //! - `shared` - Shared modules used across different layers
 //! - `testing` - Testing utilities (unit, integration, and end-to-end)
@@ -31,6 +32,7 @@ pub mod application;
 pub mod config;
 pub mod container;
 pub mod domain;
+pub mod help;
 pub mod infrastructure;
 pub mod logging;
 pub mod presentation;
