@@ -45,7 +45,7 @@ Create a detailed specification in `docs/issues/` with temporary name:
 
 ```bash
 # Copy the template to create your specification document
-cp docs/issues/TEMPLATE.md docs/issues/setup-logging-for-production-cli.md
+cp docs/issues/SPECIFICATION-TEMPLATE.md docs/issues/setup-logging-for-production-cli.md
 
 # Edit the document to fill in all sections
 vim docs/issues/setup-logging-for-production-cli.md
@@ -53,7 +53,7 @@ vim docs/issues/setup-logging-for-production-cli.md
 
 #### Document Structure
 
-Use the template at [`docs/issues/TEMPLATE.md`](../issues/TEMPLATE.md) as your starting point. The template includes:
+Use the template at [`docs/issues/SPECIFICATION-TEMPLATE.md`](../issues/SPECIFICATION-TEMPLATE.md) as your starting point. The template includes:
 
 - **Header**: Issue number, parent epic, and related links
 - **Overview**: Clear description of what the task accomplishes
@@ -71,6 +71,18 @@ Use the template at [`docs/issues/TEMPLATE.md`](../issues/TEMPLATE.md) as your s
 - **Provide Context**: Link to related documentation, ADRs, and examples
 - **Estimate Time**: Help others understand scope
 - **Define Success**: Clear acceptance criteria
+- **Specify Architecture**: Include DDD layer, module path, and architectural constraints (see template guidance below)
+
+#### Architectural Requirements
+
+When creating issues that involve code changes, always specify:
+
+- **DDD Layer**: Which layer the change belongs to (Presentation, Application, Domain, Infrastructure)
+- **Module Path**: Exact location in the codebase (`src/{layer}/{module}/`)
+- **Architectural Constraints**: Dependencies, patterns, and anti-patterns to follow
+- **Related Documentation**: Link to [docs/codebase-architecture.md](../docs/codebase-architecture.md) and other relevant architectural guidance
+
+This ensures AI assistants and contributors understand not just **what** to implement, but **where** and **how** to implement it within the project's architectural patterns.
 
 ### Step 2: Create GitHub Epic Issue (if needed)
 
@@ -100,7 +112,7 @@ If this is the first task in a roadmap section, create an epic issue first:
 
 2. **Click "New Issue"**
 
-3. **Fill in Task Details**: Use the template at [`docs/issues/TASK-TEMPLATE.md`](../issues/TASK-TEMPLATE.md) and fill in:
+3. **Fill in Task Details**: Use the template at [`docs/issues/GITHUB-ISSUE-TEMPLATE.md`](../issues/GITHUB-ISSUE-TEMPLATE.md) and fill in:
 
    - Title with the task name from roadmap
    - Overview with brief description
@@ -223,7 +235,7 @@ Implementing roadmap task **1.1 Setup logging**
 
 ```bash
 # 1. Create initial specification document from template
-cp docs/issues/TEMPLATE.md docs/issues/setup-logging-for-production-cli.md
+cp docs/issues/SPECIFICATION-TEMPLATE.md docs/issues/setup-logging-for-production-cli.md
 vim docs/issues/setup-logging-for-production-cli.md
 # ... fill in all sections: overview, goals, specs, implementation plan ...
 
