@@ -162,10 +162,12 @@ pub async fn run_test_command(test_context: &TestContext) -> Result<(), TestTask
         AnyEnvironmentState::Releasing(env) => test_command_handler.execute(env).await,
         AnyEnvironmentState::Released(env) => test_command_handler.execute(env).await,
         AnyEnvironmentState::Running(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::Destroying(env) => test_command_handler.execute(env).await,
         AnyEnvironmentState::ProvisionFailed(env) => test_command_handler.execute(env).await,
         AnyEnvironmentState::ConfigureFailed(env) => test_command_handler.execute(env).await,
         AnyEnvironmentState::ReleaseFailed(env) => test_command_handler.execute(env).await,
         AnyEnvironmentState::RunFailed(env) => test_command_handler.execute(env).await,
+        AnyEnvironmentState::DestroyFailed(env) => test_command_handler.execute(env).await,
         AnyEnvironmentState::Destroyed(env) => test_command_handler.execute(env).await,
     };
 

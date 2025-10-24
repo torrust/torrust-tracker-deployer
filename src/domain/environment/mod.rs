@@ -114,9 +114,9 @@ pub use internal_config::InternalConfig;
 pub use name::{EnvironmentName, EnvironmentNameError};
 pub use runtime_outputs::RuntimeOutputs;
 pub use state::{
-    AnyEnvironmentState, ConfigureFailed, Configured, Configuring, Created, Destroyed,
-    ProvisionFailed, Provisioned, Provisioning, ReleaseFailed, Released, Releasing, RunFailed,
-    Running,
+    AnyEnvironmentState, ConfigureFailed, Configured, Configuring, Created, DestroyFailed,
+    Destroyed, Destroying, ProvisionFailed, Provisioned, Provisioning, ReleaseFailed, Released,
+    Releasing, RunFailed, Running,
 };
 pub use user_inputs::UserInputs;
 
@@ -297,6 +297,15 @@ impl<S> Environment<S> {
             context: self.context,
             state: new_state,
         }
+    }
+
+    /// Transitions from any state to Destroying state
+    ///
+    /// This method can be called from any state to begin the environment destruction process.
+    /// It indicates that the destroy command has started executing.
+    #[must_use]
+    pub fn start_destroying(self) -> Environment<Destroying> {
+        self.with_state(Destroying)
     }
 
     /// Transitions from any state to Destroyed state

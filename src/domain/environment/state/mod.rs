@@ -49,7 +49,9 @@ mod configure_failed;
 mod configured;
 mod configuring;
 mod created;
+mod destroy_failed;
 mod destroyed;
+mod destroying;
 mod provision_failed;
 mod provisioned;
 mod provisioning;
@@ -65,7 +67,9 @@ pub use configure_failed::{ConfigureFailed, ConfigureFailureContext, ConfigureSt
 pub use configured::Configured;
 pub use configuring::Configuring;
 pub use created::Created;
+pub use destroy_failed::{DestroyFailed, DestroyFailureContext, DestroyStep};
 pub use destroyed::Destroyed;
+pub use destroying::Destroying;
 pub use provision_failed::{ProvisionFailed, ProvisionFailureContext, ProvisionStep};
 pub use provisioned::Provisioned;
 pub use provisioning::Provisioning;
@@ -171,6 +175,9 @@ pub enum AnyEnvironmentState {
     /// Environment in `Running` state
     Running(Environment<Running>),
 
+    /// Environment in `Destroying` state
+    Destroying(Environment<Destroying>),
+
     /// Environment in `ProvisionFailed` error state
     ProvisionFailed(Environment<ProvisionFailed>),
 
@@ -182,6 +189,9 @@ pub enum AnyEnvironmentState {
 
     /// Environment in `RunFailed` error state
     RunFailed(Environment<RunFailed>),
+
+    /// Environment in `DestroyFailed` error state
+    DestroyFailed(Environment<DestroyFailed>),
 
     /// Environment in `Destroyed` terminal state
     Destroyed(Environment<Destroyed>),
@@ -211,10 +221,12 @@ impl AnyEnvironmentState {
             Self::Releasing(env) => env.context(),
             Self::Released(env) => env.context(),
             Self::Running(env) => env.context(),
+            Self::Destroying(env) => env.context(),
             Self::ProvisionFailed(env) => env.context(),
             Self::ConfigureFailed(env) => env.context(),
             Self::ReleaseFailed(env) => env.context(),
             Self::RunFailed(env) => env.context(),
+            Self::DestroyFailed(env) => env.context(),
             Self::Destroyed(env) => env.context(),
         }
     }
@@ -251,10 +263,12 @@ impl AnyEnvironmentState {
             Self::Releasing(_) => "releasing",
             Self::Released(_) => "released",
             Self::Running(_) => "running",
+            Self::Destroying(_) => "destroying",
             Self::ProvisionFailed(_) => "provision_failed",
             Self::ConfigureFailed(_) => "configure_failed",
             Self::ReleaseFailed(_) => "release_failed",
             Self::RunFailed(_) => "run_failed",
+            Self::DestroyFailed(_) => "destroy_failed",
             Self::Destroyed(_) => "destroyed",
         }
     }
@@ -280,6 +294,7 @@ impl AnyEnvironmentState {
                 | Self::Releasing(_)
                 | Self::Released(_)
                 | Self::Running(_)
+                | Self::Destroying(_)
                 | Self::Destroyed(_)
         )
     }
@@ -300,6 +315,7 @@ impl AnyEnvironmentState {
                 | Self::ConfigureFailed(_)
                 | Self::ReleaseFailed(_)
                 | Self::RunFailed(_)
+                | Self::DestroyFailed(_)
         )
     }
 
@@ -322,6 +338,7 @@ impl AnyEnvironmentState {
                 | Self::ConfigureFailed(_)
                 | Self::ReleaseFailed(_)
                 | Self::RunFailed(_)
+                | Self::DestroyFailed(_)
         )
     }
 
@@ -341,6 +358,7 @@ impl AnyEnvironmentState {
             Self::ConfigureFailed(env) => Some(&env.state().context.base.error_summary),
             Self::ReleaseFailed(env) => Some(&env.state().failed_step),
             Self::RunFailed(env) => Some(&env.state().failed_step),
+            Self::DestroyFailed(env) => Some(&env.state().context.base.error_summary),
             _ => None,
         }
     }
@@ -436,10 +454,12 @@ impl AnyEnvironmentState {
             Self::Releasing(env) => Ok(env.destroy()),
             Self::Released(env) => Ok(env.destroy()),
             Self::Running(env) => Ok(env.destroy()),
+            Self::Destroying(env) => Ok(env.destroy()),
             Self::ProvisionFailed(env) => Ok(env.destroy()),
             Self::ConfigureFailed(env) => Ok(env.destroy()),
             Self::ReleaseFailed(env) => Ok(env.destroy()),
             Self::RunFailed(env) => Ok(env.destroy()),
+            Self::DestroyFailed(env) => Ok(env.destroy()),
             Self::Destroyed(_) => Err(StateTypeError::UnexpectedState {
                 expected: "any state except destroyed",
                 actual: "destroyed".to_string(),
