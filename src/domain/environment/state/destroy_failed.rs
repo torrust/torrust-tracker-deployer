@@ -43,7 +43,7 @@ pub struct DestroyFailureContext {
 pub enum DestroyStep {
     /// Loading environment state
     LoadEnvironment,
-    /// Destroying infrastructure via OpenTofu
+    /// Destroying infrastructure via `OpenTofu`
     DestroyInfrastructure,
     /// Cleaning up state files
     CleanupStateFiles,
@@ -121,7 +121,10 @@ mod tests {
         let state = DestroyFailed {
             context: context.clone(),
         };
-        assert_eq!(state.context.failed_step, DestroyStep::DestroyInfrastructure);
+        assert_eq!(
+            state.context.failed_step,
+            DestroyStep::DestroyInfrastructure
+        );
         assert_eq!(state.context.error_kind, ErrorKind::InfrastructureOperation);
     }
 

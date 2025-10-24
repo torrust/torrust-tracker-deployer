@@ -122,8 +122,11 @@ pub fn run_destroy_command(test_context: &mut TestContext) -> Result<(), Destroy
     // Create repository for this environment
     let repository = test_context.create_repository();
 
+    // Create clock for timing information
+    let clock = std::sync::Arc::new(crate::shared::SystemClock);
+
     // Use the new DestroyCommandHandler to handle all infrastructure destruction steps
-    let destroy_command_handler = DestroyCommandHandler::new(repository);
+    let destroy_command_handler = DestroyCommandHandler::new(repository, clock);
 
     // Execute destruction using environment name
     // The DestroyCommandHandler now loads the environment internally and handles all states
