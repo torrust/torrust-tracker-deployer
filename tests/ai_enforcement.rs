@@ -20,11 +20,11 @@
 //! ## Usage
 //!
 //! ```bash
-//! # Default: Run all expensive validation tests (recommended for AI assistants)
-//! cargo test ai_precommit_enforcement
+//! # Default: Run all AI validation tests (recommended for AI assistants)
+//! cargo test ai_enforcement
 //!
-//! # Development: Skip expensive tests for faster iteration
-//! SKIP_EXPENSIVE_TESTS=1 cargo test ai_precommit_enforcement
+//! # Development: Skip AI enforcement for faster iteration
+//! SKIP_AI_ENFORCEMENT=1 cargo test ai_enforcement
 //! ```
 //!
 //! ## Related Documentation
@@ -35,23 +35,21 @@
 //!
 //! ## Environment Variable Control
 //!
-//! - **Default behavior**: All expensive tests run when `SKIP_EXPENSIVE_TESTS` is not set
-//! - **Skip expensive tests**: Set `SKIP_EXPENSIVE_TESTS=1` to skip time-consuming tests during development
-//! - **Run expensive tests**: Set `SKIP_EXPENSIVE_TESTS=0` or any other value, or leave unset
+//! - **Default behavior**: All AI validation tests run when `SKIP_AI_ENFORCEMENT` is not set
+//! - **Skip AI enforcement**: Set `SKIP_AI_ENFORCEMENT=1` to skip AI quality enforcement during development
+//! - **Run AI enforcement**: Set `SKIP_AI_ENFORCEMENT=0` or any other value, or leave unset
 //!
 //! This allows rapid development cycles while ensuring AI assistants run full validation by default.
 
 #[cfg(test)]
-mod ai_precommit_enforcement_tests {
+mod ai_enforcement_tests {
     use std::env;
     use std::process::Command;
 
     #[test]
     fn it_should_pass_dependency_check() {
-        if env::var("SKIP_EXPENSIVE_TESTS").unwrap_or_default() == "1" {
-            println!(
-                "Skipping expensive test - set SKIP_EXPENSIVE_TESTS=1 to skip or unset to run"
-            );
+        if env::var("SKIP_AI_ENFORCEMENT").unwrap_or_default() == "1" {
+            println!("Skipping AI enforcement - set SKIP_AI_ENFORCEMENT=1 to skip or unset to run");
             return;
         }
 
@@ -80,10 +78,8 @@ mod ai_precommit_enforcement_tests {
 
     #[test]
     fn it_should_pass_linting_checks() {
-        if env::var("SKIP_EXPENSIVE_TESTS").unwrap_or_default() == "1" {
-            println!(
-                "Skipping expensive test - set SKIP_EXPENSIVE_TESTS=1 to skip or unset to run"
-            );
+        if env::var("SKIP_AI_ENFORCEMENT").unwrap_or_default() == "1" {
+            println!("Skipping AI enforcement - set SKIP_AI_ENFORCEMENT=1 to skip or unset to run");
             return;
         }
 
@@ -106,10 +102,8 @@ mod ai_precommit_enforcement_tests {
 
     #[test]
     fn it_should_pass_documentation_build() {
-        if env::var("SKIP_EXPENSIVE_TESTS").unwrap_or_default() == "1" {
-            println!(
-                "Skipping expensive test - set SKIP_EXPENSIVE_TESTS=1 to skip or unset to run"
-            );
+        if env::var("SKIP_AI_ENFORCEMENT").unwrap_or_default() == "1" {
+            println!("Skipping AI enforcement - set SKIP_AI_ENFORCEMENT=1 to skip or unset to run");
             return;
         }
 
@@ -148,10 +142,8 @@ mod ai_precommit_enforcement_tests {
 
     #[test]
     fn it_should_pass_e2e_config_tests() {
-        if env::var("SKIP_EXPENSIVE_TESTS").unwrap_or_default() == "1" {
-            println!(
-                "Skipping expensive test - set SKIP_EXPENSIVE_TESTS=1 to skip or unset to run"
-            );
+        if env::var("SKIP_AI_ENFORCEMENT").unwrap_or_default() == "1" {
+            println!("Skipping AI enforcement - set SKIP_AI_ENFORCEMENT=1 to skip or unset to run");
             return;
         }
 
@@ -181,10 +173,8 @@ mod ai_precommit_enforcement_tests {
 
     #[test]
     fn it_should_pass_e2e_provision_tests() {
-        if env::var("SKIP_EXPENSIVE_TESTS").unwrap_or_default() == "1" {
-            println!(
-                "Skipping expensive test - set SKIP_EXPENSIVE_TESTS=1 to skip or unset to run"
-            );
+        if env::var("SKIP_AI_ENFORCEMENT").unwrap_or_default() == "1" {
+            println!("Skipping AI enforcement - set SKIP_AI_ENFORCEMENT=1 to skip or unset to run");
             return;
         }
 

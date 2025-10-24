@@ -598,14 +598,14 @@ These tests ensure that when someone runs `./scripts/pre-commit.sh`, all the too
 
 ### Skipping Expensive Tests During Development
 
-If you need faster test cycles during development, you can skip the expensive integration tests:
+If you need faster test cycles during development, you can skip the AI enforcement tests:
 
 ```bash
-# Skip expensive pre-commit integration tests
-SKIP_EXPENSIVE_TESTS=1 cargo test
+# Skip AI enforcement tests
+SKIP_AI_ENFORCEMENT=1 cargo test
 ```
 
-**Default Behavior**: Expensive tests **run by default** when `SKIP_EXPENSIVE_TESTS` is not set. This ensures AI assistants like GitHub Copilot always validate pre-commit requirements.
+**Default Behavior**: AI enforcement tests **run by default** when `SKIP_AI_ENFORCEMENT` is not set. This ensures AI assistants like GitHub Copilot always validate quality requirements.
 
 **When to skip**:
 
@@ -631,21 +631,21 @@ This integration testing strategy helps with:
 ### Running Tests
 
 ```bash
-# Default: Run all tests including expensive pre-commit validation
+# Default: Run all tests including AI enforcement checks
 cargo test
 
-# Fast development: Skip expensive tests
-SKIP_EXPENSIVE_TESTS=1 cargo test
+# Fast development: Skip AI enforcement
+SKIP_AI_ENFORCEMENT=1 cargo test
 
-# Explicitly run only AI precommit enforcement tests
-cargo test ai_precommit_enforcement
+# Explicitly run only AI enforcement tests
+cargo test ai_enforcement
 ```
 
 This makes the test suite more readable, maintainable, and reliable for all contributors.
 
 ## 🤖 AI Assistant Integration
 
-The project includes a dedicated test file `tests/ai_precommit_enforcement.rs` that ensures AI assistants (like GitHub Copilot) run all necessary pre-commit checks before committing code.
+The project includes a dedicated test file `tests/ai_enforcement.rs` that ensures AI assistants (like GitHub Copilot) run all necessary quality checks before committing code.
 
 ### Purpose
 
