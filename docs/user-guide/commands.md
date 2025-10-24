@@ -1,26 +1,28 @@
 # Command Reference
 
-This guide provides an overview of the planned commands for the Torrust Tracker Deployer.
+This guide provides an overview of the available commands for the Torrust Tracker Deployer.
 
 ## ⚠️ Implementation Status
 
-**Current State**: Only the `DestroyCommand` handler exists in the Application layer. The CLI interface is not yet implemented.
+**Current State**: The `destroy` command is fully implemented with CLI interface.
 
-- ✅ **Application Layer**: `DestroyCommand` handler implemented
-- ❌ **CLI Interface**: Not yet implemented (coming in [issue #10](https://github.com/torrust/torrust-tracker-deployer/issues/10))
+- ✅ **Implemented**: `destroy` command
+- ❌ **CLI Interface**: Other commands not yet implemented
 
 The CLI commands documented here represent the planned MVP implementation.
 
 ## Planned Commands (MVP)
 
 ```bash
-# Planned CLI commands
-torrust-tracker-deployer create <env>     # Future - Create environment configuration
-torrust-tracker-deployer deploy <env>     # Future - Full deployment (provision → configure → release)
-torrust-tracker-deployer run <env>        # Future - Start application services
-torrust-tracker-deployer status <env>     # Future - Check environment status
-torrust-tracker-deployer test <env>       # Future - Run validation tests
-torrust-tracker-deployer destroy <env>    # Destroy infrastructure (App layer exists, CLI coming)
+# Available command
+torrust-tracker-deployer destroy <env>     # Destroy infrastructure and clean up resources
+
+# Future commands
+torrust-tracker-deployer create <env>      # Future - Create environment configuration
+torrust-tracker-deployer deploy <env>      # Future - Full deployment (provision → configure → release)
+torrust-tracker-deployer run <env>         # Future - Start application services
+torrust-tracker-deployer status <env>      # Future - Check environment status
+torrust-tracker-deployer test <env>        # Future - Run validation tests
 ```
 
 **Note**: The `deploy` command will internally orchestrate the complete deployment workflow: provision → configure → release. Individual commands for these phases may be added later for advanced users.
@@ -33,15 +35,11 @@ torrust-tracker-deployer destroy <env>    # Destroy infrastructure (App layer ex
 
 Remove environment and clean up all resources.
 
-**Status**:
-
-- ✅ Application Layer: `DestroyCommand` implemented
-- ❌ CLI: Not yet implemented (see [issue #10](https://github.com/torrust/torrust-tracker-deployer/issues/10))
+**Status**: ✅ Fully Implemented
 
 **Use when**: Tearing down temporary or failed environments
 
 ```bash
-# Planned CLI usage (not yet available)
 torrust-tracker-deployer destroy my-environment
 ```
 
@@ -162,14 +160,10 @@ torrust-tracker-deployer test production
 ### Development/Testing Workflow
 
 ```bash
-# Quick setup for testing (once implemented)
-torrust-tracker-deployer create test-env
-torrust-tracker-deployer deploy test-env
-
-# Run tests...
-
-# Quick teardown (App layer exists, CLI coming)
+# Quick teardown (implemented)
 torrust-tracker-deployer destroy test-env
+
+# Note: create and deploy commands are not yet implemented
 ```
 
 ## Environment States
@@ -189,11 +183,13 @@ Created → Provisioned → Configured → Released → Running → Destroyed
 
 ## Common Options
 
-All commands (when implemented) will support these options:
+The destroy command supports these options:
 
 - `--help` - Display command help
 - `--log-output <OUTPUT>` - Logging destination (`file-only` or `file-and-stderr`)
-- `--log-format <FORMAT>` - Log format (`pretty`, `json`, or `compact`)
+- `--log-file-format <FORMAT>` - File log format (`pretty`, `json`, or `compact`)
+- `--log-stderr-format <FORMAT>` - Stderr log format (`pretty`, `json`, or `compact`)
+- `--log-dir <DIR>` - Log directory (default: `./data/logs`)
 
 ### Environment Variables
 
@@ -201,15 +197,14 @@ All commands (when implemented) will support these options:
 
 ## Getting Started
 
-Once the CLI is implemented, new users should:
+New users should:
 
 1. Start with the [`destroy` command documentation](commands/destroy.md) to understand the workflow
 2. Review the deployment states and standard workflow
-3. Consult individual command documentation as commands become available
+3. Consult individual command documentation as more commands become available
 
 ## Related Documentation
 
 - [Destroy Command](commands/destroy.md) - Detailed destroy command documentation
 - [Logging Guide](../logging.md) - Configure logging output
 - [E2E Testing](../../e2e-testing.md) - Testing infrastructure and commands
-- [Issue #10 - UI Layer Destroy Command](../../issues/10-epic-ui-layer-destroy-command.md) - CLI implementation plan
