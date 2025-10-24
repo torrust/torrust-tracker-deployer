@@ -160,10 +160,8 @@ torrust-tracker-deployer test production
 ### Development/Testing Workflow
 
 ```bash
-# Quick teardown (implemented)
+# Note: Only destroy command is currently implemented
 torrust-tracker-deployer destroy test-env
-
-# Note: create and deploy commands are not yet implemented
 ```
 
 ## Environment States

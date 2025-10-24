@@ -67,8 +67,7 @@ The destroy command removes:
 Remove a test environment after validation:
 
 ```bash
-# Note: provision and configure commands are not yet implemented
-# This example shows the destroy command only
+# Note: Only destroy command is currently implemented
 torrust-tracker-deployer destroy test-env
 ```
 
