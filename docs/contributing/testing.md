@@ -521,7 +521,7 @@ fn it_should_handle_partial_cleanup_failure() {
     let temp_dir = TempDir::new().unwrap();
     let data_dir = temp_dir.path().join("data/test");
     std::fs::create_dir_all(&data_dir).unwrap();
-    
+
     // Make directory read-only (simulates permission error)
     let metadata = std::fs::metadata(&data_dir).unwrap();
     let mut permissions = metadata.permissions();
@@ -581,4 +581,72 @@ When writing new tests:
 - Use test builders for command testing to simplify setup
 - Test commands at multiple levels: unit, integration, and E2E
 
+## 🔄 Pre-commit Integration Testing
+
+The project includes integration tests that validate all components of the pre-commit script to ensure they work correctly in any environment (including GitHub Copilot's environment).
+
+### How It Works
+
+**By default, `cargo test` runs expensive integration tests** that validate:
+
+- **Dependency check**: `cargo-machete` for unused dependencies
+- **Linting**: `cargo run --bin linter all` for code quality
+- **Documentation**: `cargo doc` for documentation builds
+- **E2E tests**: `cargo run --bin e2e-config-tests` and `cargo run --bin e2e-provision-and-destroy-tests` for end-to-end validation
+
+These tests ensure that when someone runs `./scripts/pre-commit.sh`, all the tools and dependencies are available and working.
+
+### Skipping Expensive Tests During Development
+
+If you need faster test cycles during development, you can skip the expensive integration tests:
+
+```bash
+# Skip expensive pre-commit integration tests
+SKIP_EXPENSIVE_TESTS=1 cargo test
+```
+
+**Default Behavior**: Expensive tests **run by default** when `SKIP_EXPENSIVE_TESTS` is not set. This ensures AI assistants like GitHub Copilot always validate pre-commit requirements.
+
+**When to skip**:
+
+- ✅ Rapid development cycles where you're running tests frequently
+- ✅ Working on isolated code that doesn't affect pre-commit tools
+- ✅ CI environments that run pre-commit checks separately
+
+**When NOT to skip**:
+
+- ❌ Before creating a PR (let the full tests run at least once)
+- ❌ When modifying anything that could affect linting, dependencies, or documentation
+- ❌ When testing in a new environment or after dependency changes
+
+### Why This Approach
+
+This integration testing strategy helps with:
+
+- **✅ Environment validation**: Catches missing tools or configuration issues early
+- **✅ Copilot compatibility**: Ensures GitHub Copilot's environment has all necessary dependencies
+- **✅ Fast feedback**: Developers see pre-commit issues during normal test cycles
+- **✅ Flexible development**: Can be disabled when needed for faster iteration
+
+### Running Tests
+
+```bash
+# Default: Run all tests including expensive pre-commit validation
+cargo test
+
+# Fast development: Skip expensive tests
+SKIP_EXPENSIVE_TESTS=1 cargo test
+
+# Explicitly run only AI precommit enforcement tests
+cargo test ai_precommit_enforcement
+```
+
 This makes the test suite more readable, maintainable, and reliable for all contributors.
+
+## 🤖 AI Assistant Integration
+
+The project includes a dedicated test file `tests/ai_precommit_enforcement.rs` that ensures AI assistants (like GitHub Copilot) run all necessary pre-commit checks before committing code.
+
+### Purpose
+
+AI assistants often work in remote environments where they don't have access to local Git hooks or pre-commit scripts. These integration tests force the AI to validate all quality checks during the normal test execution.
