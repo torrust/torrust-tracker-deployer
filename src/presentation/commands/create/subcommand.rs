@@ -64,10 +64,7 @@ use super::errors::CreateSubcommandError;
 /// }
 /// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle(
-    env_file: &Path,
-    working_dir: &Path,
-) -> Result<(), CreateSubcommandError> {
+pub fn handle(env_file: &Path, working_dir: &Path) -> Result<(), CreateSubcommandError> {
     // Create user output with default stdout/stderr channels
     let mut output = UserOutput::new(VerbosityLevel::Normal);
 
@@ -79,9 +76,8 @@ pub fn handle(
 
     // Step 1: Load and parse configuration file using Figment
     let loader = ConfigLoader;
-    let config: EnvironmentCreationConfig = loader.load_from_file(env_file).map_err(|err| {
+    let config: EnvironmentCreationConfig = loader.load_from_file(env_file).inspect_err(|err| {
         output.error(&err.to_string());
-        err
     })?;
 
     output.progress(&format!(
@@ -103,13 +99,12 @@ pub fn handle(
     output.progress("Validating configuration and creating environment...");
 
     // Step 5: Execute create command
-    let environment = command_handler
-        .execute(config.clone())
-        .map_err(|err| {
-            let error = CreateSubcommandError::CommandFailed(err);
-            output.error(&error.to_string());
-            error
-        })?;
+    #[allow(clippy::manual_inspect)]
+    let environment = command_handler.execute(config.clone()).map_err(|err| {
+        let error = CreateSubcommandError::CommandFailed(err);
+        output.error(&error.to_string());
+        error
+    })?;
 
     // Step 6: Display success message
     output.success(&format!(
@@ -121,7 +116,10 @@ pub fn handle(
         "Instance name: {}",
         environment.instance_name().as_str()
     ));
-    output.result(&format!("Data directory: {}", environment.data_dir().display()));
+    output.result(&format!(
+        "Data directory: {}",
+        environment.data_dir().display()
+    ));
     output.result(&format!(
         "Build directory: {}",
         environment.build_dir().display()
@@ -185,7 +183,7 @@ mod tests {
             CreateSubcommandError::ConfigFileNotFound { path } => {
                 assert_eq!(path, config_path);
             }
-            other => panic!("Expected ConfigFileNotFound, got: {:?}", other),
+            other => panic!("Expected ConfigFileNotFound, got: {other:?}"),
         }
     }
 
@@ -205,7 +203,7 @@ mod tests {
             CreateSubcommandError::ConfigParsingFailed { .. } => {
                 // Expected
             }
-            other => panic!("Expected ConfigParsingFailed, got: {:?}", other),
+            other => panic!("Expected ConfigParsingFailed, got: {other:?}"),
         }
     }
 
@@ -239,7 +237,7 @@ mod tests {
             CreateSubcommandError::CommandFailed(_) => {
                 // Expected - environment already exists
             }
-            other => panic!("Expected CommandFailed, got: {:?}", other),
+            other => panic!("Expected CommandFailed, got: {other:?}"),
         }
     }
 

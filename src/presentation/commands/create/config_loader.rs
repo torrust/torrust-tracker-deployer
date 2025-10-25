@@ -206,7 +206,7 @@ mod tests {
             CreateSubcommandError::ConfigValidationFailed(_) => {
                 // Expected - validation should catch invalid environment name
             }
-            other => panic!("Expected ConfigValidationFailed, got: {:?}", other),
+            other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
         }
     }
 
@@ -235,7 +235,7 @@ mod tests {
             CreateSubcommandError::ConfigValidationFailed(_) => {
                 // Expected - validation should catch missing SSH keys
             }
-            other => panic!("Expected ConfigValidationFailed, got: {:?}", other),
+            other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
         }
     }
 

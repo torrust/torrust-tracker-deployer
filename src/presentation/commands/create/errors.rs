@@ -216,10 +216,7 @@ mod tests {
             CreateSubcommandError::ConfigParsingFailed {
                 path: PathBuf::from("test.json"),
                 format: ConfigFormat::Json,
-                source: Box::new(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "test",
-                )),
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "test")),
             },
             CreateSubcommandError::ConfigValidationFailed(
                 CreateConfigError::InvalidEnvironmentName(EnvironmentNameError::InvalidFormat {

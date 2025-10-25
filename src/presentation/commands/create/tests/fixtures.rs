@@ -20,14 +20,13 @@ pub fn create_valid_config(path: &Path, env_name: &str) -> PathBuf {
     let config_json = format!(
         r#"{{
     "environment": {{
-        "name": "{}"
+        "name": "{env_name}"
     }},
     "ssh_credentials": {{
         "private_key_path": "fixtures/testing_rsa",
         "public_key_path": "fixtures/testing_rsa.pub"
     }}
-}}"#,
-        env_name
+}}"#
     );
 
     let config_path = path.join("config.json");

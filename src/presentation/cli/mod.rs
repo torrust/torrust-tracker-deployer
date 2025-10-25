@@ -47,7 +47,7 @@ mod tests {
             Commands::Destroy { environment } => {
                 assert_eq!(environment, "test-env");
             }
-            _ => panic!("Expected Destroy command"),
+            Commands::Create { .. } => panic!("Expected Destroy command"),
         }
     }
 
@@ -63,7 +63,7 @@ mod tests {
                 Commands::Destroy { environment } => {
                     assert_eq!(environment, env_name);
                 }
-                _ => panic!("Expected Destroy command"),
+                Commands::Create { .. } => panic!("Expected Destroy command"),
             }
         }
     }
@@ -104,7 +104,7 @@ mod tests {
             Commands::Destroy { environment } => {
                 assert_eq!(environment, "test-env");
             }
-            _ => panic!("Expected Destroy command"),
+            Commands::Create { .. } => panic!("Expected Destroy command"),
         }
 
         // Log options are set but we don't compare them as they don't implement PartialEq
@@ -182,7 +182,7 @@ mod tests {
             Commands::Create { env_file } => {
                 assert_eq!(env_file, std::path::PathBuf::from("config.json"));
             }
-            _ => panic!("Expected Create command"),
+            Commands::Destroy { .. } => panic!("Expected Create command"),
         }
     }
 
@@ -195,7 +195,7 @@ mod tests {
             Commands::Create { env_file } => {
                 assert_eq!(env_file, std::path::PathBuf::from("env.json"));
             }
-            _ => panic!("Expected Create command"),
+            Commands::Destroy { .. } => panic!("Expected Create command"),
         }
     }
 
@@ -234,7 +234,7 @@ mod tests {
             Commands::Create { env_file } => {
                 assert_eq!(env_file, std::path::PathBuf::from("config.json"));
             }
-            _ => panic!("Expected Create command"),
+            Commands::Destroy { .. } => panic!("Expected Create command"),
         }
     }
 

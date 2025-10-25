@@ -24,7 +24,9 @@ fn it_should_create_environment_from_valid_config() {
 
     // Verify environment state file was created by repository
     // Repository creates: <base_dir>/{env-name}/environment.json
-    let env_state_file = temp_dir.path().join("integration-test-env/environment.json");
+    let env_state_file = temp_dir
+        .path()
+        .join("integration-test-env/environment.json");
     assert!(
         env_state_file.exists(),
         "Environment state file should be created at: {}",
@@ -44,7 +46,7 @@ fn it_should_reject_nonexistent_config_file() {
         create::CreateSubcommandError::ConfigFileNotFound { path } => {
             assert_eq!(path, nonexistent_path);
         }
-        other => panic!("Expected ConfigFileNotFound, got: {:?}", other),
+        other => panic!("Expected ConfigFileNotFound, got: {other:?}"),
     }
 }
 
@@ -60,7 +62,7 @@ fn it_should_reject_invalid_json() {
         create::CreateSubcommandError::ConfigParsingFailed { path, .. } => {
             assert_eq!(path, config_path);
         }
-        other => panic!("Expected ConfigParsingFailed, got: {:?}", other),
+        other => panic!("Expected ConfigParsingFailed, got: {other:?}"),
     }
 }
 
@@ -76,7 +78,7 @@ fn it_should_reject_invalid_environment_name() {
         create::CreateSubcommandError::ConfigValidationFailed(_) => {
             // Expected
         }
-        other => panic!("Expected ConfigValidationFailed, got: {:?}", other),
+        other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
     }
 }
 
@@ -92,7 +94,7 @@ fn it_should_reject_missing_ssh_keys() {
         create::CreateSubcommandError::ConfigValidationFailed(_) => {
             // Expected
         }
-        other => panic!("Expected ConfigValidationFailed, got: {:?}", other),
+        other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
     }
 }
 
@@ -113,7 +115,7 @@ fn it_should_reject_duplicate_environment() {
         create::CreateSubcommandError::CommandFailed(_) => {
             // Expected - environment already exists
         }
-        other => panic!("Expected CommandFailed, got: {:?}", other),
+        other => panic!("Expected CommandFailed, got: {other:?}"),
     }
 }
 
