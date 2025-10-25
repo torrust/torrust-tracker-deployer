@@ -5,6 +5,7 @@
 //!
 //! ## Components
 //!
+//! - `config` - Configuration value objects and validation for environment creation
 //! - `environment` - Environment module with entity, name validation, and state management
 //!   - `environment::name` - Environment name validation and management
 //!   - `environment::state` - State marker types and type erasure for environment state machine
@@ -12,6 +13,7 @@
 //! - `profile_name` - LXD profile name validation and management
 //! - `template` - Core template domain models and business logic
 
+pub mod config;
 pub mod environment;
 pub mod instance_name;
 pub mod profile_name;
