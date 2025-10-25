@@ -8,6 +8,7 @@ use crate::presentation::cli::Commands;
 use crate::presentation::errors::CommandError;
 
 // Re-export command modules
+pub mod create;
 pub mod destroy;
 
 // Future command modules will be added here:
@@ -49,8 +50,12 @@ pub mod destroy;
 ///     }
 /// }
 /// ```
-pub fn execute(command: Commands) -> Result<(), CommandError> {
+pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), CommandError> {
     match command {
+        Commands::Create { env_file } => {
+            create::handle(&env_file, working_dir)?;
+            Ok(())
+        }
         Commands::Destroy { environment } => {
             destroy::handle(&environment)?;
             Ok(())

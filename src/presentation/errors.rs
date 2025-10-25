@@ -19,6 +19,7 @@
 
 use thiserror::Error;
 
+use crate::presentation::commands::create::CreateSubcommandError;
 use crate::presentation::commands::destroy::DestroyError;
 
 /// Errors that can occur during CLI command execution
@@ -28,12 +29,25 @@ use crate::presentation::commands::destroy::DestroyError;
 /// types, source preservation, and tiered help system support.
 #[derive(Debug, Error)]
 pub enum CommandError {
+    /// Create command specific errors
+    ///
+    /// Encapsulates all errors that can occur during environment creation.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Create command failed: {0}")]
+    Create(Box<CreateSubcommandError>),
+
     /// Destroy command specific errors
     ///
     /// Encapsulates all errors that can occur during environment destruction.
     /// Use `.help()` for detailed troubleshooting steps.
     #[error("Destroy command failed: {0}")]
     Destroy(Box<DestroyError>),
+}
+
+impl From<CreateSubcommandError> for CommandError {
+    fn from(error: CreateSubcommandError) -> Self {
+        Self::Create(Box::new(error))
+    }
 }
 
 impl From<DestroyError> for CommandError {
@@ -78,6 +92,7 @@ impl CommandError {
     #[must_use]
     pub fn help(&self) -> &'static str {
         match self {
+            Self::Create(e) => e.help(),
             Self::Destroy(e) => e.help(),
         }
     }
