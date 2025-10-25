@@ -67,6 +67,12 @@
 
 ## Acceptance Criteria
 
+**Quality Checks**:
+
+- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+
+**Task-Specific Criteria**:
+
 - [ ] Criterion 1
 - [ ] Criterion 2
 - [ ] Criterion 3

@@ -70,7 +70,7 @@ Use the template at [`docs/issues/SPECIFICATION-TEMPLATE.md`](../issues/SPECIFIC
 - **Be Actionable**: Break work into small, trackable tasks with checkboxes
 - **Provide Context**: Link to related documentation, ADRs, and examples
 - **Estimate Time**: Help others understand scope
-- **Define Success**: Clear acceptance criteria
+- **Define Success**: Clear acceptance criteria (see [Common Acceptance Criteria](#common-acceptance-criteria) below)
 - **Specify Architecture**: Include DDD layer, module path, and architectural constraints (see template guidance below)
 
 #### Architectural Requirements
@@ -83,6 +83,33 @@ When creating issues that involve code changes, always specify:
 - **Related Documentation**: Link to [docs/codebase-architecture.md](../docs/codebase-architecture.md) and other relevant architectural guidance
 
 This ensures AI assistants and contributors understand not just **what** to implement, but **where** and **how** to implement it within the project's architectural patterns.
+
+#### Common Acceptance Criteria
+
+Every issue should include these standard acceptance criteria in addition to task-specific criteria:
+
+**Quality Checks** (applies to every commit and PR):
+
+```markdown
+- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+```
+
+This verification ensures:
+
+- ✅ No unused dependencies (`cargo machete`)
+- ✅ All linters pass (markdown, yaml, toml, clippy, rustfmt, shellcheck)
+- ✅ All unit tests pass (`cargo test`)
+- ✅ Documentation builds successfully (`cargo doc`)
+- ✅ All E2E tests pass (config, provision, full suite)
+
+**Why Include This?**
+
+- **Reminder**: Makes quality requirements explicit and visible
+- **AI Assistants**: Ensures automated tools run all checks before submitting work
+- **Consistency**: Every contributor knows the baseline quality standards
+- **Early Detection**: Catches issues before PR review
+
+The pre-commit script is the single source of truth for all quality checks. By including it in acceptance criteria, we make it clear that passing these checks is **required**, not optional.
 
 ### Step 2: Create GitHub Epic Issue (if needed)
 
