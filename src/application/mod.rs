@@ -6,10 +6,12 @@
 //!
 //! ## Components
 //!
+//! - `commands` - Delivery-agnostic commands implementing the Command pattern
 //! - `command_handlers` - High-level deployment command handlers implementing the Command Handler pattern
 //! - `steps` - Workflow orchestration and business process coordination
 
 pub mod command_handlers;
+pub mod commands;
 pub mod steps;
 
 // Re-export command handler types for convenience
