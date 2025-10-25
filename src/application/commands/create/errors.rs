@@ -45,8 +45,8 @@ impl CreateCommandError {
     /// };
     ///
     /// let help = error.help();
-    /// assert!(help.contains("already exists"));
-    /// assert!(help.contains("different name"));
+    /// assert!(help.contains("Already Exists"));
+    /// assert!(help.contains("Choose a different"));
     /// ```
     #[must_use]
     pub fn help(&self) -> &'static str {
