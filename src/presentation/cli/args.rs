@@ -95,6 +95,7 @@ impl GlobalArgs {
     ///     log_stderr_format: LogFormat::Pretty,
     ///     log_output: LogOutput::FileAndStderr,
     ///     log_dir: PathBuf::from("/tmp/logs"),
+    ///     working_dir: PathBuf::from("."),
     /// };
     /// let config = args.logging_config();
     /// // config will have specified log formats and directory

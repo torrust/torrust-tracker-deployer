@@ -40,10 +40,12 @@ pub mod destroy;
 /// ```rust
 /// use clap::Parser;
 /// use torrust_tracker_deployer_lib::presentation::{cli, commands};
+/// use std::path::Path;
 ///
 /// let cli = cli::Cli::parse();
 /// if let Some(command) = cli.command {
-///     let result = commands::execute(command);
+///     let working_dir = Path::new(".");
+///     let result = commands::execute(command, working_dir);
 ///     match result {
 ///         Ok(_) => println!("Command executed successfully"),
 ///         Err(e) => commands::handle_error(&e),
