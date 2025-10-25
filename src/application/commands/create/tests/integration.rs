@@ -5,7 +5,9 @@
 
 use tempfile::TempDir;
 
-use crate::application::commands::create::tests::{create_valid_test_config, CreateCommandTestBuilder};
+use crate::application::commands::create::tests::{
+    create_valid_test_config, CreateCommandTestBuilder,
+};
 use crate::application::commands::create::CreateCommandError;
 use crate::domain::environment::EnvironmentName;
 
@@ -103,15 +105,14 @@ fn it_should_persist_environment_state_to_repository() {
         .expect("Environment should exist in repository");
 
     // Verify loaded environment matches created one
-    assert_eq!(
-        loaded.name().as_str(),
-        created_environment.name().as_str()
-    );
+    assert_eq!(loaded.name().as_str(), created_environment.name().as_str());
 }
 
 #[test]
 fn it_should_fail_with_invalid_environment_name() {
-    use crate::domain::config::{EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig};
+    use crate::domain::config::{
+        EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
+    };
     use std::fs;
 
     // Arrange
@@ -153,7 +154,9 @@ fn it_should_fail_with_invalid_environment_name() {
 
 #[test]
 fn it_should_fail_when_ssh_private_key_not_found() {
-    use crate::domain::config::{EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig};
+    use crate::domain::config::{
+        EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
+    };
 
     // Arrange
     let (command, temp_dir) = CreateCommandTestBuilder::new().build();
@@ -165,7 +168,11 @@ fn it_should_fail_when_ssh_private_key_not_found() {
         },
         SshCredentialsConfig::new(
             "/nonexistent/private_key".to_string(),
-            temp_dir.path().join("id_rsa.pub").to_string_lossy().to_string(),
+            temp_dir
+                .path()
+                .join("id_rsa.pub")
+                .to_string_lossy()
+                .to_string(),
             "torrust".to_string(),
             22,
         ),

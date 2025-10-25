@@ -130,13 +130,12 @@ mod tests {
     fn it_should_provide_help_for_invalid_configuration() {
         use crate::domain::EnvironmentNameError;
 
-        let config_error = CreateConfigError::InvalidEnvironmentName(
-            EnvironmentNameError::InvalidFormat {
+        let config_error =
+            CreateConfigError::InvalidEnvironmentName(EnvironmentNameError::InvalidFormat {
                 attempted_name: "Invalid_Name".to_string(),
                 reason: "contains invalid characters".to_string(),
                 valid_examples: vec!["dev".to_string(), "staging".to_string()],
-            },
-        );
+            });
         let error = CreateCommandError::InvalidConfiguration(config_error);
 
         let help = error.help();

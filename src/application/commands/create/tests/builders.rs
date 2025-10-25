@@ -236,10 +236,7 @@ impl Default for CreateCommandTestBuilder {
 /// let config = create_valid_test_config(&temp_dir, "test-environment");
 /// ```
 #[must_use]
-pub fn create_valid_test_config(
-    temp_dir: &TempDir,
-    env_name: &str,
-) -> EnvironmentCreationConfig {
+pub fn create_valid_test_config(temp_dir: &TempDir, env_name: &str) -> EnvironmentCreationConfig {
     use std::fs;
 
     // Create temporary SSH key files
@@ -297,10 +294,7 @@ mod tests {
         let prod_name = EnvironmentName::new("production").unwrap();
         let staging_name = EnvironmentName::new("staging").unwrap();
 
-        assert!(command
-            .environment_repository
-            .exists(&prod_name)
-            .unwrap());
+        assert!(command.environment_repository.exists(&prod_name).unwrap());
         assert!(command
             .environment_repository
             .exists(&staging_name)
