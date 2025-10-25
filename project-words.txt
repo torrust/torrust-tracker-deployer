@@ -61,6 +61,7 @@ keepalive
 keygen
 keyrings
 larstobi
+lineinfile
 logfile
 logicaldisk
 loglevel
@@ -69,6 +70,7 @@ MAAACBA
 maxbytes
 mgmt
 millis
+mockall
 mocksecret
 mtorrust
 multiprocess
@@ -113,6 +115,7 @@ rgba
 rootpass
 rpcinterface
 rstest
+runbooks
 runcmd
 rustc
 Rustdoc
@@ -133,6 +136,8 @@ sqlx
 sshpass
 startretries
 stringly
+Subissue
+subissues
 subshell
 substates
 supervisorctl
@@ -179,6 +184,3 @@ writeln
 ключ
 конфиг
 файл
-lineinfile
-mockall
-runbooks
