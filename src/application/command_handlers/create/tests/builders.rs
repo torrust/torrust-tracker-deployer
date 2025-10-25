@@ -1,7 +1,7 @@
 //! Test builders for Create Command
 //!
 //! This module provides test builders that simplify test setup by managing
-//! dependencies and lifecycle for `CreateCommand` tests.
+//! dependencies and lifecycle for `CreateCommandHandler` tests.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -9,14 +9,14 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use tempfile::TempDir;
 
-use crate::application::commands::create::CreateCommand;
+use crate::application::command_handlers::create::CreateCommandHandler;
 use crate::domain::config::{EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig};
 use crate::domain::environment::{Environment, EnvironmentName};
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
 use crate::testing::MockClock;
 
-/// Test builder for `CreateCommand` with sensible defaults and customization options
+/// Test builder for `CreateCommandHandler` with sensible defaults and customization options
 ///
 /// This builder simplifies test setup by:
 /// - Managing `TempDir` lifecycle
@@ -27,24 +27,24 @@ use crate::testing::MockClock;
 /// # Examples
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deployer_lib::application::commands::create::tests::CreateCommandTestBuilder;
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::tests::CreateCommandHandlerTestBuilder;
 ///
 /// // Simple command with defaults
-/// let (command, _temp_dir) = CreateCommandTestBuilder::new().build();
+/// let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new().build();
 ///
 /// // Command with fixed time for deterministic testing
 /// use chrono::{TimeZone, Utc};
 /// let fixed_time = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
-/// let (command, _temp_dir) = CreateCommandTestBuilder::new()
+/// let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new()
 ///     .with_fixed_time(fixed_time)
 ///     .build();
 ///
 /// // Command with existing environment to test conflict detection
-/// let (command, _temp_dir) = CreateCommandTestBuilder::new()
+/// let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new()
 ///     .with_existing_environment("production")
 ///     .build();
 /// ```
-pub struct CreateCommandTestBuilder {
+pub struct CreateCommandHandlerTestBuilder {
     /// Optional base directory for environment storage
     base_directory: Option<std::path::PathBuf>,
 
@@ -55,15 +55,15 @@ pub struct CreateCommandTestBuilder {
     existing_environments: Vec<String>,
 }
 
-impl CreateCommandTestBuilder {
+impl CreateCommandHandlerTestBuilder {
     /// Create a new test builder with default settings
     ///
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::application::commands::create::tests::CreateCommandTestBuilder;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::tests::CreateCommandHandlerTestBuilder;
     ///
-    /// let builder = CreateCommandTestBuilder::new();
+    /// let builder = CreateCommandHandlerTestBuilder::new();
     /// ```
     #[must_use]
     pub fn new() -> Self {
@@ -82,11 +82,11 @@ impl CreateCommandTestBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::application::commands::create::tests::CreateCommandTestBuilder;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::tests::CreateCommandHandlerTestBuilder;
     /// use tempfile::TempDir;
     ///
     /// let temp_dir = TempDir::new().unwrap();
-    /// let (command, _temp_dir) = CreateCommandTestBuilder::new()
+    /// let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new()
     ///     .with_base_directory(temp_dir.path())
     ///     .build();
     /// ```
@@ -104,11 +104,11 @@ impl CreateCommandTestBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::application::commands::create::tests::CreateCommandTestBuilder;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::tests::CreateCommandHandlerTestBuilder;
     /// use chrono::{TimeZone, Utc};
     ///
     /// let fixed_time = Utc.with_ymd_and_hms(2025, 1, 1, 12, 0, 0).unwrap();
-    /// let (command, _temp_dir) = CreateCommandTestBuilder::new()
+    /// let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new()
     ///     .with_fixed_time(fixed_time)
     ///     .build();
     /// ```
@@ -126,9 +126,9 @@ impl CreateCommandTestBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::application::commands::create::tests::CreateCommandTestBuilder;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::tests::CreateCommandHandlerTestBuilder;
     ///
-    /// let (command, _temp_dir) = CreateCommandTestBuilder::new()
+    /// let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new()
     ///     .with_existing_environment("production")
     ///     .with_existing_environment("staging")
     ///     .build();
@@ -139,21 +139,21 @@ impl CreateCommandTestBuilder {
         self
     }
 
-    /// Build the `CreateCommand` with configured dependencies
+    /// Build the `CreateCommandHandler` with configured dependencies
     ///
-    /// Returns a tuple of (`CreateCommand`, `TempDir`). The `TempDir` must be
+    /// Returns a tuple of (`CreateCommandHandler`, `TempDir`). The `TempDir` must be
     /// kept alive for the duration of the test to prevent cleanup.
     ///
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::application::commands::create::tests::CreateCommandTestBuilder;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::tests::CreateCommandHandlerTestBuilder;
     ///
-    /// let (command, _temp_dir) = CreateCommandTestBuilder::new().build();
+    /// let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new().build();
     /// // Use command for testing
     /// ```
     #[must_use]
-    pub fn build(self) -> (CreateCommand, TempDir) {
+    pub fn build(self) -> (CreateCommandHandler, TempDir) {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let base_dir = self
             .base_directory
@@ -173,7 +173,7 @@ impl CreateCommandTestBuilder {
             self.create_existing_environment(&repository, env_name, &base_dir);
         }
 
-        let command = CreateCommand::new(repository, clock);
+        let command = CreateCommandHandler::new(repository, clock);
 
         (command, temp_dir)
     }
@@ -210,7 +210,7 @@ impl CreateCommandTestBuilder {
     }
 }
 
-impl Default for CreateCommandTestBuilder {
+impl Default for CreateCommandHandlerTestBuilder {
     fn default() -> Self {
         Self::new()
     }
@@ -229,7 +229,7 @@ impl Default for CreateCommandTestBuilder {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deployer_lib::application::commands::create::tests::create_valid_test_config;
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::tests::create_valid_test_config;
 /// use tempfile::TempDir;
 ///
 /// let temp_dir = TempDir::new().unwrap();
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn it_should_build_command_with_defaults() {
-        let (command, _temp_dir) = CreateCommandTestBuilder::new().build();
+        let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new().build();
 
         // Verify command is created (basic smoke test)
         assert_eq!(Arc::strong_count(&command.environment_repository), 1);
@@ -275,7 +275,7 @@ mod tests {
         use chrono::TimeZone;
 
         let fixed_time = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
-        let (command, _temp_dir) = CreateCommandTestBuilder::new()
+        let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new()
             .with_fixed_time(fixed_time)
             .build();
 
@@ -285,7 +285,7 @@ mod tests {
 
     #[test]
     fn it_should_build_command_with_existing_environments() {
-        let (command, _temp_dir) = CreateCommandTestBuilder::new()
+        let (command, _temp_dir) = CreateCommandHandlerTestBuilder::new()
             .with_existing_environment("production")
             .with_existing_environment("staging")
             .build();

@@ -1,12 +1,12 @@
 //! Create Command Module
 //!
-//! This module implements the delivery-agnostic `CreateCommand` for orchestrating
+//! This module implements the delivery-agnostic `CreateCommandHandler` for orchestrating
 //! environment creation business logic. The command is synchronous and follows
 //! existing patterns from `ProvisionCommandHandler`.
 //!
 //! ## Architecture
 //!
-//! The `CreateCommand` implements the Command Pattern and uses Dependency Injection
+//! The `CreateCommandHandler` implements the Command Pattern and uses Dependency Injection
 //! to interact with infrastructure services through interfaces:
 //!
 //! - **Repository Pattern**: Persists environment state via `EnvironmentRepository`
@@ -24,7 +24,7 @@
 //!
 //! ```rust,no_run
 //! use std::sync::Arc;
-//! use torrust_tracker_deployer_lib::application::commands::create::CreateCommand;
+//! use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
 //! use torrust_tracker_deployer_lib::domain::config::{
 //!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
 //! };
@@ -37,7 +37,7 @@
 //! let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 //!
 //! // Create command
-//! let command = CreateCommand::new(repository, clock);
+//! let command = CreateCommandHandler::new(repository, clock);
 //!
 //! // Prepare configuration
 //! let config = EnvironmentCreationConfig::new(
@@ -64,12 +64,12 @@
 //! }
 //! ```
 
-pub mod command;
 pub mod errors;
+pub mod handler;
 
 #[cfg(test)]
 mod tests;
 
 // Re-export main types for convenience
-pub use command::CreateCommand;
-pub use errors::CreateCommandError;
+pub use errors::CreateCommandHandlerError;
+pub use handler::CreateCommandHandler;

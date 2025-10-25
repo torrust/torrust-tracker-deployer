@@ -1,20 +1,20 @@
 //! Integration tests for Create Command
 //!
-//! These tests verify the complete behavior of `CreateCommand` including
+//! These tests verify the complete behavior of `CreateCommandHandler` including
 //! interaction with the repository and proper error handling.
 
 use tempfile::TempDir;
 
-use crate::application::commands::create::tests::{
-    create_valid_test_config, CreateCommandTestBuilder,
+use crate::application::command_handlers::create::tests::{
+    create_valid_test_config, CreateCommandHandlerTestBuilder,
 };
-use crate::application::commands::create::CreateCommandError;
+use crate::application::command_handlers::create::CreateCommandHandlerError;
 use crate::domain::environment::EnvironmentName;
 
 #[test]
 fn it_should_create_environment_with_valid_configuration() {
     // Arrange
-    let (command, temp_dir) = CreateCommandTestBuilder::new().build();
+    let (command, temp_dir) = CreateCommandHandlerTestBuilder::new().build();
     let config = create_valid_test_config(&temp_dir, "test-environment");
 
     // Act
@@ -29,7 +29,7 @@ fn it_should_create_environment_with_valid_configuration() {
 #[test]
 fn it_should_fail_when_environment_already_exists() {
     // Arrange
-    let (command, temp_dir) = CreateCommandTestBuilder::new()
+    let (command, temp_dir) = CreateCommandHandlerTestBuilder::new()
         .with_existing_environment("test-environment")
         .build();
 
@@ -41,7 +41,7 @@ fn it_should_fail_when_environment_already_exists() {
     // Assert
     assert!(result.is_err(), "Expected error for duplicate environment");
     match result.unwrap_err() {
-        CreateCommandError::EnvironmentAlreadyExists { name } => {
+        CreateCommandHandlerError::EnvironmentAlreadyExists { name } => {
             assert_eq!(name, "test-environment");
         }
         other => panic!("Expected EnvironmentAlreadyExists error, got: {other:?}"),
@@ -52,7 +52,7 @@ fn it_should_fail_when_environment_already_exists() {
 fn it_should_verify_repository_handles_directory_creation() {
     // Arrange
     let temp_dir = TempDir::new().unwrap();
-    let (command, builder_temp_dir) = CreateCommandTestBuilder::new()
+    let (command, builder_temp_dir) = CreateCommandHandlerTestBuilder::new()
         .with_base_directory(temp_dir.path())
         .build();
 
@@ -86,7 +86,7 @@ fn it_should_verify_repository_handles_directory_creation() {
 #[test]
 fn it_should_persist_environment_state_to_repository() {
     // Arrange
-    let (command, temp_dir) = CreateCommandTestBuilder::new().build();
+    let (command, temp_dir) = CreateCommandHandlerTestBuilder::new().build();
     let config = create_valid_test_config(&temp_dir, "persistent-env");
 
     // Act
@@ -116,7 +116,7 @@ fn it_should_fail_with_invalid_environment_name() {
     use std::fs;
 
     // Arrange
-    let (command, temp_dir) = CreateCommandTestBuilder::new().build();
+    let (command, temp_dir) = CreateCommandHandlerTestBuilder::new().build();
 
     // Create config with invalid environment name (uppercase not allowed)
     let private_key = temp_dir.path().join("id_rsa");
@@ -145,7 +145,7 @@ fn it_should_fail_with_invalid_environment_name() {
         "Expected error for invalid environment name"
     );
     match result.unwrap_err() {
-        CreateCommandError::InvalidConfiguration(_) => {
+        CreateCommandHandlerError::InvalidConfiguration(_) => {
             // Expected error type
         }
         other => panic!("Expected InvalidConfiguration error, got: {other:?}"),
@@ -159,7 +159,7 @@ fn it_should_fail_when_ssh_private_key_not_found() {
     };
 
     // Arrange
-    let (command, temp_dir) = CreateCommandTestBuilder::new().build();
+    let (command, temp_dir) = CreateCommandHandlerTestBuilder::new().build();
 
     // Create config with non-existent SSH key files
     let config = EnvironmentCreationConfig::new(
@@ -187,7 +187,7 @@ fn it_should_fail_when_ssh_private_key_not_found() {
         "Expected error for non-existent SSH private key"
     );
     match result.unwrap_err() {
-        CreateCommandError::InvalidConfiguration(_) => {
+        CreateCommandHandlerError::InvalidConfiguration(_) => {
             // Expected error type
         }
         other => panic!("Expected InvalidConfiguration error, got: {other:?}"),
@@ -197,7 +197,7 @@ fn it_should_fail_when_ssh_private_key_not_found() {
 #[test]
 fn it_should_provide_helpful_error_messages() {
     // Arrange
-    let (command, temp_dir) = CreateCommandTestBuilder::new()
+    let (command, temp_dir) = CreateCommandHandlerTestBuilder::new()
         .with_existing_environment("existing-env")
         .build();
 
@@ -222,7 +222,7 @@ fn it_should_provide_helpful_error_messages() {
 #[test]
 fn it_should_create_multiple_different_environments() {
     // Arrange
-    let (command, temp_dir) = CreateCommandTestBuilder::new().build();
+    let (command, temp_dir) = CreateCommandHandlerTestBuilder::new().build();
 
     // Act: Create first environment
     let config1 = create_valid_test_config(&temp_dir, "environment-1");
@@ -248,7 +248,7 @@ fn it_should_use_deterministic_timestamps_with_mock_clock() {
 
     // Arrange
     let fixed_time = chrono::Utc.with_ymd_and_hms(2025, 1, 1, 12, 0, 0).unwrap();
-    let (command, temp_dir) = CreateCommandTestBuilder::new()
+    let (command, temp_dir) = CreateCommandHandlerTestBuilder::new()
         .with_fixed_time(fixed_time)
         .build();
 

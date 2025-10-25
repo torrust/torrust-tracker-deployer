@@ -14,7 +14,7 @@ use crate::domain::environment::repository::RepositoryError;
 /// These errors represent failures in the business logic orchestration
 /// and provide structured context for troubleshooting and user feedback.
 #[derive(Debug, Error)]
-pub enum CreateCommandError {
+pub enum CreateCommandHandlerError {
     /// Configuration validation failed
     #[error("Configuration validation failed")]
     InvalidConfiguration(#[source] CreateConfigError),
@@ -28,7 +28,7 @@ pub enum CreateCommandError {
     RepositoryError(#[source] RepositoryError),
 }
 
-impl CreateCommandError {
+impl CreateCommandHandlerError {
     /// Provides detailed troubleshooting guidance for this error
     ///
     /// Returns context-specific help text that guides users toward resolving
@@ -38,9 +38,9 @@ impl CreateCommandError {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::application::commands::create::CreateCommandError;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandlerError;
     ///
-    /// let error = CreateCommandError::EnvironmentAlreadyExists {
+    /// let error = CreateCommandHandlerError::EnvironmentAlreadyExists {
     ///     name: "production".to_string(),
     /// };
     ///
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_environment_already_exists() {
-        let error = CreateCommandError::EnvironmentAlreadyExists {
+        let error = CreateCommandHandlerError::EnvironmentAlreadyExists {
             name: "test-env".to_string(),
         };
 
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn it_should_display_environment_name_in_error() {
-        let error = CreateCommandError::EnvironmentAlreadyExists {
+        let error = CreateCommandHandlerError::EnvironmentAlreadyExists {
             name: "production".to_string(),
         };
 
@@ -136,7 +136,7 @@ mod tests {
                 reason: "contains invalid characters".to_string(),
                 valid_examples: vec!["dev".to_string(), "staging".to_string()],
             });
-        let error = CreateCommandError::InvalidConfiguration(config_error);
+        let error = CreateCommandHandlerError::InvalidConfiguration(config_error);
 
         let help = error.help();
         assert!(help.contains("Configuration"));
@@ -147,7 +147,7 @@ mod tests {
     #[test]
     fn it_should_provide_help_for_repository_error() {
         let repo_error = RepositoryError::NotFound;
-        let error = CreateCommandError::RepositoryError(repo_error);
+        let error = CreateCommandHandlerError::RepositoryError(repo_error);
 
         let help = error.help();
         assert!(help.contains("Repository"));
@@ -160,17 +160,17 @@ mod tests {
         use crate::domain::EnvironmentNameError;
 
         let errors = vec![
-            CreateCommandError::InvalidConfiguration(CreateConfigError::InvalidEnvironmentName(
-                EnvironmentNameError::InvalidFormat {
+            CreateCommandHandlerError::InvalidConfiguration(
+                CreateConfigError::InvalidEnvironmentName(EnvironmentNameError::InvalidFormat {
                     attempted_name: "test".to_string(),
                     reason: "invalid".to_string(),
                     valid_examples: vec!["dev".to_string()],
-                },
-            )),
-            CreateCommandError::EnvironmentAlreadyExists {
+                }),
+            ),
+            CreateCommandHandlerError::EnvironmentAlreadyExists {
                 name: "test".to_string(),
             },
-            CreateCommandError::RepositoryError(RepositoryError::NotFound),
+            CreateCommandHandlerError::RepositoryError(RepositoryError::NotFound),
         ];
 
         for error in errors {

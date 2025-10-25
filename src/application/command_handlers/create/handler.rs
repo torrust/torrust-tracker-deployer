@@ -1,6 +1,6 @@
 //! Create Command Implementation
 //!
-//! This module implements the `CreateCommand` that orchestrates environment
+//! This module implements the `CreateCommandHandler` that orchestrates environment
 //! creation business logic. It follows the Command Pattern with dependency
 //! injection and is delivery-agnostic.
 
@@ -12,7 +12,7 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Created, Environment};
 use crate::shared::Clock;
 
-use super::errors::CreateCommandError;
+use super::errors::CreateCommandHandlerError;
 
 /// Command to create a new deployment environment
 ///
@@ -41,7 +41,7 @@ use super::errors::CreateCommandError;
 ///
 /// ```rust,no_run
 /// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::application::commands::create::CreateCommand;
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
 /// use torrust_tracker_deployer_lib::domain::config::{
 ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
 /// };
@@ -54,7 +54,7 @@ use super::errors::CreateCommandError;
 /// let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 ///
 /// // Create command
-/// let command = CreateCommand::new(repository, clock);
+/// let command = CreateCommandHandler::new(repository, clock);
 ///
 /// // Prepare configuration
 /// let config = EnvironmentCreationConfig::new(
@@ -74,7 +74,7 @@ use super::errors::CreateCommandError;
 /// println!("Created environment: {}", environment.name());
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
-pub struct CreateCommand {
+pub struct CreateCommandHandler {
     /// Repository for persisting environment state
     pub(crate) environment_repository: Arc<dyn EnvironmentRepository>,
 
@@ -83,8 +83,8 @@ pub struct CreateCommand {
     pub(crate) clock: Arc<dyn Clock>,
 }
 
-impl CreateCommand {
-    /// Create a new `CreateCommand` with required dependencies
+impl CreateCommandHandler {
+    /// Create a new `CreateCommandHandler` with required dependencies
     ///
     /// # Arguments
     ///
@@ -95,7 +95,7 @@ impl CreateCommand {
     ///
     /// ```rust,no_run
     /// use std::sync::Arc;
-    /// use torrust_tracker_deployer_lib::application::commands::create::CreateCommand;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
     /// use torrust_tracker_deployer_lib::shared::{SystemClock, Clock};
     ///
@@ -103,7 +103,7 @@ impl CreateCommand {
     /// let repository = repository_factory.create(std::path::PathBuf::from("."));
     /// let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     ///
-    /// let command = CreateCommand::new(repository, clock);
+    /// let command = CreateCommandHandler::new(repository, clock);
     /// ```
     #[must_use]
     pub fn new(
@@ -131,7 +131,7 @@ impl CreateCommand {
     /// # Returns
     ///
     /// * `Ok(Environment<Created>)` - Successfully created environment
-    /// * `Err(CreateCommandError)` - Business logic or persistence failure
+    /// * `Err(CreateCommandHandlerError)` - Business logic or persistence failure
     ///
     /// # Business Rules
     ///
@@ -152,12 +152,12 @@ impl CreateCommand {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::application::commands::create::CreateCommand;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
     /// use torrust_tracker_deployer_lib::domain::config::{
     ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
     /// };
     ///
-    /// # fn example(command: CreateCommand) -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn example(command: CreateCommandHandler) -> Result<(), Box<dyn std::error::Error>> {
     /// let config = EnvironmentCreationConfig::new(
     ///     EnvironmentSection {
     ///         name: "staging".to_string(),
@@ -186,7 +186,7 @@ impl CreateCommand {
     pub fn execute(
         &self,
         config: EnvironmentCreationConfig,
-    ) -> Result<Environment<Created>, CreateCommandError> {
+    ) -> Result<Environment<Created>, CreateCommandHandlerError> {
         info!(
             command = "create",
             environment_name = %config.environment.name,
@@ -197,7 +197,7 @@ impl CreateCommand {
         // This validates environment name, SSH username, and file existence
         let (environment_name, ssh_credentials, ssh_port) = config
             .to_environment_params()
-            .map_err(CreateCommandError::InvalidConfiguration)?;
+            .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
 
         info!(
             environment_name = %environment_name.as_str(),
@@ -209,9 +209,9 @@ impl CreateCommand {
         if self
             .environment_repository
             .exists(&environment_name)
-            .map_err(CreateCommandError::RepositoryError)?
+            .map_err(CreateCommandHandlerError::RepositoryError)?
         {
-            return Err(CreateCommandError::EnvironmentAlreadyExists {
+            return Err(CreateCommandHandlerError::EnvironmentAlreadyExists {
                 name: environment_name.as_str().to_string(),
             });
         }
@@ -237,7 +237,7 @@ impl CreateCommand {
         // Repository handles directory creation atomically during save
         self.environment_repository
             .save(&environment.clone().into_any())
-            .map_err(CreateCommandError::RepositoryError)?;
+            .map_err(CreateCommandHandlerError::RepositoryError)?;
 
         info!(
             environment_name = %environment.name().as_str(),
@@ -263,7 +263,7 @@ mod tests {
         let repository = repository_factory.create(temp_dir.path().to_path_buf());
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 
-        let command = CreateCommand::new(repository, clock);
+        let command = CreateCommandHandler::new(repository, clock);
 
         // Verify the command was created (basic structure test)
         assert_eq!(Arc::strong_count(&command.environment_repository), 1);
