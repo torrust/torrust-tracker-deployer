@@ -13,4 +13,6 @@ pub mod command_handlers;
 pub mod steps;
 
 // Re-export command handler types for convenience
-pub use command_handlers::{ConfigureCommandHandler, ProvisionCommandHandler, TestCommandHandler};
+pub use command_handlers::{
+    ConfigureCommandHandler, CreateCommandHandler, ProvisionCommandHandler, TestCommandHandler,
+};
