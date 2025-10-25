@@ -1,39 +1,44 @@
 # Destroy Command
 
-⚠️ **Implementation Status**: The `DestroyCommand` exists in the Application layer, but the CLI interface is not yet implemented. CLI functionality will be available after [issue #10](https://github.com/torrust/torrust-tracker-deployer/issues/10) is completed.
-
 The destroy command removes all infrastructure and resources for a deployment environment. It safely tears down virtual machines, networks, and related resources created during provisioning.
 
 ## Command Syntax
 
 ```bash
-# Planned CLI usage (not yet available)
-torrust-tracker-deployer destroy <ENVIRONMENT_NAME>
+torrust-tracker-deployer destroy <ENVIRONMENT>
 ```
 
 **Arguments**:
 
-- `<ENVIRONMENT_NAME>` - Name of the environment to destroy (required)
+- `<ENVIRONMENT>` - Name of the environment to destroy (required)
 
 **Options**:
 
 - `--help` - Display help information
-- `--log-output <OUTPUT>` - Logging output destination (`file-only` or `file-and-stderr`)
-- `--log-format <FORMAT>` - Log format (`pretty`, `json`, or `compact`)
+- `--log-output <OUTPUT>` - Logging output mode (default: `file-only`)
+  - `file-only`: Write logs to file only (production mode)
+  - `file-and-stderr`: Write logs to both file and stderr (development/testing mode)
+- `--log-file-format <FORMAT>` - Format for file logging (default: `compact`)
+  - `pretty`: Pretty-printed output for development (no ANSI codes in files)
+  - `json`: JSON output for production environments
+  - `compact`: Compact output for minimal verbosity
+- `--log-stderr-format <FORMAT>` - Format for stderr logging (default: `pretty`)
+  - `pretty`: Pretty-printed output with colors for development
+  - `json`: JSON output for machine processing
+  - `compact`: Compact output with colors for minimal verbosity
+- `--log-dir <DIR>` - Log directory (default: `./data/logs`)
 
 ## Basic Usage
 
 Destroy an environment:
 
 ```bash
-# Planned CLI usage (not yet available)
 torrust-tracker-deployer destroy my-environment
 ```
 
 With verbose logging to see progress:
 
 ```bash
-# Planned CLI usage (not yet available)
 torrust-tracker-deployer destroy my-environment --log-output file-and-stderr
 ```
 
@@ -62,14 +67,7 @@ The destroy command removes:
 Remove a test environment after validation:
 
 ```bash
-# Planned CLI usage (not yet available)
-# Provision and test
-torrust-tracker-deployer provision test-env
-torrust-tracker-deployer configure test-env
-
-# Run tests...
-
-# Clean up
+# Note: Only destroy command is currently implemented
 torrust-tracker-deployer destroy test-env
 ```
 
@@ -78,8 +76,6 @@ torrust-tracker-deployer destroy test-env
 Clean up after a failed deployment:
 
 ```bash
-# Planned CLI usage (not yet available)
-# If provisioning fails, destroy partial infrastructure
 torrust-tracker-deployer destroy failed-env
 ```
 
@@ -90,7 +86,6 @@ Automate cleanup of temporary environments:
 ```bash
 #!/bin/bash
 # cleanup-old-environments.sh
-# Planned CLI usage (not yet available)
 
 ENVIRONMENTS=("dev-1" "dev-2" "staging-temp")
 
@@ -105,8 +100,6 @@ done
 Quickly remove an environment in case of issues:
 
 ```bash
-# Planned CLI usage (not yet available)
-# Force destruction with verbose output
 torrust-tracker-deployer destroy emergency-env --log-output file-and-stderr
 ```
 
@@ -119,7 +112,6 @@ The destroy command is **idempotent** - you can run it multiple times safely:
 - Useful in automation scripts where you want to ensure cleanup
 
 ```bash
-# Planned CLI usage (not yet available)
 # Safe to run multiple times
 torrust-tracker-deployer destroy my-env
 torrust-tracker-deployer destroy my-env  # Still succeeds
@@ -167,7 +159,6 @@ torrust-tracker-deployer destroy my-env  # Still succeeds
 1. Run destroy again (it's idempotent):
 
    ```bash
-   # Planned CLI usage (not yet available)
    torrust-tracker-deployer destroy my-env
    ```
 
@@ -210,7 +201,6 @@ Error: OpenTofu command failed: resource still in use
 3. Try destroying again:
 
    ```bash
-   # Planned CLI usage (not yet available)
    torrust-tracker-deployer destroy my-env
    ```
 
@@ -274,10 +264,10 @@ If destroy fails, check the logs for detailed information:
 # View logs
 cat data/logs/log.txt
 
-# With pretty format for debugging (planned CLI usage)
+# With pretty format for debugging
 torrust-tracker-deployer destroy my-env \
     --log-output file-and-stderr \
-    --log-format pretty
+    --log-stderr-format pretty
 ```
 
 The logs will show:
@@ -314,7 +304,7 @@ Always backup important data before destroying:
 lxc exec my-env -- tar czf /tmp/backup.tar.gz /opt/torrust
 lxc file pull my-env/tmp/backup.tar.gz ./my-env-backup.tar.gz
 
-# Now safe to destroy (planned CLI usage)
+# Now safe to destroy
 torrust-tracker-deployer destroy my-env
 ```
 
@@ -324,7 +314,6 @@ In scripts, add confirmation prompts:
 
 ```bash
 #!/bin/bash
-# Planned CLI usage (not yet available)
 read -p "Destroy environment '$1'? (yes/no): " confirm
 
 if [ "$confirm" = "yes" ]; then
@@ -352,7 +341,6 @@ Example GitHub Actions workflow:
 
 ```yaml
 name: Cleanup Test Environments
-# Planned CLI usage (not yet available)
 
 on:
   schedule:
@@ -381,7 +369,6 @@ jobs:
 ```bash
 #!/bin/bash
 # cleanup-environments.sh
-# Planned CLI usage (not yet available)
 
 set -euo pipefail
 
@@ -457,12 +444,9 @@ cat data/state.json
 
 ## Related Commands
 
-- [Command Index](../commands.md) - Overview of all planned commands
-- Environment provisioning and configuration (coming in future CLI)
-- Environment status checking (coming in future CLI)
+- [Command Index](../commands.md) - Overview of all commands
 
 ## See Also
 
 - [Logging Guide](../logging.md) - Configure logging output and formats
 - [E2E Testing Guide](../../e2e-testing.md) - How destroy is tested in E2E tests
-- [Issue #10 - UI Layer Destroy Command](../../issues/10-epic-ui-layer-destroy-command.md) - CLI implementation plan

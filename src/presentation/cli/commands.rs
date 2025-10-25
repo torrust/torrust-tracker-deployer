@@ -20,8 +20,7 @@ pub enum Commands {
         /// Name of the environment to destroy
         ///
         /// The environment name must be a valid identifier that was previously
-        /// created through the provision command. Use 'list' command to see
-        /// available environments.
+        /// created through the provision command.
         environment: String,
     },
     // Future commands will be added here:
