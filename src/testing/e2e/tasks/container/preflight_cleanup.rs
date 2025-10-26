@@ -8,7 +8,8 @@
 use crate::shared::command::CommandExecutor;
 use crate::testing::e2e::context::TestContext;
 use crate::testing::e2e::tasks::preflight_cleanup::{
-    cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
+    cleanup_build_directory, cleanup_data_environment, cleanup_templates_directory,
+    PreflightCleanupError,
 };
 use tracing::{info, warn};
 
@@ -43,6 +44,9 @@ pub fn preflight_cleanup_previous_resources(
 
     // Clean the templates directory to ensure fresh embedded template extraction for E2E tests
     cleanup_templates_directory(env)?;
+
+    // Clean the data directory to ensure fresh environment state for E2E tests
+    cleanup_data_environment(env)?;
 
     // Clean up any hanging Docker containers from interrupted test runs
     cleanup_hanging_docker_containers(env);

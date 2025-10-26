@@ -9,7 +9,8 @@ use crate::adapters::tofu;
 use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 use crate::testing::e2e::context::TestContext;
 use crate::testing::e2e::tasks::preflight_cleanup::{
-    cleanup_build_directory, cleanup_templates_directory, PreflightCleanupError,
+    cleanup_build_directory, cleanup_data_environment, cleanup_templates_directory,
+    PreflightCleanupError,
 };
 use tracing::{info, warn};
 
@@ -43,6 +44,9 @@ pub fn preflight_cleanup_previous_resources(
 
     // Clean the templates directory to ensure fresh embedded template extraction for E2E tests
     cleanup_templates_directory(test_context)?;
+
+    // Clean the data directory to ensure fresh environment state for E2E tests
+    cleanup_data_environment(test_context)?;
 
     // Clean any existing OpenTofu infrastructure from previous test runs
     cleanup_opentofu_infrastructure(test_context)?;

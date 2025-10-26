@@ -55,17 +55,20 @@
 
 use anyhow::Result;
 use clap::Parser;
-use std::time::Instant;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
-use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PORT};
-use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+use torrust_tracker_deployer_lib::adapters::ssh::DEFAULT_SSH_PORT;
+use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::shared::Username;
+use torrust_tracker_deployer_lib::shared::{Clock, SystemClock};
 use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::{
+    preflight_cleanup::cleanup_previous_test_data,
     run_configure_command::run_configure_command,
+    run_create_command::run_create_command,
     run_test_command::run_test_command,
     virtual_machine::{
         preflight_cleanup::preflight_cleanup_previous_resources,
@@ -109,6 +112,7 @@ struct Cli {
 ///
 /// May panic during the match statement if unexpected error combinations occur
 /// that are not handled by the current error handling logic.
+#[allow(clippy::too_many_lines)]
 #[tokio::main]
 pub async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -127,29 +131,38 @@ pub async fn main() -> Result<()> {
         "Starting E2E tests"
     );
 
-    // Create environment entity for e2e-full testing
-    let environment_name = EnvironmentName::new("e2e-full".to_string())?;
-
     // Use absolute paths to project root for SSH keys to ensure they can be found by Ansible
     let project_root = std::env::current_dir().expect("Failed to get current directory");
     let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
     let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
-    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
-    let ssh_credentials = SshCredentials::new(
-        ssh_private_key_path.clone(),
-        ssh_public_key_path.clone(),
-        ssh_user.clone(),
-    );
 
-    let ssh_port = DEFAULT_SSH_PORT;
-    let environment = Environment::new(environment_name, ssh_credentials, ssh_port);
+    // Cleanup any artifacts from previous test runs BEFORE creating the environment
+    // This prevents "environment already exists" errors from stale state
+    // We do this before CreateCommandHandler because it checks if environment exists in repository
+    cleanup_previous_test_data("e2e-full").map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    // Create repository factory and clock for environment creation
+    let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+
+    // Create environment via CreateCommandHandler
+    let environment = run_create_command(
+        &repository_factory,
+        clock,
+        "e2e-full",
+        ssh_private_key_path.to_string_lossy().to_string(),
+        ssh_public_key_path.to_string_lossy().to_string(),
+        "torrust",
+        DEFAULT_SSH_PORT,
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     let mut test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
             .init()?;
 
-    // Cleanup any artifacts from previous test runs that may have failed to clean up
-    // This ensures a clean slate before starting new tests
+    // Additional preflight cleanup for infrastructure (OpenTofu, LXD resources)
+    // This handles any lingering infrastructure from interrupted previous runs
     preflight_cleanup_previous_resources(&test_context)?;
 
     let test_start = Instant::now();
