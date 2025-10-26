@@ -83,8 +83,7 @@ fn it_should_fail_gracefully_with_invalid_config() {
     let stderr = result.stderr();
     assert!(
         stderr.contains("missing field") || stderr.contains("Configuration"),
-        "Error message should mention configuration issues, got: {}",
-        stderr
+        "Error message should mention configuration issues, got: {stderr}"
     );
 }
 
@@ -108,8 +107,7 @@ fn it_should_fail_when_config_file_not_found() {
     let stderr = result.stderr();
     assert!(
         stderr.contains("not found") || stderr.contains("No such file"),
-        "Error message should mention file not found, got: {}",
-        stderr
+        "Error message should mention file not found, got: {stderr}"
     );
 }
 
@@ -149,9 +147,10 @@ fn it_should_fail_when_environment_already_exists() {
     // Verify error message mentions duplicate or already exists
     let stderr = result2.stderr();
     assert!(
-        stderr.contains("Already Exists") || stderr.contains("already exists") || stderr.contains("AlreadyExists"),
-        "Error message should mention environment already exists, got: {}",
-        stderr
+        stderr.contains("Already Exists")
+            || stderr.contains("already exists")
+            || stderr.contains("AlreadyExists"),
+        "Error message should mention environment already exists, got: {stderr}"
     );
 }
 

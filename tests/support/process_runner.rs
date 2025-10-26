@@ -42,7 +42,7 @@ impl ProcessRunner {
     /// Returns an error if the command fails to execute.
     pub fn run_create_command(&self, config_file: &str) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
-        
+
         // If working directory is specified, we need to:
         // 1. Make the config file path absolute (cargo runs from project root)
         // 2. Pass --working-dir to tell the app where to store data
@@ -69,9 +69,7 @@ impl ProcessRunner {
             cmd.args(["run", "--", "create", "--env-file", config_file]);
         }
 
-        let output = cmd
-            .output()
-            .context("Failed to execute create command")?;
+        let output = cmd.output().context("Failed to execute create command")?;
 
         Ok(ProcessResult::new(output))
     }

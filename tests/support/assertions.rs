@@ -65,8 +65,7 @@ impl EnvironmentStateAssertions {
 
         assert_eq!(
             state_key, expected_state,
-            "Environment state should be '{}', but was '{}'",
-            expected_state, state_key
+            "Environment state should be '{expected_state}', but was '{state_key}'"
         );
     }
 
@@ -102,10 +101,7 @@ impl EnvironmentStateAssertions {
     /// Panics if the traces directory doesn't exist.
     #[allow(dead_code)]
     pub fn assert_trace_directory_exists(&self, env_name: &str) {
-        let traces_dir = self
-            .workspace_path
-            .join(env_name)
-            .join("traces");
+        let traces_dir = self.workspace_path.join(env_name).join("traces");
 
         assert!(
             traces_dir.exists(),
