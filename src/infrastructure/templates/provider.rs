@@ -95,7 +95,7 @@ impl TemplateProvider {
         })?;
 
         // Validate output path
-        Self::validate_output_path(output_path)?;
+        Self::validate_output_path(output_path, template_type)?;
 
         // Create parent directories if they don't exist
         if let Some(parent) = output_path.parent() {
@@ -191,7 +191,7 @@ impl TemplateProvider {
     }
 
     /// Validate that the output path is suitable for template generation
-    fn validate_output_path(path: &Path) -> Result<(), TemplateError> {
+    fn validate_output_path(path: &Path, template_type: TemplateType) -> Result<(), TemplateError> {
         // Check if path already exists and is not a file
         if path.exists() && !path.is_file() {
             return Err(TemplateError::InvalidOutputPath {
@@ -200,14 +200,17 @@ impl TemplateProvider {
             });
         }
 
-        // Validate file extension matches template type (JSON)
+        // Validate file extension matches template type
+        let expected_extension = template_type.file_extension();
         if let Some(extension) = path.extension() {
-            if extension != "json" {
+            if extension != expected_extension {
                 return Err(TemplateError::InvalidOutputPath {
                     path: path.to_path_buf(),
                     reason: format!(
-                        "File extension '{}' does not match JSON template type",
-                        extension.to_string_lossy()
+                        "File extension '{}' does not match {} template type (expected '{}')",
+                        extension.to_string_lossy(),
+                        template_type,
+                        expected_extension
                     ),
                 });
             }
