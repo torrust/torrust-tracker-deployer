@@ -5,12 +5,29 @@
 
 use clap::Subcommand;
 
+use std::path::PathBuf;
+
 /// Available CLI commands
 ///
 /// This enum defines all the subcommands available in the CLI application.
 /// Each variant represents a specific operation that can be performed.
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    /// Create a new deployment environment
+    ///
+    /// This command creates a new environment based on a configuration file.
+    /// The configuration file specifies the environment name, SSH credentials,
+    /// and other settings required for environment creation.
+    Create {
+        /// Path to the environment configuration file
+        ///
+        /// The configuration file must be in JSON format and contain all
+        /// required fields for environment creation. Use --help for more
+        /// information about the configuration format.
+        #[arg(long, short = 'f', value_name = "FILE")]
+        env_file: PathBuf,
+    },
+
     /// Destroy an existing deployment environment
     ///
     /// This command will tear down all infrastructure associated with the

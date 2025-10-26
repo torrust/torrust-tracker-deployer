@@ -47,6 +47,7 @@ mod tests {
             Commands::Destroy { environment } => {
                 assert_eq!(environment, "test-env");
             }
+            Commands::Create { .. } => panic!("Expected Destroy command"),
         }
     }
 
@@ -62,6 +63,7 @@ mod tests {
                 Commands::Destroy { environment } => {
                     assert_eq!(environment, env_name);
                 }
+                Commands::Create { .. } => panic!("Expected Destroy command"),
             }
         }
     }
@@ -102,6 +104,7 @@ mod tests {
             Commands::Destroy { environment } => {
                 assert_eq!(environment, "test-env");
             }
+            Commands::Create { .. } => panic!("Expected Destroy command"),
         }
 
         // Log options are set but we don't compare them as they don't implement PartialEq
@@ -161,6 +164,101 @@ mod tests {
         assert!(
             help_text.contains("environment") || help_text.contains("<ENVIRONMENT>"),
             "Help text should mention environment parameter"
+        );
+    }
+
+    #[test]
+    fn it_should_parse_create_subcommand() {
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "--env-file",
+            "config.json",
+        ];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        assert!(cli.command.is_some());
+        match cli.command.unwrap() {
+            Commands::Create { env_file } => {
+                assert_eq!(env_file, std::path::PathBuf::from("config.json"));
+            }
+            Commands::Destroy { .. } => panic!("Expected Create command"),
+        }
+    }
+
+    #[test]
+    fn it_should_parse_create_with_short_flag() {
+        let args = vec!["torrust-tracker-deployer", "create", "-f", "env.json"];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        match cli.command.unwrap() {
+            Commands::Create { env_file } => {
+                assert_eq!(env_file, std::path::PathBuf::from("env.json"));
+            }
+            Commands::Destroy { .. } => panic!("Expected Create command"),
+        }
+    }
+
+    #[test]
+    fn it_should_require_env_file_parameter_for_create() {
+        let args = vec!["torrust-tracker-deployer", "create"];
+        let result = Cli::try_parse_from(args);
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        let error_message = error.to_string();
+        assert!(
+            error_message.contains("required") || error_message.contains("--env-file"),
+            "Error message should indicate missing required --env-file: {error_message}"
+        );
+    }
+
+    #[test]
+    fn it_should_parse_working_dir_global_option() {
+        let args = vec![
+            "torrust-tracker-deployer",
+            "--working-dir",
+            "/tmp/workspace",
+            "create",
+            "--env-file",
+            "config.json",
+        ];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        assert_eq!(
+            cli.global.working_dir,
+            std::path::PathBuf::from("/tmp/workspace")
+        );
+
+        match cli.command.unwrap() {
+            Commands::Create { env_file } => {
+                assert_eq!(env_file, std::path::PathBuf::from("config.json"));
+            }
+            Commands::Destroy { .. } => panic!("Expected Create command"),
+        }
+    }
+
+    #[test]
+    fn it_should_use_default_working_dir_when_not_specified() {
+        let args = vec!["torrust-tracker-deployer", "create", "-f", "config.json"];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        assert_eq!(cli.global.working_dir, std::path::PathBuf::from("."));
+    }
+
+    #[test]
+    fn it_should_show_create_help() {
+        let args = vec!["torrust-tracker-deployer", "create", "--help"];
+        let result = Cli::try_parse_from(args);
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert_eq!(error.kind(), clap::error::ErrorKind::DisplayHelp);
+
+        let help_text = error.to_string();
+        assert!(
+            help_text.contains("env-file") || help_text.contains("configuration"),
+            "Help text should mention env-file parameter"
         );
     }
 }

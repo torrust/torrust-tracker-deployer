@@ -45,6 +45,7 @@ pub mod user_output;
 
 // Re-export commonly used presentation types for convenience
 pub use cli::{Cli, Commands, GlobalArgs};
+pub use commands::create::CreateSubcommandError;
 pub use commands::destroy::DestroyError;
 pub use commands::{execute, handle_error};
 pub use errors::CommandError;

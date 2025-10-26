@@ -56,7 +56,7 @@ pub fn run() {
 
     match cli.command {
         Some(command) => {
-            if let Err(e) = presentation::execute(command) {
+            if let Err(e) = presentation::execute(command, &cli.global.working_dir) {
                 presentation::handle_error(&e);
                 std::process::exit(1);
             }

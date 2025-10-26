@@ -55,6 +55,20 @@ pub struct GlobalArgs {
     /// observability and the application cannot function without it.
     #[arg(long, default_value = "./data/logs", global = true)]
     pub log_dir: PathBuf,
+
+    /// Working directory for environment data (default: .)
+    ///
+    /// Root directory where environment data will be stored. Each environment
+    /// creates subdirectories within this location for build files and state.
+    /// This is useful for testing or when you want to manage environments in
+    /// a different location than the current directory.
+    ///
+    /// Examples:
+    /// - Default: './data' (relative to current directory)
+    /// - Testing: '/tmp/test-workspace' (absolute path)
+    /// - Production: '/var/lib/torrust-deployer' (system location)
+    #[arg(long, default_value = ".", global = true)]
+    pub working_dir: PathBuf,
 }
 
 impl GlobalArgs {
@@ -81,6 +95,7 @@ impl GlobalArgs {
     ///     log_stderr_format: LogFormat::Pretty,
     ///     log_output: LogOutput::FileAndStderr,
     ///     log_dir: PathBuf::from("/tmp/logs"),
+    ///     working_dir: PathBuf::from("."),
     /// };
     /// let config = args.logging_config();
     /// // config will have specified log formats and directory
