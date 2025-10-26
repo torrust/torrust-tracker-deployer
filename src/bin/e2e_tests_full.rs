@@ -53,23 +53,21 @@
 //! The test suite supports different VM providers (LXD, Multipass) and includes
 //! comprehensive logging and error reporting.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
 use torrust_tracker_deployer_lib::adapters::ssh::DEFAULT_SSH_PORT;
-use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
-use torrust_tracker_deployer_lib::domain::config::SshCredentialsConfig;
-use torrust_tracker_deployer_lib::domain::config::{EnvironmentCreationConfig, EnvironmentSection};
-use torrust_tracker_deployer_lib::domain::environment::Created;
-use torrust_tracker_deployer_lib::domain::Environment;
+use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
+use torrust_tracker_deployer_lib::shared::{Clock, SystemClock};
 use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::{
     run_configure_command::run_configure_command,
+    run_create_command::run_create_command,
     run_test_command::run_test_command,
     virtual_machine::{
         preflight_cleanup::preflight_cleanup_previous_resources,
@@ -92,91 +90,6 @@ struct Cli {
         help = "Logging format: pretty, json, or compact"
     )]
     log_format: LogFormat,
-}
-
-/// Default timeout for repository lock acquisition operations
-const REPOSITORY_LOCK_TIMEOUT_SECS: u64 = 30;
-
-/// Creates a new environment using the `CreateCommandHandler`.
-///
-/// This function demonstrates the use of the create command handler in the E2E test context.
-/// It creates the environment using the command pattern, ensuring proper validation and
-/// repository persistence.
-///
-/// # Arguments
-///
-/// * `environment_name` - Name of the environment to create
-/// * `ssh_private_key_path` - Path to SSH private key file
-/// * `ssh_public_key_path` - Path to SSH public key file
-/// * `ssh_username` - SSH username for the environment
-/// * `ssh_port` - SSH port number
-///
-/// # Returns
-///
-/// Returns the created `Environment<Created>` on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Configuration is invalid
-/// - Environment already exists
-/// - Repository operations fail
-fn create_environment_via_command(
-    environment_name: &str,
-    ssh_private_key_path: String,
-    ssh_public_key_path: String,
-    ssh_username: &str,
-    ssh_port: u16,
-) -> Result<Environment<Created>> {
-    info!(
-        environment_name = environment_name,
-        "Creating environment via CreateCommandHandler"
-    );
-
-    // Get the project root directory to create repository in the correct location
-    let project_root = std::env::current_dir()
-        .context("Failed to determine current directory for environment creation")?;
-
-    // Create repository factory with default timeout
-    let repository_factory = torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory::new(
-        std::time::Duration::from_secs(REPOSITORY_LOCK_TIMEOUT_SECS)
-    );
-
-    // Create repository pointing to project root (standard location for data directory)
-    let repository = repository_factory.create(project_root);
-
-    // Create clock service for command handler
-    let clock: Arc<dyn torrust_tracker_deployer_lib::shared::Clock> =
-        Arc::new(torrust_tracker_deployer_lib::shared::SystemClock);
-
-    // Create the command handler
-    let create_command = CreateCommandHandler::new(repository, clock);
-
-    // Build the configuration
-    let config = EnvironmentCreationConfig::new(
-        EnvironmentSection {
-            name: environment_name.to_string(),
-        },
-        SshCredentialsConfig::new(
-            ssh_private_key_path,
-            ssh_public_key_path,
-            ssh_username.to_string(),
-            ssh_port,
-        ),
-    );
-
-    // Execute the command
-    let environment = create_command
-        .execute(config)
-        .context("Failed to create environment via command")?;
-
-    info!(
-        environment_name = environment.name().as_str(),
-        instance_name = environment.instance_name().as_str(),
-        "Environment created successfully via CreateCommandHandler"
-    );
-
-    Ok(environment)
 }
 
 /// Main entry point for E2E tests.
@@ -221,14 +134,21 @@ pub async fn main() -> Result<()> {
     let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
     let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
 
+    // Create repository factory and clock for environment creation
+    let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+
     // Create environment via CreateCommandHandler
-    let environment = create_environment_via_command(
+    let environment = run_create_command(
+        &repository_factory,
+        clock,
         "e2e-full",
         ssh_private_key_path.to_string_lossy().to_string(),
         ssh_public_key_path.to_string_lossy().to_string(),
         "torrust",
         DEFAULT_SSH_PORT,
-    )?;
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     let mut test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?

@@ -9,6 +9,7 @@
 //! The tasks are organized by deployment target:
 //!
 //! ### Infrastructure-agnostic tasks (can be used with both containers and VMs):
+//! - `run_create_command` - Environment creation using `CreateCommandHandler`
 //! - `run_configure_command` - Infrastructure configuration via Ansible and playbook execution
 //! - `run_configuration_validation` - Configuration validation and testing
 //! - `run_test_command` - Deployment validation and testing
@@ -30,5 +31,6 @@ pub mod container;
 pub mod preflight_cleanup;
 pub mod run_configuration_validation;
 pub mod run_configure_command;
+pub mod run_create_command;
 pub mod run_test_command;
 pub mod virtual_machine;
