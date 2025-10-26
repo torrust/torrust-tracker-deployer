@@ -53,7 +53,7 @@
 //! The test suite supports different VM providers (LXD, Multipass) and includes
 //! comprehensive logging and error reporting.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::sync::Arc;
 use std::time::Instant;
@@ -94,6 +94,9 @@ struct Cli {
     log_format: LogFormat,
 }
 
+/// Default timeout for repository lock acquisition operations
+const REPOSITORY_LOCK_TIMEOUT_SECS: u64 = 30;
+
 /// Creates a new environment using the `CreateCommandHandler`.
 ///
 /// This function demonstrates the use of the create command handler in the E2E test context.
@@ -131,11 +134,12 @@ fn create_environment_via_command(
     );
 
     // Get the project root directory to create repository in the correct location
-    let project_root = std::env::current_dir().expect("Failed to get current directory");
+    let project_root = std::env::current_dir()
+        .context("Failed to determine current directory for environment creation")?;
 
     // Create repository factory with default timeout
     let repository_factory = torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory::new(
-        std::time::Duration::from_secs(30)
+        std::time::Duration::from_secs(REPOSITORY_LOCK_TIMEOUT_SECS)
     );
 
     // Create repository pointing to project root (standard location for data directory)
@@ -164,7 +168,7 @@ fn create_environment_via_command(
     // Execute the command
     let environment = create_command
         .execute(config)
-        .map_err(|e| anyhow::anyhow!("Failed to create environment via command: {e}"))?;
+        .context("Failed to create environment via command")?;
 
     info!(
         environment_name = environment.name().as_str(),
