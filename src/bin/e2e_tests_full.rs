@@ -66,6 +66,7 @@ use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder
 use torrust_tracker_deployer_lib::shared::{Clock, SystemClock};
 use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::{
+    preflight_cleanup::cleanup_previous_test_data,
     run_configure_command::run_configure_command,
     run_create_command::run_create_command,
     run_test_command::run_test_command,
@@ -111,6 +112,7 @@ struct Cli {
 ///
 /// May panic during the match statement if unexpected error combinations occur
 /// that are not handled by the current error handling logic.
+#[allow(clippy::too_many_lines)]
 #[tokio::main]
 pub async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -134,6 +136,11 @@ pub async fn main() -> Result<()> {
     let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
     let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
 
+    // Cleanup any artifacts from previous test runs BEFORE creating the environment
+    // This prevents "environment already exists" errors from stale state
+    // We do this before CreateCommandHandler because it checks if environment exists in repository
+    cleanup_previous_test_data("e2e-full").map_err(|e| anyhow::anyhow!("{e}"))?;
+
     // Create repository factory and clock for environment creation
     let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
@@ -154,8 +161,8 @@ pub async fn main() -> Result<()> {
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
             .init()?;
 
-    // Cleanup any artifacts from previous test runs that may have failed to clean up
-    // This ensures a clean slate before starting new tests
+    // Additional preflight cleanup for infrastructure (OpenTofu, LXD resources)
+    // This handles any lingering infrastructure from interrupted previous runs
     preflight_cleanup_previous_resources(&test_context)?;
 
     let test_start = Instant::now();
