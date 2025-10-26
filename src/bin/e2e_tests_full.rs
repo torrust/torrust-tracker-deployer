@@ -55,14 +55,18 @@
 
 use anyhow::Result;
 use clap::Parser;
+use std::sync::Arc;
 use std::time::Instant;
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
-use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PORT};
-use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+use torrust_tracker_deployer_lib::adapters::ssh::DEFAULT_SSH_PORT;
+use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
+use torrust_tracker_deployer_lib::domain::config::SshCredentialsConfig;
+use torrust_tracker_deployer_lib::domain::config::{EnvironmentCreationConfig, EnvironmentSection};
+use torrust_tracker_deployer_lib::domain::environment::Created;
+use torrust_tracker_deployer_lib::domain::Environment;
 use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::{
     run_configure_command::run_configure_command,
@@ -88,6 +92,87 @@ struct Cli {
         help = "Logging format: pretty, json, or compact"
     )]
     log_format: LogFormat,
+}
+
+/// Creates a new environment using the `CreateCommandHandler`.
+///
+/// This function demonstrates the use of the create command handler in the E2E test context.
+/// It creates the environment using the command pattern, ensuring proper validation and
+/// repository persistence.
+///
+/// # Arguments
+///
+/// * `environment_name` - Name of the environment to create
+/// * `ssh_private_key_path` - Path to SSH private key file
+/// * `ssh_public_key_path` - Path to SSH public key file
+/// * `ssh_username` - SSH username for the environment
+/// * `ssh_port` - SSH port number
+///
+/// # Returns
+///
+/// Returns the created `Environment<Created>` on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Configuration is invalid
+/// - Environment already exists
+/// - Repository operations fail
+fn create_environment_via_command(
+    environment_name: &str,
+    ssh_private_key_path: String,
+    ssh_public_key_path: String,
+    ssh_username: &str,
+    ssh_port: u16,
+) -> Result<Environment<Created>> {
+    info!(
+        environment_name = environment_name,
+        "Creating environment via CreateCommandHandler"
+    );
+
+    // Get the project root directory to create repository in the correct location
+    let project_root = std::env::current_dir().expect("Failed to get current directory");
+
+    // Create repository factory with default timeout
+    let repository_factory = torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory::new(
+        std::time::Duration::from_secs(30)
+    );
+
+    // Create repository pointing to project root (standard location for data directory)
+    let repository = repository_factory.create(project_root);
+
+    // Create clock service for command handler
+    let clock: Arc<dyn torrust_tracker_deployer_lib::shared::Clock> =
+        Arc::new(torrust_tracker_deployer_lib::shared::SystemClock);
+
+    // Create the command handler
+    let create_command = CreateCommandHandler::new(repository, clock);
+
+    // Build the configuration
+    let config = EnvironmentCreationConfig::new(
+        EnvironmentSection {
+            name: environment_name.to_string(),
+        },
+        SshCredentialsConfig::new(
+            ssh_private_key_path,
+            ssh_public_key_path,
+            ssh_username.to_string(),
+            ssh_port,
+        ),
+    );
+
+    // Execute the command
+    let environment = create_command
+        .execute(config)
+        .map_err(|e| anyhow::anyhow!("Failed to create environment via command: {e}"))?;
+
+    info!(
+        environment_name = environment.name().as_str(),
+        instance_name = environment.instance_name().as_str(),
+        "Environment created successfully via CreateCommandHandler"
+    );
+
+    Ok(environment)
 }
 
 /// Main entry point for E2E tests.
@@ -127,22 +212,19 @@ pub async fn main() -> Result<()> {
         "Starting E2E tests"
     );
 
-    // Create environment entity for e2e-full testing
-    let environment_name = EnvironmentName::new("e2e-full".to_string())?;
-
     // Use absolute paths to project root for SSH keys to ensure they can be found by Ansible
     let project_root = std::env::current_dir().expect("Failed to get current directory");
     let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
     let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
-    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
-    let ssh_credentials = SshCredentials::new(
-        ssh_private_key_path.clone(),
-        ssh_public_key_path.clone(),
-        ssh_user.clone(),
-    );
 
-    let ssh_port = DEFAULT_SSH_PORT;
-    let environment = Environment::new(environment_name, ssh_credentials, ssh_port);
+    // Create environment via CreateCommandHandler
+    let environment = create_environment_via_command(
+        "e2e-full",
+        ssh_private_key_path.to_string_lossy().to_string(),
+        ssh_public_key_path.to_string_lossy().to_string(),
+        "torrust",
+        DEFAULT_SSH_PORT,
+    )?;
 
     let mut test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
