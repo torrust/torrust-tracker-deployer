@@ -423,6 +423,99 @@ If you want to use GitHub Copilot to assist with implementation:
 
 **Note**: GitHub Copilot agents work best with well-defined specifications, which is why we create detailed issue documents first.
 
+## 🧹 Cleaning Up Closed Issues
+
+Over time, as issues are completed and closed on GitHub, the `docs/issues/` folder can accumulate documentation for closed issues. Periodically clean up these files to keep the repository focused on active work.
+
+### When to Clean Up
+
+- After completing a major milestone or epic
+- During regular maintenance cycles
+- When preparing releases
+- Whenever the `docs/issues/` folder feels cluttered
+
+### Cleanup Process
+
+1. **List Current Issue Files**:
+
+   ```bash
+   ls docs/issues/
+   ```
+
+   Issue files follow the format: `{issue-number}-{description}.md`
+
+2. **Check Issue Status on GitHub**:
+
+   Use the GitHub CLI to check the status of each issue:
+
+   ```bash
+   # Check individual issue
+   gh issue view 21 --json state --jq .state
+
+   # Check multiple issues at once
+   for issue in 21 22 23 24; do
+     state=$(gh issue view $issue --json state --jq .state 2>/dev/null || echo "NOT_FOUND")
+     echo "$issue:$state"
+   done
+   ```
+
+   Issue states:
+
+   - `OPEN` - Issue is still active (keep the file)
+   - `CLOSED` - Issue has been completed (remove the file)
+   - `NOT_FOUND` - Issue doesn't exist (remove the file)
+
+3. **Remove Closed Issue Files**:
+
+   ```bash
+   # Remove specific closed issue files
+   cd docs/issues/
+   rm -f 21-fix-e2e-infrastructure-preservation.md \
+         22-rename-app-commands-to-command-handlers.md \
+         23-add-clap-subcommand-configuration.md \
+         24-add-user-documentation.md
+   ```
+
+4. **Verify Remaining Files**:
+
+   ```bash
+   ls docs/issues/
+   ```
+
+   Only open issues and template files should remain.
+
+5. **Commit the Changes**:
+
+   ```bash
+   # Stage the deletions
+   git add docs/issues/
+
+   # Commit with descriptive message
+   git commit -m "chore: remove closed issue documentation files
+
+   Removed X closed issue documentation files from docs/issues/:
+   - #21: fix-e2e-infrastructure-preservation
+   - #22: rename-app-commands-to-command-handlers
+   - #23: add-clap-subcommand-configuration
+   - #24: add-user-documentation
+
+   All these issues have been closed on GitHub and no longer need
+   local documentation files.
+
+   Remaining open issues: #16, #17, #18, #19, #34"
+
+   # Push to remote
+   git push
+   ```
+
+### Important Notes
+
+- **Keep Template Files**: Never delete `EPIC-TEMPLATE.md`, `GITHUB-ISSUE-TEMPLATE.md`, or `SPECIFICATION-TEMPLATE.md`
+- **Verify Before Deleting**: Always double-check issue status before removing files
+- **Document Removals**: Use descriptive commit messages listing which issues were removed
+- **Team Communication**: Consider notifying the team before large cleanup operations
+- **Git History**: Closed issue documentation remains available in git history if needed for future reference
+
 ---
 
 By following this workflow, you ensure that roadmap tasks are properly documented, tracked, and implemented with high quality and consistency.
