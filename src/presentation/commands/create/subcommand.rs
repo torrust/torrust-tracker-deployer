@@ -4,7 +4,7 @@
 //! including configuration file loading, argument processing, user interaction,
 //! and command execution.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -40,7 +40,9 @@ pub fn handle_create_command(
     working_dir: &Path,
 ) -> Result<(), CreateSubcommandError> {
     match action {
-        CreateAction::Environment { env_file } => handle_environment_creation(&env_file, working_dir),
+        CreateAction::Environment { env_file } => {
+            handle_environment_creation(&env_file, working_dir)
+        }
         CreateAction::Template { output_path } => {
             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
             handle_template_generation(&template_path)
@@ -65,7 +67,7 @@ pub fn handle_create_command(
 ///
 /// Returns an error if template file creation fails.
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-fn handle_template_generation(output_path: &PathBuf) -> Result<(), CreateSubcommandError> {
+fn handle_template_generation(output_path: &Path) -> Result<(), CreateSubcommandError> {
     // Create user output for progress messages
     let mut output = UserOutput::new(VerbosityLevel::Normal);
 

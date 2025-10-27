@@ -327,7 +327,12 @@ mod tests {
 
     #[test]
     fn it_should_show_create_environment_help() {
-        let args = vec!["torrust-tracker-deployer", "create", "environment", "--help"];
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "environment",
+            "--help",
+        ];
         let result = Cli::try_parse_from(args);
 
         assert!(result.is_err());
