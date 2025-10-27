@@ -156,13 +156,18 @@ fn it_should_fail_when_environment_already_exists() {
 
 /// Helper function to create a test environment configuration
 fn create_test_environment_config(env_name: &str) -> String {
+    // Use absolute paths to SSH keys to ensure they work regardless of current directory
+    let project_root = env!("CARGO_MANIFEST_DIR");
+    let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+    let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
     serde_json::json!({
         "environment": {
             "name": env_name
         },
         "ssh_credentials": {
-            "private_key_path": "fixtures/testing_rsa",
-            "public_key_path": "fixtures/testing_rsa.pub"
+            "private_key_path": private_key_path,
+            "public_key_path": public_key_path
         }
     })
     .to_string()

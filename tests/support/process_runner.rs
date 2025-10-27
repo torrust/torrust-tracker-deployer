@@ -34,7 +34,7 @@ impl ProcessRunner {
 
     /// Run the create command with the production binary
     ///
-    /// This method runs `cargo run -- create --env-file <config_file>` with
+    /// This method runs `cargo run -- create environment --env-file <config_file>` with
     /// optional working directory for the application itself via `--working-dir`.
     ///
     /// # Errors
@@ -58,6 +58,7 @@ impl ProcessRunner {
                 "run",
                 "--",
                 "create",
+                "environment",
                 "--env-file",
                 absolute_config.to_str().unwrap(),
                 "--working-dir",
@@ -65,7 +66,14 @@ impl ProcessRunner {
             ]);
         } else {
             // No working directory, use relative paths
-            cmd.args(["run", "--", "create", "--env-file", config_file]);
+            cmd.args([
+                "run",
+                "--",
+                "create",
+                "environment",
+                "--env-file",
+                config_file,
+            ]);
         }
 
         let output = cmd.output().context("Failed to execute create command")?;
