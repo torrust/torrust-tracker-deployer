@@ -20,7 +20,7 @@
 use thiserror::Error;
 
 use crate::presentation::commands::create::CreateSubcommandError;
-use crate::presentation::commands::destroy::DestroyError;
+use crate::presentation::commands::destroy::DestroySubcommandError;
 
 /// Errors that can occur during CLI command execution
 ///
@@ -41,7 +41,7 @@ pub enum CommandError {
     /// Encapsulates all errors that can occur during environment destruction.
     /// Use `.help()` for detailed troubleshooting steps.
     #[error("Destroy command failed: {0}")]
-    Destroy(Box<DestroyError>),
+    Destroy(Box<DestroySubcommandError>),
 }
 
 impl From<CreateSubcommandError> for CommandError {
@@ -50,8 +50,8 @@ impl From<CreateSubcommandError> for CommandError {
     }
 }
 
-impl From<DestroyError> for CommandError {
-    fn from(error: DestroyError) -> Self {
+impl From<DestroySubcommandError> for CommandError {
+    fn from(error: DestroySubcommandError) -> Self {
         Self::Destroy(Box::new(error))
     }
 }
@@ -68,13 +68,13 @@ impl CommandError {
     /// ```rust
     /// use clap::Parser;
     /// use torrust_tracker_deployer_lib::presentation::{cli, errors};
-    /// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroyError;
+    /// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroySubcommandError;
     /// use torrust_tracker_deployer_lib::application::command_handlers::destroy::DestroyCommandHandlerError;
     /// use std::path::PathBuf;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // Create error for demonstration
-    /// let destroy_error = DestroyError::DestroyOperationFailed {
+    /// let destroy_error = DestroySubcommandError::DestroyOperationFailed {
     ///     name: "test-env".to_string(),
     ///     source: DestroyCommandHandlerError::StateCleanupFailed {
     ///         path: PathBuf::from("/tmp/test"),
