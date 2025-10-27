@@ -22,6 +22,12 @@ use crate::domain::environment::EnvironmentName;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Base directory name for user data
+const DATA_DIR_NAME: &str = "data";
+
+/// Base directory name for build artifacts
+const BUILD_DIR_NAME: &str = "build";
+
 /// Internal paths and configuration derived from user inputs
 ///
 /// This struct contains fields that are derived automatically from user inputs
@@ -78,8 +84,8 @@ impl InternalConfig {
     #[must_use]
     pub fn new(env_name: &EnvironmentName) -> Self {
         // Generate environment-specific directories
-        let data_dir = PathBuf::from("data").join(env_name.as_str());
-        let build_dir = PathBuf::from("build").join(env_name.as_str());
+        let data_dir = PathBuf::from(DATA_DIR_NAME).join(env_name.as_str());
+        let build_dir = PathBuf::from(BUILD_DIR_NAME).join(env_name.as_str());
 
         Self {
             build_dir,
