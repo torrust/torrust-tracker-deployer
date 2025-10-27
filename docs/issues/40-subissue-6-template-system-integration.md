@@ -1,11 +1,34 @@
-# Template System Integration
+# Template System Integration (v1 - DEPRECATED)
 
-**Issue**: [#40](https://github.com/torrust/torrust-tracker-deployer/issues/40)
-**Parent Epic**: [#34](https://github.com/torrust/torrust-tracker-deployer/issues/34) - Implement Create Environment Command
-**Status**: OPTIONAL ENHANCEMENT
-**Related**: [Roadmap Task 1.5](../roadmap.md), [Infrastructure Layer Architecture](../codebase-architecture.md#infrastructure-layer)
+**Issue**: [#40](https://github.com/torrust/torrust-tracker-deployer/issues/40)  
+**Parent Epic**: [#34](https://github.com/torrust/torrust-tracker-deployer/issues/34) - Implement Create Environment Command  
+**Status**: ⚠️ **DEPRECATED** - Superseded by [v2 - Struct-Based Generation](./40-subissue-6-template-system-integration-v2.md)  
+**Related**: [Roadmap Task 1.5](../roadmap.md)
 
-## Overview
+## ⚠️ Deprecation Notice
+
+**This approach has been deprecated in favor of struct-based JSON generation.**
+
+- **See**: [40-subissue-6-template-system-integration-v2.md](./40-subissue-6-template-system-integration-v2.md) for the current approach
+- **Reason**: The template structure exactly matches `EnvironmentCreationConfig`, so generating it programmatically is more maintainable and type-safe than maintaining separate template files
+- **Impact**: This document is kept for historical reference and to understand why the approach changed
+
+## Why This Approach Was Deprecated
+
+This original specification suggested using the existing `TemplateManager` system for configuration template generation, which led to confusion:
+
+1. **Wrong System**: The `TemplateManager` is designed for infrastructure templates (Ansible, OpenTofu), not user configuration templates
+2. **Unnecessary Duplication**: Creating a template file would duplicate the `EnvironmentCreationConfig` struct definition
+3. **Manual Sync Required**: Changes to the struct would require manual updates to template files
+4. **Not Type-Safe**: Template files are strings that can become out of sync with code
+
+The v2 approach uses struct-based generation to avoid these issues entirely.
+
+---
+
+## Original Specification (For Historical Reference)
+
+### Overview
 
 Implement the template system for configuration file generation in the infrastructure layer. This system provides embedded JSON configuration templates that can be generated on-demand, supporting the `--generate-template` functionality with proper error handling and validation.
 
