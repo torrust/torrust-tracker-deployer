@@ -35,6 +35,29 @@ pub enum CreateConfigError {
     /// Invalid SSH port (must be 1-65535)
     #[error("Invalid SSH port: {port} (must be between 1 and 65535)")]
     InvalidPort { port: u16 },
+
+    /// Failed to serialize configuration template to JSON
+    #[error("Failed to serialize configuration template to JSON")]
+    TemplateSerializationFailed {
+        #[source]
+        source: serde_json::Error,
+    },
+
+    /// Failed to create parent directory for template file
+    #[error("Failed to create directory: {path}")]
+    TemplateDirectoryCreationFailed {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+
+    /// Failed to write template file
+    #[error("Failed to write template file: {path}")]
+    TemplateFileWriteFailed {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
 }
 
 impl CreateConfigError {
@@ -59,6 +82,7 @@ impl CreateConfigError {
     /// assert!(help.contains("Check that the file path is correct"));
     /// ```
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn help(&self) -> &'static str {
         match self {
             Self::InvalidEnvironmentName(_) => {
@@ -128,6 +152,51 @@ impl CreateConfigError {
                  - 2222 (common alternative)\n\
                  \n\
                  Fix: Update the SSH port in your configuration to a valid port number (1-65535)."
+            }
+            Self::TemplateSerializationFailed { .. } => {
+                "Template serialization failed.\n\
+                 \n\
+                 This indicates an internal error in template generation.\n\
+                 \n\
+                 Common causes:\n\
+                 - Software bug in template generation logic\n\
+                 - Invalid data structure for JSON serialization\n\
+                 \n\
+                 Fix:\n\
+                 1. Report this issue with full error details\n\
+                 2. Check for application updates\n\
+                 \n\
+                 This is likely a software bug that needs to be reported."
+            }
+            Self::TemplateDirectoryCreationFailed { .. } => {
+                "Failed to create directory for template file.\n\
+                 \n\
+                 Common causes:\n\
+                 - Insufficient permissions to create directory\n\
+                 - No disk space available\n\
+                 - A file exists with the same name as the directory\n\
+                 - Path length exceeds system limits\n\
+                 \n\
+                 Fix:\n\
+                 1. Check write permissions for the parent directory\n\
+                 2. Verify disk space is available: df -h\n\
+                 3. Ensure no file exists with the same name as the directory\n\
+                 4. Try using a shorter path"
+            }
+            Self::TemplateFileWriteFailed { .. } => {
+                "Failed to write template file.\n\
+                 \n\
+                 Common causes:\n\
+                 - Insufficient permissions to write file\n\
+                 - No disk space available\n\
+                 - File is open in another application\n\
+                 - Antivirus software blocking file creation\n\
+                 \n\
+                 Fix:\n\
+                 1. Check write permissions for the target file and directory\n\
+                 2. Verify disk space is available: df -h\n\
+                 3. Ensure the file is not open in another application\n\
+                 4. Check if antivirus software is blocking file creation"
             }
         }
     }
@@ -213,5 +282,44 @@ mod tests {
                 "Help should contain actionable guidance"
             );
         }
+    }
+
+    #[test]
+    fn test_template_serialization_failed_error() {
+        // Simulate serialization error (hard to create naturally)
+        let json_error = serde_json::from_str::<serde_json::Value>("invalid").unwrap_err();
+        let error = CreateConfigError::TemplateSerializationFailed { source: json_error };
+
+        assert!(error
+            .to_string()
+            .contains("serialize configuration template"));
+        assert!(error.help().contains("internal error"));
+        assert!(error.help().contains("Report this issue"));
+    }
+
+    #[test]
+    fn test_template_directory_creation_failed_error() {
+        let error = CreateConfigError::TemplateDirectoryCreationFailed {
+            path: PathBuf::from("/test/path"),
+            source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
+        };
+
+        assert!(error.to_string().contains("Failed to create directory"));
+        assert!(error.to_string().contains("/test/path"));
+        assert!(error.help().contains("permissions"));
+        assert!(error.help().contains("df -h"));
+    }
+
+    #[test]
+    fn test_template_file_write_failed_error() {
+        let error = CreateConfigError::TemplateFileWriteFailed {
+            path: PathBuf::from("/test/file.json"),
+            source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
+        };
+
+        assert!(error.to_string().contains("Failed to write template file"));
+        assert!(error.to_string().contains("/test/file.json"));
+        assert!(error.help().contains("permissions"));
+        assert!(error.help().contains("disk space"));
     }
 }
