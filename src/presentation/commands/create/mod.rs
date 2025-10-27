@@ -42,4 +42,4 @@ mod tests;
 // Re-export commonly used types for convenience
 pub use config_loader::ConfigLoader;
 pub use errors::{ConfigFormat, CreateSubcommandError};
-pub use subcommand::handle;
+pub use subcommand::handle_create_command;

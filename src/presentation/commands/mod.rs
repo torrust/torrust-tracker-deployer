@@ -25,6 +25,7 @@ pub mod destroy;
 /// # Arguments
 ///
 /// * `command` - The parsed CLI command to execute
+/// * `working_dir` - Working directory for environment data storage
 ///
 /// # Returns
 ///
@@ -54,8 +55,8 @@ pub mod destroy;
 /// ```
 pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), CommandError> {
     match command {
-        Commands::Create { env_file } => {
-            create::handle(&env_file, working_dir)?;
+        Commands::Create { action } => {
+            create::handle_create_command(action, working_dir)?;
             Ok(())
         }
         Commands::Destroy { environment } => {

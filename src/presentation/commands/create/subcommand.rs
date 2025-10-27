@@ -11,13 +11,101 @@ use std::time::Duration;
 use crate::application::command_handlers::create::CreateCommandHandler;
 use crate::domain::config::EnvironmentCreationConfig;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::presentation::cli::commands::CreateAction;
 use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 use crate::shared::{Clock, SystemClock};
 
 use super::config_loader::ConfigLoader;
 use super::errors::CreateSubcommandError;
 
-/// Handle the create subcommand
+/// Handle the create command with its subcommands
+///
+/// This function routes between different create subcommands (environment or template).
+///
+/// # Arguments
+///
+/// * `action` - The create action to perform (environment creation or template generation)
+/// * `working_dir` - Root directory for environment data storage
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or a `CreateSubcommandError` on failure.
+///
+/// # Errors
+///
+/// Returns an error if the subcommand execution fails.
+#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
+pub fn handle_create_command(
+    action: CreateAction,
+    working_dir: &Path,
+) -> Result<(), CreateSubcommandError> {
+    match action {
+        CreateAction::Environment { env_file } => {
+            handle_environment_creation(&env_file, working_dir)
+        }
+        CreateAction::Template { output_path } => {
+            let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
+            handle_template_generation(&template_path)
+        }
+    }
+}
+
+/// Handle template generation
+///
+/// This function generates a configuration template file with placeholder values
+/// that users can edit to create their own environment configurations.
+///
+/// # Arguments
+///
+/// * `output_path` - Path where the template file should be created
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or a `CreateSubcommandError` on failure.
+///
+/// # Errors
+///
+/// Returns an error if template file creation fails.
+#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
+fn handle_template_generation(output_path: &Path) -> Result<(), CreateSubcommandError> {
+    // Create user output for progress messages
+    let mut output = UserOutput::new(VerbosityLevel::Normal);
+
+    output.progress("Generating configuration template...");
+
+    // Call existing domain method - template generation implemented in PR #48
+    // This is async, so we need to use tokio runtime
+    tokio::runtime::Runtime::new()
+        .expect("Failed to create tokio runtime")
+        .block_on(async {
+            EnvironmentCreationConfig::generate_template_file(output_path)
+                .await
+                .map_err(CreateSubcommandError::TemplateGenerationFailed)
+        })?;
+
+    output.success(&format!(
+        "Configuration template generated: {}",
+        output_path.display()
+    ));
+    println!();
+    println!("Next steps:");
+    println!("1. Edit the template file and replace placeholder values:");
+    println!("   - REPLACE_WITH_ENVIRONMENT_NAME: Choose a unique environment name (e.g., 'dev', 'staging')");
+    println!("   - REPLACE_WITH_SSH_PRIVATE_KEY_PATH: Path to your SSH private key");
+    println!("   - REPLACE_WITH_SSH_PUBLIC_KEY_PATH: Path to your SSH public key");
+    println!("2. Review default values:");
+    println!("   - username: 'torrust' (can be changed if needed)");
+    println!("   - port: 22 (standard SSH port)");
+    println!("3. Create the environment:");
+    println!(
+        "   torrust-tracker-deployer create environment --env-file {}",
+        output_path.display()
+    );
+
+    Ok(())
+}
+
+/// Handle environment creation from configuration file
 ///
 /// This function orchestrates the environment creation workflow from the
 /// presentation layer by:
@@ -46,25 +134,11 @@ use super::errors::CreateSubcommandError;
 /// This function will return an error if the configuration file cannot be
 /// loaded, parsed, validated, or if the create command execution fails.
 /// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use std::path::{Path, PathBuf};
-/// use torrust_tracker_deployer_lib::presentation::commands::create;
-///
-/// let result = create::handle(
-///     Path::new("config/environment.json"),
-///     &PathBuf::from(".")
-/// );
-///
-/// if let Err(e) = result {
-///     eprintln!("Create failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle(env_file: &Path, working_dir: &Path) -> Result<(), CreateSubcommandError> {
+fn handle_environment_creation(
+    env_file: &Path,
+    working_dir: &Path,
+) -> Result<(), CreateSubcommandError> {
     // Create user output with default stdout/stderr channels
     let mut output = UserOutput::new(VerbosityLevel::Normal);
 
@@ -152,7 +226,7 @@ mod tests {
         fs::write(&config_path, config_json).unwrap();
 
         let working_dir = temp_dir.path();
-        let result = handle(&config_path, working_dir);
+        let result = handle_environment_creation(&config_path, working_dir);
 
         assert!(
             result.is_ok(),
@@ -176,7 +250,7 @@ mod tests {
         let config_path = temp_dir.path().join("nonexistent.json");
         let working_dir = temp_dir.path();
 
-        let result = handle(&config_path, working_dir);
+        let result = handle_environment_creation(&config_path, working_dir);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -196,7 +270,7 @@ mod tests {
         fs::write(&config_path, r#"{"invalid json"#).unwrap();
 
         let working_dir = temp_dir.path();
-        let result = handle(&config_path, working_dir);
+        let result = handle_environment_creation(&config_path, working_dir);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -226,11 +300,11 @@ mod tests {
         let working_dir = temp_dir.path();
 
         // Create environment first time
-        let result1 = handle(&config_path, working_dir);
+        let result1 = handle_environment_creation(&config_path, working_dir);
         assert!(result1.is_ok(), "First create should succeed");
 
         // Try to create same environment again
-        let result2 = handle(&config_path, working_dir);
+        let result2 = handle_environment_creation(&config_path, working_dir);
         assert!(result2.is_err(), "Second create should fail");
 
         match result2.unwrap_err() {
@@ -260,7 +334,7 @@ mod tests {
         }"#;
         fs::write(&config_path, config_json).unwrap();
 
-        let result = handle(&config_path, &custom_working_dir);
+        let result = handle_environment_creation(&config_path, &custom_working_dir);
 
         assert!(result.is_ok(), "Should create in custom working dir");
 

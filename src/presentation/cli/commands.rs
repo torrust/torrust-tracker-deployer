@@ -13,19 +13,13 @@ use std::path::PathBuf;
 /// Each variant represents a specific operation that can be performed.
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Create a new deployment environment
+    /// Create operations (environment creation or template generation)
     ///
-    /// This command creates a new environment based on a configuration file.
-    /// The configuration file specifies the environment name, SSH credentials,
-    /// and other settings required for environment creation.
+    /// This command provides subcommands for creating environments and generating
+    /// configuration templates.
     Create {
-        /// Path to the environment configuration file
-        ///
-        /// The configuration file must be in JSON format and contain all
-        /// required fields for environment creation. Use --help for more
-        /// information about the configuration format.
-        #[arg(long, short = 'f', value_name = "FILE")]
-        env_file: PathBuf,
+        #[command(subcommand)]
+        action: CreateAction,
     },
 
     /// Destroy an existing deployment environment
@@ -64,4 +58,57 @@ pub enum Commands {
     //     /// Version tag for the release
     //     version: String,
     // },
+}
+
+/// Actions available for the create command
+#[derive(Debug, Subcommand)]
+pub enum CreateAction {
+    /// Create environment from configuration file
+    ///
+    /// This subcommand creates a new deployment environment based on a
+    /// configuration file. The configuration file specifies the environment
+    /// name, SSH credentials, and other settings required for creation.
+    Environment {
+        /// Path to the environment configuration file
+        ///
+        /// The configuration file must be in JSON format and contain all
+        /// required fields for environment creation.
+        #[arg(long, short = 'f', value_name = "FILE")]
+        env_file: PathBuf,
+    },
+
+    /// Generate template configuration file
+    ///
+    /// This subcommand generates a JSON configuration template file with
+    /// placeholder values. Edit the template to provide your actual
+    /// configuration values, then use 'create environment' to create
+    /// the environment.
+    Template {
+        /// Output path for the template file (optional)
+        ///
+        /// If not provided, creates environment-template.json in the
+        /// current working directory. Parent directories will be created
+        /// automatically if they don't exist.
+        #[arg(value_name = "PATH")]
+        output_path: Option<PathBuf>,
+    },
+}
+
+impl CreateAction {
+    /// Get the default template output path
+    #[must_use]
+    pub fn default_template_path() -> PathBuf {
+        PathBuf::from("environment-template.json")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_should_use_default_template_path() {
+        let default_path = CreateAction::default_template_path();
+        assert_eq!(default_path, PathBuf::from("environment-template.json"));
+    }
 }

@@ -65,6 +65,14 @@ pub enum CreateSubcommandError {
         #[source]
         CreateCommandHandlerError,
     ),
+
+    /// Template generation failed
+    #[error("Template generation failed")]
+    TemplateGenerationFailed(
+        /// Underlying template generation error from domain layer
+        #[source]
+        crate::domain::config::CreateConfigError,
+    ),
 }
 
 impl CreateSubcommandError {
@@ -100,7 +108,7 @@ impl CreateSubcommandError {
 4. Use absolute paths or paths relative to current directory
 
 Example:
-  torrust-tracker-deployer create --env-file ./config/environment.json
+  torrust-tracker-deployer create environment --env-file ./config/environment.json
 
 For more information about configuration format, see the documentation."
             }
@@ -142,7 +150,9 @@ Example valid configuration:
 For more information, see the configuration documentation."
                 }
             },
-            Self::ConfigValidationFailed(inner) => inner.help(),
+            Self::ConfigValidationFailed(inner) | Self::TemplateGenerationFailed(inner) => {
+                inner.help()
+            }
             Self::CommandFailed(inner) => inner.help(),
         }
     }
