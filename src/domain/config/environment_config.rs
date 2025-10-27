@@ -152,6 +152,100 @@ impl EnvironmentCreationConfig {
 
         Ok((environment_name, ssh_credentials, ssh_port))
     }
+
+    /// Creates a template instance with placeholder values
+    ///
+    /// This method generates a configuration template with placeholder values
+    /// that users can replace with their actual configuration. The template
+    /// structure matches the `EnvironmentCreationConfig` exactly, ensuring
+    /// type safety and automatic synchronization with struct changes.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::config::EnvironmentCreationConfig;
+    ///
+    /// let template = EnvironmentCreationConfig::template();
+    /// assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
+    /// ```
+    #[must_use]
+    pub fn template() -> Self {
+        Self {
+            environment: EnvironmentSection {
+                name: "REPLACE_WITH_ENVIRONMENT_NAME".to_string(),
+            },
+            ssh_credentials: SshCredentialsConfig {
+                private_key_path: "REPLACE_WITH_SSH_PRIVATE_KEY_PATH".to_string(),
+                public_key_path: "REPLACE_WITH_SSH_PUBLIC_KEY_PATH".to_string(),
+                username: "torrust".to_string(), // default value
+                port: 22,                        // default value
+            },
+        }
+    }
+
+    /// Generates a configuration template file at the specified path
+    ///
+    /// This method creates a JSON configuration file with placeholder values
+    /// that users can edit. The file is formatted with pretty-printing for
+    /// better readability.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path where the template file should be created
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Template file created successfully
+    /// * `Err(CreateConfigError)` - File creation or serialization failed
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Parent directory cannot be created
+    /// - Template serialization fails (unlikely - indicates a bug)
+    /// - File cannot be written due to permissions or I/O errors
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use torrust_tracker_deployer_lib::domain::config::EnvironmentCreationConfig;
+    /// use std::path::Path;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// EnvironmentCreationConfig::generate_template_file(
+    ///     Path::new("./environment-config.json")
+    /// ).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn generate_template_file(path: &std::path::Path) -> Result<(), CreateConfigError> {
+        // Create template instance with placeholders
+        let template = Self::template();
+
+        // Serialize to pretty-printed JSON
+        let json = serde_json::to_string_pretty(&template)
+            .map_err(|source| CreateConfigError::TemplateSerializationFailed { source })?;
+
+        // Create parent directories if they don't exist
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent).await.map_err(|source| {
+                CreateConfigError::TemplateDirectoryCreationFailed {
+                    path: parent.to_path_buf(),
+                    source,
+                }
+            })?;
+        }
+
+        // Write template to file
+        tokio::fs::write(path, json).await.map_err(|source| {
+            CreateConfigError::TemplateFileWriteFailed {
+                path: path.to_path_buf(),
+                source,
+            }
+        })?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -418,5 +512,129 @@ mod tests {
         let deserialized: EnvironmentCreationConfig = serde_json::from_str(&json).unwrap();
 
         assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_template_has_placeholder_values() {
+        let template = EnvironmentCreationConfig::template();
+
+        assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
+        assert_eq!(
+            template.ssh_credentials.private_key_path,
+            "REPLACE_WITH_SSH_PRIVATE_KEY_PATH"
+        );
+        assert_eq!(
+            template.ssh_credentials.public_key_path,
+            "REPLACE_WITH_SSH_PUBLIC_KEY_PATH"
+        );
+        assert_eq!(template.ssh_credentials.username, "torrust");
+        assert_eq!(template.ssh_credentials.port, 22);
+    }
+
+    #[test]
+    fn test_template_serializes_to_valid_json() {
+        let template = EnvironmentCreationConfig::template();
+        let json = serde_json::to_string_pretty(&template).unwrap();
+
+        // Verify it can be deserialized back
+        let deserialized: EnvironmentCreationConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(template, deserialized);
+    }
+
+    #[test]
+    fn test_template_structure_matches_config() {
+        let template = EnvironmentCreationConfig::template();
+
+        // Verify template has same structure as regular config
+        let regular_config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "test".to_string(),
+            },
+            SshCredentialsConfig::new(
+                "path1".to_string(),
+                "path2".to_string(),
+                "user".to_string(),
+                22,
+            ),
+        );
+
+        // Both should serialize to same structure (different values)
+        let template_json = serde_json::to_value(&template).unwrap();
+        let config_json = serde_json::to_value(&regular_config).unwrap();
+
+        // Check structure matches
+        assert!(template_json.is_object());
+        assert!(config_json.is_object());
+
+        let template_obj = template_json.as_object().unwrap();
+        let config_obj = config_json.as_object().unwrap();
+
+        assert_eq!(template_obj.keys().len(), config_obj.keys().len());
+        assert!(template_obj.contains_key("environment"));
+        assert!(template_obj.contains_key("ssh_credentials"));
+    }
+
+    #[tokio::test]
+    async fn test_generate_template_file() {
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let template_path = temp_dir.path().join("config.json");
+
+        let result = EnvironmentCreationConfig::generate_template_file(&template_path).await;
+        assert!(result.is_ok());
+
+        // Verify file exists
+        assert!(template_path.exists());
+
+        // Verify content is valid JSON
+        let content = std::fs::read_to_string(&template_path).unwrap();
+        let parsed: EnvironmentCreationConfig = serde_json::from_str(&content).unwrap();
+
+        // Verify placeholders are present
+        assert_eq!(parsed.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
+        assert_eq!(
+            parsed.ssh_credentials.private_key_path,
+            "REPLACE_WITH_SSH_PRIVATE_KEY_PATH"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_generate_template_file_creates_parent_directories() {
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let nested_path = temp_dir
+            .path()
+            .join("configs")
+            .join("env")
+            .join("test.json");
+
+        let result = EnvironmentCreationConfig::generate_template_file(&nested_path).await;
+        assert!(result.is_ok());
+
+        // Verify nested directories were created
+        assert!(nested_path.exists());
+        assert!(nested_path.parent().unwrap().exists());
+    }
+
+    #[tokio::test]
+    async fn test_generate_template_file_overwrites_existing() {
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let template_path = temp_dir.path().join("config.json");
+
+        // Create initial file
+        std::fs::write(&template_path, "old content").unwrap();
+
+        // Generate template should overwrite
+        let result = EnvironmentCreationConfig::generate_template_file(&template_path).await;
+        assert!(result.is_ok());
+
+        // Verify content was replaced
+        let content = std::fs::read_to_string(&template_path).unwrap();
+        assert!(content.contains("REPLACE_WITH_ENVIRONMENT_NAME"));
+        assert!(!content.contains("old content"));
     }
 }

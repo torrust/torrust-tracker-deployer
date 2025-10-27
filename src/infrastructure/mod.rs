@@ -13,11 +13,9 @@
 //!   - `template` - Template rendering delivery mechanisms (wrappers)
 //! - `remote_actions` - Repository-like implementations for remote system operations
 //! - `persistence` - Persistence infrastructure (repositories, file locking, storage)
-//! - `templates` - Configuration template generation for user-facing configuration files
 //! - `trace` - Trace file generation for error analysis
 
 pub mod external_tools;
 pub mod persistence;
 pub mod remote_actions;
-pub mod templates;
 pub mod trace;
