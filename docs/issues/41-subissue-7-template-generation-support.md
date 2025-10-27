@@ -1,5 +1,20 @@
 # Template Generation Support
 
+> **⚠️ DEPRECATED**: This specification is outdated. It was written before PR #48 implemented struct-based template generation in the domain layer.
+>
+> **Use the updated specification instead**: [`41-subissue-7-template-generation-support-v2.md`](./41-subissue-7-template-generation-support-v2.md)
+>
+> **Key changes**:
+>
+> - Template generation is already implemented in `src/domain/config/environment_config.rs` (PR #48)
+> - No need for `src/infrastructure/templates/` module
+> - This issue is now just a simple CLI integration
+> - Use `EnvironmentCreationConfig::generate_template_file()` directly
+
+---
+
+## [DEPRECATED] Original Specification
+
 **Issue**: [#41](https://github.com/torrust/torrust-tracker-deployer/issues/41)
 **Parent Epic**: [#34](https://github.com/torrust/torrust-tracker-deployer/issues/34) - Implement Create Environment Command
 **Depends On**: [#40](https://github.com/torrust/torrust-tracker-deployer/issues/40) - Template System Integration
@@ -22,19 +37,19 @@ Implement the `template` subcommand for the create command, allowing users to ge
 
 ## 🏗️ Architecture Requirements
 
-**DDD Layer**: Presentation (CLI interface) + Infrastructure (template generation)
-**Module Path**: `src/presentation/console/subcommands/create/` + `src/infrastructure/templates/`
-**Pattern**: CLI Subcommand + Template Generation
+**DDD Layer**: Presentation (CLI interface) only
+**Module Path**: `src/presentation/console/subcommands/create/`
+**Pattern**: CLI Subcommand → Domain Method Call
 
-**Dependencies**: Requires Subissue 6 (Template System Integration) to be completed first.
+**Dependencies**: Requires Subissue 6 (Template System Integration) to be completed first - **✅ Already completed in PR #48**
 
 ### Module Integration
 
 This subissue extends the CLI subcommand structure established in Subissue 3 (CLI Presentation Layer):
 
 - **Presentation Layer**: Add `template` subcommand to existing create command structure
-- **Infrastructure Layer**: Extend existing TemplateManager for configuration template generation
-- **No new domain logic**: Template generation is a user convenience feature
+- **Domain Layer**: Use existing `EnvironmentCreationConfig::generate_template_file()` method (already implemented in PR #48)
+- **No new infrastructure needed**: Template generation is already complete in the domain layer
 
 ## Specifications
 
