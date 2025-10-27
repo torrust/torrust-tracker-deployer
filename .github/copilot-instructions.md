@@ -25,6 +25,7 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 - `templates/` - Generated template examples and test fixtures
 - `build/` - Generated runtime configurations (git-ignored)
 - `docs/` - Project documentation
+- `docs/user-guide/` - User-facing documentation (getting started, commands, configuration)
 - `docs/decisions/` - Architectural Decision Records (ADRs)
 - `scripts/` - Shell scripts for development tasks
 - `fixtures/` - Test data and keys for development

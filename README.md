@@ -107,6 +107,8 @@ cargo install --path .
 torrust-tracker-deployer
 ```
 
+For detailed usage instructions, command reference, and examples, see the **[👤 User Guide](docs/user-guide/README.md)**.
+
 The application includes comprehensive logging with configurable format, output mode, and directory. See **[📖 Logging Guide](docs/user-guide/logging.md)** for details on logging configuration options.
 
 #### 🔧 Development Tasks
@@ -166,6 +168,8 @@ cargo run --bin e2e-tests-full -- --help
 
 > **⚠️ Manual deployment is not currently possible.** The application only supports E2E tests with hardcoded environments.
 >
+> **Temporary Workaround:** Until the `provision` command is available as a user-facing command, you can use E2E tests to provision infrastructure for experimentation. See the reference section below for details.
+>
 > **To explore the deployment process:**
 >
 > 1. Run E2E tests with `--keep` flag: `cargo run --bin e2e-tests-full -- --keep`
@@ -175,7 +179,9 @@ cargo run --bin e2e-tests-full -- --help
 > **Manual deployment commands will be available after completing the [roadmap](docs/roadmap.md).**
 
 <details>
-<summary>📋 <strong>Reference: Experimenting with OpenTofu and Ansible manually</strong></summary>
+<summary>📋 <strong>Reference: Experimenting with OpenTofu and Ansible manually (Temporary Workaround)</strong></summary>
+
+> **Note:** This is a **temporary workaround** for experimentation until the `provision` command is available as a user-facing CLI command. Currently, infrastructure provisioning is only implemented in E2E tests.
 
 If you want to experiment with OpenTofu and Ansible commands directly using the generated templates:
 
@@ -372,9 +378,10 @@ This project follows a structured development roadmap to evolve from the current
 
 ## 📚 Documentation
 
+- **[👤 User Guide](docs/user-guide/README.md)** - Getting started, command reference, and usage examples
 - **[🤝 Contributing Guide](docs/contributing/README.md)** - Git workflow, commit process, and linting conventions
-- **[� Roadmap](docs/roadmap.md)** - Development roadmap and MVP goals
-- **[�📖 Documentation Organization Guide](docs/documentation.md)** - How documentation is organized and where to contribute
+- **[🗺️ Roadmap](docs/roadmap.md)** - Development roadmap and MVP goals
+- **[📖 Documentation Organization Guide](docs/documentation.md)** - How documentation is organized and where to contribute
 - **[📖 OpenTofu Setup Guide](docs/tech-stack/opentofu.md)** - Installation, common commands, and best practices
 - **[📖 Ansible Setup Guide](docs/tech-stack/ansible.md)** - Installation, configuration, and project usage
 - **[📖 VM Providers Comparison](docs/vm-providers.md)** - Detailed comparison and decision rationale
