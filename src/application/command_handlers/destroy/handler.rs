@@ -1,95 +1,14 @@
-//! Infrastructure destruction command handler
-//!
-//! This module contains the `DestroyCommandHandler` which orchestrates the complete infrastructure
-//! teardown workflow including:
-//!
-//! - Infrastructure destruction via `OpenTofu`
-//! - State cleanup and resource verification
-//!
-//! The command handler handles the complex interaction with deployment tools and ensures
-//! proper sequencing of destruction steps.
+//! Destroy command handler implementation
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use tracing::{info, instrument};
 
-use crate::adapters::tofu::client::OpenTofuError;
+use super::errors::DestroyCommandHandlerError;
 use crate::application::steps::DestroyInfrastructureStep;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::domain::environment::state::StateTypeError;
 use crate::domain::environment::{Destroyed, Environment};
-use crate::shared::command::CommandError;
-use crate::shared::Traceable;
-
-/// Comprehensive error type for the `DestroyCommandHandler`
-#[derive(Debug, thiserror::Error)]
-pub enum DestroyCommandHandlerError {
-    #[error("OpenTofu command failed: {0}")]
-    OpenTofu(#[from] OpenTofuError),
-
-    #[error("Command execution failed: {0}")]
-    Command(#[from] CommandError),
-
-    #[error("Failed to persist environment state: {0}")]
-    StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
-
-    #[error("Invalid state transition: {0}")]
-    StateTransition(#[from] StateTypeError),
-
-    #[error("Failed to clean up state files at '{path}': {source}")]
-    StateCleanupFailed {
-        path: PathBuf,
-        #[source]
-        source: std::io::Error,
-    },
-}
-
-impl crate::shared::Traceable for DestroyCommandHandlerError {
-    fn trace_format(&self) -> String {
-        match self {
-            Self::OpenTofu(e) => {
-                format!("DestroyCommandHandlerError: OpenTofu command failed - {e}")
-            }
-            Self::Command(e) => {
-                format!("DestroyCommandHandlerError: Command execution failed - {e}")
-            }
-            Self::StatePersistence(e) => {
-                format!("DestroyCommandHandlerError: Failed to persist environment state - {e}")
-            }
-            Self::StateTransition(e) => {
-                format!("DestroyCommandHandlerError: Invalid state transition - {e}")
-            }
-            Self::StateCleanupFailed { path, source } => {
-                format!(
-                    "DestroyCommandHandlerError: Failed to clean up state files at '{}' - {source}",
-                    path.display()
-                )
-            }
-        }
-    }
-
-    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
-        match self {
-            Self::OpenTofu(e) => Some(e),
-            Self::Command(e) => Some(e),
-            Self::StatePersistence(_)
-            | Self::StateTransition(_)
-            | Self::StateCleanupFailed { .. } => None,
-        }
-    }
-
-    fn error_kind(&self) -> crate::shared::ErrorKind {
-        match self {
-            Self::OpenTofu(_) => crate::shared::ErrorKind::InfrastructureOperation,
-            Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
-            Self::StateTransition(_) => crate::shared::ErrorKind::Configuration,
-            Self::StatePersistence(_) | Self::StateCleanupFailed { .. } => {
-                crate::shared::ErrorKind::StatePersistence
-            }
-        }
-    }
-}
+use crate::shared::error::Traceable;
 
 /// `DestroyCommandHandler` orchestrates the complete infrastructure destruction workflow
 ///
@@ -118,8 +37,8 @@ impl crate::shared::Traceable for DestroyCommandHandlerError {
 /// - Report appropriate status to the user
 /// - Not fail due to missing resources
 pub struct DestroyCommandHandler {
-    repository: Arc<dyn EnvironmentRepository>,
-    clock: Arc<dyn crate::shared::Clock>,
+    pub(crate) repository: Arc<dyn EnvironmentRepository>,
+    pub(crate) clock: Arc<dyn crate::shared::Clock>,
 }
 
 impl DestroyCommandHandler {
@@ -325,7 +244,7 @@ impl DestroyCommandHandler {
     /// # Returns
     ///
     /// A `DestroyFailureContext` with all failure metadata and trace file path
-    fn build_failure_context(
+    pub(crate) fn build_failure_context(
         &self,
         _environment: &crate::domain::environment::Environment<
             crate::domain::environment::Destroying,
@@ -367,8 +286,6 @@ impl DestroyCommandHandler {
         }
     }
 
-    // Private helper methods
-
     /// Check if infrastructure should be destroyed
     ///
     /// Determines whether to attempt infrastructure destruction based on whether
@@ -382,7 +299,7 @@ impl DestroyCommandHandler {
     /// # Returns
     ///
     /// Returns `true` if infrastructure destruction should be attempted, `false` otherwise
-    fn should_destroy_infrastructure(
+    pub(crate) fn should_destroy_infrastructure(
         environment: &Environment<crate::domain::environment::Destroying>,
     ) -> bool {
         let tofu_build_dir = environment.tofu_build_dir();
@@ -419,7 +336,9 @@ impl DestroyCommandHandler {
     /// # Errors
     ///
     /// Returns an error if state file cleanup fails
-    fn cleanup_state_files<S>(env: &Environment<S>) -> Result<(), DestroyCommandHandlerError> {
+    pub(crate) fn cleanup_state_files<S>(
+        env: &Environment<S>,
+    ) -> Result<(), DestroyCommandHandlerError> {
         let data_dir = env.data_dir();
         let build_dir = env.build_dir();
 
@@ -454,178 +373,5 @@ impl DestroyCommandHandler {
         }
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::TempDir;
-
-    /// Test builder for `DestroyCommandHandler` that manages dependencies and lifecycle
-    ///
-    /// This builder simplifies test setup by:
-    /// - Managing `TempDir` lifecycle
-    /// - Providing sensible defaults for all dependencies
-    /// - Allowing selective customization of dependencies
-    /// - Returning only the command handler and necessary test artifacts
-    pub struct DestroyCommandHandlerTestBuilder {
-        temp_dir: TempDir,
-    }
-
-    impl DestroyCommandHandlerTestBuilder {
-        /// Create a new test builder with default configuration
-        pub fn new() -> Self {
-            let temp_dir = TempDir::new().expect("Failed to create temp dir");
-            Self { temp_dir }
-        }
-
-        /// Build the `DestroyCommandHandler` with all dependencies
-        ///
-        /// Returns: (`command_handler`, `temp_dir`)
-        /// The `temp_dir` must be kept alive for the duration of the test.
-        pub fn build(self) -> (DestroyCommandHandler, TempDir) {
-            let repository_factory =
-                crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
-                    std::time::Duration::from_secs(30),
-                );
-            let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
-
-            // Create a system clock for testing
-            let clock = Arc::new(crate::shared::SystemClock);
-
-            let command_handler = DestroyCommandHandler::new(repository, clock);
-
-            (command_handler, self.temp_dir)
-        }
-    }
-
-    #[test]
-    fn it_should_create_destroy_command_handler_with_all_dependencies() {
-        let (command_handler, _temp_dir) = DestroyCommandHandlerTestBuilder::new().build();
-
-        // Verify the command handler was created (basic structure test)
-        // This test just verifies that the command handler can be created with the dependencies
-        assert_eq!(Arc::strong_count(&command_handler.repository), 1);
-    }
-
-    #[test]
-    fn it_should_have_correct_error_type_conversions() {
-        // Test that all error types can convert to DestroyCommandHandlerError
-        let command_error = CommandError::StartupFailed {
-            command: "test".to_string(),
-            source: std::io::Error::new(std::io::ErrorKind::NotFound, "test"),
-        };
-        let opentofu_error = OpenTofuError::CommandError(command_error);
-        let destroy_error: DestroyCommandHandlerError = opentofu_error.into();
-        drop(destroy_error);
-
-        let command_error_direct = CommandError::ExecutionFailed {
-            command: "test".to_string(),
-            exit_code: "1".to_string(),
-            stdout: String::new(),
-            stderr: "test error".to_string(),
-        };
-        let destroy_error: DestroyCommandHandlerError = command_error_direct.into();
-        drop(destroy_error);
-    }
-
-    #[test]
-    fn it_should_skip_infrastructure_destruction_when_tofu_build_dir_does_not_exist() {
-        use crate::domain::environment::testing::EnvironmentTestBuilder;
-
-        // Arrange: Create environment in Created state with no OpenTofu build directory
-        let (created_env, _data_dir, _build_dir, _temp_dir) =
-            EnvironmentTestBuilder::new().build_with_custom_paths();
-
-        // Transition to Destroying state
-        let destroying_env = created_env.start_destroying();
-
-        // Verify tofu_build_dir does not exist
-        assert!(
-            !destroying_env.tofu_build_dir().exists(),
-            "OpenTofu build directory should not exist for Created state"
-        );
-
-        // Act: Check if infrastructure should be destroyed
-        let should_destroy = DestroyCommandHandler::should_destroy_infrastructure(&destroying_env);
-
-        // Assert: Infrastructure destruction should be skipped
-        assert!(
-            !should_destroy,
-            "Infrastructure destruction should be skipped when tofu_build_dir does not exist"
-        );
-    }
-
-    #[test]
-    fn it_should_attempt_infrastructure_destruction_when_tofu_build_dir_exists() {
-        use crate::domain::environment::testing::EnvironmentTestBuilder;
-
-        // Arrange: Create environment with OpenTofu build directory
-        let (created_env, _data_dir, _build_dir, _temp_dir) =
-            EnvironmentTestBuilder::new().build_with_custom_paths();
-
-        // Create the OpenTofu build directory to simulate provisioned state
-        let tofu_build_dir = created_env.tofu_build_dir();
-        std::fs::create_dir_all(&tofu_build_dir).expect("Failed to create tofu build dir");
-
-        // Transition to Destroying state
-        let destroying_env = created_env.start_destroying();
-
-        // Verify tofu_build_dir exists
-        assert!(
-            destroying_env.tofu_build_dir().exists(),
-            "OpenTofu build directory should exist for provisioned environment"
-        );
-
-        // Act: Check if infrastructure should be destroyed
-        let should_destroy = DestroyCommandHandler::should_destroy_infrastructure(&destroying_env);
-
-        // Assert: Infrastructure destruction should be attempted
-        assert!(
-            should_destroy,
-            "Infrastructure destruction should be attempted when tofu_build_dir exists"
-        );
-    }
-
-    #[test]
-    fn it_should_clean_up_state_files_regardless_of_infrastructure_state() {
-        use crate::domain::environment::testing::EnvironmentTestBuilder;
-
-        // Arrange: Create environment with data and build directories
-        let (created_env, data_dir, build_dir, _temp_dir) =
-            EnvironmentTestBuilder::new().build_with_custom_paths();
-
-        // Create the directories
-        std::fs::create_dir_all(&data_dir).expect("Failed to create data dir");
-        std::fs::create_dir_all(&build_dir).expect("Failed to create build dir");
-
-        // Create some files in the directories
-        std::fs::write(data_dir.join("environment.json"), "{}").expect("Failed to write file");
-        std::fs::write(build_dir.join("test.txt"), "test").expect("Failed to write file");
-
-        // Verify directories exist before cleanup
-        assert!(data_dir.exists(), "Data directory should exist");
-        assert!(build_dir.exists(), "Build directory should exist");
-
-        // Act: Clean up state files
-        let result = DestroyCommandHandler::cleanup_state_files(&created_env);
-
-        // Assert: Cleanup succeeded
-        assert!(
-            result.is_ok(),
-            "State file cleanup should succeed: {:?}",
-            result.err()
-        );
-
-        // Assert: Directories were removed
-        assert!(
-            !data_dir.exists(),
-            "Data directory should be removed after cleanup"
-        );
-        assert!(
-            !build_dir.exists(),
-            "Build directory should be removed after cleanup"
-        );
     }
 }
