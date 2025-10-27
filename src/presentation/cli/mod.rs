@@ -184,7 +184,9 @@ mod tests {
                 crate::presentation::cli::CreateAction::Environment { env_file } => {
                     assert_eq!(env_file, std::path::PathBuf::from("config.json"));
                 }
-                _ => panic!("Expected Environment action"),
+                crate::presentation::cli::CreateAction::Template { .. } => {
+                    panic!("Expected Environment action")
+                }
             },
             Commands::Destroy { .. } => panic!("Expected Create command"),
         }
@@ -206,7 +208,9 @@ mod tests {
                 crate::presentation::cli::CreateAction::Environment { env_file } => {
                     assert_eq!(env_file, std::path::PathBuf::from("env.json"));
                 }
-                _ => panic!("Expected Environment action"),
+                crate::presentation::cli::CreateAction::Template { .. } => {
+                    panic!("Expected Environment action")
+                }
             },
             Commands::Destroy { .. } => panic!("Expected Create command"),
         }
@@ -249,7 +253,9 @@ mod tests {
                 crate::presentation::cli::CreateAction::Environment { env_file } => {
                     assert_eq!(env_file, std::path::PathBuf::from("config.json"));
                 }
-                _ => panic!("Expected Environment action"),
+                crate::presentation::cli::CreateAction::Template { .. } => {
+                    panic!("Expected Environment action")
+                }
             },
             Commands::Destroy { .. } => panic!("Expected Create command"),
         }
@@ -295,7 +301,9 @@ mod tests {
                 crate::presentation::cli::CreateAction::Template { output_path } => {
                     assert!(output_path.is_none());
                 }
-                _ => panic!("Expected Template action"),
+                crate::presentation::cli::CreateAction::Environment { .. } => {
+                    panic!("Expected Template action")
+                }
             },
             Commands::Destroy { .. } => panic!("Expected Create command"),
         }
@@ -319,7 +327,9 @@ mod tests {
                         Some(std::path::PathBuf::from("./config/my-env.json"))
                     );
                 }
-                _ => panic!("Expected Template action"),
+                crate::presentation::cli::CreateAction::Environment { .. } => {
+                    panic!("Expected Template action")
+                }
             },
             Commands::Destroy { .. } => panic!("Expected Create command"),
         }

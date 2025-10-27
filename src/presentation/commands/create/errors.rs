@@ -150,9 +150,10 @@ Example valid configuration:
 For more information, see the configuration documentation."
                 }
             },
-            Self::ConfigValidationFailed(inner) => inner.help(),
+            Self::ConfigValidationFailed(inner) | Self::TemplateGenerationFailed(inner) => {
+                inner.help()
+            }
             Self::CommandFailed(inner) => inner.help(),
-            Self::TemplateGenerationFailed(inner) => inner.help(),
         }
     }
 }
