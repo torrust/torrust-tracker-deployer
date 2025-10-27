@@ -584,4 +584,3 @@ Edit the generated template and then use it to create your environment.
 ## See Also
 
 - [Logging Guide](../logging.md) - Configure logging output and formats
-- [Template Customization](../template-customization.md) - Advanced template configuration
