@@ -168,9 +168,10 @@ impl DestroyError {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::presentation::commands::destroy;
+    /// use std::path::Path;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// if let Err(e) = destroy::handle("test-env") {
+    /// if let Err(e) = destroy::handle("test-env", Path::new(".")) {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
