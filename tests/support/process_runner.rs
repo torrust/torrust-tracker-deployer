@@ -92,7 +92,7 @@ impl ProcessRunner {
     #[allow(dead_code)]
     pub fn run_destroy_command(&self, environment_name: &str) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
-        
+
         if let Some(working_dir) = &self.working_dir {
             // Build command with working directory
             cmd.args([
@@ -105,12 +105,7 @@ impl ProcessRunner {
             ]);
         } else {
             // No working directory, use relative paths
-            cmd.args([
-                "run",
-                "--",
-                "destroy",
-                environment_name,
-            ]);
+            cmd.args(["run", "--", "destroy", environment_name]);
         }
 
         let output = cmd.output().context("Failed to execute destroy command")?;

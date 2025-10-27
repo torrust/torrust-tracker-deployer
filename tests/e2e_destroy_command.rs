@@ -84,12 +84,10 @@ fn it_should_destroy_environment_with_default_working_directory() {
         destroy_result.stderr()
     );
 
-    // Assert: Verify environment was removed
-    let env_dir = temp_workspace.path().join("test-destroy-default");
-    assert!(
-        !env_dir.exists(),
-        "Environment directory should be removed after destroy"
-    );
+    // Assert: Verify environment was transitioned to Destroyed state
+    let env_assertions = EnvironmentStateAssertions::new(temp_workspace.path());
+    env_assertions.assert_environment_exists("test-destroy-default");
+    env_assertions.assert_environment_state_is("test-destroy-default", "Destroyed");
 }
 
 #[test]
@@ -133,12 +131,10 @@ fn it_should_destroy_environment_with_custom_working_directory() {
         destroy_result.stderr()
     );
 
-    // Assert: Verify environment was removed from custom location
-    let env_dir = temp_workspace.path().join("test-destroy-custom");
-    assert!(
-        !env_dir.exists(),
-        "Environment directory should be removed after destroy"
-    );
+    // Assert: Verify environment was transitioned to Destroyed state in custom location
+    let env_assertions = EnvironmentStateAssertions::new(temp_workspace.path());
+    env_assertions.assert_environment_exists("test-destroy-custom");
+    env_assertions.assert_environment_state_is("test-destroy-custom", "Destroyed");
 }
 
 #[test]
@@ -207,10 +203,8 @@ fn it_should_complete_full_lifecycle_with_custom_working_directory() {
         destroy_result.stderr()
     );
 
-    // Assert: Environment is completely removed
-    let env_dir = temp_workspace.path().join("test-lifecycle");
-    assert!(
-        !env_dir.exists(),
-        "Environment directory should be removed after destroy"
-    );
+    // Assert: Environment is transitioned to Destroyed state
+    let env_assertions = EnvironmentStateAssertions::new(temp_workspace.path());
+    env_assertions.assert_environment_exists("test-lifecycle");
+    env_assertions.assert_environment_state_is("test-lifecycle", "Destroyed");
 }
