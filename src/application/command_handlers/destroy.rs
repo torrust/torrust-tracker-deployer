@@ -287,11 +287,23 @@ impl DestroyCommandHandler {
     > {
         use crate::domain::environment::state::DestroyStep;
 
-        // Step 1: Destroy infrastructure via OpenTofu
-        Self::destroy_infrastructure(opentofu_client)
-            .map_err(|e| (e, DestroyStep::DestroyInfrastructure))?;
+        // Step 1: Conditionally destroy infrastructure via OpenTofu
+        // Only attempt infrastructure destruction if infrastructure was provisioned
+        if Self::should_destroy_infrastructure(environment) {
+            info!(
+                environment = %environment.name(),
+                "Destroying provisioned infrastructure"
+            );
+            Self::destroy_infrastructure(opentofu_client)
+                .map_err(|e| (e, DestroyStep::DestroyInfrastructure))?;
+        } else {
+            info!(
+                environment = %environment.name(),
+                "Skipping infrastructure destruction (environment was never provisioned)"
+            );
+        }
 
-        // Step 2: Clean up state files
+        // Step 2: Clean up state files (always happens regardless of infrastructure state)
         Self::cleanup_state_files(environment).map_err(|e| (e, DestroyStep::CleanupStateFiles))?;
 
         Ok(())
@@ -356,6 +368,28 @@ impl DestroyCommandHandler {
     }
 
     // Private helper methods
+
+    /// Check if infrastructure should be destroyed
+    ///
+    /// Determines whether to attempt infrastructure destruction based on whether
+    /// the `OpenTofu` build directory exists. If the directory doesn't exist, it means
+    /// no infrastructure was ever provisioned (e.g., environment in Created state).
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment being destroyed
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if infrastructure destruction should be attempted, `false` otherwise
+    fn should_destroy_infrastructure(
+        environment: &crate::domain::environment::Environment<
+            crate::domain::environment::Destroying,
+        >,
+    ) -> bool {
+        let tofu_build_dir = environment.tofu_build_dir();
+        tofu_build_dir.exists()
+    }
 
     /// Destroy the infrastructure using `OpenTofu`
     ///
@@ -496,5 +530,104 @@ mod tests {
         };
         let destroy_error: DestroyCommandHandlerError = command_error_direct.into();
         drop(destroy_error);
+    }
+
+    #[test]
+    fn it_should_skip_infrastructure_destruction_when_tofu_build_dir_does_not_exist() {
+        use crate::domain::environment::testing::EnvironmentTestBuilder;
+
+        // Arrange: Create environment in Created state with no OpenTofu build directory
+        let (created_env, _data_dir, _build_dir, _temp_dir) =
+            EnvironmentTestBuilder::new().build_with_custom_paths();
+
+        // Transition to Destroying state
+        let destroying_env = created_env.start_destroying();
+
+        // Verify tofu_build_dir does not exist
+        assert!(
+            !destroying_env.tofu_build_dir().exists(),
+            "OpenTofu build directory should not exist for Created state"
+        );
+
+        // Act: Check if infrastructure should be destroyed
+        let should_destroy = DestroyCommandHandler::should_destroy_infrastructure(&destroying_env);
+
+        // Assert: Infrastructure destruction should be skipped
+        assert!(
+            !should_destroy,
+            "Infrastructure destruction should be skipped when tofu_build_dir does not exist"
+        );
+    }
+
+    #[test]
+    fn it_should_attempt_infrastructure_destruction_when_tofu_build_dir_exists() {
+        use crate::domain::environment::testing::EnvironmentTestBuilder;
+
+        // Arrange: Create environment with OpenTofu build directory
+        let (created_env, _data_dir, _build_dir, _temp_dir) =
+            EnvironmentTestBuilder::new().build_with_custom_paths();
+
+        // Create the OpenTofu build directory to simulate provisioned state
+        let tofu_build_dir = created_env.tofu_build_dir();
+        std::fs::create_dir_all(&tofu_build_dir).expect("Failed to create tofu build dir");
+
+        // Transition to Destroying state
+        let destroying_env = created_env.start_destroying();
+
+        // Verify tofu_build_dir exists
+        assert!(
+            destroying_env.tofu_build_dir().exists(),
+            "OpenTofu build directory should exist for provisioned environment"
+        );
+
+        // Act: Check if infrastructure should be destroyed
+        let should_destroy = DestroyCommandHandler::should_destroy_infrastructure(&destroying_env);
+
+        // Assert: Infrastructure destruction should be attempted
+        assert!(
+            should_destroy,
+            "Infrastructure destruction should be attempted when tofu_build_dir exists"
+        );
+    }
+
+    #[test]
+    fn it_should_clean_up_state_files_regardless_of_infrastructure_state() {
+        use crate::domain::environment::testing::EnvironmentTestBuilder;
+
+        // Arrange: Create environment with data and build directories
+        let (created_env, data_dir, build_dir, _temp_dir) =
+            EnvironmentTestBuilder::new().build_with_custom_paths();
+
+        // Create the directories
+        std::fs::create_dir_all(&data_dir).expect("Failed to create data dir");
+        std::fs::create_dir_all(&build_dir).expect("Failed to create build dir");
+
+        // Create some files in the directories
+        std::fs::write(data_dir.join("environment.json"), "{}").expect("Failed to write file");
+        std::fs::write(build_dir.join("test.txt"), "test").expect("Failed to write file");
+
+        // Verify directories exist before cleanup
+        assert!(data_dir.exists(), "Data directory should exist");
+        assert!(build_dir.exists(), "Build directory should exist");
+
+        // Act: Clean up state files
+        let result = DestroyCommandHandler::cleanup_state_files(&created_env);
+
+        // Assert: Cleanup succeeded
+        assert!(
+            result.is_ok(),
+            "State file cleanup should succeed: {:?}",
+            result.err()
+        );
+
+        // Assert: Directories were removed
+        assert!(
+            !data_dir.exists(),
+            "Data directory should be removed after cleanup"
+        );
+        assert!(
+            !build_dir.exists(),
+            "Build directory should be removed after cleanup"
+        );
     }
 }
