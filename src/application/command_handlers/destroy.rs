@@ -303,7 +303,7 @@ impl DestroyCommandHandler {
             );
         }
 
-        // Step 2: Clean up state files (always happens regardless of infrastructure state)
+        // Step 2: Clean up state files
         Self::cleanup_state_files(environment).map_err(|e| (e, DestroyStep::CleanupStateFiles))?;
 
         Ok(())
@@ -383,9 +383,7 @@ impl DestroyCommandHandler {
     ///
     /// Returns `true` if infrastructure destruction should be attempted, `false` otherwise
     fn should_destroy_infrastructure(
-        environment: &crate::domain::environment::Environment<
-            crate::domain::environment::Destroying,
-        >,
+        environment: &Environment<crate::domain::environment::Destroying>,
     ) -> bool {
         let tofu_build_dir = environment.tofu_build_dir();
         tofu_build_dir.exists()
