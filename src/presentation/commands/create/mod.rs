@@ -20,13 +20,15 @@
 //! ## Usage Example
 //!
 //! ```rust,no_run
-//! use std::path::Path;
+//! use std::path::{Path, PathBuf};
+//! use torrust_tracker_deployer_lib::presentation::cli::commands::CreateAction;
 //! use torrust_tracker_deployer_lib::presentation::commands::create;
 //!
-//! if let Err(e) = create::handle(
-//!     Path::new("config/environment.json"),
-//!     Path::new(".")
-//! ) {
+//! let action = CreateAction::Environment {
+//!     env_file: PathBuf::from("config/environment.json")
+//! };
+//!
+//! if let Err(e) = create::handle_create_command(action, Path::new(".")) {
 //!     eprintln!("Create failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
