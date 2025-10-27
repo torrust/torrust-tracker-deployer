@@ -108,16 +108,23 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("config.json");
 
+        // Use absolute paths to SSH keys to ensure they work regardless of current directory
+        let project_root = env!("CARGO_MANIFEST_DIR");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         // Write a valid configuration file
-        let config_json = r#"{
-            "environment": {
+        let config_json = format!(
+            r#"{{
+            "environment": {{
                 "name": "test-env"
-            },
-            "ssh_credentials": {
-                "private_key_path": "fixtures/testing_rsa",
-                "public_key_path": "fixtures/testing_rsa.pub"
-            }
-        }"#;
+            }},
+            "ssh_credentials": {{
+                "private_key_path": "{private_key_path}",
+                "public_key_path": "{public_key_path}"
+            }}
+        }}"#
+        );
         fs::write(&config_path, config_json).unwrap();
 
         let loader = ConfigLoader;
@@ -186,16 +193,23 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("invalid_name.json");
 
+        // Use absolute paths to SSH keys to ensure they work regardless of current directory
+        let project_root = env!("CARGO_MANIFEST_DIR");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         // Write config with invalid environment name
-        let config_json = r#"{
-            "environment": {
+        let config_json = format!(
+            r#"{{
+            "environment": {{
                 "name": "Invalid_Name_With_Underscore"
-            },
-            "ssh_credentials": {
-                "private_key_path": "fixtures/testing_rsa",
-                "public_key_path": "fixtures/testing_rsa.pub"
-            }
-        }"#;
+            }},
+            "ssh_credentials": {{
+                "private_key_path": "{private_key_path}",
+                "public_key_path": "{public_key_path}"
+            }}
+        }}"#
+        );
         fs::write(&config_path, config_json).unwrap();
 
         let loader = ConfigLoader;
@@ -244,16 +258,23 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("with_defaults.json");
 
+        // Use absolute paths to SSH keys to ensure they work regardless of current directory
+        let project_root = env!("CARGO_MANIFEST_DIR");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         // Write config without optional fields (they should use defaults)
-        let config_json = r#"{
-            "environment": {
+        let config_json = format!(
+            r#"{{
+            "environment": {{
                 "name": "test-env"
-            },
-            "ssh_credentials": {
-                "private_key_path": "fixtures/testing_rsa",
-                "public_key_path": "fixtures/testing_rsa.pub"
-            }
-        }"#;
+            }},
+            "ssh_credentials": {{
+                "private_key_path": "{private_key_path}",
+                "public_key_path": "{public_key_path}"
+            }}
+        }}"#
+        );
         fs::write(&config_path, config_json).unwrap();
 
         let loader = ConfigLoader;

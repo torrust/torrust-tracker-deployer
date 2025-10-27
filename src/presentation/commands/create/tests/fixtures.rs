@@ -17,14 +17,19 @@ use std::path::{Path, PathBuf};
 ///
 /// Returns the path to the created configuration file
 pub fn create_valid_config(path: &Path, env_name: &str) -> PathBuf {
+    // Use absolute paths to SSH keys to ensure they work regardless of current directory
+    let project_root = env!("CARGO_MANIFEST_DIR");
+    let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+    let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
     let config_json = format!(
         r#"{{
     "environment": {{
         "name": "{env_name}"
     }},
     "ssh_credentials": {{
-        "private_key_path": "fixtures/testing_rsa",
-        "public_key_path": "fixtures/testing_rsa.pub"
+        "private_key_path": "{private_key_path}",
+        "public_key_path": "{public_key_path}"
     }}
 }}"#
     );
@@ -60,15 +65,22 @@ pub fn create_invalid_json_config(path: &Path) -> PathBuf {
 ///
 /// Returns the path to the created configuration file
 pub fn create_config_with_invalid_name(path: &Path) -> PathBuf {
-    let config_json = r#"{
-    "environment": {
+    // Use absolute paths to SSH keys to ensure they work regardless of current directory
+    let project_root = env!("CARGO_MANIFEST_DIR");
+    let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+    let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+    let config_json = format!(
+        r#"{{
+    "environment": {{
         "name": "Invalid_Name_With_Underscore"
-    },
-    "ssh_credentials": {
-        "private_key_path": "fixtures/testing_rsa",
-        "public_key_path": "fixtures/testing_rsa.pub"
-    }
-}"#;
+    }},
+    "ssh_credentials": {{
+        "private_key_path": "{private_key_path}",
+        "public_key_path": "{public_key_path}"
+    }}
+}}"#
+    );
 
     let config_path = path.join("invalid_name.json");
     fs::write(&config_path, config_json).unwrap();
