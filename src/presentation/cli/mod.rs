@@ -11,7 +11,7 @@ pub mod args;
 pub mod commands;
 
 pub use args::GlobalArgs;
-pub use commands::Commands;
+pub use commands::{Commands, CreateAction};
 
 /// Command-line interface for Torrust Tracker Deployer
 ///
@@ -168,10 +168,11 @@ mod tests {
     }
 
     #[test]
-    fn it_should_parse_create_subcommand() {
+    fn it_should_parse_create_environment_subcommand() {
         let args = vec![
             "torrust-tracker-deployer",
             "create",
+            "environment",
             "--env-file",
             "config.json",
         ];
@@ -179,29 +180,41 @@ mod tests {
 
         assert!(cli.command.is_some());
         match cli.command.unwrap() {
-            Commands::Create { env_file } => {
-                assert_eq!(env_file, std::path::PathBuf::from("config.json"));
-            }
+            Commands::Create { action } => match action {
+                crate::presentation::cli::CreateAction::Environment { env_file } => {
+                    assert_eq!(env_file, std::path::PathBuf::from("config.json"));
+                }
+                _ => panic!("Expected Environment action"),
+            },
             Commands::Destroy { .. } => panic!("Expected Create command"),
         }
     }
 
     #[test]
-    fn it_should_parse_create_with_short_flag() {
-        let args = vec!["torrust-tracker-deployer", "create", "-f", "env.json"];
+    fn it_should_parse_create_environment_with_short_flag() {
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "environment",
+            "-f",
+            "env.json",
+        ];
         let cli = Cli::try_parse_from(args).unwrap();
 
         match cli.command.unwrap() {
-            Commands::Create { env_file } => {
-                assert_eq!(env_file, std::path::PathBuf::from("env.json"));
-            }
+            Commands::Create { action } => match action {
+                crate::presentation::cli::CreateAction::Environment { env_file } => {
+                    assert_eq!(env_file, std::path::PathBuf::from("env.json"));
+                }
+                _ => panic!("Expected Environment action"),
+            },
             Commands::Destroy { .. } => panic!("Expected Create command"),
         }
     }
 
     #[test]
-    fn it_should_require_env_file_parameter_for_create() {
-        let args = vec!["torrust-tracker-deployer", "create"];
+    fn it_should_require_env_file_parameter_for_create_environment() {
+        let args = vec!["torrust-tracker-deployer", "create", "environment"];
         let result = Cli::try_parse_from(args);
 
         assert!(result.is_err());
@@ -214,12 +227,13 @@ mod tests {
     }
 
     #[test]
-    fn it_should_parse_working_dir_global_option() {
+    fn it_should_parse_working_dir_global_option_with_create_environment() {
         let args = vec![
             "torrust-tracker-deployer",
             "--working-dir",
             "/tmp/workspace",
             "create",
+            "environment",
             "--env-file",
             "config.json",
         ];
@@ -231,16 +245,25 @@ mod tests {
         );
 
         match cli.command.unwrap() {
-            Commands::Create { env_file } => {
-                assert_eq!(env_file, std::path::PathBuf::from("config.json"));
-            }
+            Commands::Create { action } => match action {
+                crate::presentation::cli::CreateAction::Environment { env_file } => {
+                    assert_eq!(env_file, std::path::PathBuf::from("config.json"));
+                }
+                _ => panic!("Expected Environment action"),
+            },
             Commands::Destroy { .. } => panic!("Expected Create command"),
         }
     }
 
     #[test]
     fn it_should_use_default_working_dir_when_not_specified() {
-        let args = vec!["torrust-tracker-deployer", "create", "-f", "config.json"];
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "environment",
+            "-f",
+            "config.json",
+        ];
         let cli = Cli::try_parse_from(args).unwrap();
 
         assert_eq!(cli.global.working_dir, std::path::PathBuf::from("."));
@@ -257,8 +280,80 @@ mod tests {
 
         let help_text = error.to_string();
         assert!(
+            help_text.contains("environment") || help_text.contains("template"),
+            "Help text should mention subcommands: {help_text}"
+        );
+    }
+
+    #[test]
+    fn it_should_parse_create_template_without_path() {
+        let args = vec!["torrust-tracker-deployer", "create", "template"];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        match cli.command.unwrap() {
+            Commands::Create { action } => match action {
+                crate::presentation::cli::CreateAction::Template { output_path } => {
+                    assert!(output_path.is_none());
+                }
+                _ => panic!("Expected Template action"),
+            },
+            Commands::Destroy { .. } => panic!("Expected Create command"),
+        }
+    }
+
+    #[test]
+    fn it_should_parse_create_template_with_custom_path() {
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "template",
+            "./config/my-env.json",
+        ];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        match cli.command.unwrap() {
+            Commands::Create { action } => match action {
+                crate::presentation::cli::CreateAction::Template { output_path } => {
+                    assert_eq!(
+                        output_path,
+                        Some(std::path::PathBuf::from("./config/my-env.json"))
+                    );
+                }
+                _ => panic!("Expected Template action"),
+            },
+            Commands::Destroy { .. } => panic!("Expected Create command"),
+        }
+    }
+
+    #[test]
+    fn it_should_show_create_environment_help() {
+        let args = vec!["torrust-tracker-deployer", "create", "environment", "--help"];
+        let result = Cli::try_parse_from(args);
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert_eq!(error.kind(), clap::error::ErrorKind::DisplayHelp);
+
+        let help_text = error.to_string();
+        assert!(
             help_text.contains("env-file") || help_text.contains("configuration"),
             "Help text should mention env-file parameter"
+        );
+    }
+
+    #[test]
+    fn it_should_show_create_template_help() {
+        let args = vec!["torrust-tracker-deployer", "create", "template", "--help"];
+        let result = Cli::try_parse_from(args);
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert_eq!(error.kind(), clap::error::ErrorKind::DisplayHelp);
+
+        let help_text = error.to_string();
+        assert!(
+            help_text.contains("template") || help_text.contains("placeholder"),
+            "Help text should mention template generation"
         );
     }
 }
