@@ -80,6 +80,38 @@ impl ProcessRunner {
 
         Ok(ProcessResult::new(output))
     }
+
+    /// Run the destroy command with the production binary
+    ///
+    /// This method runs `cargo run -- destroy <environment_name>` with
+    /// optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    #[allow(dead_code)]
+    pub fn run_destroy_command(&self, environment_name: &str) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "destroy",
+                environment_name,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args(["run", "--", "destroy", environment_name]);
+        }
+
+        let output = cmd.output().context("Failed to execute destroy command")?;
+
+        Ok(ProcessResult::new(output))
+    }
 }
 
 impl Default for ProcessRunner {
