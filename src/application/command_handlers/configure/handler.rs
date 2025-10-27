@@ -1,7 +1,10 @@
+//! Configure command handler implementation
+
 use std::sync::Arc;
 
-use tracing::{info, instrument, warn};
+use tracing::{info, instrument};
 
+use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::domain::environment::repository::EnvironmentRepository;
@@ -10,45 +13,7 @@ use crate::domain::environment::state::{
 };
 use crate::domain::environment::{Configured, Configuring, Environment, Provisioned, TraceId};
 use crate::infrastructure::trace::ConfigureTraceWriter;
-use crate::shared::command::CommandError;
 use crate::shared::error::Traceable;
-
-/// Comprehensive error type for the `ConfigureCommandHandler`
-#[derive(Debug, thiserror::Error)]
-pub enum ConfigureCommandHandlerError {
-    #[error("Command execution failed: {0}")]
-    Command(#[from] CommandError),
-
-    #[error("Failed to persist environment state: {0}")]
-    StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
-}
-
-impl crate::shared::Traceable for ConfigureCommandHandlerError {
-    fn trace_format(&self) -> String {
-        match self {
-            Self::Command(e) => {
-                format!("ConfigureCommandHandlerError: Command execution failed - {e}")
-            }
-            Self::StatePersistence(e) => {
-                format!("ConfigureCommandHandlerError: Failed to persist environment state - {e}")
-            }
-        }
-    }
-
-    fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
-        match self {
-            Self::Command(e) => Some(e),
-            Self::StatePersistence(_) => None,
-        }
-    }
-
-    fn error_kind(&self) -> crate::shared::ErrorKind {
-        match self {
-            Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
-            Self::StatePersistence(_) => crate::shared::ErrorKind::StatePersistence,
-        }
-    }
-}
 
 /// `ConfigureCommandHandler` orchestrates the complete infrastructure configuration workflow
 ///
@@ -69,9 +34,9 @@ impl crate::shared::Traceable for ConfigureCommandHandlerError {
 /// State is persisted after each transition using the injected repository.
 /// Persistence failures are logged but don't fail the command (state remains valid in memory).
 pub struct ConfigureCommandHandler {
-    ansible_client: Arc<AnsibleClient>,
-    clock: Arc<dyn crate::shared::Clock>,
-    repository: Arc<dyn EnvironmentRepository>,
+    pub(crate) ansible_client: Arc<AnsibleClient>,
+    pub(crate) clock: Arc<dyn crate::shared::Clock>,
+    pub(crate) repository: Arc<dyn EnvironmentRepository>,
 }
 
 impl ConfigureCommandHandler {
@@ -194,7 +159,6 @@ impl ConfigureCommandHandler {
         Ok(configured)
     }
 
-    /// Persist configuring state
     /// Build failure context for a configuration error and generate trace file
     ///
     /// This helper method builds structured error context including the failed step,
@@ -214,7 +178,7 @@ impl ConfigureCommandHandler {
     /// # Returns
     ///
     /// A structured `ConfigureFailureContext` with timing, error details, and trace file path
-    fn build_failure_context(
+    pub(crate) fn build_failure_context(
         &self,
         environment: &Environment<Configuring>,
         error: &ConfigureCommandHandlerError,
@@ -258,113 +222,5 @@ impl ConfigureCommandHandler {
         }
 
         context
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::TempDir;
-
-    // Helper function to create a test environment in Configuring state
-    fn create_test_environment(_temp_dir: &TempDir) -> (Environment<Configuring>, TempDir) {
-        use crate::domain::environment::testing::EnvironmentTestBuilder;
-
-        let (env, _data_dir, _build_dir, env_temp_dir) = EnvironmentTestBuilder::new()
-            .with_name("test-env")
-            .build_with_custom_paths();
-
-        // Environment is created with paths inside env_temp_dir
-        // which will be automatically cleaned up when env_temp_dir is dropped
-
-        // Transition Created -> Provisioning -> Provisioned -> Configuring
-        (
-            env.start_provisioning().provisioned().start_configuring(),
-            env_temp_dir,
-        )
-    }
-
-    /// Test builder for `ConfigureCommandHandler` that manages dependencies and lifecycle
-    ///
-    /// This builder simplifies test setup by:
-    /// - Managing `TempDir` lifecycle
-    /// - Providing sensible defaults for all dependencies
-    /// - Returning only the command and necessary test artifacts
-    pub struct ConfigureCommandHandlerTestBuilder {
-        temp_dir: TempDir,
-    }
-
-    impl ConfigureCommandHandlerTestBuilder {
-        /// Create a new test builder with default configuration
-        pub fn new() -> Self {
-            let temp_dir = TempDir::new().expect("Failed to create temp dir");
-            Self { temp_dir }
-        }
-
-        /// Build the `ConfigureCommandHandler` with all dependencies
-        ///
-        /// Returns: (`command`, `temp_dir`)
-        /// The `temp_dir` must be kept alive for the duration of the test.
-        pub fn build(self) -> (ConfigureCommandHandler, TempDir) {
-            let ansible_client = Arc::new(AnsibleClient::new(self.temp_dir.path()));
-            let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
-
-            let repository_factory =
-                crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
-                    std::time::Duration::from_secs(30),
-                );
-            let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
-
-            let command_handler = ConfigureCommandHandler::new(ansible_client, clock, repository);
-
-            (command_handler, self.temp_dir)
-        }
-    }
-
-    #[test]
-    fn it_should_create_configure_command_handler_with_all_dependencies() {
-        let (command_handler, _temp_dir) = ConfigureCommandHandlerTestBuilder::new().build();
-
-        // Verify the command handler was created (basic structure test)
-        // This test just verifies that the command handler can be created with the dependencies
-        assert_eq!(Arc::strong_count(&command_handler.ansible_client), 1);
-    }
-
-    #[test]
-    fn it_should_have_correct_error_type_conversions() {
-        // Test that all error types can convert to ConfigureCommandHandlerError
-        let command_error = CommandError::StartupFailed {
-            command: "test".to_string(),
-            source: std::io::Error::new(std::io::ErrorKind::NotFound, "test"),
-        };
-        let configure_error: ConfigureCommandHandlerError = command_error.into();
-        drop(configure_error);
-    }
-
-    #[test]
-    fn it_should_build_failure_context_from_command_error() {
-        use chrono::{TimeZone, Utc};
-
-        let (command, temp_dir) = ConfigureCommandHandlerTestBuilder::new().build();
-
-        // Create test environment for trace generation
-        let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
-
-        let error = ConfigureCommandHandlerError::Command(CommandError::ExecutionFailed {
-            command: "test".to_string(),
-            exit_code: "1".to_string(),
-            stdout: String::new(),
-            stderr: "test error".to_string(),
-        });
-
-        let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
-        let current_step = ConfigureStep::InstallDocker;
-        let context = command.build_failure_context(&environment, &error, current_step, started_at);
-        assert_eq!(context.failed_step, ConfigureStep::InstallDocker);
-        assert_eq!(
-            context.error_kind,
-            crate::shared::ErrorKind::CommandExecution
-        );
-        assert_eq!(context.base.execution_started_at, started_at);
     }
 }
