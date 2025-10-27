@@ -4,9 +4,9 @@ This guide provides an overview of the available commands for the Torrust Tracke
 
 ## ⚠️ Implementation Status
 
-**Current State**: The `destroy` command is fully implemented with CLI interface.
+**Current State**: The `create` and `destroy` commands are fully implemented with CLI interface.
 
-- ✅ **Implemented**: `destroy` command
+- ✅ **Implemented**: `create environment`, `create template`, `destroy` commands
 - ❌ **CLI Interface**: Other commands not yet implemented
 
 The CLI commands documented here represent the planned MVP implementation.
@@ -14,11 +14,12 @@ The CLI commands documented here represent the planned MVP implementation.
 ## Planned Commands (MVP)
 
 ```bash
-# Available command
-torrust-tracker-deployer destroy <env>     # Destroy infrastructure and clean up resources
+# Available commands
+torrust-tracker-deployer create environment --env-file <file>  # Create new deployment environment
+torrust-tracker-deployer create template [path]                # Generate configuration template
+torrust-tracker-deployer destroy <env>                         # Destroy infrastructure and clean up resources
 
 # Future commands
-torrust-tracker-deployer create <env>      # Future - Create environment configuration
 torrust-tracker-deployer deploy <env>      # Future - Full deployment (provision → configure → release)
 torrust-tracker-deployer run <env>         # Future - Start application services
 torrust-tracker-deployer status <env>      # Future - Check environment status
@@ -30,6 +31,46 @@ torrust-tracker-deployer test <env>        # Future - Run validation tests
 ## Available Commands
 
 ### Environment Management
+
+#### [`create environment`](commands/create-environment.md)
+
+Create a new deployment environment from a configuration file.
+
+**Status**: ✅ Fully Implemented
+
+**Use when**: Initializing new environments for development, testing, or production
+
+```bash
+torrust-tracker-deployer create environment --env-file ./config/environment.json
+```
+
+Creates:
+
+- Environment data directory
+- Initial environment state (Created)
+- Persistent configuration
+
+---
+
+#### `create template`
+
+Generate a configuration template file for environment creation.
+
+**Status**: ✅ Fully Implemented
+
+**Use when**: Starting a new environment configuration from scratch
+
+```bash
+# Generate template with default name
+torrust-tracker-deployer create template
+
+# Generate template with custom name
+torrust-tracker-deployer create template my-config.json
+```
+
+Creates: JSON configuration template with placeholder values
+
+---
 
 #### [`destroy`](commands/destroy.md)
 
@@ -54,21 +95,6 @@ Removes:
 ---
 
 ### Future Commands
-
-#### `create` (Planned)
-
-Create a new environment configuration.
-
-**Status**: ❌ Not Yet Implemented
-
-**Use when**: Initializing a new deployment environment
-
-```bash
-# Planned CLI usage
-torrust-tracker-deployer create my-environment
-```
-
----
 
 #### `deploy` (Planned)
 
@@ -143,25 +169,36 @@ torrust-tracker-deployer test my-environment
 The recommended workflow once all commands are implemented:
 
 ```bash
-# 1. Create environment configuration
-torrust-tracker-deployer create production
+# 1. Generate configuration template
+torrust-tracker-deployer create template production-config.json
 
-# 2. Deploy complete stack (provision → configure → release)
+# 2. Edit the configuration file
+nano production-config.json
+
+# 3. Create environment configuration
+torrust-tracker-deployer create environment --env-file production-config.json
+
+# 4. Deploy complete stack (provision → configure → release)
 torrust-tracker-deployer deploy production
 
-# 3. Start services
+# 5. Start services
 torrust-tracker-deployer run production
 
-# 4. Verify deployment
+# 6. Verify deployment
 torrust-tracker-deployer status production
 torrust-tracker-deployer test production
 ```
 
 ### Development/Testing Workflow
 
+Current available commands for development and testing:
+
 ```bash
-# Note: Only destroy command is currently implemented
-torrust-tracker-deployer destroy test-env
+# 1. Create environment from configuration
+torrust-tracker-deployer create environment --env-file dev-config.json
+
+# 2. When done, clean up
+torrust-tracker-deployer destroy dev-env
 ```
 
 ## Environment States
@@ -181,13 +218,14 @@ Created → Provisioned → Configured → Released → Running → Destroyed
 
 ## Common Options
 
-The destroy command supports these options:
+The create and destroy commands support these common options:
 
 - `--help` - Display command help
 - `--log-output <OUTPUT>` - Logging destination (`file-only` or `file-and-stderr`)
 - `--log-file-format <FORMAT>` - File log format (`pretty`, `json`, or `compact`)
 - `--log-stderr-format <FORMAT>` - Stderr log format (`pretty`, `json`, or `compact`)
 - `--log-dir <DIR>` - Log directory (default: `./data/logs`)
+- `--working-dir <DIR>` - Working directory for environment data (default: `.`)
 
 ### Environment Variables
 
@@ -197,12 +235,14 @@ The destroy command supports these options:
 
 New users should:
 
-1. Start with the [`destroy` command documentation](commands/destroy.md) to understand the workflow
-2. Review the deployment states and standard workflow
-3. Consult individual command documentation as more commands become available
+1. Start with the [`create environment` command documentation](commands/create-environment.md) to set up your first environment
+2. Use the [`create template` command](#create-template) to generate a configuration file
+3. Review the [`destroy` command documentation](commands/destroy.md) to understand cleanup workflow
+4. Consult individual command documentation as more commands become available
 
 ## Related Documentation
 
+- [Create Environment Command](commands/create-environment.md) - Detailed create environment command documentation
 - [Destroy Command](commands/destroy.md) - Detailed destroy command documentation
 - [Logging Guide](../logging.md) - Configure logging output
 - [E2E Testing](../../e2e-testing.md) - Testing infrastructure and commands
