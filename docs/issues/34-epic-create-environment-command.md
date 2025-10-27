@@ -800,6 +800,39 @@ This feature will be implemented as separate subissues for incremental delivery:
 - [ ] Support JSON template format
 - [ ] Template validation and helpful placeholder content
 
+### Subissue 8: Fix Destroy Command: Handle Created State Gracefully
+
+**Issue**: [#50](https://github.com/torrust/torrust-tracker-deployer/issues/50)
+**Status**: Not Started
+**Estimated Time**: 4-5 hours
+**Details**: See [50-subissue-8-fix-destroy-command-created-state-handling.md](./50-subissue-8-fix-destroy-command-created-state-handling.md)
+
+**Summary**: Fix critical bug where destroy command fails for Created state environments
+
+**Dependencies**: None (independent, must be completed before Subissue 9)
+
+### Subissue 9: Fix Destroy Command: Add Working Directory Support
+
+**Issue**: [#51](https://github.com/torrust/torrust-tracker-deployer/issues/51)
+**Status**: Not Started
+**Estimated Time**: 3-4 hours
+**Details**: See [51-subissue-9-fix-destroy-command-working-dir-support.md](./51-subissue-9-fix-destroy-command-working-dir-support.md)
+
+**Summary**: Add --working-dir parameter support to destroy command
+
+**Dependencies**: [#50](https://github.com/torrust/torrust-tracker-deployer/issues/50) must be completed first
+
+### Subissue 10: Document Create Environment Command
+
+**Issue**: [#52](https://github.com/torrust/torrust-tracker-deployer/issues/52)
+**Status**: Not Started
+**Estimated Time**: 4 hours
+**Details**: See [52-subissue-10-document-create-environment-command.md](./52-subissue-10-document-create-environment-command.md)
+
+**Summary**: Add comprehensive user-facing documentation for create environment command
+
+**Dependencies**: Subissues 1-7 (create command implementation)
+
 ### Future Subissue: TOML Format Support (Separate Issue)
 
 **Note**: This will be implemented as a separate issue after the JSON implementation is complete.
