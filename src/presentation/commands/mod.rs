@@ -60,7 +60,7 @@ pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), C
             Ok(())
         }
         Commands::Destroy { environment } => {
-            destroy::handle(&environment)?;
+            destroy::handle(&environment, working_dir)?;
             Ok(())
         } // Future commands will be added here:
           //

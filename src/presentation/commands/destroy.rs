@@ -26,6 +26,7 @@ use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 /// # Arguments
 ///
 /// * `environment_name` - The name of the environment to destroy
+/// * `working_dir` - Root directory for environment data storage
 ///
 /// # Returns
 ///
@@ -44,14 +45,15 @@ use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::presentation::commands::destroy;
+/// use std::path::Path;
 ///
-/// if let Err(e) = destroy::handle("test-env") {
+/// if let Err(e) = destroy::handle("test-env", Path::new(".")) {
 ///     eprintln!("Destroy failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
 /// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle(environment_name: &str) -> Result<(), DestroyError> {
+pub fn handle(environment_name: &str, working_dir: &std::path::Path) -> Result<(), DestroyError> {
     // Create user output with default stdout/stderr channels
     let mut output = UserOutput::new(VerbosityLevel::Normal);
 
@@ -70,7 +72,7 @@ pub fn handle(environment_name: &str) -> Result<(), DestroyError> {
 
     // Create repository for loading environment state
     let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
-    let repository = repository_factory.create(std::path::PathBuf::from("data"));
+    let repository = repository_factory.create(working_dir.to_path_buf());
 
     // Create clock for timing information
     let clock = std::sync::Arc::new(crate::shared::SystemClock);

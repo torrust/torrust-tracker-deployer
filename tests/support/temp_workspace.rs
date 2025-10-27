@@ -50,6 +50,7 @@ impl TempWorkspace {
     /// # Errors
     ///
     /// Returns an error if the file cannot be written.
+    #[allow(dead_code)]
     pub fn write_file(&self, filename: &str, content: &str) -> Result<()> {
         let file_path = self.temp_dir.path().join(filename);
         fs::write(file_path, content)?;
