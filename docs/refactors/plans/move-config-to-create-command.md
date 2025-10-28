@@ -1,5 +1,7 @@
 # Move Configuration Module from Domain to Create Command Handler
 
+**Related Issue**: [#75](https://github.com/torrust/torrust-tracker-deployer/issues/75)
+
 ## 📋 Overview
 
 This refactoring moves the `src/domain/config/` module to `src/application/command_handlers/create/config/` to align with DDD principles and improve code organization. The config module contains Data Transfer Objects (DTOs) for the create command, not domain entities, and should be located with its primary consumer.
