@@ -18,10 +18,8 @@ name: E2E Configuration Tests
 
 on:
   push:
-    branches: [main, develop]
   pull_request:
-    branches: [main]
-  workflow_dispatch: {} # Allow manual triggering
+  workflow_dispatch: # Allow manual triggering
 
 jobs:
   e2e-config-tests:
