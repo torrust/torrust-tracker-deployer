@@ -61,8 +61,8 @@ use tracing::{error, info};
 
 // Import E2E testing infrastructure
 use torrust_tracker_deployer_lib::adapters::ssh::DEFAULT_SSH_PORT;
+use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::shared::{Clock, SystemClock};
 use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::{

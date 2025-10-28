@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use crate::adapters::docker::DockerClient;
-use crate::shared::port_usage_checker::PortUsageChecker;
+use crate::testing::network::PortUsageChecker;
 
 // Import constants only for the convenience function
 use super::constants::{SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG};

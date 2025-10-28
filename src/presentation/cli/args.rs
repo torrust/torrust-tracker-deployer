@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 
-use crate::logging::{LogFormat, LogOutput, LoggingConfig};
+use crate::bootstrap::logging::{LogFormat, LogOutput, LoggingConfig};
 
 /// Global CLI arguments for logging configuration
 ///

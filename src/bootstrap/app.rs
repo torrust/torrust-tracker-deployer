@@ -20,7 +20,7 @@
 use clap::Parser;
 use tracing::info;
 
-use torrust_tracker_deployer_lib::{help, logging, presentation};
+use crate::{bootstrap, presentation};
 
 /// Main application entry point
 ///
@@ -42,7 +42,7 @@ pub fn run() {
 
     let logging_config = cli.global.logging_config();
 
-    logging::init_subscriber(logging_config);
+    bootstrap::logging::init_subscriber(logging_config);
 
     info!(
         app = "torrust-tracker-deployer",
@@ -62,7 +62,7 @@ pub fn run() {
             }
         }
         None => {
-            help::display_getting_started();
+            bootstrap::help::display_getting_started();
         }
     }
 

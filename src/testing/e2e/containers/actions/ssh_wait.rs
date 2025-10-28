@@ -33,7 +33,7 @@ use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
 use crate::adapters::ssh::SshServiceChecker;
-use crate::shared::PortChecker;
+use crate::testing::network::PortChecker;
 
 /// Specific error types for SSH wait operations
 #[derive(Debug, thiserror::Error)]
