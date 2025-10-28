@@ -449,6 +449,149 @@ These guidelines are general principles, not absolute rules. Consider deviating 
 
 Use your judgment, but **always prioritize readability and maintainability**.
 
+## 📂 Command Module Structure Patterns
+
+For presentation layer commands in `src/presentation/commands/`, we follow standardized folder structures that make it clear whether a command has subcommands or is a simple single-purpose command.
+
+### Pattern 1: Simple Commands (No Subcommands)
+
+For commands that perform a single operation (like `destroy`):
+
+```
+src/presentation/commands/destroy/
+  ├── mod.rs                         // Module documentation and re-exports
+  ├── handler.rs                     // Main command implementation
+  ├── errors.rs                      // Error types
+  └── tests/                         // Test modules
+      ├── mod.rs
+      └── integration.rs
+```
+
+**Key characteristics:**
+- Uses `handler.rs` for the main command logic
+- Direct implementation without routing
+- Clean and focused on single responsibility
+
+**Example:**
+```rust
+// In handler.rs
+pub fn handle_destroy_command(
+    environment_name: &str,
+    working_dir: &Path,
+) -> Result<(), DestroySubcommandError> {
+    // Direct implementation
+}
+```
+
+### Pattern 2: Commands with Subcommands
+
+For commands that route to multiple subcommands (like `create`):
+
+```
+src/presentation/commands/create/
+  ├── mod.rs                         // Module documentation and re-exports
+  ├── handler.rs                     // Router that delegates to subcommands
+  ├── errors.rs                      // Shared error types
+  ├── config_loader.rs              // Shared utilities (if needed)
+  ├── subcommands/                   // 🆕 Dedicated subcommands folder
+  │   ├── mod.rs                     // Subcommands module and re-exports
+  │   ├── environment.rs             // Environment creation subcommand
+  │   └── template.rs                // Template generation subcommand
+  └── tests/                         // Test modules
+      ├── mod.rs
+      ├── integration.rs
+      └── fixtures.rs
+```
+
+**Key characteristics:**
+- `handler.rs` acts as a simple router/dispatcher
+- Each subcommand has its own focused module in `subcommands/`
+- Subcommands are isolated and single-responsibility
+- Easy to add new subcommands without cluttering main files
+
+**Example:**
+```rust
+// In handler.rs (router)
+pub fn handle_create_command(
+    action: CreateAction,
+    working_dir: &Path,
+) -> Result<(), CreateSubcommandError> {
+    match action {
+        CreateAction::Environment { env_file } => {
+            subcommands::handle_environment_creation(&env_file, working_dir)
+        }
+        CreateAction::Template { output_path } => {
+            let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
+            subcommands::handle_template_generation(&template_path)
+        }
+    }
+}
+
+// In subcommands/environment.rs
+pub fn handle_environment_creation(
+    env_file: &Path,
+    working_dir: &Path,
+) -> Result<(), CreateSubcommandError> {
+    // Focused implementation for environment creation
+}
+
+// In subcommands/template.rs
+pub fn handle_template_generation(
+    output_path: &Path,
+) -> Result<(), CreateSubcommandError> {
+    // Focused implementation for template generation
+}
+```
+
+### When to Use Each Pattern
+
+**Use Pattern 1 (Simple Commands)** when:
+- The command performs a single, focused operation
+- No routing or branching logic is needed
+- The implementation fits naturally in one module
+
+**Use Pattern 2 (Commands with Subcommands)** when:
+- The command has multiple distinct subcommands
+- Each subcommand has significant implementation
+- You want to isolate different behaviors for clarity
+- You anticipate adding more subcommands in the future
+
+### Benefits of These Patterns
+
+✅ **Clear Visual Distinction**: Folder structure immediately shows command complexity
+✅ **Consistent Naming**: All commands use `handler.rs` for their main entry point
+✅ **Single Responsibility**: Each subcommand module has one clear purpose
+✅ **Easy Extension**: Adding new subcommands is straightforward
+✅ **Better Testing**: Each subcommand can be tested independently
+✅ **Improved Navigation**: Developers can quickly find the right code
+
+### Migration Guide
+
+When refactoring existing commands to follow these patterns:
+
+1. **For simple commands**: Rename `command.rs` → `handler.rs`
+2. **For commands with subcommands**:
+   - Create `subcommands/` directory
+   - Move subcommand implementations to individual files in `subcommands/`
+   - Rename main file to `handler.rs` and simplify to a router
+   - Update `mod.rs` to include the `subcommands` module
+   - Update re-exports to use the new structure
+
+**Example migration:**
+```bash
+# Before
+create/
+  └── subcommand.rs    (contains all logic)
+
+# After
+create/
+  ├── handler.rs       (router only)
+  └── subcommands/
+      ├── mod.rs
+      ├── environment.rs
+      └── template.rs
+```
+
 ## 🔗 Related Documentation
 
 - [Testing Conventions](./testing.md) - How to organize test code
