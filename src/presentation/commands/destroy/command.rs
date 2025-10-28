@@ -1,6 +1,6 @@
-//! Destroy Subcommand Handler
+//! Destroy Command Handler
 //!
-//! This module handles the destroy subcommand execution at the presentation layer,
+//! This module handles the destroy command execution at the presentation layer,
 //! including environment validation, repository initialization, and user interaction.
 
 use std::time::Duration;
