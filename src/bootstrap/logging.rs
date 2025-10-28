@@ -27,7 +27,7 @@
 //!
 //! ```rust,no_run
 //! use std::path::Path;
-//! use torrust_tracker_deployer_lib::logging::{LogOutput, LogFormat, LoggingBuilder};
+//! use torrust_tracker_deployer_lib::bootstrap::logging::{LogOutput, LogFormat, LoggingBuilder};
 //!
 //! // Flexible builder API
 //! LoggingBuilder::new(Path::new("./data/logs"))
@@ -40,7 +40,7 @@
 //!
 //! ```rust,no_run
 //! use std::path::Path;
-//! use torrust_tracker_deployer_lib::logging::{LogOutput, init_compact};
+//! use torrust_tracker_deployer_lib::bootstrap::logging::{LogOutput, init_compact};
 //!
 //! // E2E tests - enable stderr visibility with production log location
 //! init_compact(Path::new("./data/logs"), LogOutput::FileAndStderr);
@@ -151,7 +151,7 @@ impl LoggingConfig {
 ///
 /// ```rust,no_run
 /// use std::path::Path;
-/// use torrust_tracker_deployer_lib::logging::{LogOutput, LogFormat, LoggingBuilder};
+/// use torrust_tracker_deployer_lib::bootstrap::logging::{LogOutput, LogFormat, LoggingBuilder};
 ///
 /// // Basic usage with defaults (Compact file format, Pretty stderr format, FileAndStderr output)
 /// LoggingBuilder::new(Path::new("./data/logs")).init();
@@ -314,7 +314,7 @@ impl LoggingBuilder {
 ///
 /// ```rust,no_run
 /// use std::path::PathBuf;
-/// use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingConfig, init_subscriber};
+/// use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingConfig, init_subscriber};
 ///
 /// let config = LoggingConfig::new(
 ///     PathBuf::from("./data/logs"),
@@ -589,7 +589,7 @@ fn create_log_file_appender(log_dir: &Path) -> tracing_appender::non_blocking::N
 /// # Example
 /// ```rust,no_run
 /// use std::path::Path;
-/// use torrust_tracker_deployer_lib::logging::{LogOutput, init};
+/// use torrust_tracker_deployer_lib::bootstrap::logging::{LogOutput, init};
 ///
 /// // E2E tests - enable stderr visibility with production location
 /// init(Path::new("./data/logs"), LogOutput::FileAndStderr);
@@ -632,7 +632,7 @@ pub fn init(log_dir: &Path, output: LogOutput) {
 /// # Example
 /// ```rust,no_run
 /// use std::path::Path;
-/// use torrust_tracker_deployer_lib::logging::{LogOutput, init_json};
+/// use torrust_tracker_deployer_lib::bootstrap::logging::{LogOutput, init_json};
 ///
 /// // E2E tests - enable stderr visibility with production location
 /// init_json(Path::new("./data/logs"), LogOutput::FileAndStderr);
@@ -675,7 +675,7 @@ pub fn init_json(log_dir: &Path, output: LogOutput) {
 /// # Example
 /// ```rust,no_run
 /// use std::path::Path;
-/// use torrust_tracker_deployer_lib::logging::{LogOutput, init_compact};
+/// use torrust_tracker_deployer_lib::bootstrap::logging::{LogOutput, init_compact};
 ///
 /// // E2E tests - enable stderr visibility with production location
 /// init_compact(Path::new("./data/logs"), LogOutput::FileAndStderr);
@@ -716,7 +716,7 @@ pub fn init_compact(log_dir: &Path, output: LogOutput) {
 /// # Example
 /// ```rust,no_run
 /// use std::path::Path;
-/// use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, init_with_format};
+/// use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, init_with_format};
 ///
 /// // Initialize with JSON format for E2E tests with production location
 /// init_with_format(Path::new("./data/logs"), LogOutput::FileAndStderr, &LogFormat::Json);

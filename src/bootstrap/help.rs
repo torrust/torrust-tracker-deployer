@@ -29,7 +29,7 @@
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::help;
+/// use torrust_tracker_deployer_lib::bootstrap::help;
 ///
 /// // Display help when user runs app without arguments
 /// help::display_getting_started();
@@ -73,7 +73,7 @@ pub fn display_getting_started() {
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::help;
+/// use torrust_tracker_deployer_lib::bootstrap::help;
 ///
 /// // Display troubleshooting info when user encounters issues
 /// help::display_troubleshooting();
