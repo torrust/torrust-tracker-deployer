@@ -7,14 +7,10 @@
 pub mod clock;
 pub mod command;
 pub mod error;
-pub mod port_checker;
-pub mod port_usage_checker;
 pub mod username;
 
 // Re-export commonly used types for convenience
 pub use clock::{Clock, SystemClock};
 pub use command::{CommandError, CommandExecutor, CommandResult};
 pub use error::{ErrorKind, Traceable};
-pub use port_checker::{PortChecker, PortCheckerError};
-pub use port_usage_checker::{PortUsageChecker, PortUsageError};
 pub use username::{Username, UsernameError};

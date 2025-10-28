@@ -3,7 +3,7 @@
 //! This module provides functionality to check which processes are using specific ports
 //! on the system. It uses system commands like `netstat` or `ss` to query port usage.
 //!
-//! This is different from [`crate::shared::port_checker`] which checks TCP connectivity
+//! This is different from [`crate::testing::network::port_checker`] which checks TCP connectivity
 //! to a port. This module checks which process is actually bound to a port.
 
 use thiserror::Error;
@@ -22,7 +22,7 @@ use crate::adapters::network::{NetstatClient, NetworkError, SsClient};
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deployer_lib::shared::port_usage_checker::PortUsageChecker;
+/// use torrust_tracker_deployer_lib::testing::network::PortUsageChecker;
 ///
 /// // Check if port 22 is in use
 /// match PortUsageChecker::check_port(22) {
@@ -61,7 +61,7 @@ impl PortUsageChecker {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::shared::port_usage_checker::PortUsageChecker;
+    /// use torrust_tracker_deployer_lib::testing::network::PortUsageChecker;
     ///
     /// match PortUsageChecker::check_port(8080) {
     ///     Ok(lines) => {
@@ -217,7 +217,7 @@ impl PortUsageError {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::shared::port_usage_checker::PortUsageChecker;
+    /// use torrust_tracker_deployer_lib::testing::network::PortUsageChecker;
     ///
     /// if let Err(e) = PortUsageChecker::check_port(8080) {
     ///     eprintln!("Error: {e}");

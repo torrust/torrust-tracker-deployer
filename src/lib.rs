@@ -20,21 +20,17 @@
 //!
 //! ## Other Modules
 //! - `adapters` - External tool adapters (thin CLI wrappers)
+//! - `bootstrap` - Application initialization and bootstrap concerns
 //! - `config` - Configuration management for deployment environments
-//! - `container` - Service container for dependency injection
-//! - `help` - Help and usage information display functions
-//! - `logging` - Logging configuration and utilities
 //! - `shared` - Shared modules used across different layers
 //! - `testing` - Testing utilities (unit, integration, and end-to-end)
 
 pub mod adapters;
 pub mod application;
+pub mod bootstrap;
 pub mod config;
-pub mod container;
 pub mod domain;
-pub mod help;
 pub mod infrastructure;
-pub mod logging;
 pub mod presentation;
 pub mod shared;
 pub mod testing;

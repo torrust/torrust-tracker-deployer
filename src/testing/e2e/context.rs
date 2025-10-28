@@ -23,8 +23,8 @@
 use tempfile::TempDir;
 use tracing::{info, warn};
 
+use crate::bootstrap::container::Services;
 use crate::config::Config;
-use crate::container::Services;
 use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::Environment;
 use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;

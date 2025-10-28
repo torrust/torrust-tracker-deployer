@@ -31,7 +31,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use torrust_tracker_deployer_lib::logging::{LogFormat, LogOutput, LoggingBuilder};
+use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use tracing::{debug, error, info, trace, warn};
 
 #[derive(Parser)]
