@@ -189,11 +189,19 @@ All modules include comprehensive `//!` documentation with:
 
 ### Core Infrastructure
 
+**Bootstrap Module:**
+
+Application initialization and lifecycle management:
+
+- ✅ `src/bootstrap/mod.rs` - Bootstrap module root with re-exports
+- ✅ `src/bootstrap/app.rs` - Main application bootstrap and entry point logic
+- ✅ `src/bootstrap/container.rs` - Dependency injection container (Services)
+- ✅ `src/bootstrap/help.rs` - Help and usage information display
+- ✅ `src/bootstrap/logging.rs` - Logging configuration and utilities
+
 **Root Level Files:**
 
 - ✅ `src/main.rs` - Main binary entry point
-- ✅ `src/container.rs` - Dependency injection container
-- ✅ `src/logging.rs` - Logging configuration and utilities
 - ✅ `src/lib.rs` - Library root module
 
 **Binary Files:**
@@ -359,20 +367,28 @@ Generic utilities used across all layers:
 - ✅ `src/shared/command/mod.rs` - Command execution utilities (used by all adapters)
 - ✅ `src/shared/clock.rs` - Time abstraction for deterministic testing
 - ✅ `src/shared/error/mod.rs` - Shared error types
-- ✅ `src/shared/port_checker.rs` - Network port checking
-- ✅ `src/shared/port_usage_checker.rs` - Port usage validation
 - ✅ `src/shared/username.rs` - Username value object
 
-Note: SSH and Docker adapters have been moved to `src/adapters/`
+Note: SSH and Docker adapters have been moved to `src/adapters/`. Network testing utilities (port_checker, port_usage_checker) have been moved to `src/testing/network/`.
 
 ### Testing Infrastructure
 
 **E2E Testing Framework:**
 
-- ✅ `src/e2e/mod.rs` - E2E testing framework coordination
-- ✅ `src/e2e/containers/mod.rs` - Container-based testing infrastructure
-- ✅ `src/e2e/containers/actions/` - E2E test actions
-- ✅ `src/e2e/containers/provisioned.rs` - Provisioned container management
+- ✅ `src/testing/mod.rs` - Testing framework root module
+- ✅ `src/testing/e2e/mod.rs` - E2E testing framework coordination
+- ✅ `src/testing/e2e/containers/mod.rs` - Container-based testing infrastructure
+- ✅ `src/testing/e2e/containers/actions/` - E2E test actions
+- ✅ `src/testing/e2e/containers/provisioned.rs` - Provisioned container management
+- ✅ `src/testing/integration/` - Integration testing utilities
+- ✅ `src/testing/fixtures.rs` - Reusable test fixtures
+- ✅ `src/testing/mock_clock.rs` - Mock clock implementation for deterministic testing
+
+**Network Testing Utilities:**
+
+- ✅ `src/testing/network/mod.rs` - Network testing utilities root
+- ✅ `src/testing/network/port_checker.rs` - TCP port connectivity checking
+- ✅ `src/testing/network/port_usage_checker.rs` - Port usage validation and process identification
 
 **Configuration:**
 
