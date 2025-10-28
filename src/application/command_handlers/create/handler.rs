@@ -180,7 +180,7 @@ impl CreateCommandHandler {
         skip_all,
         fields(
             command_type = "create",
-            environment_name = %config.environment.name
+            environment = %config.environment.name
         )
     )]
     pub fn execute(
@@ -189,7 +189,7 @@ impl CreateCommandHandler {
     ) -> Result<Environment<Created>, CreateCommandHandlerError> {
         info!(
             command = "create",
-            environment_name = %config.environment.name,
+            environment = %config.environment.name,
             "Starting environment creation"
         );
 
@@ -198,11 +198,6 @@ impl CreateCommandHandler {
         let (environment_name, ssh_credentials, ssh_port) = config
             .to_environment_params()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
-
-        info!(
-            environment_name = %environment_name.as_str(),
-            "Configuration converted to domain objects"
-        );
 
         // Step 2: Check if environment already exists
         // This prevents duplicate environments and provides clear feedback
@@ -216,22 +211,9 @@ impl CreateCommandHandler {
             });
         }
 
-        info!(
-            environment_name = %environment_name.as_str(),
-            "Environment name is unique, proceeding with creation"
-        );
-
         // Step 3: Create environment entity using existing Environment::new()
         // No need for create_from_config() - use existing constructor
         let environment = Environment::new(environment_name, ssh_credentials, ssh_port);
-
-        info!(
-            environment_name = %environment.name().as_str(),
-            instance_name = %environment.instance_name().as_str(),
-            data_dir = ?environment.data_dir(),
-            build_dir = ?environment.build_dir(),
-            "Environment entity created"
-        );
 
         // Step 4: Persist environment state
         // Repository handles directory creation atomically during save
@@ -240,8 +222,9 @@ impl CreateCommandHandler {
             .map_err(CreateCommandHandlerError::RepositoryError)?;
 
         info!(
-            environment_name = %environment.name().as_str(),
-            "Environment persisted successfully"
+            command = "create",
+            environment = %environment.name(),
+            "Environment created successfully"
         );
 
         Ok(environment)
