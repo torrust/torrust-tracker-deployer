@@ -28,14 +28,14 @@ This refactoring addresses code quality issues in `src/application/command_handl
 **Total Active Proposals**: 7
 **Total Postponed**: 2
 **Total Discarded**: 2
-**Completed**: 4
+**Completed**: 5
 **In Progress**: 0
-**Not Started**: 3
+**Not Started**: 2
 
 ### Phase Summary
 
 - **Phase 0 - Quick Wins (High Impact, Low Effort)**: ✅ 4/4 completed (100%)
-- **Phase 1 - Structural Improvements (High Impact, Medium Effort)**: ⏳ 0/2 completed (0%)
+- **Phase 1 - Structural Improvements (High Impact, Medium Effort)**: ✅ 1/2 completed (50%)
 - **Phase 2 - Consistency & Polish (Medium Impact, Low Effort)**: ⏳ 0/1 completed (0%)
 
 ### Discarded Proposals
@@ -632,7 +632,7 @@ For LXD setup issues, see docs/vm-providers.md"
 
 ### Proposal #4: Remove pub(crate) Test Exposure
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢 Medium  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P1  
@@ -699,10 +699,13 @@ fn build_failure_context(...) { ... }  // No pub(crate)
 
 #### Implementation Checklist
 
-- [ ] Ensure common helpers are extracted (Proposal #0)
-- [ ] Add tests for common helpers
-- [ ] Remove pub(crate) from build_failure_context methods
-- [ ] Update integration tests to test through public API
+- [x] Ensure common helpers are extracted (Proposal #0)
+- [x] Add tests for common helpers
+- [x] Remove pub(crate) from build_failure_context methods
+- [x] Update integration tests to test through public API (removed tests that tested internal methods)
+- [x] Verify all tests pass
+- [x] Run linters
+- [x] Update testing documentation
 - [ ] Verify all tests pass
 - [ ] Run linters
 - [ ] Update testing documentation

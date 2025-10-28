@@ -10,24 +10,10 @@ use tempfile::TempDir;
 use crate::adapters::ansible::AnsibleClient;
 use crate::adapters::ssh::SshCredentials;
 use crate::application::command_handlers::provision::ProvisionCommandHandler;
-use crate::domain::environment::{Environment, Provisioning};
 use crate::domain::{InstanceName, ProfileName};
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::shared::Username;
-
-pub fn create_test_environment(_temp_dir: &TempDir) -> (Environment<Provisioning>, TempDir) {
-    use crate::domain::environment::testing::EnvironmentTestBuilder;
-
-    let (env, _data_dir, _build_dir, env_temp_dir) = EnvironmentTestBuilder::new()
-        .with_name("test-env")
-        .build_with_custom_paths();
-
-    // Environment is created with paths inside env_temp_dir
-    // which will be automatically cleaned up when env_temp_dir is dropped
-
-    (env.start_provisioning(), env_temp_dir)
-}
 
 /// Test builder for `ProvisionCommandHandler` that manages dependencies and lifecycle
 ///

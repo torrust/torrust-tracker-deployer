@@ -332,7 +332,7 @@ impl ProvisionCommandHandler {
     /// # Returns
     ///
     /// A `ProvisionFailureContext` with all failure metadata and trace file path
-    pub(crate) fn build_failure_context(
+    fn build_failure_context(
         &self,
         environment: &Environment<Provisioning>,
         error: &ProvisionCommandHandlerError,

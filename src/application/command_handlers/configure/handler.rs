@@ -177,7 +177,7 @@ impl ConfigureCommandHandler {
     /// # Returns
     ///
     /// A structured `ConfigureFailureContext` with timing, error details, and trace file path
-    pub(crate) fn build_failure_context(
+    fn build_failure_context(
         &self,
         environment: &Environment<Configuring>,
         error: &ConfigureCommandHandlerError,

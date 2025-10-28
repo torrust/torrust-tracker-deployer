@@ -244,7 +244,7 @@ impl DestroyCommandHandler {
     /// # Returns
     ///
     /// A `DestroyFailureContext` with all failure metadata and trace file path
-    pub(crate) fn build_failure_context(
+    fn build_failure_context(
         &self,
         _environment: &crate::domain::environment::Environment<
             crate::domain::environment::Destroying,
