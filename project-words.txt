@@ -45,6 +45,7 @@ endfor
 endraw
 epel
 EPEL
+eprint
 eprintln
 executability
 exitcode
@@ -147,6 +148,7 @@ sqlx
 sshpass
 startretries
 stringly
+subhandlers
 Subissue
 subissues
 subshell
