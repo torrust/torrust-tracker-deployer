@@ -1,5 +1,7 @@
 # Command Handlers Refactoring
 
+**Issue**: [#61](https://github.com/torrust/torrust-tracker-deployer/issues/61)
+
 ## 📋 Overview
 
 This refactoring addresses code quality issues in `src/application/command_handlers` by reducing duplication, improving maintainability, and enhancing testability while preserving existing behavior.
