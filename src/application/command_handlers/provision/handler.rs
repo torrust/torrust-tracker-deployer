@@ -9,6 +9,7 @@ use super::errors::ProvisionCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::adapters::ssh::{SshConfig, SshCredentials};
 use crate::adapters::tofu::client::InstanceInfo;
+use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
@@ -175,7 +176,7 @@ impl ProvisionCommandHandler {
     async fn execute_provisioning_with_tracking(
         &self,
         environment: &Environment<Provisioning>,
-    ) -> Result<(Environment<Provisioned>, IpAddr), (ProvisionCommandHandlerError, ProvisionStep)>
+    ) -> StepResult<(Environment<Provisioned>, IpAddr), ProvisionCommandHandlerError, ProvisionStep>
     {
         let ssh_credentials = environment.ssh_credentials();
 

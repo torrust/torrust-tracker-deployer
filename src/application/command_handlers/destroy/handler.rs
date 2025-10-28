@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use super::errors::DestroyCommandHandlerError;
+use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::DestroyInfrastructureStep;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::{Destroyed, Environment};
@@ -201,13 +202,8 @@ impl DestroyCommandHandler {
             crate::domain::environment::Destroying,
         >,
         opentofu_client: &Arc<crate::adapters::tofu::client::OpenTofuClient>,
-    ) -> Result<
-        (),
-        (
-            DestroyCommandHandlerError,
-            crate::domain::environment::state::DestroyStep,
-        ),
-    > {
+    ) -> StepResult<(), DestroyCommandHandlerError, crate::domain::environment::state::DestroyStep>
+    {
         use crate::domain::environment::state::DestroyStep;
 
         // Step 1: Conditionally destroy infrastructure via OpenTofu

@@ -6,6 +6,7 @@ use tracing::{info, instrument};
 
 use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
+use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
@@ -137,7 +138,7 @@ impl ConfigureCommandHandler {
     fn execute_configuration_with_tracking(
         &self,
         environment: &Environment<Configuring>,
-    ) -> Result<Environment<Configured>, (ConfigureCommandHandlerError, ConfigureStep)> {
+    ) -> StepResult<Environment<Configured>, ConfigureCommandHandlerError, ConfigureStep> {
         // Track current step and execute each step
         // If an error occurs, we return it along with the current step
 
