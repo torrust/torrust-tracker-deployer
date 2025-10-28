@@ -186,6 +186,79 @@ impl DestroyCommandHandler {
         }
     }
 
+    // pub(crate) helper methods for testing business logic
+
+    /// Check if infrastructure should be destroyed
+    ///
+    /// Determines whether to attempt infrastructure destruction based on whether
+    /// the `OpenTofu` build directory exists. If the directory doesn't exist, it means
+    /// no infrastructure was ever provisioned (e.g., environment in Created state).
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment being destroyed
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if infrastructure destruction should be attempted, `false` otherwise
+    pub(crate) fn should_destroy_infrastructure(
+        environment: &Environment<crate::domain::environment::Destroying>,
+    ) -> bool {
+        let tofu_build_dir = environment.tofu_build_dir();
+        tofu_build_dir.exists()
+    }
+
+    /// Clean up state files during environment destruction
+    ///
+    /// Removes the data and build directories for the environment.
+    /// This is called as part of the destruction workflow.
+    ///
+    /// # Arguments
+    ///
+    /// * `env` - The environment being destroyed
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if state file cleanup fails
+    pub(crate) fn cleanup_state_files<S>(
+        env: &Environment<S>,
+    ) -> Result<(), DestroyCommandHandlerError> {
+        let data_dir = env.data_dir();
+        let build_dir = env.build_dir();
+
+        // Remove data directory if it exists
+        if data_dir.exists() {
+            std::fs::remove_dir_all(data_dir).map_err(|source| {
+                DestroyCommandHandlerError::StateCleanupFailed {
+                    path: data_dir.clone(),
+                    source,
+                }
+            })?;
+            info!(
+                command = "destroy",
+                path = %data_dir.display(),
+                "Removed state directory"
+            );
+        }
+
+        // Remove build directory if it exists
+        if build_dir.exists() {
+            std::fs::remove_dir_all(build_dir).map_err(|source| {
+                DestroyCommandHandlerError::StateCleanupFailed {
+                    path: build_dir.clone(),
+                    source,
+                }
+            })?;
+            info!(
+                command = "destroy",
+                path = %build_dir.display(),
+                "Removed build directory"
+            );
+        }
+
+        Ok(())
+    }
+
     // Private helper methods
 
     /// Execute the destruction steps with step tracking
@@ -274,26 +347,6 @@ impl DestroyCommandHandler {
         }
     }
 
-    /// Check if infrastructure should be destroyed
-    ///
-    /// Determines whether to attempt infrastructure destruction based on whether
-    /// the `OpenTofu` build directory exists. If the directory doesn't exist, it means
-    /// no infrastructure was ever provisioned (e.g., environment in Created state).
-    ///
-    /// # Arguments
-    ///
-    /// * `environment` - The environment being destroyed
-    ///
-    /// # Returns
-    ///
-    /// Returns `true` if infrastructure destruction should be attempted, `false` otherwise
-    pub(crate) fn should_destroy_infrastructure(
-        environment: &Environment<crate::domain::environment::Destroying>,
-    ) -> bool {
-        let tofu_build_dir = environment.tofu_build_dir();
-        tofu_build_dir.exists()
-    }
-
     /// Destroy the infrastructure using `OpenTofu`
     ///
     /// Executes the `OpenTofu` destroy workflow to remove all managed infrastructure.
@@ -309,57 +362,6 @@ impl DestroyCommandHandler {
         opentofu_client: &Arc<crate::adapters::tofu::client::OpenTofuClient>,
     ) -> Result<(), DestroyCommandHandlerError> {
         DestroyInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
-        Ok(())
-    }
-
-    /// Clean up state files during environment destruction
-    ///
-    /// Removes the data and build directories for the environment.
-    /// This is called as part of the destruction workflow.
-    ///
-    /// # Arguments
-    ///
-    /// * `env` - The environment being destroyed
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if state file cleanup fails
-    pub(crate) fn cleanup_state_files<S>(
-        env: &Environment<S>,
-    ) -> Result<(), DestroyCommandHandlerError> {
-        let data_dir = env.data_dir();
-        let build_dir = env.build_dir();
-
-        // Remove data directory if it exists
-        if data_dir.exists() {
-            std::fs::remove_dir_all(data_dir).map_err(|source| {
-                DestroyCommandHandlerError::StateCleanupFailed {
-                    path: data_dir.clone(),
-                    source,
-                }
-            })?;
-            info!(
-                command = "destroy",
-                path = %data_dir.display(),
-                "Removed state directory"
-            );
-        }
-
-        // Remove build directory if it exists
-        if build_dir.exists() {
-            std::fs::remove_dir_all(build_dir).map_err(|source| {
-                DestroyCommandHandlerError::StateCleanupFailed {
-                    path: build_dir.clone(),
-                    source,
-                }
-            })?;
-            info!(
-                command = "destroy",
-                path = %build_dir.display(),
-                "Removed build directory"
-            );
-        }
-
         Ok(())
     }
 }
