@@ -457,7 +457,7 @@ For presentation layer commands in `src/presentation/commands/`, we follow stand
 
 For commands that perform a single operation (like `destroy`):
 
-```
+```text
 src/presentation/commands/destroy/
   ├── mod.rs                         // Module documentation and re-exports
   ├── handler.rs                     // Main command implementation
@@ -468,11 +468,13 @@ src/presentation/commands/destroy/
 ```
 
 **Key characteristics:**
+
 - Uses `handler.rs` for the main command logic
 - Direct implementation without routing
 - Clean and focused on single responsibility
 
 **Example:**
+
 ```rust
 // In handler.rs
 pub fn handle_destroy_command(
@@ -487,7 +489,7 @@ pub fn handle_destroy_command(
 
 For commands that route to multiple subcommands (like `create`):
 
-```
+```text
 src/presentation/commands/create/
   ├── mod.rs                         // Module documentation and re-exports
   ├── handler.rs                     // Router that delegates to subcommands
@@ -504,12 +506,14 @@ src/presentation/commands/create/
 ```
 
 **Key characteristics:**
+
 - `handler.rs` acts as a simple router/dispatcher
 - Each subcommand has its own focused module in `subcommands/`
 - Subcommands are isolated and single-responsibility
 - Easy to add new subcommands without cluttering main files
 
 **Example:**
+
 ```rust
 // In handler.rs (router)
 pub fn handle_create_command(
@@ -546,11 +550,13 @@ pub fn handle_template_generation(
 ### When to Use Each Pattern
 
 **Use Pattern 1 (Simple Commands)** when:
+
 - The command performs a single, focused operation
 - No routing or branching logic is needed
 - The implementation fits naturally in one module
 
 **Use Pattern 2 (Commands with Subcommands)** when:
+
 - The command has multiple distinct subcommands
 - Each subcommand has significant implementation
 - You want to isolate different behaviors for clarity
@@ -578,6 +584,7 @@ When refactoring existing commands to follow these patterns:
    - Update re-exports to use the new structure
 
 **Example migration:**
+
 ```bash
 # Before
 create/

@@ -26,6 +26,11 @@ use super::super::errors::CreateSubcommandError;
 /// # Errors
 ///
 /// Returns an error if template file creation fails.
+///
+/// # Panics
+///
+/// Panics if the tokio runtime cannot be created. This is a critical system
+/// failure that prevents any async operations from running.
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
 pub fn handle_template_generation(output_path: &Path) -> Result<(), CreateSubcommandError> {
     // Create user output for progress messages
