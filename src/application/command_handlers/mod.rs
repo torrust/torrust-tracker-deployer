@@ -18,6 +18,7 @@
 //! Each command handler encapsulates a complete business workflow, handling orchestration,
 //! error management, and coordination across multiple infrastructure services.
 
+pub mod common;
 pub mod configure;
 pub mod create;
 pub mod destroy;

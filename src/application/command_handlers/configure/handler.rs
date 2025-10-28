@@ -8,10 +8,8 @@ use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::domain::environment::state::{
-    BaseFailureContext, ConfigureFailureContext, ConfigureStep,
-};
-use crate::domain::environment::{Configured, Configuring, Environment, Provisioned, TraceId};
+use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
+use crate::domain::environment::{Configured, Configuring, Environment, Provisioned};
 use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::error::Traceable;
 
@@ -185,32 +183,22 @@ impl ConfigureCommandHandler {
         current_step: ConfigureStep,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> ConfigureFailureContext {
+        use crate::application::command_handlers::common::failure_context::build_base_failure_context;
+
         // Step that failed is directly provided - no reverse engineering needed
         let failed_step = current_step;
 
         // Get error kind from the error itself (errors are self-describing)
         let error_kind = error.error_kind();
 
-        let now = self.clock.now();
-        let trace_id = TraceId::new();
+        // Build base failure context using common helper
+        let base = build_base_failure_context(&self.clock, started_at, error.to_string());
 
-        // Calculate actual execution duration
-        let execution_duration = now
-            .signed_duration_since(started_at)
-            .to_std()
-            .unwrap_or_default();
-
+        // Build handler-specific context
         let mut context = ConfigureFailureContext {
             failed_step,
             error_kind,
-            base: BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: started_at,
-                execution_duration,
-                trace_id,
-                trace_file_path: None,
-            },
+            base,
         };
 
         // Generate trace file (logging handled by trace writer)

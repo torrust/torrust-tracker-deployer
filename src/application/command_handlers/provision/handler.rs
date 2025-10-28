@@ -15,10 +15,8 @@ use crate::application::steps::{
     ValidateInfrastructureStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::domain::environment::state::{
-    BaseFailureContext, ProvisionFailureContext, ProvisionStep,
-};
-use crate::domain::environment::{Created, Environment, Provisioned, Provisioning, TraceId};
+use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
+use crate::domain::environment::{Created, Environment, Provisioned, Provisioning};
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::shared::error::Traceable;
@@ -340,6 +338,7 @@ impl ProvisionCommandHandler {
         current_step: ProvisionStep,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> ProvisionFailureContext {
+        use crate::application::command_handlers::common::failure_context::build_base_failure_context;
         use crate::infrastructure::trace::ProvisionTraceWriter;
 
         // Step that failed is directly provided - no reverse engineering needed
@@ -348,27 +347,14 @@ impl ProvisionCommandHandler {
         // Get error kind from the error itself (errors are self-describing)
         let error_kind = error.error_kind();
 
-        let now = self.clock.now();
-        let trace_id = TraceId::new();
+        // Build base failure context using common helper
+        let base = build_base_failure_context(&self.clock, started_at, error.to_string());
 
-        // Calculate actual execution duration
-        let execution_duration = now
-            .signed_duration_since(started_at)
-            .to_std()
-            .unwrap_or_default();
-
-        // Build initial context without trace file path
+        // Build handler-specific context
         let mut context = ProvisionFailureContext {
             failed_step,
             error_kind,
-            base: BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: started_at,
-                execution_duration,
-                trace_id,
-                trace_file_path: None,
-            },
+            base,
         };
 
         // Generate trace file (logging handled by trace writer)

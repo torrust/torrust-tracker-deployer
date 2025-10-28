@@ -253,8 +253,8 @@ impl DestroyCommandHandler {
         current_step: crate::domain::environment::state::DestroyStep,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> crate::domain::environment::state::DestroyFailureContext {
-        use crate::domain::environment::state::{BaseFailureContext, DestroyFailureContext};
-        use crate::domain::environment::TraceId;
+        use crate::application::command_handlers::common::failure_context::build_base_failure_context;
+        use crate::domain::environment::state::DestroyFailureContext;
 
         // Step that failed is directly provided - no reverse engineering needed
         let failed_step = current_step;
@@ -262,27 +262,15 @@ impl DestroyCommandHandler {
         // Get error kind from the error itself (errors are self-describing)
         let error_kind = error.error_kind();
 
-        let now = self.clock.now();
-        let trace_id = TraceId::new();
+        // Build base failure context using common helper
+        let base = build_base_failure_context(&self.clock, started_at, error.to_string());
 
-        // Calculate actual execution duration
-        let execution_duration = now
-            .signed_duration_since(started_at)
-            .to_std()
-            .unwrap_or_default();
-
-        // Build context with all failure information
+        // Build handler-specific context
+        // Note: Trace file generation not implemented for destroy yet
         DestroyFailureContext {
             failed_step,
             error_kind,
-            base: BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: started_at,
-                execution_duration,
-                trace_id,
-                trace_file_path: None, // Trace file generation not implemented for destroy yet
-            },
+            base,
         }
     }
 
