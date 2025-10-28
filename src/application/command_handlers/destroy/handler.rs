@@ -6,7 +6,7 @@ use tracing::{info, instrument};
 
 use super::errors::DestroyCommandHandlerError;
 use crate::application::steps::DestroyInfrastructureStep;
-use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::{Destroyed, Environment};
 use crate::shared::error::Traceable;
 
@@ -37,7 +37,7 @@ use crate::shared::error::Traceable;
 /// - Report appropriate status to the user
 /// - Not fail due to missing resources
 pub struct DestroyCommandHandler {
-    pub(crate) repository: Arc<dyn EnvironmentRepository>,
+    pub(crate) repository: TypedEnvironmentRepository,
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
 }
 
@@ -48,7 +48,10 @@ impl DestroyCommandHandler {
         repository: Arc<dyn EnvironmentRepository>,
         clock: Arc<dyn crate::shared::Clock>,
     ) -> Self {
-        Self { repository, clock }
+        Self {
+            repository: TypedEnvironmentRepository::new(repository),
+            clock,
+        }
     }
 
     /// Execute the complete destruction workflow
@@ -94,6 +97,7 @@ impl DestroyCommandHandler {
         // 1. Load the environment from storage
         let environment = self
             .repository
+            .inner()
             .load(env_name)
             .map_err(DestroyCommandHandlerError::StatePersistence)?;
 
@@ -143,7 +147,7 @@ impl DestroyCommandHandler {
         };
 
         // 7. Persist intermediate state
-        self.repository.save(&destroying_env.clone().into_any())?;
+        self.repository.save_destroying(&destroying_env)?;
 
         // 8. Create OpenTofu client with correct build directory
         let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
@@ -157,7 +161,7 @@ impl DestroyCommandHandler {
                 let destroyed = destroying_env.destroyed();
 
                 // Persist final state
-                self.repository.save(&destroyed.clone().into_any())?;
+                self.repository.save_destroyed(&destroyed)?;
 
                 info!(
                     command = "destroy",
@@ -174,7 +178,7 @@ impl DestroyCommandHandler {
                 let failed = destroying_env.destroy_failed(context);
 
                 // Persist error state
-                self.repository.save(&failed.clone().into_any())?;
+                self.repository.save_destroy_failed(&failed)?;
 
                 Err(e)
             }

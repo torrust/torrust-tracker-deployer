@@ -7,7 +7,7 @@ use tracing::{info, instrument};
 use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
-use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
 use crate::domain::environment::{Configured, Configuring, Environment, Provisioned};
 use crate::infrastructure::trace::ConfigureTraceWriter;
@@ -34,7 +34,7 @@ use crate::shared::error::Traceable;
 pub struct ConfigureCommandHandler {
     pub(crate) ansible_client: Arc<AnsibleClient>,
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
-    pub(crate) repository: Arc<dyn EnvironmentRepository>,
+    pub(crate) repository: TypedEnvironmentRepository,
 }
 
 impl ConfigureCommandHandler {
@@ -48,7 +48,7 @@ impl ConfigureCommandHandler {
         Self {
             ansible_client,
             clock,
-            repository,
+            repository: TypedEnvironmentRepository::new(repository),
         }
     }
 
@@ -94,13 +94,13 @@ impl ConfigureCommandHandler {
         let environment = environment.start_configuring();
 
         // Persist intermediate state
-        self.repository.save(&environment.clone().into_any())?;
+        self.repository.save_configuring(&environment)?;
 
         // Execute configuration steps with explicit step tracking
         match self.execute_configuration_with_tracking(&environment) {
             Ok(configured_env) => {
                 // Persist final state
-                self.repository.save(&configured_env.clone().into_any())?;
+                self.repository.save_configured(&configured_env)?;
 
                 info!(
                     command = "configure",
@@ -118,7 +118,7 @@ impl ConfigureCommandHandler {
                 let failed = environment.configure_failed(context);
 
                 // Persist error state
-                self.repository.save(&failed.clone().into_any())?;
+                self.repository.save_configure_failed(&failed)?;
 
                 Err(e)
             }

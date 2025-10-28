@@ -14,7 +14,7 @@ use crate::application::steps::{
     PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
     ValidateInfrastructureStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
-use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Created, Environment, Provisioned, Provisioning};
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
@@ -52,7 +52,7 @@ pub struct ProvisionCommandHandler {
     pub(crate) ansible_client: Arc<AnsibleClient>,
     pub(crate) opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
-    pub(crate) repository: Arc<dyn EnvironmentRepository>,
+    pub(crate) repository: TypedEnvironmentRepository,
 }
 
 impl ProvisionCommandHandler {
@@ -72,7 +72,7 @@ impl ProvisionCommandHandler {
             ansible_client,
             opentofu_client,
             clock,
-            repository,
+            repository: TypedEnvironmentRepository::new(repository),
         }
     }
 
@@ -121,7 +121,7 @@ impl ProvisionCommandHandler {
         let environment = environment.start_provisioning();
 
         // Persist intermediate state
-        self.repository.save(&environment.clone().into_any())?;
+        self.repository.save_provisioning(&environment)?;
 
         // Execute provisioning steps with explicit step tracking
         // This allows us to know exactly which step failed if an error occurs
@@ -131,7 +131,7 @@ impl ProvisionCommandHandler {
                 let provisioned = provisioned.with_instance_ip(instance_ip);
 
                 // Persist final state
-                self.repository.save(&provisioned.clone().into_any())?;
+                self.repository.save_provisioned(&provisioned)?;
 
                 info!(
                     command = "provision",
@@ -150,7 +150,7 @@ impl ProvisionCommandHandler {
                 let failed = environment.provision_failed(context);
 
                 // Persist error state
-                self.repository.save(&failed.clone().into_any())?;
+                self.repository.save_provision_failed(&failed)?;
 
                 Err(e)
             }
