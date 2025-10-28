@@ -6,12 +6,11 @@ use tracing::{info, instrument};
 
 use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
+use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
-use crate::domain::environment::repository::EnvironmentRepository;
-use crate::domain::environment::state::{
-    BaseFailureContext, ConfigureFailureContext, ConfigureStep,
-};
-use crate::domain::environment::{Configured, Configuring, Environment, Provisioned, TraceId};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
+use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
+use crate::domain::environment::{Configured, Configuring, Environment, Provisioned};
 use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::error::Traceable;
 
@@ -36,7 +35,7 @@ use crate::shared::error::Traceable;
 pub struct ConfigureCommandHandler {
     pub(crate) ansible_client: Arc<AnsibleClient>,
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
-    pub(crate) repository: Arc<dyn EnvironmentRepository>,
+    pub(crate) repository: TypedEnvironmentRepository,
 }
 
 impl ConfigureCommandHandler {
@@ -50,7 +49,7 @@ impl ConfigureCommandHandler {
         Self {
             ansible_client,
             clock,
-            repository,
+            repository: TypedEnvironmentRepository::new(repository),
         }
     }
 
@@ -96,13 +95,13 @@ impl ConfigureCommandHandler {
         let environment = environment.start_configuring();
 
         // Persist intermediate state
-        self.repository.save(&environment.clone().into_any())?;
+        self.repository.save_configuring(&environment)?;
 
         // Execute configuration steps with explicit step tracking
         match self.execute_configuration_with_tracking(&environment) {
             Ok(configured_env) => {
                 // Persist final state
-                self.repository.save(&configured_env.clone().into_any())?;
+                self.repository.save_configured(&configured_env)?;
 
                 info!(
                     command = "configure",
@@ -120,7 +119,7 @@ impl ConfigureCommandHandler {
                 let failed = environment.configure_failed(context);
 
                 // Persist error state
-                self.repository.save(&failed.clone().into_any())?;
+                self.repository.save_configure_failed(&failed)?;
 
                 Err(e)
             }
@@ -139,7 +138,7 @@ impl ConfigureCommandHandler {
     fn execute_configuration_with_tracking(
         &self,
         environment: &Environment<Configuring>,
-    ) -> Result<Environment<Configured>, (ConfigureCommandHandlerError, ConfigureStep)> {
+    ) -> StepResult<Environment<Configured>, ConfigureCommandHandlerError, ConfigureStep> {
         // Track current step and execute each step
         // If an error occurs, we return it along with the current step
 
@@ -178,39 +177,29 @@ impl ConfigureCommandHandler {
     /// # Returns
     ///
     /// A structured `ConfigureFailureContext` with timing, error details, and trace file path
-    pub(crate) fn build_failure_context(
+    fn build_failure_context(
         &self,
         environment: &Environment<Configuring>,
         error: &ConfigureCommandHandlerError,
         current_step: ConfigureStep,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> ConfigureFailureContext {
+        use crate::application::command_handlers::common::failure_context::build_base_failure_context;
+
         // Step that failed is directly provided - no reverse engineering needed
         let failed_step = current_step;
 
         // Get error kind from the error itself (errors are self-describing)
         let error_kind = error.error_kind();
 
-        let now = self.clock.now();
-        let trace_id = TraceId::new();
+        // Build base failure context using common helper
+        let base = build_base_failure_context(&self.clock, started_at, error.to_string());
 
-        // Calculate actual execution duration
-        let execution_duration = now
-            .signed_duration_since(started_at)
-            .to_std()
-            .unwrap_or_default();
-
+        // Build handler-specific context
         let mut context = ConfigureFailureContext {
             failed_step,
             error_kind,
-            base: BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: started_at,
-                execution_duration,
-                trace_id,
-                trace_file_path: None,
-            },
+            base,
         };
 
         // Generate trace file (logging handled by trace writer)

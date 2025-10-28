@@ -9,25 +9,6 @@ use tempfile::TempDir;
 
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::configure::ConfigureCommandHandler;
-use crate::domain::environment::{Configuring, Environment};
-
-/// Helper function to create a test environment in Configuring state
-pub fn create_test_environment(_temp_dir: &TempDir) -> (Environment<Configuring>, TempDir) {
-    use crate::domain::environment::testing::EnvironmentTestBuilder;
-
-    let (env, _data_dir, _build_dir, env_temp_dir) = EnvironmentTestBuilder::new()
-        .with_name("test-env")
-        .build_with_custom_paths();
-
-    // Environment is created with paths inside env_temp_dir
-    // which will be automatically cleaned up when env_temp_dir is dropped
-
-    // Transition Created -> Provisioning -> Provisioned -> Configuring
-    (
-        env.start_provisioning().provisioned().start_configuring(),
-        env_temp_dir,
-    )
-}
 
 /// Test builder for `ConfigureCommandHandler` that manages dependencies and lifecycle
 ///

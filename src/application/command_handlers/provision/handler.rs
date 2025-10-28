@@ -9,16 +9,15 @@ use super::errors::ProvisionCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::adapters::ssh::{SshConfig, SshCredentials};
 use crate::adapters::tofu::client::InstanceInfo;
+use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
     ValidateInfrastructureStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
-use crate::domain::environment::repository::EnvironmentRepository;
-use crate::domain::environment::state::{
-    BaseFailureContext, ProvisionFailureContext, ProvisionStep,
-};
-use crate::domain::environment::{Created, Environment, Provisioned, Provisioning, TraceId};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
+use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
+use crate::domain::environment::{Created, Environment, Provisioned, Provisioning};
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::shared::error::Traceable;
@@ -54,7 +53,7 @@ pub struct ProvisionCommandHandler {
     pub(crate) ansible_client: Arc<AnsibleClient>,
     pub(crate) opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
-    pub(crate) repository: Arc<dyn EnvironmentRepository>,
+    pub(crate) repository: TypedEnvironmentRepository,
 }
 
 impl ProvisionCommandHandler {
@@ -74,7 +73,7 @@ impl ProvisionCommandHandler {
             ansible_client,
             opentofu_client,
             clock,
-            repository,
+            repository: TypedEnvironmentRepository::new(repository),
         }
     }
 
@@ -123,7 +122,7 @@ impl ProvisionCommandHandler {
         let environment = environment.start_provisioning();
 
         // Persist intermediate state
-        self.repository.save(&environment.clone().into_any())?;
+        self.repository.save_provisioning(&environment)?;
 
         // Execute provisioning steps with explicit step tracking
         // This allows us to know exactly which step failed if an error occurs
@@ -133,7 +132,7 @@ impl ProvisionCommandHandler {
                 let provisioned = provisioned.with_instance_ip(instance_ip);
 
                 // Persist final state
-                self.repository.save(&provisioned.clone().into_any())?;
+                self.repository.save_provisioned(&provisioned)?;
 
                 info!(
                     command = "provision",
@@ -152,7 +151,7 @@ impl ProvisionCommandHandler {
                 let failed = environment.provision_failed(context);
 
                 // Persist error state
-                self.repository.save(&failed.clone().into_any())?;
+                self.repository.save_provision_failed(&failed)?;
 
                 Err(e)
             }
@@ -177,7 +176,7 @@ impl ProvisionCommandHandler {
     async fn execute_provisioning_with_tracking(
         &self,
         environment: &Environment<Provisioning>,
-    ) -> Result<(Environment<Provisioned>, IpAddr), (ProvisionCommandHandlerError, ProvisionStep)>
+    ) -> StepResult<(Environment<Provisioned>, IpAddr), ProvisionCommandHandlerError, ProvisionStep>
     {
         let ssh_credentials = environment.ssh_credentials();
 
@@ -333,13 +332,14 @@ impl ProvisionCommandHandler {
     /// # Returns
     ///
     /// A `ProvisionFailureContext` with all failure metadata and trace file path
-    pub(crate) fn build_failure_context(
+    fn build_failure_context(
         &self,
         environment: &Environment<Provisioning>,
         error: &ProvisionCommandHandlerError,
         current_step: ProvisionStep,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> ProvisionFailureContext {
+        use crate::application::command_handlers::common::failure_context::build_base_failure_context;
         use crate::infrastructure::trace::ProvisionTraceWriter;
 
         // Step that failed is directly provided - no reverse engineering needed
@@ -348,27 +348,14 @@ impl ProvisionCommandHandler {
         // Get error kind from the error itself (errors are self-describing)
         let error_kind = error.error_kind();
 
-        let now = self.clock.now();
-        let trace_id = TraceId::new();
+        // Build base failure context using common helper
+        let base = build_base_failure_context(&self.clock, started_at, error.to_string());
 
-        // Calculate actual execution duration
-        let execution_duration = now
-            .signed_duration_since(started_at)
-            .to_std()
-            .unwrap_or_default();
-
-        // Build initial context without trace file path
+        // Build handler-specific context
         let mut context = ProvisionFailureContext {
             failed_step,
             error_kind,
-            base: BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: started_at,
-                execution_duration,
-                trace_id,
-                trace_file_path: None,
-            },
+            base,
         };
 
         // Generate trace file (logging handled by trace writer)

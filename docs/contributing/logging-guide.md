@@ -145,17 +145,17 @@ use std::path::Path;
 struct Cli {
     #[arg(long, default_value = "compact")]
     log_file_format: LogFormat,
-    
+
     #[arg(long, default_value = "pretty")]
     log_stderr_format: LogFormat,
-    
+
     #[arg(long, default_value = "file-only")]
     log_output: LogOutput,
 }
 
 fn main() {
     let cli = Cli::parse();
-    
+
     // Use LoggingBuilder for independent format control
     LoggingBuilder::new(Path::new("./data/logs"))
         .with_file_format(cli.log_file_format)
@@ -443,6 +443,279 @@ Remember: Logs within command spans automatically inherit environment context. Y
 - Nested step logs within command execution
 - Infrastructure layer operations (no environment at all)
 - Debug/trace logs where span context is sufficient
+
+## Command Handler Logging Patterns
+
+Command handlers (`src/application/command_handlers/`) follow consistent logging patterns to ensure observability across the application. All handlers use **minimal logging** focusing on command lifecycle events (start/completion) rather than step-by-step progress.
+
+### Standard Pattern
+
+All command handlers should log:
+
+1. **Start of execution**: When the command begins
+2. **Completion/Error**: When the command finishes successfully or encounters an error
+
+Command handlers should **NOT** log individual step execution - the step functions themselves handle their own logging through span instrumentation.
+
+### Required Structured Fields
+
+All command handler logs must include:
+
+- **command**: The command name (e.g., `"provision"`, `"configure"`, `"destroy"`, `"create"`)
+- **environment**: The environment name (using `%environment.name()` for Display formatting)
+
+### Provision Handler Example
+
+```rust
+// src/application/command_handlers/provision/handler.rs
+#[instrument(
+    name = "provision_command",
+    skip_all,
+    fields(
+        command_type = "provision",
+        environment = %environment.name()
+    )
+)]
+pub async fn execute(
+    &self,
+    environment: Environment<Created>,
+) -> Result<Environment<Provisioned>, ProvisionCommandError> {
+    // ✅ Log at start with structured fields
+    info!(
+        command = "provision",
+        environment = %environment.name(),
+        "Starting complete infrastructure provisioning workflow"
+    );
+
+    // Execute steps (they handle their own logging)
+    let result = self.execute_steps(environment).await;
+
+    match result {
+        Ok(provisioned) => {
+            // ✅ Log successful completion
+            info!(
+                command = "provision",
+                environment = %provisioned.name(),
+                "Infrastructure provisioning completed successfully"
+            );
+            Ok(provisioned)
+        }
+        Err(e) => {
+            // Error logging is handled by error types and propagation
+            Err(e)
+        }
+    }
+}
+```
+
+### Configure Handler Example
+
+```rust
+// src/application/command_handlers/configure/handler.rs
+#[instrument(
+    name = "configure_command",
+    skip_all,
+    fields(
+        command_type = "configure",
+        environment = %environment.name()
+    )
+)]
+pub async fn execute(
+    &self,
+    environment: Environment<Provisioned>,
+) -> Result<Environment<Configured>, ConfigureCommandError> {
+    // ✅ Log at start
+    info!(
+        command = "configure",
+        environment = %environment.name(),
+        "Starting complete infrastructure configuration workflow"
+    );
+
+    // Execute steps
+    let result = self.execute_steps(environment).await;
+
+    match result {
+        Ok(configured) => {
+            // ✅ Log successful completion
+            info!(
+                command = "configure",
+                environment = %configured.name(),
+                "Infrastructure configuration completed successfully"
+            );
+            Ok(configured)
+        }
+        Err(e) => Err(e),
+    }
+}
+```
+
+### Destroy Handler Example
+
+```rust
+// src/application/command_handlers/destroy/handler.rs
+#[instrument(
+    name = "destroy_command",
+    skip_all,
+    fields(
+        command_type = "destroy",
+        environment = %environment.name()
+    )
+)]
+pub async fn execute(
+    &self,
+    environment: Environment<AnyState>,
+) -> Result<Environment<Destroyed>, DestroyCommandError> {
+    // ✅ Log at start
+    info!(
+        command = "destroy",
+        environment = %environment.name(),
+        "Starting complete infrastructure destruction workflow"
+    );
+
+    // Check if already destroyed (special case)
+    if let EnvironmentState::Destroyed(_) = environment.state() {
+        info!(
+            command = "destroy",
+            environment = %environment.name(),
+            "Environment is already destroyed, skipping destruction"
+        );
+        return Ok(environment.into_destroyed());
+    }
+
+    // Execute steps
+    let result = self.execute_steps(environment).await;
+
+    match result {
+        Ok(destroyed) => {
+            // ✅ Log successful completion
+            info!(
+                command = "destroy",
+                environment = %destroyed.name(),
+                "Infrastructure destruction completed successfully"
+            );
+            Ok(destroyed)
+        }
+        Err(e) => Err(e),
+    }
+}
+```
+
+### Create Handler Example
+
+```rust
+// src/application/command_handlers/create/handler.rs
+#[instrument(
+    name = "create_command",
+    skip_all,
+    fields(
+        command_type = "create",
+        environment = %name
+    )
+)]
+pub async fn execute(
+    &self,
+    name: EnvironmentName,
+    config: Config,
+) -> Result<Environment<Created>, CreateCommandError> {
+    // ✅ Log at start
+    info!(
+        command = "create",
+        environment = %name,
+        "Starting environment creation workflow"
+    );
+
+    // Execute steps
+    let result = self.execute_steps(name, config).await;
+
+    match result {
+        Ok(created) => {
+            // ✅ Log successful completion
+            info!(
+                command = "create",
+                environment = %created.name(),
+                "Environment created successfully"
+            );
+            Ok(created)
+        }
+        Err(e) => Err(e),
+    }
+}
+```
+
+### Key Principles
+
+1. **Minimal Logging**: Only log command lifecycle (start/completion), not individual steps
+2. **Consistent Fields**: Always use `command` and `environment` fields with the same naming
+3. **Environment Field Format**: Use `%environment.name()` for Display formatting (not `environment_name`)
+4. **Rely on Span Hierarchy**: Step-level logging is handled by step functions within their own spans
+5. **Let Errors Propagate**: Error details are logged by error types and context builders, not in handlers
+6. **Match Block Pattern**: Use explicit `match` with logging in success arm, not `.map()` or `.and_then()`
+
+### Anti-Patterns to Avoid
+
+#### ❌ Bad: Verbose Step-by-Step Logging
+
+```rust
+// Don't log individual steps - they have their own logging
+pub async fn execute(&self, environment: Environment<Created>) -> Result<...> {
+    info!("Starting provision");
+
+    // ❌ Don't log each step
+    info!("Converting configuration");
+    let config = self.convert_config();
+
+    info!("Checking uniqueness");
+    self.check_uniqueness();
+
+    info!("Creating entity");
+    let entity = self.create_entity();
+
+    info!("Persisting");
+    self.persist(entity);
+
+    info!("Provision complete");
+}
+```
+
+#### ❌ Bad: Inconsistent Field Names
+
+```rust
+// Don't use environment_name - use environment
+info!(
+    command = "create",
+    environment_name = %name,  // ❌ Wrong field name
+    "Starting environment creation workflow"
+);
+```
+
+#### ❌ Bad: Missing Structured Fields
+
+```rust
+// Always include command and environment fields
+info!("Starting infrastructure provisioning");  // ❌ Missing structured context
+```
+
+#### ❌ Bad: Redundant Context in Nested Logs
+
+```rust
+// Within a command span, don't repeat environment in every log
+pub async fn execute(&self, environment: Environment<Created>) -> Result<...> {
+    info!(command = "provision", environment = %environment.name(), "Starting");
+
+    // ❌ Redundant - span already has environment context
+    debug!(environment = %environment.name(), "Step 1");
+    debug!(environment = %environment.name(), "Step 2");
+    debug!(environment = %environment.name(), "Step 3");
+}
+```
+
+### Why This Pattern?
+
+- **Observability**: Start/completion logs provide clear boundaries for command execution
+- **Consistency**: All handlers follow the same pattern, making logs predictable
+- **Low Noise**: Minimal logging reduces clutter while maintaining visibility
+- **Separation of Concerns**: Step functions handle their own logging, handlers orchestrate
+- **Span Hierarchy**: Tracing's span system provides context without redundant logging
 
 ## Environment Variables
 

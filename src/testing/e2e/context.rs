@@ -470,6 +470,12 @@ impl Drop for TestContext {
             // Container environments use Docker/testcontainers which handle their own cleanup
             match self.context_type {
                 TestContextType::VirtualMachine => {
+                    // Skip cleanup if infrastructure already destroyed
+                    // This prevents unnecessary cleanup attempts when DestroyCommand already cleaned up
+                    if matches!(self.environment, AnyEnvironmentState::Destroyed(_)) {
+                        return;
+                    }
+
                     // Try basic cleanup in case async cleanup failed
                     // Using emergency_destroy for consistent OpenTofu handling
                     let tofu_dir = self.config.build_dir.join(OPENTOFU_SUBFOLDER);

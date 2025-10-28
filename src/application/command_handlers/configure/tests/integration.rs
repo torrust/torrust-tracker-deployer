@@ -4,11 +4,8 @@
 
 use std::sync::Arc;
 
-use chrono::{TimeZone, Utc};
-
-use super::builders::{create_test_environment, ConfigureCommandHandlerTestBuilder};
+use super::builders::ConfigureCommandHandlerTestBuilder;
 use crate::application::command_handlers::configure::ConfigureCommandHandlerError;
-use crate::domain::environment::state::ConfigureStep;
 use crate::shared::command::CommandError;
 
 #[test]
@@ -29,29 +26,4 @@ fn it_should_have_correct_error_type_conversions() {
     };
     let configure_error: ConfigureCommandHandlerError = command_error.into();
     drop(configure_error);
-}
-
-#[test]
-fn it_should_build_failure_context_from_command_error() {
-    let (command, temp_dir) = ConfigureCommandHandlerTestBuilder::new().build();
-
-    // Create test environment for trace generation
-    let (environment, _env_temp_dir) = create_test_environment(&temp_dir);
-
-    let error = ConfigureCommandHandlerError::Command(CommandError::ExecutionFailed {
-        command: "test".to_string(),
-        exit_code: "1".to_string(),
-        stdout: String::new(),
-        stderr: "test error".to_string(),
-    });
-
-    let started_at = Utc.with_ymd_and_hms(2025, 10, 7, 12, 0, 0).unwrap();
-    let current_step = ConfigureStep::InstallDocker;
-    let context = command.build_failure_context(&environment, &error, current_step, started_at);
-    assert_eq!(context.failed_step, ConfigureStep::InstallDocker);
-    assert_eq!(
-        context.error_kind,
-        crate::shared::ErrorKind::CommandExecution
-    );
-    assert_eq!(context.base.execution_started_at, started_at);
 }

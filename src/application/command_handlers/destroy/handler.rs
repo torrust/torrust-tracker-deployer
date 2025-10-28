@@ -5,8 +5,9 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use super::errors::DestroyCommandHandlerError;
+use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::DestroyInfrastructureStep;
-use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::{Destroyed, Environment};
 use crate::shared::error::Traceable;
 
@@ -37,7 +38,7 @@ use crate::shared::error::Traceable;
 /// - Report appropriate status to the user
 /// - Not fail due to missing resources
 pub struct DestroyCommandHandler {
-    pub(crate) repository: Arc<dyn EnvironmentRepository>,
+    pub(crate) repository: TypedEnvironmentRepository,
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
 }
 
@@ -48,7 +49,10 @@ impl DestroyCommandHandler {
         repository: Arc<dyn EnvironmentRepository>,
         clock: Arc<dyn crate::shared::Clock>,
     ) -> Self {
-        Self { repository, clock }
+        Self {
+            repository: TypedEnvironmentRepository::new(repository),
+            clock,
+        }
     }
 
     /// Execute the complete destruction workflow
@@ -94,6 +98,7 @@ impl DestroyCommandHandler {
         // 1. Load the environment from storage
         let environment = self
             .repository
+            .inner()
             .load(env_name)
             .map_err(DestroyCommandHandlerError::StatePersistence)?;
 
@@ -143,7 +148,7 @@ impl DestroyCommandHandler {
         };
 
         // 7. Persist intermediate state
-        self.repository.save(&destroying_env.clone().into_any())?;
+        self.repository.save_destroying(&destroying_env)?;
 
         // 8. Create OpenTofu client with correct build directory
         let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
@@ -157,7 +162,7 @@ impl DestroyCommandHandler {
                 let destroyed = destroying_env.destroyed();
 
                 // Persist final state
-                self.repository.save(&destroyed.clone().into_any())?;
+                self.repository.save_destroyed(&destroyed)?;
 
                 info!(
                     command = "destroy",
@@ -174,117 +179,14 @@ impl DestroyCommandHandler {
                 let failed = destroying_env.destroy_failed(context);
 
                 // Persist error state
-                self.repository.save(&failed.clone().into_any())?;
+                self.repository.save_destroy_failed(&failed)?;
 
                 Err(e)
             }
         }
     }
 
-    // Private helper methods
-
-    /// Execute the destruction steps with step tracking
-    ///
-    /// This method executes all destruction steps while tracking which step is currently
-    /// being executed. If an error occurs, it returns both the error and the step that
-    /// was being executed, enabling accurate failure context generation.
-    ///
-    /// # Errors
-    ///
-    /// Returns a tuple of (error, `current_step`) if any destruction step fails
-    fn execute_destruction_with_tracking(
-        environment: &crate::domain::environment::Environment<
-            crate::domain::environment::Destroying,
-        >,
-        opentofu_client: &Arc<crate::adapters::tofu::client::OpenTofuClient>,
-    ) -> Result<
-        (),
-        (
-            DestroyCommandHandlerError,
-            crate::domain::environment::state::DestroyStep,
-        ),
-    > {
-        use crate::domain::environment::state::DestroyStep;
-
-        // Step 1: Conditionally destroy infrastructure via OpenTofu
-        // Only attempt infrastructure destruction if infrastructure was provisioned
-        if Self::should_destroy_infrastructure(environment) {
-            info!(
-                environment = %environment.name(),
-                "Destroying provisioned infrastructure"
-            );
-            Self::destroy_infrastructure(opentofu_client)
-                .map_err(|e| (e, DestroyStep::DestroyInfrastructure))?;
-        } else {
-            info!(
-                environment = %environment.name(),
-                "Skipping infrastructure destruction (environment was never provisioned)"
-            );
-        }
-
-        // Step 2: Clean up state files
-        Self::cleanup_state_files(environment).map_err(|e| (e, DestroyStep::CleanupStateFiles))?;
-
-        Ok(())
-    }
-
-    /// Build structured failure context for destroy command errors
-    ///
-    /// Creates a comprehensive `DestroyFailureContext` containing all relevant
-    /// metadata about the failure including step, timing, error classification,
-    /// and trace file location.
-    ///
-    /// # Arguments
-    ///
-    /// * `environment` - The environment being destroyed (for trace directory path)
-    /// * `error` - The destroy error that occurred
-    /// * `current_step` - The step that was executing when the error occurred
-    /// * `started_at` - The timestamp when destruction execution started
-    ///
-    /// # Returns
-    ///
-    /// A `DestroyFailureContext` with all failure metadata and trace file path
-    pub(crate) fn build_failure_context(
-        &self,
-        _environment: &crate::domain::environment::Environment<
-            crate::domain::environment::Destroying,
-        >,
-        error: &DestroyCommandHandlerError,
-        current_step: crate::domain::environment::state::DestroyStep,
-        started_at: chrono::DateTime<chrono::Utc>,
-    ) -> crate::domain::environment::state::DestroyFailureContext {
-        use crate::domain::environment::state::{BaseFailureContext, DestroyFailureContext};
-        use crate::domain::environment::TraceId;
-
-        // Step that failed is directly provided - no reverse engineering needed
-        let failed_step = current_step;
-
-        // Get error kind from the error itself (errors are self-describing)
-        let error_kind = error.error_kind();
-
-        let now = self.clock.now();
-        let trace_id = TraceId::new();
-
-        // Calculate actual execution duration
-        let execution_duration = now
-            .signed_duration_since(started_at)
-            .to_std()
-            .unwrap_or_default();
-
-        // Build context with all failure information
-        DestroyFailureContext {
-            failed_step,
-            error_kind,
-            base: BaseFailureContext {
-                error_summary: error.to_string(),
-                failed_at: now,
-                execution_started_at: started_at,
-                execution_duration,
-                trace_id,
-                trace_file_path: None, // Trace file generation not implemented for destroy yet
-            },
-        }
-    }
+    // pub(crate) helper methods for testing business logic
 
     /// Check if infrastructure should be destroyed
     ///
@@ -304,24 +206,6 @@ impl DestroyCommandHandler {
     ) -> bool {
         let tofu_build_dir = environment.tofu_build_dir();
         tofu_build_dir.exists()
-    }
-
-    /// Destroy the infrastructure using `OpenTofu`
-    ///
-    /// Executes the `OpenTofu` destroy workflow to remove all managed infrastructure.
-    ///
-    /// # Arguments
-    ///
-    /// * `opentofu_client` - The `OpenTofu` client configured with the correct build directory
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if `OpenTofu` destroy fails
-    fn destroy_infrastructure(
-        opentofu_client: &Arc<crate::adapters::tofu::client::OpenTofuClient>,
-    ) -> Result<(), DestroyCommandHandlerError> {
-        DestroyInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
-        Ok(())
     }
 
     /// Clean up state files during environment destruction
@@ -372,6 +256,112 @@ impl DestroyCommandHandler {
             );
         }
 
+        Ok(())
+    }
+
+    // Private helper methods
+
+    /// Execute the destruction steps with step tracking
+    ///
+    /// This method executes all destruction steps while tracking which step is currently
+    /// being executed. If an error occurs, it returns both the error and the step that
+    /// was being executed, enabling accurate failure context generation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `current_step`) if any destruction step fails
+    fn execute_destruction_with_tracking(
+        environment: &crate::domain::environment::Environment<
+            crate::domain::environment::Destroying,
+        >,
+        opentofu_client: &Arc<crate::adapters::tofu::client::OpenTofuClient>,
+    ) -> StepResult<(), DestroyCommandHandlerError, crate::domain::environment::state::DestroyStep>
+    {
+        use crate::domain::environment::state::DestroyStep;
+
+        // Step 1: Conditionally destroy infrastructure via OpenTofu
+        // Only attempt infrastructure destruction if infrastructure was provisioned
+        if Self::should_destroy_infrastructure(environment) {
+            info!(
+                environment = %environment.name(),
+                "Destroying provisioned infrastructure"
+            );
+            Self::destroy_infrastructure(opentofu_client)
+                .map_err(|e| (e, DestroyStep::DestroyInfrastructure))?;
+        } else {
+            info!(
+                environment = %environment.name(),
+                "Skipping infrastructure destruction (environment was never provisioned)"
+            );
+        }
+
+        // Step 2: Clean up state files
+        Self::cleanup_state_files(environment).map_err(|e| (e, DestroyStep::CleanupStateFiles))?;
+
+        Ok(())
+    }
+
+    /// Build structured failure context for destroy command errors
+    ///
+    /// Creates a comprehensive `DestroyFailureContext` containing all relevant
+    /// metadata about the failure including step, timing, error classification,
+    /// and trace file location.
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment being destroyed (for trace directory path)
+    /// * `error` - The destroy error that occurred
+    /// * `current_step` - The step that was executing when the error occurred
+    /// * `started_at` - The timestamp when destruction execution started
+    ///
+    /// # Returns
+    ///
+    /// A `DestroyFailureContext` with all failure metadata and trace file path
+    fn build_failure_context(
+        &self,
+        _environment: &crate::domain::environment::Environment<
+            crate::domain::environment::Destroying,
+        >,
+        error: &DestroyCommandHandlerError,
+        current_step: crate::domain::environment::state::DestroyStep,
+        started_at: chrono::DateTime<chrono::Utc>,
+    ) -> crate::domain::environment::state::DestroyFailureContext {
+        use crate::application::command_handlers::common::failure_context::build_base_failure_context;
+        use crate::domain::environment::state::DestroyFailureContext;
+
+        // Step that failed is directly provided - no reverse engineering needed
+        let failed_step = current_step;
+
+        // Get error kind from the error itself (errors are self-describing)
+        let error_kind = error.error_kind();
+
+        // Build base failure context using common helper
+        let base = build_base_failure_context(&self.clock, started_at, error.to_string());
+
+        // Build handler-specific context
+        // Note: Trace file generation not implemented for destroy yet
+        DestroyFailureContext {
+            failed_step,
+            error_kind,
+            base,
+        }
+    }
+
+    /// Destroy the infrastructure using `OpenTofu`
+    ///
+    /// Executes the `OpenTofu` destroy workflow to remove all managed infrastructure.
+    ///
+    /// # Arguments
+    ///
+    /// * `opentofu_client` - The `OpenTofu` client configured with the correct build directory
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `OpenTofu` destroy fails
+    fn destroy_infrastructure(
+        opentofu_client: &Arc<crate::adapters::tofu::client::OpenTofuClient>,
+    ) -> Result<(), DestroyCommandHandlerError> {
+        DestroyInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
         Ok(())
     }
 }

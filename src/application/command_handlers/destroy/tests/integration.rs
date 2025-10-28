@@ -17,7 +17,7 @@ fn it_should_create_destroy_command_handler_with_all_dependencies() {
 
     // Verify the command handler was created (basic structure test)
     // This test just verifies that the command handler can be created with the dependencies
-    assert_eq!(Arc::strong_count(&command_handler.repository), 1);
+    assert_eq!(Arc::strong_count(command_handler.repository.inner()), 1);
 }
 
 #[test]
