@@ -1,5 +1,7 @@
 # Presentation Commands Module Refactoring
 
+**GitHub EPIC**: [#63](https://github.com/torrust/torrust-tracker-deployer/issues/63)
+
 ## 📋 Overview
 
 This refactoring plan addresses code quality, consistency, and maintainability issues in the `src/presentation/commands` module. The goal is to eliminate duplication, improve abstraction, enhance testability, and ensure consistent patterns across all command handlers.
@@ -128,6 +130,8 @@ None yet.
 ---
 
 ### Proposal 1: Organize Subcommands in Dedicated Folder Structure and Standardize Module Organization
+
+**GitHub Issue**: [#64](https://github.com/torrust/torrust-tracker-deployer/issues/64)
 
 **Status**: ⏳ Not Started  
 **Type**: 🎯 Quick Win  
@@ -304,6 +308,8 @@ cargo doc --no-deps --package torrust-tracker-deployer-lib
 
 ### Proposal 2: Extract Command Configuration Constants
 
+**GitHub Issue**: [#65](https://github.com/torrust/torrust-tracker-deployer/issues/65)
+
 **Status**: ⏳ Not Started  
 **Type**: 🎯 Quick Win  
 **Impact**: 🟢🟢 Medium  
@@ -409,6 +415,8 @@ cargo clippy -- -D warnings
 ---
 
 ### Proposal 3: Extract Shared Command Dependencies and Output (Merged with former Proposal 4)
+
+**GitHub Issue**: [#66](https://github.com/torrust/torrust-tracker-deployer/issues/66)
 
 **Status**: ⏳ Not Started  
 **Type**: 🎯 Quick Win  
@@ -654,6 +662,8 @@ Verify existing command tests still pass.
 
 ### Proposal 4: Split Template Generation from Environment Creation
 
+**GitHub Issue**: [#67](https://github.com/torrust/torrust-tracker-deployer/issues/67)
+
 **Status**: ⏳ Not Started  
 **Type**: 🎯 Quick Win  
 **Impact**: 🟢🟢🟢 High  
@@ -852,6 +862,8 @@ TBD
 ---
 
 ### Proposal 5: Eliminate Direct Console Output Bypassing UserOutput
+
+**GitHub Issue**: [#68](https://github.com/torrust/torrust-tracker-deployer/issues/68)
 
 **Status**: ⏳ Not Started  
 **Type**: 🎯 Quick Win  
@@ -1082,6 +1094,8 @@ cargo test presentation::commands::create::subcommands::template
 
 ### Proposal 6: Refactor `handle_environment_creation()` Using Steps Pattern
 
+**GitHub Issue**: [#69](https://github.com/torrust/torrust-tracker-deployer/issues/69)
+
 **Status**: ⏳ Not Started  
 **Type**: 🔨 Structural Improvement  
 **Impact**: 🟢🟢🟢 High  
@@ -1284,6 +1298,8 @@ mod tests {
 
 ### Proposal 7: Create Shared Test Utilities Module
 
+**GitHub Issue**: [#70](https://github.com/torrust/torrust-tracker-deployer/issues/70)
+
 **Status**: ⏳ Not Started  
 **Type**: 🔨 Structural Improvement  
 **Impact**: 🟢🟢 Medium  
@@ -1473,6 +1489,8 @@ cargo test presentation::commands
 
 ### Proposal 8: Improve Error Consistency Between Commands
 
+**GitHub Issue**: [#71](https://github.com/torrust/torrust-tracker-deployer/issues/71)
+
 **Status**: ⏳ Not Started  
 **Type**: 🔨 Structural Improvement  
 **Impact**: 🟢🟢 Medium  
@@ -1622,6 +1640,8 @@ fn it_should_provide_detailed_help() {
 
 ### Proposal 9: Create Command Handler Factory
 
+**GitHub Issue**: [#72](https://github.com/torrust/torrust-tracker-deployer/issues/72)
+
 **Status**: ⏳ Not Started  
 **Type**: 🔬 Advanced Pattern  
 **Impact**: 🟢🟢 Medium  
@@ -1741,6 +1761,8 @@ fn it_should_create_handlers_with_shared_context() {
 ---
 
 ### Proposal 10: Add Progress Reporter Abstraction
+
+**GitHub Issue**: [#73](https://github.com/torrust/torrust-tracker-deployer/issues/73)
 
 **Status**: ⏳ Not Started  
 **Type**: 🔬 Advanced Pattern  
