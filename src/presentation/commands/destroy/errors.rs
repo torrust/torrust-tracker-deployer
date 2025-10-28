@@ -1,108 +1,13 @@
-//! Destroy Command Handler
+//! Error types for the Destroy Subcommand
 //!
-//! This module handles the destroy command execution, including environment validation,
-//! repository access, and infrastructure destruction. It provides user-friendly
-//! progress updates and comprehensive error handling.
-
-use std::time::Duration;
+//! This module defines error types that can occur during CLI destroy command execution.
+//! All errors follow the project's error handling principles by providing clear,
+//! contextual, and actionable error messages with `.help()` methods.
 
 use thiserror::Error;
 
-use crate::application::command_handlers::{
-    destroy::DestroyCommandHandlerError, DestroyCommandHandler,
-};
-use crate::domain::environment::name::{EnvironmentName, EnvironmentNameError};
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
-
-/// Handle the destroy command
-///
-/// This function orchestrates the environment destruction workflow by:
-/// 1. Validating the environment name
-/// 2. Loading the environment from persistent storage
-/// 3. Executing the destroy command handler
-/// 4. Providing user-friendly progress updates
-///
-/// # Arguments
-///
-/// * `environment_name` - The name of the environment to destroy
-/// * `working_dir` - Root directory for environment data storage
-///
-/// # Returns
-///
-/// Returns `Ok(())` on success, or a `DestroyError` if:
-/// - Environment name is invalid
-/// - Environment cannot be loaded
-/// - Destruction fails
-///
-/// # Errors
-///
-/// This function will return an error if the environment name is invalid,
-/// the environment cannot be loaded, or the destruction process fails.
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Example
-///
-/// ```rust
-/// use torrust_tracker_deployer_lib::presentation::commands::destroy;
-/// use std::path::Path;
-///
-/// if let Err(e) = destroy::handle("test-env", Path::new(".")) {
-///     eprintln!("Destroy failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle(environment_name: &str, working_dir: &std::path::Path) -> Result<(), DestroyError> {
-    // Create user output with default stdout/stderr channels
-    let mut output = UserOutput::new(VerbosityLevel::Normal);
-
-    // Display initial progress (to stderr)
-    output.progress(&format!("Destroying environment '{environment_name}'..."));
-
-    // Validate environment name
-    let env_name = EnvironmentName::new(environment_name.to_string()).map_err(|source| {
-        let error = DestroyError::InvalidEnvironmentName {
-            name: environment_name.to_string(),
-            source,
-        };
-        output.error(&error.to_string());
-        error
-    })?;
-
-    // Create repository for loading environment state
-    let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
-    let repository = repository_factory.create(working_dir.to_path_buf());
-
-    // Create clock for timing information
-    let clock = std::sync::Arc::new(crate::shared::SystemClock);
-
-    // Create and execute destroy command handler
-    output.progress("Tearing down infrastructure...");
-
-    let command_handler = DestroyCommandHandler::new(repository, clock);
-
-    // Execute destroy - the handler will load the environment and handle all states internally
-    let _destroyed_env = command_handler.execute(&env_name).map_err(|source| {
-        let error = DestroyError::DestroyOperationFailed {
-            name: environment_name.to_string(),
-            source,
-        };
-        output.error(&error.to_string());
-        error
-    })?;
-
-    output.progress("Cleaning up resources...");
-    output.success(&format!(
-        "Environment '{environment_name}' destroyed successfully"
-    ));
-
-    Ok(())
-}
-
-// ============================================================================
-// ERROR TYPES - Secondary Concerns
-// ============================================================================
+use crate::application::command_handlers::destroy::DestroyCommandHandlerError;
+use crate::domain::environment::name::EnvironmentNameError;
 
 /// Destroy command specific errors
 ///
@@ -110,7 +15,7 @@ pub fn handle(environment_name: &str, working_dir: &std::path::Path) -> Result<(
 /// including environment validation, repository access, and destruction failures.
 /// Each variant includes relevant context and actionable error messages.
 #[derive(Debug, Error)]
-pub enum DestroyError {
+pub enum DestroySubcommandError {
     /// Environment name validation failed
     ///
     /// The provided environment name doesn't meet the validation requirements.
@@ -158,7 +63,7 @@ Tip: Check directory permissions and disk space"
     RepositoryAccessFailed { data_dir: String, reason: String },
 }
 
-impl DestroyError {
+impl DestroySubcommandError {
     /// Get detailed troubleshooting guidance for this error
     ///
     /// This method provides comprehensive troubleshooting steps that can be
@@ -171,7 +76,7 @@ impl DestroyError {
     /// use std::path::Path;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// if let Err(e) = destroy::handle("test-env", Path::new(".")) {
+    /// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new(".")) {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
@@ -286,5 +191,94 @@ For persistent issues, check the infrastructure documentation."
 If the problem persists, check system logs and contact administrator."
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_should_provide_help_for_invalid_environment_name() {
+        let error = DestroySubcommandError::InvalidEnvironmentName {
+            name: "invalid_name".to_string(),
+            source: EnvironmentNameError::InvalidFormat {
+                attempted_name: "invalid_name".to_string(),
+                reason: "contains underscore".to_string(),
+                valid_examples: vec!["dev".to_string(), "staging".to_string()],
+            },
+        };
+
+        let help = error.help();
+        assert!(help.contains("Invalid Environment Name"));
+        assert!(help.contains("Check environment name format"));
+    }
+
+    #[test]
+    fn it_should_provide_help_for_environment_not_accessible() {
+        let error = DestroySubcommandError::EnvironmentNotAccessible {
+            name: "test-env".to_string(),
+            data_dir: "/tmp/data".to_string(),
+        };
+
+        let help = error.help();
+        assert!(help.contains("Environment Not Accessible"));
+        assert!(help.contains("Check if environment exists"));
+    }
+
+    #[test]
+    fn it_should_have_help_for_all_error_variants() {
+        use std::path::PathBuf;
+
+        let errors: Vec<DestroySubcommandError> = vec![
+            DestroySubcommandError::InvalidEnvironmentName {
+                name: "test".to_string(),
+                source: EnvironmentNameError::InvalidFormat {
+                    attempted_name: "test".to_string(),
+                    reason: "invalid".to_string(),
+                    valid_examples: vec!["dev".to_string()],
+                },
+            },
+            DestroySubcommandError::EnvironmentNotAccessible {
+                name: "test".to_string(),
+                data_dir: "/tmp".to_string(),
+            },
+            DestroySubcommandError::DestroyOperationFailed {
+                name: "test".to_string(),
+                source: DestroyCommandHandlerError::StateCleanupFailed {
+                    path: PathBuf::from("/tmp"),
+                    source: std::io::Error::new(std::io::ErrorKind::NotFound, "not found"),
+                },
+            },
+            DestroySubcommandError::RepositoryAccessFailed {
+                data_dir: "/tmp".to_string(),
+                reason: "permission denied".to_string(),
+            },
+        ];
+
+        for error in errors {
+            let help = error.help();
+            assert!(!help.is_empty(), "Help text should not be empty");
+            assert!(
+                help.contains("Troubleshooting") || help.len() > 50,
+                "Help should contain actionable guidance"
+            );
+        }
+    }
+
+    #[test]
+    fn it_should_display_error_with_context() {
+        let error = DestroySubcommandError::InvalidEnvironmentName {
+            name: "invalid_env".to_string(),
+            source: EnvironmentNameError::InvalidFormat {
+                attempted_name: "invalid_env".to_string(),
+                reason: "contains underscore".to_string(),
+                valid_examples: vec!["dev".to_string()],
+            },
+        };
+
+        let message = error.to_string();
+        assert!(message.contains("invalid_env"));
+        assert!(message.contains("Invalid environment name"));
     }
 }

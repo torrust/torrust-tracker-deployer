@@ -60,7 +60,7 @@ pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), C
             Ok(())
         }
         Commands::Destroy { environment } => {
-            destroy::handle(&environment, working_dir)?;
+            destroy::handle_destroy_command(&environment, working_dir)?;
             Ok(())
         } // Future commands will be added here:
           //
@@ -96,7 +96,7 @@ pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), C
 /// ```rust
 /// use clap::Parser;
 /// use torrust_tracker_deployer_lib::presentation::{commands, cli, errors};
-/// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroyError;
+/// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroySubcommandError;
 /// use torrust_tracker_deployer_lib::domain::environment::name::EnvironmentNameError;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -107,7 +107,7 @@ pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), C
 ///     valid_examples: vec!["dev".to_string(), "staging".to_string()],
 /// };
 /// let sample_error = errors::CommandError::Destroy(
-///     Box::new(DestroyError::InvalidEnvironmentName {
+///     Box::new(DestroySubcommandError::InvalidEnvironmentName {
 ///         name: "invalid_name".to_string(),
 ///         source: name_error,
 ///     })
