@@ -110,7 +110,7 @@ fn it_should_persist_environment_state_to_repository() {
 
 #[test]
 fn it_should_fail_with_invalid_environment_name() {
-    use crate::domain::config::{
+    use crate::application::command_handlers::create::config::{
         EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
     };
     use std::fs;
@@ -154,7 +154,7 @@ fn it_should_fail_with_invalid_environment_name() {
 
 #[test]
 fn it_should_fail_when_ssh_private_key_not_found() {
-    use crate::domain::config::{
+    use crate::application::command_handlers::create::config::{
         EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
     };
 

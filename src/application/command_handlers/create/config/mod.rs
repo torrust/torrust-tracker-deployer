@@ -1,15 +1,16 @@
-//! Configuration Domain Module
+//! Configuration Module for Create Command
 //!
-//! This module provides configuration value objects and validation for creating
-//! deployment environments. It sits at the boundary between external configuration
+//! This module provides configuration Data Transfer Objects (DTOs) and validation for
+//! creating deployment environments. It sits at the boundary between external configuration
 //! sources (JSON files, CLI arguments, etc.) and the internal domain model.
 //!
 //! ## Architecture
 //!
-//! The configuration layer is distinct from both the adapters and domain layers:
+//! The configuration DTOs in this module are specific to the create command and are distinct
+//! from both the domain and adapter layers:
 //!
-//! - **Configuration Layer** (`domain::config`): String-based configuration objects
-//!   that deserialize from external sources (JSON, TOML, CLI)
+//! - **Configuration DTOs** (`application::command_handlers::create::config`): String-based
+//!   configuration objects that deserialize from external sources (JSON, TOML, CLI)
 //! - **Domain Layer** (`domain::environment`): Strongly-typed domain entities
 //!   with business validation
 //! - **Adapter Layer** (`adapters::ssh`): Infrastructure-specific implementations
@@ -43,7 +44,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use torrust_tracker_deployer_lib::domain::config::{
+//! use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
 //!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
 //! };
 //! use torrust_tracker_deployer_lib::domain::Environment;

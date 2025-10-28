@@ -11,7 +11,7 @@ use figment::{
     Figment,
 };
 
-use crate::domain::config::EnvironmentCreationConfig;
+use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 
 use super::errors::{ConfigFormat, CreateSubcommandError};
 

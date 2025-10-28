@@ -27,7 +27,7 @@ const DEFAULT_SSH_PORT: u16 = 22;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::domain::config::SshCredentialsConfig;
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::SshCredentialsConfig;
 ///
 /// let config = SshCredentialsConfig {
 ///     private_key_path: "fixtures/testing_rsa".to_string(),
@@ -63,7 +63,7 @@ impl SshCredentialsConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::domain::config::SshCredentialsConfig;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::SshCredentialsConfig;
     ///
     /// let config = SshCredentialsConfig::new(
     ///     "fixtures/testing_rsa".to_string(),
@@ -109,7 +109,7 @@ impl SshCredentialsConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::domain::config::SshCredentialsConfig;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::SshCredentialsConfig;
     ///
     /// let config = SshCredentialsConfig::new(
     ///     "fixtures/testing_rsa".to_string(),

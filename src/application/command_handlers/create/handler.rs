@@ -7,7 +7,7 @@
 use std::sync::Arc;
 use tracing::{info, instrument};
 
-use crate::domain::config::EnvironmentCreationConfig;
+use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Created, Environment};
 use crate::shared::Clock;
@@ -42,7 +42,7 @@ use super::errors::CreateCommandHandlerError;
 /// ```rust,no_run
 /// use std::sync::Arc;
 /// use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
-/// use torrust_tracker_deployer_lib::domain::config::{
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
 ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
 /// };
 /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
@@ -153,7 +153,7 @@ impl CreateCommandHandler {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
-    /// use torrust_tracker_deployer_lib::domain::config::{
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
     ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
     /// };
     ///
