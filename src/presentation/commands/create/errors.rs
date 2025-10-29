@@ -32,13 +32,14 @@ impl std::fmt::Display for ConfigFormat {
 #[derive(Debug, Error)]
 pub enum CreateSubcommandError {
     // ===== Configuration File Errors =====
-
     /// Configuration file not found
     ///
     /// The specified configuration file does not exist or is not accessible.
     /// Use `.help()` for detailed troubleshooting steps.
-    #[error("Configuration file not found: {path}
-Tip: Check that the file path is correct: ls -la {path}")]
+    #[error(
+        "Configuration file not found: {path}
+Tip: Check that the file path is correct: ls -la {path}"
+    )]
     ConfigFileNotFound {
         /// Path to the missing configuration file
         path: PathBuf,
@@ -48,8 +49,10 @@ Tip: Check that the file path is correct: ls -la {path}")]
     ///
     /// The configuration file exists but could not be parsed in the expected format.
     /// Use `.help()` for detailed troubleshooting steps.
-    #[error("Failed to parse configuration file '{path}' as {format}: {source}
-Tip: Validate {format} syntax with: jq . < {path}")]
+    #[error(
+        "Failed to parse configuration file '{path}' as {format}: {source}
+Tip: Validate {format} syntax with: jq . < {path}"
+    )]
     ConfigParsingFailed {
         /// Path to the configuration file
         path: PathBuf,
@@ -64,8 +67,10 @@ Tip: Validate {format} syntax with: jq . < {path}")]
     ///
     /// The configuration file was parsed successfully but contains invalid values.
     /// Use `.help()` for detailed troubleshooting steps.
-    #[error("Configuration validation failed: {source}
-Tip: Review the validation error and fix the configuration file")]
+    #[error(
+        "Configuration validation failed: {source}
+Tip: Review the validation error and fix the configuration file"
+    )]
     ConfigValidationFailed {
         /// Underlying validation error from domain layer
         #[source]
@@ -73,13 +78,14 @@ Tip: Review the validation error and fix the configuration file")]
     },
 
     // ===== Command Execution Errors =====
-
     /// Command execution failed
     ///
     /// The create operation failed during execution after validation passed.
     /// Use `.help()` for detailed troubleshooting steps.
-    #[error("Create command execution failed: {source}
-Tip: Check logs with --log-output file-and-stderr for detailed error information")]
+    #[error(
+        "Create command execution failed: {source}
+Tip: Check logs with --log-output file-and-stderr for detailed error information"
+    )]
     CommandFailed {
         /// Underlying command handler error
         #[source]
@@ -87,13 +93,14 @@ Tip: Check logs with --log-output file-and-stderr for detailed error information
     },
 
     // ===== Template Generation Errors =====
-
     /// Template generation failed
     ///
     /// Failed to generate template configuration or files.
     /// Use `.help()` for detailed troubleshooting steps.
-    #[error("Template generation failed: {source}
-Tip: Check that you have write permissions in the target directory")]
+    #[error(
+        "Template generation failed: {source}
+Tip: Check that you have write permissions in the target directory"
+    )]
     TemplateGenerationFailed {
         /// Underlying template generation error from domain layer
         #[source]
@@ -255,11 +262,13 @@ mod tests {
                 source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "test")),
             },
             CreateSubcommandError::ConfigValidationFailed {
-                source: CreateConfigError::InvalidEnvironmentName(EnvironmentNameError::InvalidFormat {
-                    attempted_name: "test".to_string(),
-                    reason: "invalid".to_string(),
-                    valid_examples: vec!["dev".to_string()],
-                }),
+                source: CreateConfigError::InvalidEnvironmentName(
+                    EnvironmentNameError::InvalidFormat {
+                        attempted_name: "test".to_string(),
+                        reason: "invalid".to_string(),
+                        valid_examples: vec!["dev".to_string()],
+                    },
+                ),
             },
         ];
 

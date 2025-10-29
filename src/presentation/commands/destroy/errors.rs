@@ -17,7 +17,6 @@ use crate::domain::environment::name::EnvironmentNameError;
 #[derive(Debug, Error)]
 pub enum DestroySubcommandError {
     // ===== Environment Validation Errors =====
-
     /// Environment name validation failed
     ///
     /// The provided environment name doesn't meet the validation requirements.
@@ -41,7 +40,6 @@ Tip: Check if environment exists: ls -la {data_dir}/"
     EnvironmentNotAccessible { name: String, data_dir: String },
 
     // ===== Repository Access Errors =====
-
     /// Repository operation failed
     ///
     /// Failed to create or access the environment repository.
@@ -53,7 +51,6 @@ Tip: Check directory permissions and disk space"
     RepositoryAccessFailed { data_dir: String, reason: String },
 
     // ===== Destroy Operation Errors =====
-
     /// Destroy operation failed
     ///
     /// The destruction process encountered an error during execution.
