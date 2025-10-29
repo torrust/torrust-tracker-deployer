@@ -5,12 +5,12 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::application::command_handlers::create::CreateCommandHandler;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+use crate::presentation::commands::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
+use crate::presentation::user_output::UserOutput;
 use crate::shared::{Clock, SystemClock};
 
 use super::super::config_loader::ConfigLoader;
@@ -51,7 +51,7 @@ pub fn handle_environment_creation(
     working_dir: &Path,
 ) -> Result<(), CreateSubcommandError> {
     // Create user output with default stdout/stderr channels
-    let mut output = UserOutput::new(VerbosityLevel::Normal);
+    let mut output = UserOutput::new(DEFAULT_VERBOSITY);
 
     // Display initial progress (to stderr)
     output.progress(&format!(
@@ -72,7 +72,7 @@ pub fn handle_environment_creation(
 
     // Step 2: Create repository for environment persistence
     // Use the working directory from CLI args (supports testing and custom locations)
-    let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
     let repository = repository_factory.create(working_dir.to_path_buf());
 
     // Step 3: Create clock for timing information

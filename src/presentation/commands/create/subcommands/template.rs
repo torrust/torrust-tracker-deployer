@@ -6,7 +6,8 @@
 use std::path::Path;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+use crate::presentation::commands::constants::DEFAULT_VERBOSITY;
+use crate::presentation::user_output::UserOutput;
 
 use super::super::errors::CreateSubcommandError;
 
@@ -34,7 +35,7 @@ use super::super::errors::CreateSubcommandError;
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
 pub fn handle_template_generation(output_path: &Path) -> Result<(), CreateSubcommandError> {
     // Create user output for progress messages
-    let mut output = UserOutput::new(VerbosityLevel::Normal);
+    let mut output = UserOutput::new(DEFAULT_VERBOSITY);
 
     output.progress("Generating configuration template...");
 
