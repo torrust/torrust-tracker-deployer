@@ -54,7 +54,7 @@ pub fn handle_environment_creation(
 
     // Step 2: Execute command (create handler before borrowing output)
     let command_handler = factory.create_create_handler(&ctx);
-    let environment = execute_create_command(ctx.output(), command_handler, config)?;
+    let environment = execute_create_command(ctx.output(), &command_handler, config)?;
 
     // Step 3: Display results
     display_creation_results(ctx.output(), &environment);
@@ -120,7 +120,7 @@ fn load_configuration(
 /// Returns an error if command execution fails (e.g., environment already exists).
 fn execute_create_command(
     output: &mut UserOutput,
-    command_handler: crate::application::command_handlers::CreateCommandHandler,
+    command_handler: &crate::application::command_handlers::CreateCommandHandler,
     config: EnvironmentCreationConfig,
 ) -> Result<Environment, CreateSubcommandError> {
     output.progress(&format!(
@@ -444,7 +444,7 @@ mod tests {
             let factory = CommandHandlerFactory::new();
             let ctx = factory.create_context(temp_dir.path().to_path_buf());
             let command_handler = factory.create_create_handler(&ctx);
-            let result = execute_create_command(&mut output, command_handler, config);
+            let result = execute_create_command(&mut output, &command_handler, config);
 
             assert!(result.is_ok(), "Should execute command successfully");
             let environment = result.unwrap();
@@ -482,12 +482,12 @@ mod tests {
 
             // Create environment first time
             let command_handler1 = factory.create_create_handler(&ctx);
-            let result1 = execute_create_command(&mut output, command_handler1, config.clone());
+            let result1 = execute_create_command(&mut output, &command_handler1, config.clone());
             assert!(result1.is_ok(), "First execution should succeed");
 
             // Try to create same environment again
             let command_handler2 = factory.create_create_handler(&ctx);
-            let result2 = execute_create_command(&mut output, command_handler2, config);
+            let result2 = execute_create_command(&mut output, &command_handler2, config);
             assert!(result2.is_err(), "Second execution should fail");
 
             match result2.unwrap_err() {
@@ -533,7 +533,8 @@ mod tests {
             let config = loader.load_from_file(&config_path).unwrap();
             let mut quiet_output = UserOutput::new(VerbosityLevel::Quiet);
             let command_handler = factory.create_create_handler(&ctx);
-            let environment = execute_create_command(&mut quiet_output, command_handler, config).unwrap();
+            let environment =
+                execute_create_command(&mut quiet_output, &command_handler, config).unwrap();
 
             // Test display function with custom output
             let stderr_buf = Vec::new();

@@ -152,10 +152,7 @@ impl CommandContext {
     /// let ctx = CommandContext::new_with_factory(&factory, working_dir);
     /// ```
     #[must_use]
-    pub fn new_with_factory(
-        repository_factory: &RepositoryFactory,
-        working_dir: PathBuf,
-    ) -> Self {
+    pub fn new_with_factory(repository_factory: &RepositoryFactory, working_dir: PathBuf) -> Self {
         let repository = repository_factory.create(working_dir);
         let clock = Arc::new(SystemClock);
         let output = UserOutput::new(DEFAULT_VERBOSITY);
