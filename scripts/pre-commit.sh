@@ -21,6 +21,7 @@ declare -a STEPS=(
     "Running tests|All tests passed|||cargo test"
     "Testing cargo documentation|Documentation builds successfully|||cargo doc --no-deps --bins --examples --workspace --all-features"
     "Running comprehensive E2E tests|All E2E tests passed|(Filtering logs to WARNING level and above - this may take a few minutes)|RUST_LOG=warn|cargo run --bin e2e-tests-full"
+    "Running code coverage check|Coverage meets 85% threshold|(Informational only - does not block commits)||cargo cov-check"
 )
 
 # ============================================================================
