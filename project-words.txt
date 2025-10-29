@@ -6,6 +6,7 @@ appendonly
 architecting
 autorestart
 Avalonia
+browsable
 buildx
 chdir
 childlogdir
@@ -158,8 +159,10 @@ substates
 supervisorctl
 supervisord
 swappability
+Swatinem
 sysfs
 sysv
+taiki
 Taplo
 taskkill
 tasklist
