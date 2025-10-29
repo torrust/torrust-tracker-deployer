@@ -3,12 +3,11 @@
 //! This module handles the destroy command execution at the presentation layer,
 //! including environment validation, repository initialization, and user interaction.
 
-use std::time::Duration;
-
 use crate::application::command_handlers::DestroyCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+use crate::presentation::commands::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
+use crate::presentation::user_output::UserOutput;
 
 use super::errors::DestroySubcommandError;
 
@@ -55,7 +54,7 @@ pub fn handle_destroy_command(
     working_dir: &std::path::Path,
 ) -> Result<(), DestroySubcommandError> {
     // Create user output with default stdout/stderr channels
-    let mut output = UserOutput::new(VerbosityLevel::Normal);
+    let mut output = UserOutput::new(DEFAULT_VERBOSITY);
 
     // Display initial progress (to stderr)
     output.progress(&format!("Destroying environment '{environment_name}'..."));
@@ -71,7 +70,7 @@ pub fn handle_destroy_command(
     })?;
 
     // Create repository for loading environment state
-    let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
     let repository = repository_factory.create(working_dir.to_path_buf());
 
     // Create clock for timing information
