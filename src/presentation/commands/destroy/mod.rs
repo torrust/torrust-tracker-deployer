@@ -12,7 +12,7 @@
 //! ## Components
 //!
 //! - `errors` - Presentation layer error types with `.help()` methods
-//! - `command` - Main command handler orchestrating the workflow
+//! - `handler` - Main command handler orchestrating the workflow
 //!
 //! ## Usage Example
 //!
@@ -26,12 +26,12 @@
 //! }
 //! ```
 
-pub mod command;
 pub mod errors;
+pub mod handler;
 
 #[cfg(test)]
 mod tests;
 
 // Re-export commonly used types for convenience
-pub use command::handle_destroy_command;
 pub use errors::DestroySubcommandError;
+pub use handler::handle_destroy_command;
