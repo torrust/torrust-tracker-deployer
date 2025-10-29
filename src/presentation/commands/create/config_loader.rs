@@ -91,7 +91,7 @@ impl ConfigLoader {
         config
             .clone()
             .to_environment_params()
-            .map_err(CreateSubcommandError::ConfigValidationFailed)?;
+            .map_err(|source| CreateSubcommandError::ConfigValidationFailed { source })?;
 
         Ok(config)
     }
@@ -217,7 +217,7 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            CreateSubcommandError::ConfigValidationFailed(_) => {
+            CreateSubcommandError::ConfigValidationFailed { .. } => {
                 // Expected - validation should catch invalid environment name
             }
             other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
@@ -246,7 +246,7 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            CreateSubcommandError::ConfigValidationFailed(_) => {
+            CreateSubcommandError::ConfigValidationFailed { .. } => {
                 // Expected - validation should catch missing SSH keys
             }
             other => panic!("Expected ConfigValidationFailed, got: {other:?}"),

@@ -574,6 +574,169 @@ match FileLock::acquire(&path, timeout) {
 - ✅ Platform-aware guidance included
 - ✅ Users control verbosity level
 
+## 📐 Error Structure Template
+
+When defining new error types, use this template to ensure consistency:
+
+```rust
+use thiserror::Error;
+use std::path::PathBuf;
+
+#[derive(Debug, Error)]
+pub enum YourCommandError {
+    // ===== File/Configuration Errors =====
+
+    /// Brief description of when this error occurs
+    ///
+    /// More detailed explanation if needed.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Clear error message with context: {path}
+Tip: Brief actionable hint - command example if applicable")]
+    ConfigFileNotFound {
+        /// Path to the missing file
+        path: PathBuf,
+    },
+
+    /// Brief description
+    #[error("Error message with multiple context values: '{path}' as {format}: {source}
+Tip: Validate format with: command --check {path}")]
+    ParsingFailed {
+        /// Path to the file
+        path: PathBuf,
+        /// Expected format
+        format: String,
+        /// Original parsing error
+        #[source]
+        source: SomeError,
+    },
+
+    // ===== Operation Errors =====
+
+    /// Brief description
+    ///
+    /// Explanation of when this occurs.
+    #[error("Operation '{operation}' failed for '{name}': {source}
+Tip: Check logs with: --verbose or --log-output file-and-stderr")]
+    OperationFailed {
+        /// Name of the resource
+        name: String,
+        /// Operation being performed
+        operation: String,
+        /// Underlying error
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    // Add more error variants as needed, grouped by category
+}
+
+impl YourCommandError {
+    /// Get detailed troubleshooting guidance for this error
+    ///
+    /// This method provides comprehensive troubleshooting steps that can be
+    /// displayed to users when they need more help resolving the error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// if let Err(e) = some_operation() {
+    ///     eprintln!("Error: {e}");
+    ///     if verbose {
+    ///         eprintln!("\nTroubleshooting:\n{}", e.help());
+    ///     }
+    /// }
+    /// ```
+    #[must_use]
+    pub fn help(&self) -> &'static str {
+        match self {
+            Self::ConfigFileNotFound { .. } => {
+                "Configuration File Not Found - Detailed Troubleshooting:
+
+1. Check file path is correct
+   - Verify path spelling: ls -la <path>
+   - Use absolute or relative paths correctly
+
+2. Verify file permissions
+   - Check read permissions: ls -l <path>
+   - Fix if needed: chmod 644 <path>
+
+3. Common solutions
+   - Create the file if missing
+   - Check current directory: pwd
+   - Provide correct path in arguments
+
+For more information, see the documentation."
+            }
+
+            Self::ParsingFailed { .. } => {
+                "Parsing Failed - Detailed Troubleshooting:
+
+1. Validate syntax
+   - Use appropriate validator tool
+   - Check for common syntax errors
+
+2. Verify format matches expectation
+   - Check file extension
+   - Validate structure
+
+For more information, see format documentation."
+            }
+
+            Self::OperationFailed { .. } => {
+                "Operation Failed - Detailed Troubleshooting:
+
+1. Check system state
+   - Verify resources are available
+   - Check permissions
+
+2. Review logs for details
+   - Run with --verbose
+   - Check log output
+
+For persistent issues, contact support."
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_should_have_help_for_all_variants() {
+        // Create instances of all error variants
+        let errors: Vec<YourCommandError> = vec![
+            // ... create test instances
+        ];
+
+        for error in errors {
+            let help = error.help();
+            assert!(!help.is_empty(), "Help text should not be empty");
+            assert!(
+                help.contains("Troubleshooting") || help.len() > 50,
+                "Help should contain actionable guidance"
+            );
+        }
+    }
+
+    #[test]
+    fn it_should_display_context_in_errors() {
+        // Test that context fields appear in error messages
+    }
+}
+```
+
+### Template Guidelines
+
+1. **Group related errors** with section comments (e.g., `// ===== File Errors =====`)
+2. **Always include context fields** (paths, names, IDs) relevant to the error
+3. **Use `#[source]`** for all wrapped errors to preserve error chains
+4. **Add brief tips** in error messages using `\nTip:` format
+5. **Document each variant** with rustdoc comments explaining when it occurs
+6. **Implement `.help()`** with detailed troubleshooting for each variant
+7. **Write comprehensive tests** covering all variants and help text
+
 ## 📋 Error Review Checklist
 
 When reviewing error handling code, verify:
@@ -589,6 +752,7 @@ When reviewing error handling code, verify:
 - [ ] **Pattern Matching**: Can callers handle different error cases appropriately?
 - [ ] **Unwrap/Expect**: Is `unwrap()` avoided in favor of `expect()` with descriptive messages?
 - [ ] **Consistency**: Does the error follow project conventions?
+- [ ] **Error Grouping**: Are related errors grouped with section comments?
 
 ## 🔗 Related Documentation
 

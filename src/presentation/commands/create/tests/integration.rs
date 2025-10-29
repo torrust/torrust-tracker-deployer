@@ -87,7 +87,7 @@ fn it_should_reject_invalid_environment_name() {
 
     assert!(result.is_err(), "Should fail for invalid environment name");
     match result.unwrap_err() {
-        create::CreateSubcommandError::ConfigValidationFailed(_) => {
+        create::CreateSubcommandError::ConfigValidationFailed { .. } => {
             // Expected
         }
         other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
@@ -103,7 +103,7 @@ fn it_should_reject_missing_ssh_keys() {
 
     assert!(result.is_err(), "Should fail for missing SSH keys");
     match result.unwrap_err() {
-        create::CreateSubcommandError::ConfigValidationFailed(_) => {
+        create::CreateSubcommandError::ConfigValidationFailed { .. } => {
             // Expected
         }
         other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
@@ -124,7 +124,7 @@ fn it_should_reject_duplicate_environment() {
     assert!(result2.is_err(), "Second create should fail");
 
     match result2.unwrap_err() {
-        create::CreateSubcommandError::CommandFailed(_) => {
+        create::CreateSubcommandError::CommandFailed { .. } => {
             // Expected - environment already exists
         }
         other => panic!("Expected CommandFailed, got: {other:?}"),
