@@ -139,8 +139,8 @@ fn execute_create_command(
     output.progress("Validating configuration and creating environment...");
 
     #[allow(clippy::manual_inspect)]
-    command_handler.execute(config).map_err(|err| {
-        let error = CreateSubcommandError::CommandFailed(err);
+    command_handler.execute(config).map_err(|source| {
+        let error = CreateSubcommandError::CommandFailed { source };
         report_error(output, &error);
         error
     })
@@ -298,7 +298,7 @@ mod tests {
         assert!(result2.is_err(), "Second create should fail");
 
         match result2.unwrap_err() {
-            CreateSubcommandError::CommandFailed(_) => {
+            CreateSubcommandError::CommandFailed { .. } => {
                 // Expected - environment already exists
             }
             other => panic!("Expected CommandFailed, got: {other:?}"),
@@ -503,7 +503,7 @@ mod tests {
             assert!(result2.is_err(), "Second execution should fail");
 
             match result2.unwrap_err() {
-                CreateSubcommandError::CommandFailed(_) => {
+                CreateSubcommandError::CommandFailed { .. } => {
                     // Expected
                 }
                 other => panic!("Expected CommandFailed, got: {other:?}"),

@@ -46,7 +46,7 @@ pub fn handle_template_generation(output_path: &Path) -> Result<(), CreateSubcom
         .block_on(async {
             EnvironmentCreationConfig::generate_template_file(output_path)
                 .await
-                .map_err(CreateSubcommandError::TemplateGenerationFailed)
+                .map_err(|source| CreateSubcommandError::TemplateGenerationFailed { source })
         })?;
 
     output.success(&format!(

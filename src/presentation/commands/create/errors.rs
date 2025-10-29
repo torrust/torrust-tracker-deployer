@@ -31,15 +31,28 @@ impl std::fmt::Display for ConfigFormat {
 /// troubleshooting and user feedback.
 #[derive(Debug, Error)]
 pub enum CreateSubcommandError {
+    // ===== Configuration File Errors =====
     /// Configuration file not found
-    #[error("Configuration file not found: {path}")]
+    ///
+    /// The specified configuration file does not exist or is not accessible.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Configuration file not found: {path}
+Tip: Check that the file path is correct: ls -la {path}"
+    )]
     ConfigFileNotFound {
         /// Path to the missing configuration file
         path: PathBuf,
     },
 
     /// Failed to parse configuration file
-    #[error("Failed to parse configuration file '{path}' as {format}")]
+    ///
+    /// The configuration file exists but could not be parsed in the expected format.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Failed to parse configuration file '{path}' as {format}: {source}
+Tip: Validate {format} syntax with: jq . < {path}"
+    )]
     ConfigParsingFailed {
         /// Path to the configuration file
         path: PathBuf,
@@ -51,28 +64,48 @@ pub enum CreateSubcommandError {
     },
 
     /// Configuration validation failed
-    #[error("Configuration validation failed")]
-    ConfigValidationFailed(
+    ///
+    /// The configuration file was parsed successfully but contains invalid values.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Configuration validation failed: {source}
+Tip: Review the validation error and fix the configuration file"
+    )]
+    ConfigValidationFailed {
         /// Underlying validation error from domain layer
         #[source]
-        crate::application::command_handlers::create::config::CreateConfigError,
-    ),
+        source: crate::application::command_handlers::create::config::CreateConfigError,
+    },
 
+    // ===== Command Execution Errors =====
     /// Command execution failed
-    #[error("Create command execution failed")]
-    CommandFailed(
+    ///
+    /// The create operation failed during execution after validation passed.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Create command execution failed: {source}
+Tip: Check logs with --log-output file-and-stderr for detailed error information"
+    )]
+    CommandFailed {
         /// Underlying command handler error
         #[source]
-        CreateCommandHandlerError,
-    ),
+        source: CreateCommandHandlerError,
+    },
 
+    // ===== Template Generation Errors =====
     /// Template generation failed
-    #[error("Template generation failed")]
-    TemplateGenerationFailed(
+    ///
+    /// Failed to generate template configuration or files.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Template generation failed: {source}
+Tip: Check that you have write permissions in the target directory"
+    )]
+    TemplateGenerationFailed {
         /// Underlying template generation error from domain layer
         #[source]
-        crate::application::command_handlers::create::config::CreateConfigError,
-    ),
+        source: crate::application::command_handlers::create::config::CreateConfigError,
+    },
 }
 
 impl CreateSubcommandError {
@@ -150,10 +183,10 @@ Example valid configuration:
 For more information, see the configuration documentation."
                 }
             },
-            Self::ConfigValidationFailed(inner) | Self::TemplateGenerationFailed(inner) => {
-                inner.help()
+            Self::ConfigValidationFailed { source } | Self::TemplateGenerationFailed { source } => {
+                source.help()
             }
-            Self::CommandFailed(inner) => inner.help(),
+            Self::CommandFailed { source } => source.help(),
         }
     }
 }
@@ -228,13 +261,15 @@ mod tests {
                 format: ConfigFormat::Json,
                 source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "test")),
             },
-            CreateSubcommandError::ConfigValidationFailed(
-                CreateConfigError::InvalidEnvironmentName(EnvironmentNameError::InvalidFormat {
-                    attempted_name: "test".to_string(),
-                    reason: "invalid".to_string(),
-                    valid_examples: vec!["dev".to_string()],
-                }),
-            ),
+            CreateSubcommandError::ConfigValidationFailed {
+                source: CreateConfigError::InvalidEnvironmentName(
+                    EnvironmentNameError::InvalidFormat {
+                        attempted_name: "test".to_string(),
+                        reason: "invalid".to_string(),
+                        valid_examples: vec!["dev".to_string()],
+                    },
+                ),
+            },
         ];
 
         for error in errors {
