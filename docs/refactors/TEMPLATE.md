@@ -173,7 +173,7 @@
 - [Development Principles](../development-principles.md)
 - [Contributing Guidelines](../contributing/README.md)
 - [Error Handling Guide](../contributing/error-handling.md)
-- [Testing Conventions](../contributing/testing.md)
+- [Testing Conventions](../contributing/testing/)
 
 ## 💡 Notes
 

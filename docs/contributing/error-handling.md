@@ -758,7 +758,7 @@ When reviewing error handling code, verify:
 
 - [Development Principles](../development-principles.md) - Core principles including observability and actionability
 - [Contributing Guidelines](./README.md) - General contribution guidelines
-- [Testing Conventions](./testing.md) - Testing error scenarios
+- [Testing Conventions](./testing/) - Testing error scenarios
 
 ## 📚 Examples in Codebase
 

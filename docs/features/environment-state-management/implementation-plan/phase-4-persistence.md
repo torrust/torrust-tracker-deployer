@@ -523,7 +523,7 @@ During implementation, the architecture was refactored multiple times to improve
    - Example: Multi-environment path structure verification test
 
 5. **Documentation Updates**:
-   - Updated `docs/contributing/testing.md` with parameterized testing best practices
+   - Updated `docs/contributing/testing/` with parameterized testing best practices
    - Documented when to use parameterized tests vs loops
    - Added setup instructions for `rstest` crate
 

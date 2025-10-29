@@ -150,7 +150,7 @@ Update progress regularly:
 - [Development Principles](../development-principles.md) - Core principles guiding refactoring
 - [Contributing Guidelines](../contributing/README.md) - General contribution process
 - [Error Handling Guide](../contributing/error-handling.md) - Error handling standards
-- [Testing Conventions](../contributing/testing.md) - Testing best practices
+- [Testing Conventions](../contributing/testing/) - Testing best practices
 
 ## 💡 Tips
 

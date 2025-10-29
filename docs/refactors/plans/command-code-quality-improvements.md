@@ -1747,7 +1747,7 @@ After this refactoring, consider:
 ### Related Documentation
 
 - [Development Principles](../development-principles.md)
-- [Testing Conventions](../contributing/testing.md)
+- [Testing Conventions](../contributing/testing/)
 - [Error Handling Guide](../contributing/error-handling.md)
 - [Codebase Architecture](../codebase-architecture.md)
 

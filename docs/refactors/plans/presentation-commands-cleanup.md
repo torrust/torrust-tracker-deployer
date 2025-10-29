@@ -2004,7 +2004,7 @@ fn it_should_support_custom_completion_message() {
 - [Development Principles](../development-principles.md)
 - [Contributing Guidelines](../contributing/README.md)
 - [Error Handling Guide](../contributing/error-handling.md)
-- [Testing Conventions](../contributing/testing.md)
+- [Testing Conventions](../contributing/testing/)
 - [Module Organization](../contributing/module-organization.md)
 
 ## 💡 Notes

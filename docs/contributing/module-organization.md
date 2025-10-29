@@ -601,7 +601,7 @@ create/
 
 ## 🔗 Related Documentation
 
-- [Testing Conventions](./testing.md) - How to organize test code
+- [Testing Conventions](./testing/) - How to organize test code
 - [Error Handling Guide](./error-handling.md) - Error type design principles
 - [Development Principles](../development-principles.md) - Overall code quality standards
 
