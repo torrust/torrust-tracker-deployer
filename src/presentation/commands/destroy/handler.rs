@@ -70,7 +70,9 @@ pub fn handle_destroy_command(
         report_error(progress.output(), &error);
         error
     })?;
-    progress.complete_step(Some(&format!("Environment name validated: {environment_name}")));
+    progress.complete_step(Some(&format!(
+        "Environment name validated: {environment_name}"
+    )));
 
     // Step 2: Initialize dependencies
     progress.start_step("Initializing dependencies");

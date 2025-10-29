@@ -248,7 +248,7 @@ impl ProgressReporter {
 
     /// Get a mutable reference to the underlying `UserOutput`
     ///
-    /// This allows using other output methods (like `error`, `warn`) 
+    /// This allows using other output methods (like `error`, `warn`)
     /// while progress is being tracked.
     ///
     /// # Examples
@@ -304,11 +304,7 @@ mod tests {
     #[allow(clippy::type_complexity)]
     fn create_test_user_output(
         verbosity: VerbosityLevel,
-    ) -> (
-        UserOutput,
-        Arc<Mutex<Vec<u8>>>,
-        Arc<Mutex<Vec<u8>>>,
-    ) {
+    ) -> (UserOutput, Arc<Mutex<Vec<u8>>>, Arc<Mutex<Vec<u8>>>) {
         let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
         let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
 
