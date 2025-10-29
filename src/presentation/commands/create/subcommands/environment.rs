@@ -9,6 +9,7 @@ use crate::application::command_handlers::create::config::EnvironmentCreationCon
 use crate::domain::Environment;
 use crate::presentation::commands::context::report_error;
 use crate::presentation::commands::factory::CommandHandlerFactory;
+use crate::presentation::progress::ProgressReporter;
 use crate::presentation::user_output::UserOutput;
 
 use super::super::config_loader::ConfigLoader;
@@ -16,14 +17,15 @@ use super::super::errors::CreateSubcommandError;
 
 /// Handle environment creation from configuration file
 ///
-/// This function orchestrates the environment creation workflow by delegating
-/// to focused step functions:
+/// This function orchestrates the environment creation workflow with progress reporting:
 ///
 /// 1. Load configuration from file
-/// 2. Execute create command
-/// 3. Display creation results
+/// 2. Initialize dependencies
+/// 3. Validate environment
+/// 4. Execute create command
+/// 5. Display creation results
 ///
-/// Each step is implemented as a separate function for clarity and testability.
+/// Each step is tracked and timed using `ProgressReporter` for clear user feedback.
 ///
 /// # Arguments
 ///
@@ -47,17 +49,41 @@ pub fn handle_environment_creation(
     working_dir: &Path,
 ) -> Result<(), CreateSubcommandError> {
     let factory = CommandHandlerFactory::new();
-    let mut ctx = factory.create_context(working_dir.to_path_buf());
+    let ctx = factory.create_context(working_dir.to_path_buf());
+
+    // Create progress reporter for 3 main steps
+    let mut progress = ProgressReporter::new(ctx.into_output(), 3);
 
     // Step 1: Load configuration
-    let config = load_configuration(ctx.output(), env_file)?;
+    progress.start_step("Loading configuration");
+    let config = load_configuration(progress.output(), env_file)?;
+    progress.complete_step(Some(&format!(
+        "Configuration loaded: {}",
+        config.environment.name
+    )));
 
-    // Step 2: Execute command (create handler before borrowing output)
+    // Step 2: Initialize dependencies
+    progress.start_step("Initializing dependencies");
+    let ctx = factory.create_context(working_dir.to_path_buf());
     let command_handler = factory.create_create_handler(&ctx);
-    let environment = execute_create_command(ctx.output(), &command_handler, config)?;
+    progress.complete_step(None);
 
-    // Step 3: Display results
-    display_creation_results(ctx.output(), &environment);
+    // Step 3: Execute create command (provision infrastructure)
+    progress.start_step("Creating environment");
+    let environment = execute_create_command(progress.output(), &command_handler, config)?;
+    progress.complete_step(Some(&format!(
+        "Instance created: {}",
+        environment.instance_name().as_str()
+    )));
+
+    // Complete with summary
+    progress.complete(&format!(
+        "Environment '{}' created successfully",
+        environment.name().as_str()
+    ));
+
+    // Display final results
+    display_creation_results(progress.output(), &environment);
 
     Ok(())
 }
