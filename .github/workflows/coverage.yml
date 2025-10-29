@@ -36,10 +36,14 @@ jobs:
 
       - id: coverage-text
         name: Generate Text Coverage Summary
+        env:
+          SKIP_AI_ENFORCEMENT: 1
         run: cargo cov
 
       - id: coverage-html
         name: Generate HTML Coverage Report
+        env:
+          SKIP_AI_ENFORCEMENT: 1
         run: cargo cov-html
 
       - id: upload-coverage
