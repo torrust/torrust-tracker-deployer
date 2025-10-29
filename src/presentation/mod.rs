@@ -41,6 +41,7 @@
 pub mod cli;
 pub mod commands;
 pub mod errors;
+pub mod progress;
 pub mod user_output;
 
 // Re-export commonly used presentation types for convenience
@@ -49,4 +50,5 @@ pub use commands::create::CreateSubcommandError;
 pub use commands::destroy::DestroySubcommandError;
 pub use commands::{execute, handle_error};
 pub use errors::CommandError;
+pub use progress::ProgressReporter;
 pub use user_output::{UserOutput, VerbosityLevel};

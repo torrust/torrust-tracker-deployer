@@ -254,6 +254,26 @@ impl CommandContext {
     pub fn output(&mut self) -> &mut UserOutput {
         &mut self.output
     }
+
+    /// Consume the context and return the user output
+    ///
+    /// This method is useful when you want to pass ownership of the output
+    /// to another component, such as a `ProgressReporter`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::path::PathBuf;
+    /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
+    /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
+    ///
+    /// let ctx = CommandContext::new(PathBuf::from("."));
+    /// let progress = ProgressReporter::new(ctx.into_output(), 3);
+    /// ```
+    #[must_use]
+    pub fn into_output(self) -> UserOutput {
+        self.output
+    }
 }
 
 /// Report an error through user output

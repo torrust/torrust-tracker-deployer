@@ -6,16 +6,18 @@
 use crate::domain::environment::name::EnvironmentName;
 use crate::presentation::commands::context::report_error;
 use crate::presentation::commands::factory::CommandHandlerFactory;
+use crate::presentation::progress::ProgressReporter;
 
 use super::errors::DestroySubcommandError;
 
 /// Handle the destroy command
 ///
-/// This function orchestrates the environment destruction workflow by:
+/// This function orchestrates the environment destruction workflow with progress reporting:
 /// 1. Validating the environment name
-/// 2. Loading the environment from persistent storage
-/// 3. Executing the destroy command handler
-/// 4. Providing user-friendly progress updates
+/// 2. Tearing down infrastructure
+/// 3. Cleaning up resources
+///
+/// Each step is tracked and timed using `ProgressReporter` for clear user feedback.
 ///
 /// # Arguments
 ///
@@ -53,39 +55,45 @@ pub fn handle_destroy_command(
 ) -> Result<(), DestroySubcommandError> {
     // Create factory and context with all shared dependencies
     let factory = CommandHandlerFactory::new();
-    let mut ctx = factory.create_context(working_dir.to_path_buf());
+    let ctx = factory.create_context(working_dir.to_path_buf());
 
-    // Display initial progress (to stderr)
-    ctx.output()
-        .progress(&format!("Destroying environment '{environment_name}'..."));
+    // Create progress reporter for 3 main steps
+    let mut progress = ProgressReporter::new(ctx.into_output(), 3);
 
-    // Validate environment name
+    // Step 1: Validate environment name
+    progress.start_step("Validating environment");
     let env_name = EnvironmentName::new(environment_name.to_string()).map_err(|source| {
         let error = DestroySubcommandError::InvalidEnvironmentName {
             name: environment_name.to_string(),
             source,
         };
-        report_error(ctx.output(), &error);
+        report_error(progress.output(), &error);
         error
     })?;
+    progress.complete_step(Some(&format!(
+        "Environment name validated: {environment_name}"
+    )));
 
-    // Create and execute destroy command handler
-    ctx.output().progress("Tearing down infrastructure...");
-
+    // Step 2: Initialize dependencies
+    progress.start_step("Initializing dependencies");
+    let ctx = factory.create_context(working_dir.to_path_buf());
     let command_handler = factory.create_destroy_handler(&ctx);
+    progress.complete_step(None);
 
-    // Execute destroy - the handler will load the environment and handle all states internally
+    // Step 3: Execute destroy command (tear down infrastructure)
+    progress.start_step("Tearing down infrastructure");
     let _destroyed_env = command_handler.execute(&env_name).map_err(|source| {
         let error = DestroySubcommandError::DestroyOperationFailed {
             name: environment_name.to_string(),
             source,
         };
-        report_error(ctx.output(), &error);
+        report_error(progress.output(), &error);
         error
     })?;
+    progress.complete_step(Some("Infrastructure torn down"));
 
-    ctx.output().progress("Cleaning up resources...");
-    ctx.output().success(&format!(
+    // Complete with summary
+    progress.complete(&format!(
         "Environment '{environment_name}' destroyed successfully"
     ));
 
