@@ -4,24 +4,27 @@
 //! deployment environments from configuration files.
 
 use std::path::Path;
+use std::sync::Arc;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::application::command_handlers::create::CreateCommandHandler;
+use crate::domain::Environment;
 use crate::presentation::commands::context::{report_error, CommandContext};
+use crate::presentation::user_output::UserOutput;
 
 use super::super::config_loader::ConfigLoader;
 use super::super::errors::CreateSubcommandError;
 
 /// Handle environment creation from configuration file
 ///
-/// This function orchestrates the environment creation workflow from the
-/// presentation layer by:
-/// 1. Loading and parsing the configuration file using Figment
-/// 2. Validating the configuration using domain rules
-/// 3. Setting up the repository with the working directory
-/// 4. Creating the command handler with injected dependencies
-/// 5. Executing the create command
-/// 6. Providing user-friendly progress updates and error messages
+/// This function orchestrates the environment creation workflow by delegating
+/// to focused step functions:
+///
+/// 1. Load configuration from file
+/// 2. Execute create command
+/// 3. Display creation results
+///
+/// Each step is implemented as a separate function for clarity and testability.
 ///
 /// # Arguments
 ///
@@ -30,76 +33,149 @@ use super::super::errors::CreateSubcommandError;
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` on success, or a `CreateSubcommandError` if:
-/// - Configuration file is not found
-/// - Configuration parsing fails
-/// - Configuration validation fails
-/// - Command execution fails
+/// Returns `Ok(())` on success, or a `CreateSubcommandError` if any step fails.
 ///
 /// # Errors
 ///
-/// This function will return an error if the configuration file cannot be
-/// loaded, parsed, validated, or if the create command execution fails.
+/// This function will return an error if:
+/// - Configuration file cannot be loaded or validated
+/// - Command execution fails
+///
 /// All errors include detailed context and actionable troubleshooting guidance.
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
 pub fn handle_environment_creation(
     env_file: &Path,
     working_dir: &Path,
 ) -> Result<(), CreateSubcommandError> {
-    // Create command context with all shared dependencies
     let mut ctx = CommandContext::new(working_dir.to_path_buf());
 
-    // Display initial progress (to stderr)
-    ctx.output().progress(&format!(
+    // Step 1: Load configuration
+    let config = load_configuration(ctx.output(), env_file)?;
+
+    // Step 2: Execute command (split borrow to avoid conflict)
+    let environment = {
+        let repository = ctx.repository().clone();
+        let clock = ctx.clock().clone();
+        execute_create_command(ctx.output(), config, repository, clock)?
+    };
+
+    // Step 3: Display results
+    display_creation_results(ctx.output(), &environment);
+
+    Ok(())
+}
+
+/// Load and validate configuration from file
+///
+/// This step handles:
+/// - Loading configuration file using Figment
+/// - Parsing JSON content
+/// - Validating configuration using domain rules
+///
+/// # Arguments
+///
+/// * `output` - User output for progress messages
+/// * `env_file` - Path to the configuration file
+///
+/// # Returns
+///
+/// Returns the loaded and validated `EnvironmentCreationConfig`.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Configuration file is not found
+/// - JSON parsing fails
+/// - Domain validation fails
+fn load_configuration(
+    output: &mut UserOutput,
+    env_file: &Path,
+) -> Result<EnvironmentCreationConfig, CreateSubcommandError> {
+    output.progress(&format!(
         "Loading configuration from '{}'...",
         env_file.display()
     ));
 
-    // Step 1: Load and parse configuration file using Figment
     let loader = ConfigLoader;
-    let config: EnvironmentCreationConfig = loader.load_from_file(env_file).inspect_err(|err| {
-        report_error(ctx.output(), err);
-    })?;
+    loader.load_from_file(env_file).inspect_err(|err| {
+        report_error(output, err);
+    })
+}
 
-    ctx.output().progress(&format!(
+/// Execute the create command with the given configuration
+///
+/// This step handles:
+/// - Creating the command handler with dependencies
+/// - Executing the create command
+/// - Handling command execution errors
+///
+/// # Arguments
+///
+/// * `output` - User output for progress messages
+/// * `config` - Validated environment creation configuration
+/// * `repository` - Repository for environment persistence
+/// * `clock` - Clock for timing operations
+///
+/// # Returns
+///
+/// Returns the created `Environment` on success.
+///
+/// # Errors
+///
+/// Returns an error if command execution fails (e.g., environment already exists).
+fn execute_create_command(
+    output: &mut UserOutput,
+    config: EnvironmentCreationConfig,
+    repository: Arc<dyn crate::domain::environment::repository::EnvironmentRepository>,
+    clock: Arc<dyn crate::shared::Clock>,
+) -> Result<Environment, CreateSubcommandError> {
+    output.progress(&format!(
         "Creating environment '{}'...",
         config.environment.name
     ));
 
-    // Step 2: Create and execute command handler
-    let command_handler = CreateCommandHandler::new(ctx.repository().clone(), ctx.clock().clone());
+    let command_handler = CreateCommandHandler::new(repository, clock);
 
-    ctx.output()
-        .progress("Validating configuration and creating environment...");
+    output.progress("Validating configuration and creating environment...");
 
-    // Step 3: Execute create command
     #[allow(clippy::manual_inspect)]
-    let environment = command_handler.execute(config.clone()).map_err(|err| {
+    command_handler.execute(config).map_err(|err| {
         let error = CreateSubcommandError::CommandFailed(err);
-        report_error(ctx.output(), &error);
+        report_error(output, &error);
         error
-    })?;
+    })
+}
 
-    // Step 4: Display success message
-    ctx.output().success(&format!(
+/// Display the results of successful environment creation
+///
+/// This step outputs:
+/// - Success message with environment name
+/// - Instance name
+/// - Data directory location
+/// - Build directory location
+///
+/// # Arguments
+///
+/// * `output` - User output for result messages
+/// * `environment` - The successfully created environment
+fn display_creation_results(output: &mut UserOutput, environment: &Environment) {
+    output.success(&format!(
         "Environment '{}' created successfully",
         environment.name().as_str()
     ));
 
-    ctx.output().result(&format!(
+    output.result(&format!(
         "Instance name: {}",
         environment.instance_name().as_str()
     ));
-    ctx.output().result(&format!(
+    output.result(&format!(
         "Data directory: {}",
         environment.data_dir().display()
     ));
-    ctx.output().result(&format!(
+    output.result(&format!(
         "Build directory: {}",
         environment.build_dir().display()
     ));
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -267,5 +343,225 @@ mod tests {
             "Environment state should be in custom working directory at: {}",
             env_state_file.display()
         );
+    }
+
+    // ============================================================================
+    // UNIT TESTS - Helper Functions
+    // ============================================================================
+
+    mod load_configuration_tests {
+        use super::*;
+        use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+
+        #[test]
+        fn it_should_load_valid_configuration() {
+            let temp_dir = TempDir::new().unwrap();
+            let config_path = temp_dir.path().join("config.json");
+
+            let project_root = env!("CARGO_MANIFEST_DIR");
+            let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+            let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+            let config_json = format!(
+                r#"{{
+                "environment": {{
+                    "name": "test-load-config"
+                }},
+                "ssh_credentials": {{
+                    "private_key_path": "{private_key_path}",
+                    "public_key_path": "{public_key_path}"
+                }}
+            }}"#
+            );
+            fs::write(&config_path, config_json).unwrap();
+
+            let mut output = UserOutput::new(VerbosityLevel::Quiet);
+            let result = load_configuration(&mut output, &config_path);
+
+            assert!(result.is_ok(), "Should load valid configuration");
+            let config = result.unwrap();
+            assert_eq!(config.environment.name, "test-load-config");
+        }
+
+        #[test]
+        fn it_should_return_error_for_nonexistent_file() {
+            let temp_dir = TempDir::new().unwrap();
+            let config_path = temp_dir.path().join("missing.json");
+
+            let mut output = UserOutput::new(VerbosityLevel::Quiet);
+            let result = load_configuration(&mut output, &config_path);
+
+            assert!(result.is_err());
+            match result.unwrap_err() {
+                CreateSubcommandError::ConfigFileNotFound { path } => {
+                    assert_eq!(path, config_path);
+                }
+                other => panic!("Expected ConfigFileNotFound, got: {other:?}"),
+            }
+        }
+
+        #[test]
+        fn it_should_return_error_for_invalid_json() {
+            let temp_dir = TempDir::new().unwrap();
+            let config_path = temp_dir.path().join("invalid.json");
+            fs::write(&config_path, r#"{"broken json"#).unwrap();
+
+            let mut output = UserOutput::new(VerbosityLevel::Quiet);
+            let result = load_configuration(&mut output, &config_path);
+
+            assert!(result.is_err());
+            match result.unwrap_err() {
+                CreateSubcommandError::ConfigParsingFailed { .. } => {
+                    // Expected
+                }
+                other => panic!("Expected ConfigParsingFailed, got: {other:?}"),
+            }
+        }
+    }
+
+    mod execute_create_command_tests {
+        use super::*;
+        use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+
+        #[test]
+        fn it_should_execute_command_successfully() {
+            let temp_dir = TempDir::new().unwrap();
+            let config_path = temp_dir.path().join("config.json");
+
+            let project_root = env!("CARGO_MANIFEST_DIR");
+            let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+            let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+            let config_json = format!(
+                r#"{{
+                "environment": {{
+                    "name": "test-execute"
+                }},
+                "ssh_credentials": {{
+                    "private_key_path": "{private_key_path}",
+                    "public_key_path": "{public_key_path}"
+                }}
+            }}"#
+            );
+            fs::write(&config_path, config_json).unwrap();
+
+            let mut output = UserOutput::new(VerbosityLevel::Quiet);
+            let loader = ConfigLoader;
+            let config = loader.load_from_file(&config_path).unwrap();
+
+            let ctx = CommandContext::new(temp_dir.path().to_path_buf());
+            let repository = ctx.repository().clone();
+            let clock = ctx.clock().clone();
+            let result = execute_create_command(&mut output, config, repository, clock);
+
+            assert!(result.is_ok(), "Should execute command successfully");
+            let environment = result.unwrap();
+            assert_eq!(environment.name().as_str(), "test-execute");
+        }
+
+        #[test]
+        fn it_should_return_error_for_duplicate_environment() {
+            let temp_dir = TempDir::new().unwrap();
+            let config_path = temp_dir.path().join("config.json");
+
+            let project_root = env!("CARGO_MANIFEST_DIR");
+            let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+            let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+            let config_json = format!(
+                r#"{{
+                "environment": {{
+                    "name": "test-duplicate"
+                }},
+                "ssh_credentials": {{
+                    "private_key_path": "{private_key_path}",
+                    "public_key_path": "{public_key_path}"
+                }}
+            }}"#
+            );
+            fs::write(&config_path, config_json).unwrap();
+
+            let mut output = UserOutput::new(VerbosityLevel::Quiet);
+            let loader = ConfigLoader;
+            let config = loader.load_from_file(&config_path).unwrap();
+
+            let ctx = CommandContext::new(temp_dir.path().to_path_buf());
+            let repository = ctx.repository().clone();
+            let clock = ctx.clock().clone();
+
+            // Create environment first time
+            let result1 = execute_create_command(
+                &mut output,
+                config.clone(),
+                repository.clone(),
+                clock.clone(),
+            );
+            assert!(result1.is_ok(), "First execution should succeed");
+
+            // Try to create same environment again
+            let result2 = execute_create_command(&mut output, config, repository, clock);
+            assert!(result2.is_err(), "Second execution should fail");
+
+            match result2.unwrap_err() {
+                CreateSubcommandError::CommandFailed(_) => {
+                    // Expected
+                }
+                other => panic!("Expected CommandFailed, got: {other:?}"),
+            }
+        }
+    }
+
+    mod display_creation_results_tests {
+        use super::*;
+        use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+        use std::io::Cursor;
+
+        #[test]
+        fn it_should_display_environment_details() {
+            let temp_dir = TempDir::new().unwrap();
+            let config_path = temp_dir.path().join("config.json");
+
+            let project_root = env!("CARGO_MANIFEST_DIR");
+            let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+            let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+            let config_json = format!(
+                r#"{{
+                "environment": {{
+                    "name": "test-display"
+                }},
+                "ssh_credentials": {{
+                    "private_key_path": "{private_key_path}",
+                    "public_key_path": "{public_key_path}"
+                }}
+            }}"#
+            );
+            fs::write(&config_path, config_json).unwrap();
+
+            // Create environment
+            let ctx = CommandContext::new(temp_dir.path().to_path_buf());
+            let loader = ConfigLoader;
+            let config = loader.load_from_file(&config_path).unwrap();
+            let mut quiet_output = UserOutput::new(VerbosityLevel::Quiet);
+            let repository = ctx.repository().clone();
+            let clock = ctx.clock().clone();
+            let environment =
+                execute_create_command(&mut quiet_output, config, repository, clock).unwrap();
+
+            // Test display function with custom output
+            let stderr_buf = Vec::new();
+            let stderr_writer = Box::new(Cursor::new(stderr_buf));
+            let stdout_buf = Vec::new();
+            let stdout_writer = Box::new(Cursor::new(stdout_buf));
+
+            let mut output =
+                UserOutput::with_writers(VerbosityLevel::Normal, stdout_writer, stderr_writer);
+
+            // This should not panic and should output messages
+            display_creation_results(&mut output, &environment);
+
+            // Note: We can't easily verify the exact output without refactoring UserOutput
+            // to expose the buffers, but the important thing is it doesn't panic
+        }
     }
 }
