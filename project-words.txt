@@ -169,6 +169,7 @@ tasklist
 Tera
 terraformrc
 tést
+rustls
 Testcontain
 testcontainer
 testcontainers
@@ -183,12 +184,16 @@ tfvars
 thiserror
 tlnp
 tlsv
+tmpbwr
+tmpelq
 tmpfiles
 tmpfs
+tmptu
 torrust
 Torrust
 turbofish
 unergonomic
+unittests
 unrepresentable
 unsubscription
 usermod
