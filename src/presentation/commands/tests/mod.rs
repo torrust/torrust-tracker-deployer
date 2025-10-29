@@ -13,16 +13,15 @@
 //!
 //! # Usage
 //!
-//! ```rust
-//! use crate::presentation::commands::tests::{TestContext, create_valid_config};
+//! ```rust,no_run
+//! use torrust_tracker_deployer_lib::presentation::commands::tests::{TestContext, create_valid_config};
 //!
-//! #[test]
-//! fn it_should_create_environment_from_valid_config() {
+//! fn example_usage() {
 //!     let context = TestContext::new();
 //!     let config_path = create_valid_config(context.working_dir(), "test-env");
 //!     
-//!     let result = handle_environment_creation(&config_path, context.working_dir());
-//!     assert!(result.is_ok());
+//!     // Use the config path for testing
+//!     assert!(config_path.exists());
 //! }
 //! ```
 
@@ -41,11 +40,10 @@ use tempfile::TempDir;
 ///
 /// # Example
 ///
-/// ```rust
-/// use crate::presentation::commands::tests::TestContext;
+/// ```rust,no_run
+/// use torrust_tracker_deployer_lib::presentation::commands::tests::TestContext;
 ///
-/// #[test]
-/// fn it_should_work_with_temp_directory() {
+/// fn example_usage() {
 ///     let context = TestContext::new();
 ///     
 ///     // Use the working directory for tests
@@ -67,6 +65,7 @@ impl TestContext {
     /// # Panics
     ///
     /// Panics if the temporary directory cannot be created
+    #[must_use]
     pub fn new() -> Self {
         let temp_dir = TempDir::new().expect("Failed to create temporary directory");
         let working_dir = temp_dir.path().to_path_buf();
@@ -81,6 +80,7 @@ impl TestContext {
     ///
     /// The working directory is guaranteed to exist and will be automatically
     /// cleaned up when the context is dropped.
+    #[must_use]
     pub fn working_dir(&self) -> &Path {
         &self.working_dir
     }
@@ -111,21 +111,23 @@ impl Default for TestContext {
 ///
 /// Returns the full path to the created configuration file
 ///
+/// # Panics
+///
+/// Panics if the config file cannot be written to the filesystem
+///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use tempfile::TempDir;
-/// use crate::presentation::commands::tests::create_valid_config;
+/// use torrust_tracker_deployer_lib::presentation::commands::tests::create_valid_config;
 ///
-/// #[test]
-/// fn it_should_load_valid_config() {
-///     let temp_dir = TempDir::new().unwrap();
-///     let config_path = create_valid_config(temp_dir.path(), "my-env");
-///     
-///     assert!(config_path.exists());
-///     // Config can now be used with config loaders
-/// }
+/// let temp_dir = TempDir::new().unwrap();
+/// let config_path = create_valid_config(temp_dir.path(), "my-env");
+///
+/// assert!(config_path.exists());
+/// // Config can now be used with config loaders
 /// ```
+#[must_use]
 pub fn create_valid_config(path: &Path, env_name: &str) -> PathBuf {
     // Use absolute paths to SSH keys to ensure they work regardless of current directory
     let project_root = env!("CARGO_MANIFEST_DIR");
@@ -162,21 +164,22 @@ pub fn create_valid_config(path: &Path, env_name: &str) -> PathBuf {
 ///
 /// Returns the full path to the created configuration file
 ///
+/// # Panics
+///
+/// Panics if the config file cannot be written to the filesystem
+///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use tempfile::TempDir;
-/// use crate::presentation::commands::tests::create_invalid_json_config;
+/// use torrust_tracker_deployer_lib::presentation::commands::tests::create_invalid_json_config;
 ///
-/// #[test]
-/// fn it_should_reject_invalid_json() {
-///     let temp_dir = TempDir::new().unwrap();
-///     let config_path = create_invalid_json_config(temp_dir.path());
-///     
-///     let result = load_config(&config_path);
-///     assert!(result.is_err());
-/// }
+/// let temp_dir = TempDir::new().unwrap();
+/// let config_path = create_invalid_json_config(temp_dir.path());
+///
+/// // This file will contain invalid JSON for testing error handling
 /// ```
+#[must_use]
 pub fn create_invalid_json_config(path: &Path) -> PathBuf {
     let invalid_json = r#"{"environment": {"name": "test"#; // Missing closing braces
     let config_path = path.join("invalid.json");
@@ -198,21 +201,22 @@ pub fn create_invalid_json_config(path: &Path) -> PathBuf {
 ///
 /// Returns the full path to the created configuration file
 ///
+/// # Panics
+///
+/// Panics if the config file cannot be written to the filesystem
+///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use tempfile::TempDir;
-/// use crate::presentation::commands::tests::create_config_with_invalid_name;
+/// use torrust_tracker_deployer_lib::presentation::commands::tests::create_config_with_invalid_name;
 ///
-/// #[test]
-/// fn it_should_reject_invalid_environment_name() {
-///     let temp_dir = TempDir::new().unwrap();
-///     let config_path = create_config_with_invalid_name(temp_dir.path());
-///     
-///     let result = load_config(&config_path);
-///     assert!(matches!(result, Err(ConfigError::ValidationFailed(_))));
-/// }
+/// let temp_dir = TempDir::new().unwrap();
+/// let config_path = create_config_with_invalid_name(temp_dir.path());
+///
+/// // Config contains an invalid environment name for testing validation
 /// ```
+#[must_use]
 pub fn create_config_with_invalid_name(path: &Path) -> PathBuf {
     // Use absolute paths to SSH keys to ensure they work regardless of current directory
     let project_root = env!("CARGO_MANIFEST_DIR");
@@ -249,21 +253,22 @@ pub fn create_config_with_invalid_name(path: &Path) -> PathBuf {
 ///
 /// Returns the full path to the created configuration file
 ///
+/// # Panics
+///
+/// Panics if the config file cannot be written to the filesystem
+///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use tempfile::TempDir;
-/// use crate::presentation::commands::tests::create_config_with_missing_keys;
+/// use torrust_tracker_deployer_lib::presentation::commands::tests::create_config_with_missing_keys;
 ///
-/// #[test]
-/// fn it_should_reject_missing_ssh_keys() {
-///     let temp_dir = TempDir::new().unwrap();
-///     let config_path = create_config_with_missing_keys(temp_dir.path());
-///     
-///     let result = load_config(&config_path);
-///     assert!(matches!(result, Err(ConfigError::ValidationFailed(_))));
-/// }
+/// let temp_dir = TempDir::new().unwrap();
+/// let config_path = create_config_with_missing_keys(temp_dir.path());
+///
+/// // Config references non-existent SSH keys for testing validation
 /// ```
+#[must_use]
 pub fn create_config_with_missing_keys(path: &Path) -> PathBuf {
     let config_json = r#"{
     "environment": {
@@ -285,7 +290,7 @@ pub fn create_config_with_missing_keys(path: &Path) -> PathBuf {
 // ============================================================================
 
 #[cfg(test)]
-mod tests {
+mod unit_tests {
     use super::*;
 
     #[test]
@@ -314,8 +319,8 @@ mod tests {
 
     #[test]
     fn it_should_create_valid_config_file() {
-        let context = TestContext::new();
-        let config_path = create_valid_config(context.working_dir(), "test-env");
+        let test_context = TestContext::new();
+        let config_path = create_valid_config(test_context.working_dir(), "test-env");
 
         assert!(config_path.exists());
         let content = fs::read_to_string(&config_path).unwrap();
@@ -325,8 +330,8 @@ mod tests {
 
     #[test]
     fn it_should_create_invalid_json_config_file() {
-        let context = TestContext::new();
-        let config_path = create_invalid_json_config(context.working_dir());
+        let test_context = TestContext::new();
+        let config_path = create_invalid_json_config(test_context.working_dir());
 
         assert!(config_path.exists());
         let content = fs::read_to_string(&config_path).unwrap();
@@ -336,8 +341,8 @@ mod tests {
 
     #[test]
     fn it_should_create_config_with_invalid_environment_name() {
-        let context = TestContext::new();
-        let config_path = create_config_with_invalid_name(context.working_dir());
+        let test_context = TestContext::new();
+        let config_path = create_config_with_invalid_name(test_context.working_dir());
 
         assert!(config_path.exists());
         let content = fs::read_to_string(&config_path).unwrap();
@@ -346,8 +351,8 @@ mod tests {
 
     #[test]
     fn it_should_create_config_with_missing_keys() {
-        let context = TestContext::new();
-        let config_path = create_config_with_missing_keys(context.working_dir());
+        let test_context = TestContext::new();
+        let config_path = create_config_with_missing_keys(test_context.working_dir());
 
         assert!(config_path.exists());
         let content = fs::read_to_string(&config_path).unwrap();
