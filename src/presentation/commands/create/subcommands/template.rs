@@ -53,19 +53,24 @@ pub fn handle_template_generation(output_path: &Path) -> Result<(), CreateSubcom
         "Configuration template generated: {}",
         output_path.display()
     ));
-    println!();
-    println!("Next steps:");
-    println!("1. Edit the template file and replace placeholder values:");
-    println!("   - REPLACE_WITH_ENVIRONMENT_NAME: Choose a unique environment name (e.g., 'dev', 'staging')");
-    println!("   - REPLACE_WITH_SSH_PRIVATE_KEY_PATH: Path to your SSH private key");
-    println!("   - REPLACE_WITH_SSH_PUBLIC_KEY_PATH: Path to your SSH public key");
-    println!("2. Review default values:");
-    println!("   - username: 'torrust' (can be changed if needed)");
-    println!("   - port: 22 (standard SSH port)");
-    println!("3. Create the environment:");
-    println!(
-        "   torrust-tracker-deployer create environment --env-file {}",
-        output_path.display()
+
+    output.blank_line();
+
+    output.steps(
+        "Next steps:",
+        &[
+            "Edit the template file and replace placeholder values:",
+            "   - REPLACE_WITH_ENVIRONMENT_NAME: Choose a unique environment name (e.g., 'dev', 'staging')",
+            "   - REPLACE_WITH_SSH_PRIVATE_KEY_PATH: Path to your SSH private key",
+            "   - REPLACE_WITH_SSH_PUBLIC_KEY_PATH: Path to your SSH public key",
+            "Review default values:",
+            "   - username: 'torrust' (can be changed if needed)",
+            "   - port: 22 (standard SSH port)",
+            &format!(
+                "Create the environment:\n   torrust-tracker-deployer create environment --env-file {}",
+                output_path.display()
+            ),
+        ],
     );
 
     Ok(())

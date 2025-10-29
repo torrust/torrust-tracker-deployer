@@ -264,6 +264,86 @@ impl UserOutput {
     pub fn data(&mut self, data: &str) {
         writeln!(self.stdout_writer, "{data}").ok();
     }
+
+    /// Display a blank line to stderr (Normal level and above)
+    ///
+    /// Used for spacing between sections of output to improve readability.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    ///
+    /// let mut output = UserOutput::new(VerbosityLevel::Normal);
+    /// output.success("Configuration template generated");
+    /// output.blank_line();
+    /// output.progress("Starting next steps...");
+    /// ```
+    pub fn blank_line(&mut self) {
+        if self.verbosity >= VerbosityLevel::Normal {
+            writeln!(self.stderr_writer).ok();
+        }
+    }
+
+    /// Display a numbered list of steps to stderr (Normal level and above)
+    ///
+    /// Useful for displaying sequential instructions or action items.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    ///
+    /// let mut output = UserOutput::new(VerbosityLevel::Normal);
+    /// output.steps("Next steps:", &[
+    ///     "Edit the configuration file",
+    ///     "Review the settings",
+    ///     "Run the deploy command",
+    /// ]);
+    /// // Output to stderr:
+    /// // Next steps:
+    /// // 1. Edit the configuration file
+    /// // 2. Review the settings
+    /// // 3. Run the deploy command
+    /// ```
+    pub fn steps(&mut self, title: &str, steps: &[&str]) {
+        if self.verbosity >= VerbosityLevel::Normal {
+            writeln!(self.stderr_writer, "{title}").ok();
+            for (idx, step) in steps.iter().enumerate() {
+                writeln!(self.stderr_writer, "{}. {}", idx + 1, step).ok();
+            }
+        }
+    }
+
+    /// Display a multi-line information block to stderr (Normal level and above)
+    ///
+    /// Useful for displaying grouped information or detailed messages.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    ///
+    /// let mut output = UserOutput::new(VerbosityLevel::Normal);
+    /// output.info_block("Configuration options:", &[
+    ///     "  - username: 'torrust' (default)",
+    ///     "  - port: 22 (default SSH port)",
+    ///     "  - key_path: path/to/key",
+    /// ]);
+    /// // Output to stderr:
+    /// // Configuration options:
+    /// //   - username: 'torrust' (default)
+    /// //   - port: 22 (default SSH port)
+    /// //   - key_path: path/to/key
+    /// ```
+    pub fn info_block(&mut self, title: &str, lines: &[&str]) {
+        if self.verbosity >= VerbosityLevel::Normal {
+            writeln!(self.stderr_writer, "{title}").ok();
+            for line in lines {
+                writeln!(self.stderr_writer, "{line}").ok();
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -471,5 +551,102 @@ mod tests {
         assert!(normal >= VerbosityLevel::Quiet);
         assert!(normal >= VerbosityLevel::Normal);
         assert!(normal < VerbosityLevel::Verbose);
+    }
+
+    #[test]
+    fn it_should_write_blank_line_to_stderr() {
+        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+
+        output.blank_line();
+
+        // Verify blank line went to stderr
+        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
+        assert_eq!(stderr_content, "\n");
+
+        // Verify stdout is empty
+        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
+        assert_eq!(stdout_content, "");
+    }
+
+    #[test]
+    fn it_should_not_write_blank_line_at_quiet_level() {
+        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+
+        output.blank_line();
+
+        // Verify no output at Quiet level
+        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
+        assert_eq!(stderr_content, "");
+    }
+
+    #[test]
+    fn it_should_write_steps_to_stderr() {
+        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+
+        output.steps(
+            "Next steps:",
+            &[
+                "Edit the configuration file",
+                "Review the settings",
+                "Run the deploy command",
+            ],
+        );
+
+        // Verify steps went to stderr with correct formatting
+        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
+        assert_eq!(
+            stderr_content,
+            "Next steps:\n1. Edit the configuration file\n2. Review the settings\n3. Run the deploy command\n"
+        );
+
+        // Verify stdout is empty
+        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
+        assert_eq!(stdout_content, "");
+    }
+
+    #[test]
+    fn it_should_not_write_steps_at_quiet_level() {
+        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+
+        output.steps("Next steps:", &["Step 1", "Step 2"]);
+
+        // Verify no output at Quiet level
+        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
+        assert_eq!(stderr_content, "");
+    }
+
+    #[test]
+    fn it_should_write_info_block_to_stderr() {
+        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+
+        output.info_block(
+            "Configuration options:",
+            &[
+                "  - username: 'torrust' (default)",
+                "  - port: 22 (default SSH port)",
+            ],
+        );
+
+        // Verify info block went to stderr
+        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
+        assert_eq!(
+            stderr_content,
+            "Configuration options:\n  - username: 'torrust' (default)\n  - port: 22 (default SSH port)\n"
+        );
+
+        // Verify stdout is empty
+        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
+        assert_eq!(stdout_content, "");
+    }
+
+    #[test]
+    fn it_should_not_write_info_block_at_quiet_level() {
+        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+
+        output.info_block("Info:", &["Line 1", "Line 2"]);
+
+        // Verify no output at Quiet level
+        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
+        assert_eq!(stderr_content, "");
     }
 }
