@@ -119,7 +119,12 @@ pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), C
 /// # }
 /// ```
 pub fn handle_error(error: &CommandError) {
-    eprintln!("Error: {error}");
-    eprintln!("\nFor detailed troubleshooting:");
-    eprintln!("{}", error.help());
+    use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+
+    let mut output = UserOutput::new(VerbosityLevel::Normal);
+    let help_text = error.help();
+
+    output.error(&format!("{error}"));
+    output.blank_line();
+    output.info_block("For detailed troubleshooting:", &[help_text]);
 }
