@@ -19,7 +19,7 @@
 //!
 //! ```rust
 //! use torrust_tracker_deployer_lib::presentation::commands::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
-//! use torrust_tracker_deployer_lib::infrastructure::persistence::file::RepositoryFactory;
+//! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 //! use torrust_tracker_deployer_lib::presentation::user_output::UserOutput;
 //!
 //! // Use default lock timeout for repository operations
