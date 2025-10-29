@@ -13,6 +13,10 @@ pub mod context;
 pub mod create;
 pub mod destroy;
 
+// Shared test utilities
+#[cfg(test)]
+pub mod tests;
+
 // Future command modules will be added here:
 // pub mod provision;
 // pub mod configure;
