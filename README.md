@@ -330,7 +330,7 @@ This project follows a structured development roadmap to evolve from the current
 │   │   ├── commit-process.md # Commit process and pre-commit checks
 │   │   ├── error-handling.md # Error handling principles
 │   │   ├── module-organization.md # Module organization conventions
-│   │   └── testing.md       # Testing conventions
+│   │   └── testing/         # Testing conventions and guides
 │   ├── features/            # Feature specifications and documentation
 │   ├── research/            # Research and analysis documents
 │   └── *.md                 # Various documentation files

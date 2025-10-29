@@ -1011,7 +1011,7 @@ With Phase 5 complete, the environment state management feature will be fully fu
 - [Phase 1: Foundation](./phase-1-foundation.md) - Type-state pattern implementation
 - [Phase 4: Persistence](./phase-4-persistence.md) - Repository and file locking
 - [Error Handling Guide](../../../contributing/error-handling.md) - Error handling principles
-- [Testing Conventions](../../../contributing/testing.md) - Testing best practices
+- [Testing Conventions](../../../contributing/testing/) - Testing best practices
 
 ## 🚀 Getting Started
 

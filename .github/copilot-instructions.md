@@ -103,7 +103,7 @@ These principles should guide all development decisions, code reviews, and featu
 - **Dependencies**: `cargo machete` (mandatory before commits - no unused dependencies)
 - **Build**: `cargo build`
 - **Test**: `cargo test`
-- **Unit Tests**: When writing unit tests, follow conventions described in [`docs/contributing/testing.md`](../docs/contributing/testing.md)
+- **Unit Tests**: When writing unit tests, follow conventions described in [`docs/contributing/testing/`](../docs/contributing/testing/)
 - **E2E Tests**: `cargo run --bin e2e-tests-full` (comprehensive - all tests) or individual tests:
   - `cargo run --bin e2e-provision-tests` - Infrastructure provisioning tests
   - `cargo run --bin e2e-config-tests` - Configuration validation tests

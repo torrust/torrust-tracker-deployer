@@ -385,4 +385,4 @@ Once Phase 3 is complete, Phase 4 will use `AnyEnvironmentState` to:
 - [Phase 1 Plan](./phase-1-foundation.md) - Foundation with type-state pattern
 - [Main Feature Spec](./README.md) - Overall feature goals and motivation
 - [Error Handling Guide](../../contributing/error-handling.md) - Error handling principles
-- [Testing Conventions](../../contributing/testing.md) - Testing best practices
+- [Testing Conventions](../../contributing/testing/) - Testing best practices

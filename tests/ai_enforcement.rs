@@ -30,7 +30,7 @@
 //! ## Related Documentation
 //!
 //! For detailed testing conventions and guidelines, see:
-//! - [`docs/contributing/testing.md`](../docs/contributing/testing.md)
+//! - [`docs/contributing/testing/`](../docs/contributing/testing/)
 //! - [`docs/contributing/commit-process.md`](../docs/contributing/commit-process.md)
 //!
 //! ## Environment Variable Control

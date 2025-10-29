@@ -273,7 +273,7 @@ impl ConfigureCommand {
 - Phase 2 Details - State transition observability (to be created)
 - [Phase 3 Details](./phase-3-serialization.md) - Serialization & type erasure (renamed from phase-2)
 - [Error Handling Guide](../../../contributing/error-handling.md) - Error handling principles
-- [Testing Conventions](../../../contributing/testing.md) - Testing best practices
+- [Testing Conventions](../../../contributing/testing/) - Testing best practices
 
 ---
 
