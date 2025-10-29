@@ -21,7 +21,7 @@ use super::ssh_credentials_config::SshCredentialsConfig;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::domain::config::{EnvironmentCreationConfig, EnvironmentSection};
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{EnvironmentCreationConfig, EnvironmentSection};
 ///
 /// let json = r#"{
 ///     "environment": {
@@ -66,7 +66,7 @@ impl EnvironmentCreationConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::domain::config::{
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
     ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
     /// };
     ///
@@ -117,7 +117,7 @@ impl EnvironmentCreationConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::domain::config::{
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
     ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
     /// };
     /// use torrust_tracker_deployer_lib::domain::Environment;
@@ -163,7 +163,7 @@ impl EnvironmentCreationConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::domain::config::EnvironmentCreationConfig;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
     ///
     /// let template = EnvironmentCreationConfig::template();
     /// assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
@@ -208,7 +208,7 @@ impl EnvironmentCreationConfig {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::domain::config::EnvironmentCreationConfig;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
     /// use std::path::Path;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {

@@ -25,7 +25,7 @@
 //! ```rust,no_run
 //! use std::sync::Arc;
 //! use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
-//! use torrust_tracker_deployer_lib::domain::config::{
+//! use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
 //!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
 //! };
 //! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
@@ -64,6 +64,7 @@
 //! }
 //! ```
 
+pub mod config;
 pub mod errors;
 pub mod handler;
 

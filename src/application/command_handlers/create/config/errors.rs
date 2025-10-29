@@ -70,7 +70,7 @@ impl CreateConfigError {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::domain::config::CreateConfigError;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::CreateConfigError;
     /// use std::path::PathBuf;
     ///
     /// let error = CreateConfigError::PrivateKeyNotFound {

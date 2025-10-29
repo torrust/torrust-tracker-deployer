@@ -6,7 +6,7 @@
 
 use thiserror::Error;
 
-use crate::domain::config::CreateConfigError;
+use crate::application::command_handlers::create::config::CreateConfigError;
 use crate::domain::environment::repository::RepositoryError;
 
 /// Errors that can occur during environment creation command execution

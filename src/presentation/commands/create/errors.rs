@@ -55,7 +55,7 @@ pub enum CreateSubcommandError {
     ConfigValidationFailed(
         /// Underlying validation error from domain layer
         #[source]
-        crate::domain::config::CreateConfigError,
+        crate::application::command_handlers::create::config::CreateConfigError,
     ),
 
     /// Command execution failed
@@ -71,7 +71,7 @@ pub enum CreateSubcommandError {
     TemplateGenerationFailed(
         /// Underlying template generation error from domain layer
         #[source]
-        crate::domain::config::CreateConfigError,
+        crate::application::command_handlers::create::config::CreateConfigError,
     ),
 }
 
@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn it_should_have_help_for_all_error_variants() {
-        use crate::domain::config::CreateConfigError;
+        use crate::application::command_handlers::create::config::CreateConfigError;
         use crate::domain::EnvironmentNameError;
 
         let errors: Vec<CreateSubcommandError> = vec![

@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use crate::domain::config::EnvironmentCreationConfig;
+use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 
 use super::super::errors::CreateSubcommandError;
