@@ -5,9 +5,7 @@
 
 use crate::application::command_handlers::DestroyCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::commands::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
-use crate::presentation::user_output::UserOutput;
+use crate::presentation::commands::context::{report_error, CommandContext};
 
 use super::errors::DestroySubcommandError;
 
@@ -53,11 +51,12 @@ pub fn handle_destroy_command(
     environment_name: &str,
     working_dir: &std::path::Path,
 ) -> Result<(), DestroySubcommandError> {
-    // Create user output with default stdout/stderr channels
-    let mut output = UserOutput::new(DEFAULT_VERBOSITY);
+    // Create command context with all shared dependencies
+    let mut ctx = CommandContext::new(working_dir.to_path_buf());
 
     // Display initial progress (to stderr)
-    output.progress(&format!("Destroying environment '{environment_name}'..."));
+    ctx.output()
+        .progress(&format!("Destroying environment '{environment_name}'..."));
 
     // Validate environment name
     let env_name = EnvironmentName::new(environment_name.to_string()).map_err(|source| {
@@ -65,21 +64,14 @@ pub fn handle_destroy_command(
             name: environment_name.to_string(),
             source,
         };
-        output.error(&error.to_string());
+        report_error(ctx.output(), &error);
         error
     })?;
 
-    // Create repository for loading environment state
-    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-    let repository = repository_factory.create(working_dir.to_path_buf());
-
-    // Create clock for timing information
-    let clock = std::sync::Arc::new(crate::shared::SystemClock);
-
     // Create and execute destroy command handler
-    output.progress("Tearing down infrastructure...");
+    ctx.output().progress("Tearing down infrastructure...");
 
-    let command_handler = DestroyCommandHandler::new(repository, clock);
+    let command_handler = DestroyCommandHandler::new(ctx.repository().clone(), ctx.clock().clone());
 
     // Execute destroy - the handler will load the environment and handle all states internally
     let _destroyed_env = command_handler.execute(&env_name).map_err(|source| {
@@ -87,12 +79,12 @@ pub fn handle_destroy_command(
             name: environment_name.to_string(),
             source,
         };
-        output.error(&error.to_string());
+        report_error(ctx.output(), &error);
         error
     })?;
 
-    output.progress("Cleaning up resources...");
-    output.success(&format!(
+    ctx.output().progress("Cleaning up resources...");
+    ctx.output().success(&format!(
         "Environment '{environment_name}' destroyed successfully"
     ));
 

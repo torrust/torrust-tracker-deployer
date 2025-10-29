@@ -4,14 +4,10 @@
 //! deployment environments from configuration files.
 
 use std::path::Path;
-use std::sync::Arc;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::application::command_handlers::create::CreateCommandHandler;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::commands::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
-use crate::presentation::user_output::UserOutput;
-use crate::shared::{Clock, SystemClock};
+use crate::presentation::commands::context::{report_error, CommandContext};
 
 use super::super::config_loader::ConfigLoader;
 use super::super::errors::CreateSubcommandError;
@@ -50,11 +46,11 @@ pub fn handle_environment_creation(
     env_file: &Path,
     working_dir: &Path,
 ) -> Result<(), CreateSubcommandError> {
-    // Create user output with default stdout/stderr channels
-    let mut output = UserOutput::new(DEFAULT_VERBOSITY);
+    // Create command context with all shared dependencies
+    let mut ctx = CommandContext::new(working_dir.to_path_buf());
 
     // Display initial progress (to stderr)
-    output.progress(&format!(
+    ctx.output().progress(&format!(
         "Loading configuration from '{}'...",
         env_file.display()
     ));
@@ -62,50 +58,43 @@ pub fn handle_environment_creation(
     // Step 1: Load and parse configuration file using Figment
     let loader = ConfigLoader;
     let config: EnvironmentCreationConfig = loader.load_from_file(env_file).inspect_err(|err| {
-        output.error(&err.to_string());
+        report_error(ctx.output(), err);
     })?;
 
-    output.progress(&format!(
+    ctx.output().progress(&format!(
         "Creating environment '{}'...",
         config.environment.name
     ));
 
-    // Step 2: Create repository for environment persistence
-    // Use the working directory from CLI args (supports testing and custom locations)
-    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-    let repository = repository_factory.create(working_dir.to_path_buf());
+    // Step 2: Create and execute command handler
+    let command_handler = CreateCommandHandler::new(ctx.repository().clone(), ctx.clock().clone());
 
-    // Step 3: Create clock for timing information
-    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+    ctx.output()
+        .progress("Validating configuration and creating environment...");
 
-    // Step 4: Create and execute command handler
-    let command_handler = CreateCommandHandler::new(repository, clock);
-
-    output.progress("Validating configuration and creating environment...");
-
-    // Step 5: Execute create command
+    // Step 3: Execute create command
     #[allow(clippy::manual_inspect)]
     let environment = command_handler.execute(config.clone()).map_err(|err| {
         let error = CreateSubcommandError::CommandFailed(err);
-        output.error(&error.to_string());
+        report_error(ctx.output(), &error);
         error
     })?;
 
-    // Step 6: Display success message
-    output.success(&format!(
+    // Step 4: Display success message
+    ctx.output().success(&format!(
         "Environment '{}' created successfully",
         environment.name().as_str()
     ));
 
-    output.result(&format!(
+    ctx.output().result(&format!(
         "Instance name: {}",
         environment.instance_name().as_str()
     ));
-    output.result(&format!(
+    ctx.output().result(&format!(
         "Data directory: {}",
         environment.data_dir().display()
     ));
-    output.result(&format!(
+    ctx.output().result(&format!(
         "Build directory: {}",
         environment.build_dir().display()
     ));
