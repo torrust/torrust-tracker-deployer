@@ -51,7 +51,9 @@ executability
 exitcode
 getent
 Gossman
+Graça
 handleable
+Herberto
 hexdump
 Hostnames
 hotfixes
