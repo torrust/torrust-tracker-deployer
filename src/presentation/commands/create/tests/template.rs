@@ -1,21 +1,20 @@
 //! Integration Tests for Template Generation
 
-use tempfile::TempDir;
-
 use crate::presentation::cli::CreateAction;
 use crate::presentation::commands::create;
+use crate::presentation::commands::tests::TestContext;
 
 #[test]
 fn it_should_generate_template_with_default_path() {
-    let temp_dir = TempDir::new().unwrap();
+    let context = TestContext::new();
 
     // Change to temp directory so template is created there
     let original_dir = std::env::current_dir().unwrap();
-    std::env::set_current_dir(temp_dir.path()).unwrap();
+    std::env::set_current_dir(context.working_dir()).unwrap();
 
     let action = CreateAction::Template { output_path: None };
 
-    let result = create::handle_create_command(action, temp_dir.path());
+    let result = create::handle_create_command(action, context.working_dir());
 
     // Restore original directory
     std::env::set_current_dir(original_dir).unwrap();
@@ -27,7 +26,7 @@ fn it_should_generate_template_with_default_path() {
     );
 
     // Verify file exists at default path
-    let template_path = temp_dir.path().join("environment-template.json");
+    let template_path = context.working_dir().join("environment-template.json");
     assert!(
         template_path.exists(),
         "Template file should be created at: {}",
@@ -48,14 +47,14 @@ fn it_should_generate_template_with_default_path() {
 
 #[test]
 fn it_should_generate_template_with_custom_path() {
-    let temp_dir = TempDir::new().unwrap();
-    let custom_path = temp_dir.path().join("config").join("my-env.json");
+    let context = TestContext::new();
+    let custom_path = context.working_dir().join("config").join("my-env.json");
 
     let action = CreateAction::Template {
         output_path: Some(custom_path.clone()),
     };
 
-    let result = create::handle_create_command(action, temp_dir.path());
+    let result = create::handle_create_command(action, context.working_dir());
 
     assert!(result.is_ok(), "Template generation should succeed");
 
@@ -72,14 +71,14 @@ fn it_should_generate_template_with_custom_path() {
 
 #[test]
 fn it_should_generate_valid_json_template() {
-    let temp_dir = TempDir::new().unwrap();
-    let template_path = temp_dir.path().join("test.json");
+    let context = TestContext::new();
+    let template_path = context.working_dir().join("test.json");
 
     let action = CreateAction::Template {
         output_path: Some(template_path.clone()),
     };
 
-    create::handle_create_command(action, temp_dir.path()).unwrap();
+    create::handle_create_command(action, context.working_dir()).unwrap();
 
     // Read and parse the generated template
     let content = std::fs::read_to_string(&template_path).unwrap();
@@ -111,9 +110,9 @@ fn it_should_generate_valid_json_template() {
 
 #[test]
 fn it_should_create_parent_directories() {
-    let temp_dir = TempDir::new().unwrap();
-    let deep_path = temp_dir
-        .path()
+    let context = TestContext::new();
+    let deep_path = context
+        .working_dir()
         .join("a")
         .join("b")
         .join("c")
@@ -123,7 +122,7 @@ fn it_should_create_parent_directories() {
         output_path: Some(deep_path.clone()),
     };
 
-    let result = create::handle_create_command(action, temp_dir.path());
+    let result = create::handle_create_command(action, context.working_dir());
 
     assert!(result.is_ok(), "Should create parent directories");
     assert!(

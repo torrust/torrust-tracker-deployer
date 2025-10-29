@@ -3,12 +3,12 @@
 //! This module tests the complete create command workflow including
 //! configuration loading, validation, and command execution.
 
-use tempfile::TempDir;
-
 use crate::presentation::cli::CreateAction;
 use crate::presentation::commands::create;
-
-use super::fixtures;
+use crate::presentation::commands::tests::{
+    create_config_with_invalid_name, create_config_with_missing_keys, create_invalid_json_config,
+    create_valid_config, TestContext,
+};
 
 /// Helper function to call the environment creation handler
 fn handle_environment_creation(
@@ -23,10 +23,10 @@ fn handle_environment_creation(
 
 #[test]
 fn it_should_create_environment_from_valid_config() {
-    let temp_dir = TempDir::new().unwrap();
-    let config_path = fixtures::create_valid_config(temp_dir.path(), "integration-test-env");
+    let context = TestContext::new();
+    let config_path = create_valid_config(context.working_dir(), "integration-test-env");
 
-    let result = handle_environment_creation(&config_path, temp_dir.path());
+    let result = handle_environment_creation(&config_path, context.working_dir());
 
     assert!(
         result.is_ok(),
@@ -36,8 +36,8 @@ fn it_should_create_environment_from_valid_config() {
 
     // Verify environment state file was created by repository
     // Repository creates: <base_dir>/{env-name}/environment.json
-    let env_state_file = temp_dir
-        .path()
+    let env_state_file = context
+        .working_dir()
         .join("integration-test-env/environment.json");
     assert!(
         env_state_file.exists(),
@@ -48,10 +48,10 @@ fn it_should_create_environment_from_valid_config() {
 
 #[test]
 fn it_should_reject_nonexistent_config_file() {
-    let temp_dir = TempDir::new().unwrap();
-    let nonexistent_path = temp_dir.path().join("nonexistent.json");
+    let context = TestContext::new();
+    let nonexistent_path = context.working_dir().join("nonexistent.json");
 
-    let result = handle_environment_creation(&nonexistent_path, temp_dir.path());
+    let result = handle_environment_creation(&nonexistent_path, context.working_dir());
 
     assert!(result.is_err(), "Should fail for nonexistent file");
     match result.unwrap_err() {
@@ -64,10 +64,10 @@ fn it_should_reject_nonexistent_config_file() {
 
 #[test]
 fn it_should_reject_invalid_json() {
-    let temp_dir = TempDir::new().unwrap();
-    let config_path = fixtures::create_invalid_json_config(temp_dir.path());
+    let context = TestContext::new();
+    let config_path = create_invalid_json_config(context.working_dir());
 
-    let result = handle_environment_creation(&config_path, temp_dir.path());
+    let result = handle_environment_creation(&config_path, context.working_dir());
 
     assert!(result.is_err(), "Should fail for invalid JSON");
     match result.unwrap_err() {
@@ -80,10 +80,10 @@ fn it_should_reject_invalid_json() {
 
 #[test]
 fn it_should_reject_invalid_environment_name() {
-    let temp_dir = TempDir::new().unwrap();
-    let config_path = fixtures::create_config_with_invalid_name(temp_dir.path());
+    let context = TestContext::new();
+    let config_path = create_config_with_invalid_name(context.working_dir());
 
-    let result = handle_environment_creation(&config_path, temp_dir.path());
+    let result = handle_environment_creation(&config_path, context.working_dir());
 
     assert!(result.is_err(), "Should fail for invalid environment name");
     match result.unwrap_err() {
@@ -96,10 +96,10 @@ fn it_should_reject_invalid_environment_name() {
 
 #[test]
 fn it_should_reject_missing_ssh_keys() {
-    let temp_dir = TempDir::new().unwrap();
-    let config_path = fixtures::create_config_with_missing_keys(temp_dir.path());
+    let context = TestContext::new();
+    let config_path = create_config_with_missing_keys(context.working_dir());
 
-    let result = handle_environment_creation(&config_path, temp_dir.path());
+    let result = handle_environment_creation(&config_path, context.working_dir());
 
     assert!(result.is_err(), "Should fail for missing SSH keys");
     match result.unwrap_err() {
@@ -112,15 +112,15 @@ fn it_should_reject_missing_ssh_keys() {
 
 #[test]
 fn it_should_reject_duplicate_environment() {
-    let temp_dir = TempDir::new().unwrap();
-    let config_path = fixtures::create_valid_config(temp_dir.path(), "duplicate-test-env");
+    let context = TestContext::new();
+    let config_path = create_valid_config(context.working_dir(), "duplicate-test-env");
 
     // Create environment first time
-    let result1 = handle_environment_creation(&config_path, temp_dir.path());
+    let result1 = handle_environment_creation(&config_path, context.working_dir());
     assert!(result1.is_ok(), "First create should succeed");
 
     // Try to create same environment again
-    let result2 = handle_environment_creation(&config_path, temp_dir.path());
+    let result2 = handle_environment_creation(&config_path, context.working_dir());
     assert!(result2.is_err(), "Second create should fail");
 
     match result2.unwrap_err() {
@@ -133,11 +133,11 @@ fn it_should_reject_duplicate_environment() {
 
 #[test]
 fn it_should_create_environment_in_custom_working_dir() {
-    let temp_dir = TempDir::new().unwrap();
-    let custom_working_dir = temp_dir.path().join("custom");
+    let context = TestContext::new();
+    let custom_working_dir = context.working_dir().join("custom");
     std::fs::create_dir(&custom_working_dir).unwrap();
 
-    let config_path = fixtures::create_valid_config(temp_dir.path(), "custom-dir-env");
+    let config_path = create_valid_config(context.working_dir(), "custom-dir-env");
 
     let result = handle_environment_creation(&config_path, &custom_working_dir);
 
@@ -155,27 +155,27 @@ fn it_should_create_environment_in_custom_working_dir() {
 
 #[test]
 fn it_should_provide_help_for_all_error_types() {
-    let temp_dir = TempDir::new().unwrap();
+    let context = TestContext::new();
 
     // Test ConfigFileNotFound
-    let nonexistent = temp_dir.path().join("nonexistent.json");
-    if let Err(e) = handle_environment_creation(&nonexistent, temp_dir.path()) {
+    let nonexistent = context.working_dir().join("nonexistent.json");
+    if let Err(e) = handle_environment_creation(&nonexistent, context.working_dir()) {
         let help = e.help();
         assert!(!help.is_empty());
         assert!(help.contains("File Not Found") || help.contains("Check that the file path"));
     }
 
     // Test ConfigParsingFailed
-    let invalid_json = fixtures::create_invalid_json_config(temp_dir.path());
-    if let Err(e) = handle_environment_creation(&invalid_json, temp_dir.path()) {
+    let invalid_json = create_invalid_json_config(context.working_dir());
+    if let Err(e) = handle_environment_creation(&invalid_json, context.working_dir()) {
         let help = e.help();
         assert!(!help.is_empty());
         assert!(help.contains("JSON") || help.contains("syntax"));
     }
 
     // Test ConfigValidationFailed
-    let invalid_name = fixtures::create_config_with_invalid_name(temp_dir.path());
-    if let Err(e) = handle_environment_creation(&invalid_name, temp_dir.path()) {
+    let invalid_name = create_config_with_invalid_name(context.working_dir());
+    if let Err(e) = handle_environment_creation(&invalid_name, context.working_dir()) {
         let help = e.help();
         assert!(!help.is_empty());
         // Should delegate to config error help
