@@ -128,6 +128,42 @@ impl CommandContext {
         }
     }
 
+    /// Create a command context using an existing repository factory
+    ///
+    /// This constructor allows creating a context with a pre-configured repository factory,
+    /// useful when consistent repository configuration (like lock timeout) needs to be
+    /// shared across multiple contexts.
+    ///
+    /// # Arguments
+    ///
+    /// * `repository_factory` - Pre-configured repository factory
+    /// * `working_dir` - Root directory for environment data storage
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::path::PathBuf;
+    /// use std::time::Duration;
+    /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
+    /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+    ///
+    /// let factory = RepositoryFactory::new(Duration::from_secs(30));
+    /// let working_dir = PathBuf::from("./data");
+    /// let ctx = CommandContext::new_with_factory(&factory, working_dir);
+    /// ```
+    #[must_use]
+    pub fn new_with_factory(repository_factory: &RepositoryFactory, working_dir: PathBuf) -> Self {
+        let repository = repository_factory.create(working_dir);
+        let clock = Arc::new(SystemClock);
+        let output = UserOutput::new(DEFAULT_VERBOSITY);
+
+        Self {
+            repository,
+            clock,
+            output,
+        }
+    }
+
     /// Create a command context for testing with injected dependencies
     ///
     /// This constructor allows tests to inject mock implementations for better isolation
@@ -294,6 +330,19 @@ mod tests {
         // Should be able to use output methods
         ctx.output().progress("Test progress");
         ctx.output().success("Test success");
+    }
+
+    #[test]
+    fn it_should_create_context_with_factory() {
+        let temp_dir = TempDir::new().unwrap();
+        let working_dir = temp_dir.path().to_path_buf();
+
+        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+        let ctx = CommandContext::new_with_factory(&repository_factory, working_dir);
+
+        // Verify we can access all dependencies
+        let _repo = ctx.repository();
+        let _clock = ctx.clock();
     }
 
     #[test]

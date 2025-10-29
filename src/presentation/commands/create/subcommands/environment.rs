@@ -4,12 +4,11 @@
 //! deployment environments from configuration files.
 
 use std::path::Path;
-use std::sync::Arc;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
-use crate::application::command_handlers::create::CreateCommandHandler;
 use crate::domain::Environment;
-use crate::presentation::commands::context::{report_error, CommandContext};
+use crate::presentation::commands::context::report_error;
+use crate::presentation::commands::factory::CommandHandlerFactory;
 use crate::presentation::user_output::UserOutput;
 
 use super::super::config_loader::ConfigLoader;
@@ -47,17 +46,15 @@ pub fn handle_environment_creation(
     env_file: &Path,
     working_dir: &Path,
 ) -> Result<(), CreateSubcommandError> {
-    let mut ctx = CommandContext::new(working_dir.to_path_buf());
+    let factory = CommandHandlerFactory::new();
+    let mut ctx = factory.create_context(working_dir.to_path_buf());
 
     // Step 1: Load configuration
     let config = load_configuration(ctx.output(), env_file)?;
 
-    // Step 2: Execute command (split borrow to avoid conflict)
-    let environment = {
-        let repository = ctx.repository().clone();
-        let clock = ctx.clock().clone();
-        execute_create_command(ctx.output(), config, repository, clock)?
-    };
+    // Step 2: Execute command (create handler before borrowing output)
+    let command_handler = factory.create_create_handler(&ctx);
+    let environment = execute_create_command(ctx.output(), &command_handler, config)?;
 
     // Step 3: Display results
     display_creation_results(ctx.output(), &environment);
@@ -105,16 +102,14 @@ fn load_configuration(
 /// Execute the create command with the given configuration
 ///
 /// This step handles:
-/// - Creating the command handler with dependencies
-/// - Executing the create command
+/// - Executing the create command with the given handler
 /// - Handling command execution errors
 ///
 /// # Arguments
 ///
 /// * `output` - User output for progress messages
+/// * `command_handler` - Pre-created command handler
 /// * `config` - Validated environment creation configuration
-/// * `repository` - Repository for environment persistence
-/// * `clock` - Clock for timing operations
 ///
 /// # Returns
 ///
@@ -125,16 +120,13 @@ fn load_configuration(
 /// Returns an error if command execution fails (e.g., environment already exists).
 fn execute_create_command(
     output: &mut UserOutput,
+    command_handler: &crate::application::command_handlers::CreateCommandHandler,
     config: EnvironmentCreationConfig,
-    repository: Arc<dyn crate::domain::environment::repository::EnvironmentRepository>,
-    clock: Arc<dyn crate::shared::Clock>,
 ) -> Result<Environment, CreateSubcommandError> {
     output.progress(&format!(
         "Creating environment '{}'...",
         config.environment.name
     ));
-
-    let command_handler = CreateCommandHandler::new(repository, clock);
 
     output.progress("Validating configuration and creating environment...");
 
@@ -449,10 +441,10 @@ mod tests {
             let loader = ConfigLoader;
             let config = loader.load_from_file(&config_path).unwrap();
 
-            let ctx = CommandContext::new(temp_dir.path().to_path_buf());
-            let repository = ctx.repository().clone();
-            let clock = ctx.clock().clone();
-            let result = execute_create_command(&mut output, config, repository, clock);
+            let factory = CommandHandlerFactory::new();
+            let ctx = factory.create_context(temp_dir.path().to_path_buf());
+            let command_handler = factory.create_create_handler(&ctx);
+            let result = execute_create_command(&mut output, &command_handler, config);
 
             assert!(result.is_ok(), "Should execute command successfully");
             let environment = result.unwrap();
@@ -485,21 +477,17 @@ mod tests {
             let loader = ConfigLoader;
             let config = loader.load_from_file(&config_path).unwrap();
 
-            let ctx = CommandContext::new(temp_dir.path().to_path_buf());
-            let repository = ctx.repository().clone();
-            let clock = ctx.clock().clone();
+            let factory = CommandHandlerFactory::new();
+            let ctx = factory.create_context(temp_dir.path().to_path_buf());
 
             // Create environment first time
-            let result1 = execute_create_command(
-                &mut output,
-                config.clone(),
-                repository.clone(),
-                clock.clone(),
-            );
+            let command_handler1 = factory.create_create_handler(&ctx);
+            let result1 = execute_create_command(&mut output, &command_handler1, config.clone());
             assert!(result1.is_ok(), "First execution should succeed");
 
             // Try to create same environment again
-            let result2 = execute_create_command(&mut output, config, repository, clock);
+            let command_handler2 = factory.create_create_handler(&ctx);
+            let result2 = execute_create_command(&mut output, &command_handler2, config);
             assert!(result2.is_err(), "Second execution should fail");
 
             match result2.unwrap_err() {
@@ -539,14 +527,14 @@ mod tests {
             fs::write(&config_path, config_json).unwrap();
 
             // Create environment
-            let ctx = CommandContext::new(temp_dir.path().to_path_buf());
+            let factory = CommandHandlerFactory::new();
+            let ctx = factory.create_context(temp_dir.path().to_path_buf());
             let loader = ConfigLoader;
             let config = loader.load_from_file(&config_path).unwrap();
             let mut quiet_output = UserOutput::new(VerbosityLevel::Quiet);
-            let repository = ctx.repository().clone();
-            let clock = ctx.clock().clone();
+            let command_handler = factory.create_create_handler(&ctx);
             let environment =
-                execute_create_command(&mut quiet_output, config, repository, clock).unwrap();
+                execute_create_command(&mut quiet_output, &command_handler, config).unwrap();
 
             // Test display function with custom output
             let stderr_buf = Vec::new();

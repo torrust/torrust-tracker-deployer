@@ -3,9 +3,9 @@
 //! This module handles the destroy command execution at the presentation layer,
 //! including environment validation, repository initialization, and user interaction.
 
-use crate::application::command_handlers::DestroyCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
-use crate::presentation::commands::context::{report_error, CommandContext};
+use crate::presentation::commands::context::report_error;
+use crate::presentation::commands::factory::CommandHandlerFactory;
 
 use super::errors::DestroySubcommandError;
 
@@ -51,8 +51,9 @@ pub fn handle_destroy_command(
     environment_name: &str,
     working_dir: &std::path::Path,
 ) -> Result<(), DestroySubcommandError> {
-    // Create command context with all shared dependencies
-    let mut ctx = CommandContext::new(working_dir.to_path_buf());
+    // Create factory and context with all shared dependencies
+    let factory = CommandHandlerFactory::new();
+    let mut ctx = factory.create_context(working_dir.to_path_buf());
 
     // Display initial progress (to stderr)
     ctx.output()
@@ -71,7 +72,7 @@ pub fn handle_destroy_command(
     // Create and execute destroy command handler
     ctx.output().progress("Tearing down infrastructure...");
 
-    let command_handler = DestroyCommandHandler::new(ctx.repository().clone(), ctx.clock().clone());
+    let command_handler = factory.create_destroy_handler(&ctx);
 
     // Execute destroy - the handler will load the environment and handle all states internally
     let _destroyed_env = command_handler.execute(&env_name).map_err(|source| {
