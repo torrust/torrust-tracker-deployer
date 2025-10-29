@@ -192,6 +192,7 @@ tmptu
 torrust
 Torrust
 turbofish
+undertested
 unergonomic
 unittests
 unrepresentable
