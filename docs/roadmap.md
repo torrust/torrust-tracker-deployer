@@ -28,19 +28,16 @@ When starting work on a new feature:
 - [x] **1.1** Setup logging - [Issue #3](https://github.com/torrust/torrust-tracker-deployer/issues/3) ✅ Completed
   - [x] Setup logging for production CLI - [PR #4](https://github.com/torrust/torrust-tracker-deployer/pull/4)
   - [x] Remove ANSI codes from file logging - [Issue #5](https://github.com/torrust/torrust-tracker-deployer/issues/5), [PR #7](https://github.com/torrust/torrust-tracker-deployer/pull/7)
-- [ ] **1.2** Create command `torrust-tracker-deployer destroy` to destroy an environment
-  - Parent EPIC: [Implement `destroy` Command](https://github.com/torrust/torrust-tracker-deployer/issues/8) - GitHub Issue #8 ([`8-epic-destroy-command.md`](./issues/8-epic-destroy-command.md))
+- [x] **1.2** Create command `torrust-tracker-deployer destroy` to destroy an environment ✅ Completed
+  - Parent EPIC: [Implement `destroy` Command](https://github.com/torrust/torrust-tracker-deployer/issues/8) - GitHub Issue #8
   - Split into two child EPICs for incremental delivery:
-    - [ ] **Child EPIC #9**: [App Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/9) - Core business logic ([`9-epic-app-layer-destroy-command.md`](./issues/9-epic-app-layer-destroy-command.md))
-    - [ ] **Child EPIC #10**: [UI Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/10) - CLI interface ([`10-epic-ui-layer-destroy-command.md`](./issues/10-epic-ui-layer-destroy-command.md)) (depends on EPIC #9)
-  - **Note:** It will depend on the environment status. For example, if it has not been provisioned we only have to delete the persistent data.
-  - For manual testing we can create envs with the E2E full test (there is an option to keep the infra after testing)
+    - [x] **Child EPIC #9**: [App Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/9) - Core business logic
+    - [x] **Child EPIC #10**: [UI Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/10) - CLI interface
 - [ ] **1.3** Refactor extract shared code between testing and production for app bootstrapping
 - [ ] **1.4** Improve command to use better abstraction to handle presentation layer
   - types to handle user's views, etc
-- [ ] **1.5** Create command `torrust-tracker-deployer create` to create a new environment
-  - We need to decide how the user will provide config values.
-  - output using println and eprintln
+- [x] **1.5** Create command `torrust-tracker-deployer create` to create a new environment ✅ Completed
+  - EPIC: [Implement Create Environment Command](https://github.com/torrust/torrust-tracker-deployer/issues/34) - GitHub Issue #34
 - [ ] **1.6** Create command `torrust-tracker-deployer provision` to provision VM infrastructure (UI layer only)
   - **Note:** The App layer ProvisionCommand is already implemented, this task focuses on the console subcommand interface
   - Implementation should call the existing ProvisionCommand business logic
