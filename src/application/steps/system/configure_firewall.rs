@@ -89,11 +89,7 @@ impl ConfigureFirewallStep {
     #[instrument(
         name = "configure_firewall",
         skip_all,
-        fields(
-            step_type = "system",
-            component = "firewall",
-            method = "ansible"
-        )
+        fields(step_type = "system", component = "firewall", method = "ansible")
     )]
     pub fn execute(&self) -> Result<(), CommandError> {
         warn!(

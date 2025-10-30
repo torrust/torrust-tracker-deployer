@@ -42,7 +42,7 @@ pub struct InventoryContext {
     ansible_host: AnsibleHost,
     ansible_ssh_private_key_file: SshPrivateKeyFile,
     ansible_port: AnsiblePort,
-    /// Alias for ansible_port used in playbook templates
+    /// Alias for `ansible_port` used in playbook templates
     #[serde(rename = "ssh_port")]
     ssh_port: AnsiblePort,
 }

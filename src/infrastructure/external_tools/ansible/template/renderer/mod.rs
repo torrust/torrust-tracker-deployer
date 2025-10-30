@@ -425,10 +425,12 @@ impl AnsibleTemplateRenderer {
         // Read template content
         let template_content = tokio::fs::read_to_string(&source_path)
             .await
-            .map_err(|source| ConfigurationTemplateError::TeraTemplateReadFailed {
-                file_name: template_name.to_string(),
-                source,
-            })?;
+            .map_err(
+                |source| ConfigurationTemplateError::TeraTemplateReadFailed {
+                    file_name: template_name.to_string(),
+                    source,
+                },
+            )?;
 
         // Create File object for template processing
         let template_file =
@@ -443,16 +445,16 @@ impl AnsibleTemplateRenderer {
         let mut engine = crate::domain::template::TemplateEngine::new();
         let rendered_content = engine
             .render(template_file.filename(), template_file.content(), context)
-            .map_err(|source| ConfigurationTemplateError::InventoryTemplateCreationFailed {
-                source,
-            })?;
+            .map_err(
+                |source| ConfigurationTemplateError::InventoryTemplateCreationFailed { source },
+            )?;
 
         // Write rendered content to output file
         let output_path = destination_dir.join(output_name);
         crate::domain::template::write_file_with_dir_creation(&output_path, &rendered_content)
-            .map_err(|source| ConfigurationTemplateError::InventoryTemplateRenderFailed {
-                source,
-            })?;
+            .map_err(
+                |source| ConfigurationTemplateError::InventoryTemplateRenderFailed { source },
+            )?;
 
         tracing::debug!(
             "Successfully rendered Tera template {} to {}",
