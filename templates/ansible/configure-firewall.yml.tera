@@ -4,7 +4,7 @@
 # CRITICAL: SSH access is allowed BEFORE enabling firewall to prevent lockout.
 
 - name: Configure UFW firewall safely
-  hosts: torrust_servers
+  hosts: all
   become: yes
   gather_facts: yes
 

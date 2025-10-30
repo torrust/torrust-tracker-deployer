@@ -42,9 +42,6 @@ pub struct InventoryContext {
     ansible_host: AnsibleHost,
     ansible_ssh_private_key_file: SshPrivateKeyFile,
     ansible_port: AnsiblePort,
-    /// Alias for `ansible_port` used in playbook templates
-    #[serde(rename = "ssh_port")]
-    ssh_port: AnsiblePort,
 }
 
 /// Builder for `InventoryContext` with fluent interface
@@ -106,7 +103,6 @@ impl InventoryContextBuilder {
             ansible_host,
             ansible_ssh_private_key_file,
             ansible_port,
-            ssh_port: ansible_port, // Same value for playbook templates
         })
     }
 }
@@ -127,7 +123,6 @@ impl InventoryContext {
             ansible_host,
             ansible_ssh_private_key_file,
             ansible_port,
-            ssh_port: ansible_port, // Same value for playbook templates
         })
     }
 
