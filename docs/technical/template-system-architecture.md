@@ -40,14 +40,17 @@ The system operates through two levels of indirection to balance portability wit
 ### Static Templates
 
 - **Processing**: Direct file copy from templates to build directory
-- **Examples**: Infrastructure definitions, playbooks
+- **Examples**: Infrastructure definitions, Ansible playbooks (`install-docker.yml`, `configure-security-updates.yml`)
 - **Use Case**: Configuration files that don't need variable substitution
+- **Registration**: **Must be explicitly registered** in the template renderer's copy list
+- **Guide**: See [`docs/contributing/templates.md`](../contributing/templates.md#-adding-new-ansible-playbooks) for adding new static Ansible playbooks
 
 ### Dynamic Templates (Tera)
 
 - **Processing**: Variable substitution using Tera templating engine
-- **File Suffix**: `.tera` extension (e.g., `variables.tfvars.tera`)
-- **Use Case**: Configuration files requiring runtime parameters
+- **File Suffix**: `.tera` extension (e.g., `variables.tfvars.tera`, `inventory.ini.tera`)
+- **Use Case**: Configuration files requiring runtime parameters (IPs, usernames, paths)
+- **Registration**: Automatically discovered by `.tera` extension
 
 ## 🔧 Key Components
 
@@ -62,6 +65,21 @@ The system operates through two levels of indirection to balance portability wit
 - **OpenTofu Renderer**: Processes infrastructure templates
 - **Ansible Renderer**: Processes configuration management templates
 - Handle the template → build directory rendering process
+
+**Two-Phase Processing:**
+
+1. **Phase 1 - Static File Copying**:
+
+   - Files without `.tera` extension are copied as-is
+   - **Requires explicit registration** in the renderer's copy list
+   - Example: `install-docker.yml` must be added to `copy_static_templates` array
+
+2. **Phase 2 - Dynamic Template Rendering**:
+   - Files with `.tera` extension are processed for variable substitution
+   - Automatically discovered, no manual registration needed
+   - Example: `inventory.ini.tera` → `inventory.ini` with resolved variables
+
+⚠️ **Common Pitfall**: Forgetting to register static files in Phase 1 will cause "file not found" errors at runtime.
 
 ### Template Engine
 
