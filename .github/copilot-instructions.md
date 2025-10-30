@@ -99,6 +99,8 @@ These principles should guide all development decisions, code reviews, and featu
 
 10. **When organizing code within modules**: Follow the module organization conventions in [`docs/contributing/module-organization.md`](../docs/contributing/module-organization.md). Use top-down organization with public items first, high-level abstractions before low-level details, and important responsibilities before secondary concerns like error types.
 
+11. **When writing Markdown documentation**: Be aware of GitHub Flavored Markdown's automatic linking behavior. Read [`docs/contributing/github-markdown-pitfalls.md`](../docs/contributing/github-markdown-pitfalls.md) for critical patterns to avoid. **NEVER use hash-number patterns for enumeration or step numbering** - this creates unintended links to GitHub issues/PRs. Use ordered lists or alternative formats instead.
+
 ## 🧪 Build & Test
 
 - **Lint**: `cargo run --bin linter all` (comprehensive - tests stable & nightly toolchains)

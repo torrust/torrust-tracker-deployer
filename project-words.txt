@@ -6,6 +6,7 @@ appendonly
 architecting
 autorestart
 Avalonia
+backlinks
 browsable
 buildx
 chdir
