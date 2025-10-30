@@ -2,6 +2,8 @@
 
 This guide provides clear guidelines on which code belongs in which Domain-Driven Design (DDD) layer. Following these guidelines ensures proper separation of concerns, maintainability, and testability.
 
+> **Note on Examples**: This guide uses illustrative code patterns to demonstrate layer placement principles. These are generic examples designed to show common patterns rather than exact code from the repository, making them more maintainable and easier to understand.
+
 ## 🎯 Why DDD Matters
 
 The Torrust Tracker Deployer follows Domain-Driven Design principles to maintain clear separation between business logic, use cases, external integrations, and user interfaces. This architecture ensures:
@@ -140,30 +142,32 @@ pub struct ConfigDto {
 - If you need **custom serialization logic**, implement it in the infrastructure layer
 - Keep domain types pure and let infrastructure handle the serialization details
 
-### Examples from the Codebase
+### Examples and Patterns
 
-#### ✅ Correct: Value Object with Validation
+#### ✅ Pattern: Value Object with Validation
+
+Value objects encapsulate primitives with business rules and validation:
 
 ```rust
-// src/domain/environment/name.rs
-
-/// Validated environment name following restricted format rules
+/// Validated value object (e.g., EnvironmentName, Username, Email)
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct EnvironmentName(String);
+pub struct ValidatedName(String);
 
-impl EnvironmentName {
-    /// Creates a new `EnvironmentName` from a string with validation.
-    pub fn new(name: String) -> Result<Self, EnvironmentNameError> {
-        Self::validate(&name)?;
-        Ok(Self(name))
+impl ValidatedName {
+    /// Constructor with validation - enforces business rules
+    pub fn new(value: String) -> Result<Self, ValidationError> {
+        Self::validate(&value)?;
+        Ok(Self(value))
     }
 
-    fn validate(name: &str) -> Result<(), EnvironmentNameError> {
-        // Business rules for environment names
-        if name.is_empty() {
-            return Err(EnvironmentNameError::Empty);
+    fn validate(value: &str) -> Result<(), ValidationError> {
+        // Business rules go here
+        if value.is_empty() {
+            return Err(ValidationError::Empty);
         }
-        // ... more validation
+        if !value.chars().all(|c| c.is_alphanumeric() || c == '-') {
+            return Err(ValidationError::InvalidCharacters);
+        }
         Ok(())
     }
 }
@@ -171,32 +175,41 @@ impl EnvironmentName {
 
 **Why this is domain:**
 
-- Contains business rules (validation)
+- Contains business rules (validation logic)
 - Uses serde for persistence (pragmatic trade-off)
-- No infrastructure concerns
+- No infrastructure concerns (file I/O, HTTP, etc.)
 
-#### ✅ Correct: Domain Entity with Type-State Pattern
+#### ✅ Pattern: Domain Entity with Business Logic
+
+Domain entities are core business objects with identity and lifecycle:
 
 ```rust
-// src/domain/environment/mod.rs
-
-/// Environment entity with type-state pattern for lifecycle management
+/// Domain entity with business logic (e.g., Environment, Deployment, Order)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Environment<S> {
-    context: EnvironmentContext,
-    state: S,
+pub struct Entity {
+    id: EntityId,
+    name: ValidatedName,
+    status: EntityStatus,
 }
 
-impl Environment<Created> {
-    pub fn new(
-        name: EnvironmentName,
-        ssh_credentials: SshCredentials,
-        ssh_port: u16,
-    ) -> Self {
-        // Domain logic for creating environments
+impl Entity {
+    pub fn new(name: ValidatedName) -> Self {
+        // Domain logic for creating entities
         Self {
-            context: EnvironmentContext::new(name, ssh_credentials, ssh_port),
-            state: Created,
+            id: EntityId::generate(),
+            name,
+            status: EntityStatus::Created,
+        }
+    }
+
+    pub fn activate(&mut self) -> Result<(), DomainError> {
+        // Business rules for state transitions
+        match self.status {
+            EntityStatus::Created => {
+                self.status = EntityStatus::Active;
+                Ok(())
+            }
+            _ => Err(DomainError::InvalidStateTransition),
         }
     }
 }
@@ -204,30 +217,30 @@ impl Environment<Created> {
 
 **Why this is domain:**
 
-- Core business entity
-- Type-safe state transitions (compile-time safety)
-- Contains business logic
+- Core business object with identity
+- Contains business logic and state transitions
 - Serde for persistence (pragmatic choice)
+- No external dependencies
 
-#### ✅ Correct: Domain Trait
+#### ✅ Pattern: Repository Trait (Domain Interface)
+
+Domain defines persistence contracts without implementation:
 
 ```rust
-// src/domain/environment/repository/environment_repository.rs
-
-/// Repository interface for environment persistence
+/// Repository interface - domain defines the contract
 #[async_trait]
-pub trait EnvironmentRepository: Send + Sync {
-    async fn save(&self, environment: &Environment<DynState>) -> Result<(), RepositoryError>;
-    async fn find_by_name(&self, name: &EnvironmentName) -> Result<Option<Environment<DynState>>, RepositoryError>;
-    async fn delete(&self, name: &EnvironmentName) -> Result<(), RepositoryError>;
+pub trait EntityRepository: Send + Sync {
+    async fn save(&self, entity: &Entity) -> Result<(), RepositoryError>;
+    async fn find_by_id(&self, id: &EntityId) -> Result<Option<Entity>, RepositoryError>;
+    async fn delete(&self, id: &EntityId) -> Result<(), RepositoryError>;
 }
 ```
 
 **Why this is domain:**
 
-- Defines contract for persistence (interface)
-- No implementation details
-- Infrastructure layer implements this trait
+- Defines contract for persistence (interface only)
+- No implementation details (infrastructure will implement)
+- Domain stays independent of persistence technology
 
 ## 📋 Application Layer (`src/application/`)
 
@@ -251,108 +264,103 @@ The application layer orchestrates domain and infrastructure services to impleme
 - ❌ **Direct File I/O** - Use infrastructure traits instead
 - ❌ **Direct External APIs** - Use infrastructure abstractions
 
-### Examples from the Codebase
+### Examples and Patterns
 
-#### ✅ Correct: Command Handler
+#### ✅ Pattern: Command Handler (Use Case Orchestrator)
+
+Command handlers orchestrate workflows by coordinating domain and infrastructure:
 
 ```rust
-// src/application/command_handlers/provision/handler.rs
-
-/// Command handler orchestrating the complete provisioning workflow
-pub struct ProvisionCommandHandler {
-    pub(crate) tofu_template_renderer: Arc<TofuTemplateRenderer>,
-    pub(crate) ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-    pub(crate) ansible_client: Arc<AnsibleClient>,
-    pub(crate) opentofu_client: Arc<OpenTofuClient>,
-    pub(crate) clock: Arc<dyn Clock>,
-    pub(crate) repository: TypedEnvironmentRepository,
+/// Command handler orchestrating a complete workflow
+pub struct CommandHandler {
+    domain_service: Arc<dyn DomainService>,
+    infrastructure_client: Arc<dyn InfrastructureClient>,
+    repository: Arc<dyn Repository>,
 }
 
-impl ProvisionCommandHandler {
-    /// Execute the complete provisioning workflow
-    pub async fn execute(
-        &self,
-        environment: Environment<Created>,
-    ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
-        // Orchestrates steps without containing business logic
-        let env = self.transition_to_provisioning(environment).await?;
-        let env = self.render_templates(env).await?;
-        let env = self.initialize_infrastructure(env).await?;
-        // ... more steps
-        Ok(env)
+impl CommandHandler {
+    /// Execute the workflow - orchestration only, no business logic
+    pub async fn execute(&self, input: Input) -> Result<Output, CommandError> {
+        // 1. Load domain entity
+        let entity = self.repository.find_by_id(&input.id).await?;
+        
+        // 2. Delegate business logic to domain
+        let updated_entity = entity.perform_business_operation(input.params)?;
+        
+        // 3. Use infrastructure services
+        self.infrastructure_client.execute_external_operation(&updated_entity).await?;
+        
+        // 4. Persist changes
+        self.repository.save(&updated_entity).await?;
+        
+        Ok(Output::from(updated_entity))
     }
 }
 ```
 
 **Why this is application:**
 
-- Orchestrates domain and infrastructure services
-- No business logic (delegates to domain)
-- Uses infrastructure implementations
-- Coordinates workflow steps
+- Orchestrates domain and infrastructure (no business logic itself)
+- Coordinates workflow steps in sequence
+- Delegates business rules to domain layer
+- Uses infrastructure through interfaces
 
-#### ✅ Correct: DTO (Data Transfer Object)
+#### ✅ Pattern: DTO (Data Transfer Object)
+
+DTOs handle deserialization and convert to domain types:
 
 ```rust
-// src/application/command_handlers/create/config/environment_config.rs
-
-/// Configuration for creating a deployment environment
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EnvironmentCreationConfig {
-    pub environment: EnvironmentSection,
-    pub ssh_credentials: SshCredentialsConfig,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EnvironmentSection {
-    /// Raw string that will be validated when converted to EnvironmentName
+/// DTO for external input (JSON, TOML, API requests)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfigDto {
+    /// Raw string - will be validated when converted to domain type
     pub name: String,
+    pub port: u16,
+    pub enabled: bool,
 }
 
-impl EnvironmentCreationConfig {
-    /// Convert to domain types with validation
-    pub fn to_domain_params(&self) -> Result<(EnvironmentName, SshCredentials), CreateConfigError> {
-        let name = EnvironmentName::new(self.environment.name.clone())?;
-        let credentials = self.ssh_credentials.to_domain_credentials()?;
-        Ok((name, credentials))
+impl ConfigDto {
+    /// Convert DTO to validated domain types
+    pub fn to_domain(&self) -> Result<DomainConfig, ValidationError> {
+        // Validation happens in domain layer
+        let name = ValidatedName::new(self.name.clone())?;
+        Ok(DomainConfig::new(name, self.port, self.enabled))
     }
 }
 ```
 
 **Why this is application:**
 
-- Data transfer object (not domain entity)
-- Uses raw primitives (`String`) for deserialization
-- Converts to domain types
-- Serde for JSON/TOML parsing
+- Data transfer (not a domain entity with business logic)
+- Uses raw primitives for deserialization
+- Converts to domain types with validation
+- Bridge between external format and domain
 
-#### ✅ Correct: Step (Unit of Work)
+#### ✅ Pattern: Application Step
+
+Steps are reusable units of work within workflows:
 
 ```rust
-// src/application/steps/infrastructure/apply.rs
-
-/// Step that applies OpenTofu configuration to provision infrastructure
-pub struct ApplyInfrastructureStep {
-    client: Arc<OpenTofuClient>,
+/// Reusable step in a command handler workflow
+pub struct WorkflowStep {
+    infrastructure_client: Arc<dyn Client>,
 }
 
-impl ApplyInfrastructureStep {
-    pub async fn execute(
-        &self,
-        environment: &Environment<Provisioning>,
-    ) -> Result<(), StepError> {
-        // Coordinates infrastructure without business logic
-        self.client.apply(environment.build_dir()).await?;
-        Ok(())
+impl WorkflowStep {
+    pub async fn execute(&self, entity: &Entity) -> Result<StepResult, StepError> {
+        // Coordinate infrastructure call - no business logic
+        let data = entity.get_required_data();
+        self.infrastructure_client.perform_action(data).await?;
+        Ok(StepResult::Success)
     }
 }
 ```
 
 **Why this is application:**
 
-- Unit of work in a workflow
-- Coordinates infrastructure calls
-- No business logic
+- Reusable component in workflows
+- Coordinates infrastructure without business logic
+- Can be composed into larger workflows
 
 ## 🔧 Infrastructure Layer (`src/infrastructure/` and `src/adapters/`)
 
@@ -381,67 +389,67 @@ The infrastructure layer provides technical implementations for external integra
 - ❌ **Domain Entities** - Reference them, don't define them
 - ❌ **Use Cases** - Belongs in application
 
-### Examples from the Codebase
+### Examples and Patterns
 
-#### ✅ Correct: Repository Implementation
+#### ✅ Pattern: Repository Implementation
+
+Repositories implement domain persistence interfaces using specific technologies:
 
 ```rust
-// src/infrastructure/persistence/json_environment_repository.rs
-
-/// JSON-based file system implementation of EnvironmentRepository
-pub struct JsonEnvironmentRepository {
-    base_data_dir: PathBuf,
+/// File-based repository implementing domain interface
+pub struct FileSystemRepository {
+    base_dir: PathBuf,
 }
 
 #[async_trait]
-impl EnvironmentRepository for JsonEnvironmentRepository {
-    async fn save(&self, environment: &Environment<DynState>) -> Result<(), RepositoryError> {
-        let file_path = self.environment_file_path(environment.name());
-        let json = serde_json::to_string_pretty(environment)?;
+impl EntityRepository for FileSystemRepository {
+    async fn save(&self, entity: &Entity) -> Result<(), RepositoryError> {
+        let file_path = self.entity_file_path(entity.id());
+        let json = serde_json::to_string_pretty(entity)?;
         tokio::fs::write(file_path, json).await?;
         Ok(())
     }
 
-    async fn find_by_name(&self, name: &EnvironmentName) -> Result<Option<Environment<DynState>>, RepositoryError> {
-        let file_path = self.environment_file_path(name);
+    async fn find_by_id(&self, id: &EntityId) -> Result<Option<Entity>, RepositoryError> {
+        let file_path = self.entity_file_path(id);
         if !file_path.exists() {
             return Ok(None);
         }
         let json = tokio::fs::read_to_string(file_path).await?;
-        let environment = serde_json::from_str(&json)?;
-        Ok(Some(environment))
+        let entity = serde_json::from_str(&json)?;
+        Ok(Some(entity))
     }
 }
 ```
 
 **Why this is infrastructure:**
 
-- Implements domain interface (`EnvironmentRepository`)
-- Contains file I/O operations
+- Implements domain repository interface
+- Contains file I/O operations (tokio::fs)
 - Handles serialization/deserialization
-- No business logic
+- No business logic (just persistence mechanics)
 
-#### ✅ Correct: External Tool Client
+#### ✅ Pattern: External Tool Adapter
+
+Adapters wrap external tools and provide a clean interface:
 
 ```rust
-// src/adapters/tofu/client.rs
-
-/// Client for executing OpenTofu CLI commands
-pub struct OpenTofuClient {
+/// Adapter for external CLI tool (e.g., Terraform, Ansible, Docker)
+pub struct ExternalToolClient {
     command_executor: Arc<dyn CommandExecutor>,
 }
 
-impl OpenTofuClient {
-    pub async fn init(&self, working_dir: &Path) -> Result<(), OpenTofuError> {
+impl ExternalToolClient {
+    pub async fn initialize(&self, working_dir: &Path) -> Result<(), ToolError> {
         self.command_executor
-            .execute("tofu", &["init"], working_dir)
+            .execute("tool", &["init"], working_dir)
             .await?;
         Ok(())
     }
 
-    pub async fn apply(&self, working_dir: &Path) -> Result<(), OpenTofuError> {
+    pub async fn apply_changes(&self, working_dir: &Path) -> Result<(), ToolError> {
         self.command_executor
-            .execute("tofu", &["apply", "-auto-approve"], working_dir)
+            .execute("tool", &["apply", "--auto-approve"], working_dir)
             .await?;
         Ok(())
     }
@@ -450,42 +458,42 @@ impl OpenTofuClient {
 
 **Why this is infrastructure:**
 
-- Wraps external tool (OpenTofu)
-- Executes system commands
-- No business logic
-- Provides interface for application layer
+- Wraps external tool (CLI, API, SDK)
+- Executes system commands or API calls
+- No business logic (just integration mechanics)
+- Provides clean interface for application layer
 
-#### ✅ Correct: Template Renderer
+#### ✅ Pattern: HTTP Client Adapter
+
+HTTP clients integrate with external APIs:
 
 ```rust
-// src/infrastructure/external_tools/tofu/template/renderer/mod.rs
-
-/// Renderer for OpenTofu templates using Tera
-pub struct TofuTemplateRenderer {
-    tera: Tera,
-    source_dir: PathBuf,
+/// HTTP client for external API integration
+pub struct ApiClient {
+    base_url: String,
+    http_client: reqwest::Client,
 }
 
-impl TofuTemplateRenderer {
-    pub fn render_templates(
-        &self,
-        environment: &Environment<impl Send + Sync>,
-    ) -> Result<(), TemplateRenderError> {
-        let context = self.build_context(environment);
-        for template in self.tera.get_template_names() {
-            let rendered = self.tera.render(template, &context)?;
-            self.write_output(template, &rendered, environment)?;
-        }
-        Ok(())
+impl ApiClient {
+    pub async fn fetch_data(&self, id: &str) -> Result<ApiResponse, ApiError> {
+        let url = format!("{}/api/data/{}", self.base_url, id);
+        let response = self.http_client
+            .get(&url)
+            .send()
+            .await?
+            .json::<ApiResponse>()
+            .await?;
+        Ok(response)
     }
 }
 ```
 
 **Why this is infrastructure:**
 
-- Uses external library (Tera)
-- Handles file I/O
-- No business logic
+- HTTP client for external API
+- Handles network I/O
+- No business logic (just API integration)
+- Returns data for application layer to process
 
 ## 🎨 Presentation Layer (`src/presentation/`)
 
@@ -506,81 +514,94 @@ The presentation layer handles user interaction through the command-line interfa
 - ❌ **Business Logic** - Belongs in domain
 - ❌ **Direct Infrastructure Calls** - Go through application layer
 
-### Examples from the Codebase
+### Examples and Patterns
 
-#### ✅ Correct: CLI Definition
+#### ✅ Pattern: CLI Definition with Clap
+
+CLI structures define the user interface and parse arguments:
 
 ```rust
-// src/presentation/cli/mod.rs
-
-/// Command-line interface for Torrust Tracker Deployer
+/// Main CLI structure with global args and subcommands
 #[derive(Parser, Debug)]
-#[command(name = "torrust-tracker-deployer")]
-#[command(about = "Automated deployment infrastructure for Torrust Tracker")]
+#[command(name = "app-name")]
+#[command(about = "Application description")]
 #[command(version)]
 pub struct Cli {
-    /// Global arguments (logging configuration)
+    /// Global flags available to all subcommands
     #[command(flatten)]
     pub global: GlobalArgs,
 
-    /// Subcommand to execute
+    /// Available subcommands
     #[command(subcommand)]
     pub command: Option<Commands>,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Create a new deployment environment
+    /// Create a new resource
     Create {
-        #[command(subcommand)]
-        action: CreateAction,
+        name: String,
+        #[arg(short, long)]
+        force: bool,
     },
-    /// Destroy an existing deployment environment
-    Destroy {
-        environment: String,
+    /// Delete an existing resource
+    Delete {
+        name: String,
     },
 }
 ```
 
 **Why this is presentation:**
 
-- Uses clap for CLI parsing
-- Defines user interface
-- No business logic
+- Uses clap for argument parsing
+- Defines user-facing interface
+- No business logic (just data structure)
+- Routes to application layer for execution
 
-#### ✅ Correct: Command Handler (Presentation)
+#### ✅ Pattern: Command Dispatcher
+
+Dispatchers route CLI commands to application layer handlers:
 
 ```rust
-// src/presentation/commands/destroy/handler.rs
-
-/// Presentation-layer handler for destroy command
-pub struct DestroyCommandPresenter {
-    handler: Arc<DestroyCommandHandler>,
+/// Dispatcher that routes commands to application handlers
+pub struct CommandDispatcher {
+    command_handler: Arc<CommandHandler>,
 }
 
-impl DestroyCommandPresenter {
-    pub async fn handle(&self, environment_name: &str) -> Result<(), PresentationError> {
-        // Parse user input
-        let name = EnvironmentName::new(environment_name.to_string())
-            .map_err(|e| PresentationError::InvalidEnvironmentName(e))?;
-
-        // Call application layer
-        self.handler.execute(name).await
-            .map_err(PresentationError::from)?;
-
-        // Format success output
-        println!("✅ Environment '{}' destroyed successfully", environment_name);
-        Ok(())
+impl CommandDispatcher {
+    pub async fn dispatch(&self, command: Commands) -> Result<(), DispatchError> {
+        match command {
+            Commands::Create { name, force } => {
+                // Parse/validate user input
+                let validated_name = ValidatedName::new(name)
+                    .map_err(DispatchError::InvalidInput)?;
+                
+                // Route to application layer
+                self.command_handler.create(validated_name, force).await?;
+                
+                // Format user output
+                println!("✅ Resource created successfully");
+                Ok(())
+            }
+            Commands::Delete { name } => {
+                let validated_name = ValidatedName::new(name)
+                    .map_err(DispatchError::InvalidInput)?;
+                
+                self.command_handler.delete(validated_name).await?;
+                println!("✅ Resource deleted successfully");
+                Ok(())
+            }
+        }
     }
 }
 ```
 
 **Why this is presentation:**
 
-- Handles user input parsing
-- Routes to application layer
+- Routes commands to application layer
+- Parses and validates user input
 - Formats output for users
-- No business logic
+- No business logic (delegates to application/domain)
 
 ## 🧭 Decision Flowchart
 
