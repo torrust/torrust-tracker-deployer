@@ -7,7 +7,9 @@ use tracing::{info, instrument};
 use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
-use crate::application::steps::{InstallDockerComposeStep, InstallDockerStep};
+use crate::application::steps::{
+    ConfigureSecurityUpdatesStep, InstallDockerComposeStep, InstallDockerStep,
+};
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
 use crate::domain::environment::{Configured, Configuring, Environment, Provisioned};
@@ -21,6 +23,7 @@ use crate::shared::error::Traceable;
 /// This command handles all steps required to configure infrastructure:
 /// 1. Install Docker
 /// 2. Install Docker Compose
+/// 3. Configure automatic security updates
 ///
 /// # State Management
 ///
@@ -68,6 +71,7 @@ impl ConfigureCommandHandler {
     /// Returns an error if any step in the configuration workflow fails:
     /// * Docker installation fails
     /// * Docker Compose installation fails
+    /// * Security updates configuration fails
     ///
     /// On error, the environment transitions to `ConfigureFailed` state and is persisted.
     #[instrument(
@@ -149,6 +153,11 @@ impl ConfigureCommandHandler {
 
         let current_step = ConfigureStep::InstallDockerCompose;
         InstallDockerComposeStep::new(Arc::clone(&self.ansible_client))
+            .execute()
+            .map_err(|e| (e.into(), current_step))?;
+
+        let current_step = ConfigureStep::ConfigureSecurityUpdates;
+        ConfigureSecurityUpdatesStep::new(Arc::clone(&self.ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
 

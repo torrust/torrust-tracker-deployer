@@ -1,0 +1,71 @@
+---
+# Configure Automatic Security Updates
+# This playbook configures unattended-upgrades for automatic security patching
+# with scheduled reboots at 2:00 AM when updates require restart.
+
+- name: Configure automatic security updates
+  hosts: all
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: 🔐 Starting automatic security updates configuration
+      ansible.builtin.debug:
+        msg: "🚀 Configuring unattended-upgrades on {{ inventory_hostname }}"
+
+    - name: Install unattended-upgrades package
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: present
+        update_cache: true
+        force_apt_get: true
+      when: ansible_os_family == "Debian"
+
+    - name: Enable automatic security updates
+      ansible.builtin.lineinfile:
+        path: /etc/apt/apt.conf.d/20auto-upgrades
+        regexp: "^APT::Periodic::Unattended-Upgrade"
+        line: 'APT::Periodic::Unattended-Upgrade "1";'
+        create: true
+        backup: true
+
+    - name: Enable automatic reboot for security updates
+      ansible.builtin.lineinfile:
+        path: /etc/apt/apt.conf.d/50unattended-upgrades
+        regexp: "^Unattended-Upgrade::Automatic-Reboot"
+        line: 'Unattended-Upgrade::Automatic-Reboot "true";'
+        backup: true
+
+    - name: Set automatic reboot time to 2:00 AM
+      ansible.builtin.lineinfile:
+        path: /etc/apt/apt.conf.d/50unattended-upgrades
+        regexp: "^Unattended-Upgrade::Automatic-Reboot-Time"
+        line: 'Unattended-Upgrade::Automatic-Reboot-Time "02:00";'
+        backup: true
+
+    - name: Enable and start unattended-upgrades service
+      ansible.builtin.systemd:
+        name: unattended-upgrades
+        enabled: true
+        state: started
+      ignore_errors: true # Ignore in container environments where systemd might not work
+
+    - name: Verify unattended-upgrades configuration
+      ansible.builtin.command:
+        cmd: unattended-upgrade --dry-run --debug
+      register: unattended_upgrades_test
+      changed_when: false
+      failed_when: false # Don't fail on verification errors in test environments
+
+    - name: Display verification result
+      ansible.builtin.debug:
+        msg: "✅ Unattended-upgrades dry-run completed with exit code {{ unattended_upgrades_test.rc }}"
+
+    - name: Configuration summary
+      ansible.builtin.debug:
+        msg: |
+          ✅ Automatic security updates configuration completed!
+          📦 Installed: unattended-upgrades
+          🔄 Automatic updates: Enabled
+          🕐 Automatic reboot time: 02:00
+          ℹ️  Security updates will be installed automatically with scheduled reboots

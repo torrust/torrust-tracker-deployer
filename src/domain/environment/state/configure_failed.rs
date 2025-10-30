@@ -45,6 +45,8 @@ pub enum ConfigureStep {
     InstallDocker,
     /// Installing Docker Compose
     InstallDockerCompose,
+    /// Configuring automatic security updates
+    ConfigureSecurityUpdates,
 }
 
 /// Error state - Application configuration failed
