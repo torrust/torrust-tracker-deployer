@@ -8,7 +8,8 @@ use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
-    ConfigureSecurityUpdatesStep, InstallDockerComposeStep, InstallDockerStep,
+    ConfigureFirewallStep, ConfigureSecurityUpdatesStep, InstallDockerComposeStep,
+    InstallDockerStep,
 };
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
@@ -24,6 +25,7 @@ use crate::shared::error::Traceable;
 /// 1. Install Docker
 /// 2. Install Docker Compose
 /// 3. Configure automatic security updates
+/// 4. Configure UFW firewall
 ///
 /// # State Management
 ///
@@ -158,6 +160,11 @@ impl ConfigureCommandHandler {
 
         let current_step = ConfigureStep::ConfigureSecurityUpdates;
         ConfigureSecurityUpdatesStep::new(Arc::clone(&self.ansible_client))
+            .execute()
+            .map_err(|e| (e.into(), current_step))?;
+
+        let current_step = ConfigureStep::ConfigureFirewall;
+        ConfigureFirewallStep::new(Arc::clone(&self.ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
 

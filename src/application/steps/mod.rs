@@ -36,7 +36,7 @@ pub use rendering::{
     RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
 };
 pub use software::{InstallDockerComposeStep, InstallDockerStep};
-pub use system::{ConfigureSecurityUpdatesStep, WaitForCloudInitStep};
+pub use system::{ConfigureFirewallStep, ConfigureSecurityUpdatesStep, WaitForCloudInitStep};
 pub use validation::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,

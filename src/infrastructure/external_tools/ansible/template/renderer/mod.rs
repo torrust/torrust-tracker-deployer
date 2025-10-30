@@ -198,6 +198,15 @@ impl AnsibleTemplateRenderer {
             .render(inventory_context, &build_ansible_dir)
             .map_err(|source| ConfigurationTemplateError::InventoryRenderingFailed { source })?;
 
+        // Render dynamic firewall playbook template with SSH port variable
+        self.render_tera_template(
+            "configure-firewall.yml.tera",
+            "configure-firewall.yml",
+            inventory_context,
+            &build_ansible_dir,
+        )
+        .await?;
+
         // Copy static Ansible files (config and playbooks)
         self.copy_static_templates(&self.template_manager, &build_ansible_dir)
             .await?;
@@ -370,6 +379,87 @@ impl AnsibleTemplateRenderer {
             })?;
 
         tracing::debug!("Successfully copied static file {}", file_name);
+        Ok(())
+    }
+
+    /// Renders a Tera template with the provided context
+    ///
+    /// # Arguments
+    ///
+    /// * `template_name` - Name of the template file (e.g., "configure-firewall.yml.tera")
+    /// * `output_name` - Name of the output file (e.g., "configure-firewall.yml")
+    /// * `context` - Template context for variable substitution
+    /// * `destination_dir` - Directory where the rendered file will be written
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), ConfigurationTemplateError>` - Success or error from the template rendering operation
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Template file cannot be found or read
+    /// - Template content is invalid
+    /// - Variable substitution fails
+    /// - Output file cannot be written
+    async fn render_tera_template(
+        &self,
+        template_name: &str,
+        output_name: &str,
+        context: &InventoryContext,
+        destination_dir: &Path,
+    ) -> Result<(), ConfigurationTemplateError> {
+        tracing::debug!("Rendering Tera template: {}", template_name);
+
+        let template_path = Self::build_template_path(template_name);
+
+        // Get the template file path
+        let source_path = self
+            .template_manager
+            .get_template_path(&template_path)
+            .map_err(|source| ConfigurationTemplateError::TemplatePathFailed {
+                file_name: template_name.to_string(),
+                source,
+            })?;
+
+        // Read template content
+        let template_content = tokio::fs::read_to_string(&source_path)
+            .await
+            .map_err(|source| ConfigurationTemplateError::TeraTemplateReadFailed {
+                file_name: template_name.to_string(),
+                source,
+            })?;
+
+        // Create File object for template processing
+        let template_file =
+            crate::domain::template::file::File::new(template_name, template_content).map_err(
+                |source| ConfigurationTemplateError::FileCreationFailed {
+                    file_name: template_name.to_string(),
+                    source,
+                },
+            )?;
+
+        // Render template with context
+        let mut engine = crate::domain::template::TemplateEngine::new();
+        let rendered_content = engine
+            .render(template_file.filename(), template_file.content(), context)
+            .map_err(|source| ConfigurationTemplateError::InventoryTemplateCreationFailed {
+                source,
+            })?;
+
+        // Write rendered content to output file
+        let output_path = destination_dir.join(output_name);
+        crate::domain::template::write_file_with_dir_creation(&output_path, &rendered_content)
+            .map_err(|source| ConfigurationTemplateError::InventoryTemplateRenderFailed {
+                source,
+            })?;
+
+        tracing::debug!(
+            "Successfully rendered Tera template {} to {}",
+            template_name,
+            output_path.display()
+        );
+
         Ok(())
     }
 }
