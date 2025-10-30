@@ -28,6 +28,7 @@
         line: 'APT::Periodic::Unattended-Upgrade "1";'
         create: true
         backup: true
+      when: ansible_os_family == "Debian"
 
     - name: Enable automatic reboot for security updates
       ansible.builtin.lineinfile:
@@ -35,6 +36,7 @@
         regexp: "^Unattended-Upgrade::Automatic-Reboot"
         line: 'Unattended-Upgrade::Automatic-Reboot "true";'
         backup: true
+      when: ansible_os_family == "Debian"
 
     - name: Set automatic reboot time to 2:00 AM
       ansible.builtin.lineinfile:
@@ -42,12 +44,14 @@
         regexp: "^Unattended-Upgrade::Automatic-Reboot-Time"
         line: 'Unattended-Upgrade::Automatic-Reboot-Time "02:00";'
         backup: true
+      when: ansible_os_family == "Debian"
 
     - name: Enable and start unattended-upgrades service
       ansible.builtin.systemd:
         name: unattended-upgrades
         enabled: true
         state: started
+      when: ansible_os_family == "Debian"
       ignore_errors: true # Ignore in container environments where systemd might not work
 
     - name: Verify unattended-upgrades configuration
@@ -56,6 +60,7 @@
       register: unattended_upgrades_test
       changed_when: false
       failed_when: false # Don't fail on verification errors in test environments
+      when: ansible_os_family == "Debian"
 
     - name: Display verification result
       ansible.builtin.debug:
