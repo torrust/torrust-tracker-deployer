@@ -47,6 +47,8 @@ See detailed specification: [docs/issues/{number}-{name}.md](../docs/issues/{num
 
 ## Acceptance Criteria
 
+> **Note for Contributors**: These criteria define what the PR reviewer will check. Use this as your pre-review checklist before submitting the PR to minimize back-and-forth iterations.
+
 **Quality Checks**:
 
 - [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`

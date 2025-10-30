@@ -111,6 +111,27 @@ This verification ensures:
 
 The pre-commit script is the single source of truth for all quality checks. By including it in acceptance criteria, we make it clear that passing these checks is **required**, not optional.
 
+#### Acceptance Criteria as PR Review Checklist
+
+Acceptance criteria serve a dual purpose in our workflow:
+
+1. **For Issue Authors**: They define what "done" means for the task
+2. **For Contributors**: They provide a pre-review checklist before submitting PRs
+
+Both issue templates ([SPECIFICATION-TEMPLATE.md](../issues/SPECIFICATION-TEMPLATE.md) and [GITHUB-ISSUE-TEMPLATE.md](../issues/GITHUB-ISSUE-TEMPLATE.md)) include a note that reminds contributors:
+
+> **Note for Contributors**: These criteria define what the PR reviewer will check. Use this as your pre-review checklist before submitting the PR to minimize back-and-forth iterations.
+
+**Benefits of this approach**:
+
+- **Clear expectations**: Contributors know exactly what reviewers will check
+- **Self-review**: Encourages contributors to verify their work before submission
+- **Faster merges**: Reduces back-and-forth in PR reviews by catching issues early
+- **Quality consistency**: Ensures all PRs meet the same standards
+- **Learning opportunity**: New contributors learn project standards through acceptance criteria
+
+When creating issues, think about what you would check when reviewing the PR. Make acceptance criteria specific, measurable, and aligned with the project's quality standards as documented in the [PR Review Guide](./pr-review-guide.md).
+
 ### Step 2: Create GitHub Epic Issue (if needed)
 
 If this is the first task in a roadmap section, create an epic issue first:

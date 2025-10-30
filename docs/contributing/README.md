@@ -7,6 +7,7 @@ This guide will help you understand our development practices and contribution w
 | Topic                                | File                                                 |
 | ------------------------------------ | ---------------------------------------------------- |
 | DDD layer placement (architecture)   | [ddd-layer-placement.md](./ddd-layer-placement.md)   |
+| PR review guide for reviewers        | [pr-review-guide.md](./pr-review-guide.md)           |
 | Creating roadmap issues              | [roadmap-issues.md](./roadmap-issues.md)             |
 | Branching conventions                | [branching.md](./branching.md)                       |
 | Commit process and pre-commit checks | [commit-process.md](./commit-process.md)             |
