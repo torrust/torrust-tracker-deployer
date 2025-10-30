@@ -354,11 +354,16 @@ impl ApplyInfrastructureStep {
 - Coordinates infrastructure calls
 - No business logic
 
-## 🔧 Infrastructure Layer (`src/infrastructure/`)
+## 🔧 Infrastructure Layer (`src/infrastructure/` and `src/adapters/`)
 
 ### Purpose
 
 The infrastructure layer provides technical implementations for external integrations, file I/O, persistence, and other external concerns. It implements interfaces defined in the domain layer.
+
+**Note:** The project organizes infrastructure code into two directories:
+
+- `src/adapters/` - Direct wrappers for external tools (OpenTofu, Ansible, SSH, Docker, LXD)
+- `src/infrastructure/` - Other infrastructure concerns (persistence, tracing, template rendering)
 
 ### What Belongs Here
 
