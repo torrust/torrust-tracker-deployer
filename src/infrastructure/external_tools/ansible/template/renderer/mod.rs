@@ -308,6 +308,7 @@ impl AnsibleTemplateRenderer {
             "install-docker.yml",
             "install-docker-compose.yml",
             "wait-cloud-init.yml",
+            "configure-security-updates.yml",
         ] {
             self.copy_static_file(template_manager, playbook, destination_dir)
                 .await?;
@@ -315,7 +316,7 @@ impl AnsibleTemplateRenderer {
 
         tracing::debug!(
             "Successfully copied {} static template files",
-            5 // ansible.cfg + 4 playbooks
+            6 // ansible.cfg + 5 playbooks
         );
 
         Ok(())

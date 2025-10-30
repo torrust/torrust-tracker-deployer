@@ -6,15 +6,17 @@
  *
  * Current steps:
  * - Cloud-init completion waiting
+ * - Automatic security updates configuration
  *
  * Future steps may include:
- * - System updates and security patches
  * - User account setup and management
  * - Firewall configuration
  * - Log rotation configuration
  * - System service management
  */
 
+pub mod configure_security_updates;
 pub mod wait_cloud_init;
 
+pub use configure_security_updates::ConfigureSecurityUpdatesStep;
 pub use wait_cloud_init::WaitForCloudInitStep;
