@@ -170,17 +170,28 @@ Update the specification document with the issue number:
 
 ### Step 5: Rename File with Issue Number
 
-Follow the naming convention: `{issue-number}-{description}.md`
+Follow the naming convention based on issue type:
+
+**For Task Issues**: `{issue-number}-{description}.md`
 
 ```bash
-# Example: Issue #3
+# Example: Task Issue #3
 mv docs/issues/setup-logging-for-production-cli.md \
    docs/issues/3-setup-logging-for-production-cli.md
+```
+
+**For Epic Issues**: `{issue-number}-epic-{description}.md`
+
+```bash
+# Example: Epic Issue #2
+mv docs/issues/scaffolding-for-main-app-epic.md \
+   docs/issues/2-epic-scaffolding-for-main-app.md
 ```
 
 **Naming Rules**:
 
 - Start with issue number
+- Use `epic-` prefix after the number for epic issues
 - Use lowercase
 - Separate words with hyphens
 - Keep descriptive but concise
@@ -343,9 +354,16 @@ git checkout -b 3-setup-logging-for-production-cli
 # Wrong: File still has temporary name
 docs/issues/setup-logging-for-production-cli.md
 # Problem: Should have issue number prefix
+
+# Wrong: Epic file missing "epic-" prefix
+docs/issues/2-scaffolding-for-main-app.md
+# Problem: Epic files need "epic-" prefix after number
 ```
 
-✅ **Correct**: `docs/issues/3-setup-logging-for-production-cli.md`
+✅ **Correct**:
+
+- Task issues: `docs/issues/3-setup-logging-for-production-cli.md`
+- Epic issues: `docs/issues/2-epic-scaffolding-for-main-app.md`
 
 ### ❌ Don't Skip Bidirectional Linking
 
