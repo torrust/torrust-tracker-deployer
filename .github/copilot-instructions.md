@@ -64,14 +64,16 @@ These principles should guide all development decisions, code reviews, and featu
 
 ## 🔧 Essential Rules
 
-1. **Before creating branches**: Read [`docs/contributing/branching.md`](../docs/contributing/branching.md) for naming conventions (`{issue-number}-{short-description}`)
+1. **Before placing code in DDD layers**: Read [`docs/contributing/ddd-layer-placement.md`](../docs/contributing/ddd-layer-placement.md) for comprehensive guidance on which code belongs in which layer (Domain, Application, Infrastructure, Presentation). This guide includes rules, red flags, examples, and a decision flowchart to help you make the right architectural decisions.
 
-2. **Before committing**: Read [`docs/contributing/commit-process.md`](../docs/contributing/commit-process.md) for conventional commits
+2. **Before creating branches**: Read [`docs/contributing/branching.md`](../docs/contributing/branching.md) for naming conventions (`{issue-number}-{short-description}`)
+
+3. **Before committing**: Read [`docs/contributing/commit-process.md`](../docs/contributing/commit-process.md) for conventional commits
 
    - **With issue branch**: `{type}: [#{issue}] {description}` (when branch name starts with `{issue-number}-`)
    - **Without issue branch**: `{type}: {description}` (when working on main or branch without issue number prefix)
 
-3. **Before committing**: Always run the pre-commit verification script - all checks must pass before staging files or creating commits, regardless of the tool or method used:
+4. **Before committing**: Always run the pre-commit verification script - all checks must pass before staging files or creating commits, regardless of the tool or method used:
 
    ```bash
    ./scripts/pre-commit.sh
@@ -85,17 +87,17 @@ These principles should guide all development decisions, code reviews, and featu
    - Git clients: GitHub Desktop, GitKraken, etc.
    - CI/CD: Any automated commits or merges
 
-4. **Before working with Tera templates**: Read [`docs/contributing/templates.md`](../docs/contributing/templates.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
+5. **Before working with Tera templates**: Read [`docs/contributing/templates.md`](../docs/contributing/templates.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
 
-5. **When adding new Ansible playbooks**: Read [`docs/contributing/templates.md`](../docs/contributing/templates.md) for the complete guide. **CRITICAL**: Static playbooks (without `.tera` extension) must be registered in `src/infrastructure/external_tools/ansible/template/renderer/mod.rs` in the `copy_static_templates` method, otherwise they won't be copied to the build directory and Ansible will fail with "playbook not found" error.
+6. **When adding new Ansible playbooks**: Read [`docs/contributing/templates.md`](../docs/contributing/templates.md) for the complete guide. **CRITICAL**: Static playbooks (without `.tera` extension) must be registered in `src/infrastructure/external_tools/ansible/template/renderer/mod.rs` in the `copy_static_templates` method, otherwise they won't be copied to the build directory and Ansible will fail with "playbook not found" error.
 
-6. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](../docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
+7. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](../docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
 
-7. **Understanding expected errors**: Read [`docs/contributing/known-issues.md`](../docs/contributing/known-issues.md) for known issues and expected behaviors. Some errors that appear red in E2E test output (like SSH host key warnings) are normal and expected - not actual failures.
+8. **Understanding expected errors**: Read [`docs/contributing/known-issues.md`](../docs/contributing/known-issues.md) for known issues and expected behaviors. Some errors that appear red in E2E test output (like SSH host key warnings) are normal and expected - not actual failures.
 
-8. **Before making engineering decisions**: Document significant architectural or design decisions as Architectural Decision Records (ADRs) in `docs/decisions/`. Read [`docs/decisions/README.md`](../docs/decisions/README.md) for the ADR template and guidelines. This ensures decisions are properly documented with context, rationale, and consequences for future reference.
+9. **Before making engineering decisions**: Document significant architectural or design decisions as Architectural Decision Records (ADRs) in `docs/decisions/`. Read [`docs/decisions/README.md`](../docs/decisions/README.md) for the ADR template and guidelines. This ensures decisions are properly documented with context, rationale, and consequences for future reference.
 
-9. **When organizing code within modules**: Follow the module organization conventions in [`docs/contributing/module-organization.md`](../docs/contributing/module-organization.md). Use top-down organization with public items first, high-level abstractions before low-level details, and important responsibilities before secondary concerns like error types.
+10. **When organizing code within modules**: Follow the module organization conventions in [`docs/contributing/module-organization.md`](../docs/contributing/module-organization.md). Use top-down organization with public items first, high-level abstractions before low-level details, and important responsibilities before secondary concerns like error types.
 
 ## 🧪 Build & Test
 
