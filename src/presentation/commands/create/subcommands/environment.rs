@@ -55,7 +55,7 @@ pub fn handle_environment_creation(
     let ctx = factory.create_context(working_dir.to_path_buf(), user_output.clone());
 
     // Create progress reporter for 3 main steps
-    let mut progress = ProgressReporter::new(ctx.into_user_output(), 3);
+    let mut progress = ProgressReporter::new(user_output.clone(), 3);
 
     // Step 1: Load configuration
     progress.start_step("Loading configuration");
@@ -67,7 +67,6 @@ pub fn handle_environment_creation(
 
     // Step 2: Initialize dependencies
     progress.start_step("Initializing dependencies");
-    let ctx = factory.create_context(working_dir.to_path_buf(), user_output.clone());
     let command_handler = factory.create_create_handler(&ctx);
     progress.complete_step(None);
 

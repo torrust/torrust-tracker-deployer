@@ -285,29 +285,6 @@ impl CommandContext {
     pub fn user_output(&self) -> &Arc<std::sync::Mutex<UserOutput>> {
         &self.user_output
     }
-
-    /// Consume the context and return the shared user output
-    ///
-    /// This method is useful when you want to pass ownership of the `Arc<Mutex<UserOutput>>`
-    /// to another component, such as a `ProgressReporter`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use std::path::PathBuf;
-    /// use std::sync::{Arc, Mutex};
-    /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
-    /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
-    ///
-    /// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
-    /// let ctx = CommandContext::new(PathBuf::from("."), user_output);
-    /// let progress = ProgressReporter::new(ctx.into_user_output(), 3);
-    /// ```
-    #[must_use]
-    pub fn into_user_output(self) -> Arc<std::sync::Mutex<UserOutput>> {
-        self.user_output
-    }
 }
 
 /// Report an error through user output
