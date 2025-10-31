@@ -8,7 +8,6 @@ use std::sync::{Arc, Mutex};
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::domain::Environment;
-use crate::presentation::commands::context::report_error;
 use crate::presentation::commands::factory::CommandHandlerFactory;
 use crate::presentation::progress::ProgressReporter;
 use crate::presentation::user_output::UserOutput;
@@ -127,7 +126,10 @@ fn load_configuration(
     let loader = ConfigLoader;
 
     loader.load_from_file(env_file).inspect_err(|err| {
-        report_error(user_output, err);
+        user_output
+            .lock()
+            .expect("UserOutput mutex poisoned")
+            .error(&err.to_string());
     })
 }
 
@@ -171,7 +173,10 @@ fn execute_create_command(
     #[allow(clippy::manual_inspect)]
     command_handler.execute(config).map_err(|source| {
         let error = CreateSubcommandError::CommandFailed { source };
-        report_error(user_output, &error);
+        user_output
+            .lock()
+            .expect("UserOutput mutex poisoned")
+            .error(&error.to_string());
         error
     })
 }

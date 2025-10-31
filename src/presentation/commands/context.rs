@@ -287,44 +287,9 @@ impl CommandContext {
     }
 }
 
-/// Report an error through user output
-///
-/// This utility function provides a consistent way to report errors to users.
-/// It outputs the error message through the provided user output instance.
-///
-/// # Arguments
-///
-/// * `output` - User output instance to use for reporting
-/// * `error` - Error to report (any type implementing `std::error::Error`)
-///
-/// # Examples
-///
-/// ```rust
-/// use std::sync::{Arc, Mutex};
-/// use torrust_tracker_deployer_lib::presentation::commands::context::report_error;
-/// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
-///
-/// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
-/// let error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
-/// report_error(&output, &error);
-/// ```
-pub fn report_error(
-    user_output: &Arc<std::sync::Mutex<UserOutput>>,
-    error: &dyn std::error::Error,
-) {
-    // Try to acquire the lock and report the error through the configured
-    // `UserOutput`. If the lock is poisoned, fallback to writing to stderr so
-    // the user still sees the message instead of panicking.
-    match user_output.lock() {
-        Ok(mut output) => output.error(&error.to_string()),
-        Err(_) => eprintln!("Error: {error}"),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
     use tempfile::TempDir;
 
     use crate::presentation::user_output::VerbosityLevel;
@@ -435,25 +400,6 @@ mod tests {
         output_ref.lock().unwrap().progress("First message");
         output_ref.lock().unwrap().success("Second message");
         output_ref.lock().unwrap().error("Third message");
-    }
-
-    #[test]
-    fn it_should_report_errors_through_output() {
-        // Create output with custom writers for testing
-        let stderr_buf = Vec::new();
-        let stderr_writer = Box::new(Cursor::new(stderr_buf));
-        let stdout_writer = Box::new(Cursor::new(Vec::new()));
-
-        let output = UserOutput::with_writers(VerbosityLevel::Normal, stdout_writer, stderr_writer);
-
-        // Wrap output in Arc<Mutex<>> and report the error through the new API
-        let shared_output = Arc::new(std::sync::Mutex::new(output));
-        let error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
-        report_error(&shared_output, &error);
-
-        // Note: In a real test, we'd verify the output was written,
-        // but that requires extracting the buffer from output which isn't directly possible
-        // without additional helper methods. The important thing is that it compiles and runs.
     }
 
     #[test]

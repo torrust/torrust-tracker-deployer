@@ -6,7 +6,6 @@
 use std::sync::{Arc, Mutex};
 
 use crate::domain::environment::name::EnvironmentName;
-use crate::presentation::commands::context::report_error;
 use crate::presentation::commands::factory::CommandHandlerFactory;
 use crate::presentation::progress::ProgressReporter;
 use crate::presentation::user_output::UserOutput;
@@ -75,7 +74,11 @@ pub fn handle_destroy_command(
             name: environment_name.to_string(),
             source,
         };
-        report_error(progress.output(), &error);
+        progress
+            .output()
+            .lock()
+            .expect("UserOutput mutex poisoned")
+            .error(&error.to_string());
         error
     })?;
     progress.complete_step(Some(&format!(
@@ -94,7 +97,11 @@ pub fn handle_destroy_command(
             name: environment_name.to_string(),
             source,
         };
-        report_error(progress.output(), &error);
+        progress
+            .output()
+            .lock()
+            .expect("UserOutput mutex poisoned")
+            .error(&error.to_string());
         error
     })?;
     progress.complete_step(Some("Infrastructure torn down"));
