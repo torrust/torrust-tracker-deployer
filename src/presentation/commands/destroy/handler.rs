@@ -40,11 +40,6 @@ use super::errors::DestroySubcommandError;
 /// the environment cannot be loaded, or the destruction process fails.
 /// All errors include detailed context and actionable troubleshooting guidance.
 ///
-/// # Panics
-///
-/// This function will panic if the `UserOutput` mutex is poisoned. This can only
-/// occur if a panic happened while another thread held the mutex lock.
-///
 /// # Example
 ///
 /// ```rust
@@ -73,48 +68,50 @@ pub fn handle_destroy_command(
     let mut progress = ProgressReporter::new(user_output.clone(), 3);
 
     // Step 1: Validate environment name
-    progress.start_step("Validating environment");
+    progress
+        .start_step("Validating environment")
+        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
     let env_name = EnvironmentName::new(environment_name.to_string()).map_err(|source| {
-        let error = DestroySubcommandError::InvalidEnvironmentName {
+        DestroySubcommandError::InvalidEnvironmentName {
             name: environment_name.to_string(),
             source,
-        };
-        progress
-            .output()
-            .lock()
-            .expect("UserOutput mutex poisoned")
-            .error(&error.to_string());
-        error
+        }
     })?;
-    progress.complete_step(Some(&format!(
-        "Environment name validated: {environment_name}"
-    )));
+    progress
+        .complete_step(Some(&format!(
+            "Environment name validated: {environment_name}"
+        )))
+        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
 
     // Step 2: Initialize dependencies
-    progress.start_step("Initializing dependencies");
+    progress
+        .start_step("Initializing dependencies")
+        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
     let command_handler = factory.create_destroy_handler(&ctx);
-    progress.complete_step(None);
+    progress
+        .complete_step(None)
+        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
 
     // Step 3: Execute destroy command (tear down infrastructure)
-    progress.start_step("Tearing down infrastructure");
+    progress
+        .start_step("Tearing down infrastructure")
+        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
     let _destroyed_env = command_handler.execute(&env_name).map_err(|source| {
-        let error = DestroySubcommandError::DestroyOperationFailed {
+        DestroySubcommandError::DestroyOperationFailed {
             name: environment_name.to_string(),
             source,
-        };
-        progress
-            .output()
-            .lock()
-            .expect("UserOutput mutex poisoned")
-            .error(&error.to_string());
-        error
+        }
     })?;
-    progress.complete_step(Some("Infrastructure torn down"));
+    progress
+        .complete_step(Some("Infrastructure torn down"))
+        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
 
     // Complete with summary
-    progress.complete(&format!(
-        "Environment '{environment_name}' destroyed successfully"
-    ));
+    progress
+        .complete(&format!(
+            "Environment '{environment_name}' destroyed successfully"
+        ))
+        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
 
     Ok(())
 }

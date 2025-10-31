@@ -57,31 +57,45 @@ pub fn handle_environment_creation(
     let mut progress = ProgressReporter::new(user_output.clone(), 3);
 
     // Step 1: Load configuration
-    progress.start_step("Loading configuration");
+    progress
+        .start_step("Loading configuration")
+        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
     let config = load_configuration(progress.output(), env_file)?;
-    progress.complete_step(Some(&format!(
-        "Configuration loaded: {}",
-        config.environment.name
-    )));
+    progress
+        .complete_step(Some(&format!(
+            "Configuration loaded: {}",
+            config.environment.name
+        )))
+        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
 
     // Step 2: Initialize dependencies
-    progress.start_step("Initializing dependencies");
+    progress
+        .start_step("Initializing dependencies")
+        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
     let command_handler = factory.create_create_handler(&ctx);
-    progress.complete_step(None);
+    progress
+        .complete_step(None)
+        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
 
     // Step 3: Execute create command (provision infrastructure)
-    progress.start_step("Creating environment");
+    progress
+        .start_step("Creating environment")
+        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
     let environment = execute_create_command(progress.output(), &command_handler, config)?;
-    progress.complete_step(Some(&format!(
-        "Instance created: {}",
-        environment.instance_name().as_str()
-    )));
+    progress
+        .complete_step(Some(&format!(
+            "Instance created: {}",
+            environment.instance_name().as_str()
+        )))
+        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
 
     // Complete with summary
-    progress.complete(&format!(
-        "Environment '{}' created successfully",
-        environment.name().as_str()
-    ));
+    progress
+        .complete(&format!(
+            "Environment '{}' created successfully",
+            environment.name().as_str()
+        ))
+        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
 
     // Display final results
     display_creation_results(progress.output(), &environment);
@@ -117,7 +131,9 @@ fn load_configuration(
 ) -> Result<EnvironmentCreationConfig, CreateSubcommandError> {
     user_output
         .lock()
-        .expect("UserOutput mutex poisoned")
+        .map_err(|_| CreateSubcommandError::ProgressReportingFailed {
+            source: crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned,
+        })?
         .progress(&format!(
             "Loading configuration from '{}'...",
             env_file.display()
@@ -126,10 +142,10 @@ fn load_configuration(
     let loader = ConfigLoader;
 
     loader.load_from_file(env_file).inspect_err(|err| {
-        user_output
-            .lock()
-            .expect("UserOutput mutex poisoned")
-            .error(&err.to_string());
+        // Attempt to log error, but don't fail if mutex is poisoned
+        if let Ok(mut output) = user_output.lock() {
+            output.error(&err.to_string());
+        }
     })
 }
 
@@ -159,7 +175,9 @@ fn execute_create_command(
 ) -> Result<Environment, CreateSubcommandError> {
     user_output
         .lock()
-        .expect("UserOutput mutex poisoned")
+        .map_err(|_| CreateSubcommandError::ProgressReportingFailed {
+            source: crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned,
+        })?
         .progress(&format!(
             "Creating environment '{}'...",
             config.environment.name
@@ -167,16 +185,18 @@ fn execute_create_command(
 
     user_output
         .lock()
-        .expect("UserOutput mutex poisoned")
+        .map_err(|_| CreateSubcommandError::ProgressReportingFailed {
+            source: crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned,
+        })?
         .progress("Validating configuration and creating environment...");
 
     #[allow(clippy::manual_inspect)]
     command_handler.execute(config).map_err(|source| {
         let error = CreateSubcommandError::CommandFailed { source };
-        user_output
-            .lock()
-            .expect("UserOutput mutex poisoned")
-            .error(&error.to_string());
+        // Attempt to log error, but don't fail if mutex is poisoned
+        if let Ok(mut output) = user_output.lock() {
+            output.error(&error.to_string());
+        }
         error
     })
 }
@@ -193,8 +213,16 @@ fn execute_create_command(
 ///
 /// * `user_output` - Shared user output for result messages
 /// * `environment` - The successfully created environment
+///
+/// # Panics
+///
+/// This function will panic if the `UserOutput` mutex is poisoned. Since this is
+/// called after successful environment creation (when operation is complete),
+/// a poisoned mutex indicates an irrecoverable state and panicking is acceptable.
 fn display_creation_results(user_output: &Arc<Mutex<UserOutput>>, environment: &Environment) {
-    let mut output = user_output.lock().expect("UserOutput mutex poisoned");
+    let mut output = user_output
+        .lock()
+        .expect("UserOutput mutex poisoned after successful environment creation");
 
     output.success(&format!(
         "Environment '{}' created successfully",
