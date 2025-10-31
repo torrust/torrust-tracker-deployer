@@ -130,6 +130,16 @@ Tip: This is a critical bug - please report it with full logs using --log-output
     },
 }
 
+// ============================================================================
+// ERROR CONVERSIONS
+// ============================================================================
+
+impl From<ProgressReporterError> for CreateSubcommandError {
+    fn from(source: ProgressReporterError) -> Self {
+        Self::ProgressReportingFailed { source }
+    }
+}
+
 impl CreateSubcommandError {
     /// Provides detailed troubleshooting guidance for this error
     ///

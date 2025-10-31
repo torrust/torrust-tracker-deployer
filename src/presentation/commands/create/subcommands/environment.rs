@@ -57,45 +57,31 @@ pub fn handle_environment_creation(
     let mut progress = ProgressReporter::new(user_output.clone(), 3);
 
     // Step 1: Load configuration
-    progress
-        .start_step("Loading configuration")
-        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
+    progress.start_step("Loading configuration")?;
     let config = load_configuration(progress.output(), env_file)?;
-    progress
-        .complete_step(Some(&format!(
-            "Configuration loaded: {}",
-            config.environment.name
-        )))
-        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
+    progress.complete_step(Some(&format!(
+        "Configuration loaded: {}",
+        config.environment.name
+    )))?;
 
     // Step 2: Initialize dependencies
-    progress
-        .start_step("Initializing dependencies")
-        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
+    progress.start_step("Initializing dependencies")?;
     let command_handler = factory.create_create_handler(&ctx);
-    progress
-        .complete_step(None)
-        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
+    progress.complete_step(None)?;
 
     // Step 3: Execute create command (provision infrastructure)
-    progress
-        .start_step("Creating environment")
-        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
+    progress.start_step("Creating environment")?;
     let environment = execute_create_command(progress.output(), &command_handler, config)?;
-    progress
-        .complete_step(Some(&format!(
-            "Instance created: {}",
-            environment.instance_name().as_str()
-        )))
-        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
+    progress.complete_step(Some(&format!(
+        "Instance created: {}",
+        environment.instance_name().as_str()
+    )))?;
 
     // Complete with summary
-    progress
-        .complete(&format!(
-            "Environment '{}' created successfully",
-            environment.name().as_str()
-        ))
-        .map_err(|e| CreateSubcommandError::ProgressReportingFailed { source: e })?;
+    progress.complete(&format!(
+        "Environment '{}' created successfully",
+        environment.name().as_str()
+    ))?;
 
     // Display final results
     display_creation_results(progress.output(), &environment);
@@ -131,9 +117,7 @@ fn load_configuration(
 ) -> Result<EnvironmentCreationConfig, CreateSubcommandError> {
     user_output
         .lock()
-        .map_err(|_| CreateSubcommandError::ProgressReportingFailed {
-            source: crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned,
-        })?
+        .map_err(|_| crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned)?
         .progress(&format!(
             "Loading configuration from '{}'...",
             env_file.display()
@@ -175,9 +159,7 @@ fn execute_create_command(
 ) -> Result<Environment, CreateSubcommandError> {
     user_output
         .lock()
-        .map_err(|_| CreateSubcommandError::ProgressReportingFailed {
-            source: crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned,
-        })?
+        .map_err(|_| crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned)?
         .progress(&format!(
             "Creating environment '{}'...",
             config.environment.name
@@ -185,9 +167,7 @@ fn execute_create_command(
 
     user_output
         .lock()
-        .map_err(|_| CreateSubcommandError::ProgressReportingFailed {
-            source: crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned,
-        })?
+        .map_err(|_| crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned)?
         .progress("Validating configuration and creating environment...");
 
     #[allow(clippy::manual_inspect)]

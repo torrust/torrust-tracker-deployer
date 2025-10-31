@@ -68,50 +68,36 @@ pub fn handle_destroy_command(
     let mut progress = ProgressReporter::new(user_output.clone(), 3);
 
     // Step 1: Validate environment name
-    progress
-        .start_step("Validating environment")
-        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
+    progress.start_step("Validating environment")?;
     let env_name = EnvironmentName::new(environment_name.to_string()).map_err(|source| {
         DestroySubcommandError::InvalidEnvironmentName {
             name: environment_name.to_string(),
             source,
         }
     })?;
-    progress
-        .complete_step(Some(&format!(
-            "Environment name validated: {environment_name}"
-        )))
-        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
+    progress.complete_step(Some(&format!(
+        "Environment name validated: {environment_name}"
+    )))?;
 
     // Step 2: Initialize dependencies
-    progress
-        .start_step("Initializing dependencies")
-        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
+    progress.start_step("Initializing dependencies")?;
     let command_handler = factory.create_destroy_handler(&ctx);
-    progress
-        .complete_step(None)
-        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
+    progress.complete_step(None)?;
 
     // Step 3: Execute destroy command (tear down infrastructure)
-    progress
-        .start_step("Tearing down infrastructure")
-        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
+    progress.start_step("Tearing down infrastructure")?;
     let _destroyed_env = command_handler.execute(&env_name).map_err(|source| {
         DestroySubcommandError::DestroyOperationFailed {
             name: environment_name.to_string(),
             source,
         }
     })?;
-    progress
-        .complete_step(Some("Infrastructure torn down"))
-        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
+    progress.complete_step(Some("Infrastructure torn down"))?;
 
     // Complete with summary
-    progress
-        .complete(&format!(
-            "Environment '{environment_name}' destroyed successfully"
-        ))
-        .map_err(|e| DestroySubcommandError::ProgressReportingFailed { source: e })?;
+    progress.complete(&format!(
+        "Environment '{environment_name}' destroyed successfully"
+    ))?;
 
     Ok(())
 }
