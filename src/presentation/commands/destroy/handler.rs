@@ -40,6 +40,11 @@ use super::errors::DestroySubcommandError;
 /// the environment cannot be loaded, or the destruction process fails.
 /// All errors include detailed context and actionable troubleshooting guidance.
 ///
+/// # Panics
+///
+/// This function will panic if the `UserOutput` mutex is poisoned. This can only
+/// occur if a panic happened while another thread held the mutex lock.
+///
 /// # Example
 ///
 /// ```rust

@@ -301,11 +301,20 @@ mod tests {
         )))
     }
 
-    #[test]
-    fn it_should_create_context_with_production_dependencies() {
+    /// Test helper to create a test context with temporary directory
+    ///
+    /// Returns a tuple of (`TempDir`, `PathBuf`, `Arc<Mutex<UserOutput>>`)
+    /// The `TempDir` must be kept alive for the duration of the test.
+    fn create_test_setup() -> (TempDir, PathBuf, Arc<std::sync::Mutex<UserOutput>>) {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path().to_path_buf();
         let user_output = create_test_user_output();
+        (temp_dir, working_dir, user_output)
+    }
+
+    #[test]
+    fn it_should_create_context_with_production_dependencies() {
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
         let ctx = CommandContext::new(working_dir, user_output);
 
@@ -316,9 +325,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_access_to_repository() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
         let ctx = CommandContext::new(working_dir, user_output);
 
@@ -328,9 +335,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_access_to_clock() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
         let ctx = CommandContext::new(working_dir, user_output);
 
@@ -340,9 +345,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_access_to_user_output() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
         let ctx = CommandContext::new(working_dir, user_output);
 
@@ -354,9 +357,7 @@ mod tests {
 
     #[test]
     fn it_should_create_context_with_factory() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
         let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
         let ctx = CommandContext::new_with_factory(&repository_factory, working_dir, user_output);
@@ -389,9 +390,7 @@ mod tests {
 
     #[test]
     fn it_should_allow_accessing_output_multiple_times() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
         let ctx = CommandContext::new(working_dir, user_output);
 
@@ -404,9 +403,7 @@ mod tests {
 
     #[test]
     fn it_should_use_default_constants() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
         // Creating context should use DEFAULT_LOCK_TIMEOUT
         let _ctx = CommandContext::new(working_dir, user_output);
