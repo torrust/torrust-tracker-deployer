@@ -250,6 +250,23 @@ mod tests {
         Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
     }
 
+    /// Test helper to create a test setup with factory, temp directory, and user output
+    ///
+    /// Returns a tuple of (`CommandHandlerFactory`, `TempDir`, `PathBuf`, `Arc<Mutex<UserOutput>>`)
+    /// The `TempDir` must be kept alive for the duration of the test.
+    fn create_test_setup() -> (
+        CommandHandlerFactory,
+        TempDir,
+        PathBuf,
+        Arc<Mutex<UserOutput>>,
+    ) {
+        let factory = CommandHandlerFactory::new();
+        let temp_dir = TempDir::new().unwrap();
+        let working_dir = temp_dir.path().to_path_buf();
+        let user_output = create_test_user_output();
+        (factory, temp_dir, working_dir, user_output)
+    }
+
     #[test]
     fn it_should_create_factory_with_default_configuration() {
         let factory = CommandHandlerFactory::new();
@@ -270,10 +287,7 @@ mod tests {
 
     #[test]
     fn it_should_create_context_with_factory() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
         let context = factory.create_context(working_dir, user_output);
 
@@ -284,10 +298,7 @@ mod tests {
 
     #[test]
     fn it_should_create_create_handler() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
         let context = factory.create_context(working_dir, user_output);
         let _handler = factory.create_create_handler(&context);
@@ -297,10 +308,7 @@ mod tests {
 
     #[test]
     fn it_should_create_destroy_handler() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
         let context = factory.create_context(working_dir, user_output);
         let _handler = factory.create_destroy_handler(&context);
@@ -310,9 +318,7 @@ mod tests {
 
     #[test]
     fn it_should_create_multiple_contexts_from_same_factory() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (factory, _temp_dir, working_dir, _user_output) = create_test_setup();
 
         // Should be able to create multiple contexts
         let context1 = factory.create_context(working_dir.clone(), create_test_user_output());
@@ -325,10 +331,7 @@ mod tests {
 
     #[test]
     fn it_should_create_multiple_handlers_from_same_context() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
         let context = factory.create_context(working_dir, user_output);
 
@@ -346,9 +349,7 @@ mod tests {
         let repository_factory = RepositoryFactory::new(Duration::from_millis(100));
         let factory = CommandHandlerFactory::new_for_testing(repository_factory);
 
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let (_factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
         // Should be able to create context with custom factory
         let context = factory.create_context(working_dir, user_output);
