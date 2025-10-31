@@ -164,9 +164,25 @@ impl ConfigureCommandHandler {
             .map_err(|e| (e.into(), current_step))?;
 
         let current_step = ConfigureStep::ConfigureFirewall;
-        ConfigureFirewallStep::new(Arc::clone(&self.ansible_client))
-            .execute()
-            .map_err(|e| (e.into(), current_step))?;
+        // Allow tests or CI to explicitly skip the firewall configuration step
+        // (useful for container-based test runs where iptables/ufw require
+        // elevated kernel capabilities not available in unprivileged containers).
+        let skip_firewall = std::env::var("TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER")
+            .map(|v| v == "true")
+            .unwrap_or(false);
+
+        if skip_firewall {
+            info!(
+                command = "configure",
+                step = "configure_firewall",
+                status = "skipped",
+                "Skipping UFW firewall configuration due to TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER"
+            );
+        } else {
+            ConfigureFirewallStep::new(Arc::clone(&self.ansible_client))
+                .execute()
+                .map_err(|e| (e.into(), current_step))?;
+        }
 
         // Transition to Configured state
         let configured = environment.clone().configured();

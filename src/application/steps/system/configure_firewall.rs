@@ -99,15 +99,22 @@ impl ConfigureFirewallStep {
         );
 
         // Run Ansible playbook (SSH port already resolved during template rendering)
-        self.ansible_client.run_playbook("configure-firewall")?;
-
-        info!(
-            step = "configure_firewall",
-            status = "success",
-            "UFW firewall configured successfully with SSH access preserved"
-        );
-
-        Ok(())
+        match self.ansible_client.run_playbook("configure-firewall") {
+            Ok(_) => {
+                info!(
+                    step = "configure_firewall",
+                    status = "success",
+                    "UFW firewall configured successfully with SSH access preserved"
+                );
+                Ok(())
+            }
+            Err(e) => {
+                // Propagate errors to the caller. Tests that run in container environments
+                // should explicitly opt-out of running this step (for example via an
+                // environment variable) instead of relying on runtime error detection.
+                Err(e)
+            }
+        }
     }
 }
 
