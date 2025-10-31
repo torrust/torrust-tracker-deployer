@@ -1,8 +1,16 @@
 //! Integration Tests for Template Generation
 
+use std::sync::{Arc, Mutex};
+
 use crate::presentation::cli::CreateAction;
 use crate::presentation::commands::create;
 use crate::presentation::commands::tests::TestContext;
+use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+
+/// Helper to create test `UserOutput`
+fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
+    Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
+}
 
 #[test]
 fn it_should_generate_template_with_default_path() {
@@ -13,8 +21,9 @@ fn it_should_generate_template_with_default_path() {
     std::env::set_current_dir(test_context.working_dir()).unwrap();
 
     let action = CreateAction::Template { output_path: None };
+    let user_output = create_test_user_output();
 
-    let result = create::handle_create_command(action, test_context.working_dir());
+    let result = create::handle_create_command(action, test_context.working_dir(), &user_output);
 
     // Restore original directory
     std::env::set_current_dir(original_dir).unwrap();
@@ -56,8 +65,9 @@ fn it_should_generate_template_with_custom_path() {
     let action = CreateAction::Template {
         output_path: Some(custom_path.clone()),
     };
+    let user_output = create_test_user_output();
 
-    let result = create::handle_create_command(action, test_context.working_dir());
+    let result = create::handle_create_command(action, test_context.working_dir(), &user_output);
 
     assert!(result.is_ok(), "Template generation should succeed");
 
@@ -80,8 +90,9 @@ fn it_should_generate_valid_json_template() {
     let action = CreateAction::Template {
         output_path: Some(template_path.clone()),
     };
+    let user_output = create_test_user_output();
 
-    create::handle_create_command(action, test_context.working_dir()).unwrap();
+    create::handle_create_command(action, test_context.working_dir(), &user_output).unwrap();
 
     // Read and parse the generated template
     let file_content = std::fs::read_to_string(&template_path).unwrap();
@@ -124,8 +135,9 @@ fn it_should_create_parent_directories() {
     let action = CreateAction::Template {
         output_path: Some(deep_path.clone()),
     };
+    let user_output = create_test_user_output();
 
-    let result = create::handle_create_command(action, test_context.working_dir());
+    let result = create::handle_create_command(action, test_context.working_dir(), &user_output);
 
     assert!(result.is_ok(), "Should create parent directories");
     assert!(

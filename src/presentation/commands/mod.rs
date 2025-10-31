@@ -4,8 +4,11 @@
 //! It serves as the central dispatch point for command execution and provides consistent
 //! error handling across all commands.
 
+use std::sync::{Arc, Mutex};
+
 use crate::presentation::cli::Commands;
 use crate::presentation::errors::CommandError;
+use crate::presentation::user_output::UserOutput;
 
 // Re-export command modules
 pub mod constants;
@@ -33,6 +36,7 @@ pub mod tests;
 ///
 /// * `command` - The parsed CLI command to execute
 /// * `working_dir` - Working directory for environment data storage
+/// * `user_output` - Shared user output service for consistent output formatting
 ///
 /// # Returns
 ///
@@ -47,27 +51,32 @@ pub mod tests;
 ///
 /// ```rust
 /// use clap::Parser;
-/// use torrust_tracker_deployer_lib::presentation::{cli, commands};
-/// use std::path::Path;
+/// use torrust_tracker_deployer_lib::presentation::{cli, commands, user_output};
+/// use std::{path::Path, sync::{Arc, Mutex}};
 ///
 /// let cli = cli::Cli::parse();
 /// if let Some(command) = cli.command {
 ///     let working_dir = Path::new(".");
-///     let result = commands::execute(command, working_dir);
+///     let user_output = Arc::new(Mutex::new(user_output::UserOutput::new(user_output::VerbosityLevel::Normal)));
+///     let result = commands::execute(command, working_dir, &user_output);
 ///     match result {
 ///         Ok(_) => println!("Command executed successfully"),
-///         Err(e) => commands::handle_error(&e),
+///         Err(e) => commands::handle_error(&e, &user_output),
 ///     }
 /// }
 /// ```
-pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), CommandError> {
+pub fn execute(
+    command: Commands,
+    working_dir: &std::path::Path,
+    user_output: &Arc<Mutex<UserOutput>>,
+) -> Result<(), CommandError> {
     match command {
         Commands::Create { action } => {
-            create::handle_create_command(action, working_dir)?;
+            create::handle_create_command(action, working_dir, user_output)?;
             Ok(())
         }
         Commands::Destroy { environment } => {
-            destroy::handle_destroy_command(&environment, working_dir)?;
+            destroy::handle_destroy_command(&environment, working_dir, user_output)?;
             Ok(())
         } // Future commands will be added here:
           //
@@ -97,14 +106,16 @@ pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), C
 /// # Arguments
 ///
 /// * `error` - The command error to handle and display
+/// * `user_output` - Shared user output service for consistent output formatting
 ///
 /// # Example
 ///
 /// ```rust
 /// use clap::Parser;
-/// use torrust_tracker_deployer_lib::presentation::{commands, cli, errors};
+/// use torrust_tracker_deployer_lib::presentation::{commands, cli, errors, user_output};
 /// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroySubcommandError;
 /// use torrust_tracker_deployer_lib::domain::environment::name::EnvironmentNameError;
+/// use std::sync::{Arc, Mutex};
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // Example of handling a command error (simulated for testing)
@@ -119,17 +130,26 @@ pub fn execute(command: Commands, working_dir: &std::path::Path) -> Result<(), C
 ///         source: name_error,
 ///     })
 /// );
-/// commands::handle_error(&sample_error);
+/// let user_output = Arc::new(Mutex::new(user_output::UserOutput::new(user_output::VerbosityLevel::Normal)));
+/// commands::handle_error(&sample_error, &user_output);
 /// # Ok(())
 /// # }
 /// ```
-pub fn handle_error(error: &CommandError) {
-    use crate::presentation::user_output::{UserOutput, VerbosityLevel};
-
-    let mut output = UserOutput::new(VerbosityLevel::Normal);
+pub fn handle_error(error: &CommandError, user_output: &Arc<Mutex<UserOutput>>) {
     let help_text = error.help();
 
-    output.error(&format!("{error}"));
-    output.blank_line();
-    output.info_block("For detailed troubleshooting:", &[help_text]);
+    if let Ok(mut output) = user_output.lock() {
+        output.error(&format!("{error}"));
+        output.blank_line();
+        output.info_block("For detailed troubleshooting:", &[help_text]);
+    } else {
+        // Cannot acquire lock - print to stderr directly as fallback
+        eprintln!("ERROR: {error}");
+        eprintln!();
+        eprintln!("CRITICAL: Failed to acquire user output lock.");
+        eprintln!("This indicates a panic occurred in another thread.");
+        eprintln!();
+        eprintln!("For detailed troubleshooting:");
+        eprintln!("{help_text}");
+    }
 }

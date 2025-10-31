@@ -42,6 +42,13 @@ pub enum CommandError {
     /// Use `.help()` for detailed troubleshooting steps.
     #[error("Destroy command failed: {0}")]
     Destroy(Box<DestroySubcommandError>),
+
+    /// User output lock acquisition failed
+    ///
+    /// Failed to acquire the mutex lock for user output. This typically indicates
+    /// a panic occurred in another thread while holding the lock.
+    #[error("Failed to acquire user output lock - a panic occurred in another thread while displaying output")]
+    UserOutputLockFailed,
 }
 
 impl From<CreateSubcommandError> for CommandError {
@@ -94,6 +101,27 @@ impl CommandError {
         match self {
             Self::Create(e) => e.help(),
             Self::Destroy(e) => e.help(),
+            Self::UserOutputLockFailed => {
+                "User Output Lock Failed - Detailed Troubleshooting:
+
+This error indicates that a panic occurred in another thread while it was using
+the user output system, leaving the mutex in a \"poisoned\" state.
+
+1. Check for any error messages that appeared before this one
+   - The original panic message should appear earlier in the output
+   - This will indicate what caused the initial failure
+
+2. This is typically caused by:
+   - A bug in the application code that caused a panic
+   - An unhandled error condition that triggered a panic
+   - Resource exhaustion (memory, file handles, etc.)
+
+3. If you can reproduce this issue:
+   - Run with --verbose to see more detailed logging
+   - Report the issue with the full error output and steps to reproduce
+
+This is a serious application error that indicates a bug. Please report it to the developers."
+            }
         }
     }
 }

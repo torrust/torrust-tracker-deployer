@@ -15,10 +15,11 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use std::sync::{Arc, Mutex};
 //! use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
 //! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 //!
-//! let mut output = UserOutput::new(VerbosityLevel::Normal);
+//! let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
 //! let mut progress = ProgressReporter::new(output, 3);
 //!
 //! // Step 1: Load configuration
@@ -58,6 +59,7 @@
 //! ✅ Environment 'test-env' created successfully
 //! ```
 
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::presentation::user_output::UserOutput;
@@ -70,10 +72,11 @@ use crate::presentation::user_output::UserOutput;
 /// # Examples
 ///
 /// ```rust
+/// use std::sync::{Arc, Mutex};
 /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
 /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 ///
-/// let output = UserOutput::new(VerbosityLevel::Normal);
+/// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
 /// let mut progress = ProgressReporter::new(output, 2);
 ///
 /// progress.start_step("Step 1");
@@ -85,7 +88,7 @@ use crate::presentation::user_output::UserOutput;
 /// progress.complete("All done!");
 /// ```
 pub struct ProgressReporter {
-    output: UserOutput,
+    output: Arc<Mutex<UserOutput>>,
     total_steps: usize,
     current_step: usize,
     step_start: Option<Instant>,
@@ -96,20 +99,21 @@ impl ProgressReporter {
     ///
     /// # Arguments
     ///
-    /// * `output` - User output handler for displaying messages
+    /// * `output` - Shared user output handler for displaying messages
     /// * `total_steps` - Total number of steps in the operation
     ///
     /// # Examples
     ///
     /// ```rust
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let output = UserOutput::new(VerbosityLevel::Normal);
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
     /// let progress = ProgressReporter::new(output, 5);
     /// ```
     #[must_use]
-    pub fn new(output: UserOutput, total_steps: usize) -> Self {
+    pub fn new(output: Arc<Mutex<UserOutput>>, total_steps: usize) -> Self {
         Self {
             output,
             total_steps,
@@ -127,13 +131,19 @@ impl ProgressReporter {
     ///
     /// * `description` - Human-readable description of what this step does
     ///
+    /// # Panics
+    ///
+    /// Panics if the `UserOutput` mutex is poisoned, which indicates another
+    /// thread panicked while holding the lock. This is an unrecoverable state.
+    ///
     /// # Examples
     ///
     /// ```rust
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let output = UserOutput::new(VerbosityLevel::Normal);
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
     /// let mut progress = ProgressReporter::new(output, 3);
     ///
     /// progress.start_step("Loading configuration");
@@ -143,10 +153,13 @@ impl ProgressReporter {
         self.current_step += 1;
         self.step_start = Some(Instant::now());
 
-        self.output.progress(&format!(
-            "[{}/{}] {}...",
-            self.current_step, self.total_steps, description
-        ));
+        self.output
+            .lock()
+            .expect("UserOutput mutex poisoned")
+            .progress(&format!(
+                "[{}/{}] {}...",
+                self.current_step, self.total_steps, description
+            ));
     }
 
     /// Complete the current step with optional result message
@@ -158,13 +171,19 @@ impl ProgressReporter {
     ///
     /// * `result` - Optional description of what was accomplished
     ///
+    /// # Panics
+    ///
+    /// Panics if the `UserOutput` mutex is poisoned, which indicates another
+    /// thread panicked while holding the lock. This is an unrecoverable state.
+    ///
     /// # Examples
     ///
     /// ```rust
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let output = UserOutput::new(VerbosityLevel::Normal);
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
     /// let mut progress = ProgressReporter::new(output, 2);
     ///
     /// progress.start_step("Loading data");
@@ -181,9 +200,13 @@ impl ProgressReporter {
 
             if let Some(msg) = result {
                 self.output
+                    .lock()
+                    .expect("UserOutput mutex poisoned")
                     .result(&format!("  ✓ {} (took {})", msg, format_duration(duration)));
             } else {
                 self.output
+                    .lock()
+                    .expect("UserOutput mutex poisoned")
                     .result(&format!("  ✓ Done (took {})", format_duration(duration)));
             }
         }
@@ -200,14 +223,20 @@ impl ProgressReporter {
     ///
     /// * `description` - What is currently happening within this step
     ///
+    /// # Panics
+    ///
+    /// Panics if the `UserOutput` mutex is poisoned, which indicates another
+    /// thread panicked while holding the lock. This is an unrecoverable state.
+    ///
     /// # Examples
     ///
     /// ```rust
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let output = UserOutput::new(VerbosityLevel::Normal);
-    /// let mut progress = ProgressReporter::new(output, 1);
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let mut progress = ProgressReporter::new(output.clone(), 1);
     ///
     /// progress.start_step("Provisioning infrastructure");
     /// progress.sub_step("Creating virtual machine");
@@ -216,7 +245,10 @@ impl ProgressReporter {
     /// progress.complete_step(Some("Infrastructure ready"));
     /// ```
     pub fn sub_step(&mut self, description: &str) {
-        self.output.result(&format!("    → {description}"));
+        self.output
+            .lock()
+            .expect("UserOutput mutex poisoned")
+            .result(&format!("    → {description}"));
     }
 
     /// Complete all steps and show summary
@@ -228,14 +260,20 @@ impl ProgressReporter {
     ///
     /// * `summary` - Final success message describing what was accomplished
     ///
+    /// # Panics
+    ///
+    /// Panics if the `UserOutput` mutex is poisoned, which indicates another
+    /// thread panicked while holding the lock. This is an unrecoverable state.
+    ///
     /// # Examples
     ///
     /// ```rust
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let output = UserOutput::new(VerbosityLevel::Normal);
-    /// let mut progress = ProgressReporter::new(output, 1);
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let mut progress = ProgressReporter::new(output.clone(), 1);
     ///
     /// progress.start_step("Creating environment");
     /// progress.complete_step(None);
@@ -243,10 +281,13 @@ impl ProgressReporter {
     /// // Output: ✅ Environment 'test-env' created successfully
     /// ```
     pub fn complete(&mut self, summary: &str) {
-        self.output.success(summary);
+        self.output
+            .lock()
+            .expect("UserOutput mutex poisoned")
+            .success(summary);
     }
 
-    /// Get a mutable reference to the underlying `UserOutput`
+    /// Get a reference to the shared `UserOutput`
     ///
     /// This allows using other output methods (like `error`, `warn`)
     /// while progress is being tracked.
@@ -254,19 +295,20 @@ impl ProgressReporter {
     /// # Examples
     ///
     /// ```rust
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let output = UserOutput::new(VerbosityLevel::Normal);
-    /// let mut progress = ProgressReporter::new(output, 1);
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let mut progress = ProgressReporter::new(output.clone(), 1);
     ///
     /// progress.start_step("Checking conditions");
-    /// progress.output().warn("Some non-critical warning");
+    /// progress.output().lock().unwrap().warn("Some non-critical warning");
     /// progress.complete_step(None);
     /// ```
     #[must_use]
-    pub fn output(&mut self) -> &mut UserOutput {
-        &mut self.output
+    pub fn output(&self) -> &Arc<Mutex<UserOutput>> {
+        &self.output
     }
 }
 
@@ -316,6 +358,21 @@ mod tests {
         (output, stdout_buffer, stderr_buffer)
     }
 
+    /// Helper to create wrapped test `UserOutput` for `ProgressReporter`
+    ///
+    /// Returns: (`Arc<Mutex<UserOutput>>`, Arc to stdout buffer, Arc to stderr buffer)
+    #[allow(clippy::type_complexity)]
+    fn create_wrapped_test_output(
+        verbosity: VerbosityLevel,
+    ) -> (
+        Arc<Mutex<UserOutput>>,
+        Arc<Mutex<Vec<u8>>>,
+        Arc<Mutex<Vec<u8>>>,
+    ) {
+        let (output, stdout, stderr) = create_test_user_output(verbosity);
+        (Arc::new(Mutex::new(output)), stdout, stderr)
+    }
+
     /// A writer that shares a buffer through an Arc<Mutex<Vec<u8>>>
     struct SharedWriter(Arc<Mutex<Vec<u8>>>);
 
@@ -331,7 +388,7 @@ mod tests {
 
     #[test]
     fn it_should_create_progress_reporter_with_total_steps() {
-        let output = UserOutput::new(VerbosityLevel::Normal);
+        let (output, _stdout, _stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
         let progress = ProgressReporter::new(output, 5);
 
         assert_eq!(progress.total_steps, 5);
@@ -341,7 +398,7 @@ mod tests {
 
     #[test]
     fn it_should_start_step_and_increment_counter() {
-        let (output, _stdout, stderr) = create_test_user_output(VerbosityLevel::Normal);
+        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
         let mut progress = ProgressReporter::new(output, 3);
 
         progress.start_step("Loading configuration");
@@ -355,7 +412,7 @@ mod tests {
 
     #[test]
     fn it_should_track_multiple_steps() {
-        let (output, _stdout, stderr) = create_test_user_output(VerbosityLevel::Normal);
+        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
         let mut progress = ProgressReporter::new(output, 3);
 
         progress.start_step("Step 1");
@@ -375,7 +432,7 @@ mod tests {
 
     #[test]
     fn it_should_complete_step_with_result_message() {
-        let (output, stdout, _stderr) = create_test_user_output(VerbosityLevel::Normal);
+        let (output, stdout, _stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
         let mut progress = ProgressReporter::new(output, 1);
 
         progress.start_step("Loading data");
@@ -389,7 +446,7 @@ mod tests {
 
     #[test]
     fn it_should_complete_step_without_result_message() {
-        let (output, stdout, _stderr) = create_test_user_output(VerbosityLevel::Normal);
+        let (output, stdout, _stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
         let mut progress = ProgressReporter::new(output, 1);
 
         progress.start_step("Processing");
@@ -403,7 +460,7 @@ mod tests {
 
     #[test]
     fn it_should_report_sub_steps() {
-        let (output, stdout, _stderr) = create_test_user_output(VerbosityLevel::Normal);
+        let (output, stdout, _stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
         let mut progress = ProgressReporter::new(output, 1);
 
         progress.start_step("Provisioning");
@@ -418,7 +475,7 @@ mod tests {
 
     #[test]
     fn it_should_display_completion_summary() {
-        let (output, _stdout, stderr) = create_test_user_output(VerbosityLevel::Normal);
+        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
         let mut progress = ProgressReporter::new(output, 1);
 
         progress.start_step("Creating environment");
@@ -431,10 +488,14 @@ mod tests {
 
     #[test]
     fn it_should_provide_access_to_output() {
-        let (output, _stdout, stderr) = create_test_user_output(VerbosityLevel::Normal);
-        let mut progress = ProgressReporter::new(output, 1);
+        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let progress = ProgressReporter::new(output, 1);
 
-        progress.output().warn("Test warning");
+        progress
+            .output()
+            .lock()
+            .expect("UserOutput mutex poisoned")
+            .warn("Test warning");
 
         let stderr_content = String::from_utf8(stderr.lock().unwrap().clone()).unwrap();
         assert!(stderr_content.contains("⚠️  Test warning"));
@@ -442,7 +503,7 @@ mod tests {
 
     #[test]
     fn it_should_respect_verbosity_levels() {
-        let (output, _stdout, stderr) = create_test_user_output(VerbosityLevel::Quiet);
+        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Quiet);
         let mut progress = ProgressReporter::new(output, 1);
 
         progress.start_step("Step 1");
@@ -476,7 +537,7 @@ mod tests {
 
     #[test]
     fn it_should_handle_full_workflow() {
-        let (output, stdout, stderr) = create_test_user_output(VerbosityLevel::Normal);
+        let (output, stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
         let mut progress = ProgressReporter::new(output, 3);
 
         // Step 1

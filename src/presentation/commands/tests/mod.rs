@@ -27,7 +27,10 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use tempfile::TempDir;
+
+use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 
 // ============================================================================
 // PUBLIC API - Test Context
@@ -57,6 +60,7 @@ use tempfile::TempDir;
 pub struct TestContext {
     _temp_dir: TempDir,
     working_dir: PathBuf,
+    user_output: Arc<Mutex<UserOutput>>,
 }
 
 impl TestContext {
@@ -69,10 +73,12 @@ impl TestContext {
     pub fn new() -> Self {
         let temp_dir = TempDir::new().expect("Failed to create temporary directory");
         let working_dir = temp_dir.path().to_path_buf();
+        let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
 
         Self {
             _temp_dir: temp_dir,
             working_dir,
+            user_output,
         }
     }
 
@@ -83,6 +89,12 @@ impl TestContext {
     #[must_use]
     pub fn working_dir(&self) -> &Path {
         &self.working_dir
+    }
+
+    /// Get a reference to the shared user output
+    #[must_use]
+    pub fn user_output(&self) -> Arc<Mutex<UserOutput>> {
+        Arc::clone(&self.user_output)
     }
 }
 

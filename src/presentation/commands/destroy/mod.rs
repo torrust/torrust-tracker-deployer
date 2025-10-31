@@ -18,9 +18,12 @@
 //!
 //! ```rust,no_run
 //! use std::path::Path;
+//! use std::sync::{Arc, Mutex};
 //! use torrust_tracker_deployer_lib::presentation::commands::destroy;
+//! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 //!
-//! if let Err(e) = destroy::handle_destroy_command("test-env", Path::new(".")) {
+//! let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+//! if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), &output) {
 //!     eprintln!("Destroy failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }

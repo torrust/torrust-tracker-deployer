@@ -4,9 +4,9 @@
 //! configuration file templates with placeholder values.
 
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
-use crate::presentation::commands::constants::DEFAULT_VERBOSITY;
 use crate::presentation::user_output::UserOutput;
 
 use super::super::errors::CreateSubcommandError;
@@ -19,6 +19,7 @@ use super::super::errors::CreateSubcommandError;
 /// # Arguments
 ///
 /// * `output_path` - Path where the template file should be created
+/// * `user_output` - Shared user output service for consistent output formatting
 ///
 /// # Returns
 ///
@@ -33,9 +34,14 @@ use super::super::errors::CreateSubcommandError;
 /// Panics if the tokio runtime cannot be created. This is a critical system
 /// failure that prevents any async operations from running.
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle_template_generation(output_path: &Path) -> Result<(), CreateSubcommandError> {
-    // Create user output for progress messages
-    let mut output = UserOutput::new(DEFAULT_VERBOSITY);
+pub fn handle_template_generation(
+    output_path: &Path,
+    user_output: &Arc<Mutex<UserOutput>>,
+) -> Result<(), CreateSubcommandError> {
+    // Lock user output for progress messages
+    let mut output = user_output
+        .lock()
+        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?;
 
     output.progress("Generating configuration template...");
 

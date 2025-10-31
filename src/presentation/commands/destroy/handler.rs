@@ -3,10 +3,13 @@
 //! This module handles the destroy command execution at the presentation layer,
 //! including environment validation, repository initialization, and user interaction.
 
+use std::sync::{Arc, Mutex};
+
 use crate::domain::environment::name::EnvironmentName;
 use crate::presentation::commands::context::report_error;
 use crate::presentation::commands::factory::CommandHandlerFactory;
 use crate::presentation::progress::ProgressReporter;
+use crate::presentation::user_output::UserOutput;
 
 use super::errors::DestroySubcommandError;
 
@@ -23,6 +26,7 @@ use super::errors::DestroySubcommandError;
 ///
 /// * `environment_name` - The name of the environment to destroy
 /// * `working_dir` - Root directory for environment data storage
+/// * `user_output` - Shared user output service for consistent output formatting
 ///
 /// # Returns
 ///
@@ -40,10 +44,13 @@ use super::errors::DestroySubcommandError;
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::commands::destroy;
 /// use std::path::Path;
+/// use std::sync::{Arc, Mutex};
+/// use torrust_tracker_deployer_lib::presentation::commands::destroy;
+/// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 ///
-/// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new(".")) {
+/// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+/// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), &user_output) {
 ///     eprintln!("Destroy failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
@@ -52,13 +59,14 @@ use super::errors::DestroySubcommandError;
 pub fn handle_destroy_command(
     environment_name: &str,
     working_dir: &std::path::Path,
+    user_output: &Arc<Mutex<UserOutput>>,
 ) -> Result<(), DestroySubcommandError> {
     // Create factory and context with all shared dependencies
     let factory = CommandHandlerFactory::new();
-    let ctx = factory.create_context(working_dir.to_path_buf());
+    let ctx = factory.create_context(working_dir.to_path_buf(), user_output.clone());
 
     // Create progress reporter for 3 main steps
-    let mut progress = ProgressReporter::new(ctx.into_output(), 3);
+    let mut progress = ProgressReporter::new(ctx.into_user_output(), 3);
 
     // Step 1: Validate environment name
     progress.start_step("Validating environment");
@@ -76,7 +84,7 @@ pub fn handle_destroy_command(
 
     // Step 2: Initialize dependencies
     progress.start_step("Initializing dependencies");
-    let ctx = factory.create_context(working_dir.to_path_buf());
+    let ctx = factory.create_context(working_dir.to_path_buf(), user_output.clone());
     let command_handler = factory.create_destroy_handler(&ctx);
     progress.complete_step(None);
 
@@ -103,16 +111,23 @@ pub fn handle_destroy_command(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::user_output::VerbosityLevel;
     use std::fs;
     use tempfile::TempDir;
+
+    /// Test helper to create a test user output
+    fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
+        Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
+    }
 
     #[test]
     fn it_should_return_error_for_invalid_environment_name() {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
+        let user_output = create_test_user_output();
 
         // Test with invalid environment name (contains underscore)
-        let result = handle_destroy_command("invalid_name", working_dir);
+        let result = handle_destroy_command("invalid_name", working_dir, &user_output);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -127,8 +142,9 @@ mod tests {
     fn it_should_return_error_for_empty_environment_name() {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
+        let user_output = create_test_user_output();
 
-        let result = handle_destroy_command("", working_dir);
+        let result = handle_destroy_command("", working_dir, &user_output);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -143,9 +159,10 @@ mod tests {
     fn it_should_return_error_for_nonexistent_environment() {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
+        let user_output = create_test_user_output();
 
         // Try to destroy an environment that doesn't exist
-        let result = handle_destroy_command("nonexistent-env", working_dir);
+        let result = handle_destroy_command("nonexistent-env", working_dir, &user_output);
 
         assert!(result.is_err());
         // Should get DestroyOperationFailed because environment doesn't exist
@@ -161,6 +178,7 @@ mod tests {
     fn it_should_accept_valid_environment_name() {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
+        let user_output = create_test_user_output();
 
         // Create a mock environment directory to test validation
         let env_dir = working_dir.join("test-env");
@@ -168,7 +186,7 @@ mod tests {
 
         // Valid environment name should pass validation, but will fail
         // at destroy operation since we don't have a real environment setup
-        let result = handle_destroy_command("test-env", working_dir);
+        let result = handle_destroy_command("test-env", working_dir, &user_output);
 
         // Should fail at operation, not at name validation
         if let Err(DestroySubcommandError::InvalidEnvironmentName { .. }) = result {
