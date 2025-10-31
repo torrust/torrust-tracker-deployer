@@ -124,6 +124,7 @@ Pulumi
 pytest
 RAII
 Repomix
+reprioritize
 reprovisioning
 reqwest
 resolv
@@ -137,6 +138,7 @@ rustc
 Rustdoc
 RUSTDOCFLAGS
 rustflags
+rustls
 rustup
 Scriptability
 SCRIPTDIR
@@ -170,7 +172,6 @@ tasklist
 Tera
 terraformrc
 tést
-rustls
 Testcontain
 testcontainer
 testcontainers
