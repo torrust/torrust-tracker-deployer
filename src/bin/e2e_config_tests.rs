@@ -112,6 +112,10 @@ struct CliArgs {
 pub async fn main() -> Result<()> {
     let cli = CliArgs::parse();
 
+    // Set environment variable to skip firewall configuration in container-based tests
+    // UFW/iptables requires kernel capabilities not available in unprivileged containers
+    std::env::set_var("TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER", "true");
+
     // Initialize logging with production log location for E2E tests using the builder pattern
     LoggingBuilder::new(std::path::Path::new("./data/logs"))
         .with_format(cli.log_format.clone())

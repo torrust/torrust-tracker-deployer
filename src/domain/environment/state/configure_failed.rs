@@ -47,6 +47,8 @@ pub enum ConfigureStep {
     InstallDockerCompose,
     /// Configuring automatic security updates
     ConfigureSecurityUpdates,
+    /// Configuring UFW firewall
+    ConfigureFirewall,
 }
 
 /// Error state - Application configuration failed

@@ -8,7 +8,8 @@ use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
-    ConfigureSecurityUpdatesStep, InstallDockerComposeStep, InstallDockerStep,
+    ConfigureFirewallStep, ConfigureSecurityUpdatesStep, InstallDockerComposeStep,
+    InstallDockerStep,
 };
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
@@ -24,6 +25,7 @@ use crate::shared::error::Traceable;
 /// 1. Install Docker
 /// 2. Install Docker Compose
 /// 3. Configure automatic security updates
+/// 4. Configure UFW firewall
 ///
 /// # State Management
 ///
@@ -160,6 +162,27 @@ impl ConfigureCommandHandler {
         ConfigureSecurityUpdatesStep::new(Arc::clone(&self.ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
+
+        let current_step = ConfigureStep::ConfigureFirewall;
+        // Allow tests or CI to explicitly skip the firewall configuration step
+        // (useful for container-based test runs where iptables/ufw require
+        // elevated kernel capabilities not available in unprivileged containers).
+        let skip_firewall = std::env::var("TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER")
+            .map(|v| v == "true")
+            .unwrap_or(false);
+
+        if skip_firewall {
+            info!(
+                command = "configure",
+                step = "configure_firewall",
+                status = "skipped",
+                "Skipping UFW firewall configuration due to TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER"
+            );
+        } else {
+            ConfigureFirewallStep::new(Arc::clone(&self.ansible_client))
+                .execute()
+                .map_err(|e| (e.into(), current_step))?;
+        }
 
         // Transition to Configured state
         let configured = environment.clone().configured();
