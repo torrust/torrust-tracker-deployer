@@ -23,7 +23,7 @@
 use tempfile::TempDir;
 use tracing::{info, warn};
 
-use crate::bootstrap::container::Services;
+use super::container::Services;
 use crate::config::Config;
 use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::Environment;

@@ -6,6 +6,7 @@
 //!
 //! ## Module Structure
 //!
+//! - `container` - Service dependency injection container for E2E tests
 //! - `context` - Test context configuration and management
 //! - `containers` - Container management for E2E testing scenarios
 //! - `tasks` - High-level testing tasks and workflows
@@ -16,9 +17,13 @@
 //! provisioning, configuration, validation, and cleanup phases to ensure
 //! the entire deployment system works correctly.
 
+pub mod container;
 pub mod containers;
 pub mod context;
 pub mod tasks;
+
+// Re-export for convenience
+pub use container::Services;
 
 // Re-export provisioned container types for backward compatibility
 pub use containers::{ContainerError, RunningProvisionedContainer, StoppedProvisionedContainer};

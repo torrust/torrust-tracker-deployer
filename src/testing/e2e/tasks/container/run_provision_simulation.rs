@@ -25,8 +25,8 @@ use tracing::info;
 
 use crate::adapters::ssh::SshCredentials;
 use crate::application::steps::RenderAnsibleTemplatesStep;
-use crate::bootstrap::container::Services;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
+use crate::testing::e2e::container::Services;
 use crate::testing::e2e::containers::actions::{SshKeySetupAction, SshWaitAction};
 use crate::testing::e2e::containers::timeout::ContainerTimeouts;
 use crate::testing::e2e::containers::{RunningProvisionedContainer, StoppedProvisionedContainer};

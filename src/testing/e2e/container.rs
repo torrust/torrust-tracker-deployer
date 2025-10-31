@@ -1,14 +1,20 @@
-//! Dependency injection container for deployment services
+//! Dependency injection container for testing services
 //!
 //! This module provides the `Services` struct that acts as a dependency injection container,
-//! holding all the service clients and template renderers needed for deployment operations.
-//! It centralizes service construction and makes them easily accessible throughout the application.
+//! holding all the service clients and template renderers needed for E2E testing operations.
+//! It centralizes service construction and makes them easily accessible throughout tests.
 //!
 //! ## Services Included
 //!
 //! - **Command clients**: `OpenTofu`, LXD, Ansible clients for external tool interaction
 //! - **Template services**: Template manager and specialized renderers for different tools
 //! - **Configuration**: Centralized configuration management
+//!
+//! ## Usage in Tests
+//!
+//! This container is primarily used in E2E tests to create all necessary service dependencies
+//! in a consistent way. In production, services are created on-demand depending on which
+//! command the user is executing.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -36,7 +42,7 @@ use crate::shared::Clock;
 /// TODO: Make this configurable via Config in the future
 const REPOSITORY_LOCK_TIMEOUT_SECS: u64 = 30;
 
-/// Service clients and renderers for performing actions
+/// Service clients and renderers for performing actions in tests
 pub struct Services {
     // Command wrappers
     pub opentofu_client: Arc<OpenTofuClient>,

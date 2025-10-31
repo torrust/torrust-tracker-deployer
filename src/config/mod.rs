@@ -25,7 +25,7 @@ use std::path::PathBuf;
 /// Centralizes all deployment-related configuration including file paths,
 /// service connection details, and runtime behavior settings.
 ///
-/// Created once at deployment start and passed to [`Services::new()`](crate::bootstrap::container::Services::new).
+/// Created once at deployment start and passed to [`Services::new()`](crate::testing::e2e::container::Services::new).
 pub struct Config {
     /// Directory containing template files for rendering configurations.
     ///

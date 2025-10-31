@@ -23,6 +23,7 @@ pub use network::{PortChecker, PortCheckerError, PortUsageChecker, PortUsageErro
 
 // Re-export E2E types for convenience
 pub use e2e::{
+    container::Services,
     containers::{ContainerError, RunningProvisionedContainer, StoppedProvisionedContainer},
     context::{TestContext, TestContextType},
 };
