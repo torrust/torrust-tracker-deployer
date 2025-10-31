@@ -57,16 +57,6 @@
         - firewall
         - ssh
 
-    - name: Allow SSH service by name (additional safety measure)
-      community.general.ufw:
-        rule: allow
-        name: ssh
-        comment: "SSH service (standard SSH)"
-      tags:
-        - security
-        - firewall
-        - ssh
-
     - name: Enable UFW firewall (AFTER SSH rules are in place)
       community.general.ufw:
         state: enabled
