@@ -144,6 +144,13 @@ pub fn handle_error(error: &CommandError, user_output: &Arc<Mutex<UserOutput>>) 
         output.info_block("For detailed troubleshooting:", &[help_text]);
     } else {
         // Cannot acquire lock - print to stderr directly as fallback
+        //
+        // RATIONALE: Plain text formatting without emojis/styling is intentional.
+        // When the mutex is poisoned, we're in a degraded error state where another
+        // thread has panicked. Using plain eprintln! ensures maximum compatibility
+        // and avoids any additional complexity that could fail in this critical path.
+        // The goal here is reliability over aesthetics - get the error message to
+        // the user no matter what, even if it's not pretty.
         eprintln!("ERROR: {error}");
         eprintln!();
         eprintln!("CRITICAL: Failed to acquire user output lock.");

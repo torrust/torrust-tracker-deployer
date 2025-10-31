@@ -54,7 +54,7 @@ pub fn handle_environment_creation(
     let ctx = factory.create_context(working_dir.to_path_buf(), user_output.clone());
 
     // Create progress reporter for 3 main steps
-    let mut progress = ProgressReporter::new(user_output.clone(), 3);
+    let mut progress = ProgressReporter::new(ctx.user_output().clone(), 3);
 
     // Step 1: Load configuration
     progress.start_step("Loading configuration")?;
@@ -117,7 +117,7 @@ fn load_configuration(
 ) -> Result<EnvironmentCreationConfig, CreateSubcommandError> {
     user_output
         .lock()
-        .map_err(|_| crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned)?
+        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?
         .progress(&format!(
             "Loading configuration from '{}'...",
             env_file.display()
@@ -159,7 +159,7 @@ fn execute_create_command(
 ) -> Result<Environment, CreateSubcommandError> {
     user_output
         .lock()
-        .map_err(|_| crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned)?
+        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?
         .progress(&format!(
             "Creating environment '{}'...",
             config.environment.name
@@ -167,7 +167,7 @@ fn execute_create_command(
 
     user_output
         .lock()
-        .map_err(|_| crate::presentation::progress::ProgressReporterError::UserOutputMutexPoisoned)?
+        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?
         .progress("Validating configuration and creating environment...");
 
     #[allow(clippy::manual_inspect)]
@@ -199,10 +199,16 @@ fn execute_create_command(
 /// This function will panic if the `UserOutput` mutex is poisoned. Since this is
 /// called after successful environment creation (when operation is complete),
 /// a poisoned mutex indicates an irrecoverable state and panicking is acceptable.
+///
+/// The panic message provides detailed context matching our error handling principles:
+/// clear explanation of what happened, why it's critical, and that it indicates a bug.
 fn display_creation_results(user_output: &Arc<Mutex<UserOutput>>, environment: &Environment) {
-    let mut output = user_output
-        .lock()
-        .expect("UserOutput mutex poisoned after successful environment creation");
+    let mut output = user_output.lock().expect(
+        "CRITICAL: UserOutput mutex poisoned after successful environment creation. \
+         This indicates a panic occurred in another thread while holding the output lock. \
+         The environment was created successfully, but we cannot display the results. \
+         This is a bug - please report it with full logs using --log-output file-and-stderr",
+    );
 
     output.success(&format!(
         "Environment '{}' created successfully",

@@ -65,7 +65,7 @@ pub fn handle_destroy_command(
     let ctx = factory.create_context(working_dir.to_path_buf(), user_output.clone());
 
     // Create progress reporter for 3 main steps
-    let mut progress = ProgressReporter::new(user_output.clone(), 3);
+    let mut progress = ProgressReporter::new(ctx.user_output().clone(), 3);
 
     // Step 1: Validate environment name
     progress.start_step("Validating environment")?;
