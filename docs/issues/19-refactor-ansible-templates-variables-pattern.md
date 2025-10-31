@@ -1,6 +1,6 @@
 # EPIC: Refactor Ansible Templates to Variables Pattern
 
-**Issue**: #19
+**Issue**: [#19](https://github.com/torrust/torrust-tracker-deployer/issues/19)
 **Type**: EPIC
 **Parent Epic**: #16 - Finish ConfigureCommand - System Security Configuration
 **Depends On**: #18 - Configure UFW Firewall
@@ -16,8 +16,8 @@ After implementing the security updates and firewall configuration, we now have 
 
 This EPIC uses **vertical slice** approach - each sub-task is a complete, independently deployable increment:
 
-- [ ] #19.1 - [Create Variables Template Infrastructure](./19.1-create-variables-template.md) - Complete implementation with unit tests and documentation
-- [ ] #19.2 - [Convert Firewall to Variables Pattern](./19.2-convert-firewall-template-to-static.md) - Complete conversion including cleanup, documentation updates, and full validation
+- [ ] [#105](https://github.com/torrust/torrust-tracker-deployer/issues/105) - [Create Variables Template Infrastructure](./105-create-variables-template.md) - Complete implementation with unit tests and documentation
+- [ ] [#106](https://github.com/torrust/torrust-tracker-deployer/issues/106) - [Convert Firewall to Variables Pattern](./106-convert-firewall-template-to-static.md) - Complete conversion including cleanup, documentation updates, and full validation
 
 ## Goals
 
@@ -115,7 +115,7 @@ This epic uses **vertical slice methodology** - each sub-task is a complete, ind
 
 **Outcome**: System works with new variables infrastructure in place, fully tested and documented.
 
-**See**: [19.1-create-variables-template.md](./19.1-create-variables-template.md)
+**See**: [Issue #105](./105-create-variables-template.md)
 
 ### Vertical Slice 2: Convert Firewall to Variables Pattern (Estimated: 4.5 days)
 
@@ -137,7 +137,7 @@ This epic uses **vertical slice methodology** - each sub-task is a complete, ind
 
 **Outcome**: System works with firewall using variables pattern, old code removed, documentation updated, all tests passing.
 
-**See**: [19.2-convert-firewall-template-to-static.md](./19.2-convert-firewall-template-to-static.md)
+**See**: [Issue #106](./106-convert-firewall-template-to-static.md)
 
 ### Total Estimated Time
 
@@ -161,7 +161,7 @@ This epic uses **vertical slice methodology** - each sub-task is a complete, ind
 
 ### Dependencies
 
-- #19.2 requires #19.1 to be completed (variables template must exist)
+- #106 requires #105 to be completed (variables template must exist)
 
 ## High-Level Architecture Changes
 
@@ -309,7 +309,7 @@ All implementation details have been moved to the following sub-task documents:
 
 ### Task 1: Create Variables Template Infrastructure
 
-See **[Issue #19.1 - Create Variables Template](./19.1-create-variables-template.md)** for complete implementation details including:
+See **[Issue #105 - Create Variables Template](./105-create-variables-template.md)** for complete implementation details including:
 
 - Template file structure (`variables.yml.tera`)
 - Context implementation (`AnsibleVariablesContext`)
@@ -320,7 +320,7 @@ See **[Issue #19.1 - Create Variables Template](./19.1-create-variables-template
 
 ### Task 2: Convert Firewall Template to Static (Complete Vertical Slice)
 
-See **[Issue #19.2 - Convert Firewall Template to Static](./19.2-convert-firewall-template-to-static.md)** for complete implementation details including:
+See **[Issue #106 - Convert Firewall Template to Static](./106-convert-firewall-template-to-static.md)** for complete implementation details including:
 
 - Template conversion (remove `.tera`, add `vars_files`)
 - Static file registration in `copy_static_templates()`
@@ -335,8 +335,8 @@ See **[Issue #19.2 - Convert Firewall Template to Static](./19.2-convert-firewal
 
 Refer to individual sub-task acceptance criteria for detailed requirements:
 
-- **Issue #19.1**: Variables template infrastructure created and tested
-- **Issue #19.2**: Firewall playbook converted to static with complete cleanup, documentation updates, and validation
+- **Issue #105**: Variables template infrastructure created and tested
+- **Issue #106**: Firewall playbook converted to static with complete cleanup, documentation updates, and validation
 
 ### High-Level Success Metrics
 
@@ -361,7 +361,7 @@ For detailed implementation guidance, refer to the individual sub-task documents
 
 ## AI Agent Guidance
 
-When implementing this EPIC, work through the sub-tasks in the specified order (#19.1 → #19.2). Each sub-task document contains:
+When implementing this EPIC, work through the sub-tasks in the specified order (#105 → #106). Each sub-task document contains:
 
 - Detailed phase-by-phase implementation steps
 - "Baby steps" approach to keep tests green
@@ -373,7 +373,7 @@ When implementing this EPIC, work through the sub-tasks in the specified order (
 - ✅ Agent can run: `cargo test`, `cargo run --bin e2e-config-tests`, `cargo run --bin linter all`
 - ❌ Agent cannot run: `cargo run --bin e2e-tests-full` (requires LXD/VMs - human reviewer must execute)
 
-**Note**: Task #19.2 is a complete vertical slice that includes implementation, cleanup of old code, documentation updates, and full validation all in one task.
+**Note**: Task #106 is a complete vertical slice that includes implementation, cleanup of old code, documentation updates, and full validation all in one task.
 
 ## Detailed Acceptance Criteria
 
@@ -481,14 +481,14 @@ This refactoring is perfectly timed because:
 1. **Inventory Limitation**: Keep `inventory.yml.tera` as Tera template (Ansible inventories don't support `vars_files`)
 2. **Variables Scope**: Only system configuration variables in `variables.yml` (connection details stay in inventory)
 3. **AnsibleClient Generic**: Update signature to accept optional extra args for flexibility
-4. **Clean Up Old Code**: Delete `firewall_playbook` renderer and wrapper as part of #19.2 (vertical slice)
+4. **Clean Up Old Code**: Delete `firewall_playbook` renderer and wrapper as part of #106 (vertical slice)
 
 ### Implementation Order
 
 Follow the subtasks in sequence:
 
-1. **Task #19.1**: Create variables template infrastructure (new files, no breaking changes)
-2. **Task #19.2**: Convert firewall template to static - complete vertical slice including:
+1. **Task #105**: Create variables template infrastructure (new files, no breaking changes)
+2. **Task #106**: Convert firewall template to static - complete vertical slice including:
    - Template conversion and API updates
    - Cleanup of old architecture
    - Documentation updates

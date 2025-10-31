@@ -1,9 +1,9 @@
 # Convert Firewall Template to Static
 
-**Issue**: #19.2
-**Parent Epic**: #19 - Refactor Ansible Templates to Variables Pattern
-**Depends On**: #19.1 - Create Variables Template
-**Related**: [Parent Epic](./19-refactor-ansible-templates-variables-pattern.md), [Issue #19.1](./19.1-create-variables-template.md)
+**Issue**: [#106](https://github.com/torrust/torrust-tracker-deployer/issues/106)
+**Parent Epic**: [#19](https://github.com/torrust/torrust-tracker-deployer/issues/19) - Refactor Ansible Templates to Variables Pattern
+**Depends On**: [#105](https://github.com/torrust/torrust-tracker-deployer/issues/105) - Create Variables Template
+**Related**: [Parent Epic](./19-refactor-ansible-templates-variables-pattern.md), [Issue #105](./105-create-variables-template.md)
 
 ## Overview
 

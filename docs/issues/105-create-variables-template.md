@@ -1,7 +1,7 @@
 # Create Variables Template
 
-**Issue**: #19.1
-**Parent Epic**: #19 - Refactor Ansible Templates to Variables Pattern
+**Issue**: [#105](https://github.com/torrust/torrust-tracker-deployer/issues/105)
+**Parent Epic**: [#19](https://github.com/torrust/torrust-tracker-deployer/issues/19) - Refactor Ansible Templates to Variables Pattern
 **Related**: [Parent Epic](./19-refactor-ansible-templates-variables-pattern.md), [Template System Architecture](../technical/template-system-architecture.md)
 
 ## Overview
