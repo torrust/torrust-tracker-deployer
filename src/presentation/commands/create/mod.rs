@@ -22,14 +22,17 @@
 //!
 //! ```rust,no_run
 //! use std::path::{Path, PathBuf};
+//! use std::sync::{Arc, Mutex};
 //! use torrust_tracker_deployer_lib::presentation::cli::commands::CreateAction;
 //! use torrust_tracker_deployer_lib::presentation::commands::create;
+//! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 //!
 //! let action = CreateAction::Environment {
 //!     env_file: PathBuf::from("config/environment.json")
 //! };
+//! let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
 //!
-//! if let Err(e) = create::handle_create_command(action, Path::new(".")) {
+//! if let Err(e) = create::handle_create_command(action, Path::new("."), &output) {
 //!     eprintln!("Create failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }

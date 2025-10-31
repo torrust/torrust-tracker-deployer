@@ -32,14 +32,17 @@
 //!
 //! ```rust
 //! use std::path::Path;
+//! use std::sync::{Arc, Mutex};
 //! use torrust_tracker_deployer_lib::presentation::commands::factory::CommandHandlerFactory;
+//! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 //!
 //! fn handle_command(working_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 //!     // Create factory with default configuration
 //!     let factory = CommandHandlerFactory::new();
+//!     let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
 //!     
 //!     // Create command context
-//!     let context = factory.create_context(working_dir.to_path_buf());
+//!     let context = factory.create_context(working_dir.to_path_buf(), output);
 //!     
 //!     // Create command handler
 //!     let handler = factory.create_create_handler(&context);
@@ -50,9 +53,11 @@
 //! ```
 
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use crate::application::command_handlers::{CreateCommandHandler, DestroyCommandHandler};
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::presentation::user_output::UserOutput;
 
 use super::constants::DEFAULT_LOCK_TIMEOUT;
 use super::context::CommandContext;
@@ -70,10 +75,13 @@ use super::context::CommandContext;
 ///
 /// ```rust
 /// use std::path::PathBuf;
+/// use std::sync::{Arc, Mutex};
 /// use torrust_tracker_deployer_lib::presentation::commands::factory::CommandHandlerFactory;
+/// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 ///
 /// let factory = CommandHandlerFactory::new();
-/// let context = factory.create_context(PathBuf::from("."));
+/// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+/// let context = factory.create_context(PathBuf::from("."), output);
 /// let handler = factory.create_create_handler(&context);
 /// ```
 pub struct CommandHandlerFactory {
@@ -119,14 +127,21 @@ impl CommandHandlerFactory {
     ///
     /// ```rust
     /// use std::path::PathBuf;
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::commands::factory::CommandHandlerFactory;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let factory = CommandHandlerFactory::new();
-    /// let context = factory.create_context(PathBuf::from("./data"));
+    /// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let context = factory.create_context(PathBuf::from("./data"), user_output);
     /// ```
     #[must_use]
-    pub fn create_context(&self, working_dir: PathBuf) -> CommandContext {
-        CommandContext::new_with_factory(&self.repository_factory, working_dir)
+    pub fn create_context(
+        &self,
+        working_dir: PathBuf,
+        user_output: Arc<Mutex<UserOutput>>,
+    ) -> CommandContext {
+        CommandContext::new_with_factory(&self.repository_factory, working_dir, user_output)
     }
 
     /// Create a create command handler
@@ -145,10 +160,13 @@ impl CommandHandlerFactory {
     ///
     /// ```rust
     /// use std::path::PathBuf;
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::commands::factory::CommandHandlerFactory;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let factory = CommandHandlerFactory::new();
-    /// let context = factory.create_context(PathBuf::from("."));
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let context = factory.create_context(PathBuf::from("."), output);
     /// let handler = factory.create_create_handler(&context);
     /// ```
     #[must_use]
@@ -172,10 +190,13 @@ impl CommandHandlerFactory {
     ///
     /// ```rust
     /// use std::path::PathBuf;
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::commands::factory::CommandHandlerFactory;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let factory = CommandHandlerFactory::new();
-    /// let context = factory.create_context(PathBuf::from("."));
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let context = factory.create_context(PathBuf::from("."), output);
     /// let handler = factory.create_destroy_handler(&context);
     /// ```
     #[must_use]
@@ -221,7 +242,30 @@ impl CommandHandlerFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::user_output::VerbosityLevel;
     use tempfile::TempDir;
+
+    /// Test helper to create a test user output
+    fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
+        Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
+    }
+
+    /// Test helper to create a test setup with factory, temp directory, and user output
+    ///
+    /// Returns a tuple of (`CommandHandlerFactory`, `TempDir`, `PathBuf`, `Arc<Mutex<UserOutput>>`)
+    /// The `TempDir` must be kept alive for the duration of the test.
+    fn create_test_setup() -> (
+        CommandHandlerFactory,
+        TempDir,
+        PathBuf,
+        Arc<Mutex<UserOutput>>,
+    ) {
+        let factory = CommandHandlerFactory::new();
+        let temp_dir = TempDir::new().unwrap();
+        let working_dir = temp_dir.path().to_path_buf();
+        let user_output = create_test_user_output();
+        (factory, temp_dir, working_dir, user_output)
+    }
 
     #[test]
     fn it_should_create_factory_with_default_configuration() {
@@ -243,11 +287,9 @@ mod tests {
 
     #[test]
     fn it_should_create_context_with_factory() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
-        let context = factory.create_context(working_dir);
+        let context = factory.create_context(working_dir, user_output);
 
         // Verify context is created with dependencies
         let _ = context.repository();
@@ -256,11 +298,9 @@ mod tests {
 
     #[test]
     fn it_should_create_create_handler() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
-        let context = factory.create_context(working_dir);
+        let context = factory.create_context(working_dir, user_output);
         let _handler = factory.create_create_handler(&context);
 
         // Verify handler is created (basic structure test)
@@ -268,11 +308,9 @@ mod tests {
 
     #[test]
     fn it_should_create_destroy_handler() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
-        let context = factory.create_context(working_dir);
+        let context = factory.create_context(working_dir, user_output);
         let _handler = factory.create_destroy_handler(&context);
 
         // Verify handler is created (basic structure test)
@@ -280,13 +318,11 @@ mod tests {
 
     #[test]
     fn it_should_create_multiple_contexts_from_same_factory() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (factory, _temp_dir, working_dir, _user_output) = create_test_setup();
 
         // Should be able to create multiple contexts
-        let context1 = factory.create_context(working_dir.clone());
-        let context2 = factory.create_context(working_dir);
+        let context1 = factory.create_context(working_dir.clone(), create_test_user_output());
+        let context2 = factory.create_context(working_dir, create_test_user_output());
 
         // Both contexts should be functional
         let _ = context1.repository();
@@ -295,11 +331,9 @@ mod tests {
 
     #[test]
     fn it_should_create_multiple_handlers_from_same_context() {
-        let factory = CommandHandlerFactory::new();
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
-        let context = factory.create_context(working_dir);
+        let context = factory.create_context(working_dir, user_output);
 
         // Should be able to create multiple handlers from same context
         let _create_handler = factory.create_create_handler(&context);
@@ -315,11 +349,10 @@ mod tests {
         let repository_factory = RepositoryFactory::new(Duration::from_millis(100));
         let factory = CommandHandlerFactory::new_for_testing(repository_factory);
 
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (_factory, _temp_dir, working_dir, user_output) = create_test_setup();
 
         // Should be able to create context with custom factory
-        let context = factory.create_context(working_dir);
+        let context = factory.create_context(working_dir, user_output);
         let _ = context.repository();
     }
 }

@@ -3,9 +3,17 @@
 //! These tests verify the destroy command behavior at the presentation layer,
 //! including user interaction, error handling, and command orchestration.
 
+use std::fs;
+use std::sync::{Arc, Mutex};
+
 use crate::presentation::commands::destroy::{handle_destroy_command, DestroySubcommandError};
 use crate::presentation::commands::tests::TestContext;
-use std::fs;
+use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+
+/// Helper to create test `UserOutput`
+fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
+    Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
+}
 
 #[test]
 fn it_should_reject_invalid_environment_names() {
@@ -19,7 +27,8 @@ fn it_should_reject_invalid_environment_names() {
     ];
 
     for name in invalid_names {
-        let result = handle_destroy_command(name, context.working_dir());
+        let user_output = create_test_user_output();
+        let result = handle_destroy_command(name, context.working_dir(), &user_output);
         assert!(
             result.is_err(),
             "Should reject invalid environment name: {name}",
@@ -35,7 +44,8 @@ fn it_should_reject_invalid_environment_names() {
     // Test too long name separately due to String allocation
     // The actual max length depends on domain validation rules
     let too_long_name = "a".repeat(64);
-    let result = handle_destroy_command(&too_long_name, context.working_dir());
+    let user_output = create_test_user_output();
+    let result = handle_destroy_command(&too_long_name, context.working_dir(), &user_output);
     assert!(result.is_err(), "Should get some error for 64-char name");
     // Accept either InvalidEnvironmentName OR DestroyOperationFailed
     // The domain layer determines what length is valid
@@ -54,7 +64,8 @@ fn it_should_accept_valid_environment_names() {
     ];
 
     for name in valid_names {
-        let result = handle_destroy_command(name, context.working_dir());
+        let user_output = create_test_user_output();
+        let result = handle_destroy_command(name, context.working_dir(), &user_output);
 
         // Will fail at operation since environment doesn't exist,
         // but should NOT fail at name validation
@@ -66,7 +77,8 @@ fn it_should_accept_valid_environment_names() {
 
     // Test max length separately due to String allocation
     let max_length_name = "a".repeat(63);
-    let result = handle_destroy_command(&max_length_name, context.working_dir());
+    let user_output = create_test_user_output();
+    let result = handle_destroy_command(&max_length_name, context.working_dir(), &user_output);
     if let Err(DestroySubcommandError::InvalidEnvironmentName { .. }) = result {
         panic!("Should not reject valid 63-char environment name");
     }
@@ -76,8 +88,9 @@ fn it_should_accept_valid_environment_names() {
 #[test]
 fn it_should_fail_for_nonexistent_environment() {
     let context = TestContext::new();
+    let user_output = create_test_user_output();
 
-    let result = handle_destroy_command("nonexistent-env", context.working_dir());
+    let result = handle_destroy_command("nonexistent-env", context.working_dir(), &user_output);
 
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -92,7 +105,11 @@ fn it_should_fail_for_nonexistent_environment() {
 fn it_should_provide_help_for_errors() {
     let context = TestContext::new();
 
-    let result = handle_destroy_command("invalid_name", context.working_dir());
+    let result = handle_destroy_command(
+        "invalid_name",
+        context.working_dir(),
+        &context.user_output(),
+    );
 
     assert!(result.is_err());
     let error = result.unwrap_err();
@@ -112,7 +129,7 @@ fn it_should_work_with_custom_working_directory() {
     fs::create_dir(&custom_working_dir).unwrap();
 
     // Try to destroy from custom directory
-    let result = handle_destroy_command("test-env", &custom_working_dir);
+    let result = handle_destroy_command("test-env", &custom_working_dir, &context.user_output());
 
     // Should fail at operation (environment doesn't exist) but not at path validation
     assert!(result.is_err());

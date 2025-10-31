@@ -31,18 +31,21 @@
 //!
 //! ```rust
 //! use std::path::Path;
+//! use std::sync::{Arc, Mutex};
 //! use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
+//! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 //!
 //! fn handle_command(working_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-//!     let mut ctx = CommandContext::new(working_dir.to_path_buf());
+//!     let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+//!     let mut ctx = CommandContext::new(working_dir.to_path_buf(), output.clone());
 //!     
-//!     ctx.output().progress("Starting operation...");
+//!     output.lock().unwrap().progress("Starting operation...");
 //!     
 //!     // Use repository and clock through context
 //!     let repo = ctx.repository();
 //!     let clock = ctx.clock();
 //!     
-//!     ctx.output().success("Operation completed");
+//!     output.lock().unwrap().success("Operation completed");
 //!     Ok(())
 //! }
 //! ```
@@ -55,7 +58,7 @@ use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::user_output::UserOutput;
 use crate::shared::{Clock, SystemClock};
 
-use super::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
+use super::constants::DEFAULT_LOCK_TIMEOUT;
 
 /// Command execution context containing shared dependencies
 ///
@@ -71,10 +74,13 @@ use super::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
 ///
 /// ```rust
 /// use std::path::PathBuf;
+/// use std::sync::{Arc, Mutex};
 /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
+/// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 ///
 /// let working_dir = PathBuf::from(".");
-/// let mut ctx = CommandContext::new(working_dir);
+/// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+/// let ctx = CommandContext::new(working_dir, user_output.clone());
 ///
 /// // Access repository
 /// let repo = ctx.repository();
@@ -83,13 +89,14 @@ use super::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
 /// let clock = ctx.clock();
 ///
 /// // Access user output
-/// ctx.output().progress("Processing...");
-/// ctx.output().success("Complete!");
+/// let mut output = ctx.user_output().lock().unwrap();
+/// output.progress("Processing...");
+/// output.success("Complete!");
 /// ```
 pub struct CommandContext {
     repository: Arc<dyn EnvironmentRepository>,
     clock: Arc<dyn Clock>,
-    output: UserOutput,
+    user_output: Arc<std::sync::Mutex<UserOutput>>,
 }
 
 impl CommandContext {
@@ -99,32 +106,35 @@ impl CommandContext {
     /// and default configuration from constants:
     /// - Repository with default lock timeout
     /// - System clock
-    /// - User output with default verbosity
+    /// - Injected user output service
     ///
     /// # Arguments
     ///
     /// * `working_dir` - Root directory for environment data storage
+    /// * `user_output` - Shared user output service for consistent output formatting
     ///
     /// # Examples
     ///
     /// ```rust
     /// use std::path::PathBuf;
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let working_dir = PathBuf::from("./data");
-    /// let ctx = CommandContext::new(working_dir);
+    /// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let ctx = CommandContext::new(working_dir, user_output);
     /// ```
     #[must_use]
-    pub fn new(working_dir: PathBuf) -> Self {
+    pub fn new(working_dir: PathBuf, user_output: Arc<std::sync::Mutex<UserOutput>>) -> Self {
         let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
         let repository = repository_factory.create(working_dir);
         let clock = Arc::new(SystemClock);
-        let output = UserOutput::new(DEFAULT_VERBOSITY);
 
         Self {
             repository,
             clock,
-            output,
+            user_output,
         }
     }
 
@@ -138,29 +148,36 @@ impl CommandContext {
     ///
     /// * `repository_factory` - Pre-configured repository factory
     /// * `working_dir` - Root directory for environment data storage
+    /// * `user_output` - Shared user output service for consistent output formatting
     ///
     /// # Examples
     ///
     /// ```rust
     /// use std::path::PathBuf;
     /// use std::time::Duration;
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// let factory = RepositoryFactory::new(Duration::from_secs(30));
     /// let working_dir = PathBuf::from("./data");
-    /// let ctx = CommandContext::new_with_factory(&factory, working_dir);
+    /// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let ctx = CommandContext::new_with_factory(&factory, working_dir, user_output);
     /// ```
     #[must_use]
-    pub fn new_with_factory(repository_factory: &RepositoryFactory, working_dir: PathBuf) -> Self {
+    pub fn new_with_factory(
+        repository_factory: &RepositoryFactory,
+        working_dir: PathBuf,
+        user_output: Arc<std::sync::Mutex<UserOutput>>,
+    ) -> Self {
         let repository = repository_factory.create(working_dir);
         let clock = Arc::new(SystemClock);
-        let output = UserOutput::new(DEFAULT_VERBOSITY);
 
         Self {
             repository,
             clock,
-            output,
+            user_output,
         }
     }
 
@@ -173,12 +190,12 @@ impl CommandContext {
     ///
     /// * `repository` - Repository implementation (can be a mock)
     /// * `clock` - Clock implementation (can be a mock)
-    /// * `output` - User output instance (can use custom writers)
+    /// * `user_output` - Shared user output service for consistent output formatting
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use std::sync::Arc;
+    /// use std::sync::{Arc, Mutex};
     /// use std::path::PathBuf;
     /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
@@ -190,20 +207,20 @@ impl CommandContext {
     /// let factory = RepositoryFactory::new(Duration::from_secs(5));
     /// let repository = factory.create(PathBuf::from("/tmp/test"));
     /// let clock: Arc<dyn Clock> = Arc::new(SystemClock);
-    /// let output = UserOutput::new(VerbosityLevel::Quiet);
+    /// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Quiet)));
     ///
-    /// let ctx = CommandContext::new_for_testing(repository, clock, output);
+    /// let ctx = CommandContext::new_for_testing(repository, clock, user_output);
     /// ```
     #[must_use]
     pub fn new_for_testing(
         repository: Arc<dyn EnvironmentRepository>,
         clock: Arc<dyn Clock>,
-        output: UserOutput,
+        user_output: Arc<std::sync::Mutex<UserOutput>>,
     ) -> Self {
         Self {
             repository,
             clock,
-            output,
+            user_output,
         }
     }
 
@@ -213,9 +230,12 @@ impl CommandContext {
     ///
     /// ```rust
     /// use std::path::PathBuf;
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let ctx = CommandContext::new(PathBuf::from("."));
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let ctx = CommandContext::new(PathBuf::from("."), output);
     /// let repo = ctx.repository();
     /// ```
     #[must_use]
@@ -229,9 +249,12 @@ impl CommandContext {
     ///
     /// ```rust
     /// use std::path::PathBuf;
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let ctx = CommandContext::new(PathBuf::from("."));
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let ctx = CommandContext::new(PathBuf::from("."), output);
     /// let clock = ctx.clock();
     /// ```
     #[must_use]
@@ -239,79 +262,61 @@ impl CommandContext {
         &self.clock
     }
 
-    /// Get mutable reference to user output
+    /// Get reference to the shared user output
+    ///
+    /// Returns the Arc-wrapped Mutex-protected `UserOutput` instance, allowing
+    /// multiple components to share access to the same output sink.
     ///
     /// # Examples
     ///
     /// ```rust
     /// use std::path::PathBuf;
+    /// use std::sync::{Arc, Mutex};
     /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let mut ctx = CommandContext::new(PathBuf::from("."));
-    /// ctx.output().progress("Working...");
-    /// ctx.output().success("Done!");
-    /// ```
-    pub fn output(&mut self) -> &mut UserOutput {
-        &mut self.output
-    }
-
-    /// Consume the context and return the user output
-    ///
-    /// This method is useful when you want to pass ownership of the output
-    /// to another component, such as a `ProgressReporter`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use std::path::PathBuf;
-    /// use torrust_tracker_deployer_lib::presentation::commands::context::CommandContext;
-    /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    ///
-    /// let ctx = CommandContext::new(PathBuf::from("."));
-    /// let progress = ProgressReporter::new(ctx.into_output(), 3);
+    /// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let ctx = CommandContext::new(PathBuf::from("."), user_output);
+    /// let output_ref = ctx.user_output();
+    /// output_ref.lock().unwrap().progress("Working...");
+    /// output_ref.lock().unwrap().success("Done!");
     /// ```
     #[must_use]
-    pub fn into_output(self) -> UserOutput {
-        self.output
+    pub fn user_output(&self) -> &Arc<std::sync::Mutex<UserOutput>> {
+        &self.user_output
     }
-}
-
-/// Report an error through user output
-///
-/// This utility function provides a consistent way to report errors to users.
-/// It outputs the error message through the provided user output instance.
-///
-/// # Arguments
-///
-/// * `output` - User output instance to use for reporting
-/// * `error` - Error to report (any type implementing `std::error::Error`)
-///
-/// # Examples
-///
-/// ```rust
-/// use torrust_tracker_deployer_lib::presentation::commands::context::report_error;
-/// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
-///
-/// let mut output = UserOutput::new(VerbosityLevel::Normal);
-/// let error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
-/// report_error(&mut output, &error);
-/// ```
-pub fn report_error(output: &mut UserOutput, error: &dyn std::error::Error) {
-    output.error(&error.to_string());
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
     use tempfile::TempDir;
+
+    use crate::presentation::user_output::VerbosityLevel;
+
+    /// Test helper to create a test user output
+    fn create_test_user_output() -> Arc<std::sync::Mutex<UserOutput>> {
+        Arc::new(std::sync::Mutex::new(UserOutput::new(
+            VerbosityLevel::Normal,
+        )))
+    }
+
+    /// Test helper to create a test context with temporary directory
+    ///
+    /// Returns a tuple of (`TempDir`, `PathBuf`, `Arc<Mutex<UserOutput>>`)
+    /// The `TempDir` must be kept alive for the duration of the test.
+    fn create_test_setup() -> (TempDir, PathBuf, Arc<std::sync::Mutex<UserOutput>>) {
+        let temp_dir = TempDir::new().unwrap();
+        let working_dir = temp_dir.path().to_path_buf();
+        let user_output = create_test_user_output();
+        (temp_dir, working_dir, user_output)
+    }
 
     #[test]
     fn it_should_create_context_with_production_dependencies() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
-        let ctx = CommandContext::new(working_dir);
+        let ctx = CommandContext::new(working_dir, user_output);
 
         // Verify dependencies are present and accessible (we can call methods on them)
         let _ = ctx.repository();
@@ -320,10 +325,9 @@ mod tests {
 
     #[test]
     fn it_should_provide_access_to_repository() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
-        let ctx = CommandContext::new(working_dir);
+        let ctx = CommandContext::new(working_dir, user_output);
 
         // Should be able to access repository
         let _repo = ctx.repository();
@@ -331,34 +335,32 @@ mod tests {
 
     #[test]
     fn it_should_provide_access_to_clock() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
-        let ctx = CommandContext::new(working_dir);
+        let ctx = CommandContext::new(working_dir, user_output);
 
         // Should be able to access clock
         let _clock = ctx.clock();
     }
 
     #[test]
-    fn it_should_provide_mutable_access_to_output() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+    fn it_should_provide_access_to_user_output() {
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
-        let mut ctx = CommandContext::new(working_dir);
+        let ctx = CommandContext::new(working_dir, user_output);
 
-        // Should be able to use output methods
-        ctx.output().progress("Test progress");
-        ctx.output().success("Test success");
+        // Should be able to use output methods through Arc<Mutex<>>
+        let output_ref = ctx.user_output();
+        output_ref.lock().unwrap().progress("Test progress");
+        output_ref.lock().unwrap().success("Test success");
     }
 
     #[test]
     fn it_should_create_context_with_factory() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
         let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-        let ctx = CommandContext::new_with_factory(&repository_factory, working_dir);
+        let ctx = CommandContext::new_with_factory(&repository_factory, working_dir, user_output);
 
         // Verify we can access all dependencies
         let _repo = ctx.repository();
@@ -374,10 +376,12 @@ mod tests {
         let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
         let repository = repository_factory.create(working_dir);
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
-        let output = UserOutput::new(DEFAULT_VERBOSITY);
+        let user_output = Arc::new(std::sync::Mutex::new(UserOutput::new(
+            VerbosityLevel::Normal,
+        )));
 
         // Create context with test dependencies
-        let ctx = CommandContext::new_for_testing(repository, clock, output);
+        let ctx = CommandContext::new_for_testing(repository, clock, user_output);
 
         // Verify we can access all dependencies
         let _repo = ctx.repository();
@@ -386,42 +390,23 @@ mod tests {
 
     #[test]
     fn it_should_allow_accessing_output_multiple_times() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
-        let mut ctx = CommandContext::new(working_dir);
+        let ctx = CommandContext::new(working_dir, user_output);
 
-        // Should be able to call output() multiple times
-        ctx.output().progress("First message");
-        ctx.output().success("Second message");
-        ctx.output().error("Third message");
-    }
-
-    #[test]
-    fn it_should_report_errors_through_output() {
-        // Create output with custom writers for testing
-        let stderr_buf = Vec::new();
-        let stderr_writer = Box::new(Cursor::new(stderr_buf));
-        let stdout_writer = Box::new(Cursor::new(Vec::new()));
-
-        let mut output = UserOutput::with_writers(DEFAULT_VERBOSITY, stdout_writer, stderr_writer);
-
-        // Create an error and report it
-        let error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
-        report_error(&mut output, &error);
-
-        // Note: In a real test, we'd verify the output was written,
-        // but that requires extracting the buffer from output which isn't directly possible
-        // without additional helper methods. The important thing is that it compiles and runs.
+        // Should be able to call user_output() multiple times
+        let output_ref = ctx.user_output();
+        output_ref.lock().unwrap().progress("First message");
+        output_ref.lock().unwrap().success("Second message");
+        output_ref.lock().unwrap().error("Third message");
     }
 
     #[test]
     fn it_should_use_default_constants() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path().to_path_buf();
+        let (_temp_dir, working_dir, user_output) = create_test_setup();
 
-        // Creating context should use DEFAULT_LOCK_TIMEOUT and DEFAULT_VERBOSITY
-        let _ctx = CommandContext::new(working_dir);
+        // Creating context should use DEFAULT_LOCK_TIMEOUT
+        let _ctx = CommandContext::new(working_dir, user_output);
 
         // This test verifies that the code compiles with the constants
         // The actual values are tested in the constants module

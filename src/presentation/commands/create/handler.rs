@@ -4,8 +4,10 @@
 //! routing between different subcommands (environment creation or template generation).
 
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use crate::presentation::cli::commands::CreateAction;
+use crate::presentation::user_output::UserOutput;
 
 use super::errors::CreateSubcommandError;
 use super::subcommands;
@@ -18,6 +20,7 @@ use super::subcommands;
 ///
 /// * `action` - The create action to perform (environment creation or template generation)
 /// * `working_dir` - Root directory for environment data storage
+/// * `user_output` - Shared user output service for consistent output formatting
 ///
 /// # Returns
 ///
@@ -30,14 +33,15 @@ use super::subcommands;
 pub fn handle_create_command(
     action: CreateAction,
     working_dir: &Path,
+    user_output: &Arc<Mutex<UserOutput>>,
 ) -> Result<(), CreateSubcommandError> {
     match action {
         CreateAction::Environment { env_file } => {
-            subcommands::handle_environment_creation(&env_file, working_dir)
+            subcommands::handle_environment_creation(&env_file, working_dir, user_output)
         }
         CreateAction::Template { output_path } => {
             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
-            subcommands::handle_template_generation(&template_path)
+            subcommands::handle_template_generation(&template_path, user_output)
         }
     }
 }

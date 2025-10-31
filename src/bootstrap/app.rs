@@ -27,8 +27,9 @@ use crate::{bootstrap, presentation};
 /// This function serves as the application bootstrap, handling:
 /// 1. CLI argument parsing (delegated to presentation layer)
 /// 2. Logging initialization using `LoggingConfig`
-/// 3. Command execution (delegated to presentation layer)
-/// 4. Error handling and exit code management
+/// 3. Service container creation for dependency injection
+/// 4. Command execution (delegated to presentation layer)
+/// 5. Error handling and exit code management
 ///
 /// # Panics
 ///
@@ -54,10 +55,15 @@ pub fn run() {
         "Application started"
     );
 
+    // Initialize service container for dependency injection
+    let container = bootstrap::Container::new();
+
     match cli.command {
         Some(command) => {
-            if let Err(e) = presentation::execute(command, &cli.global.working_dir) {
-                presentation::handle_error(&e);
+            if let Err(e) =
+                presentation::execute(command, &cli.global.working_dir, &container.user_output())
+            {
+                presentation::handle_error(&e, &container.user_output());
                 std::process::exit(1);
             }
         }

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use crate::application::command_handlers::create::CreateCommandHandlerError;
+use crate::presentation::progress::ProgressReporterError;
 
 /// Format of configuration file
 #[derive(Debug, Clone, Copy)]
@@ -106,6 +107,37 @@ Tip: Check that you have write permissions in the target directory"
         #[source]
         source: crate::application::command_handlers::create::config::CreateConfigError,
     },
+
+    // ===== User Output Lock Errors =====
+    /// User output lock acquisition failed
+    ///
+    /// Failed to acquire the mutex lock for user output. This indicates a panic
+    /// occurred in another thread while holding the lock.
+    #[error("Failed to acquire user output lock - a panic occurred in another thread")]
+    UserOutputLockFailed,
+
+    /// Progress reporting failed
+    ///
+    /// Failed to report progress to the user due to an internal error.
+    /// This indicates a critical internal error.
+    #[error(
+        "Failed to report progress: {source}
+Tip: This is a critical bug - please report it with full logs using --log-output file-and-stderr"
+    )]
+    ProgressReportingFailed {
+        #[source]
+        source: ProgressReporterError,
+    },
+}
+
+// ============================================================================
+// ERROR CONVERSIONS
+// ============================================================================
+
+impl From<ProgressReporterError> for CreateSubcommandError {
+    fn from(source: ProgressReporterError) -> Self {
+        Self::ProgressReportingFailed { source }
+    }
 }
 
 impl CreateSubcommandError {
@@ -187,6 +219,56 @@ For more information, see the configuration documentation."
                 source.help()
             }
             Self::CommandFailed { source } => source.help(),
+            Self::UserOutputLockFailed => {
+                "User Output Lock Failed - Troubleshooting:
+
+This error indicates that a panic occurred in another thread while it was using
+the user output system, leaving the mutex in a \"poisoned\" state.
+
+1. Check for any error messages that appeared before this one
+   - The original panic message should appear earlier in the output
+   - This will indicate what caused the initial failure
+
+2. This is typically caused by:
+   - A bug in the application code that caused a panic
+   - An unhandled error condition that triggered a panic
+   - Resource exhaustion (memory, file handles, etc.)
+
+3. If you can reproduce this issue:
+   - Run with --verbose to see more detailed logging
+   - Report the issue with the full error output and steps to reproduce
+
+This is a serious application error that indicates a bug. Please report it to the developers."
+            }
+            Self::ProgressReportingFailed { .. } => {
+                "Progress Reporting Failed - Critical Internal Error:
+
+This error indicates that the progress reporting system encountered a critical
+internal error while trying to update the user interface. This is a BUG in the
+application and should NOT occur under normal circumstances.
+
+Immediate Actions:
+1. Save any logs using: --log-output file-and-stderr
+2. Note the operation that was in progress when this occurred
+3. Record any error messages that appeared before this one
+4. Document the current state of your environment
+
+Report the Issue:
+1. Include the full log output (--log-output file-and-stderr)
+2. Provide steps to reproduce the error
+3. Include your environment configuration file
+4. Note your operating system and version
+5. Report to: https://github.com/torrust/torrust-tracker-deployer/issues
+
+Workaround:
+1. Restart the application and retry the operation
+2. Try the operation again with --verbose for more details
+3. Check system resources (memory, disk space)
+4. Check file system permissions
+
+This error means the operation may have PARTIALLY completed or FAILED.
+Verify the state of your environment before retrying."
+            }
         }
     }
 }
@@ -251,6 +333,7 @@ mod tests {
     fn it_should_have_help_for_all_error_variants() {
         use crate::application::command_handlers::create::config::CreateConfigError;
         use crate::domain::EnvironmentNameError;
+        use crate::presentation::progress::ProgressReporterError;
 
         let errors: Vec<CreateSubcommandError> = vec![
             CreateSubcommandError::ConfigFileNotFound {
@@ -269,6 +352,9 @@ mod tests {
                         valid_examples: vec!["dev".to_string()],
                     },
                 ),
+            },
+            CreateSubcommandError::ProgressReportingFailed {
+                source: ProgressReporterError::UserOutputMutexPoisoned,
             },
         ];
 
