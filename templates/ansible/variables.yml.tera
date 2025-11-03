@@ -8,8 +8,4 @@
 
 # System Configuration
 ssh_port: {{ ssh_port }}
-# Future service variables can be added here:
-# mysql_port: {{ mysql_port }}
-# tracker_port: {{ tracker_port }}
-# prometheus_port: {{ prometheus_port }}
-# grafana_port: {{ grafana_port }}
+# Future service variables can be added here when needed
