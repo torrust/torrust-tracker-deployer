@@ -1,16 +1,10 @@
 //! Integration Tests for Template Generation
 
-use std::sync::{Arc, Mutex};
-
 use crate::presentation::cli::CreateAction;
 use crate::presentation::commands::create;
 use crate::presentation::commands::tests::TestContext;
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
-
-/// Helper to create test `UserOutput`
-fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
-    Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
-}
+use crate::presentation::user_output::test_support::TestUserOutput;
+use crate::presentation::user_output::VerbosityLevel;
 
 #[test]
 fn it_should_generate_template_with_default_path() {
@@ -21,7 +15,7 @@ fn it_should_generate_template_with_default_path() {
     std::env::set_current_dir(test_context.working_dir()).unwrap();
 
     let action = CreateAction::Template { output_path: None };
-    let user_output = create_test_user_output();
+    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
     let result = create::handle_create_command(action, test_context.working_dir(), &user_output);
 
@@ -65,7 +59,7 @@ fn it_should_generate_template_with_custom_path() {
     let action = CreateAction::Template {
         output_path: Some(custom_path.clone()),
     };
-    let user_output = create_test_user_output();
+    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
     let result = create::handle_create_command(action, test_context.working_dir(), &user_output);
 
@@ -90,7 +84,7 @@ fn it_should_generate_valid_json_template() {
     let action = CreateAction::Template {
         output_path: Some(template_path.clone()),
     };
-    let user_output = create_test_user_output();
+    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
     create::handle_create_command(action, test_context.working_dir(), &user_output).unwrap();
 
@@ -135,7 +129,7 @@ fn it_should_create_parent_directories() {
     let action = CreateAction::Template {
         output_path: Some(deep_path.clone()),
     };
-    let user_output = create_test_user_output();
+    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
     let result = create::handle_create_command(action, test_context.working_dir(), &user_output);
 

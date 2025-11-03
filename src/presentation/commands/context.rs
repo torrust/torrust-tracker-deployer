@@ -292,14 +292,8 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
+    use crate::presentation::user_output::test_support::TestUserOutput;
     use crate::presentation::user_output::VerbosityLevel;
-
-    /// Test helper to create a test user output
-    fn create_test_user_output() -> Arc<std::sync::Mutex<UserOutput>> {
-        Arc::new(std::sync::Mutex::new(UserOutput::new(
-            VerbosityLevel::Normal,
-        )))
-    }
 
     /// Test helper to create a test context with temporary directory
     ///
@@ -308,7 +302,7 @@ mod tests {
     fn create_test_setup() -> (TempDir, PathBuf, Arc<std::sync::Mutex<UserOutput>>) {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
         (temp_dir, working_dir, user_output)
     }
 

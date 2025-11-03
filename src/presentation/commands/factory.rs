@@ -242,13 +242,9 @@ impl CommandHandlerFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::user_output::test_support::TestUserOutput;
     use crate::presentation::user_output::VerbosityLevel;
     use tempfile::TempDir;
-
-    /// Test helper to create a test user output
-    fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
-        Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
-    }
 
     /// Test helper to create a test setup with factory, temp directory, and user output
     ///
@@ -263,7 +259,7 @@ mod tests {
         let factory = CommandHandlerFactory::new();
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path().to_path_buf();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
         (factory, temp_dir, working_dir, user_output)
     }
 
@@ -321,8 +317,12 @@ mod tests {
         let (factory, _temp_dir, working_dir, _user_output) = create_test_setup();
 
         // Should be able to create multiple contexts
-        let context1 = factory.create_context(working_dir.clone(), create_test_user_output());
-        let context2 = factory.create_context(working_dir, create_test_user_output());
+        let context1 = factory.create_context(
+            working_dir.clone(),
+            TestUserOutput::wrapped(VerbosityLevel::Normal),
+        );
+        let context2 =
+            factory.create_context(working_dir, TestUserOutput::wrapped(VerbosityLevel::Normal));
 
         // Both contexts should be functional
         let _ = context1.repository();

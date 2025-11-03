@@ -4,16 +4,11 @@
 //! including user interaction, error handling, and command orchestration.
 
 use std::fs;
-use std::sync::{Arc, Mutex};
 
 use crate::presentation::commands::destroy::{handle_destroy_command, DestroySubcommandError};
 use crate::presentation::commands::tests::TestContext;
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
-
-/// Helper to create test `UserOutput`
-fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
-    Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
-}
+use crate::presentation::user_output::test_support::TestUserOutput;
+use crate::presentation::user_output::VerbosityLevel;
 
 #[test]
 fn it_should_reject_invalid_environment_names() {
@@ -27,7 +22,7 @@ fn it_should_reject_invalid_environment_names() {
     ];
 
     for name in invalid_names {
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
         let result = handle_destroy_command(name, context.working_dir(), &user_output);
         assert!(
             result.is_err(),
@@ -44,7 +39,7 @@ fn it_should_reject_invalid_environment_names() {
     // Test too long name separately due to String allocation
     // The actual max length depends on domain validation rules
     let too_long_name = "a".repeat(64);
-    let user_output = create_test_user_output();
+    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
     let result = handle_destroy_command(&too_long_name, context.working_dir(), &user_output);
     assert!(result.is_err(), "Should get some error for 64-char name");
     // Accept either InvalidEnvironmentName OR DestroyOperationFailed
@@ -64,7 +59,7 @@ fn it_should_accept_valid_environment_names() {
     ];
 
     for name in valid_names {
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
         let result = handle_destroy_command(name, context.working_dir(), &user_output);
 
         // Will fail at operation since environment doesn't exist,
@@ -77,7 +72,7 @@ fn it_should_accept_valid_environment_names() {
 
     // Test max length separately due to String allocation
     let max_length_name = "a".repeat(63);
-    let user_output = create_test_user_output();
+    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
     let result = handle_destroy_command(&max_length_name, context.working_dir(), &user_output);
     if let Err(DestroySubcommandError::InvalidEnvironmentName { .. }) = result {
         panic!("Should not reject valid 63-char environment name");
@@ -88,7 +83,7 @@ fn it_should_accept_valid_environment_names() {
 #[test]
 fn it_should_fail_for_nonexistent_environment() {
     let context = TestContext::new();
-    let user_output = create_test_user_output();
+    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
     let result = handle_destroy_command("nonexistent-env", context.working_dir(), &user_output);
 

@@ -370,58 +370,13 @@ fn format_duration(duration: Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::user_output::test_support::TestUserOutput;
     use crate::presentation::user_output::VerbosityLevel;
-    use std::sync::{Arc, Mutex};
-
-    /// Helper to create test `UserOutput` with buffer writers
-    ///
-    /// Returns: (`UserOutput`, Arc to stdout buffer, Arc to stderr buffer)
-    #[allow(clippy::type_complexity)]
-    fn create_test_user_output(
-        verbosity: VerbosityLevel,
-    ) -> (UserOutput, Arc<Mutex<Vec<u8>>>, Arc<Mutex<Vec<u8>>>) {
-        let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
-        let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
-
-        let stdout_writer = Box::new(SharedWriter(Arc::clone(&stdout_buffer)));
-        let stderr_writer = Box::new(SharedWriter(Arc::clone(&stderr_buffer)));
-
-        let output = UserOutput::with_writers(verbosity, stdout_writer, stderr_writer);
-
-        (output, stdout_buffer, stderr_buffer)
-    }
-
-    /// Helper to create wrapped test `UserOutput` for `ProgressReporter`
-    ///
-    /// Returns: (`Arc<Mutex<UserOutput>>`, Arc to stdout buffer, Arc to stderr buffer)
-    #[allow(clippy::type_complexity)]
-    fn create_wrapped_test_output(
-        verbosity: VerbosityLevel,
-    ) -> (
-        Arc<Mutex<UserOutput>>,
-        Arc<Mutex<Vec<u8>>>,
-        Arc<Mutex<Vec<u8>>>,
-    ) {
-        let (output, stdout, stderr) = create_test_user_output(verbosity);
-        (Arc::new(Mutex::new(output)), stdout, stderr)
-    }
-
-    /// A writer that shares a buffer through an Arc<Mutex<Vec<u8>>>
-    struct SharedWriter(Arc<Mutex<Vec<u8>>>);
-
-    impl std::io::Write for SharedWriter {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.0.lock().unwrap().write(buf)
-        }
-
-        fn flush(&mut self) -> std::io::Result<()> {
-            self.0.lock().unwrap().flush()
-        }
-    }
 
     #[test]
     fn it_should_create_progress_reporter_with_total_steps() {
-        let (output, _stdout, _stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        let (output, _stdout, _stderr) = test_output.into_wrapped();
         let progress = ProgressReporter::new(output, 5);
 
         assert_eq!(progress.total_steps, 5);
@@ -431,7 +386,8 @@ mod tests {
 
     #[test]
     fn it_should_start_step_and_increment_counter() {
-        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        let (output, _stdout, stderr) = test_output.into_wrapped();
         let mut progress = ProgressReporter::new(output, 3);
 
         progress
@@ -447,7 +403,8 @@ mod tests {
 
     #[test]
     fn it_should_track_multiple_steps() {
-        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        let (output, _stdout, stderr) = test_output.into_wrapped();
         let mut progress = ProgressReporter::new(output, 3);
 
         progress
@@ -473,7 +430,8 @@ mod tests {
 
     #[test]
     fn it_should_complete_step_with_result_message() {
-        let (output, stdout, _stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        let (output, stdout, _stderr) = test_output.into_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -491,7 +449,8 @@ mod tests {
 
     #[test]
     fn it_should_complete_step_without_result_message() {
-        let (output, stdout, _stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        let (output, stdout, _stderr) = test_output.into_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -509,7 +468,8 @@ mod tests {
 
     #[test]
     fn it_should_report_sub_steps() {
-        let (output, stdout, _stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        let (output, stdout, _stderr) = test_output.into_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -532,7 +492,8 @@ mod tests {
 
     #[test]
     fn it_should_display_completion_summary() {
-        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        let (output, _stdout, stderr) = test_output.into_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -551,7 +512,8 @@ mod tests {
 
     #[test]
     fn it_should_provide_access_to_output() {
-        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        let (output, _stdout, stderr) = test_output.into_wrapped();
         let progress = ProgressReporter::new(output, 1);
 
         progress
@@ -566,7 +528,8 @@ mod tests {
 
     #[test]
     fn it_should_respect_verbosity_levels() {
-        let (output, _stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Quiet);
+        let test_output = TestUserOutput::new(VerbosityLevel::Quiet);
+        let (output, _stdout, stderr) = test_output.into_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress.start_step("Step 1").expect("Failed to start step");
@@ -602,7 +565,8 @@ mod tests {
 
     #[test]
     fn it_should_handle_full_workflow() {
-        let (output, stdout, stderr) = create_wrapped_test_output(VerbosityLevel::Normal);
+        let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        let (output, stdout, stderr) = test_output.into_wrapped();
         let mut progress = ProgressReporter::new(output, 3);
 
         // Step 1
