@@ -42,7 +42,83 @@ use super::config::Config;
 
 **Why**: This follows universal Rust conventions and makes dependencies immediately visible.
 
-### 2. Public Before Private
+### 2. Prefer Imports Over Full Paths
+
+Always import types and use their short names rather than fully-qualified paths, unless you need to disambiguate naming conflicts.
+
+#### ✅ Good: Import and use short names
+
+```rust
+use std::sync::Arc;
+use crate::presentation::user_output::UserOutput;
+
+pub struct CommandHandler {
+    output: Arc<UserOutput>,
+}
+
+impl CommandHandler {
+    pub fn new(output: Arc<UserOutput>) -> Self {
+        Self { output }
+    }
+
+    pub fn execute(&self) -> Result<()> {
+        self.output.display_success("Done!");
+        Ok(())
+    }
+}
+```
+
+#### ❌ Bad: Full namespace paths
+
+```rust
+// Don't do this - it's verbose and hard to read
+pub struct CommandHandler {
+    output: std::sync::Arc<crate::presentation::user_output::UserOutput>,
+}
+
+impl CommandHandler {
+    pub fn new(output: std::sync::Arc<crate::presentation::user_output::UserOutput>) -> Self {
+        Self { output }
+    }
+}
+```
+
+#### When Full Paths Are Acceptable
+
+Use full paths **only** when you need to disambiguate between types with the same name:
+
+```rust
+// ✅ Good: Disambiguating same-named types
+use crate::domain::Environment as DomainEnvironment;
+use crate::config::Environment as ConfigEnvironment;
+
+// Or when the conflict is rare:
+use crate::domain::Environment;
+
+pub fn compare(
+    domain: &Environment,
+    config: &crate::config::Environment  // Only this one needs full path
+) -> bool {
+    // ...
+}
+```
+
+#### Exception: Quick One-Off Usage
+
+In rare cases where a type is used exactly once and importing it would add clutter, a full path may be acceptable:
+
+```rust
+// Acceptable for single use
+pub fn create_temp_dir() -> std::io::Result<std::path::PathBuf> {
+    // Only used here, importing might not add value
+}
+```
+
+However, if the type appears multiple times, always import it.
+
+**Why**: Short names improve readability and reduce visual noise. Rust's import system exists to make code cleaner - use it!
+
+### 3. Public Before Private
 
 Place public items before private items:
 
@@ -72,7 +148,7 @@ fn calculate_data_dir(name: &str) -> PathBuf {
 
 **Why**: Users of the module see the public interface first without wading through implementation details.
 
-### 3. High-Level Before Low-Level
+### 4. High-Level Before Low-Level
 
 Organize abstractions from high-level (business logic) to low-level (implementation details):
 
@@ -101,7 +177,7 @@ trait StepRunner {
 
 **Why**: Readers can understand what the module does before diving into how it works.
 
-### 4. Important Before Secondary
+### 5. Important Before Secondary
 
 Place primary responsibilities before secondary concerns (like error types, constants, helpers):
 
