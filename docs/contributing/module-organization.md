@@ -116,7 +116,52 @@ pub fn create_temp_dir() -> std::io::Result<std::path::PathBuf> {
 
 However, if the type appears multiple times, always import it.
 
-**Why**: Short names improve readability and reduce visual noise. Rust's import system exists to make code cleaner - use it!
+#### ❌ Avoid: Inline Full Paths in Function Bodies
+
+Never use fully-qualified paths inside function implementations. Always import at the module level:
+
+```rust
+// ❌ Bad: Full path inside function body
+pub struct AnsibleVariablesContext {
+    ssh_port: u16,
+}
+
+impl AnsibleVariablesContext {
+    pub fn new(ssh_port: u16) -> Result<Self, AnsibleVariablesContextError> {
+        // Don't do this - hard to read and breaks the import-at-top convention
+        crate::infrastructure::external_tools::ansible::template::wrappers::inventory::context::AnsiblePort::new(ssh_port)?;
+
+        Ok(Self { ssh_port })
+    }
+}
+```
+
+```rust
+// ✅ Good: Import at module level, use short name
+use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::context::AnsiblePort;
+
+pub struct AnsibleVariablesContext {
+    ssh_port: u16,
+}
+
+impl AnsibleVariablesContext {
+    pub fn new(ssh_port: u16) -> Result<Self, AnsibleVariablesContextError> {
+        // Much cleaner and easier to read
+        AnsiblePort::new(ssh_port)?;
+
+        Ok(Self { ssh_port })
+    }
+}
+```
+
+**Why**:
+
+- Keeps all dependencies visible at the top of the file
+- Makes function bodies cleaner and more readable
+- Follows Rust's standard conventions
+- Easier to refactor and maintain
+
+**Summary**: Short names improve readability and reduce visual noise. Rust's import system exists to make code cleaner - use it!
 
 ### 3. Public Before Private
 
