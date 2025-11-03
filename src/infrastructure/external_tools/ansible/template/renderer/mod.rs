@@ -57,7 +57,6 @@ pub mod firewall_playbook;
 pub mod inventory;
 pub mod variables;
 
-pub use firewall_playbook::FirewallPlaybookTemplateRenderer;
 pub use inventory::InventoryTemplateRenderer;
 pub use variables::VariablesTemplateRenderer;
 
@@ -125,13 +124,6 @@ pub enum ConfigurationTemplateError {
         source: InventoryTemplateError,
     },
 
-    /// Failed to render firewall playbook template using collaborator
-    #[error("Failed to render firewall playbook template: {source}")]
-    FirewallPlaybookRenderingFailed {
-        #[source]
-        source: firewall_playbook::FirewallPlaybookTemplateError,
-    },
-
     /// Failed to render variables template using collaborator
     #[error("Failed to render variables template: {source}")]
     VariablesRenderingFailed {
@@ -156,7 +148,6 @@ pub struct AnsibleTemplateRenderer {
     build_dir: PathBuf,
     template_manager: Arc<TemplateManager>,
     inventory_renderer: InventoryTemplateRenderer,
-    firewall_playbook_renderer: FirewallPlaybookTemplateRenderer,
     variables_renderer: VariablesTemplateRenderer,
 }
 
@@ -176,15 +167,12 @@ impl AnsibleTemplateRenderer {
     #[must_use]
     pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: Arc<TemplateManager>) -> Self {
         let inventory_renderer = InventoryTemplateRenderer::new(template_manager.clone());
-        let firewall_playbook_renderer =
-            FirewallPlaybookTemplateRenderer::new(template_manager.clone());
         let variables_renderer = VariablesTemplateRenderer::new(template_manager.clone());
 
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
             template_manager,
             inventory_renderer,
-            firewall_playbook_renderer,
             variables_renderer,
         }
     }
@@ -229,14 +217,6 @@ impl AnsibleTemplateRenderer {
         self.inventory_renderer
             .render(inventory_context, &build_ansible_dir)
             .map_err(|source| ConfigurationTemplateError::InventoryRenderingFailed { source })?;
-
-        // Render dynamic firewall playbook template with SSH port variable using collaborator
-        let firewall_context = Self::create_firewall_context(inventory_context)?;
-        self.firewall_playbook_renderer
-            .render(&firewall_context, &build_ansible_dir)
-            .map_err(
-                |source| ConfigurationTemplateError::FirewallPlaybookRenderingFailed { source },
-            )?;
 
         // Render dynamic variables template with system configuration using collaborator
         let variables_context = Self::create_variables_context(inventory_context)?;
@@ -418,48 +398,6 @@ impl AnsibleTemplateRenderer {
 
         tracing::debug!("Successfully copied static file {}", file_name);
         Ok(())
-    }
-
-    /// Creates a `FirewallPlaybookContext` from an `InventoryContext`
-    ///
-    /// Extracts the SSH port from the inventory context to create
-    /// a firewall-specific context for template rendering.
-    ///
-    /// # Arguments
-    ///
-    /// * `inventory_context` - The inventory context containing SSH port information
-    ///
-    /// # Returns
-    ///
-    /// * `Result<FirewallPlaybookContext, ConfigurationTemplateError>` - The firewall context or an error
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the SSH port cannot be extracted or validated
-    fn create_firewall_context(
-        inventory_context: &InventoryContext,
-    ) -> Result<
-        crate::infrastructure::external_tools::ansible::template::wrappers::firewall_playbook::FirewallPlaybookContext,
-        ConfigurationTemplateError,
-    >{
-        use crate::infrastructure::external_tools::ansible::template::wrappers::firewall_playbook::FirewallPlaybookContext;
-        use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::context::AnsiblePort;
-
-        // Extract SSH port from inventory context
-        let ssh_port = AnsiblePort::new(inventory_context.ansible_port()).map_err(|e| {
-            ConfigurationTemplateError::ContextCreationFailed {
-                context_type: "FirewallPlaybook".to_string(),
-                message: format!("Invalid SSH port: {e}"),
-            }
-        })?;
-
-        // Create firewall context
-        FirewallPlaybookContext::new(ssh_port).map_err(|e| {
-            ConfigurationTemplateError::ContextCreationFailed {
-                context_type: "FirewallPlaybook".to_string(),
-                message: format!("Failed to create firewall context: {e}"),
-            }
-        })
     }
 
     /// Creates an `AnsibleVariablesContext` from an `InventoryContext`
