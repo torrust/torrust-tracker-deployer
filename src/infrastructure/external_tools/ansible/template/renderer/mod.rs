@@ -55,9 +55,11 @@ use crate::infrastructure::external_tools::ansible::template::wrappers::inventor
 
 pub mod firewall_playbook;
 pub mod inventory;
+pub mod variables;
 
 pub use firewall_playbook::FirewallPlaybookTemplateRenderer;
 pub use inventory::InventoryTemplateRenderer;
+pub use variables::VariablesTemplateRenderer;
 
 /// Errors that can occur during configuration template rendering
 #[derive(Error, Debug)]
