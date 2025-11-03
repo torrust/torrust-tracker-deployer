@@ -1,0 +1,11 @@
+---
+# Centralized Ansible Variables
+# This file contains all dynamic variables used across Ansible playbooks.
+# It follows the same pattern as OpenTofu's variables.tfvars.tera for consistency.
+#
+# NOTE: The inventory file (inventory.yml.tera) cannot use this file because
+# Ansible inventories don't support vars_files. Only playbooks can use vars_files.
+
+# System Configuration
+ssh_port: {{ ssh_port }}
+# Future service variables can be added here when needed
