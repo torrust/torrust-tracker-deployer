@@ -488,6 +488,22 @@ pub mod test_support {
             }
         }
 
+        /// Create wrapped test output for use with APIs that require `Arc<Mutex<UserOutput>>`
+        ///
+        /// This is a convenience method for tests that just need a wrapped output
+        /// without access to the buffers.
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// let output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        /// // Use with APIs that expect Arc<Mutex<UserOutput>>
+        /// ```
+        pub fn wrapped(verbosity: VerbosityLevel) -> Arc<Mutex<UserOutput>> {
+            let test_output = Self::new(verbosity);
+            Arc::new(Mutex::new(test_output.output))
+        }
+
         /// Wrap an existing `UserOutput` in an `Arc<Mutex<>>` for use with APIs that require it
         ///
         /// Returns a tuple of (`Arc<Mutex<UserOutput>>`, stdout buffer, stderr buffer) for tests

@@ -233,20 +233,16 @@ pub fn handle_destroy_command(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::user_output::test_support::TestUserOutput;
     use crate::presentation::user_output::VerbosityLevel;
     use std::fs;
     use tempfile::TempDir;
-
-    /// Test helper to create a test user output
-    fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
-        Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
-    }
 
     #[test]
     fn it_should_return_error_for_invalid_environment_name() {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
         // Test with invalid environment name (contains underscore)
         let result = handle_destroy_command("invalid_name", working_dir, &user_output);
@@ -264,7 +260,7 @@ mod tests {
     fn it_should_return_error_for_empty_environment_name() {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
         let result = handle_destroy_command("", working_dir, &user_output);
 
@@ -281,7 +277,7 @@ mod tests {
     fn it_should_return_error_for_nonexistent_environment() {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
         // Try to destroy an environment that doesn't exist
         let result = handle_destroy_command("nonexistent-env", working_dir, &user_output);
@@ -300,7 +296,7 @@ mod tests {
     fn it_should_accept_valid_environment_name() {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
         // Create a mock environment directory to test validation
         let env_dir = working_dir.join("test-env");
