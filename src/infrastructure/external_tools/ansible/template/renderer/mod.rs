@@ -138,6 +138,13 @@ pub enum ConfigurationTemplateError {
         #[source]
         source: variables::VariablesTemplateError,
     },
+
+    /// Failed to create context from inventory data
+    #[error("Failed to create {context_type} context: {message}")]
+    ContextCreationFailed {
+        context_type: String,
+        message: String,
+    },
 }
 
 /// Renders `Ansible` configuration templates to a build directory
@@ -439,21 +446,17 @@ impl AnsibleTemplateRenderer {
 
         // Extract SSH port from inventory context
         let ssh_port = AnsiblePort::new(inventory_context.ansible_port()).map_err(|e| {
-            ConfigurationTemplateError::TemplatePathFailed {
-                file_name: "configure-firewall.yml.tera".to_string(),
-                source: TemplateManagerError::TemplateNotFound {
-                    relative_path: format!("Invalid SSH port: {e}"),
-                },
+            ConfigurationTemplateError::ContextCreationFailed {
+                context_type: "FirewallPlaybook".to_string(),
+                message: format!("Invalid SSH port: {e}"),
             }
         })?;
 
         // Create firewall context
         FirewallPlaybookContext::new(ssh_port).map_err(|e| {
-            ConfigurationTemplateError::TemplatePathFailed {
-                file_name: "configure-firewall.yml.tera".to_string(),
-                source: TemplateManagerError::TemplateNotFound {
-                    relative_path: format!("Failed to create firewall context: {e}"),
-                },
+            ConfigurationTemplateError::ContextCreationFailed {
+                context_type: "FirewallPlaybook".to_string(),
+                message: format!("Failed to create firewall context: {e}"),
             }
         })
     }
@@ -484,11 +487,9 @@ impl AnsibleTemplateRenderer {
 
         // Extract SSH port from inventory context and create variables context
         AnsibleVariablesContext::new(inventory_context.ansible_port()).map_err(|e| {
-            ConfigurationTemplateError::TemplatePathFailed {
-                file_name: "variables.yml.tera".to_string(),
-                source: TemplateManagerError::TemplateNotFound {
-                    relative_path: format!("Failed to create variables context: {e}"),
-                },
+            ConfigurationTemplateError::ContextCreationFailed {
+                context_type: "AnsibleVariables".to_string(),
+                message: format!("Failed to create variables context: {e}"),
             }
         })
     }
