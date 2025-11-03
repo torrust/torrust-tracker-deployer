@@ -17,7 +17,7 @@ Code coverage is a metric that measures which lines of code are executed during 
 
 ### Project-Wide Goals
 
-- **Overall Coverage Target**: ≥ 85% (lines)
+- **Overall Coverage Target**: ≥ 75% (lines)
 - **Critical Business Logic**: ≥ 90% (domain layer, commands, steps)
 - **Shared Utilities**: ≥ 95% (clock, username, command executor)
 
@@ -76,7 +76,7 @@ cargo install cargo-llvm-cov
 
 ### Quick Coverage Check
 
-Validate that coverage meets the 85% threshold:
+Validate that coverage meets the 75% threshold:
 
 ```bash
 cargo cov-check
@@ -86,7 +86,7 @@ This command:
 
 - Runs tests with coverage instrumentation
 - Calculates line coverage percentage
-- **Fails** if coverage is below 85%
+- **Fails** if coverage is below 75%
 - Shows a summary of coverage by file
 
 **Example Output (Passing)**:
@@ -179,7 +179,7 @@ All coverage commands use cargo aliases defined in `.cargo/config.toml`:
 | Alias               | Full Command                                                      | Purpose                           |
 | ------------------- | ----------------------------------------------------------------- | --------------------------------- |
 | `cargo cov`         | `cargo llvm-cov`                                                  | Basic coverage report in terminal |
-| `cargo cov-check`   | `cargo llvm-cov --all-features --workspace --fail-under-lines 85` | Validate 85% threshold            |
+| `cargo cov-check`   | `cargo llvm-cov --all-features --workspace --fail-under-lines 75` | Validate 75% threshold            |
 | `cargo cov-lcov`    | `cargo llvm-cov --lcov --output-path=./.coverage/lcov.info`       | Generate LCOV format              |
 | `cargo cov-codecov` | `cargo llvm-cov --codecov --output-path=./.coverage/codecov.json` | Generate Codecov JSON             |
 | `cargo cov-html`    | `cargo llvm-cov --html`                                           | Generate HTML report              |
@@ -202,7 +202,7 @@ When you run `./scripts/pre-commit.sh`, the coverage check:
 From `scripts/pre-commit.sh`:
 
 ```bash
-"Running code coverage check|Coverage meets 85% threshold|(Informational only - does not block commits)||cargo cov-check"
+"Running code coverage check|Coverage meets 75% threshold|(Informational only - does not block commits)||cargo cov-check"
 ```
 
 ### Why Non-blocking?
@@ -224,7 +224,7 @@ Coverage checks are informational to allow:
 
 ...
 TOTAL                           ...             ...          87.23%      ...
-PASSED: Coverage meets 85% threshold (1m 23s)
+PASSED: Coverage meets 75% threshold (1m 23s)
 
 ==========================================
 SUCCESS: All pre-commit checks passed!
@@ -241,7 +241,7 @@ Total time: 5m 42s
 ...
 TOTAL                           ...             ...          82.45%      ...
 
-error: coverage is below 85%
+error: coverage is below 75%
 
 ==========================================
 FAILED: Pre-commit checks failed!
@@ -311,7 +311,7 @@ The coverage workflow:
 When adding new features, aim for:
 
 - **New domain logic**: ≥ 90% coverage
-- **New commands/steps**: ≥ 85% coverage
+- **New commands/steps**: ≥ 75% coverage
 - **New utilities**: ≥ 95% coverage
 - **Infrastructure adapters**: E2E tests + reasonable unit tests
 
@@ -333,9 +333,10 @@ This ensures the bug won't regress in the future.
 When refactoring code:
 
 1. **Maintain or improve** existing coverage
-2. **Avoid** decreasing overall project coverage below 85%
-3. **Document** any intentional coverage reductions
-4. **Update tests** to reflect new structure
+2. **Prefer** adding tests over decreasing project coverage
+3. **Avoid** decreasing overall project coverage below 75%
+4. **Document** any intentional coverage reductions
+5. **Update tests** to reflect new structure
 
 ### For Documentation Changes
 
@@ -371,7 +372,7 @@ Coverage types:
 - **Function Coverage**: Percentage of functions called
 - **Branch Coverage**: Percentage of conditional branches taken
 
-We primarily track **line coverage** with the 85% target.
+We primarily track **line coverage** with the 75% target.
 
 ### Reading HTML Reports
 
@@ -383,8 +384,8 @@ We primarily track **line coverage** with the 85% target.
 
 **Focus Areas**:
 
-1. **Domain Logic**: Should be mostly green (90%+)
-2. **Commands/Steps**: Should be mostly green (85%+)
+1. **Domain entities/value objects**: Should be near 100%
+2. **Commands/Steps**: Should be mostly green (75%+)
 3. **Utilities**: Should be almost all green (95%+)
 4. **Adapters**: May have more red (E2E tested)
 
@@ -441,7 +442,7 @@ When reviewing PRs:
 Request additional tests when:
 
 - ✅ New domain logic has <90% coverage
-- ✅ New commands/steps have <85% coverage
+- ✅ New commands/steps have <75% coverage
 - ✅ Critical business logic is untested
 - ✅ Error paths are completely untested
 - ✅ Tests exist but don't validate actual behavior (dummy tests)
@@ -492,7 +493,7 @@ Accept lower coverage when:
 
 ### Coverage Check Fails Locally
 
-**Problem**: `cargo cov-check` reports coverage below 85%
+**Problem**: `cargo cov-check` reports coverage below 75%
 
 **Solutions**:
 
