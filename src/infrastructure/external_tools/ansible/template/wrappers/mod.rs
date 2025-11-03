@@ -9,3 +9,4 @@ pub mod variables;
 // Re-export the main template structs for easier access
 pub use firewall_playbook::FirewallPlaybookTemplate;
 pub use inventory::InventoryTemplate;
+pub use variables::AnsibleVariablesTemplate;
