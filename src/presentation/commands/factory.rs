@@ -317,8 +317,12 @@ mod tests {
         let (factory, _temp_dir, working_dir, _user_output) = create_test_setup();
 
         // Should be able to create multiple contexts
-        let context1 = factory.create_context(working_dir.clone(), TestUserOutput::wrapped(VerbosityLevel::Normal));
-        let context2 = factory.create_context(working_dir, TestUserOutput::wrapped(VerbosityLevel::Normal));
+        let context1 = factory.create_context(
+            working_dir.clone(),
+            TestUserOutput::wrapped(VerbosityLevel::Normal),
+        );
+        let context2 =
+            factory.create_context(working_dir, TestUserOutput::wrapped(VerbosityLevel::Normal));
 
         // Both contexts should be functional
         let _ = context1.repository();

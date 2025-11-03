@@ -472,6 +472,7 @@ pub mod test_support {
         /// ```rust,ignore
         /// let test_output = TestUserOutput::new(VerbosityLevel::Normal);
         /// ```
+        #[must_use]
         pub fn new(verbosity: VerbosityLevel) -> Self {
             let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
             let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
@@ -499,6 +500,7 @@ pub mod test_support {
         /// let output = TestUserOutput::wrapped(VerbosityLevel::Normal);
         /// // Use with APIs that expect Arc<Mutex<UserOutput>>
         /// ```
+        #[must_use]
         pub fn wrapped(verbosity: VerbosityLevel) -> Arc<Mutex<UserOutput>> {
             let test_output = Self::new(verbosity);
             Arc::new(Mutex::new(test_output.output))
@@ -517,8 +519,15 @@ pub mod test_support {
         /// // Use `wrapped` with APIs that expect Arc<Mutex<UserOutput>>
         /// // Use buffers to assert on output content
         /// ```
+        #[must_use]
         #[allow(clippy::type_complexity)]
-        pub fn into_wrapped(self) -> (Arc<Mutex<UserOutput>>, Arc<Mutex<Vec<u8>>>, Arc<Mutex<Vec<u8>>>) {
+        pub fn into_wrapped(
+            self,
+        ) -> (
+            Arc<Mutex<UserOutput>>,
+            Arc<Mutex<Vec<u8>>>,
+            Arc<Mutex<Vec<u8>>>,
+        ) {
             let stdout_buf = Arc::clone(&self.stdout_buffer);
             let stderr_buf = Arc::clone(&self.stderr_buffer);
             (Arc::new(Mutex::new(self.output)), stdout_buf, stderr_buf)
@@ -533,6 +542,12 @@ pub mod test_support {
         /// test_output.output.result("Done");
         /// assert_eq!(test_output.stdout(), "Done\n");
         /// ```
+        ///
+        /// # Panics
+        ///
+        /// Panics if the mutex is poisoned or if the buffer contains invalid UTF-8.
+        /// These conditions indicate a test bug and should never occur in practice.
+        #[must_use]
         pub fn stdout(&self) -> String {
             String::from_utf8(self.stdout_buffer.lock().unwrap().clone())
                 .expect("stdout should be valid UTF-8")
@@ -547,6 +562,12 @@ pub mod test_support {
         /// test_output.output.progress("Working...");
         /// assert_eq!(test_output.stderr(), "⏳ Working...\n");
         /// ```
+        ///
+        /// # Panics
+        ///
+        /// Panics if the mutex is poisoned or if the buffer contains invalid UTF-8.
+        /// These conditions indicate a test bug and should never occur in practice.
+        #[must_use]
         pub fn stderr(&self) -> String {
             String::from_utf8(self.stderr_buffer.lock().unwrap().clone())
                 .expect("stderr should be valid UTF-8")
@@ -564,6 +585,7 @@ pub mod test_support {
         /// assert_eq!(stdout, "Done\n");
         /// assert_eq!(stderr, "⏳ Working...\n");
         /// ```
+        #[must_use]
         #[allow(dead_code)]
         pub fn output_pair(&self) -> (String, String) {
             (self.stdout(), self.stderr())
@@ -582,6 +604,11 @@ pub mod test_support {
         /// test_output.output.progress("Step 2");
         /// assert_eq!(test_output.stderr(), "⏳ Step 2\n");
         /// ```
+        ///
+        /// # Panics
+        ///
+        /// Panics if the mutex is poisoned. This indicates a test bug and should
+        /// never occur in practice.
         #[allow(dead_code)]
         pub fn clear(&mut self) {
             self.stdout_buffer.lock().unwrap().clear();
@@ -790,7 +817,9 @@ mod tests {
     fn it_should_not_write_steps_at_quiet_level() {
         let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        test_output.output.steps("Next steps:", &["Step 1", "Step 2"]);
+        test_output
+            .output
+            .steps("Next steps:", &["Step 1", "Step 2"]);
 
         // Verify no output at Quiet level
         assert_eq!(test_output.stderr(), "");
@@ -822,7 +851,9 @@ mod tests {
     fn it_should_not_write_info_block_at_quiet_level() {
         let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        test_output.output.info_block("Info:", &["Line 1", "Line 2"]);
+        test_output
+            .output
+            .info_block("Info:", &["Line 1", "Line 2"]);
 
         // Verify no output at Quiet level
         assert_eq!(test_output.stderr(), "");
