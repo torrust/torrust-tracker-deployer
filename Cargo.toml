@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "packages/linting",
+  "packages/dependency-installer",
 ]
 resolver = "2"
 
