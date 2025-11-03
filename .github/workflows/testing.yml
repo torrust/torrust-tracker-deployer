@@ -140,6 +140,4 @@ jobs:
 
       - id: test
         name: Run Unit Tests
-        env:
-          SKIP_AI_ENFORCEMENT: 1
         run: cargo test --tests --benches --examples --workspace --all-targets --all-features

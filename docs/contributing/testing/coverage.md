@@ -176,13 +176,13 @@ This shows coverage statistics in the terminal without generating files.
 
 All coverage commands use cargo aliases defined in `.cargo/config.toml`:
 
-| Alias | Full Command | Purpose |
-|-------|--------------|---------|
-| `cargo cov` | `cargo llvm-cov` | Basic coverage report in terminal |
-| `cargo cov-check` | `cargo llvm-cov --all-features --workspace --fail-under-lines 85` | Validate 85% threshold |
-| `cargo cov-lcov` | `cargo llvm-cov --lcov --output-path=./.coverage/lcov.info` | Generate LCOV format |
-| `cargo cov-codecov` | `cargo llvm-cov --codecov --output-path=./.coverage/codecov.json` | Generate Codecov JSON |
-| `cargo cov-html` | `cargo llvm-cov --html` | Generate HTML report |
+| Alias               | Full Command                                                      | Purpose                           |
+| ------------------- | ----------------------------------------------------------------- | --------------------------------- |
+| `cargo cov`         | `cargo llvm-cov`                                                  | Basic coverage report in terminal |
+| `cargo cov-check`   | `cargo llvm-cov --all-features --workspace --fail-under-lines 85` | Validate 85% threshold            |
+| `cargo cov-lcov`    | `cargo llvm-cov --lcov --output-path=./.coverage/lcov.info`       | Generate LCOV format              |
+| `cargo cov-codecov` | `cargo llvm-cov --codecov --output-path=./.coverage/codecov.json` | Generate Codecov JSON             |
+| `cargo cov-html`    | `cargo llvm-cov --html`                                           | Generate HTML report              |
 
 ## 🚨 Pre-commit Coverage Check
 
@@ -272,12 +272,6 @@ The workflow generates coverage in multiple formats:
 - Generate HTML coverage report (cargo cov-html)
 - Upload HTML report as GitHub Actions artifact
 ```
-
-### Environment Variables
-
-The workflow sets:
-
-- `SKIP_AI_ENFORCEMENT=1` - Disables AI-related test enforcement during coverage runs
 
 ### Accessing Coverage Reports
 

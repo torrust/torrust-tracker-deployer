@@ -173,7 +173,6 @@ This section provides links to specialized testing documentation organized by to
 - **[Resource Management](./resource-management.md)** - TempDir usage, test isolation, cleanup
 - **[Testing Commands](./testing-commands.md)** - Command test patterns, builders, mocks, E2E
 - **[Clock Service](./clock-service.md)** - MockClock usage for deterministic time tests
-- **[Pre-commit Integration](./pre-commit-integration.md)** - AI enforcement tests, SKIP_AI_ENFORCEMENT flag
 - **[Coverage](./coverage.md)** - Code coverage targets, tools, CI/CD workflow, and PR guidelines
 
 ## 🔗 Related Documentation
