@@ -234,14 +234,10 @@ fn display_creation_results(user_output: &Arc<Mutex<UserOutput>>, environment: &
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::user_output::test_support::TestUserOutput;
     use crate::presentation::user_output::VerbosityLevel;
     use std::fs;
     use tempfile::TempDir;
-
-    /// Test helper to create a test user output
-    fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
-        Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
-    }
 
     #[test]
     fn it_should_create_environment_from_valid_config() {
@@ -268,7 +264,7 @@ mod tests {
         fs::write(&config_path, config_json).unwrap();
 
         let working_dir = temp_dir.path();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
         let result = handle_environment_creation(&config_path, working_dir, &user_output);
 
         assert!(
@@ -292,7 +288,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("nonexistent.json");
         let working_dir = temp_dir.path();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
         let result = handle_environment_creation(&config_path, working_dir, &user_output);
 
@@ -314,7 +310,7 @@ mod tests {
         fs::write(&config_path, r#"{"invalid json"#).unwrap();
 
         let working_dir = temp_dir.path();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
         let result = handle_environment_creation(&config_path, working_dir, &user_output);
 
         assert!(result.is_err());
@@ -350,7 +346,7 @@ mod tests {
         fs::write(&config_path, config_json).unwrap();
 
         let working_dir = temp_dir.path();
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
 
         // Create environment first time
         let result1 = handle_environment_creation(&config_path, working_dir, &user_output);
@@ -394,7 +390,7 @@ mod tests {
         );
         fs::write(&config_path, config_json).unwrap();
 
-        let user_output = create_test_user_output();
+        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
         let result = handle_environment_creation(&config_path, &custom_working_dir, &user_output);
 
         assert!(result.is_ok(), "Should create in custom working dir");
@@ -438,7 +434,7 @@ mod tests {
             );
             fs::write(&config_path, config_json).unwrap();
 
-            let user_output = create_test_user_output();
+            let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
             let result = load_configuration(&user_output, &config_path);
 
             assert!(result.is_ok(), "Should load valid configuration");
@@ -451,7 +447,7 @@ mod tests {
             let temp_dir = TempDir::new().unwrap();
             let config_path = temp_dir.path().join("missing.json");
 
-            let user_output = create_test_user_output();
+            let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
             let result = load_configuration(&user_output, &config_path);
 
             assert!(result.is_err());
@@ -469,7 +465,7 @@ mod tests {
             let config_path = temp_dir.path().join("invalid.json");
             fs::write(&config_path, r#"{"broken json"#).unwrap();
 
-            let user_output = create_test_user_output();
+            let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
             let result = load_configuration(&user_output, &config_path);
 
             assert!(result.is_err());
@@ -507,7 +503,7 @@ mod tests {
             );
             fs::write(&config_path, config_json).unwrap();
 
-            let user_output = create_test_user_output();
+            let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
             let loader = ConfigLoader;
             let config = loader.load_from_file(&config_path).unwrap();
 
@@ -543,7 +539,7 @@ mod tests {
             );
             fs::write(&config_path, config_json).unwrap();
 
-            let user_output = create_test_user_output();
+            let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
             let loader = ConfigLoader;
             let config = loader.load_from_file(&config_path).unwrap();
 
@@ -597,7 +593,7 @@ mod tests {
             fs::write(&config_path, config_json).unwrap();
 
             // Create environment
-            let user_output = create_test_user_output();
+            let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
             let factory = CommandHandlerFactory::new();
             let ctx = factory.create_context(temp_dir.path().to_path_buf(), user_output.clone());
             let loader = ConfigLoader;

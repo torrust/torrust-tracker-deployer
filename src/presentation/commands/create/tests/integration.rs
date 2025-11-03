@@ -3,20 +3,14 @@
 //! This module tests the complete create command workflow including
 //! configuration loading, validation, and command execution.
 
-use std::sync::{Arc, Mutex};
-
 use crate::presentation::cli::CreateAction;
 use crate::presentation::commands::create;
 use crate::presentation::commands::tests::{
     create_config_with_invalid_name, create_config_with_missing_keys, create_invalid_json_config,
     create_valid_config, TestContext,
 };
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
-
-/// Helper to create test `UserOutput`
-fn create_test_user_output() -> Arc<Mutex<UserOutput>> {
-    Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)))
-}
+use crate::presentation::user_output::test_support::TestUserOutput;
+use crate::presentation::user_output::VerbosityLevel;
 
 /// Helper function to call the environment creation handler
 fn handle_environment_creation(
@@ -26,7 +20,7 @@ fn handle_environment_creation(
     let action = CreateAction::Environment {
         env_file: config_path.to_path_buf(),
     };
-    let user_output = create_test_user_output();
+    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
     create::handle_create_command(action, working_dir, &user_output)
 }
 
