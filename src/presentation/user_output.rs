@@ -408,179 +408,266 @@ impl UserOutput {
 mod tests {
     use super::*;
 
-    /// Helper to create test `UserOutput` with buffer writers
+    /// Test support module for `UserOutput` testing
     ///
-    /// Returns: (`UserOutput`, Arc to stdout buffer, Arc to stderr buffer)
-    #[allow(clippy::type_complexity)]
-    fn create_test_user_output(
-        verbosity: VerbosityLevel,
-    ) -> (
-        UserOutput,
-        std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
-        std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
-    ) {
+    /// Provides simplified test infrastructure for capturing and asserting on output.
+    mod test_support {
+        use super::*;
         use std::sync::{Arc, Mutex};
 
-        let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
-        let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
-
-        let stdout_clone = Arc::clone(&stdout_buffer);
-        let stderr_clone = Arc::clone(&stderr_buffer);
-
-        // Create thread-safe writers that share the buffer
-        let stdout_writer = Box::new(SharedWriter(Arc::clone(&stdout_buffer)));
-        let stderr_writer = Box::new(SharedWriter(Arc::clone(&stderr_buffer)));
-
-        let output = UserOutput::with_writers(verbosity, stdout_writer, stderr_writer);
-
-        (output, stdout_clone, stderr_clone)
-    }
-
-    /// A writer that shares a buffer through an Arc<Mutex<Vec<u8>>>
-    struct SharedWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
-
-    impl Write for SharedWriter {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.0.lock().unwrap().write(buf)
+        /// Writer implementation for tests that writes to a shared buffer
+        ///
+        /// Uses `Arc<Mutex<Vec<u8>>>` to satisfy the `Send + Sync` requirements
+        /// of the `UserOutput::with_writers` method.
+        pub(super) struct TestWriter {
+            buffer: Arc<Mutex<Vec<u8>>>,
         }
 
-        fn flush(&mut self) -> std::io::Result<()> {
-            self.0.lock().unwrap().flush()
+        impl TestWriter {
+            /// Create a new `TestWriter` with a shared buffer
+            pub(super) fn new(buffer: Arc<Mutex<Vec<u8>>>) -> Self {
+                Self { buffer }
+            }
+        }
+
+        impl Write for TestWriter {
+            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                self.buffer.lock().unwrap().write(buf)
+            }
+
+            fn flush(&mut self) -> std::io::Result<()> {
+                self.buffer.lock().unwrap().flush()
+            }
+        }
+
+        /// Test wrapper for `UserOutput` that simplifies test code
+        ///
+        /// Provides easy access to captured stdout and stderr content,
+        /// eliminating the need for manual buffer management in tests.
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        ///
+        /// test_output.output.progress("Processing...");
+        ///
+        /// assert_eq!(test_output.stderr(), "⏳ Processing...\n");
+        /// assert_eq!(test_output.stdout(), "");
+        /// ```
+        pub(super) struct TestUserOutput {
+            /// The `UserOutput` instance being tested
+            pub(super) output: UserOutput,
+            stdout_buffer: Arc<Mutex<Vec<u8>>>,
+            stderr_buffer: Arc<Mutex<Vec<u8>>>,
+        }
+
+        impl TestUserOutput {
+            /// Create a new test output with the specified verbosity level
+            ///
+            /// # Examples
+            ///
+            /// ```rust,ignore
+            /// let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+            /// ```
+            pub(super) fn new(verbosity: VerbosityLevel) -> Self {
+                let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+                let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+                let stdout_writer = Box::new(TestWriter::new(Arc::clone(&stdout_buffer)));
+                let stderr_writer = Box::new(TestWriter::new(Arc::clone(&stderr_buffer)));
+
+                let output = UserOutput::with_writers(verbosity, stdout_writer, stderr_writer);
+
+                Self {
+                    output,
+                    stdout_buffer,
+                    stderr_buffer,
+                }
+            }
+
+            /// Get the content written to stdout as a String
+            ///
+            /// # Examples
+            ///
+            /// ```rust,ignore
+            /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+            /// test_output.output.result("Done");
+            /// assert_eq!(test_output.stdout(), "Done\n");
+            /// ```
+            pub(super) fn stdout(&self) -> String {
+                String::from_utf8(self.stdout_buffer.lock().unwrap().clone())
+                    .expect("stdout should be valid UTF-8")
+            }
+
+            /// Get the content written to stderr as a String
+            ///
+            /// # Examples
+            ///
+            /// ```rust,ignore
+            /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+            /// test_output.output.progress("Working...");
+            /// assert_eq!(test_output.stderr(), "⏳ Working...\n");
+            /// ```
+            pub(super) fn stderr(&self) -> String {
+                String::from_utf8(self.stderr_buffer.lock().unwrap().clone())
+                    .expect("stderr should be valid UTF-8")
+            }
+
+            /// Get both stdout and stderr content as a tuple
+            ///
+            /// # Examples
+            ///
+            /// ```rust,ignore
+            /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+            /// test_output.output.progress("Working...");
+            /// test_output.output.result("Done");
+            /// let (stdout, stderr) = test_output.output_pair();
+            /// assert_eq!(stdout, "Done\n");
+            /// assert_eq!(stderr, "⏳ Working...\n");
+            /// ```
+            #[allow(dead_code)]
+            pub(super) fn output_pair(&self) -> (String, String) {
+                (self.stdout(), self.stderr())
+            }
+
+            /// Clear all captured output
+            ///
+            /// Useful when testing multiple operations in the same test.
+            ///
+            /// # Examples
+            ///
+            /// ```rust,ignore
+            /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+            /// test_output.output.progress("Step 1");
+            /// test_output.clear();
+            /// test_output.output.progress("Step 2");
+            /// assert_eq!(test_output.stderr(), "⏳ Step 2\n");
+            /// ```
+            #[allow(dead_code)]
+            pub(super) fn clear(&mut self) {
+                self.stdout_buffer.lock().unwrap().clear();
+                self.stderr_buffer.lock().unwrap().clear();
+            }
         }
     }
 
     #[test]
     fn it_should_write_progress_messages_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
-        output.progress("Testing progress message");
+        test_output.output.progress("Testing progress message");
 
         // Verify message went to stderr
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "⏳ Testing progress message\n");
+        assert_eq!(test_output.stderr(), "⏳ Testing progress message\n");
 
         // Verify stdout is empty
-        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stdout_content, "");
+        assert_eq!(test_output.stdout(), "");
     }
 
     #[test]
     fn it_should_write_success_messages_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
-        output.success("Testing success message");
+        test_output.output.success("Testing success message");
 
         // Verify message went to stderr
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "✅ Testing success message\n");
+        assert_eq!(test_output.stderr(), "✅ Testing success message\n");
 
         // Verify stdout is empty
-        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stdout_content, "");
+        assert_eq!(test_output.stdout(), "");
     }
 
     #[test]
     fn it_should_write_warning_messages_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
-        output.warn("Testing warning message");
+        test_output.output.warn("Testing warning message");
 
         // Verify message went to stderr
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "⚠️  Testing warning message\n");
+        assert_eq!(test_output.stderr(), "⚠️  Testing warning message\n");
 
         // Verify stdout is empty
-        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stdout_content, "");
+        assert_eq!(test_output.stdout(), "");
     }
 
     #[test]
     fn it_should_write_error_messages_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
-        output.error("Testing error message");
+        test_output.output.error("Testing error message");
 
         // Verify message went to stderr
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "❌ Testing error message\n");
+        assert_eq!(test_output.stderr(), "❌ Testing error message\n");
 
         // Verify stdout is empty
-        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stdout_content, "");
+        assert_eq!(test_output.stdout(), "");
     }
 
     #[test]
     fn it_should_write_results_to_stdout() {
-        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
-        output.result("Test result data");
+        test_output.output.result("Test result data");
 
         // Verify message went to stdout
-        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stdout_content, "Test result data\n");
+        assert_eq!(test_output.stdout(), "Test result data\n");
 
         // Verify stderr is empty
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "");
+        assert_eq!(test_output.stderr(), "");
     }
 
     #[test]
     fn it_should_write_data_to_stdout() {
-        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
-        output.data(r#"{"status": "destroyed"}"#);
+        test_output.output.data(r#"{"status": "destroyed"}"#);
 
         // Verify message went to stdout
-        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stdout_content, "{\"status\": \"destroyed\"}\n");
+        assert_eq!(test_output.stdout(), "{\"status\": \"destroyed\"}\n");
 
         // Verify stderr is empty
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "");
+        assert_eq!(test_output.stderr(), "");
     }
 
     #[test]
     fn it_should_respect_verbosity_levels_for_progress() {
-        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        output.progress("This should not appear");
+        test_output.output.progress("This should not appear");
 
         // Verify no output at Quiet level
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "");
+        assert_eq!(test_output.stderr(), "");
     }
 
     #[test]
     fn it_should_respect_verbosity_levels_for_success() {
-        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        output.success("This should not appear");
+        test_output.output.success("This should not appear");
 
         // Verify no output at Quiet level
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "");
+        assert_eq!(test_output.stderr(), "");
     }
 
     #[test]
     fn it_should_respect_verbosity_levels_for_warn() {
-        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        output.warn("This should not appear");
+        test_output.output.warn("This should not appear");
 
         // Verify no output at Quiet level
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "");
+        assert_eq!(test_output.stderr(), "");
     }
 
     #[test]
     fn it_should_always_show_errors_regardless_of_verbosity() {
-        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        output.error("Critical error message");
+        test_output.output.error("Critical error message");
 
         // Verify error appears even at Quiet level
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "❌ Critical error message\n");
+        assert_eq!(test_output.stderr(), "❌ Critical error message\n");
     }
 
     #[test]
@@ -613,35 +700,32 @@ mod tests {
 
     #[test]
     fn it_should_write_blank_line_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
-        output.blank_line();
+        test_output.output.blank_line();
 
         // Verify blank line went to stderr
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "\n");
+        assert_eq!(test_output.stderr(), "\n");
 
         // Verify stdout is empty
-        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stdout_content, "");
+        assert_eq!(test_output.stdout(), "");
     }
 
     #[test]
     fn it_should_not_write_blank_line_at_quiet_level() {
-        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        output.blank_line();
+        test_output.output.blank_line();
 
         // Verify no output at Quiet level
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "");
+        assert_eq!(test_output.stderr(), "");
     }
 
     #[test]
     fn it_should_write_steps_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
-        output.steps(
+        test_output.output.steps(
             "Next steps:",
             &[
                 "Edit the configuration file",
@@ -651,33 +735,30 @@ mod tests {
         );
 
         // Verify steps went to stderr with correct formatting
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
         assert_eq!(
-            stderr_content,
+            test_output.stderr(),
             "Next steps:\n1. Edit the configuration file\n2. Review the settings\n3. Run the deploy command\n"
         );
 
         // Verify stdout is empty
-        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stdout_content, "");
+        assert_eq!(test_output.stdout(), "");
     }
 
     #[test]
     fn it_should_not_write_steps_at_quiet_level() {
-        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        output.steps("Next steps:", &["Step 1", "Step 2"]);
+        test_output.output.steps("Next steps:", &["Step 1", "Step 2"]);
 
         // Verify no output at Quiet level
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "");
+        assert_eq!(test_output.stderr(), "");
     }
 
     #[test]
     fn it_should_write_info_block_to_stderr() {
-        let (mut output, stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Normal);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
-        output.info_block(
+        test_output.output.info_block(
             "Configuration options:",
             &[
                 "  - username: 'torrust' (default)",
@@ -686,26 +767,23 @@ mod tests {
         );
 
         // Verify info block went to stderr
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
         assert_eq!(
-            stderr_content,
+            test_output.stderr(),
             "Configuration options:\n  - username: 'torrust' (default)\n  - port: 22 (default SSH port)\n"
         );
 
         // Verify stdout is empty
-        let stdout_content = String::from_utf8(stdout_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stdout_content, "");
+        assert_eq!(test_output.stdout(), "");
     }
 
     #[test]
     fn it_should_not_write_info_block_at_quiet_level() {
-        let (mut output, _stdout_buf, stderr_buf) = create_test_user_output(VerbosityLevel::Quiet);
+        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        output.info_block("Info:", &["Line 1", "Line 2"]);
+        test_output.output.info_block("Info:", &["Line 1", "Line 2"]);
 
         // Verify no output at Quiet level
-        let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
-        assert_eq!(stderr_content, "");
+        assert_eq!(test_output.stderr(), "");
     }
 
     // VerbosityFilter tests
