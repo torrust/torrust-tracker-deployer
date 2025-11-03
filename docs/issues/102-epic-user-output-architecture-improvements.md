@@ -54,10 +54,19 @@ See comprehensive refactoring plan: [docs/refactors/plans/user-output-architectu
 
 ## Sub-Tasks
 
-Subissues will be created incrementally before implementing each proposal:
+### Phase 0: Quick Wins
 
-- [ ] [#103](https://github.com/torrust/torrust-tracker-deployer/issues/103) - Proposal #0: Extract Verbosity Filtering Logic
-- [ ] Future subissues to be created as work progresses
+- [x] [#103](https://github.com/torrust/torrust-tracker-deployer/issues/103) - Proposal 0: Extract Verbosity Filtering Logic
+- [ ] [#123](https://github.com/torrust/torrust-tracker-deployer/issues/123) - Proposal 1: Simplify Test Infrastructure
+- [ ] [#124](https://github.com/torrust/torrust-tracker-deployer/issues/124) - Proposal 2: Add Theme/Configuration Support
+
+### Other Related Work
+
+- [x] [#107](https://github.com/torrust/torrust-tracker-deployer/issues/107) - Centralize UserOutput via Dependency Injection
+
+### Future Subissues
+
+Additional subissues for Phase 1 and Phase 2 proposals will be created as work progresses.
 
 ## Timeline
 
