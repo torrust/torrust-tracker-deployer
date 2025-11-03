@@ -66,7 +66,7 @@ impl AnsibleClient {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// # use torrust_tracker_deployer_lib::adapters::ansible::AnsibleClient;
     /// # let client = AnsibleClient::new("/path/to/config");
     /// // Run without extra args (backward compatible)
