@@ -70,6 +70,62 @@ pub enum VerbosityLevel {
     Debug,
 }
 
+/// Determines what messages should be displayed based on verbosity level
+///
+/// This struct encapsulates verbosity filtering logic, making it testable
+/// independently from output formatting.
+struct VerbosityFilter {
+    level: VerbosityLevel,
+}
+
+impl VerbosityFilter {
+    /// Create a new verbosity filter with the specified level
+    fn new(level: VerbosityLevel) -> Self {
+        Self { level }
+    }
+
+    /// Check if messages at the given level should be shown
+    fn should_show(&self, required_level: VerbosityLevel) -> bool {
+        self.level >= required_level
+    }
+
+    /// Progress messages require Normal level
+    fn should_show_progress(&self) -> bool {
+        self.should_show(VerbosityLevel::Normal)
+    }
+
+    /// Success messages require Normal level
+    fn should_show_success(&self) -> bool {
+        self.should_show(VerbosityLevel::Normal)
+    }
+
+    /// Warning messages require Normal level
+    fn should_show_warnings(&self) -> bool {
+        self.should_show(VerbosityLevel::Normal)
+    }
+
+    /// Errors are always shown regardless of verbosity level
+    #[allow(clippy::unused_self)]
+    fn should_show_errors(&self) -> bool {
+        true
+    }
+
+    /// Blank lines require Normal level
+    fn should_show_blank_lines(&self) -> bool {
+        self.should_show(VerbosityLevel::Normal)
+    }
+
+    /// Steps require Normal level
+    fn should_show_steps(&self) -> bool {
+        self.should_show(VerbosityLevel::Normal)
+    }
+
+    /// Info blocks require Normal level
+    fn should_show_info_blocks(&self) -> bool {
+        self.should_show(VerbosityLevel::Normal)
+    }
+}
+
 /// Handles user-facing output separate from internal logging
 ///
 /// Uses dual channels following Unix conventions and modern CLI best practices:
@@ -100,7 +156,7 @@ pub enum VerbosityLevel {
 /// output.result("Processing complete");
 /// ```
 pub struct UserOutput {
-    verbosity: VerbosityLevel,
+    verbosity_filter: VerbosityFilter,
     stdout_writer: Box<dyn Write + Send + Sync>,
     stderr_writer: Box<dyn Write + Send + Sync>,
 }
@@ -118,7 +174,7 @@ impl UserOutput {
     #[must_use]
     pub fn new(verbosity: VerbosityLevel) -> Self {
         Self {
-            verbosity,
+            verbosity_filter: VerbosityFilter::new(verbosity),
             stdout_writer: Box::new(std::io::stdout()),
             stderr_writer: Box::new(std::io::stderr()),
         }
@@ -151,7 +207,7 @@ impl UserOutput {
         stderr_writer: Box<dyn Write + Send + Sync>,
     ) -> Self {
         Self {
-            verbosity,
+            verbosity_filter: VerbosityFilter::new(verbosity),
             stdout_writer,
             stderr_writer,
         }
@@ -172,7 +228,7 @@ impl UserOutput {
     /// // Output to stderr: ⏳ Destroying environment...
     /// ```
     pub fn progress(&mut self, message: &str) {
-        if self.verbosity >= VerbosityLevel::Normal {
+        if self.verbosity_filter.should_show_progress() {
             writeln!(self.stderr_writer, "⏳ {message}").ok();
         }
     }
@@ -191,7 +247,7 @@ impl UserOutput {
     /// // Output to stderr: ✅ Environment destroyed successfully
     /// ```
     pub fn success(&mut self, message: &str) {
-        if self.verbosity >= VerbosityLevel::Normal {
+        if self.verbosity_filter.should_show_success() {
             writeln!(self.stderr_writer, "✅ {message}").ok();
         }
     }
@@ -208,7 +264,7 @@ impl UserOutput {
     /// // Output to stderr: ⚠️  Infrastructure may already be destroyed
     /// ```
     pub fn warn(&mut self, message: &str) {
-        if self.verbosity >= VerbosityLevel::Normal {
+        if self.verbosity_filter.should_show_warnings() {
             writeln!(self.stderr_writer, "⚠️  {message}").ok();
         }
     }
@@ -227,7 +283,9 @@ impl UserOutput {
     /// // Output to stderr: ❌ Failed to destroy environment
     /// ```
     pub fn error(&mut self, message: &str) {
-        writeln!(self.stderr_writer, "❌ {message}").ok();
+        if self.verbosity_filter.should_show_errors() {
+            writeln!(self.stderr_writer, "❌ {message}").ok();
+        }
     }
 
     /// Output final results to stdout for piping/redirection
@@ -280,7 +338,7 @@ impl UserOutput {
     /// output.progress("Starting next steps...");
     /// ```
     pub fn blank_line(&mut self) {
-        if self.verbosity >= VerbosityLevel::Normal {
+        if self.verbosity_filter.should_show_blank_lines() {
             writeln!(self.stderr_writer).ok();
         }
     }
@@ -307,7 +365,7 @@ impl UserOutput {
     /// // 3. Run the deploy command
     /// ```
     pub fn steps(&mut self, title: &str, steps: &[&str]) {
-        if self.verbosity >= VerbosityLevel::Normal {
+        if self.verbosity_filter.should_show_steps() {
             writeln!(self.stderr_writer, "{title}").ok();
             for (idx, step) in steps.iter().enumerate() {
                 writeln!(self.stderr_writer, "{}. {}", idx + 1, step).ok();
@@ -337,7 +395,7 @@ impl UserOutput {
     /// //   - key_path: path/to/key
     /// ```
     pub fn info_block(&mut self, title: &str, lines: &[&str]) {
-        if self.verbosity >= VerbosityLevel::Normal {
+        if self.verbosity_filter.should_show_info_blocks() {
             writeln!(self.stderr_writer, "{title}").ok();
             for line in lines {
                 writeln!(self.stderr_writer, "{line}").ok();
@@ -648,5 +706,119 @@ mod tests {
         // Verify no output at Quiet level
         let stderr_content = String::from_utf8(stderr_buf.lock().unwrap().clone()).unwrap();
         assert_eq!(stderr_content, "");
+    }
+
+    // VerbosityFilter tests
+    mod verbosity_filter {
+        use super::super::*;
+
+        #[test]
+        fn it_should_show_progress_at_normal_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
+            assert!(filter.should_show_progress());
+        }
+
+        #[test]
+        fn it_should_not_show_progress_at_quiet_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
+            assert!(!filter.should_show_progress());
+        }
+
+        #[test]
+        fn it_should_show_progress_at_verbose_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Verbose);
+            assert!(filter.should_show_progress());
+        }
+
+        #[test]
+        fn it_should_always_show_errors_regardless_of_level() {
+            assert!(VerbosityFilter::new(VerbosityLevel::Quiet).should_show_errors());
+            assert!(VerbosityFilter::new(VerbosityLevel::Normal).should_show_errors());
+            assert!(VerbosityFilter::new(VerbosityLevel::Verbose).should_show_errors());
+            assert!(VerbosityFilter::new(VerbosityLevel::VeryVerbose).should_show_errors());
+            assert!(VerbosityFilter::new(VerbosityLevel::Debug).should_show_errors());
+        }
+
+        #[test]
+        fn it_should_show_success_at_normal_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
+            assert!(filter.should_show_success());
+        }
+
+        #[test]
+        fn it_should_not_show_success_at_quiet_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
+            assert!(!filter.should_show_success());
+        }
+
+        #[test]
+        fn it_should_show_warnings_at_normal_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
+            assert!(filter.should_show_warnings());
+        }
+
+        #[test]
+        fn it_should_not_show_warnings_at_quiet_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
+            assert!(!filter.should_show_warnings());
+        }
+
+        #[test]
+        fn it_should_show_blank_lines_at_normal_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
+            assert!(filter.should_show_blank_lines());
+        }
+
+        #[test]
+        fn it_should_not_show_blank_lines_at_quiet_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
+            assert!(!filter.should_show_blank_lines());
+        }
+
+        #[test]
+        fn it_should_show_steps_at_normal_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
+            assert!(filter.should_show_steps());
+        }
+
+        #[test]
+        fn it_should_not_show_steps_at_quiet_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
+            assert!(!filter.should_show_steps());
+        }
+
+        #[test]
+        fn it_should_show_info_blocks_at_normal_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
+            assert!(filter.should_show_info_blocks());
+        }
+
+        #[test]
+        fn it_should_not_show_info_blocks_at_quiet_level() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
+            assert!(!filter.should_show_info_blocks());
+        }
+
+        #[test]
+        fn it_should_show_when_level_meets_requirement() {
+            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
+            assert!(filter.should_show(VerbosityLevel::Quiet));
+            assert!(filter.should_show(VerbosityLevel::Normal));
+            assert!(!filter.should_show(VerbosityLevel::Verbose));
+        }
+
+        #[test]
+        fn it_should_handle_all_verbosity_levels_in_should_show() {
+            let quiet_filter = VerbosityFilter::new(VerbosityLevel::Quiet);
+            assert!(quiet_filter.should_show(VerbosityLevel::Quiet));
+            assert!(!quiet_filter.should_show(VerbosityLevel::Normal));
+
+            let debug_filter = VerbosityFilter::new(VerbosityLevel::Debug);
+            assert!(debug_filter.should_show(VerbosityLevel::Quiet));
+            assert!(debug_filter.should_show(VerbosityLevel::Normal));
+            assert!(debug_filter.should_show(VerbosityLevel::Verbose));
+            assert!(debug_filter.should_show(VerbosityLevel::VeryVerbose));
+            assert!(debug_filter.should_show(VerbosityLevel::Debug));
+        }
     }
 }
