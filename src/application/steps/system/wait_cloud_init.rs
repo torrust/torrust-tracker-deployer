@@ -56,7 +56,7 @@ impl WaitForCloudInitStep {
             "Waiting for cloud-init completion"
         );
 
-        self.ansible_client.run_playbook("wait-cloud-init")?;
+        self.ansible_client.run_playbook("wait-cloud-init", &[])?;
 
         info!(
             step = "wait_cloud_init",

@@ -66,7 +66,7 @@ impl InstallDockerStep {
             "Installing Docker via Ansible"
         );
 
-        self.ansible_client.run_playbook("install-docker")?;
+        self.ansible_client.run_playbook("install-docker", &[])?;
 
         info!(
             step = "install_docker",

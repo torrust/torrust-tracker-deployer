@@ -71,7 +71,7 @@ impl ConfigureSecurityUpdatesStep {
         );
 
         self.ansible_client
-            .run_playbook("configure-security-updates")?;
+            .run_playbook("configure-security-updates", &[])?;
 
         info!(
             step = "configure_security_updates",

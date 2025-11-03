@@ -45,11 +45,12 @@ impl AnsibleClient {
         }
     }
 
-    /// Run an Ansible playbook
+    /// Run an Ansible playbook with optional extra arguments
     ///
     /// # Arguments
     ///
     /// * `playbook` - Name of the playbook file (without .yml extension)
+    /// * `extra_args` - Optional extra arguments to pass to ansible-playbook
     ///
     /// # Returns
     ///
@@ -62,7 +63,19 @@ impl AnsibleClient {
     /// * The Ansible playbook execution fails
     /// * The playbook file does not exist in the working directory
     /// * There are issues with the inventory or configuration
-    pub fn run_playbook(&self, playbook: &str) -> Result<String, CommandError> {
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use torrust_tracker_deployer_lib::adapters::ansible::AnsibleClient;
+    /// # let client = AnsibleClient::new("/path/to/config");
+    /// // Run without extra args (backward compatible)
+    /// client.run_playbook("install-docker", &[]).unwrap();
+    ///
+    /// // Run with extra variables
+    /// client.run_playbook("configure-firewall", &["-e", "@variables.yml"]).unwrap();
+    /// ```
+    pub fn run_playbook(&self, playbook: &str, extra_args: &[&str]) -> Result<String, CommandError> {
         info!(
             "Running Ansible playbook '{}' in directory: {}",
             playbook,
@@ -71,12 +84,16 @@ impl AnsibleClient {
 
         let playbook_file = format!("{playbook}.yml");
 
+        // Build command arguments: -v flag + playbook + extra args
+        let mut args = vec!["-v", &playbook_file];
+        args.extend_from_slice(extra_args);
+
         // Use -v flag for verbose output showing task progress
         // This helps track progress during long-running operations like Docker installation
         self.command_executor
             .run_command(
                 "ansible-playbook",
-                &["-v", &playbook_file],
+                &args,
                 Some(&self.working_dir),
             )
             .map(|result| result.stdout)
@@ -140,7 +157,7 @@ mod tests {
 
         // This tests the structure - we expect the method to exist and accept a &str
         // The actual execution would fail without Ansible, but we're testing the interface
-        let result = client.run_playbook("install-docker");
+        let result = client.run_playbook("install-docker", &[]);
 
         // We expect it to fail because ansible-playbook is not available in test environment
         // But this confirms the method signature and basic functionality works
