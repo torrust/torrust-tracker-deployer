@@ -52,6 +52,50 @@ The system operates through two levels of indirection to balance portability wit
 - **Use Case**: Configuration files requiring runtime parameters (IPs, usernames, paths)
 - **Registration**: Automatically discovered by `.tera` extension
 
+## 🎨 Ansible Variables Pattern
+
+For Ansible templates, the system uses a **hybrid approach** combining static playbooks with centralized variables:
+
+### Tera Templates (2 templates)
+
+1. `inventory.yml.tera` - Inventory requires direct variable substitution (Ansible inventories don't support vars_files)
+2. `variables.yml.tera` - Centralized variables for all playbooks
+
+### Static Playbooks
+
+- All playbooks are static YAML files (no `.tera` extension)
+- Playbooks reference variables via `vars_files: [variables.yml]`
+- Variables are resolved at Ansible runtime, not at template rendering time
+
+### Benefits
+
+- **Reduced Rust Boilerplate**: No per-playbook renderer/wrapper/context needed
+- **Centralized Variable Management**: All playbook variables in one place
+- **Consistency**: Follows the same pattern as OpenTofu's `variables.tfvars.tera`
+- **Maintainability**: Adding new playbooks requires minimal code changes
+
+### Example
+
+```yaml
+# templates/ansible/configure-firewall.yml (static playbook)
+---
+- name: Configure UFW firewall
+  hosts: all
+  vars_files:
+    - variables.yml  # Load centralized variables
+  
+  tasks:
+    - name: Allow SSH access
+      community.general.ufw:
+        port: "{{ ssh_port }}"  # Variable from variables.yml
+```
+
+```yaml
+# templates/ansible/variables.yml.tera (rendered once)
+---
+ssh_port: {{ ssh_port }}
+```
+
 ## 🔧 Key Components
 
 ### Template Manager

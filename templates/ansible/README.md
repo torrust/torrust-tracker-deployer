@@ -28,18 +28,22 @@ This directory contains Ansible playbook templates for the Torrust Tracker Deplo
 
   - Sets up unattended-upgrades for automatic security patches
 
-- **`configure-firewall.yml.tera`** - Configures UFW (Uncomplicated Firewall) with SSH lockout prevention
+- **`configure-firewall.yml`** - Configures UFW (Uncomplicated Firewall) with SSH lockout prevention
 
   - ⚠️ **Critical**: This playbook configures restrictive firewall rules
   - Automatically preserves SSH access on the configured port to prevent lockout
+  - Uses centralized variables from `variables.yml` (loaded via `vars_files`)
   - **Container Limitation**: Requires kernel capabilities (CAP_NET_ADMIN, CAP_NET_RAW) not available in unprivileged containers
   - **Automatic Skip**: Container-based E2E tests automatically skip this step via `TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER` environment variable
     - Accepted values: `"true"` or `"false"` (case-sensitive, lowercase only)
     - Example: `TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER=true`
-  - **VM-only**: This playbook is only executed in VM-based deployments and tests### Configuration Files
+  - **VM-only**: This playbook is only executed in VM-based deployments and tests
 
-- **`ansible.cfg`** - Ansible configuration
+### Configuration Files
+
+- **`ansible.cfg`** - Ansible configuration (static)
 - **`inventory.yml.tera`** - Inventory template file (processed by Tera templating engine)
+- **`variables.yml.tera`** - Centralized variables template (processed by Tera templating engine)
 
 ## Usage Order
 
@@ -50,7 +54,7 @@ For a typical deployment:
 3. **`install-docker.yml`** - Install Docker
 4. **`install-docker-compose.yml`** - Install Docker Compose (optional)
 5. **`configure-security-updates.yml`** - Configure automatic security updates
-6. **`configure-firewall.yml.tera`** - Configure UFW firewall (VM-only, skipped in containers)
+6. **`configure-firewall.yml`** - Configure UFW firewall (VM-only, skipped in containers)
 
 ## CI/Testing Considerations
 
@@ -63,6 +67,23 @@ For a typical deployment:
   - The deployer sets `TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER=true` for container tests (accepts `"true"` or `"false"` only)
   - VM-based tests (LXD) have full kernel access and run the firewall playbook normally
 
+## Variables Pattern
+
+This directory uses a **centralized variables pattern**:
+
+- **`variables.yml.tera`** - Centralized variables (rendered at runtime with Tera)
+- **`inventory.yml.tera`** - Connection variables (rendered at runtime with Tera)
+- **`*.yml`** - Static playbooks that load `variables.yml` via `vars_files` directive
+
+### When Adding New Playbooks
+
+1. **Add variables** to `variables.yml.tera`
+2. **Create static** `.yml` playbook (not `.tera`)
+3. **Add `vars_files: [variables.yml]`** to playbook
+4. **Register** in `copy_static_templates()` if new static playbook
+
+This pattern reduces Rust boilerplate (no per-playbook renderer/wrapper/context needed) while providing centralized variable management.
+
 ## Template Processing
 
-These files are processed by the Tera templating engine and written to the `build/ansible/` directory during the build process.
+Files with `.tera` extension are processed by the Tera templating engine. All files are written to the `build/ansible/` directory during the build process.

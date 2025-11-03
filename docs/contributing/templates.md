@@ -274,6 +274,72 @@ When adding a static Ansible playbook:
 - [ ] Create application step to execute the playbook
 - [ ] Verify playbook appears in `build/` directory during execution
 
+## 🎯 Using Centralized Variables in Ansible Playbooks
+
+When creating new Ansible playbooks that need dynamic variables (ports, paths, etc.), use the **centralized variables pattern** instead of creating new Tera templates.
+
+### DO ✅
+
+**Add variables to `templates/ansible/variables.yml.tera`:**
+
+```yaml
+# System Configuration
+ssh_port: {{ ssh_port }}
+my_service_port: {{ my_service_port }}  # ← Add your new variable
+```
+
+**Reference variables in static playbook using `vars_files`:**
+
+```yaml
+# templates/ansible/my-new-service.yml (static playbook, no .tera extension)
+---
+- name: Configure My Service
+  hosts: all
+  vars_files:
+    - variables.yml  # Load centralized variables
+  
+  tasks:
+    - name: Configure service port
+      ansible.builtin.lineinfile:
+        path: /etc/myservice/config
+        line: "port={{ my_service_port }}"
+```
+
+**Register playbook in `copy_static_templates()` method:**
+
+```rust
+for playbook in &[
+    "update-apt-cache.yml",
+    "install-docker.yml",
+    "my-new-service.yml",  // ← Add here
+] {
+    // ...
+}
+```
+
+### DON'T ❌
+
+- ❌ Create a new `.tera` template for the playbook
+- ❌ Create a new renderer/wrapper/context for each playbook
+- ❌ Add variables directly in `inventory.yml.tera` (unless inventory-specific)
+
+### Benefits
+
+1. **Minimal Code**: No Rust boilerplate (renderer, wrapper, context) needed
+2. **Centralized Management**: All variables in one place
+3. **Runtime Resolution**: Variables resolved by Ansible, not at template rendering
+4. **Easy Maintenance**: Adding new variables requires minimal changes
+
+### When to Create a New Tera Template
+
+Only create a new `.tera` template if:
+
+1. The file **cannot** use Ansible's `vars_files` directive (e.g., inventory files)
+2. The file requires **complex logic** that Tera provides but Ansible doesn't
+3. The file needs **different variable scopes** than what centralized variables provide
+
+Otherwise, use the centralized variables pattern for simplicity.
+
 ### Related Documentation
 
 - **Architecture**: [`docs/technical/template-system-architecture.md`](../technical/template-system-architecture.md) - Understanding the two-phase template system
