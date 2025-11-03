@@ -105,6 +105,7 @@ impl VerbosityFilter {
     }
 
     /// Errors are always shown regardless of verbosity level
+    #[allow(clippy::unused_self)]
     fn should_show_errors(&self) -> bool {
         true
     }
