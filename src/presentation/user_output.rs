@@ -405,152 +405,178 @@ impl UserOutput {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod test_support {
+    //! Test support infrastructure for `UserOutput` testing
+    //!
+    //! Provides simplified test infrastructure for capturing and asserting on output
+    //! in tests across the codebase.
+
     use super::*;
+    use std::sync::{Arc, Mutex};
 
-    /// Test support module for `UserOutput` testing
+    /// Writer implementation for tests that writes to a shared buffer
     ///
-    /// Provides simplified test infrastructure for capturing and asserting on output.
-    mod test_support {
-        use super::*;
-        use std::sync::{Arc, Mutex};
+    /// Uses `Arc<Mutex<Vec<u8>>>` to satisfy the `Send + Sync` requirements
+    /// of the `UserOutput::with_writers` method.
+    pub struct TestWriter {
+        buffer: Arc<Mutex<Vec<u8>>>,
+    }
 
-        /// Writer implementation for tests that writes to a shared buffer
+    impl TestWriter {
+        /// Create a new `TestWriter` with a shared buffer
+        pub fn new(buffer: Arc<Mutex<Vec<u8>>>) -> Self {
+            Self { buffer }
+        }
+    }
+
+    impl Write for TestWriter {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.buffer.lock().unwrap().write(buf)
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            self.buffer.lock().unwrap().flush()
+        }
+    }
+
+    /// Test wrapper for `UserOutput` that simplifies test code
+    ///
+    /// Provides easy access to captured stdout and stderr content,
+    /// eliminating the need for manual buffer management in tests.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use torrust_tracker_deployer_lib::presentation::user_output::test_support::TestUserOutput;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    ///
+    /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+    ///
+    /// test_output.output.progress("Processing...");
+    ///
+    /// assert_eq!(test_output.stderr(), "⏳ Processing...\n");
+    /// assert_eq!(test_output.stdout(), "");
+    /// ```
+    pub struct TestUserOutput {
+        /// The `UserOutput` instance being tested
+        pub output: UserOutput,
+        stdout_buffer: Arc<Mutex<Vec<u8>>>,
+        stderr_buffer: Arc<Mutex<Vec<u8>>>,
+    }
+
+    impl TestUserOutput {
+        /// Create a new test output with the specified verbosity level
         ///
-        /// Uses `Arc<Mutex<Vec<u8>>>` to satisfy the `Send + Sync` requirements
-        /// of the `UserOutput::with_writers` method.
-        pub(super) struct TestWriter {
-            buffer: Arc<Mutex<Vec<u8>>>,
-        }
-
-        impl TestWriter {
-            /// Create a new `TestWriter` with a shared buffer
-            pub(super) fn new(buffer: Arc<Mutex<Vec<u8>>>) -> Self {
-                Self { buffer }
-            }
-        }
-
-        impl Write for TestWriter {
-            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-                self.buffer.lock().unwrap().write(buf)
-            }
-
-            fn flush(&mut self) -> std::io::Result<()> {
-                self.buffer.lock().unwrap().flush()
-            }
-        }
-
-        /// Test wrapper for `UserOutput` that simplifies test code
+        /// # Examples
         ///
-        /// Provides easy access to captured stdout and stderr content,
-        /// eliminating the need for manual buffer management in tests.
+        /// ```rust,ignore
+        /// let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        /// ```
+        pub fn new(verbosity: VerbosityLevel) -> Self {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let stdout_writer = Box::new(TestWriter::new(Arc::clone(&stdout_buffer)));
+            let stderr_writer = Box::new(TestWriter::new(Arc::clone(&stderr_buffer)));
+
+            let output = UserOutput::with_writers(verbosity, stdout_writer, stderr_writer);
+
+            Self {
+                output,
+                stdout_buffer,
+                stderr_buffer,
+            }
+        }
+
+        /// Wrap an existing `UserOutput` in an `Arc<Mutex<>>` for use with APIs that require it
+        ///
+        /// Returns a tuple of (`Arc<Mutex<UserOutput>>`, stdout buffer, stderr buffer) for tests
+        /// that need access to both the wrapped output and the buffers.
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// let test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        /// let (wrapped, stdout_buf, stderr_buf) = test_output.into_wrapped();
+        /// // Use `wrapped` with APIs that expect Arc<Mutex<UserOutput>>
+        /// // Use buffers to assert on output content
+        /// ```
+        #[allow(clippy::type_complexity)]
+        pub fn into_wrapped(self) -> (Arc<Mutex<UserOutput>>, Arc<Mutex<Vec<u8>>>, Arc<Mutex<Vec<u8>>>) {
+            let stdout_buf = Arc::clone(&self.stdout_buffer);
+            let stderr_buf = Arc::clone(&self.stderr_buffer);
+            (Arc::new(Mutex::new(self.output)), stdout_buf, stderr_buf)
+        }
+
+        /// Get the content written to stdout as a String
         ///
         /// # Examples
         ///
         /// ```rust,ignore
         /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        ///
-        /// test_output.output.progress("Processing...");
-        ///
-        /// assert_eq!(test_output.stderr(), "⏳ Processing...\n");
-        /// assert_eq!(test_output.stdout(), "");
+        /// test_output.output.result("Done");
+        /// assert_eq!(test_output.stdout(), "Done\n");
         /// ```
-        pub(super) struct TestUserOutput {
-            /// The `UserOutput` instance being tested
-            pub(super) output: UserOutput,
-            stdout_buffer: Arc<Mutex<Vec<u8>>>,
-            stderr_buffer: Arc<Mutex<Vec<u8>>>,
+        pub fn stdout(&self) -> String {
+            String::from_utf8(self.stdout_buffer.lock().unwrap().clone())
+                .expect("stdout should be valid UTF-8")
         }
 
-        impl TestUserOutput {
-            /// Create a new test output with the specified verbosity level
-            ///
-            /// # Examples
-            ///
-            /// ```rust,ignore
-            /// let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-            /// ```
-            pub(super) fn new(verbosity: VerbosityLevel) -> Self {
-                let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
-                let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+        /// Get the content written to stderr as a String
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        /// test_output.output.progress("Working...");
+        /// assert_eq!(test_output.stderr(), "⏳ Working...\n");
+        /// ```
+        pub fn stderr(&self) -> String {
+            String::from_utf8(self.stderr_buffer.lock().unwrap().clone())
+                .expect("stderr should be valid UTF-8")
+        }
 
-                let stdout_writer = Box::new(TestWriter::new(Arc::clone(&stdout_buffer)));
-                let stderr_writer = Box::new(TestWriter::new(Arc::clone(&stderr_buffer)));
+        /// Get both stdout and stderr content as a tuple
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        /// test_output.output.progress("Working...");
+        /// test_output.output.result("Done");
+        /// let (stdout, stderr) = test_output.output_pair();
+        /// assert_eq!(stdout, "Done\n");
+        /// assert_eq!(stderr, "⏳ Working...\n");
+        /// ```
+        #[allow(dead_code)]
+        pub fn output_pair(&self) -> (String, String) {
+            (self.stdout(), self.stderr())
+        }
 
-                let output = UserOutput::with_writers(verbosity, stdout_writer, stderr_writer);
-
-                Self {
-                    output,
-                    stdout_buffer,
-                    stderr_buffer,
-                }
-            }
-
-            /// Get the content written to stdout as a String
-            ///
-            /// # Examples
-            ///
-            /// ```rust,ignore
-            /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-            /// test_output.output.result("Done");
-            /// assert_eq!(test_output.stdout(), "Done\n");
-            /// ```
-            pub(super) fn stdout(&self) -> String {
-                String::from_utf8(self.stdout_buffer.lock().unwrap().clone())
-                    .expect("stdout should be valid UTF-8")
-            }
-
-            /// Get the content written to stderr as a String
-            ///
-            /// # Examples
-            ///
-            /// ```rust,ignore
-            /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-            /// test_output.output.progress("Working...");
-            /// assert_eq!(test_output.stderr(), "⏳ Working...\n");
-            /// ```
-            pub(super) fn stderr(&self) -> String {
-                String::from_utf8(self.stderr_buffer.lock().unwrap().clone())
-                    .expect("stderr should be valid UTF-8")
-            }
-
-            /// Get both stdout and stderr content as a tuple
-            ///
-            /// # Examples
-            ///
-            /// ```rust,ignore
-            /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-            /// test_output.output.progress("Working...");
-            /// test_output.output.result("Done");
-            /// let (stdout, stderr) = test_output.output_pair();
-            /// assert_eq!(stdout, "Done\n");
-            /// assert_eq!(stderr, "⏳ Working...\n");
-            /// ```
-            #[allow(dead_code)]
-            pub(super) fn output_pair(&self) -> (String, String) {
-                (self.stdout(), self.stderr())
-            }
-
-            /// Clear all captured output
-            ///
-            /// Useful when testing multiple operations in the same test.
-            ///
-            /// # Examples
-            ///
-            /// ```rust,ignore
-            /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-            /// test_output.output.progress("Step 1");
-            /// test_output.clear();
-            /// test_output.output.progress("Step 2");
-            /// assert_eq!(test_output.stderr(), "⏳ Step 2\n");
-            /// ```
-            #[allow(dead_code)]
-            pub(super) fn clear(&mut self) {
-                self.stdout_buffer.lock().unwrap().clear();
-                self.stderr_buffer.lock().unwrap().clear();
-            }
+        /// Clear all captured output
+        ///
+        /// Useful when testing multiple operations in the same test.
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+        /// test_output.output.progress("Step 1");
+        /// test_output.clear();
+        /// test_output.output.progress("Step 2");
+        /// assert_eq!(test_output.stderr(), "⏳ Step 2\n");
+        /// ```
+        #[allow(dead_code)]
+        pub fn clear(&mut self) {
+            self.stdout_buffer.lock().unwrap().clear();
+            self.stderr_buffer.lock().unwrap().clear();
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
 
     #[test]
     fn it_should_write_progress_messages_to_stderr() {
