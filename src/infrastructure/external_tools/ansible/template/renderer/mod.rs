@@ -53,7 +53,6 @@ use crate::domain::template::{FileOperationError, TemplateManager, TemplateManag
 use crate::infrastructure::external_tools::ansible::template::renderer::inventory::InventoryTemplateError;
 use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContext;
 
-pub mod firewall_playbook;
 pub mod inventory;
 pub mod variables;
 
