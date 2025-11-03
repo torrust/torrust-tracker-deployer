@@ -57,6 +57,9 @@ impl DependencyManager {
     }
 
     /// Get a specific detector by dependency type
+    ///
+    /// Note: This creates a new detector instance on each call, which is acceptable
+    /// since detectors are lightweight and stateless.
     #[must_use]
     pub fn get_detector(&self, dep: Dependency) -> Box<dyn ToolDetector> {
         match dep {

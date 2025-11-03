@@ -4,6 +4,11 @@ use crate::errors::CommandError;
 
 /// Check if a command exists in the system PATH
 ///
+/// # Platform Support
+///
+/// Currently uses the `which` command on Unix-like systems. Windows support
+/// would require using `where` command or a different approach.
+///
 /// # Examples
 ///
 /// ```rust
@@ -19,6 +24,7 @@ use crate::errors::CommandError;
 /// Returns an error if the 'which' command fails to execute
 pub fn command_exists(command: &str) -> Result<bool, CommandError> {
     // Use 'which' on Unix-like systems to check if command exists
+    // Note: This is Unix-specific. For Windows support, use 'where' command.
     let output =
         Command::new("which")
             .arg(command)
