@@ -36,7 +36,7 @@ fn main() {
             println!("\n{} dependencies checked", results.len());
         }
         Err(e) => {
-            eprintln!("Error checking dependencies: {}", e);
+            eprintln!("Error checking dependencies: {e}");
             std::process::exit(1);
         }
     }
