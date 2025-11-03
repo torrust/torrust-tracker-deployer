@@ -101,7 +101,10 @@ impl ConfigureFirewallStep {
         // Run Ansible playbook with variables file
         // Note: The @ symbol in Ansible means "load variables from this file"
         // Equivalent to: ansible-playbook -e @variables.yml configure-firewall.yml
-        match self.ansible_client.run_playbook("configure-firewall", &["-e", "@variables.yml"]) {
+        match self
+            .ansible_client
+            .run_playbook("configure-firewall", &["-e", "@variables.yml"])
+        {
             Ok(_) => {
                 info!(
                     step = "configure_firewall",

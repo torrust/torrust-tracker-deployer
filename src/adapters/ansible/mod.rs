@@ -75,7 +75,11 @@ impl AnsibleClient {
     /// // Run with extra variables
     /// client.run_playbook("configure-firewall", &["-e", "@variables.yml"]).unwrap();
     /// ```
-    pub fn run_playbook(&self, playbook: &str, extra_args: &[&str]) -> Result<String, CommandError> {
+    pub fn run_playbook(
+        &self,
+        playbook: &str,
+        extra_args: &[&str],
+    ) -> Result<String, CommandError> {
         info!(
             "Running Ansible playbook '{}' in directory: {}",
             playbook,
@@ -91,11 +95,7 @@ impl AnsibleClient {
         // Use -v flag for verbose output showing task progress
         // This helps track progress during long-running operations like Docker installation
         self.command_executor
-            .run_command(
-                "ansible-playbook",
-                &args,
-                Some(&self.working_dir),
-            )
+            .run_command("ansible-playbook", &args, Some(&self.working_dir))
             .map(|result| result.stdout)
     }
 
