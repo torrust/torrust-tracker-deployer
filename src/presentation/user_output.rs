@@ -71,6 +71,7 @@ use std::io::Write;
 /// assert_eq!(theme.error_symbol(), "[x]");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_field_names)]
 pub struct Theme {
     progress_symbol: String,
     success_symbol: String,
@@ -442,7 +443,12 @@ impl UserOutput {
     /// ```
     pub fn progress(&mut self, message: &str) {
         if self.verbosity_filter.should_show_progress() {
-            writeln!(self.stderr_writer, "{} {message}", self.theme.progress_symbol()).ok();
+            writeln!(
+                self.stderr_writer,
+                "{} {message}",
+                self.theme.progress_symbol()
+            )
+            .ok();
         }
     }
 
@@ -461,7 +467,12 @@ impl UserOutput {
     /// ```
     pub fn success(&mut self, message: &str) {
         if self.verbosity_filter.should_show_success() {
-            writeln!(self.stderr_writer, "{} {message}", self.theme.success_symbol()).ok();
+            writeln!(
+                self.stderr_writer,
+                "{} {message}",
+                self.theme.success_symbol()
+            )
+            .ok();
         }
     }
 
@@ -478,7 +489,12 @@ impl UserOutput {
     /// ```
     pub fn warn(&mut self, message: &str) {
         if self.verbosity_filter.should_show_warnings() {
-            writeln!(self.stderr_writer, "{}  {message}", self.theme.warning_symbol()).ok();
+            writeln!(
+                self.stderr_writer,
+                "{}  {message}",
+                self.theme.warning_symbol()
+            )
+            .ok();
         }
     }
 
@@ -497,7 +513,12 @@ impl UserOutput {
     /// ```
     pub fn error(&mut self, message: &str) {
         if self.verbosity_filter.should_show_errors() {
-            writeln!(self.stderr_writer, "{} {message}", self.theme.error_symbol()).ok();
+            writeln!(
+                self.stderr_writer,
+                "{} {message}",
+                self.theme.error_symbol()
+            )
+            .ok();
         }
     }
 
@@ -705,7 +726,8 @@ pub mod test_support {
             let stdout_writer = Box::new(TestWriter::new(Arc::clone(&stdout_buffer)));
             let stderr_writer = Box::new(TestWriter::new(Arc::clone(&stderr_buffer)));
 
-            let output = UserOutput::with_theme_and_writers(verbosity, theme, stdout_writer, stderr_writer);
+            let output =
+                UserOutput::with_theme_and_writers(verbosity, theme, stdout_writer, stderr_writer);
 
             Self {
                 output,
@@ -912,7 +934,7 @@ mod tests {
         #[test]
         fn it_should_support_debug_formatting() {
             let theme = Theme::emoji();
-            let debug_output = format!("{:?}", theme);
+            let debug_output = format!("{theme:?}");
 
             assert!(debug_output.contains("Theme"));
         }
@@ -1293,7 +1315,8 @@ mod tests {
 
         #[test]
         fn it_should_use_plain_theme_when_specified() {
-            let mut test_output = TestUserOutput::with_theme(VerbosityLevel::Normal, Theme::plain());
+            let mut test_output =
+                TestUserOutput::with_theme(VerbosityLevel::Normal, Theme::plain());
 
             test_output.output.progress("Test");
             test_output.output.success("Success");
@@ -1309,7 +1332,8 @@ mod tests {
 
         #[test]
         fn it_should_use_ascii_theme_when_specified() {
-            let mut test_output = TestUserOutput::with_theme(VerbosityLevel::Normal, Theme::ascii());
+            let mut test_output =
+                TestUserOutput::with_theme(VerbosityLevel::Normal, Theme::ascii());
 
             test_output.output.progress("Test");
             test_output.output.success("Success");
