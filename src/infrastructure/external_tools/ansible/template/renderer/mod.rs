@@ -131,6 +131,13 @@ pub enum ConfigurationTemplateError {
         #[source]
         source: firewall_playbook::FirewallPlaybookTemplateError,
     },
+
+    /// Failed to render variables template using collaborator
+    #[error("Failed to render variables template: {source}")]
+    VariablesRenderingFailed {
+        #[source]
+        source: variables::VariablesTemplateError,
+    },
 }
 
 /// Renders `Ansible` configuration templates to a build directory
@@ -143,6 +150,7 @@ pub struct AnsibleTemplateRenderer {
     template_manager: Arc<TemplateManager>,
     inventory_renderer: InventoryTemplateRenderer,
     firewall_playbook_renderer: FirewallPlaybookTemplateRenderer,
+    variables_renderer: VariablesTemplateRenderer,
 }
 
 impl AnsibleTemplateRenderer {
@@ -163,12 +171,14 @@ impl AnsibleTemplateRenderer {
         let inventory_renderer = InventoryTemplateRenderer::new(template_manager.clone());
         let firewall_playbook_renderer =
             FirewallPlaybookTemplateRenderer::new(template_manager.clone());
+        let variables_renderer = VariablesTemplateRenderer::new(template_manager.clone());
 
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
             template_manager,
             inventory_renderer,
             firewall_playbook_renderer,
+            variables_renderer,
         }
     }
 
@@ -220,6 +230,12 @@ impl AnsibleTemplateRenderer {
             .map_err(
                 |source| ConfigurationTemplateError::FirewallPlaybookRenderingFailed { source },
             )?;
+
+        // Render dynamic variables template with system configuration using collaborator
+        let variables_context = Self::create_variables_context(inventory_context)?;
+        self.variables_renderer
+            .render(&variables_context, &build_ansible_dir)
+            .map_err(|source| ConfigurationTemplateError::VariablesRenderingFailed { source })?;
 
         // Copy static Ansible files (config and playbooks)
         self.copy_static_templates(&self.template_manager, &build_ansible_dir)
@@ -437,6 +453,41 @@ impl AnsibleTemplateRenderer {
                 file_name: "configure-firewall.yml.tera".to_string(),
                 source: TemplateManagerError::TemplateNotFound {
                     relative_path: format!("Failed to create firewall context: {e}"),
+                },
+            }
+        })
+    }
+
+    /// Creates an `AnsibleVariablesContext` from an `InventoryContext`
+    ///
+    /// Extracts the SSH port from the inventory context to create
+    /// a variables context for template rendering.
+    ///
+    /// # Arguments
+    ///
+    /// * `inventory_context` - The inventory context containing SSH port information
+    ///
+    /// # Returns
+    ///
+    /// * `Result<AnsibleVariablesContext, ConfigurationTemplateError>` - The variables context or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the SSH port cannot be extracted or validated
+    fn create_variables_context(
+        inventory_context: &InventoryContext,
+    ) -> Result<
+        crate::infrastructure::external_tools::ansible::template::wrappers::variables::AnsibleVariablesContext,
+        ConfigurationTemplateError,
+    >{
+        use crate::infrastructure::external_tools::ansible::template::wrappers::variables::AnsibleVariablesContext;
+
+        // Extract SSH port from inventory context and create variables context
+        AnsibleVariablesContext::new(inventory_context.ansible_port()).map_err(|e| {
+            ConfigurationTemplateError::TemplatePathFailed {
+                file_name: "variables.yml.tera".to_string(),
+                source: TemplateManagerError::TemplateNotFound {
+                    relative_path: format!("Failed to create variables context: {e}"),
                 },
             }
         })
