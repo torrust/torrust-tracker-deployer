@@ -10,6 +10,7 @@ backlinks
 browsable
 buildx
 chdir
+checkmarks
 childlogdir
 chkdsk
 chrono
@@ -117,6 +118,7 @@ pids
 pipefail
 postconditions
 preconfigured
+preinstalls
 prereq
 println
 publickey
@@ -169,6 +171,7 @@ taiki
 Taplo
 taskkill
 tasklist
+readlink
 Tera
 terraformrc
 tést
