@@ -95,11 +95,16 @@ impl ConfigureFirewallStep {
         warn!(
             step = "configure_firewall",
             action = "configure_ufw",
-            "Configuring UFW firewall - CRITICAL: SSH access will be restricted to configured port"
+            "Configuring UFW firewall with variables from variables.yml"
         );
 
-        // Run Ansible playbook (SSH port already resolved during template rendering)
-        match self.ansible_client.run_playbook("configure-firewall") {
+        // Run Ansible playbook with variables file
+        // Note: The @ symbol in Ansible means "load variables from this file"
+        // Equivalent to: ansible-playbook -e @variables.yml configure-firewall.yml
+        match self
+            .ansible_client
+            .run_playbook("configure-firewall", &["-e", "@variables.yml"])
+        {
             Ok(_) => {
                 info!(
                     step = "configure_firewall",

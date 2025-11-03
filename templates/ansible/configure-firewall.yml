@@ -2,11 +2,15 @@
 # Configure UFW Firewall with Safe SSH Access
 # This playbook configures UFW with restrictive policies while preserving SSH access.
 # CRITICAL: SSH access is allowed BEFORE enabling firewall to prevent lockout.
+#
+# Variables are loaded from variables.yml for centralized management.
 
 - name: Configure UFW firewall safely
   hosts: all
   become: yes
   gather_facts: yes
+  vars_files:
+    - variables.yml
 
   tasks:
     - name: Install UFW (should already be present on Ubuntu)
@@ -49,9 +53,9 @@
     - name: Allow SSH access on configured port (BEFORE enabling firewall)
       community.general.ufw:
         rule: allow
-        port: "{{ssh_port}}"
+        port: "{{ ssh_port }}"
         proto: tcp
-        comment: "SSH access (configured port {{ssh_port}})"
+        comment: "SSH access (configured port {{ ssh_port }})"
       tags:
         - security
         - firewall
@@ -85,7 +89,7 @@
 
     - name: Verify SSH port is allowed
       ansible.builtin.shell:
-        cmd: "ufw status | grep -E '{{ssh_port}}/tcp.*ALLOW'"
+        cmd: "ufw status | grep -E '{{ ssh_port }}/tcp.*ALLOW'"
       register: ssh_port_check
       changed_when: false
       failed_when: ssh_port_check.rc != 0
@@ -99,7 +103,7 @@
       ansible.builtin.debug:
         msg:
           - "UFW firewall configured successfully"
-          - "SSH access preserved on port {{ssh_port}}"
+          - "SSH access preserved on port {{ ssh_port }}"
           - "Default policy: deny incoming, allow outgoing"
           - "Active rules protect against unauthorized access"
       tags:

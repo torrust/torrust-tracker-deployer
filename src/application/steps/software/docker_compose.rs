@@ -65,7 +65,8 @@ impl InstallDockerComposeStep {
             "Installing Docker Compose via Ansible"
         );
 
-        self.ansible_client.run_playbook("install-docker-compose")?;
+        self.ansible_client
+            .run_playbook("install-docker-compose", &[])?;
 
         info!(
             step = "install_docker_compose",
