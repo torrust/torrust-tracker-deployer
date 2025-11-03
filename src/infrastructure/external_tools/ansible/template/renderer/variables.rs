@@ -151,12 +151,10 @@ impl VariablesTemplateRenderer {
             })?;
 
         // Read template content
-        let variables_template_content =
-            std::fs::read_to_string(&variables_template_path).map_err(|source| {
-                VariablesTemplateError::TeraTemplateReadFailed {
-                    file_name: Self::VARIABLES_TEMPLATE_FILE.to_string(),
-                    source,
-                }
+        let variables_template_content = std::fs::read_to_string(&variables_template_path)
+            .map_err(|source| VariablesTemplateError::TeraTemplateReadFailed {
+                file_name: Self::VARIABLES_TEMPLATE_FILE.to_string(),
+                source,
             })?;
 
         // Create File object for template processing
@@ -170,10 +168,9 @@ impl VariablesTemplateRenderer {
 
         // Create AnsibleVariablesTemplate with system configuration context
         let variables_template =
-            AnsibleVariablesTemplate::new(&variables_template_file, variables_context.clone())
-                .map_err(|source| {
-                    VariablesTemplateError::VariablesTemplateCreationFailed { source }
-                })?;
+            AnsibleVariablesTemplate::new(&variables_template_file, variables_context).map_err(
+                |source| VariablesTemplateError::VariablesTemplateCreationFailed { source },
+            )?;
 
         // Render to output file
         let variables_output_path = output_dir.join(Self::VARIABLES_OUTPUT_FILE);
@@ -215,10 +212,10 @@ mod tests {
         let ansible_dir = temp_dir.join("ansible");
         fs::create_dir_all(&ansible_dir)?;
 
-        let template_content = r#"---
+        let template_content = r"---
 # Centralized Ansible Variables
 ssh_port: {{ ssh_port }}
-"#;
+";
 
         fs::write(ansible_dir.join("variables.yml.tera"), template_content)?;
 
@@ -272,10 +269,7 @@ ssh_port: {{ ssh_port }}
 
         // Verify output file exists
         let output_file = output_dir.join("variables.yml");
-        assert!(
-            output_file.exists(),
-            "variables.yml should be created"
-        );
+        assert!(output_file.exists(), "variables.yml should be created");
 
         // Verify output content contains expected values
         let output_content = fs::read_to_string(&output_file).expect("Failed to read output file");
@@ -306,8 +300,8 @@ ssh_port: {{ ssh_port }}
         let renderer = VariablesTemplateRenderer::new(template_manager);
 
         // Use custom SSH port
-        let variables_context = AnsibleVariablesContext::new(2222)
-            .expect("Failed to create variables context");
+        let variables_context =
+            AnsibleVariablesContext::new(2222).expect("Failed to create variables context");
 
         let result = renderer.render(&variables_context, &output_dir);
 
