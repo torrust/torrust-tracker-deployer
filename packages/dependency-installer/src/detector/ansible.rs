@@ -1,29 +1,30 @@
 use tracing::info;
 
 use crate::command::command_exists;
+use crate::Dependency;
 
-use super::{DetectionError, ToolDetector};
+use super::{DependencyDetector, DetectionError};
 
-/// Detector for `Ansible` tool
+/// Detector for `Ansible` dependency
 pub struct AnsibleDetector;
 
-impl ToolDetector for AnsibleDetector {
+impl DependencyDetector for AnsibleDetector {
     fn name(&self) -> &'static str {
         "Ansible"
     }
 
     fn is_installed(&self) -> Result<bool, DetectionError> {
-        info!(tool = "ansible", "Checking if Ansible is installed");
+        info!(dependency = "ansible", "Checking if Ansible is installed");
 
         let installed = command_exists("ansible").map_err(|e| DetectionError::DetectionFailed {
-            tool: self.name().to_string(),
+            dependency: Dependency::Ansible,
             source: std::io::Error::other(e.to_string()),
         })?;
 
         if installed {
-            info!(tool = "ansible", "Ansible is installed");
+            info!(dependency = "ansible", "Ansible is installed");
         } else {
-            info!(tool = "ansible", "Ansible is not installed");
+            info!(dependency = "ansible", "Ansible is not installed");
         }
 
         Ok(installed)

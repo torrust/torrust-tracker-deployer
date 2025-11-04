@@ -1,13 +1,13 @@
 //! Unit tests for detector functionality
 //!
-//! Tests for the `ToolDetector` trait implementations including:
+//! Tests for the `DependencyDetector` trait implementations including:
 //! - Individual detector implementations
 //! - `DependencyManager` functionality
 //! - Error handling
 
 use torrust_dependency_installer::{
-    AnsibleDetector, CargoMacheteDetector, CheckResult, Dependency, DependencyManager, LxdDetector,
-    OpenTofuDetector, ToolDetector,
+    AnsibleDetector, CargoMacheteDetector, CheckResult, Dependency, DependencyDetector,
+    DependencyManager, LxdDetector, OpenTofuDetector,
 };
 
 // =============================================================================

@@ -52,7 +52,7 @@ async fn test_check_all_reports_missing_dependencies() {
 
 /// Test that the check command works for specific dependencies
 #[tokio::test]
-async fn test_check_specific_tool() {
+async fn test_check_specific_dependency() {
     let binary_path = get_binary_path();
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;

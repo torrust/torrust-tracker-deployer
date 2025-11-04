@@ -1,30 +1,31 @@
 use tracing::info;
 
 use crate::command::command_exists;
+use crate::Dependency;
 
-use super::{DetectionError, ToolDetector};
+use super::{DependencyDetector, DetectionError};
 
-/// Detector for `LXD` tool
+/// Detector for `LXD` dependency
 pub struct LxdDetector;
 
-impl ToolDetector for LxdDetector {
+impl DependencyDetector for LxdDetector {
     fn name(&self) -> &'static str {
         "LXD"
     }
 
     fn is_installed(&self) -> Result<bool, DetectionError> {
-        info!(tool = "lxd", "Checking if LXD is installed");
+        info!(dependency = "lxd", "Checking if LXD is installed");
 
         // Check for 'lxc' command (LXD client)
         let installed = command_exists("lxc").map_err(|e| DetectionError::DetectionFailed {
-            tool: self.name().to_string(),
+            dependency: Dependency::Lxd,
             source: std::io::Error::other(e.to_string()),
         })?;
 
         if installed {
-            info!(tool = "lxd", "LXD is installed");
+            info!(dependency = "lxd", "LXD is installed");
         } else {
-            info!(tool = "lxd", "LXD is not installed");
+            info!(dependency = "lxd", "LXD is not installed");
         }
 
         Ok(installed)

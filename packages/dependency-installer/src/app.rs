@@ -57,23 +57,29 @@ impl AppError {
     /// # Exit Codes
     ///
     /// - `ExitCode::MissingDependencies`: Tool not installed or missing dependencies
-    /// - `ExitCode::InvalidArguments`: Unknown tool name
+    /// - `ExitCode::InvalidArguments`: Unknown dependency name
     /// - `ExitCode::InternalError`: Detection failures or other errors
     #[must_use]
     pub fn to_exit_code(&self) -> ExitCode {
-        use crate::handlers::check::{CheckAllToolsError, CheckError, CheckSpecificToolError};
+        use crate::handlers::check::{
+            CheckAllDependenciesError, CheckError, CheckSpecificDependencyError,
+        };
 
         match self {
             Self::CheckFailed { source } => match source {
                 CheckError::CheckAllFailed { source } => match source {
-                    CheckAllToolsError::MissingDependencies { .. } => ExitCode::MissingDependencies,
-                    CheckAllToolsError::DependencyCheckFailed { .. } => ExitCode::InternalError,
-                },
-                CheckError::CheckSpecificFailed { source } => match source {
-                    CheckSpecificToolError::DependencyNotInstalled { .. } => {
+                    CheckAllDependenciesError::MissingDependencies { .. } => {
                         ExitCode::MissingDependencies
                     }
-                    CheckSpecificToolError::DetectionFailed { .. } => ExitCode::InternalError,
+                    CheckAllDependenciesError::DependencyCheckFailed { .. } => {
+                        ExitCode::InternalError
+                    }
+                },
+                CheckError::CheckSpecificFailed { source } => match source {
+                    CheckSpecificDependencyError::DependencyNotInstalled { .. } => {
+                        ExitCode::MissingDependencies
+                    }
+                    CheckSpecificDependencyError::DetectionFailed { .. } => ExitCode::InternalError,
                 },
             },
             Self::ListFailed { .. } => ExitCode::InternalError,

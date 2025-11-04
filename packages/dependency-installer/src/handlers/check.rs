@@ -17,7 +17,7 @@ pub enum CheckError {
     #[error("Failed to check all dependencies: {source}")]
     CheckAllFailed {
         #[source]
-        source: CheckAllToolsError,
+        source: CheckAllDependenciesError,
     },
 
     /// Failed to check a specific dependency
@@ -26,25 +26,25 @@ pub enum CheckError {
     #[error("Failed to check specific dependency: {source}")]
     CheckSpecificFailed {
         #[source]
-        source: CheckSpecificToolError,
+        source: CheckSpecificDependencyError,
     },
 }
 
-impl From<CheckAllToolsError> for CheckError {
-    fn from(source: CheckAllToolsError) -> Self {
+impl From<CheckAllDependenciesError> for CheckError {
+    fn from(source: CheckAllDependenciesError) -> Self {
         Self::CheckAllFailed { source }
     }
 }
 
-impl From<CheckSpecificToolError> for CheckError {
-    fn from(source: CheckSpecificToolError) -> Self {
+impl From<CheckSpecificDependencyError> for CheckError {
+    fn from(source: CheckSpecificDependencyError) -> Self {
         Self::CheckSpecificFailed { source }
     }
 }
 
-/// Errors that can occur when checking all tools
+/// Errors that can occur when checking all dependencies
 #[derive(Debug, Error)]
-pub enum CheckAllToolsError {
+pub enum CheckAllDependenciesError {
     /// Failed to check dependencies
     ///
     /// This occurs when the dependency detection system fails to check
@@ -67,7 +67,7 @@ pub enum CheckAllToolsError {
     },
 }
 
-impl From<DetectionError> for CheckAllToolsError {
+impl From<DetectionError> for CheckAllDependenciesError {
     fn from(source: DetectionError) -> Self {
         Self::DependencyCheckFailed { source }
     }
@@ -75,7 +75,7 @@ impl From<DetectionError> for CheckAllToolsError {
 
 /// Errors that can occur when checking a specific dependency
 #[derive(Debug, Error)]
-pub enum CheckSpecificToolError {
+pub enum CheckSpecificDependencyError {
     /// Failed to detect if the dependency is installed
     ///
     /// This occurs when the dependency detection system fails to check
@@ -91,12 +91,12 @@ pub enum CheckSpecificToolError {
     /// This occurs when the specified dependency is not found on the system.
     #[error("{dependency}: not installed")]
     DependencyNotInstalled {
-        /// Name of the dependency that is not installed
-        dependency: String,
+        /// The dependency that is not installed
+        dependency: Dependency,
     },
 }
 
-impl From<DetectionError> for CheckSpecificToolError {
+impl From<DetectionError> for CheckSpecificDependencyError {
     fn from(source: DetectionError) -> Self {
         Self::DetectionFailed { source }
     }
@@ -121,7 +121,7 @@ pub fn handle_check(
     Ok(())
 }
 
-fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllToolsError> {
+fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllDependenciesError> {
     info!("Checking all dependencies");
     println!("Checking dependencies...\n");
 
@@ -152,7 +152,7 @@ fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllToo
             "Missing {missing_count} out of {} required dependencies",
             results.len()
         );
-        Err(CheckAllToolsError::MissingDependencies {
+        Err(CheckAllDependenciesError::MissingDependencies {
             missing_count,
             total_count: results.len(),
         })
@@ -166,7 +166,7 @@ fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllToo
 fn check_specific_dependency(
     manager: &DependencyManager,
     dependency: Dependency,
-) -> Result<(), CheckSpecificToolError> {
+) -> Result<(), CheckSpecificDependencyError> {
     info!(dependency = %dependency, "Checking specific dependency");
 
     let detector = manager.get_detector(dependency);
@@ -180,8 +180,6 @@ fn check_specific_dependency(
     } else {
         error!(dependency = detector.name(), "Dependency is not installed");
         eprintln!("✗ {}: not installed", detector.name());
-        Err(CheckSpecificToolError::DependencyNotInstalled {
-            dependency: detector.name().to_string(),
-        })
+        Err(CheckSpecificDependencyError::DependencyNotInstalled { dependency })
     }
 }

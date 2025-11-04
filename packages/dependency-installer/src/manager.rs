@@ -2,8 +2,8 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::detector::{
-    AnsibleDetector, CargoMacheteDetector, DetectionError, LxdDetector, OpenTofuDetector,
-    ToolDetector,
+    AnsibleDetector, CargoMacheteDetector, DependencyDetector, DetectionError, LxdDetector,
+    OpenTofuDetector,
 };
 
 /// Enum representing available dependencies
@@ -123,7 +123,7 @@ impl DependencyManager {
     /// Note: This creates a new detector instance on each call, which is acceptable
     /// since detectors are lightweight and stateless.
     #[must_use]
-    pub fn get_detector(&self, dep: Dependency) -> Box<dyn ToolDetector> {
+    pub fn get_detector(&self, dep: Dependency) -> Box<dyn DependencyDetector> {
         match dep {
             Dependency::CargoMachete => Box::new(CargoMacheteDetector),
             Dependency::OpenTofu => Box::new(OpenTofuDetector),

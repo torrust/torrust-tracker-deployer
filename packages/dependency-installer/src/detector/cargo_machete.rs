@@ -1,33 +1,37 @@
 use tracing::info;
 
 use crate::command::command_exists;
+use crate::Dependency;
 
-use super::{DetectionError, ToolDetector};
+use super::{DependencyDetector, DetectionError};
 
-/// Detector for `cargo-machete` tool
+/// Detector for `cargo-machete` dependency
 pub struct CargoMacheteDetector;
 
-impl ToolDetector for CargoMacheteDetector {
+impl DependencyDetector for CargoMacheteDetector {
     fn name(&self) -> &'static str {
         "cargo-machete"
     }
 
     fn is_installed(&self) -> Result<bool, DetectionError> {
         info!(
-            tool = "cargo-machete",
+            dependency = "cargo-machete",
             "Checking if cargo-machete is installed"
         );
 
         let installed =
             command_exists("cargo-machete").map_err(|e| DetectionError::DetectionFailed {
-                tool: self.name().to_string(),
+                dependency: Dependency::CargoMachete,
                 source: std::io::Error::other(e.to_string()),
             })?;
 
         if installed {
-            info!(tool = "cargo-machete", "cargo-machete is installed");
+            info!(dependency = "cargo-machete", "cargo-machete is installed");
         } else {
-            info!(tool = "cargo-machete", "cargo-machete is not installed");
+            info!(
+                dependency = "cargo-machete",
+                "cargo-machete is not installed"
+            );
         }
 
         Ok(installed)

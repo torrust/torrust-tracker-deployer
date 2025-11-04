@@ -5,6 +5,8 @@ pub mod opentofu;
 
 use thiserror::Error;
 
+use crate::Dependency;
+
 pub use ansible::AnsibleDetector;
 pub use cargo_machete::CargoMacheteDetector;
 pub use lxd::LxdDetector;
@@ -13,23 +15,26 @@ pub use opentofu::OpenTofuDetector;
 /// Error types for detection operations
 #[derive(Debug, Error)]
 pub enum DetectionError {
-    #[error("Failed to detect tool '{tool}': {source}")]
+    #[error("Failed to detect dependency '{dependency}': {source}")]
     DetectionFailed {
-        tool: String,
+        dependency: Dependency,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("Command execution failed for tool '{tool}': {message}")]
-    CommandFailed { tool: String, message: String },
+    #[error("Command execution failed for dependency '{dependency}': {message}")]
+    CommandFailed {
+        dependency: Dependency,
+        message: String,
+    },
 }
 
-/// Trait for detecting if a tool is installed
-pub trait ToolDetector {
-    /// Get the tool name for display purposes
+/// Trait for detecting if a dependency is installed
+pub trait DependencyDetector {
+    /// Get the dependency name for display purposes
     fn name(&self) -> &'static str;
 
-    /// Check if the tool is already installed
+    /// Check if the dependency is already installed
     ///
     /// # Errors
     ///
