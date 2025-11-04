@@ -15,25 +15,25 @@ use torrust_dependency_installer::{
 // =============================================================================
 
 #[test]
-fn test_cargo_machete_detector_name() {
+fn it_should_return_cargo_machete_detector_name() {
     let detector = CargoMacheteDetector;
     assert_eq!(detector.name(), "cargo-machete");
 }
 
 #[test]
-fn test_opentofu_detector_name() {
+fn it_should_return_opentofu_detector_name() {
     let detector = OpenTofuDetector;
     assert_eq!(detector.name(), "OpenTofu");
 }
 
 #[test]
-fn test_ansible_detector_name() {
+fn it_should_return_ansible_detector_name() {
     let detector = AnsibleDetector;
     assert_eq!(detector.name(), "Ansible");
 }
 
 #[test]
-fn test_lxd_detector_name() {
+fn it_should_return_lxd_detector_name() {
     let detector = LxdDetector;
     assert_eq!(detector.name(), "LXD");
 }
@@ -47,7 +47,7 @@ fn test_lxd_detector_name() {
 // that the detection logic executes successfully without panicking.
 
 #[test]
-fn test_cargo_machete_detector_runs_without_error() {
+fn it_should_run_cargo_machete_detector_without_error() {
     let detector = CargoMacheteDetector;
     // Should not panic - result depends on system state
     let result = detector.is_installed();
@@ -55,7 +55,7 @@ fn test_cargo_machete_detector_runs_without_error() {
 }
 
 #[test]
-fn test_opentofu_detector_runs_without_error() {
+fn it_should_run_opentofu_detector_without_error() {
     let detector = OpenTofuDetector;
     // Should not panic - result depends on system state
     let result = detector.is_installed();
@@ -63,7 +63,7 @@ fn test_opentofu_detector_runs_without_error() {
 }
 
 #[test]
-fn test_ansible_detector_runs_without_error() {
+fn it_should_run_ansible_detector_without_error() {
     let detector = AnsibleDetector;
     // Should not panic - result depends on system state
     let result = detector.is_installed();
@@ -71,7 +71,7 @@ fn test_ansible_detector_runs_without_error() {
 }
 
 #[test]
-fn test_lxd_detector_runs_without_error() {
+fn it_should_run_lxd_detector_without_error() {
     let detector = LxdDetector;
     // Should not panic - result depends on system state
     let result = detector.is_installed();
@@ -83,7 +83,7 @@ fn test_lxd_detector_runs_without_error() {
 // =============================================================================
 
 #[test]
-fn test_detectors_have_no_required_version_by_default() {
+fn it_should_return_no_required_version_by_default_for_all_detectors() {
     let cargo_machete = CargoMacheteDetector;
     let opentofu = OpenTofuDetector;
     let ansible = AnsibleDetector;
@@ -100,21 +100,21 @@ fn test_detectors_have_no_required_version_by_default() {
 // =============================================================================
 
 #[test]
-fn test_dependency_manager_creation() {
+fn it_should_create_dependency_manager() {
     let manager = DependencyManager::new();
     // Should not panic
     drop(manager);
 }
 
 #[test]
-fn test_dependency_manager_default() {
+fn it_should_create_dependency_manager_with_default() {
     let manager = DependencyManager::default();
     // Should not panic
     drop(manager);
 }
 
 #[test]
-fn test_dependency_manager_check_all_runs() {
+fn it_should_check_all_dependencies_without_error() {
     let manager = DependencyManager::new();
     let results = manager.check_all();
 
@@ -134,28 +134,28 @@ fn test_dependency_manager_check_all_runs() {
 }
 
 #[test]
-fn test_dependency_manager_get_detector_cargo_machete() {
+fn it_should_get_cargo_machete_detector_from_manager() {
     let manager = DependencyManager::new();
     let detector = manager.get_detector(Dependency::CargoMachete);
     assert_eq!(detector.name(), "cargo-machete");
 }
 
 #[test]
-fn test_dependency_manager_get_detector_opentofu() {
+fn it_should_get_opentofu_detector_from_manager() {
     let manager = DependencyManager::new();
     let detector = manager.get_detector(Dependency::OpenTofu);
     assert_eq!(detector.name(), "OpenTofu");
 }
 
 #[test]
-fn test_dependency_manager_get_detector_ansible() {
+fn it_should_get_ansible_detector_from_manager() {
     let manager = DependencyManager::new();
     let detector = manager.get_detector(Dependency::Ansible);
     assert_eq!(detector.name(), "Ansible");
 }
 
 #[test]
-fn test_dependency_manager_get_detector_lxd() {
+fn it_should_get_lxd_detector_from_manager() {
     let manager = DependencyManager::new();
     let detector = manager.get_detector(Dependency::Lxd);
     assert_eq!(detector.name(), "LXD");
@@ -166,7 +166,7 @@ fn test_dependency_manager_get_detector_lxd() {
 // =============================================================================
 
 #[test]
-fn test_check_result_creation() {
+fn it_should_create_check_result() {
     let result = CheckResult {
         tool: "test-tool".to_string(),
         installed: true,
@@ -177,7 +177,7 @@ fn test_check_result_creation() {
 }
 
 #[test]
-fn test_check_result_clone() {
+fn it_should_clone_check_result() {
     let result = CheckResult {
         tool: "test-tool".to_string(),
         installed: false,
@@ -193,7 +193,7 @@ fn test_check_result_clone() {
 // =============================================================================
 
 #[test]
-fn test_command_exists_for_known_command() {
+fn it_should_detect_existing_command() {
     use torrust_dependency_installer::command::command_exists;
 
     // Test with 'sh' which should always exist on Unix systems
@@ -204,7 +204,7 @@ fn test_command_exists_for_known_command() {
 }
 
 #[test]
-fn test_command_exists_for_nonexistent_command() {
+fn it_should_detect_nonexistent_command() {
     use torrust_dependency_installer::command::command_exists;
 
     // Test with a command that definitely doesn't exist
@@ -215,7 +215,7 @@ fn test_command_exists_for_nonexistent_command() {
 }
 
 #[test]
-fn test_execute_command_success() {
+fn it_should_execute_command_successfully() {
     use torrust_dependency_installer::command::execute_command;
 
     // Test with 'echo' which should always work
@@ -225,7 +225,7 @@ fn test_execute_command_success() {
 }
 
 #[test]
-fn test_execute_command_nonexistent() {
+fn it_should_fail_to_execute_nonexistent_command() {
     use torrust_dependency_installer::command::execute_command;
 
     // Test with nonexistent command
