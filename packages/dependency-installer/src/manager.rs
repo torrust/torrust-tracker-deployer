@@ -1,7 +1,7 @@
 use crate::detector::{
-    AnsibleDetector, CargoMacheteDetector, LxdDetector, OpenTofuDetector, ToolDetector,
+    AnsibleDetector, CargoMacheteDetector, DetectionError, LxdDetector, OpenTofuDetector,
+    ToolDetector,
 };
-use crate::errors::DetectionError;
 
 /// Result of checking a single dependency
 #[derive(Debug, Clone)]

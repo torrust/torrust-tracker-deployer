@@ -1,8 +1,8 @@
 use tracing::info;
 
 use crate::command::command_exists;
-use crate::detector::ToolDetector;
-use crate::errors::DetectionError;
+
+use super::{DetectionError, ToolDetector};
 
 /// Detector for `cargo-machete` tool
 pub struct CargoMacheteDetector;

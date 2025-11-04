@@ -1,6 +1,20 @@
 use std::process::Command;
 
-use crate::errors::CommandError;
+use thiserror::Error;
+
+/// Error types for command execution utilities
+#[derive(Debug, Error)]
+pub enum CommandError {
+    #[error("Failed to execute command '{command}': {source}")]
+    ExecutionFailed {
+        command: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("Command '{command}' not found in PATH")]
+    CommandNotFound { command: String },
+}
 
 /// Check if a command exists in the system PATH
 ///

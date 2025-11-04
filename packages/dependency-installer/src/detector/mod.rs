@@ -3,12 +3,26 @@ pub mod cargo_machete;
 pub mod lxd;
 pub mod opentofu;
 
-use crate::errors::DetectionError;
+use thiserror::Error;
 
 pub use ansible::AnsibleDetector;
 pub use cargo_machete::CargoMacheteDetector;
 pub use lxd::LxdDetector;
 pub use opentofu::OpenTofuDetector;
+
+/// Error types for detection operations
+#[derive(Debug, Error)]
+pub enum DetectionError {
+    #[error("Failed to detect tool '{tool}': {source}")]
+    DetectionFailed {
+        tool: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("Command execution failed for tool '{tool}': {message}")]
+    CommandFailed { tool: String, message: String },
+}
 
 /// Trait for detecting if a tool is installed
 pub trait ToolDetector {
