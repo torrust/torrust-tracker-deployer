@@ -67,9 +67,11 @@ async fn test_check_specific_tool() {
     // Check a specific tool (OpenTofu)
     let output = container.exec(&["dependency-installer", "check", "--tool", "opentofu"]);
 
-    // The output contains the status line with the checkmark/X symbol
+    // The output contains "OpenTofu: not installed" in the status line
+    // We check for the plain text version since the ✗ symbol may not be present
+    // in all terminal environments or when output is redirected
     assert!(
-        output.contains("✗ OpenTofu: not installed") || output.contains("OpenTofu: not installed"),
+        output.contains("OpenTofu: not installed"),
         "Expected OpenTofu to be reported as not installed, got: {}",
         output
     );
@@ -149,16 +151,34 @@ async fn test_verbose_output() {
 ///
 /// This function assumes the binary was built before running tests.
 /// Run `cargo build --bin dependency-installer` before running these tests.
+///
+/// # Implementation Note
+///
+/// We use CARGO_MANIFEST_DIR and navigate up to the workspace root, then into
+/// the target directory. This works because:
+/// 1. CARGO_MANIFEST_DIR points to packages/dependency-installer
+/// 2. The workspace root is two directories up
+/// 3. The target directory is in the workspace root
+///
+/// Alternative approaches considered:
+/// - CARGO_TARGET_DIR: Not always set
+/// - OUT_DIR: Points to build script output, not target/debug
+/// - Searching for target dir: Too expensive
 fn get_binary_path() -> PathBuf {
-    // Get the workspace root directory
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    // Get the package manifest directory (packages/dependency-installer)
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
-    // Navigate to workspace target directory
-    path.pop(); // packages
-    path.pop(); // repository root
-    path.push("target");
-    path.push("debug");
-    path.push("dependency-installer");
+    // Navigate to workspace root (two levels up from packages/dependency-installer)
+    let workspace_root = manifest_dir
+        .parent() // packages/
+        .and_then(|p| p.parent()) // workspace root
+        .expect("Failed to find workspace root");
+
+    // Build path to the binary in target/debug
+    let path = workspace_root
+        .join("target")
+        .join("debug")
+        .join("dependency-installer");
 
     assert!(
         path.exists(),

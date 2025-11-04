@@ -47,6 +47,13 @@ pub fn copy_file_to_container(container_id: &str, source_path: &Path, dest_path:
 /// # Returns
 ///
 /// The combined stdout and stderr output as a string
+///
+/// # Note
+///
+/// The output combines stderr and stdout because the CLI uses tracing which writes
+/// logs to stderr, while user-facing messages go to stdout. We need both for
+/// comprehensive test assertions. Stderr is placed first to maintain chronological
+/// order of log messages relative to output.
 pub fn exec_in_container(container_id: &str, command: &[&str]) -> String {
     let output = Command::new("docker")
         .arg("exec")
@@ -55,7 +62,7 @@ pub fn exec_in_container(container_id: &str, command: &[&str]) -> String {
         .output()
         .expect("Failed to execute docker exec command");
 
-    // Combine stdout and stderr to capture all output (logs go to stderr)
+    // Combine stderr (logs) and stdout (user messages) to capture all output
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     format!("{}{}", stderr, stdout)
@@ -70,7 +77,12 @@ pub fn exec_in_container(container_id: &str, command: &[&str]) -> String {
 ///
 /// # Returns
 ///
-/// The exit code of the command
+/// The exit code of the command, or 1 if the process was terminated by a signal
+///
+/// # Note
+///
+/// If the process was terminated by a signal (returns None from code()), we return 1
+/// to indicate failure rather than 0, which would incorrectly suggest success.
 pub fn exec_in_container_with_exit_code(container_id: &str, command: &[&str]) -> i32 {
     let status = Command::new("docker")
         .arg("exec")
@@ -79,5 +91,6 @@ pub fn exec_in_container_with_exit_code(container_id: &str, command: &[&str]) ->
         .status()
         .expect("Failed to execute docker exec command");
 
-    status.code().unwrap_or(0)
+    // Return 1 (failure) if terminated by signal, otherwise use actual exit code
+    status.code().unwrap_or(1)
 }
