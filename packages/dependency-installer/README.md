@@ -20,7 +20,75 @@ This package can detect the following development dependencies:
 
 ## Usage
 
-### Checking Dependencies
+### CLI Binary
+
+The package provides a `dependency-installer` binary for command-line usage:
+
+```bash
+# Check all dependencies
+dependency-installer check
+
+# Check specific tool
+dependency-installer check --tool opentofu
+
+# List all tools with status
+dependency-installer list
+
+# Enable verbose logging
+dependency-installer check --verbose
+
+# Get help
+dependency-installer --help
+dependency-installer check --help
+```
+
+#### Exit Codes
+
+- **0**: Success (all checks passed)
+- **1**: Missing dependencies
+- **2**: Invalid arguments
+- **3**: Internal error
+
+#### Examples
+
+```bash
+# Check all dependencies
+$ dependency-installer check
+Checking dependencies...
+
+✓ cargo-machete: installed
+✗ OpenTofu: not installed
+✗ Ansible: not installed
+✓ LXD: installed
+
+Missing 2 out of 4 required dependencies
+
+# Check specific tool (with aliases)
+$ dependency-installer check --tool tofu
+✗ OpenTofu: not installed
+
+# List all tools
+$ dependency-installer list
+Available tools:
+
+- cargo-machete (installed)
+- OpenTofu (not installed)
+- Ansible (not installed)
+- LXD (installed)
+```
+
+#### Tool Aliases
+
+The CLI accepts multiple aliases for tools:
+
+- `cargo-machete` or `machete`
+- `opentofu` or `tofu`
+- `ansible`
+- `lxd`
+
+### Library Usage
+
+#### Checking Dependencies
 
 ```rust
 use torrust_dependency_installer::DependencyManager;
@@ -39,7 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### Using Individual Detectors
+#### Using Individual Detectors
 
 ```rust
 use torrust_dependency_installer::{ToolDetector, OpenTofuDetector};
