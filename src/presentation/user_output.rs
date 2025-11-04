@@ -2381,8 +2381,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::plain(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
@@ -2412,8 +2416,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
@@ -2440,8 +2448,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
@@ -2477,8 +2489,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
@@ -2505,8 +2521,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
@@ -2531,8 +2551,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::plain(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
@@ -2555,8 +2579,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Quiet),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
@@ -2584,8 +2612,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::default(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
@@ -2607,8 +2639,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
@@ -2636,8 +2672,12 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)))),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stdout_buffer,
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
                 formatter_override: Some(formatter),
             };
 
