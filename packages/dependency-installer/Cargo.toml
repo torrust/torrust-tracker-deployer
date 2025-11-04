@@ -9,7 +9,12 @@ license = "MIT"
 name = "torrust_dependency_installer"
 path = "src/lib.rs"
 
+[[bin]]
+name = "dependency-installer"
+path = "src/bin/dependency-installer.rs"
+
 [dependencies]
+clap = { version = "4.0", features = [ "derive" ] }
 thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
