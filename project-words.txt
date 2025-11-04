@@ -99,6 +99,7 @@ nameof
 nanos
 newgrp
 newtype
+newtypes
 nistp
 nocapture
 noconfirm

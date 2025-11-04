@@ -15,11 +15,11 @@ See comprehensive refactoring plan: [docs/refactors/plans/user-output-architectu
 
 ## Goals
 
-- [ ] **Separate Concerns**: Extract verbosity filtering, theme configuration, and formatting logic
-- [ ] **Simplify Testing**: Improve test infrastructure and reduce duplication
-- [ ] **Enable Extensibility**: Support different output styles (emoji, plain text, JSON) and destinations
-- [ ] **Improve Maintainability**: Reduce code duplication and establish clear abstractions
-- [ ] **Maintain Quality**: All refactorings must pass pre-commit checks and maintain test coverage
+- [x] **Separate Concerns**: Extract verbosity filtering, theme configuration, and formatting logic
+- [x] **Simplify Testing**: Improve test infrastructure and reduce duplication
+- [x] **Enable Extensibility**: Support different output styles (emoji, plain text, JSON) and destinations
+- [x] **Improve Maintainability**: Reduce code duplication and establish clear abstractions
+- [x] **Maintain Quality**: All refactorings must pass pre-commit checks and maintain test coverage
 
 ## Proposals Summary
 
@@ -57,17 +57,18 @@ See comprehensive refactoring plan: [docs/refactors/plans/user-output-architectu
 ### Phase 0: Quick Wins
 
 - [x] [#103](https://github.com/torrust/torrust-tracker-deployer/issues/103) - Proposal 0: Extract Verbosity Filtering Logic
-- [ ] [#123](https://github.com/torrust/torrust-tracker-deployer/issues/123) - Proposal 1: Simplify Test Infrastructure
-- [ ] [#124](https://github.com/torrust/torrust-tracker-deployer/issues/124) - Proposal 2: Add Theme/Configuration Support
+- [x] [#123](https://github.com/torrust/torrust-tracker-deployer/issues/123) - Proposal 1: Simplify Test Infrastructure
+- [x] [#124](https://github.com/torrust/torrust-tracker-deployer/issues/124) - Proposal 2: Add Theme/Configuration Support
 
 ### Phase 1: Strategic Improvements
 
-- [ ] [#127](https://github.com/torrust/torrust-tracker-deployer/issues/127) - Proposal 3: Use Message Trait for Extensibility
-- [ ] [#128](https://github.com/torrust/torrust-tracker-deployer/issues/128) - Proposal 5: Parameterized Test Cases
+- [x] [#127](https://github.com/torrust/torrust-tracker-deployer/issues/127) - Proposal 3: Use Message Trait for Extensibility
+- [x] [#128](https://github.com/torrust/torrust-tracker-deployer/issues/128) - Proposal 5: Parameterized Test Cases
 
 ### Phase 2: Polish & Extensions
 
-- [ ] [#133](https://github.com/torrust/torrust-tracker-deployer/issues/133) - Proposal 4: Add Formatter Override Support
+- [x] [#133](https://github.com/torrust/torrust-tracker-deployer/issues/133) - Proposal 4: Add Formatter Override Support
+- [ ] [#135](https://github.com/torrust/torrust-tracker-deployer/issues/135) - Proposal 6: Type-Safe Channel Routing
 
 ### Other Related Work
 
