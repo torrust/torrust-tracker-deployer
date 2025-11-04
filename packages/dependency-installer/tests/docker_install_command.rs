@@ -11,6 +11,7 @@ use containers::ubuntu_container_builder::UbuntuContainerBuilder;
 
 /// Test that cargo-machete can be installed
 #[tokio::test]
+#[ignore] // Requires recent Rust/Cargo version, run with --ignored flag
 async fn it_should_install_cargo_machete_successfully() {
     // Get the binary path (built by cargo before running tests)
     let binary_path = get_binary_path();
@@ -56,6 +57,7 @@ async fn it_should_install_cargo_machete_successfully() {
 
 /// Test that installation is idempotent (can run multiple times)
 #[tokio::test]
+#[ignore] // Requires recent Rust/Cargo version, run with --ignored flag
 async fn it_should_handle_idempotent_installation_of_cargo_machete() {
     let binary_path = get_binary_path();
 
@@ -146,12 +148,7 @@ async fn it_should_install_ansible_successfully() {
         .await;
 
     // Install Ansible
-    let output = container.exec(&[
-        "dependency-installer",
-        "install",
-        "--dependency",
-        "ansible",
-    ]);
+    let output = container.exec(&["dependency-installer", "install", "--dependency", "ansible"]);
 
     // Verify installation succeeded
     let combined = output.to_string();
@@ -190,12 +187,7 @@ async fn it_should_install_lxd_successfully() {
     container.exec(&["apt-get", "install", "-y", "snapd"]);
 
     // Install LXD
-    let output = container.exec(&[
-        "dependency-installer",
-        "install",
-        "--dependency",
-        "lxd",
-    ]);
+    let output = container.exec(&["dependency-installer", "install", "--dependency", "lxd"]);
 
     // Verify installation succeeded
     let combined = output.to_string();

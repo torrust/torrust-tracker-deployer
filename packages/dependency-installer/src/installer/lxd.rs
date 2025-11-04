@@ -103,11 +103,7 @@ impl DependencyInstaller for LxdInstaller {
         // Fix socket permissions for CI environment
         debug!("Setting socket permissions for CI compatibility");
         let output = Command::new("sudo")
-            .args([
-                "chmod",
-                "666",
-                "/var/snap/lxd/common/lxd/unix.socket",
-            ])
+            .args(["chmod", "666", "/var/snap/lxd/common/lxd/unix.socket"])
             .output()
             .map_err(|e| InstallationError::CommandFailed {
                 dependency: Dependency::Lxd,

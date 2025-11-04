@@ -13,8 +13,8 @@ use crate::detector::{
     OpenTofuDetector,
 };
 use crate::installer::{
-    AnsibleInstaller, CargoMacheteInstaller, DependencyInstaller, InstallationError,
-    LxdInstaller, OpenTofuInstaller,
+    AnsibleInstaller, CargoMacheteInstaller, DependencyInstaller, InstallationError, LxdInstaller,
+    OpenTofuInstaller,
 };
 
 // ============================================================================
