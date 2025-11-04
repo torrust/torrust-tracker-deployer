@@ -26,10 +26,15 @@ impl DependencyDetector for CargoMacheteDetector {
             })?;
 
         if installed {
-            info!(dependency = "cargo-machete", "cargo-machete is installed");
+            info!(
+                dependency = "cargo-machete",
+                status = "installed",
+                "cargo-machete is installed"
+            );
         } else {
             info!(
                 dependency = "cargo-machete",
+                status = "not installed",
                 "cargo-machete is not installed"
             );
         }

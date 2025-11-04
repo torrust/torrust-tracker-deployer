@@ -22,9 +22,17 @@ impl DependencyDetector for AnsibleDetector {
         })?;
 
         if installed {
-            info!(dependency = "ansible", "Ansible is installed");
+            info!(
+                dependency = "ansible",
+                status = "installed",
+                "Ansible is installed"
+            );
         } else {
-            info!(dependency = "ansible", "Ansible is not installed");
+            info!(
+                dependency = "ansible",
+                status = "not installed",
+                "Ansible is not installed"
+            );
         }
 
         Ok(installed)

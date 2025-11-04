@@ -23,9 +23,13 @@ impl DependencyDetector for LxdDetector {
         })?;
 
         if installed {
-            info!(dependency = "lxd", "LXD is installed");
+            info!(dependency = "lxd", status = "installed", "LXD is installed");
         } else {
-            info!(dependency = "lxd", "LXD is not installed");
+            info!(
+                dependency = "lxd",
+                status = "not installed",
+                "LXD is not installed"
+            );
         }
 
         Ok(installed)

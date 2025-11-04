@@ -12,16 +12,9 @@
 
 use std::process;
 
-use torrust_dependency_installer::app::{self, ExitCode};
+use torrust_dependency_installer::app;
 
 fn main() {
-    let exit_code = match app::run() {
-        Ok(()) => ExitCode::Success,
-        Err(e) => {
-            eprintln!("Error: {e}");
-            e.to_exit_code()
-        }
-    };
-
+    let exit_code = app::run();
     process::exit(exit_code.into());
 }

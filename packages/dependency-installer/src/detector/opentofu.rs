@@ -22,9 +22,17 @@ impl DependencyDetector for OpenTofuDetector {
         })?;
 
         if installed {
-            info!(dependency = "opentofu", "OpenTofu is installed");
+            info!(
+                dependency = "opentofu",
+                status = "installed",
+                "OpenTofu is installed"
+            );
         } else {
-            info!(dependency = "opentofu", "OpenTofu is not installed");
+            info!(
+                dependency = "opentofu",
+                status = "not installed",
+                "OpenTofu is not installed"
+            );
         }
 
         Ok(installed)

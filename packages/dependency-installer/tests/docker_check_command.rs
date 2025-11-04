@@ -18,17 +18,9 @@ async fn test_check_all_reports_missing_dependencies() {
     // Start Ubuntu container with the binary
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
-    // Run the check command with logging disabled for clean test output
-    let output = container.exec(&["dependency-installer", "check", "--log-level", "off"]);
-
-    // Verify it reports missing dependencies in the error message
-    assert!(
-        output.contains("Missing 4 out of 4 required dependencies"),
-        "Expected missing dependencies error message, got: {output}"
-    );
-
-    // Verify exit code is non-zero (failure)
-    let exit_code = container.exec_with_exit_code(&["dependency-installer", "check", "--log-level", "off"]);
+    // Verify exit code is non-zero (failure) when dependencies are missing
+    let exit_code =
+        container.exec_with_exit_code(&["dependency-installer", "check", "--log-level", "off"]);
     assert_eq!(
         exit_code, 1,
         "check command should exit with 1 when dependencies missing"
@@ -42,15 +34,7 @@ async fn test_check_specific_dependency() {
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
-    // Run check command for opentofu (which is not installed) with logging disabled
-    let output = container.exec(&["dependency-installer", "check", "--dependency", "opentofu", "--log-level", "off"]);
-
-    // Verify it reports missing dependency in the error message
-    assert!(
-        output.contains("opentofu: not installed"),
-        "Expected opentofu missing error message, got: {output}"
-    );
-
+    // Verify exit code when checking missing specific dependency
     let exit_code = container.exec_with_exit_code(&[
         "dependency-installer",
         "check",

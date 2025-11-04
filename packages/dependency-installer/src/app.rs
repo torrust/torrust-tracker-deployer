@@ -101,13 +101,9 @@ impl From<ListError> for AppError {
 
 /// Run the CLI application
 ///
-/// # Errors
-///
-/// Returns an error if:
-/// - Dependencies are missing
-/// - Invalid tool name is provided
-/// - Internal error occurs during dependency checking
-pub fn run() -> Result<(), AppError> {
+/// Returns the appropriate exit code based on the operation result.
+/// Errors are logged using tracing and do not propagate to stderr.
+pub fn run() -> ExitCode {
     let cli = Cli::parse();
 
     // Determine log level: verbose flag overrides log-level argument
@@ -122,12 +118,19 @@ pub fn run() -> Result<(), AppError> {
 
     let manager = DependencyManager::new();
 
-    match cli.command {
+    let result: Result<(), AppError> = match cli.command {
         Commands::Check { dependency } => {
-            crate::handlers::check::handle_check(&manager, dependency)?;
+            crate::handlers::check::handle_check(&manager, dependency).map_err(AppError::from)
         }
-        Commands::List => crate::handlers::list::handle_list(&manager)?,
-    }
+        Commands::List => crate::handlers::list::handle_list(&manager).map_err(AppError::from),
+    };
 
-    Ok(())
+    match result {
+        Ok(()) => ExitCode::Success,
+        Err(e) => {
+            // Log the error using tracing instead of eprintln
+            tracing::error!(error = %e, "Command failed");
+            e.to_exit_code()
+        }
+    }
 }
