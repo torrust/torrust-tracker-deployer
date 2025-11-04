@@ -201,6 +201,102 @@ impl Default for Theme {
     }
 }
 
+/// Output channel for routing messages
+///
+/// Determines whether a message should be written to stdout or stderr.
+/// Following Unix conventions:
+/// - **stdout**: Final results and structured data for piping/redirection
+/// - **stderr**: Progress updates, status messages, operational info, errors
+///
+/// # Examples
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::presentation::user_output::Channel;
+///
+/// let channel = Channel::Stdout;
+/// assert_eq!(channel, Channel::Stdout);
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Channel {
+    /// Standard output stream for final results and data
+    Stdout,
+    /// Standard error stream for progress and operational messages
+    Stderr,
+}
+
+/// Trait for output messages that can be written to user-facing channels
+///
+/// This trait enables extensibility following the Open/Closed Principle.
+/// Each message type encapsulates its own:
+/// - Formatting logic (how it appears to users)
+/// - Verbosity requirements (when it should be shown)
+/// - Channel routing (stdout vs stderr)
+///
+/// # Design Philosophy
+///
+/// By implementing this trait, message types become self-contained and can be
+/// added without modifying the `UserOutput` struct. This makes the system
+/// extensible - new message types can be defined in external modules.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::{OutputMessage, Theme, VerbosityLevel, Channel};
+///
+/// struct CustomMessage {
+///     text: String,
+/// }
+///
+/// impl OutputMessage for CustomMessage {
+///     fn format(&self, theme: &Theme) -> String {
+///         format!("🎉 {}", self.text)
+///     }
+///
+///     fn required_verbosity(&self) -> VerbosityLevel {
+///         VerbosityLevel::Normal
+///     }
+///
+///     fn channel(&self) -> Channel {
+///         Channel::Stderr
+///     }
+/// }
+/// ```
+pub trait OutputMessage {
+    /// Format this message using the given theme
+    ///
+    /// This method defines how the message appears to users. It should
+    /// incorporate theme symbols and any necessary formatting.
+    ///
+    /// # Arguments
+    ///
+    /// * `theme` - The theme providing symbols for formatting
+    ///
+    /// # Returns
+    ///
+    /// A formatted string ready for display to users
+    fn format(&self, theme: &Theme) -> String;
+
+    /// Get the minimum verbosity level required to show this message
+    ///
+    /// Messages are only displayed if the current verbosity level is
+    /// greater than or equal to the required level.
+    ///
+    /// # Returns
+    ///
+    /// The minimum verbosity level needed to display this message
+    fn required_verbosity(&self) -> VerbosityLevel;
+
+    /// Get the output channel for this message
+    ///
+    /// Determines whether the message goes to stdout or stderr following
+    /// Unix conventions.
+    ///
+    /// # Returns
+    ///
+    /// The channel (Stdout or Stderr) where this message should be written
+    fn channel(&self) -> Channel;
+}
+
 /// Verbosity levels for user output
 ///
 /// Controls the amount of detail shown to users. Higher verbosity levels include
@@ -230,6 +326,220 @@ pub enum VerbosityLevel {
     Debug,
 }
 
+// ============================================================================
+// Concrete Message Type Implementations
+// ============================================================================
+
+/// Progress message for ongoing operations
+///
+/// Progress messages indicate that work is in progress. They are displayed
+/// during operations to provide feedback to users.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::ProgressMessage;
+///
+/// let message = ProgressMessage {
+///     text: "Destroying environment...".to_string(),
+/// };
+/// ```
+pub struct ProgressMessage {
+    /// The progress message text
+    pub text: String,
+}
+
+impl OutputMessage for ProgressMessage {
+    fn format(&self, theme: &Theme) -> String {
+        format!("{} {}\n", theme.progress_symbol(), self.text)
+    }
+
+    fn required_verbosity(&self) -> VerbosityLevel {
+        VerbosityLevel::Normal
+    }
+
+    fn channel(&self) -> Channel {
+        Channel::Stderr
+    }
+}
+
+/// Success message for completed operations
+///
+/// Success messages indicate that an operation completed successfully.
+/// They provide positive feedback to users.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::SuccessMessage;
+///
+/// let message = SuccessMessage {
+///     text: "Environment destroyed successfully".to_string(),
+/// };
+/// ```
+pub struct SuccessMessage {
+    /// The success message text
+    pub text: String,
+}
+
+impl OutputMessage for SuccessMessage {
+    fn format(&self, theme: &Theme) -> String {
+        format!("{} {}\n", theme.success_symbol(), self.text)
+    }
+
+    fn required_verbosity(&self) -> VerbosityLevel {
+        VerbosityLevel::Normal
+    }
+
+    fn channel(&self) -> Channel {
+        Channel::Stderr
+    }
+}
+
+/// Warning message for non-critical issues
+///
+/// Warning messages alert users to potential issues that don't prevent
+/// operation completion but may need attention.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::WarningMessage;
+///
+/// let message = WarningMessage {
+///     text: "Infrastructure may already be destroyed".to_string(),
+/// };
+/// ```
+pub struct WarningMessage {
+    /// The warning message text
+    pub text: String,
+}
+
+impl OutputMessage for WarningMessage {
+    fn format(&self, theme: &Theme) -> String {
+        format!("{}  {}\n", theme.warning_symbol(), self.text)
+    }
+
+    fn required_verbosity(&self) -> VerbosityLevel {
+        VerbosityLevel::Normal
+    }
+
+    fn channel(&self) -> Channel {
+        Channel::Stderr
+    }
+}
+
+/// Error message for critical failures
+///
+/// Error messages indicate critical failures that prevent operation completion.
+/// They are always shown regardless of verbosity level.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::ErrorMessage;
+///
+/// let message = ErrorMessage {
+///     text: "Failed to destroy environment".to_string(),
+/// };
+/// ```
+pub struct ErrorMessage {
+    /// The error message text
+    pub text: String,
+}
+
+impl OutputMessage for ErrorMessage {
+    fn format(&self, theme: &Theme) -> String {
+        format!("{} {}\n", theme.error_symbol(), self.text)
+    }
+
+    fn required_verbosity(&self) -> VerbosityLevel {
+        VerbosityLevel::Quiet // Always shown
+    }
+
+    fn channel(&self) -> Channel {
+        Channel::Stderr
+    }
+}
+
+/// Result message for final output data
+///
+/// Result messages contain final output data that can be piped or redirected.
+/// They go to stdout without any symbols or formatting.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::ResultMessage;
+///
+/// let message = ResultMessage {
+///     text: "Deployment complete".to_string(),
+/// };
+/// ```
+pub struct ResultMessage {
+    /// The result message text
+    pub text: String,
+}
+
+impl OutputMessage for ResultMessage {
+    fn format(&self, _theme: &Theme) -> String {
+        format!("{}\n", self.text)
+    }
+
+    fn required_verbosity(&self) -> VerbosityLevel {
+        VerbosityLevel::Quiet
+    }
+
+    fn channel(&self) -> Channel {
+        Channel::Stdout
+    }
+}
+
+/// Steps message for sequential instructions
+///
+/// Steps messages display numbered lists of sequential items.
+/// Useful for showing action items or instructions.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+///
+/// let message = StepsMessage {
+///     title: "Next steps:".to_string(),
+///     items: vec![
+///         "Edit the configuration file".to_string(),
+///         "Review the settings".to_string(),
+///     ],
+/// };
+/// ```
+pub struct StepsMessage {
+    /// The title for the steps list
+    pub title: String,
+    /// The list of step items
+    pub items: Vec<String>,
+}
+
+impl OutputMessage for StepsMessage {
+    fn format(&self, _theme: &Theme) -> String {
+        use std::fmt::Write;
+
+        let mut output = format!("{}\n", self.title);
+        for (idx, step) in self.items.iter().enumerate() {
+            writeln!(&mut output, "{}. {}", idx + 1, step).ok();
+        }
+        output
+    }
+
+    fn required_verbosity(&self) -> VerbosityLevel {
+        VerbosityLevel::Normal
+    }
+
+    fn channel(&self) -> Channel {
+        Channel::Stderr
+    }
+}
+
 /// Determines what messages should be displayed based on verbosity level
 ///
 /// This struct encapsulates verbosity filtering logic, making it testable
@@ -250,22 +560,26 @@ impl VerbosityFilter {
     }
 
     /// Progress messages require Normal level
+    #[allow(dead_code)]
     fn should_show_progress(&self) -> bool {
         self.should_show(VerbosityLevel::Normal)
     }
 
     /// Success messages require Normal level
+    #[allow(dead_code)]
     fn should_show_success(&self) -> bool {
         self.should_show(VerbosityLevel::Normal)
     }
 
     /// Warning messages require Normal level
+    #[allow(dead_code)]
     fn should_show_warnings(&self) -> bool {
         self.should_show(VerbosityLevel::Normal)
     }
 
     /// Errors are always shown regardless of verbosity level
     #[allow(clippy::unused_self)]
+    #[allow(dead_code)]
     fn should_show_errors(&self) -> bool {
         true
     }
@@ -276,6 +590,7 @@ impl VerbosityFilter {
     }
 
     /// Steps require Normal level
+    #[allow(dead_code)]
     fn should_show_steps(&self) -> bool {
         self.should_show(VerbosityLevel::Normal)
     }
@@ -427,6 +742,40 @@ impl UserOutput {
         Self::with_theme_and_writers(verbosity, Theme::default(), stdout_writer, stderr_writer)
     }
 
+    /// Write a message to the appropriate channel using trait dispatch
+    ///
+    /// This is the core method for extensible message handling. It uses the
+    /// `OutputMessage` trait to determine formatting, verbosity requirements,
+    /// and channel routing. This allows new message types to be added without
+    /// modifying this struct.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel, ProgressMessage};
+    ///
+    /// let mut output = UserOutput::new(VerbosityLevel::Normal);
+    /// output.write(&ProgressMessage {
+    ///     text: "Processing...".to_string(),
+    /// });
+    /// ```
+    pub fn write(&mut self, message: &dyn OutputMessage) {
+        if !self
+            .verbosity_filter
+            .should_show(message.required_verbosity())
+        {
+            return;
+        }
+
+        let formatted = message.format(&self.theme);
+        let writer = match message.channel() {
+            Channel::Stdout => &mut self.stdout_writer,
+            Channel::Stderr => &mut self.stderr_writer,
+        };
+
+        write!(writer, "{formatted}").ok();
+    }
+
     /// Display progress message to stderr (Normal level and above)
     ///
     /// Progress messages go to stderr following cargo/docker patterns.
@@ -442,14 +791,9 @@ impl UserOutput {
     /// // Output to stderr: ⏳ Destroying environment...
     /// ```
     pub fn progress(&mut self, message: &str) {
-        if self.verbosity_filter.should_show_progress() {
-            writeln!(
-                self.stderr_writer,
-                "{} {message}",
-                self.theme.progress_symbol()
-            )
-            .ok();
-        }
+        self.write(&ProgressMessage {
+            text: message.to_string(),
+        });
     }
 
     /// Display success message to stderr (Normal level and above)
@@ -466,14 +810,9 @@ impl UserOutput {
     /// // Output to stderr: ✅ Environment destroyed successfully
     /// ```
     pub fn success(&mut self, message: &str) {
-        if self.verbosity_filter.should_show_success() {
-            writeln!(
-                self.stderr_writer,
-                "{} {message}",
-                self.theme.success_symbol()
-            )
-            .ok();
-        }
+        self.write(&SuccessMessage {
+            text: message.to_string(),
+        });
     }
 
     /// Display warning message to stderr (Normal level and above)
@@ -488,14 +827,9 @@ impl UserOutput {
     /// // Output to stderr: ⚠️  Infrastructure may already be destroyed
     /// ```
     pub fn warn(&mut self, message: &str) {
-        if self.verbosity_filter.should_show_warnings() {
-            writeln!(
-                self.stderr_writer,
-                "{}  {message}",
-                self.theme.warning_symbol()
-            )
-            .ok();
-        }
+        self.write(&WarningMessage {
+            text: message.to_string(),
+        });
     }
 
     /// Display error message to stderr (all levels)
@@ -512,14 +846,9 @@ impl UserOutput {
     /// // Output to stderr: ❌ Failed to destroy environment
     /// ```
     pub fn error(&mut self, message: &str) {
-        if self.verbosity_filter.should_show_errors() {
-            writeln!(
-                self.stderr_writer,
-                "{} {message}",
-                self.theme.error_symbol()
-            )
-            .ok();
-        }
+        self.write(&ErrorMessage {
+            text: message.to_string(),
+        });
     }
 
     /// Output final results to stdout for piping/redirection
@@ -537,7 +866,9 @@ impl UserOutput {
     /// // Output to stdout: Deployment complete
     /// ```
     pub fn result(&mut self, message: &str) {
-        writeln!(self.stdout_writer, "{message}").ok();
+        self.write(&ResultMessage {
+            text: message.to_string(),
+        });
     }
 
     /// Output structured data to stdout (JSON, etc.)
@@ -599,12 +930,10 @@ impl UserOutput {
     /// // 3. Run the deploy command
     /// ```
     pub fn steps(&mut self, title: &str, steps: &[&str]) {
-        if self.verbosity_filter.should_show_steps() {
-            writeln!(self.stderr_writer, "{title}").ok();
-            for (idx, step) in steps.iter().enumerate() {
-                writeln!(self.stderr_writer, "{}. {}", idx + 1, step).ok();
-            }
-        }
+        self.write(&StepsMessage {
+            title: title.to_string(),
+            items: steps.iter().map(|s| (*s).to_string()).collect(),
+        });
     }
 
     /// Display a multi-line information block to stderr (Normal level and above)
@@ -1293,6 +1622,237 @@ mod tests {
             assert!(debug_filter.should_show(VerbosityLevel::Verbose));
             assert!(debug_filter.should_show(VerbosityLevel::VeryVerbose));
             assert!(debug_filter.should_show(VerbosityLevel::Debug));
+        }
+    }
+
+    // ============================================================================
+    // OutputMessage Trait Tests
+    // ============================================================================
+
+    mod output_message_trait {
+        use super::super::*;
+        use crate::presentation::user_output::test_support::TestUserOutput;
+
+        #[test]
+        fn progress_message_should_format_with_theme() {
+            let theme = Theme::emoji();
+            let message = ProgressMessage {
+                text: "Test message".to_string(),
+            };
+
+            let formatted = message.format(&theme);
+
+            assert_eq!(formatted, "⏳ Test message\n");
+        }
+
+        #[test]
+        fn progress_message_should_require_normal_verbosity() {
+            let message = ProgressMessage {
+                text: "Test".to_string(),
+            };
+
+            assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
+        }
+
+        #[test]
+        fn progress_message_should_use_stderr_channel() {
+            let message = ProgressMessage {
+                text: "Test".to_string(),
+            };
+
+            assert_eq!(message.channel(), Channel::Stderr);
+        }
+
+        #[test]
+        fn success_message_should_format_with_theme() {
+            let theme = Theme::plain();
+            let message = SuccessMessage {
+                text: "Operation complete".to_string(),
+            };
+
+            let formatted = message.format(&theme);
+
+            assert_eq!(formatted, "[OK] Operation complete\n");
+        }
+
+        #[test]
+        fn error_message_should_always_be_shown() {
+            let message = ErrorMessage {
+                text: "Critical error".to_string(),
+            };
+
+            // Errors should require Quiet level (always shown)
+            assert_eq!(message.required_verbosity(), VerbosityLevel::Quiet);
+        }
+
+        #[test]
+        fn result_message_should_use_stdout_channel() {
+            let message = ResultMessage {
+                text: "Output data".to_string(),
+            };
+
+            assert_eq!(message.channel(), Channel::Stdout);
+        }
+
+        #[test]
+        fn result_message_should_not_include_symbols() {
+            let theme = Theme::emoji();
+            let message = ResultMessage {
+                text: "Plain output".to_string(),
+            };
+
+            let formatted = message.format(&theme);
+
+            // Result messages should not include theme symbols
+            assert!(!formatted.contains("⏳"));
+            assert!(!formatted.contains("✅"));
+            assert_eq!(formatted, "Plain output\n");
+        }
+
+        #[test]
+        fn steps_message_should_format_numbered_list() {
+            let theme = Theme::emoji();
+            let message = StepsMessage {
+                title: "Next steps:".to_string(),
+                items: vec!["First step".to_string(), "Second step".to_string()],
+            };
+
+            let formatted = message.format(&theme);
+
+            assert_eq!(formatted, "Next steps:\n1. First step\n2. Second step\n");
+        }
+
+        #[test]
+        fn warning_message_should_include_extra_space() {
+            let theme = Theme::emoji();
+            let message = WarningMessage {
+                text: "Warning text".to_string(),
+            };
+
+            let formatted = message.format(&theme);
+
+            // Warning messages include two spaces after the symbol
+            assert_eq!(formatted, "⚠️  Warning text\n");
+        }
+
+        #[test]
+        fn user_output_write_should_respect_verbosity_filter() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Quiet);
+
+            // Normal-level message should be filtered
+            test_output.output.write(&ProgressMessage {
+                text: "Should not appear".to_string(),
+            });
+
+            assert_eq!(test_output.stderr(), "");
+
+            // Quiet-level message should be shown
+            test_output.output.write(&ErrorMessage {
+                text: "Should appear".to_string(),
+            });
+
+            assert_eq!(test_output.stderr(), "❌ Should appear\n");
+        }
+
+        #[test]
+        fn user_output_write_should_route_to_correct_channel() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            // Stderr message
+            test_output.output.write(&ProgressMessage {
+                text: "Progress".to_string(),
+            });
+
+            // Stdout message
+            test_output.output.write(&ResultMessage {
+                text: "Result".to_string(),
+            });
+
+            assert_eq!(test_output.stderr(), "⏳ Progress\n");
+            assert_eq!(test_output.stdout(), "Result\n");
+        }
+
+        #[test]
+        fn channel_enum_should_support_equality() {
+            assert_eq!(Channel::Stdout, Channel::Stdout);
+            assert_eq!(Channel::Stderr, Channel::Stderr);
+            assert_ne!(Channel::Stdout, Channel::Stderr);
+        }
+
+        // Custom message type to demonstrate extensibility
+        struct CustomDebugMessage {
+            text: String,
+        }
+
+        impl OutputMessage for CustomDebugMessage {
+            fn format(&self, _theme: &Theme) -> String {
+                format!("[DEBUG] {}\n", self.text)
+            }
+
+            fn required_verbosity(&self) -> VerbosityLevel {
+                VerbosityLevel::Debug
+            }
+
+            fn channel(&self) -> Channel {
+                Channel::Stderr
+            }
+        }
+
+        #[test]
+        fn custom_message_type_should_work_with_write() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Debug);
+
+            test_output.output.write(&CustomDebugMessage {
+                text: "Custom debug message".to_string(),
+            });
+
+            assert_eq!(test_output.stderr(), "[DEBUG] Custom debug message\n");
+        }
+
+        #[test]
+        fn custom_message_type_should_respect_verbosity() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            // Debug-level custom message should not appear at Normal level
+            test_output.output.write(&CustomDebugMessage {
+                text: "Should not appear".to_string(),
+            });
+
+            assert_eq!(test_output.stderr(), "");
+        }
+
+        #[test]
+        fn open_closed_principle_demonstration() {
+            // This test demonstrates that new message types can be added
+            // without modifying the UserOutput struct
+
+            struct CustomInfoMessage {
+                category: String,
+                message: String,
+            }
+
+            impl OutputMessage for CustomInfoMessage {
+                fn format(&self, _theme: &Theme) -> String {
+                    format!("ℹ️  [{}] {}\n", self.category, self.message)
+                }
+
+                fn required_verbosity(&self) -> VerbosityLevel {
+                    VerbosityLevel::Verbose
+                }
+
+                fn channel(&self) -> Channel {
+                    Channel::Stderr
+                }
+            }
+
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Verbose);
+
+            test_output.output.write(&CustomInfoMessage {
+                category: "CONFIG".to_string(),
+                message: "Loading configuration".to_string(),
+            });
+
+            assert_eq!(test_output.stderr(), "ℹ️  [CONFIG] Loading configuration\n");
         }
     }
 
