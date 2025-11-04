@@ -110,13 +110,15 @@ impl From<ListError> for AppError {
 pub fn run() -> Result<(), AppError> {
     let cli = Cli::parse();
 
-    // Initialize tracing based on verbose flag
-    // Must set environment variable before calling init_tracing()
-    if cli.verbose {
-        std::env::set_var("RUST_LOG", "debug");
-    }
+    // Determine log level: verbose flag overrides log-level argument
+    let log_level = if cli.verbose {
+        Some(tracing::Level::DEBUG)
+    } else {
+        cli.log_level.to_tracing_level()
+    };
 
-    crate::init_tracing();
+    // Initialize tracing with the determined log level
+    crate::init_tracing(log_level);
 
     let manager = DependencyManager::new();
 

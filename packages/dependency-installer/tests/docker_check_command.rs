@@ -18,8 +18,8 @@ async fn test_check_all_reports_missing_dependencies() {
     // Start Ubuntu container with the binary
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
-    // Run the check command
-    let output = container.exec(&["dependency-installer", "check"]);
+    // Run the check command with logging disabled for clean test output
+    let output = container.exec(&["dependency-installer", "check", "--log-level", "off"]);
 
     // Verify it reports missing dependencies in the error message
     assert!(
@@ -28,7 +28,7 @@ async fn test_check_all_reports_missing_dependencies() {
     );
 
     // Verify exit code is non-zero (failure)
-    let exit_code = container.exec_with_exit_code(&["dependency-installer", "check"]);
+    let exit_code = container.exec_with_exit_code(&["dependency-installer", "check", "--log-level", "off"]);
     assert_eq!(
         exit_code, 1,
         "check command should exit with 1 when dependencies missing"
@@ -42,8 +42,8 @@ async fn test_check_specific_dependency() {
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
-    // Run check command for opentofu (which is not installed)
-    let output = container.exec(&["dependency-installer", "check", "--dependency", "opentofu"]);
+    // Run check command for opentofu (which is not installed) with logging disabled
+    let output = container.exec(&["dependency-installer", "check", "--dependency", "opentofu", "--log-level", "off"]);
 
     // Verify it reports missing dependency in the error message
     assert!(
@@ -56,6 +56,8 @@ async fn test_check_specific_dependency() {
         "check",
         "--dependency",
         "opentofu",
+        "--log-level",
+        "off",
     ]);
     assert_eq!(
         exit_code, 1,
@@ -70,9 +72,10 @@ async fn test_list_command() {
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
+    // Run list command with default log level (info) to verify logging output
     let output = container.exec(&["dependency-installer", "list"]);
 
-    // Verify all tools are listed
+    // Verify all tools are listed in the logging output
     assert!(
         output.contains("cargo-machete"),
         "Expected cargo-machete to be listed, got: {output}"

@@ -39,7 +39,7 @@ This package can detect the following development dependencies:
 The package provides a `dependency-installer` binary for command-line usage:
 
 ```bash
-# Check all dependencies
+# Check all dependencies (default: info log level)
 dependency-installer check
 
 # Check specific dependency
@@ -48,11 +48,12 @@ dependency-installer check --dependency opentofu
 # List all dependencies with status
 dependency-installer list
 
-# Enable verbose logging (includes DEBUG level)
-dependency-installer check --verbose
+# Control log level (off, error, warn, info, debug, trace)
+dependency-installer check --log-level debug
+dependency-installer check --log-level off   # Disable all logging
 
-# Control logging via environment variable
-RUST_LOG=debug dependency-installer check
+# Enable verbose logging (equivalent to --log-level debug)
+dependency-installer check --verbose
 
 # Get help
 dependency-installer --help

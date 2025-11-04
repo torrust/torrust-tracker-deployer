@@ -8,8 +8,8 @@
 use torrust_dependency_installer::{init_tracing, DependencyManager};
 
 fn main() {
-    // Initialize tracing for structured logging
-    init_tracing();
+    // Initialize tracing for structured logging with INFO level
+    init_tracing(Some(tracing::Level::INFO));
 
     println!("Checking development dependencies...\n");
 
