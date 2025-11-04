@@ -27,23 +27,19 @@ async fn test_check_all_reports_missing_dependencies() {
     // Verify it reports missing dependencies
     assert!(
         output.contains("cargo-machete: not installed"),
-        "Expected cargo-machete to be reported as not installed, got: {}",
-        output
+        "Expected cargo-machete to be reported as not installed, got: {output}"
     );
     assert!(
         output.contains("OpenTofu: not installed"),
-        "Expected OpenTofu to be reported as not installed, got: {}",
-        output
+        "Expected OpenTofu to be reported as not installed, got: {output}"
     );
     assert!(
         output.contains("Ansible: not installed"),
-        "Expected Ansible to be reported as not installed, got: {}",
-        output
+        "Expected Ansible to be reported as not installed, got: {output}"
     );
     assert!(
         output.contains("LXD: not installed"),
-        "Expected LXD to be reported as not installed, got: {}",
-        output
+        "Expected LXD to be reported as not installed, got: {output}"
     );
 
     // Verify exit code is non-zero (failure)
@@ -72,8 +68,7 @@ async fn test_check_specific_tool() {
     // in all terminal environments or when output is redirected
     assert!(
         output.contains("OpenTofu: not installed"),
-        "Expected OpenTofu to be reported as not installed, got: {}",
-        output
+        "Expected OpenTofu to be reported as not installed, got: {output}"
     );
 
     let exit_code =
@@ -99,30 +94,25 @@ async fn test_list_command() {
     // Verify all tools are listed
     assert!(
         output.contains("cargo-machete"),
-        "Expected cargo-machete to be listed, got: {}",
-        output
+        "Expected cargo-machete to be listed, got: {output}"
     );
     assert!(
         output.contains("OpenTofu"),
-        "Expected OpenTofu to be listed, got: {}",
-        output
+        "Expected OpenTofu to be listed, got: {output}"
     );
     assert!(
         output.contains("Ansible"),
-        "Expected Ansible to be listed, got: {}",
-        output
+        "Expected Ansible to be listed, got: {output}"
     );
     assert!(
         output.contains("LXD"),
-        "Expected LXD to be listed, got: {}",
-        output
+        "Expected LXD to be listed, got: {output}"
     );
 
     // Verify status is shown
     assert!(
         output.contains("not installed"),
-        "Expected 'not installed' status to be shown, got: {}",
-        output
+        "Expected 'not installed' status to be shown, got: {output}"
     );
 }
 
@@ -142,8 +132,7 @@ async fn test_verbose_output() {
     // The CLI uses tracing, so we should see timestamp-prefixed log messages
     assert!(
         output.contains("INFO") || output.contains("Checking"),
-        "Expected verbose output to contain INFO logs or 'Checking' message, got: {}",
-        output
+        "Expected verbose output to contain INFO logs or 'Checking' message, got: {output}"
     );
 }
 
@@ -154,15 +143,15 @@ async fn test_verbose_output() {
 ///
 /// # Implementation Note
 ///
-/// We use CARGO_MANIFEST_DIR and navigate up to the workspace root, then into
+/// We use `CARGO_MANIFEST_DIR` and navigate up to the workspace root, then into
 /// the target directory. This works because:
-/// 1. CARGO_MANIFEST_DIR points to packages/dependency-installer
+/// 1. `CARGO_MANIFEST_DIR` points to packages/dependency-installer
 /// 2. The workspace root is two directories up
 /// 3. The target directory is in the workspace root
 ///
 /// Alternative approaches considered:
-/// - CARGO_TARGET_DIR: Not always set
-/// - OUT_DIR: Points to build script output, not target/debug
+/// - `CARGO_TARGET_DIR`: Not always set
+/// - `OUT_DIR`: Points to build script output, not target/debug
 /// - Searching for target dir: Too expensive
 fn get_binary_path() -> PathBuf {
     // Get the package manifest directory (packages/dependency-installer)
@@ -182,8 +171,8 @@ fn get_binary_path() -> PathBuf {
 
     assert!(
         path.exists(),
-        "Binary not found at {:?}. Run 'cargo build --bin dependency-installer' first",
-        path
+        "Binary not found at {}. Run 'cargo build --bin dependency-installer' first",
+        path.display()
     );
 
     path

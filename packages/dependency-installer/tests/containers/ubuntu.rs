@@ -64,6 +64,7 @@ impl UbuntuContainerBuilder {
     /// # Returns
     ///
     /// A builder that can start the container with the binary
+    #[allow(clippy::unused_self)]
     pub fn with_binary(self, binary_path: &Path) -> UbuntuContainerWithBinary {
         UbuntuContainerWithBinary {
             binary_path: binary_path.to_path_buf(),

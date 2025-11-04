@@ -25,15 +25,13 @@ pub fn copy_file_to_container(container_id: &str, source_path: &Path, dest_path:
     let output = Command::new("docker")
         .arg("cp")
         .arg(source_path)
-        .arg(format!("{}:{}", container_id, dest_path))
+        .arg(format!("{container_id}:{dest_path}"))
         .output()
         .expect("Failed to execute docker cp command");
 
     if !output.status.success() {
-        panic!(
-            "Failed to copy file to container: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        panic!("Failed to copy file to container: {stderr}");
     }
 }
 
@@ -65,7 +63,7 @@ pub fn exec_in_container(container_id: &str, command: &[&str]) -> String {
     // Combine stderr (logs) and stdout (user messages) to capture all output
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    format!("{}{}", stderr, stdout)
+    format!("{stderr}{stdout}")
 }
 
 /// Execute a command in a container and return exit code
@@ -81,7 +79,7 @@ pub fn exec_in_container(container_id: &str, command: &[&str]) -> String {
 ///
 /// # Note
 ///
-/// If the process was terminated by a signal (returns None from code()), we return 1
+/// If the process was terminated by a signal (returns None from `code()`), we return 1
 /// to indicate failure rather than 0, which would incorrectly suggest success.
 pub fn exec_in_container_with_exit_code(container_id: &str, command: &[&str]) -> i32 {
     let status = Command::new("docker")
