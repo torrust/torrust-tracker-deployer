@@ -37,39 +37,47 @@ impl DependencyInstaller for OpenTofuInstaller {
     }
 
     async fn install(&self) -> Result<(), InstallationError> {
-        info!(dependency = "opentofu", "Installing OpenTofu");
-
-        let script_path = "/tmp/install-opentofu.sh";
-
-        // Download installer script
-        debug!("Downloading OpenTofu installer script");
-        let output = Command::new("curl")
-            .args([
-                "--proto",
-                "=https",
-                "--tlsv1.2",
-                "-fsSL",
-                "https://get.opentofu.org/install-opentofu.sh",
-                "-o",
-                script_path,
-            ])
-            .output()
-            .map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::OpenTofu,
-                source: e,
-            })?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
+        #[cfg(not(unix))]
+        {
             return Err(InstallationError::InstallationFailed {
                 dependency: Dependency::OpenTofu,
-                message: format!("Failed to download installer: {stderr}"),
+                message: "OpenTofu installation is only supported on Unix-like systems".to_string(),
             });
         }
 
-        // Make script executable (Unix-specific)
         #[cfg(unix)]
         {
+            info!(dependency = "opentofu", "Installing OpenTofu");
+
+            let script_path = "/tmp/install-opentofu.sh";
+
+            // Download installer script
+            debug!("Downloading OpenTofu installer script");
+            let output = Command::new("curl")
+                .args([
+                    "--proto",
+                    "=https",
+                    "--tlsv1.2",
+                    "-fsSL",
+                    "https://get.opentofu.org/install-opentofu.sh",
+                    "-o",
+                    script_path,
+                ])
+                .output()
+                .map_err(|e| InstallationError::CommandFailed {
+                    dependency: Dependency::OpenTofu,
+                    source: e,
+                })?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(InstallationError::InstallationFailed {
+                    dependency: Dependency::OpenTofu,
+                    message: format!("Failed to download installer: {stderr}"),
+                });
+            }
+
+            // Make script executable
             debug!("Making installer script executable");
             fs::set_permissions(
                 script_path,
@@ -79,50 +87,42 @@ impl DependencyInstaller for OpenTofuInstaller {
                 dependency: Dependency::OpenTofu,
                 source: e,
             })?;
-        }
 
-        #[cfg(not(unix))]
-        {
-            return Err(InstallationError::InstallationFailed {
-                dependency: Dependency::OpenTofu,
-                message: "OpenTofu installation is only supported on Unix-like systems".to_string(),
-            });
-        }
+            // Run installer with sudo
+            debug!("Running OpenTofu installer with sudo");
+            let output = Command::new("sudo")
+                .args([script_path, "--install-method", "deb"])
+                .output()
+                .map_err(|e| InstallationError::CommandFailed {
+                    dependency: Dependency::OpenTofu,
+                    source: e,
+                })?;
 
-        // Run installer with sudo
-        debug!("Running OpenTofu installer with sudo");
-        let output = Command::new("sudo")
-            .args([script_path, "--install-method", "deb"])
-            .output()
-            .map_err(|e| InstallationError::CommandFailed {
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                // Clean up script before returning error (ignore cleanup errors)
+                fs::remove_file(script_path).ok();
+                return Err(InstallationError::InstallationFailed {
+                    dependency: Dependency::OpenTofu,
+                    message: format!("Installer script failed: {stderr}"),
+                });
+            }
+
+            // Clean up installer script
+            debug!("Cleaning up installer script");
+            fs::remove_file(script_path).map_err(|e| InstallationError::CommandFailed {
                 dependency: Dependency::OpenTofu,
                 source: e,
             })?;
 
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            // Clean up script before returning error (ignore cleanup errors)
-            fs::remove_file(script_path).ok();
-            return Err(InstallationError::InstallationFailed {
-                dependency: Dependency::OpenTofu,
-                message: format!("Installer script failed: {stderr}"),
-            });
+            info!(
+                dependency = "opentofu",
+                status = "installed",
+                "OpenTofu installation completed"
+            );
+
+            Ok(())
         }
-
-        // Clean up installer script
-        debug!("Cleaning up installer script");
-        fs::remove_file(script_path).map_err(|e| InstallationError::CommandFailed {
-            dependency: Dependency::OpenTofu,
-            source: e,
-        })?;
-
-        info!(
-            dependency = "opentofu",
-            status = "installed",
-            "OpenTofu installation completed"
-        );
-
-        Ok(())
     }
 
     fn requires_sudo(&self) -> bool {
