@@ -68,15 +68,14 @@ See comprehensive refactoring plan: [docs/refactors/plans/user-output-architectu
 ### Phase 2: Polish & Extensions
 
 - [x] [#133](https://github.com/torrust/torrust-tracker-deployer/issues/133) - Proposal 4: Add Formatter Override Support
-- [ ] [#135](https://github.com/torrust/torrust-tracker-deployer/issues/135) - Proposal 6: Type-Safe Channel Routing
+- [x] [#135](https://github.com/torrust/torrust-tracker-deployer/issues/135) - Proposal 6: Type-Safe Channel Routing
+- [ ] [#138](https://github.com/torrust/torrust-tracker-deployer/issues/138) - Proposal 7: Add Buffering Control
+- [ ] [#139](https://github.com/torrust/torrust-tracker-deployer/issues/139) - Proposal 8: Builder Pattern for Complex Messages
+- [ ] [#140](https://github.com/torrust/torrust-tracker-deployer/issues/140) - Proposal 9: Output Sink Abstraction
 
 ### Other Related Work
 
 - [x] [#107](https://github.com/torrust/torrust-tracker-deployer/issues/107) - Centralize UserOutput via Dependency Injection
-
-### Future Subissues
-
-Additional subissues for Phase 2 proposals will be created as work progresses.
 
 ## Timeline
 
