@@ -65,6 +65,10 @@ See comprehensive refactoring plan: [docs/refactors/plans/user-output-architectu
 - [ ] [#127](https://github.com/torrust/torrust-tracker-deployer/issues/127) - Proposal 3: Use Message Trait for Extensibility
 - [ ] [#128](https://github.com/torrust/torrust-tracker-deployer/issues/128) - Proposal 5: Parameterized Test Cases
 
+### Phase 2: Polish & Extensions
+
+- [ ] [#133](https://github.com/torrust/torrust-tracker-deployer/issues/133) - Proposal 4: Add Formatter Override Support
+
 ### Other Related Work
 
 - [x] [#107](https://github.com/torrust/torrust-tracker-deployer/issues/107) - Centralize UserOutput via Dependency Injection
