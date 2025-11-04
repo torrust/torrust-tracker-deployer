@@ -704,9 +704,18 @@ impl StdoutWriter {
     /// Write a line to stdout
     ///
     /// Writes the given message to the stdout channel.
+    /// The message should include any necessary newline characters.
     /// Errors are silently ignored as output operations are best-effort.
     fn write_line(&mut self, message: &str) {
         write!(self.0, "{message}").ok();
+    }
+
+    /// Write with a newline to stdout
+    ///
+    /// Writes the given message followed by a newline to the stdout channel.
+    /// Errors are silently ignored as output operations are best-effort.
+    fn writeln(&mut self, message: &str) {
+        writeln!(self.0, "{message}").ok();
     }
 }
 
@@ -730,9 +739,18 @@ impl StderrWriter {
     /// Write a line to stderr
     ///
     /// Writes the given message to the stderr channel.
+    /// The message should include any necessary newline characters.
     /// Errors are silently ignored as output operations are best-effort.
     fn write_line(&mut self, message: &str) {
         write!(self.0, "{message}").ok();
+    }
+
+    /// Write with a newline to stderr
+    ///
+    /// Writes the given message followed by a newline to the stderr channel.
+    /// Errors are silently ignored as output operations are best-effort.
+    fn writeln(&mut self, message: &str) {
+        writeln!(self.0, "{message}").ok();
     }
 }
 
@@ -1174,7 +1192,7 @@ impl UserOutput {
     /// // Output to stdout: {"status": "destroyed", "environment": "test"}
     /// ```
     pub fn data(&mut self, data: &str) {
-        writeln!(self.stdout.0, "{data}").ok();
+        self.stdout.writeln(data);
     }
 
     /// Display a blank line to stderr (Normal level and above)
@@ -1193,7 +1211,7 @@ impl UserOutput {
     /// ```
     pub fn blank_line(&mut self) {
         if self.verbosity_filter.should_show_blank_lines() {
-            writeln!(self.stderr.0).ok();
+            self.stderr.writeln("");
         }
     }
 
@@ -1248,9 +1266,9 @@ impl UserOutput {
     /// ```
     pub fn info_block(&mut self, title: &str, lines: &[&str]) {
         if self.verbosity_filter.should_show_info_blocks() {
-            writeln!(self.stderr.0, "{title}").ok();
+            self.stderr.writeln(title);
             for line in lines {
-                writeln!(self.stderr.0, "{line}").ok();
+                self.stderr.writeln(line);
             }
         }
     }
@@ -1584,6 +1602,30 @@ mod tests {
             // Verify correct channel routing via type system
             assert!(test_output.stderr().contains("Progress message"));
             assert!(test_output.stdout().contains("Result data"));
+        }
+
+        #[test]
+        fn stdout_writer_writeln_adds_newline() {
+            let buffer = Arc::new(Mutex::new(Vec::new()));
+            let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+
+            let mut stdout = StdoutWriter::new(writer);
+            stdout.writeln("Test");
+
+            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+            assert_eq!(output, "Test\n");
+        }
+
+        #[test]
+        fn stderr_writer_writeln_adds_newline() {
+            let buffer = Arc::new(Mutex::new(Vec::new()));
+            let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+
+            let mut stderr = StderrWriter::new(writer);
+            stderr.writeln("Error");
+
+            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+            assert_eq!(output, "Error\n");
         }
     }
 
