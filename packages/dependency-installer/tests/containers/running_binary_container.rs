@@ -5,6 +5,7 @@ use std::process::Command;
 
 use testcontainers::{ContainerAsync, GenericImage};
 
+use super::command_output::CommandOutput;
 use super::container_id::ContainerId;
 
 /// A running Ubuntu container with a binary installed and ready to execute
@@ -34,7 +35,7 @@ impl RunningBinaryContainer {
         }
     }
 
-    /// Execute a command in the container and return stdout
+    /// Execute a command in the container and return the output
     ///
     /// # Arguments
     ///
@@ -42,15 +43,14 @@ impl RunningBinaryContainer {
     ///
     /// # Returns
     ///
-    /// The combined stdout and stderr output as a string
+    /// A `CommandOutput` containing both stdout and stderr streams
     ///
     /// # Note
     ///
-    /// The output combines stderr and stdout because the CLI uses tracing which writes
-    /// logs to stderr, while user-facing messages go to stdout. We need both for
-    /// comprehensive test assertions. Stderr is placed first to maintain chronological
-    /// order of log messages relative to output.
-    pub fn exec(&self, command: &[&str]) -> String {
+    /// The CLI uses tracing which writes logs to stderr, while user-facing messages
+    /// go to stdout. The `CommandOutput` type allows tests to inspect either stream
+    /// individually or combined.
+    pub fn exec(&self, command: &[&str]) -> CommandOutput {
         let output = Command::new("docker")
             .arg("exec")
             .arg(&self.container_id)
@@ -58,10 +58,10 @@ impl RunningBinaryContainer {
             .output()
             .expect("Failed to execute docker exec command");
 
-        // Combine stderr (logs) and stdout (user messages) to capture all output
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        format!("{stderr}{stdout}")
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+        CommandOutput::new(stdout, stderr)
     }
 
     /// Execute a command and return the exit code
