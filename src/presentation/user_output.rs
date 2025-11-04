@@ -522,9 +522,11 @@ pub struct StepsMessage {
 
 impl OutputMessage for StepsMessage {
     fn format(&self, _theme: &Theme) -> String {
+        use std::fmt::Write;
+
         let mut output = format!("{}\n", self.title);
         for (idx, step) in self.items.iter().enumerate() {
-            output.push_str(&format!("{}. {}\n", idx + 1, step));
+            writeln!(&mut output, "{}. {}", idx + 1, step).ok();
         }
         output
     }
@@ -758,7 +760,10 @@ impl UserOutput {
     /// });
     /// ```
     pub fn write(&mut self, message: &dyn OutputMessage) {
-        if !self.verbosity_filter.should_show(message.required_verbosity()) {
+        if !self
+            .verbosity_filter
+            .should_show(message.required_verbosity())
+        {
             return;
         }
 
@@ -1847,10 +1852,7 @@ mod tests {
                 message: "Loading configuration".to_string(),
             });
 
-            assert_eq!(
-                test_output.stderr(),
-                "ℹ️  [CONFIG] Loading configuration\n"
-            );
+            assert_eq!(test_output.stderr(), "ℹ️  [CONFIG] Loading configuration\n");
         }
     }
 
