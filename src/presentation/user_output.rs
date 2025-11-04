@@ -1315,7 +1315,7 @@ mod tests {
                 "warning" => test_output.output.warn("Test message"),
                 "error" => test_output.output.error("Test message"),
                 "result" => test_output.output.result("Test message"),
-                _ => panic!("Unknown method: {}", method),
+                _ => panic!("Unknown method: {method}"),
             }
 
             // Verify output went to the correct channel
@@ -1328,7 +1328,7 @@ mod tests {
                     assert_eq!(test_output.stderr(), expected_output);
                     assert_eq!(test_output.stdout(), "");
                 }
-                _ => panic!("Unknown channel: {}", expected_channel),
+                _ => panic!("Unknown channel: {expected_channel}"),
             }
         }
 
@@ -1357,7 +1357,7 @@ mod tests {
                 "progress" => test_output.output.progress("Test"),
                 "success" => test_output.output.success("Test"),
                 "warning" => test_output.output.warn("Test"),
-                _ => panic!("Unknown method: {}", method),
+                _ => panic!("Unknown method: {method}"),
             }
 
             if should_show {
@@ -1394,7 +1394,9 @@ mod tests {
         #[case(VerbosityLevel::Verbose)]
         #[case(VerbosityLevel::VeryVerbose)]
         #[case(VerbosityLevel::Debug)]
-        fn it_should_always_show_results_at_all_verbosity_levels(#[case] verbosity: VerbosityLevel) {
+        fn it_should_always_show_results_at_all_verbosity_levels(
+            #[case] verbosity: VerbosityLevel,
+        ) {
             let mut test_output = test_support::TestUserOutput::new(verbosity);
 
             test_output.output.result("Result data");
@@ -1422,8 +1424,6 @@ mod tests {
         // Verify stderr is empty
         assert_eq!(test_output.stderr(), "");
     }
-
-
 
     #[test]
     fn it_should_use_normal_as_default_verbosity() {
