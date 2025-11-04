@@ -2266,7 +2266,7 @@ mod tests {
             output.error("Error");
 
             let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
-            let lines: Vec<&str> = stderr.trim().split('\n').collect();
+            let lines: Vec<&str> = stderr.lines().collect();
 
             let progress_json: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
             assert_eq!(progress_json["type"], "ProgressMessage");
@@ -2465,7 +2465,7 @@ mod tests {
 
             // Verify all stderr messages are valid JSON
             let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
-            for line in stderr.trim().split('\n') {
+            for line in stderr.lines() {
                 let json: Result<serde_json::Value, _> = serde_json::from_str(line);
                 assert!(json.is_ok(), "Invalid JSON: {line}");
             }
