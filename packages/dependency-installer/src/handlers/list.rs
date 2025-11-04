@@ -22,6 +22,12 @@ pub enum ListError {
     },
 }
 
+impl From<DetectionError> for ListError {
+    fn from(source: DetectionError) -> Self {
+        Self::DependencyCheckFailed { source }
+    }
+}
+
 /// Handle the list command
 ///
 /// # Errors
@@ -31,9 +37,7 @@ pub fn handle_list(manager: &DependencyManager) -> Result<(), ListError> {
     info!("Listing all available tools");
     println!("Available tools:\n");
 
-    let results = manager
-        .check_all()
-        .map_err(|source| ListError::DependencyCheckFailed { source })?;
+    let results = manager.check_all()?;
 
     for result in results {
         let status = if result.installed {

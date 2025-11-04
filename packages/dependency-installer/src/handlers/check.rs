@@ -30,6 +30,18 @@ pub enum CheckError {
     },
 }
 
+impl From<CheckAllToolsError> for CheckError {
+    fn from(source: CheckAllToolsError) -> Self {
+        Self::CheckAllFailed { source }
+    }
+}
+
+impl From<CheckSpecificToolError> for CheckError {
+    fn from(source: CheckSpecificToolError) -> Self {
+        Self::CheckSpecificFailed { source }
+    }
+}
+
 /// Errors that can occur when checking all tools
 #[derive(Debug, Error)]
 pub enum CheckAllToolsError {
@@ -53,6 +65,12 @@ pub enum CheckAllToolsError {
         /// Total number of dependencies checked
         total_count: usize,
     },
+}
+
+impl From<DetectionError> for CheckAllToolsError {
+    fn from(source: DetectionError) -> Self {
+        Self::DependencyCheckFailed { source }
+    }
 }
 
 /// Errors that can occur when checking a specific tool
@@ -87,6 +105,18 @@ pub enum CheckSpecificToolError {
     },
 }
 
+impl From<ParseToolNameError> for CheckSpecificToolError {
+    fn from(source: ParseToolNameError) -> Self {
+        Self::ParseFailed { source }
+    }
+}
+
+impl From<DetectionError> for CheckSpecificToolError {
+    fn from(source: DetectionError) -> Self {
+        Self::DetectionFailed { source }
+    }
+}
+
 /// Errors that can occur when parsing tool names
 #[derive(Debug, Error)]
 pub enum ParseToolNameError {
@@ -113,19 +143,18 @@ pub enum ParseToolNameError {
 /// - Internal error occurs during dependency checking
 pub fn handle_check(manager: &DependencyManager, tool: Option<String>) -> Result<(), CheckError> {
     match tool {
-        Some(tool_name) => check_specific_tool(manager, &tool_name)
-            .map_err(|source| CheckError::CheckSpecificFailed { source }),
-        None => check_all_tools(manager).map_err(|source| CheckError::CheckAllFailed { source }),
+        Some(tool_name) => check_specific_tool(manager, &tool_name)?,
+        None => check_all_tools(manager)?,
     }
+
+    Ok(())
 }
 
 fn check_all_tools(manager: &DependencyManager) -> Result<(), CheckAllToolsError> {
     info!("Checking all dependencies");
     println!("Checking dependencies...\n");
 
-    let results = manager
-        .check_all()
-        .map_err(|source| CheckAllToolsError::DependencyCheckFailed { source })?;
+    let results = manager.check_all()?;
 
     let mut missing_count = 0;
 
@@ -168,14 +197,11 @@ fn check_specific_tool(
     info!(tool = tool_name, "Checking specific tool");
 
     // Parse tool name to Dependency enum
-    let dep = parse_tool_name(tool_name)
-        .map_err(|source| CheckSpecificToolError::ParseFailed { source })?;
+    let dep = parse_tool_name(tool_name)?;
 
     let detector = manager.get_detector(dep);
 
-    let installed = detector
-        .is_installed()
-        .map_err(|source| CheckSpecificToolError::DetectionFailed { source })?;
+    let installed = detector.is_installed()?;
 
     if installed {
         info!(tool = detector.name(), "Tool is installed");
