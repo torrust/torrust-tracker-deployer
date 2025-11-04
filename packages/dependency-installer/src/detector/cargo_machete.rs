@@ -1,33 +1,56 @@
+//! `cargo-machete` dependency detector
+//!
+//! This module provides detection logic for the `cargo-machete` dependency.
+
+// External crates
 use tracing::info;
 
+// Internal crate
 use crate::command::command_exists;
-use crate::detector::ToolDetector;
-use crate::errors::DetectionError;
+use crate::Dependency;
 
-/// Detector for `cargo-machete` tool
+use super::{DependencyDetector, DetectionError};
+
+// ============================================================================
+// PUBLIC API - Main Types
+// ============================================================================
+
+/// Detector for `cargo-machete` dependency
 pub struct CargoMacheteDetector;
 
-impl ToolDetector for CargoMacheteDetector {
+// ============================================================================
+// PUBLIC API - Implementations
+// ============================================================================
+
+impl DependencyDetector for CargoMacheteDetector {
     fn name(&self) -> &'static str {
         "cargo-machete"
     }
 
     fn is_installed(&self) -> Result<bool, DetectionError> {
         info!(
-            tool = "cargo-machete",
+            dependency = "cargo-machete",
             "Checking if cargo-machete is installed"
         );
 
         let installed =
             command_exists("cargo-machete").map_err(|e| DetectionError::DetectionFailed {
-                tool: self.name().to_string(),
+                dependency: Dependency::CargoMachete,
                 source: std::io::Error::other(e.to_string()),
             })?;
 
         if installed {
-            info!(tool = "cargo-machete", "cargo-machete is installed");
+            info!(
+                dependency = "cargo-machete",
+                status = "installed",
+                "cargo-machete is installed"
+            );
         } else {
-            info!(tool = "cargo-machete", "cargo-machete is not installed");
+            info!(
+                dependency = "cargo-machete",
+                status = "not installed",
+                "cargo-machete is not installed"
+            );
         }
 
         Ok(installed)

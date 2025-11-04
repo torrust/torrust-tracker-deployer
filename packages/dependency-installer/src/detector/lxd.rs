@@ -1,30 +1,49 @@
+//! `LXD` dependency detector
+//!
+//! This module provides detection logic for the `LXD` dependency.
+
+// External crates
 use tracing::info;
 
+// Internal crate
 use crate::command::command_exists;
-use crate::detector::ToolDetector;
-use crate::errors::DetectionError;
+use crate::Dependency;
 
-/// Detector for `LXD` tool
+use super::{DependencyDetector, DetectionError};
+
+// ============================================================================
+// PUBLIC API - Main Types
+// ============================================================================
+
+/// Detector for `LXD` dependency
 pub struct LxdDetector;
 
-impl ToolDetector for LxdDetector {
+// ============================================================================
+// PUBLIC API - Implementations
+// ============================================================================
+
+impl DependencyDetector for LxdDetector {
     fn name(&self) -> &'static str {
         "LXD"
     }
 
     fn is_installed(&self) -> Result<bool, DetectionError> {
-        info!(tool = "lxd", "Checking if LXD is installed");
+        info!(dependency = "lxd", "Checking if LXD is installed");
 
         // Check for 'lxc' command (LXD client)
         let installed = command_exists("lxc").map_err(|e| DetectionError::DetectionFailed {
-            tool: self.name().to_string(),
+            dependency: Dependency::Lxd,
             source: std::io::Error::other(e.to_string()),
         })?;
 
         if installed {
-            info!(tool = "lxd", "LXD is installed");
+            info!(dependency = "lxd", status = "installed", "LXD is installed");
         } else {
-            info!(tool = "lxd", "LXD is not installed");
+            info!(
+                dependency = "lxd",
+                status = "not installed",
+                "LXD is not installed"
+            );
         }
 
         Ok(installed)

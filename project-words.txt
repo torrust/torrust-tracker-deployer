@@ -57,6 +57,7 @@ Gossman
 Graça
 handleable
 Herberto
+hexdigit
 hexdump
 Hostnames
 hotfixes

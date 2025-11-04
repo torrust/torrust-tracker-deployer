@@ -8,8 +8,8 @@
 use torrust_dependency_installer::{init_tracing, DependencyManager};
 
 fn main() {
-    // Initialize tracing for structured logging
-    init_tracing();
+    // Initialize tracing for structured logging with INFO level
+    init_tracing(Some(tracing::Level::INFO));
 
     println!("Checking development dependencies...\n");
 
@@ -23,6 +23,8 @@ fn main() {
             println!("{}", "=".repeat(40));
 
             for result in &results {
+                let detector = manager.get_detector(result.dependency);
+                let name = detector.name();
                 let status = if result.installed { "✓" } else { "✗" };
                 let status_text = if result.installed {
                     "Installed"
@@ -30,7 +32,7 @@ fn main() {
                     "Not Installed"
                 };
 
-                println!("{} {:20} {}", status, result.tool, status_text);
+                println!("{status} {name:20} {status_text}");
             }
 
             println!("\n{} dependencies checked", results.len());

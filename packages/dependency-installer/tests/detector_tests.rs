@@ -1,13 +1,13 @@
 //! Unit tests for detector functionality
 //!
-//! Tests for the `ToolDetector` trait implementations including:
+//! Tests for the `DependencyDetector` trait implementations including:
 //! - Individual detector implementations
 //! - `DependencyManager` functionality
 //! - Error handling
 
 use torrust_dependency_installer::{
-    AnsibleDetector, CargoMacheteDetector, CheckResult, Dependency, DependencyManager, LxdDetector,
-    OpenTofuDetector, ToolDetector,
+    AnsibleDetector, CargoMacheteDetector, CheckResult, Dependency, DependencyDetector,
+    DependencyManager, LxdDetector, OpenTofuDetector,
 };
 
 // =============================================================================
@@ -101,16 +101,14 @@ fn it_should_return_no_required_version_by_default_for_all_detectors() {
 
 #[test]
 fn it_should_create_dependency_manager() {
-    let manager = DependencyManager::new();
+    let _manager = DependencyManager::new();
     // Should not panic
-    drop(manager);
 }
 
 #[test]
 fn it_should_create_dependency_manager_with_default() {
-    let manager = DependencyManager::default();
+    let _manager = DependencyManager::new();
     // Should not panic
-    drop(manager);
 }
 
 #[test]
@@ -121,16 +119,16 @@ fn it_should_check_all_dependencies_without_error() {
     // Should not panic - result depends on system state
     assert!(results.is_ok(), "check_all should not error");
 
-    // Verify we get results for all 4 tools
+    // Verify we get results for all 4 dependencies
     let check_results = results.unwrap();
     assert_eq!(check_results.len(), 4, "Should check 4 dependencies");
 
-    // Verify all expected tools are in results
-    let tool_names: Vec<String> = check_results.iter().map(|r| r.tool.clone()).collect();
-    assert!(tool_names.contains(&"cargo-machete".to_string()));
-    assert!(tool_names.contains(&"OpenTofu".to_string()));
-    assert!(tool_names.contains(&"Ansible".to_string()));
-    assert!(tool_names.contains(&"LXD".to_string()));
+    // Verify all expected dependencies are in results
+    let dependencies: Vec<Dependency> = check_results.iter().map(|r| r.dependency).collect();
+    assert!(dependencies.contains(&Dependency::CargoMachete));
+    assert!(dependencies.contains(&Dependency::OpenTofu));
+    assert!(dependencies.contains(&Dependency::Ansible));
+    assert!(dependencies.contains(&Dependency::Lxd));
 }
 
 #[test]
@@ -167,24 +165,26 @@ fn it_should_get_lxd_detector_from_manager() {
 
 #[test]
 fn it_should_create_check_result() {
+    use torrust_dependency_installer::Dependency;
     let result = CheckResult {
-        tool: "test-tool".to_string(),
+        dependency: Dependency::CargoMachete,
         installed: true,
     };
 
-    assert_eq!(result.tool, "test-tool");
+    assert_eq!(result.dependency, Dependency::CargoMachete);
     assert!(result.installed);
 }
 
 #[test]
 fn it_should_clone_check_result() {
+    use torrust_dependency_installer::Dependency;
     let result = CheckResult {
-        tool: "test-tool".to_string(),
+        dependency: Dependency::OpenTofu,
         installed: false,
     };
 
     let cloned = result.clone();
-    assert_eq!(cloned.tool, "test-tool");
+    assert_eq!(cloned.dependency, Dependency::OpenTofu);
     assert!(!cloned.installed);
 }
 
