@@ -4,8 +4,6 @@
 
 // Standard library
 use std::process::Command;
-use std::thread;
-use std::time::Duration;
 
 // External crates
 use async_trait::async_trait;
@@ -60,7 +58,7 @@ impl DependencyInstaller for LxdInstaller {
 
         // Wait for LXD daemon to start
         debug!("Waiting for LXD daemon to initialize");
-        thread::sleep(Duration::from_secs(15));
+        tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
 
         // Initialize LXD with default settings
         debug!("Initializing LXD with default settings");

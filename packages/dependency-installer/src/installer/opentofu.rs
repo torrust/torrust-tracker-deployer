@@ -67,16 +67,27 @@ impl DependencyInstaller for OpenTofuInstaller {
             });
         }
 
-        // Make script executable
-        debug!("Making installer script executable");
-        fs::set_permissions(
-            script_path,
-            std::os::unix::fs::PermissionsExt::from_mode(0o755),
-        )
-        .map_err(|e| InstallationError::CommandFailed {
-            dependency: Dependency::OpenTofu,
-            source: e,
-        })?;
+        // Make script executable (Unix-specific)
+        #[cfg(unix)]
+        {
+            debug!("Making installer script executable");
+            fs::set_permissions(
+                script_path,
+                std::os::unix::fs::PermissionsExt::from_mode(0o755),
+            )
+            .map_err(|e| InstallationError::CommandFailed {
+                dependency: Dependency::OpenTofu,
+                source: e,
+            })?;
+        }
+
+        #[cfg(not(unix))]
+        {
+            return Err(InstallationError::InstallationFailed {
+                dependency: Dependency::OpenTofu,
+                message: "OpenTofu installation is only supported on Unix-like systems".to_string(),
+            });
+        }
 
         // Run installer with sudo
         debug!("Running OpenTofu installer with sudo");
@@ -90,8 +101,8 @@ impl DependencyInstaller for OpenTofuInstaller {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            // Clean up script before returning error
-            drop(fs::remove_file(script_path));
+            // Clean up script before returning error (ignore cleanup errors)
+            fs::remove_file(script_path).ok();
             return Err(InstallationError::InstallationFailed {
                 dependency: Dependency::OpenTofu,
                 message: format!("Installer script failed: {stderr}"),
