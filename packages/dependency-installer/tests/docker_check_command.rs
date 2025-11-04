@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 
 mod containers;
-use containers::ubuntu::UbuntuContainerBuilder;
+use containers::ubuntu_container_builder::UbuntuContainerBuilder;
 
 /// Test that the check command correctly identifies missing dependencies
 /// in a fresh Ubuntu 24.04 container
@@ -16,10 +16,7 @@ async fn test_check_all_reports_missing_dependencies() {
     let binary_path = get_binary_path();
 
     // Start Ubuntu container with the binary
-    let container = UbuntuContainerBuilder::new()
-        .with_binary(&binary_path)
-        .start()
-        .await;
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
     // Run the check command
     let output = container.exec(&["dependency-installer", "check"]);
@@ -29,14 +26,17 @@ async fn test_check_all_reports_missing_dependencies() {
         output.contains("cargo-machete: not installed"),
         "Expected cargo-machete to be reported as not installed, got: {output}"
     );
+
     assert!(
         output.contains("OpenTofu: not installed"),
         "Expected OpenTofu to be reported as not installed, got: {output}"
     );
+
     assert!(
         output.contains("Ansible: not installed"),
         "Expected Ansible to be reported as not installed, got: {output}"
     );
+
     assert!(
         output.contains("LXD: not installed"),
         "Expected LXD to be reported as not installed, got: {output}"
@@ -55,10 +55,7 @@ async fn test_check_all_reports_missing_dependencies() {
 async fn test_check_specific_tool() {
     let binary_path = get_binary_path();
 
-    let container = UbuntuContainerBuilder::new()
-        .with_binary(&binary_path)
-        .start()
-        .await;
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
     // Check a specific tool (OpenTofu)
     let output = container.exec(&["dependency-installer", "check", "--tool", "opentofu"]);
@@ -84,10 +81,7 @@ async fn test_check_specific_tool() {
 async fn test_list_command() {
     let binary_path = get_binary_path();
 
-    let container = UbuntuContainerBuilder::new()
-        .with_binary(&binary_path)
-        .start()
-        .await;
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
     let output = container.exec(&["dependency-installer", "list"]);
 
@@ -121,10 +115,7 @@ async fn test_list_command() {
 async fn test_verbose_output() {
     let binary_path = get_binary_path();
 
-    let container = UbuntuContainerBuilder::new()
-        .with_binary(&binary_path)
-        .start()
-        .await;
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
     let output = container.exec(&["dependency-installer", "check", "--verbose"]);
 

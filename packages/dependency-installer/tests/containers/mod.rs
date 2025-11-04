@@ -2,5 +2,6 @@
 //!
 //! This module provides helper types and functions for managing test containers.
 
-pub mod helpers;
-pub mod ubuntu;
+pub(super) mod container_id;
+pub(super) mod running_binary_container;
+pub mod ubuntu_container_builder;
