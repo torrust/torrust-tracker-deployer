@@ -18,14 +18,16 @@ For manual usage, you can control log verbosity with the `--verbose` flag or `RU
 ## Features
 
 - **Dependency Detection**: Check if required development tools are installed
-- **Extensible**: Easy to add new dependency detectors
+- **Dependency Installation**: Install missing dependencies automatically
+- **Extensible**: Easy to add new dependency detectors and installers
 - **Structured Logging**: Built-in tracing support for observability and automation
 - **Type-Safe**: Uses strongly-typed enums for dependencies
 - **Error Handling**: Clear, actionable error messages
+- **Async Support**: Asynchronous installation operations for better performance
 
 ## Supported Dependencies
 
-This package can detect the following development dependencies:
+This package can detect and install the following development dependencies:
 
 - **cargo-machete** - Detects unused Rust dependencies
 - **OpenTofu** - Infrastructure provisioning tool
@@ -45,25 +47,34 @@ dependency-installer check
 # Check specific dependency
 dependency-installer check --dependency opentofu
 
+# Install all dependencies
+dependency-installer install
+
+# Install specific dependency
+dependency-installer install --dependency opentofu
+
 # List all dependencies with status
 dependency-installer list
 
 # Control log level (off, error, warn, info, debug, trace)
 dependency-installer check --log-level debug
+dependency-installer install --log-level debug
 dependency-installer check --log-level off   # Disable all logging
 
 # Enable verbose logging (equivalent to --log-level debug)
 dependency-installer check --verbose
+dependency-installer install --verbose
 
 # Get help
 dependency-installer --help
 dependency-installer check --help
+dependency-installer install --help
 ```
 
 #### Exit Codes
 
-- **0**: Success (all checks passed)
-- **1**: Missing dependencies
+- **0**: Success (all checks or installations passed)
+- **1**: Missing dependencies or installation failures
 - **2**: Invalid arguments
 - **3**: Internal error
 
@@ -88,6 +99,26 @@ $ dependency-installer check --dependency opentofu
 2025-11-04T17:33:20.960473Z  INFO torrust_dependency_installer::detector::opentofu: OpenTofu is not installed dependency="opentofu"
 2025-11-04T17:33:20.960482Z  INFO torrust_dependency_installer::handlers::check: Dependency is not installed dependency="OpenTofu" status="not installed"
 Error: Check command failed: Failed to check specific dependency: opentofu: not installed
+
+# Install all dependencies
+$ dependency-installer install
+2025-11-04T19:30:10.000000Z  INFO torrust_dependency_installer::handlers::install: Installing all dependencies
+2025-11-04T19:30:10.100000Z  INFO torrust_dependency_installer::installer::cargo_machete: Installing cargo-machete dependency="cargo-machete"
+2025-11-04T19:30:25.000000Z  INFO torrust_dependency_installer::handlers::install: Dependency installation result dependency="cargo-machete" status="installed"
+2025-11-04T19:30:25.100000Z  INFO torrust_dependency_installer::installer::opentofu: Installing OpenTofu dependency="opentofu"
+2025-11-04T19:30:40.000000Z  INFO torrust_dependency_installer::handlers::install: Dependency installation result dependency="OpenTofu" status="installed"
+...
+2025-11-04T19:31:00.000000Z  INFO torrust_dependency_installer::handlers::install: All dependencies installed successfully
+
+# Install specific dependency with verbose logging
+$ dependency-installer install --dependency opentofu --verbose
+2025-11-04T19:30:10.000000Z  INFO torrust_dependency_installer::handlers::install: Installing specific dependency dependency=opentofu
+2025-11-04T19:30:10.100000Z  INFO torrust_dependency_installer::installer::opentofu: Installing OpenTofu dependency="opentofu"
+2025-11-04T19:30:10.200000Z DEBUG torrust_dependency_installer::installer::opentofu: Downloading OpenTofu installer script
+2025-11-04T19:30:12.000000Z DEBUG torrust_dependency_installer::installer::opentofu: Making installer script executable
+2025-11-04T19:30:12.100000Z DEBUG torrust_dependency_installer::installer::opentofu: Running OpenTofu installer with sudo
+2025-11-04T19:30:25.000000Z DEBUG torrust_dependency_installer::installer::opentofu: Cleaning up installer script
+2025-11-04T19:30:25.100000Z  INFO torrust_dependency_installer::handlers::install: Dependency installation completed dependency="OpenTofu" status="installed"
 
 # List all dependencies
 $ dependency-installer list
@@ -134,6 +165,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             installed = result.installed,
             "Dependency status"
         );
+    }
+
+    Ok(())
+}
+```
+
+#### Installing Dependencies
+
+```rust
+use torrust_dependency_installer::{Dependency, DependencyManager};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize tracing for structured logging
+    tracing_subscriber::fmt::init();
+
+    let manager = DependencyManager::new();
+
+    // Install specific dependency
+    manager.install(Dependency::OpenTofu).await?;
+
+    // Or install all dependencies
+    let results = manager.install_all().await;
+
+    for result in results {
+        let installer = manager.get_installer(result.dependency);
+        if result.success {
+            tracing::info!(
+                dependency = installer.name(),
+                "Installation succeeded"
+            );
+        } else {
+            tracing::error!(
+                dependency = installer.name(),
+                error = result.error.as_deref().unwrap_or("unknown"),
+                "Installation failed"
+            );
+        }
     }
 
     Ok(())

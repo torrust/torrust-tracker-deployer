@@ -9,9 +9,9 @@ use std::path::PathBuf;
 mod containers;
 use containers::ubuntu_container_builder::UbuntuContainerBuilder;
 
-/// Test that cargo-machete can be installed
+/// Test that `cargo-machete` can be installed
 #[tokio::test]
-#[ignore] // Requires recent Rust/Cargo version, run with --ignored flag
+#[ignore = "Requires recent Rust/Cargo version, run with --ignored flag"]
 async fn it_should_install_cargo_machete_successfully() {
     // Get the binary path (built by cargo before running tests)
     let binary_path = get_binary_path();
@@ -57,7 +57,7 @@ async fn it_should_install_cargo_machete_successfully() {
 
 /// Test that installation is idempotent (can run multiple times)
 #[tokio::test]
-#[ignore] // Requires recent Rust/Cargo version, run with --ignored flag
+#[ignore = "Requires recent Rust/Cargo version, run with --ignored flag"]
 async fn it_should_handle_idempotent_installation_of_cargo_machete() {
     let binary_path = get_binary_path();
 
@@ -93,9 +93,9 @@ async fn it_should_handle_idempotent_installation_of_cargo_machete() {
     );
 }
 
-/// Test that OpenTofu can be installed
+/// Test that `OpenTofu` can be installed
 #[tokio::test]
-#[ignore] // This test is expensive, run with --ignored flag
+#[ignore = "This test is expensive, run with --ignored flag"]
 async fn it_should_install_opentofu_successfully() {
     let binary_path = get_binary_path();
 
@@ -137,9 +137,9 @@ async fn it_should_install_opentofu_successfully() {
     );
 }
 
-/// Test that Ansible can be installed
+/// Test that `Ansible` can be installed
 #[tokio::test]
-#[ignore] // This test is expensive, run with --ignored flag
+#[ignore = "This test is expensive, run with --ignored flag"]
 async fn it_should_install_ansible_successfully() {
     let binary_path = get_binary_path();
 
@@ -172,9 +172,9 @@ async fn it_should_install_ansible_successfully() {
     );
 }
 
-/// Test that LXD can be installed
+/// Test that `LXD` can be installed
 #[tokio::test]
-#[ignore] // This test is expensive and requires snap, run with --ignored flag
+#[ignore = "This test is expensive and requires snap, run with --ignored flag"]
 async fn it_should_install_lxd_successfully() {
     let binary_path = get_binary_path();
 
