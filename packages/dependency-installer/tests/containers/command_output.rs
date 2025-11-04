@@ -61,21 +61,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_should_create_command_output() {
+    fn it_should_create_command_output_with_separate_stdout_and_stderr() {
         let output = CommandOutput::new("hello".to_string(), "error".to_string());
         assert_eq!(output.stdout(), "hello");
         assert_eq!(output.stderr(), "error");
     }
 
     #[test]
-    fn it_should_combine_output_with_stderr_first() {
+    fn it_should_combine_stderr_and_stdout_with_stderr_first() {
         let output =
             CommandOutput::new("stdout content".to_string(), "stderr content\n".to_string());
         assert_eq!(output.combined(), "stderr content\nstdout content");
     }
 
     #[test]
-    fn it_should_check_contains_in_stdout() {
+    fn it_should_find_text_in_stdout_when_checking_contains() {
         let output = CommandOutput::new("hello world".to_string(), String::new());
         assert!(output.contains("hello"));
         assert!(output.contains("world"));
@@ -83,7 +83,7 @@ mod tests {
     }
 
     #[test]
-    fn it_should_check_contains_in_stderr() {
+    fn it_should_find_text_in_stderr_when_checking_contains() {
         let output = CommandOutput::new(String::new(), "error message".to_string());
         assert!(output.contains("error"));
         assert!(output.contains("message"));
@@ -91,7 +91,7 @@ mod tests {
     }
 
     #[test]
-    fn it_should_check_contains_in_both_streams() {
+    fn it_should_find_text_in_either_stream_when_checking_contains() {
         let output = CommandOutput::new("stdout text".to_string(), "stderr text".to_string());
         assert!(output.contains("stdout"));
         assert!(output.contains("stderr"));

@@ -11,7 +11,7 @@ use containers::ubuntu_container_builder::UbuntuContainerBuilder;
 /// Test that the check command correctly identifies missing dependencies
 /// in a fresh Ubuntu 24.04 container
 #[tokio::test]
-async fn test_check_all_reports_missing_dependencies() {
+async fn it_should_report_missing_dependencies_when_checking_all_in_fresh_ubuntu_container() {
     // Get the binary path (built by cargo before running tests)
     let binary_path = get_binary_path();
 
@@ -29,7 +29,7 @@ async fn test_check_all_reports_missing_dependencies() {
 
 /// Test that the check command works for specific dependencies
 #[tokio::test]
-async fn test_check_specific_dependency() {
+async fn it_should_exit_with_error_code_when_checking_missing_specific_dependency() {
     let binary_path = get_binary_path();
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
@@ -51,7 +51,7 @@ async fn test_check_specific_dependency() {
 
 /// Test that the list command works correctly
 #[tokio::test]
-async fn test_list_command() {
+async fn it_should_list_all_dependencies_with_their_installation_status() {
     let binary_path = get_binary_path();
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
@@ -86,7 +86,7 @@ async fn test_list_command() {
 
 /// Test verbose output flag
 #[tokio::test]
-async fn test_verbose_output() {
+async fn it_should_display_debug_logs_when_verbose_flag_is_enabled() {
     let binary_path = get_binary_path();
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
