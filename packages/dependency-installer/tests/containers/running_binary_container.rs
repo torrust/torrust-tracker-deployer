@@ -8,6 +8,9 @@ use testcontainers::{ContainerAsync, GenericImage};
 use super::command_output::CommandOutput;
 use super::container_id::ContainerId;
 
+/// Exit code returned by a command execution
+pub type ExitCode = i32;
+
 /// A running Ubuntu container with a binary installed and ready to execute
 ///
 /// This struct provides methods for executing commands and managing a running
@@ -78,7 +81,7 @@ impl RunningBinaryContainer {
     ///
     /// If the process was terminated by a signal (returns None from `code()`), we return 1
     /// to indicate failure rather than 0, which would incorrectly suggest success.
-    pub fn exec_with_exit_code(&self, command: &[&str]) -> i32 {
+    pub fn exec_with_exit_code(&self, command: &[&str]) -> ExitCode {
         let status = Command::new("docker")
             .arg("exec")
             .arg(&self.container_id)
