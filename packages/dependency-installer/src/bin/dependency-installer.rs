@@ -68,6 +68,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     // Initialize tracing based on verbose flag
+    // Must set environment variable before calling init_tracing()
     if cli.verbose {
         std::env::set_var("RUST_LOG", "debug");
     }
@@ -114,7 +115,7 @@ fn check_all_tools(manager: &DependencyManager) -> Result<(), Box<dyn std::error
             results.len()
         );
         error!("{}", msg);
-        println!("{msg}");
+        eprintln!("{msg}");
         Err(msg.into())
     } else {
         info!("All dependencies are installed");
@@ -142,7 +143,7 @@ fn check_specific_tool(
     } else {
         let msg = format!("{}: not installed", detector.name());
         error!(tool = detector.name(), "Tool is not installed");
-        println!("✗ {msg}");
+        eprintln!("✗ {msg}");
         Err(msg.into())
     }
 }
@@ -170,8 +171,12 @@ fn parse_tool_name(name: &str) -> Result<Dependency, String> {
         "opentofu" | "tofu" => Ok(Dependency::OpenTofu),
         "ansible" => Ok(Dependency::Ansible),
         "lxd" => Ok(Dependency::Lxd),
-        _ => Err(format!(
-            "Unknown tool: {name}. Available: cargo-machete, opentofu, ansible, lxd"
-        )),
+        _ => {
+            // List of available tools - should be kept in sync with the match arms above
+            const AVAILABLE_TOOLS: &str = "cargo-machete, opentofu, ansible, lxd";
+            Err(format!(
+                "Unknown tool: {name}. Available: {AVAILABLE_TOOLS}"
+            ))
+        }
     }
 }
