@@ -1,6 +1,9 @@
+pub mod app;
+pub mod cli;
 pub mod command;
 pub mod detector;
 pub mod errors;
+pub mod handlers;
 pub mod logging;
 pub mod manager;
 
