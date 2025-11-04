@@ -259,6 +259,10 @@ pub enum Channel {
 ///     fn channel(&self) -> Channel {
 ///         Channel::Stderr
 ///     }
+///
+///     fn type_name(&self) -> &'static str {
+///         "CustomMessage"
+///     }
 /// }
 /// ```
 pub trait OutputMessage {
@@ -295,6 +299,67 @@ pub trait OutputMessage {
     ///
     /// The channel (Stdout or Stderr) where this message should be written
     fn channel(&self) -> Channel;
+
+    /// Get the type name of this message
+    ///
+    /// Returns a human-readable type identifier for this message type.
+    /// This is primarily used by formatter overrides (e.g., JSON formatter)
+    /// to include type information in the output.
+    ///
+    /// # Returns
+    ///
+    /// A static string representing the message type name
+    fn type_name(&self) -> &'static str;
+}
+
+/// Optional trait for post-processing message output
+///
+/// This allows transforming the standard message format without
+/// modifying individual message types. Use sparingly - prefer
+/// extending the message trait or using themes for most cases.
+///
+/// # When to Use
+///
+/// - **Machine-readable formats**: JSON, XML, structured logs
+/// - **Additional decoration**: ANSI colors, markup codes
+/// - **Output wrapping**: Adding metadata, timestamps, process info
+///
+/// # When NOT to Use
+///
+/// - **Symbol changes**: Use `Theme` instead
+/// - **New message types**: Implement `OutputMessage` trait instead
+/// - **Channel routing changes**: Define in message type's `channel()` method
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::{FormatterOverride, OutputMessage};
+///
+/// struct JsonFormatter;
+///
+/// impl FormatterOverride for JsonFormatter {
+///     fn transform(&self, formatted: &str, message: &dyn OutputMessage) -> String {
+///         // Transform to JSON representation
+///         format!(r#"{{"content": "{}"}}"#, formatted.trim())
+///     }
+/// }
+/// ```
+pub trait FormatterOverride: Send + Sync {
+    /// Transform formatted message output
+    ///
+    /// This method receives the already-formatted message (with theme applied)
+    /// and the original message object for context. It should return the
+    /// transformed output.
+    ///
+    /// # Arguments
+    ///
+    /// * `formatted` - The message already formatted with theme
+    /// * `message` - The original message object (for metadata/context)
+    ///
+    /// # Returns
+    ///
+    /// The transformed message string
+    fn transform(&self, formatted: &str, message: &dyn OutputMessage) -> String;
 }
 
 /// Verbosity levels for user output
@@ -324,6 +389,47 @@ pub enum VerbosityLevel {
     VeryVerbose,
     /// Maximum detail for troubleshooting
     Debug,
+}
+
+// ============================================================================
+// Formatter Override Implementations
+// ============================================================================
+
+/// JSON formatter for machine-readable output
+///
+/// Transforms messages into JSON objects with metadata including:
+/// - Message type (for programmatic filtering)
+/// - Channel (stdout/stderr)
+/// - Content (the formatted message)
+/// - Timestamp (ISO 8601 format)
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::{JsonFormatter, UserOutput, VerbosityLevel};
+///
+/// let formatter = JsonFormatter;
+/// let mut output = UserOutput::with_formatter_override(
+///     VerbosityLevel::Normal,
+///     Box::new(formatter)
+/// );
+///
+/// output.progress("Starting process");
+/// // Output: {"type":"ProgressMessage","channel":"Stderr","content":"⏳ Starting process","timestamp":"2025-11-04T12:34:56Z"}
+/// ```
+pub struct JsonFormatter;
+
+impl FormatterOverride for JsonFormatter {
+    fn transform(&self, formatted: &str, message: &dyn OutputMessage) -> String {
+        let json = serde_json::json!({
+            "type": message.type_name(),
+            "channel": format!("{:?}", message.channel()),
+            "content": formatted.trim(), // Remove trailing newlines for cleaner JSON
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+        })
+        .to_string();
+        format!("{json}\n")
+    }
 }
 
 // ============================================================================
@@ -361,6 +467,10 @@ impl OutputMessage for ProgressMessage {
     fn channel(&self) -> Channel {
         Channel::Stderr
     }
+
+    fn type_name(&self) -> &'static str {
+        "ProgressMessage"
+    }
 }
 
 /// Success message for completed operations
@@ -393,6 +503,10 @@ impl OutputMessage for SuccessMessage {
 
     fn channel(&self) -> Channel {
         Channel::Stderr
+    }
+
+    fn type_name(&self) -> &'static str {
+        "SuccessMessage"
     }
 }
 
@@ -427,6 +541,10 @@ impl OutputMessage for WarningMessage {
     fn channel(&self) -> Channel {
         Channel::Stderr
     }
+
+    fn type_name(&self) -> &'static str {
+        "WarningMessage"
+    }
 }
 
 /// Error message for critical failures
@@ -460,6 +578,10 @@ impl OutputMessage for ErrorMessage {
     fn channel(&self) -> Channel {
         Channel::Stderr
     }
+
+    fn type_name(&self) -> &'static str {
+        "ErrorMessage"
+    }
 }
 
 /// Result message for final output data
@@ -492,6 +614,10 @@ impl OutputMessage for ResultMessage {
 
     fn channel(&self) -> Channel {
         Channel::Stdout
+    }
+
+    fn type_name(&self) -> &'static str {
+        "ResultMessage"
     }
 }
 
@@ -537,6 +663,10 @@ impl OutputMessage for StepsMessage {
 
     fn channel(&self) -> Channel {
         Channel::Stderr
+    }
+
+    fn type_name(&self) -> &'static str {
+        "StepsMessage"
     }
 }
 
@@ -635,6 +765,7 @@ pub struct UserOutput {
     verbosity_filter: VerbosityFilter,
     stdout_writer: Box<dyn Write + Send + Sync>,
     stderr_writer: Box<dyn Write + Send + Sync>,
+    formatter_override: Option<Box<dyn FormatterOverride>>,
 }
 
 impl UserOutput {
@@ -710,6 +841,73 @@ impl UserOutput {
             verbosity_filter: VerbosityFilter::new(verbosity),
             stdout_writer,
             stderr_writer,
+            formatter_override: None,
+        }
+    }
+
+    /// Create `UserOutput` with an optional formatter override
+    ///
+    /// This allows applying custom formatting (e.g., JSON, colored output)
+    /// on top of the theme-based formatting.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{
+    ///     UserOutput, VerbosityLevel, JsonFormatter
+    /// };
+    ///
+    /// let mut output = UserOutput::with_formatter_override(
+    ///     VerbosityLevel::Normal,
+    ///     Box::new(JsonFormatter),
+    /// );
+    ///
+    /// output.progress("Processing");
+    /// // Output: {"type":"ProgressMessage","channel":"Stderr","content":"⏳ Processing","timestamp":"..."}
+    /// ```
+    #[must_use]
+    pub fn with_formatter_override(
+        verbosity: VerbosityLevel,
+        formatter_override: Box<dyn FormatterOverride>,
+    ) -> Self {
+        Self {
+            theme: Theme::default(),
+            verbosity_filter: VerbosityFilter::new(verbosity),
+            stdout_writer: Box::new(std::io::stdout()),
+            stderr_writer: Box::new(std::io::stderr()),
+            formatter_override: Some(formatter_override),
+        }
+    }
+
+    /// Create `UserOutput` with theme and optional formatter override
+    ///
+    /// Combines theme selection with optional formatter override.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{
+    ///     UserOutput, VerbosityLevel, Theme, JsonFormatter
+    /// };
+    ///
+    /// let mut output = UserOutput::with_theme_and_formatter(
+    ///     VerbosityLevel::Normal,
+    ///     Theme::plain(),
+    ///     Some(Box::new(JsonFormatter)),
+    /// );
+    /// ```
+    #[must_use]
+    pub fn with_theme_and_formatter(
+        verbosity: VerbosityLevel,
+        theme: Theme,
+        formatter_override: Option<Box<dyn FormatterOverride>>,
+    ) -> Self {
+        Self {
+            theme,
+            verbosity_filter: VerbosityFilter::new(verbosity),
+            stdout_writer: Box::new(std::io::stdout()),
+            stderr_writer: Box::new(std::io::stderr()),
+            formatter_override,
         }
     }
 
@@ -767,7 +965,13 @@ impl UserOutput {
             return;
         }
 
-        let formatted = message.format(&self.theme);
+        let mut formatted = message.format(&self.theme);
+
+        // Apply optional format override
+        if let Some(override_formatter) = &self.formatter_override {
+            formatted = override_formatter.transform(&formatted, message);
+        }
+
         let writer = match message.channel() {
             Channel::Stdout => &mut self.stdout_writer,
             Channel::Stderr => &mut self.stderr_writer,
@@ -1830,6 +2034,10 @@ mod tests {
             fn channel(&self) -> Channel {
                 Channel::Stderr
             }
+
+            fn type_name(&self) -> &'static str {
+                "CustomDebugMessage"
+            }
         }
 
         #[test]
@@ -1876,6 +2084,10 @@ mod tests {
 
                 fn channel(&self) -> Channel {
                     Channel::Stderr
+                }
+
+                fn type_name(&self) -> &'static str {
+                    "CustomInfoMessage"
                 }
             }
 
@@ -1948,6 +2160,320 @@ mod tests {
             // Verify it compiles and creates output with the theme
             // (actual output testing done through TestUserOutput)
             drop(output);
+        }
+    }
+
+    // ============================================================================
+    // FormatterOverride Tests
+    // ============================================================================
+
+    mod formatter_override {
+        use super::super::*;
+        use crate::presentation::user_output::test_support::TestUserOutput;
+        use std::sync::{Arc, Mutex};
+
+        // Custom test formatter to verify override is applied
+        struct TestFormatter {
+            prefix: String,
+        }
+
+        impl FormatterOverride for TestFormatter {
+            fn transform(&self, formatted: &str, _message: &dyn OutputMessage) -> String {
+                format!("{}{}", self.prefix, formatted)
+            }
+        }
+
+        #[test]
+        fn it_should_apply_formatter_override_to_messages() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(TestFormatter {
+                prefix: "[TEST] ".to_string(),
+            });
+
+            let mut output = UserOutput {
+                theme: Theme::plain(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            output.progress("Test message");
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            assert_eq!(stderr, "[TEST] [INFO] Test message\n");
+        }
+
+        #[test]
+        fn it_should_not_apply_override_when_none() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            test_output.output.progress("Test message");
+
+            // Without override, should see normal formatted output
+            assert_eq!(test_output.stderr(), "⏳ Test message\n");
+        }
+
+        #[test]
+        fn it_should_work_with_json_formatter() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::emoji(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            output.progress("Test message");
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+
+            // Parse JSON to verify structure (trim to remove trailing newline)
+            let json: serde_json::Value = serde_json::from_str(stderr.trim()).expect("Valid JSON");
+
+            assert_eq!(json["type"], "ProgressMessage");
+            assert_eq!(json["channel"], "Stderr");
+            assert_eq!(json["content"], "⏳ Test message");
+            assert!(json["timestamp"].is_string());
+        }
+
+        #[test]
+        fn it_should_include_correct_type_name_in_json() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::emoji(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            // Test different message types
+            output.progress("Progress");
+            output.success("Success");
+            output.warn("Warning");
+            output.error("Error");
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let lines: Vec<&str> = stderr.trim().split('\n').collect();
+
+            let progress_json: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
+            assert_eq!(progress_json["type"], "ProgressMessage");
+
+            let success_json: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
+            assert_eq!(success_json["type"], "SuccessMessage");
+
+            let warning_json: serde_json::Value = serde_json::from_str(lines[2]).unwrap();
+            assert_eq!(warning_json["type"], "WarningMessage");
+
+            let error_json: serde_json::Value = serde_json::from_str(lines[3]).unwrap();
+            assert_eq!(error_json["type"], "ErrorMessage");
+        }
+
+        #[test]
+        fn it_should_include_correct_channel_in_json() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::emoji(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            output.progress("Stderr message");
+            output.result("Stdout message");
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
+
+            let stderr_json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
+            assert_eq!(stderr_json["channel"], "Stderr");
+
+            let stdout_json: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+            assert_eq!(stdout_json["channel"], "Stdout");
+        }
+
+        #[test]
+        fn it_should_trim_trailing_newlines_in_json() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::emoji(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            output.progress("Test");
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
+
+            // Content should not have trailing newline
+            let content = json["content"].as_str().unwrap();
+            assert!(!content.ends_with('\n'));
+            assert_eq!(content, "⏳ Test");
+        }
+
+        #[test]
+        fn it_should_respect_theme_with_json_formatter() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::plain(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            output.progress("Test");
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
+
+            // Content should reflect plain theme
+            assert_eq!(json["content"], "[INFO] Test");
+        }
+
+        #[test]
+        fn it_should_respect_verbosity_with_formatter_override() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::emoji(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Quiet),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            // Normal-level message should be filtered at Quiet level
+            output.progress("Should not appear");
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            assert_eq!(stderr, "");
+
+            // Quiet-level message should appear
+            output.error("Should appear");
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
+            assert_eq!(json["type"], "ErrorMessage");
+        }
+
+        #[test]
+        fn it_should_create_output_with_formatter_override_constructor() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::default(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            output.progress("Test");
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
+
+            assert_eq!(json["type"], "ProgressMessage");
+        }
+
+        #[test]
+        fn it_should_work_with_steps_message() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::emoji(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            output.steps("Next steps:", &["Step 1", "Step 2"]);
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
+
+            assert_eq!(json["type"], "StepsMessage");
+            assert_eq!(json["channel"], "Stderr");
+            // Content should include formatted steps
+            let content = json["content"].as_str().unwrap();
+            assert!(content.contains("Next steps:"));
+            assert!(content.contains("1. Step 1"));
+            assert!(content.contains("2. Step 2"));
+        }
+
+        #[test]
+        fn it_should_produce_valid_json_for_all_message_types() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::emoji(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                stderr_writer: Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                formatter_override: Some(formatter),
+            };
+
+            // Test all message types
+            output.progress("Progress");
+            output.success("Success");
+            output.warn("Warning");
+            output.error("Error");
+            output.result("Result");
+            output.steps("Steps:", &["Step 1"]);
+
+            // Verify all stderr messages are valid JSON
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            for line in stderr.trim().split('\n') {
+                let json: Result<serde_json::Value, _> = serde_json::from_str(line);
+                assert!(json.is_ok(), "Invalid JSON: {line}");
+            }
+
+            // Verify stdout message is valid JSON
+            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
+            let json: Result<serde_json::Value, _> = serde_json::from_str(stdout.trim());
+            assert!(json.is_ok(), "Invalid JSON in stdout");
         }
     }
 }
