@@ -5,6 +5,8 @@
 
 use clap::{Parser, Subcommand};
 
+use crate::Dependency;
+
 /// Manage development dependencies for E2E tests
 #[derive(Parser)]
 #[command(name = "dependency-installer")]
@@ -23,9 +25,9 @@ pub struct Cli {
 pub enum Commands {
     /// Check if dependencies are installed
     Check {
-        /// Specific tool to check (if omitted, checks all)
-        #[arg(short, long)]
-        tool: Option<String>,
+        /// Specific dependency to check (if omitted, checks all)
+        #[arg(short = 'd', long)]
+        dependency: Option<Dependency>,
     },
 
     /// List all available tools and their status

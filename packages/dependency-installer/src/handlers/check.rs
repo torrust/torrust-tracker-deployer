@@ -11,19 +11,19 @@ use crate::{Dependency, DependencyManager};
 /// Errors that can occur when handling the check command
 #[derive(Debug, Error)]
 pub enum CheckError {
-    /// Failed to check all tools
+    /// Failed to check all dependencies
     ///
     /// This occurs when checking all dependencies at once.
-    #[error("Failed to check all tools: {source}")]
+    #[error("Failed to check all dependencies: {source}")]
     CheckAllFailed {
         #[source]
         source: CheckAllToolsError,
     },
 
-    /// Failed to check a specific tool
+    /// Failed to check a specific dependency
     ///
-    /// This occurs when checking a single specified tool.
-    #[error("Failed to check specific tool: {source}")]
+    /// This occurs when checking a single specified dependency.
+    #[error("Failed to check specific dependency: {source}")]
     CheckSpecificFailed {
         #[source]
         source: CheckSpecificToolError,
@@ -73,42 +73,27 @@ impl From<DetectionError> for CheckAllToolsError {
     }
 }
 
-/// Errors that can occur when checking a specific tool
+/// Errors that can occur when checking a specific dependency
 #[derive(Debug, Error)]
 pub enum CheckSpecificToolError {
-    /// Failed to parse the tool name
-    ///
-    /// This occurs when the user provides an unrecognized tool name.
-    #[error("Failed to parse tool name: {source}")]
-    ParseFailed {
-        #[source]
-        source: ParseToolNameError,
-    },
-
-    /// Failed to detect if the tool is installed
+    /// Failed to detect if the dependency is installed
     ///
     /// This occurs when the dependency detection system fails to check
-    /// whether a specific tool is installed.
-    #[error("Failed to detect tool installation: {source}")]
+    /// whether a specific dependency is installed.
+    #[error("Failed to detect dependency installation: {source}")]
     DetectionFailed {
         #[source]
         source: DetectionError,
     },
 
-    /// Tool is not installed
+    /// Dependency is not installed
     ///
-    /// This occurs when the specified tool is not found on the system.
-    #[error("{tool}: not installed")]
-    ToolNotInstalled {
-        /// Name of the tool that is not installed
-        tool: String,
+    /// This occurs when the specified dependency is not found on the system.
+    #[error("{dependency}: not installed")]
+    DependencyNotInstalled {
+        /// Name of the dependency that is not installed
+        dependency: String,
     },
-}
-
-impl From<ParseToolNameError> for CheckSpecificToolError {
-    fn from(source: ParseToolNameError) -> Self {
-        Self::ParseFailed { source }
-    }
 }
 
 impl From<DetectionError> for CheckSpecificToolError {
@@ -117,40 +102,26 @@ impl From<DetectionError> for CheckSpecificToolError {
     }
 }
 
-/// Errors that can occur when parsing tool names
-#[derive(Debug, Error)]
-pub enum ParseToolNameError {
-    /// Unknown tool name provided
-    ///
-    /// This occurs when the user specifies a tool name that is not recognized.
-    /// The error includes the invalid name and a list of available tools.
-    #[error("Unknown tool: {name}. Available: {available_tools}")]
-    UnknownTool {
-        /// The tool name that was not recognized
-        name: String,
-        /// Comma-separated list of available tool names
-        available_tools: String,
-    },
-}
-
 /// Handle the check command
 ///
 /// # Errors
 ///
 /// Returns an error if:
 /// - Dependencies are missing
-/// - Invalid tool name is provided
 /// - Internal error occurs during dependency checking
-pub fn handle_check(manager: &DependencyManager, tool: Option<String>) -> Result<(), CheckError> {
-    match tool {
-        Some(tool_name) => check_specific_tool(manager, &tool_name)?,
-        None => check_all_tools(manager)?,
+pub fn handle_check(
+    manager: &DependencyManager,
+    dependency: Option<Dependency>,
+) -> Result<(), CheckError> {
+    match dependency {
+        Some(dep) => check_specific_dependency(manager, dep)?,
+        None => check_all_dependencies(manager)?,
     }
 
     Ok(())
 }
 
-fn check_all_tools(manager: &DependencyManager) -> Result<(), CheckAllToolsError> {
+fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllToolsError> {
     info!("Checking all dependencies");
     println!("Checking dependencies...\n");
 
@@ -159,10 +130,12 @@ fn check_all_tools(manager: &DependencyManager) -> Result<(), CheckAllToolsError
     let mut missing_count = 0;
 
     for result in &results {
+        let detector = manager.get_detector(result.dependency);
+        let name = detector.name();
         if result.installed {
-            println!("✓ {}: installed", result.tool);
+            println!("✓ {name}: installed");
         } else {
-            println!("✗ {}: not installed", result.tool);
+            println!("✗ {name}: not installed");
             missing_count += 1;
         }
     }
@@ -190,45 +163,25 @@ fn check_all_tools(manager: &DependencyManager) -> Result<(), CheckAllToolsError
     }
 }
 
-fn check_specific_tool(
+fn check_specific_dependency(
     manager: &DependencyManager,
-    tool_name: &str,
+    dependency: Dependency,
 ) -> Result<(), CheckSpecificToolError> {
-    info!(tool = tool_name, "Checking specific tool");
+    info!(dependency = %dependency, "Checking specific dependency");
 
-    // Parse tool name to Dependency enum
-    let dep = parse_tool_name(tool_name)?;
-
-    let detector = manager.get_detector(dep);
+    let detector = manager.get_detector(dependency);
 
     let installed = detector.is_installed()?;
 
     if installed {
-        info!(tool = detector.name(), "Tool is installed");
+        info!(dependency = detector.name(), "Dependency is installed");
         println!("✓ {}: installed", detector.name());
         Ok(())
     } else {
-        error!(tool = detector.name(), "Tool is not installed");
+        error!(dependency = detector.name(), "Dependency is not installed");
         eprintln!("✗ {}: not installed", detector.name());
-        Err(CheckSpecificToolError::ToolNotInstalled {
-            tool: detector.name().to_string(),
+        Err(CheckSpecificToolError::DependencyNotInstalled {
+            dependency: detector.name().to_string(),
         })
-    }
-}
-
-fn parse_tool_name(name: &str) -> Result<Dependency, ParseToolNameError> {
-    match name.to_lowercase().as_str() {
-        "cargo-machete" | "machete" => Ok(Dependency::CargoMachete),
-        "opentofu" | "tofu" => Ok(Dependency::OpenTofu),
-        "ansible" => Ok(Dependency::Ansible),
-        "lxd" => Ok(Dependency::Lxd),
-        _ => {
-            // List of available tools - should be kept in sync with the match arms above
-            const AVAILABLE_TOOLS: &str = "cargo-machete, opentofu, ansible, lxd";
-            Err(ParseToolNameError::UnknownTool {
-                name: name.to_string(),
-                available_tools: AVAILABLE_TOOLS.to_string(),
-            })
-        }
     }
 }

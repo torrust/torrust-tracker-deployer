@@ -23,6 +23,8 @@ fn main() {
             println!("{}", "=".repeat(40));
 
             for result in &results {
+                let detector = manager.get_detector(result.dependency);
+                let name = detector.name();
                 let status = if result.installed { "✓" } else { "✗" };
                 let status_text = if result.installed {
                     "Installed"
@@ -30,7 +32,7 @@ fn main() {
                     "Not Installed"
                 };
 
-                println!("{} {:20} {}", status, result.tool, status_text);
+                println!("{status} {name:20} {status_text}");
             }
 
             println!("\n{} dependencies checked", results.len());

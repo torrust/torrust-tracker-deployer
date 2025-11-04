@@ -34,18 +34,20 @@ impl From<DetectionError> for ListError {
 ///
 /// Returns an error if dependency checking fails
 pub fn handle_list(manager: &DependencyManager) -> Result<(), ListError> {
-    info!("Listing all available tools");
-    println!("Available tools:\n");
+    info!("Listing all available dependencies");
+    println!("Available dependencies:\n");
 
     let results = manager.check_all()?;
 
     for result in results {
+        let detector = manager.get_detector(result.dependency);
+        let name = detector.name();
         let status = if result.installed {
             "installed"
         } else {
             "not installed"
         };
-        println!("- {} ({status})", result.tool);
+        println!("- {name} ({status})");
     }
 
     Ok(())

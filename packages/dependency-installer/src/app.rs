@@ -61,9 +61,7 @@ impl AppError {
     /// - `ExitCode::InternalError`: Detection failures or other errors
     #[must_use]
     pub fn to_exit_code(&self) -> ExitCode {
-        use crate::handlers::check::{
-            CheckAllToolsError, CheckError, CheckSpecificToolError, ParseToolNameError,
-        };
+        use crate::handlers::check::{CheckAllToolsError, CheckError, CheckSpecificToolError};
 
         match self {
             Self::CheckFailed { source } => match source {
@@ -72,10 +70,7 @@ impl AppError {
                     CheckAllToolsError::DependencyCheckFailed { .. } => ExitCode::InternalError,
                 },
                 CheckError::CheckSpecificFailed { source } => match source {
-                    CheckSpecificToolError::ParseFailed {
-                        source: ParseToolNameError::UnknownTool { .. },
-                    } => ExitCode::InvalidArguments,
-                    CheckSpecificToolError::ToolNotInstalled { .. } => {
+                    CheckSpecificToolError::DependencyNotInstalled { .. } => {
                         ExitCode::MissingDependencies
                     }
                     CheckSpecificToolError::DetectionFailed { .. } => ExitCode::InternalError,
@@ -120,7 +115,9 @@ pub fn run() -> Result<(), AppError> {
     let manager = DependencyManager::new();
 
     match cli.command {
-        Commands::Check { tool } => crate::handlers::check::handle_check(&manager, tool)?,
+        Commands::Check { dependency } => {
+            crate::handlers::check::handle_check(&manager, dependency)?;
+        }
         Commands::List => crate::handlers::list::handle_list(&manager)?,
     }
 

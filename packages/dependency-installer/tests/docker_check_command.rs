@@ -50,15 +50,15 @@ async fn test_check_all_reports_missing_dependencies() {
     );
 }
 
-/// Test that the check command works for specific tools
+/// Test that the check command works for specific dependencies
 #[tokio::test]
 async fn test_check_specific_tool() {
     let binary_path = get_binary_path();
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
-    // Check a specific tool (OpenTofu)
-    let output = container.exec(&["dependency-installer", "check", "--tool", "opentofu"]);
+    // Check a specific dependency (OpenTofu)
+    let output = container.exec(&["dependency-installer", "check", "--dependency", "opentofu"]);
 
     // The output contains "OpenTofu: not installed" in the status line
     // We check for the plain text version since the ✗ symbol may not be present
@@ -68,11 +68,15 @@ async fn test_check_specific_tool() {
         "Expected OpenTofu to be reported as not installed, got: {output}"
     );
 
-    let exit_code =
-        container.exec_with_exit_code(&["dependency-installer", "check", "--tool", "opentofu"]);
+    let exit_code = container.exec_with_exit_code(&[
+        "dependency-installer",
+        "check",
+        "--dependency",
+        "opentofu",
+    ]);
     assert_eq!(
         exit_code, 1,
-        "check command should exit with 1 for missing specific tool"
+        "check command should exit with 1 for missing specific dependency"
     );
 }
 
