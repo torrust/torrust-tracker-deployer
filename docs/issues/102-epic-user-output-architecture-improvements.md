@@ -60,13 +60,18 @@ See comprehensive refactoring plan: [docs/refactors/plans/user-output-architectu
 - [ ] [#123](https://github.com/torrust/torrust-tracker-deployer/issues/123) - Proposal 1: Simplify Test Infrastructure
 - [ ] [#124](https://github.com/torrust/torrust-tracker-deployer/issues/124) - Proposal 2: Add Theme/Configuration Support
 
+### Phase 1: Strategic Improvements
+
+- [ ] [#127](https://github.com/torrust/torrust-tracker-deployer/issues/127) - Proposal 3: Use Message Trait for Extensibility
+- [ ] [#128](https://github.com/torrust/torrust-tracker-deployer/issues/128) - Proposal 5: Parameterized Test Cases
+
 ### Other Related Work
 
 - [x] [#107](https://github.com/torrust/torrust-tracker-deployer/issues/107) - Centralize UserOutput via Dependency Injection
 
 ### Future Subissues
 
-Additional subissues for Phase 1 and Phase 2 proposals will be created as work progresses.
+Additional subissues for Phase 2 proposals will be created as work progresses.
 
 ## Timeline
 
