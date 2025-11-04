@@ -1,0 +1,15 @@
+[package]
+name = "torrust-dependency-installer"
+version = "0.1.0"
+edition = "2021"
+description = "Dependency detection and installation utilities for the Torrust Tracker Deployer project"
+license = "MIT"
+
+[lib]
+name = "torrust_dependency_installer"
+path = "src/lib.rs"
+
+[dependencies]
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
