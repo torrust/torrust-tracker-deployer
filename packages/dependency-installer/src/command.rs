@@ -1,20 +1,17 @@
+//! Command execution utilities
+//!
+//! This module provides utilities for executing system commands and checking
+//! if commands exist in the system PATH.
+
+// Standard library
 use std::process::Command;
 
+// External crates
 use thiserror::Error;
 
-/// Error types for command execution utilities
-#[derive(Debug, Error)]
-pub enum CommandError {
-    #[error("Failed to execute command '{command}': {source}")]
-    ExecutionFailed {
-        command: String,
-        #[source]
-        source: std::io::Error,
-    },
-
-    #[error("Command '{command}' not found in PATH")]
-    CommandNotFound { command: String },
-}
+// ============================================================================
+// PUBLIC API - Functions
+// ============================================================================
 
 /// Check if a command exists in the system PATH
 ///
@@ -93,4 +90,22 @@ pub fn execute_command(command: &str, args: &[&str]) -> Result<String, CommandEr
             command: format!("{command} {}", args.join(" ")),
             source: std::io::Error::new(std::io::ErrorKind::InvalidData, e),
         })
+}
+
+// ============================================================================
+// ERROR TYPES - Secondary Concerns
+// ============================================================================
+
+/// Error types for command execution utilities
+#[derive(Debug, Error)]
+pub enum CommandError {
+    #[error("Failed to execute command '{command}': {source}")]
+    ExecutionFailed {
+        command: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("Command '{command}' not found in PATH")]
+    CommandNotFound { command: String },
 }

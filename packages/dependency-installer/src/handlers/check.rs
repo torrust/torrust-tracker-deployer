@@ -2,11 +2,113 @@
 //!
 //! This module handles checking whether dependencies are installed.
 
+// External crates
 use thiserror::Error;
 use tracing::info;
 
+// Internal crate
 use crate::detector::DetectionError;
 use crate::{Dependency, DependencyManager};
+
+// ============================================================================
+// PUBLIC API - Functions
+// ============================================================================
+
+/// Handle the check command
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Dependencies are missing
+/// - Internal error occurs during dependency checking
+pub fn handle_check(
+    manager: &DependencyManager,
+    dependency: Option<Dependency>,
+) -> Result<(), CheckError> {
+    match dependency {
+        Some(dep) => check_specific_dependency(manager, dep)?,
+        None => check_all_dependencies(manager)?,
+    }
+
+    Ok(())
+}
+
+// ============================================================================
+// PRIVATE - Helper Functions
+// ============================================================================
+
+fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllDependenciesError> {
+    info!("Checking all dependencies");
+
+    let results = manager.check_all()?;
+
+    let mut missing_count = 0;
+
+    for result in &results {
+        let detector = manager.get_detector(result.dependency);
+        let name = detector.name();
+        if result.installed {
+            info!(
+                dependency = name,
+                status = "installed",
+                "Dependency check result"
+            );
+        } else {
+            info!(
+                dependency = name,
+                status = "not installed",
+                "Dependency check result"
+            );
+            missing_count += 1;
+        }
+    }
+
+    if missing_count > 0 {
+        info!(
+            missing_count,
+            total_count = results.len(),
+            "Missing dependencies"
+        );
+        Err(CheckAllDependenciesError::MissingDependencies {
+            missing_count,
+            total_count: results.len(),
+        })
+    } else {
+        info!("All dependencies are installed");
+        Ok(())
+    }
+}
+
+fn check_specific_dependency(
+    manager: &DependencyManager,
+    dependency: Dependency,
+) -> Result<(), CheckSpecificDependencyError> {
+    info!(dependency = %dependency, "Checking specific dependency");
+
+    let detector = manager.get_detector(dependency);
+
+    let installed = detector.is_installed()?;
+
+    if installed {
+        info!(
+            dependency = detector.name(),
+            status = "installed",
+            "Dependency is installed"
+        );
+        Ok(())
+    } else {
+        info!(
+            dependency = detector.name(),
+            status = "not installed",
+            "Dependency is not installed"
+        );
+        Err(CheckSpecificDependencyError::DependencyNotInstalled { dependency })
+    }
+}
+
+// ============================================================================
+// ERROR TYPES - Secondary Concerns
+// ============================================================================
 
 /// Errors that can occur when handling the check command
 #[derive(Debug, Error)]
@@ -99,93 +201,5 @@ pub enum CheckSpecificDependencyError {
 impl From<DetectionError> for CheckSpecificDependencyError {
     fn from(source: DetectionError) -> Self {
         Self::DetectionFailed { source }
-    }
-}
-
-/// Handle the check command
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Dependencies are missing
-/// - Internal error occurs during dependency checking
-pub fn handle_check(
-    manager: &DependencyManager,
-    dependency: Option<Dependency>,
-) -> Result<(), CheckError> {
-    match dependency {
-        Some(dep) => check_specific_dependency(manager, dep)?,
-        None => check_all_dependencies(manager)?,
-    }
-
-    Ok(())
-}
-
-fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllDependenciesError> {
-    info!("Checking all dependencies");
-
-    let results = manager.check_all()?;
-
-    let mut missing_count = 0;
-
-    for result in &results {
-        let detector = manager.get_detector(result.dependency);
-        let name = detector.name();
-        if result.installed {
-            info!(
-                dependency = name,
-                status = "installed",
-                "Dependency check result"
-            );
-        } else {
-            info!(
-                dependency = name,
-                status = "not installed",
-                "Dependency check result"
-            );
-            missing_count += 1;
-        }
-    }
-
-    if missing_count > 0 {
-        info!(
-            missing_count,
-            total_count = results.len(),
-            "Missing dependencies"
-        );
-        Err(CheckAllDependenciesError::MissingDependencies {
-            missing_count,
-            total_count: results.len(),
-        })
-    } else {
-        info!("All dependencies are installed");
-        Ok(())
-    }
-}
-
-fn check_specific_dependency(
-    manager: &DependencyManager,
-    dependency: Dependency,
-) -> Result<(), CheckSpecificDependencyError> {
-    info!(dependency = %dependency, "Checking specific dependency");
-
-    let detector = manager.get_detector(dependency);
-
-    let installed = detector.is_installed()?;
-
-    if installed {
-        info!(
-            dependency = detector.name(),
-            status = "installed",
-            "Dependency is installed"
-        );
-        Ok(())
-    } else {
-        info!(
-            dependency = detector.name(),
-            status = "not installed",
-            "Dependency is not installed"
-        );
-        Err(CheckSpecificDependencyError::DependencyNotInstalled { dependency })
     }
 }

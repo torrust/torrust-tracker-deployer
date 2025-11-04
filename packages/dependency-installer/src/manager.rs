@@ -1,10 +1,21 @@
+//! Dependency management and detection coordination
+//!
+//! This module provides the main dependency manager that coordinates detection
+//! operations for all supported dependencies.
+
+// Standard library
 use std::fmt;
 use std::str::FromStr;
 
+// Internal crate
 use crate::detector::{
     AnsibleDetector, CargoMacheteDetector, DependencyDetector, DetectionError, LxdDetector,
     OpenTofuDetector,
 };
+
+// ============================================================================
+// PUBLIC API - Main Types
+// ============================================================================
 
 /// Enum representing available dependencies
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,6 +34,13 @@ pub struct CheckResult {
     /// Whether the dependency is installed
     pub installed: bool,
 }
+
+/// Main dependency manager for detection operations
+pub struct DependencyManager;
+
+// ============================================================================
+// PUBLIC API - Implementations
+// ============================================================================
 
 impl Dependency {
     /// Returns all available dependencies
@@ -64,33 +82,6 @@ impl FromStr for Dependency {
         }
     }
 }
-
-/// Error that occurs when parsing a dependency name
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DependencyParseError {
-    /// Unknown dependency name provided
-    UnknownDependency { name: String },
-}
-
-impl fmt::Display for DependencyParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::UnknownDependency { name } => {
-                let available = Dependency::all()
-                    .iter()
-                    .map(Dependency::canonical_name)
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                write!(f, "Unknown dependency: {name}. Available: {available}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for DependencyParseError {}
-
-/// Main dependency manager for detection operations
-pub struct DependencyManager;
 
 impl DependencyManager {
     /// Create a new dependency manager
@@ -138,3 +129,31 @@ impl Default for DependencyManager {
         Self::new()
     }
 }
+
+// ============================================================================
+// ERROR TYPES - Secondary Concerns
+// ============================================================================
+
+/// Error that occurs when parsing a dependency name
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DependencyParseError {
+    /// Unknown dependency name provided
+    UnknownDependency { name: String },
+}
+
+impl fmt::Display for DependencyParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnknownDependency { name } => {
+                let available = Dependency::all()
+                    .iter()
+                    .map(Dependency::canonical_name)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "Unknown dependency: {name}. Available: {available}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for DependencyParseError {}

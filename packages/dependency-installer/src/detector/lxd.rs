@@ -1,12 +1,26 @@
+//! `LXD` dependency detector
+//!
+//! This module provides detection logic for the `LXD` dependency.
+
+// External crates
 use tracing::info;
 
+// Internal crate
 use crate::command::command_exists;
 use crate::Dependency;
 
 use super::{DependencyDetector, DetectionError};
 
+// ============================================================================
+// PUBLIC API - Main Types
+// ============================================================================
+
 /// Detector for `LXD` dependency
 pub struct LxdDetector;
+
+// ============================================================================
+// PUBLIC API - Implementations
+// ============================================================================
 
 impl DependencyDetector for LxdDetector {
     fn name(&self) -> &'static str {
