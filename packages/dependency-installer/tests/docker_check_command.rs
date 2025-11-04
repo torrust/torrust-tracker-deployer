@@ -74,7 +74,8 @@ async fn test_check_specific_tool() {
         output
     );
 
-    let exit_code = container.exec_with_exit_code(&["dependency-installer", "check", "--tool", "opentofu"]);
+    let exit_code =
+        container.exec_with_exit_code(&["dependency-installer", "check", "--tool", "opentofu"]);
     assert_eq!(
         exit_code, 1,
         "check command should exit with 1 for missing specific tool"
@@ -151,7 +152,7 @@ async fn test_verbose_output() {
 fn get_binary_path() -> PathBuf {
     // Get the workspace root directory
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    
+
     // Navigate to workspace target directory
     path.pop(); // packages
     path.pop(); // repository root

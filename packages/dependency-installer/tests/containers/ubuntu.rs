@@ -106,10 +106,17 @@ impl UbuntuContainerWithBinary {
         let container_id = container.id().to_string();
 
         // Copy the binary into the container
-        copy_file_to_container(&container_id, &self.binary_path, "/usr/local/bin/dependency-installer");
+        copy_file_to_container(
+            &container_id,
+            &self.binary_path,
+            "/usr/local/bin/dependency-installer",
+        );
 
         // Make the binary executable
-        exec_in_container(&container_id, &["chmod", "+x", "/usr/local/bin/dependency-installer"]);
+        exec_in_container(
+            &container_id,
+            &["chmod", "+x", "/usr/local/bin/dependency-installer"],
+        );
 
         UbuntuTestContainer {
             container,
