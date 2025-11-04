@@ -23,6 +23,18 @@
 //! The newtype pattern is a zero-cost abstraction - it has the same memory layout and performance
 //! characteristics as the wrapped type, but provides type safety benefits.
 //!
+//! ## Buffering Behavior
+//!
+//! Output is line-buffered by default. Messages are typically flushed automatically
+//! after each newline. For cases where immediate output is critical (e.g., before
+//! long-running operations), call `flush()` explicitly:
+//!
+//! ```rust,ignore
+//! output.progress("Starting long operation...");
+//! output.flush()?; // Ensure message appears before operation starts
+//! perform_long_operation();
+//! ```
+//!
 //! ## Example Usage
 //!
 //! ```rust
@@ -1081,6 +1093,32 @@ impl UserOutput {
             Channel::Stdout => self.write_to_stdout(&formatted),
             Channel::Stderr => self.write_to_stderr(&formatted),
         }
+    }
+
+    /// Flush all pending output to stdout and stderr
+    ///
+    /// This is typically not needed as writes are line-buffered by default,
+    /// but can be useful for ensuring output appears immediately before
+    /// long-running operations or in test scenarios.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if flushing either stream fails.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    ///
+    /// let mut output = UserOutput::new(VerbosityLevel::Normal);
+    /// output.progress("Starting long operation...");
+    /// output.flush().expect("Failed to flush output");
+    /// // Now perform long operation...
+    /// ```
+    pub fn flush(&mut self) -> std::io::Result<()> {
+        self.stdout.0.flush()?;
+        self.stderr.0.flush()?;
+        Ok(())
     }
 
     /// Display progress message to stderr (Normal level and above)
@@ -2742,6 +2780,108 @@ mod tests {
             let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
             let json: Result<serde_json::Value, _> = serde_json::from_str(stdout.trim());
             assert!(json.is_ok(), "Invalid JSON in stdout");
+        }
+    }
+
+    // ============================================================================
+    // Buffering Tests
+    // ============================================================================
+
+    mod buffering {
+        use super::super::*;
+        use crate::presentation::user_output::test_support::TestUserOutput;
+
+        #[test]
+        fn it_should_flush_all_writers() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+            test_output.output.progress("Test message");
+
+            // Flush should succeed
+            test_output.output.flush().expect("Flush should succeed");
+
+            // Verify output is present (flushed)
+            assert!(!test_output.stderr().is_empty());
+            assert!(test_output.stderr().contains("Test message"));
+        }
+
+        #[test]
+        fn it_should_be_safe_to_flush_multiple_times() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+            test_output.output.progress("Test message");
+
+            // Multiple flushes should be safe
+            test_output
+                .output
+                .flush()
+                .expect("First flush should succeed");
+            test_output
+                .output
+                .flush()
+                .expect("Second flush should succeed");
+            test_output
+                .output
+                .flush()
+                .expect("Third flush should succeed");
+
+            // Output should still be present
+            assert!(!test_output.stderr().is_empty());
+        }
+
+        #[test]
+        fn it_should_flush_empty_buffers_safely() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            // Flushing with no output should be safe
+            test_output
+                .output
+                .flush()
+                .expect("Flushing empty buffers should succeed");
+
+            // No output should be present
+            assert_eq!(test_output.stderr(), "");
+            assert_eq!(test_output.stdout(), "");
+        }
+
+        #[test]
+        fn it_should_flush_both_stdout_and_stderr() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            // Write to both channels
+            test_output.output.progress("Progress message");
+            test_output.output.result("Result data");
+
+            // Flush should handle both channels
+            test_output
+                .output
+                .flush()
+                .expect("Flush should succeed for both channels");
+
+            // Verify both outputs are present
+            assert!(test_output.stderr().contains("Progress message"));
+            assert!(test_output.stdout().contains("Result data"));
+        }
+
+        #[test]
+        fn it_should_work_with_sequential_flush_calls() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            // Write, flush, write, flush pattern
+            test_output.output.progress("Message 1");
+            test_output
+                .output
+                .flush()
+                .expect("First flush should succeed");
+
+            test_output.output.progress("Message 2");
+            test_output
+                .output
+                .flush()
+                .expect("Second flush should succeed");
+
+            // Both messages should be present
+            let stderr = test_output.stderr();
+            assert!(stderr.contains("Message 1"));
+            assert!(stderr.contains("Message 2"));
         }
     }
 }
