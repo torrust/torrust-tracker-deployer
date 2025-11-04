@@ -3,11 +3,14 @@
 //! This module provides installation logic for the `OpenTofu` dependency.
 
 // Standard library
+#[cfg(unix)]
 use std::fs;
+#[cfg(unix)]
 use std::process::Command;
 
 // External crates
 use async_trait::async_trait;
+#[cfg(unix)]
 use tracing::{debug, info};
 
 // Internal crate
