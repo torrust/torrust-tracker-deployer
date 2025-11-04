@@ -12,6 +12,10 @@ use crate::detector::{
     AnsibleDetector, CargoMacheteDetector, DependencyDetector, DetectionError, LxdDetector,
     OpenTofuDetector,
 };
+use crate::installer::{
+    AnsibleInstaller, CargoMacheteInstaller, DependencyInstaller, InstallationError,
+    LxdInstaller, OpenTofuInstaller,
+};
 
 // ============================================================================
 // PUBLIC API - Main Types
@@ -33,6 +37,17 @@ pub struct CheckResult {
     pub dependency: Dependency,
     /// Whether the dependency is installed
     pub installed: bool,
+}
+
+/// Result of installing a single dependency
+#[derive(Debug, Clone)]
+pub struct InstallResult {
+    /// The dependency that was installed
+    pub dependency: Dependency,
+    /// Whether the installation succeeded
+    pub success: bool,
+    /// Error message if installation failed
+    pub error: Option<String>,
 }
 
 /// Main dependency manager for detection operations
@@ -121,6 +136,57 @@ impl DependencyManager {
             Dependency::Ansible => Box::new(AnsibleDetector),
             Dependency::Lxd => Box::new(LxdDetector),
         }
+    }
+
+    /// Get a specific installer by dependency type
+    ///
+    /// Note: This creates a new installer instance on each call, which is acceptable
+    /// since installers are lightweight and stateless.
+    #[must_use]
+    pub fn get_installer(&self, dep: Dependency) -> Box<dyn DependencyInstaller> {
+        match dep {
+            Dependency::CargoMachete => Box::new(CargoMacheteInstaller),
+            Dependency::OpenTofu => Box::new(OpenTofuInstaller),
+            Dependency::Ansible => Box::new(AnsibleInstaller),
+            Dependency::Lxd => Box::new(LxdInstaller),
+        }
+    }
+
+    /// Install a specific dependency
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the installation process fails
+    pub async fn install(&self, dep: Dependency) -> Result<(), InstallationError> {
+        let installer = self.get_installer(dep);
+        installer.install().await
+    }
+
+    /// Install all dependencies and return results
+    ///
+    /// This method attempts to install all dependencies, collecting results
+    /// for each one. Even if some installations fail, all dependencies will
+    /// be attempted.
+    pub async fn install_all(&self) -> Vec<InstallResult> {
+        let mut results = Vec::new();
+
+        for &dependency in Dependency::all() {
+            let result = match self.install(dependency).await {
+                Ok(()) => InstallResult {
+                    dependency,
+                    success: true,
+                    error: None,
+                },
+                Err(e) => InstallResult {
+                    dependency,
+                    success: false,
+                    error: Some(e.to_string()),
+                },
+            };
+            results.push(result);
+        }
+
+        results
     }
 }
 

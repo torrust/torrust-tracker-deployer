@@ -9,6 +9,7 @@ use thiserror::Error;
 // Internal crate
 use crate::cli::{Cli, Commands};
 use crate::handlers::check::CheckError;
+use crate::handlers::install::InstallError;
 use crate::handlers::list::ListError;
 use crate::DependencyManager;
 
@@ -47,7 +48,7 @@ impl From<ExitCode> for i32 {
 ///
 /// Returns the appropriate exit code based on the operation result.
 /// Errors are logged using tracing and do not propagate to stderr.
-pub fn run() -> ExitCode {
+pub async fn run() -> ExitCode {
     let cli = Cli::parse();
 
     // Determine log level: verbose flag overrides log-level argument
@@ -65,6 +66,11 @@ pub fn run() -> ExitCode {
     let result: Result<(), AppError> = match cli.command {
         Commands::Check { dependency } => {
             crate::handlers::check::handle_check(&manager, dependency).map_err(AppError::from)
+        }
+        Commands::Install { dependency } => {
+            crate::handlers::install::handle_install(&manager, dependency)
+                .await
+                .map_err(AppError::from)
         }
         Commands::List => crate::handlers::list::handle_list(&manager).map_err(AppError::from),
     };
@@ -95,6 +101,15 @@ pub enum AppError {
         source: CheckError,
     },
 
+    /// Failed to execute the install command
+    ///
+    /// This occurs when the install command fails to install dependencies.
+    #[error("Install command failed: {source}")]
+    InstallFailed {
+        #[source]
+        source: InstallError,
+    },
+
     /// Failed to execute the list command
     ///
     /// This occurs when the list command fails to list dependencies.
@@ -118,6 +133,9 @@ impl AppError {
         use crate::handlers::check::{
             CheckAllDependenciesError, CheckError, CheckSpecificDependencyError,
         };
+        use crate::handlers::install::{
+            InstallAllDependenciesError, InstallError, InstallSpecificDependencyError,
+        };
 
         match self {
             Self::CheckFailed { source } => match source {
@@ -136,6 +154,18 @@ impl AppError {
                     CheckSpecificDependencyError::DetectionFailed { .. } => ExitCode::InternalError,
                 },
             },
+            Self::InstallFailed { source } => match source {
+                InstallError::InstallAllFailed { source } => match source {
+                    InstallAllDependenciesError::InstallationsFailed { .. } => {
+                        ExitCode::MissingDependencies
+                    }
+                },
+                InstallError::InstallSpecificFailed { source } => match source {
+                    InstallSpecificDependencyError::InstallationFailed { .. } => {
+                        ExitCode::InternalError
+                    }
+                },
+            },
             Self::ListFailed { .. } => ExitCode::InternalError,
         }
     }
@@ -144,6 +174,12 @@ impl AppError {
 impl From<CheckError> for AppError {
     fn from(source: CheckError) -> Self {
         Self::CheckFailed { source }
+    }
+}
+
+impl From<InstallError> for AppError {
+    fn from(source: InstallError) -> Self {
+        Self::InstallFailed { source }
     }
 }
 
