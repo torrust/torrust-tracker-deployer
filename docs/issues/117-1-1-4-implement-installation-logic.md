@@ -1,56 +1,82 @@
-# Implement Installation Logic
+# Implement Installation Logic# Implement Installation Logic
 
-**Issue**: [#117](https://github.com/torrust/torrust-tracker-deployer/issues/117)
-**Parent Issue**: [#113](https://github.com/torrust/torrust-tracker-deployer/issues/113) - Create Dependency Installation Package for E2E Tests  
-**Depends On**: [#116](https://github.com/torrust/torrust-tracker-deployer/issues/116) - Create Docker Test Infrastructure (Issue 1-1-3)  
-**Epic**: [#112](https://github.com/torrust/torrust-tracker-deployer/issues/112) - Refactor and Improve E2E Test Execution  
-**Related**: [docs/e2e-testing.md](../e2e-testing.md)
+**Issue**: [#117](https://github.com/torrust/torrust-tracker-deployer/issues/117) **Issue**: [#117](https://github.com/torrust/torrust-tracker-deployer/issues/117)
 
-## Overview
+**Parent Issue**: [#113](https://github.com/torrust/torrust-tracker-deployer/issues/113) - Create Dependency Installation Package for E2E Tests **Parent Issue**: [#113](https://github.com/torrust/torrust-tracker-deployer/issues/113) - Create Dependency Installation Package for E2E Tests
 
-Implement the installation logic for all dependencies by converting existing bash scripts to Rust, add the `install` subcommand to the CLI binary, and extend the Docker test infrastructure to verify installations work correctly.
+**Depends On**: [#116](https://github.com/torrust/torrust-tracker-deployer/issues/116) - Create Docker Test Infrastructure (Issue 1-1-3) **Depends On**: [#116](https://github.com/torrust/torrust-tracker-deployer/issues/116) - Create Docker Test Infrastructure (Issue 1-1-3)
 
-## Objectives
+**Epic**: [#112](https://github.com/torrust/torrust-tracker-deployer/issues/112) - Refactor and Improve E2E Test Execution **Epic**: [#112](https://github.com/torrust/torrust-tracker-deployer/issues/112) - Refactor and Improve E2E Test Execution
 
-- [ ] Define `ToolInstaller` trait for installation abstraction
-- [ ] Convert bash installation scripts to Rust implementations
-- [ ] Add `install` subcommand to CLI binary
-- [ ] Extend Docker tests to verify actual installation
-- [ ] Test installation in clean Ubuntu 24.04 containers
-- [ ] Ensure installation is idempotent and robust
+**Related**: [docs/e2e-testing.md](../e2e-testing.md)**Related**: [docs/e2e-testing.md](../e2e-testing.md)
 
-## Context
+## Overview## Overview
 
-This is **Phase 4** (final phase) of creating the dependency installation package. It adds actual installation capability, completing the package functionality.
+Implement the installation logic for all dependencies by converting existing bash scripts to Rust, add the `install` subcommand to the CLI binary, and extend the Docker test infrastructure to verify installations work correctly.Implement the installation logic for all dependencies by converting existing bash scripts to Rust, add the \`install\` subcommand to the CLI binary, and extend the Docker test infrastructure to verify installations work correctly.
 
-### Why Installation Logic Last
+**Design Note**: This package uses **structured logging only** (via the tracing crate) for automation-focused design. There are no user-facing `println!()` statements - all output is through structured logs suitable for CI/CD pipelines.**Note**: This package uses **structured logging only** (via the tracing crate) for automation-focused design. There are no user-facing \`println!()\` statements - all output is through structured logs suitable for CI/CD pipelines.
 
-Implementing installation after detection and Docker testing ensures:
+## Objectives## Objectives
 
-1. **Detection works first** - We can test what's installed before we install it
-2. **Docker infrastructure ready** - We can test installations in isolated containers
-3. **CLI foundation exists** - We just add a new subcommand to existing structure
-4. **Testing is easier** - Docker containers provide clean environments for testing installations
+- [ ] Define `DependencyInstaller` trait for installation abstraction- [ ] Define \`DependencyInstaller\` trait for installation abstraction
 
-### Dependencies
+- [ ] Convert bash installation scripts to Rust implementations- [ ] Convert bash installation scripts to Rust implementations
 
-- **Requires**: Issue 1-1-3 (Docker testing infrastructure) must be completed first
-- **Uses**: Detection logic from Issue 1-1-1 and CLI from Issue 1-1-2
-- **Completes**: The dependency installation package is ready for E2E integration (Issue 1-2)
+- [ ] Add `install` subcommand to CLI binary using handler-based architecture- [ ] Add \`install\` subcommand to CLI binary using handler-based architecture
 
-## 🏗️ Architecture Requirements
+- [ ] Extend Docker tests to verify actual installation- [ ] Extend Docker tests to verify actual installation
 
-**DDD Layers**: Domain (ToolInstaller trait), Infrastructure (installers), Presentation (install command)  
-**Module Paths**:
+- [ ] Test installation in clean Ubuntu 24.04 containers- [ ] Test installation in clean Ubuntu 24.04 containers
 
-- `src/installer/mod.rs` - ToolInstaller trait
-- `src/installer/cargo_machete.rs` - Cargo-machete installer
-- `src/installer/opentofu.rs` - OpenTofu installer
-- `src/installer/ansible.rs` - Ansible installer
-- `src/installer/lxd.rs` - LXD installer
-- `src/bin/dependency-installer.rs` - Add install subcommand
+- [ ] Ensure installation is idempotent and robust- [ ] Ensure installation is idempotent and robust
 
-### Directory Structure After This Phase
+- [ ] Use structured logging (tracing) for observability- [ ] Use structured logging (tracing) for observability
+
+## Context## Context
+
+This is **Phase 4** (final phase) of creating the dependency installation package. It adds actual installation capability, completing the package functionality.This is **Phase 4** (final phase) of creating the dependency installation package. It adds actual installation capability, completing the package functionality.
+
+### Why Installation Logic Last### Why Installation Logic Last
+
+Implementing installation after detection and Docker testing ensures:Implementing installation after detection and Docker testing ensures:
+
+1. **Detection works first** - We can test what's installed before we install it1. **Detection works first** - We can test what's installed before we install it
+
+2. **Docker infrastructure ready** - We can test installations in isolated containers2. **Docker infrastructure ready** - We can test installations in isolated containers
+
+3. **CLI foundation exists** - We just add a new subcommand to existing structure3. **CLI foundation exists** - We just add a new subcommand to existing structure
+
+4. **Testing is easier** - Docker containers provide clean environments for testing installations4. **Testing is easier** - Docker containers provide clean environments for testing installations
+
+### Dependencies### Dependencies
+
+- **Requires**: Issue 1-1-3 (Docker testing infrastructure) must be completed first- **Requires**: Issue 1-1-3 (Docker testing infrastructure) must be completed first
+
+- **Uses**: Detection logic from Issue 1-1-1 and CLI from Issue 1-1-2- **Uses**: Detection logic from Issue 1-1-1 and CLI from Issue 1-1-2
+
+- **Completes**: The dependency installation package is ready for E2E integration (Issue 1-2)- **Completes**: The dependency installation package is ready for E2E integration (Issue 1-2)
+
+## 🏗️ Architecture Requirements## 🏗️ Architecture Requirements
+
+**DDD Layers**: Domain (DependencyInstaller trait), Infrastructure (installers), Presentation (install command handler) **DDD Layers**: Domain (DependencyInstaller trait), Infrastructure (installers), Presentation (install command handler)
+
+**Module Paths**:**Module Paths**:
+
+- `src/installer/mod.rs` - DependencyInstaller trait and error types- \`src/installer/mod.rs\` - DependencyInstaller trait
+
+- `src/installer/cargo_machete.rs` - Cargo-machete installer- \`src/installer/cargo_machete.rs\` - Cargo-machete installer
+
+- `src/installer/opentofu.rs` - OpenTofu installer- \`src/installer/opentofu.rs\` - OpenTofu installer
+
+- `src/installer/ansible.rs` - Ansible installer- \`src/installer/ansible.rs\` - Ansible installer
+
+- `src/installer/lxd.rs` - LXD installer- \`src/installer/lxd.rs\` - LXD installer
+
+- `src/handlers/install.rs` - Install command handler- \`src/handlers/install.rs\` - Install command handler
+
+- `src/bin/dependency-installer.rs` - Update with install subcommand- \`src/bin/dependency-installer.rs\` - Update with install subcommand
+
+### Directory Structure After This PhaseSee the full specification in the backup file for complete implementation details.
 
 ```text
 packages/dependency-installer/
@@ -64,48 +90,59 @@ packages/dependency-installer/
 │   │   ├── ansible.rs
 │   │   └── lxd.rs
 │   ├── installer/                  # ← NEW in this phase
-│   │   ├── mod.rs
+│   │   ├── mod.rs                  # Trait + error types
 │   │   ├── cargo_machete.rs
 │   │   ├── opentofu.rs
 │   │   ├── ansible.rs
 │   │   └── lxd.rs
+│   ├── handlers/                   # Existing, extend with install
+│   │   ├── mod.rs
+│   │   ├── check.rs                # Existing
+│   │   ├── list.rs                 # Existing
+│   │   └── install.rs              # ← NEW
 │   ├── bin/
 │   │   └── dependency-installer.rs # Add install command
-│   └── error.rs
+│   ├── command.rs                  # Existing utilities
+│   ├── cli.rs                      # Update with Install command
+│   ├── app.rs                      # Update to handle install
+│   └── logging.rs                  # Existing
 ├── tests/
-│   ├── docker_check_command.rs
+│   ├── docker_check_command.rs     # Existing
 │   └── docker_install_command.rs   # ← NEW tests in this phase
 └── docker/
-    └── ubuntu-24.04.Dockerfile
+    └── ubuntu-24.04.Dockerfile     # May need sudo support
 ```
 
 ## Specifications
 
-### ToolInstaller Trait
+### DependencyInstaller Trait
 
 Define the trait in `src/installer/mod.rs`:
 
 ```rust
 use async_trait::async_trait;
-use crate::error::InstallationError;
-use crate::detector::Dependency;
+use crate::Dependency;
 
 /// Trait for installing development dependencies
 #[async_trait]
-pub trait ToolInstaller: Send + Sync {
-    /// Get the name of this installer
+pub trait DependencyInstaller: Send + Sync {
+    /// Get the name of this installer for logging
     fn name(&self) -> &str;
 
     /// Get the dependency this installer handles
     fn dependency(&self) -> Dependency;
 
-    /// Install the tool
+    /// Install the dependency
     ///
     /// This should be idempotent - calling it multiple times should be safe.
-    /// If the tool is already installed, this should succeed without error.
+    /// If the dependency is already installed, this should succeed without error.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if installation fails
     async fn install(&self) -> Result<(), InstallationError>;
 
-    /// Check if the tool requires sudo/admin privileges
+    /// Check if the dependency requires sudo/admin privileges
     fn requires_sudo(&self) -> bool {
         false
     }
@@ -118,28 +155,65 @@ pub use ansible::AnsibleInstaller;
 pub use lxd::LxdInstaller;
 ```
 
+### InstallationError Type
+
+Add to `src/installer/mod.rs`:
+
+```rust
+use thiserror::Error;
+
+/// Error types for installation operations
+#[derive(Debug, Error)]
+pub enum InstallationError {
+    #[error("Failed to execute command for dependency '{dependency}': {command}")]
+    CommandFailed {
+        dependency: Dependency,
+        command: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("Failed to download installer for dependency '{dependency}' from {url}")]
+    DownloadFailed {
+        dependency: Dependency,
+        url: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("Installation failed for dependency '{dependency}': {message}")]
+    InstallFailed {
+        dependency: Dependency,
+        message: String,
+    },
+
+    #[error("Installer not found for dependency '{dependency}'")]
+    InstallerNotFound { dependency: Dependency },
+}
+```
+
 ### Example Installer: Cargo-machete
 
 Convert `scripts/setup/install-cargo-machete.sh` to Rust in `src/installer/cargo_machete.rs`:
 
 ```rust
 use async_trait::async_trait;
-use crate::installer::ToolInstaller;
-use crate::detector::Dependency;
-use crate::error::InstallationError;
+use crate::installer::{DependencyInstaller, InstallationError};
+use crate::Dependency;
 use std::process::Command;
 use tracing::{info, debug};
 
 pub struct CargoMacheteInstaller;
 
 impl CargoMacheteInstaller {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self
     }
 }
 
 #[async_trait]
-impl ToolInstaller for CargoMacheteInstaller {
+impl DependencyInstaller for CargoMacheteInstaller {
     fn name(&self) -> &str {
         "cargo-machete"
     }
@@ -149,31 +223,33 @@ impl ToolInstaller for CargoMacheteInstaller {
     }
 
     async fn install(&self) -> Result<(), InstallationError> {
-        info!("Installing cargo-machete");
+        info!(dependency = self.name(), "Installing dependency");
 
         // Equivalent to: cargo install cargo-machete
         let output = Command::new("cargo")
             .args(["install", "cargo-machete"])
             .output()
             .map_err(|e| InstallationError::CommandFailed {
-                tool: self.name().to_string(),
+                dependency: self.dependency(),
                 command: "cargo install cargo-machete".to_string(),
                 source: e,
             })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            debug!("cargo install stderr: {}", stderr);
+            debug!(stderr = %stderr, "Installation command stderr");
 
-            // cargo install exits with 0 even if already installed
-            // So any non-zero exit is a real error
             return Err(InstallationError::InstallFailed {
-                tool: self.name().to_string(),
+                dependency: self.dependency(),
                 message: stderr.to_string(),
             });
         }
 
-        info!("Successfully installed cargo-machete");
+        info!(
+            dependency = self.name(),
+            status = "installed",
+            "Installation complete"
+        );
         Ok(())
     }
 }
@@ -185,22 +261,22 @@ Convert `scripts/setup/install-opentofu.sh` to Rust in `src/installer/opentofu.r
 
 ```rust
 use async_trait::async_trait;
-use crate::installer::ToolInstaller;
-use crate::detector::Dependency;
-use crate::error::InstallationError;
+use crate::installer::{DependencyInstaller, InstallationError};
+use crate::Dependency;
 use std::process::Command;
 use tracing::{info, debug};
 
 pub struct OpenTofuInstaller;
 
 impl OpenTofuInstaller {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self
     }
 }
 
 #[async_trait]
-impl ToolInstaller for OpenTofuInstaller {
+impl DependencyInstaller for OpenTofuInstaller {
     fn name(&self) -> &str {
         "OpenTofu"
     }
@@ -210,7 +286,7 @@ impl ToolInstaller for OpenTofuInstaller {
     }
 
     async fn install(&self) -> Result<(), InstallationError> {
-        info!("Installing OpenTofu");
+        info!(dependency = self.name(), "Installing dependency");
 
         // Step 1: Download installer script
         self.download_installer_script().await?;
@@ -224,7 +300,11 @@ impl ToolInstaller for OpenTofuInstaller {
         // Step 4: Clean up
         self.cleanup().await?;
 
-        info!("Successfully installed OpenTofu");
+        info!(
+            dependency = self.name(),
+            status = "installed",
+            "Installation complete"
+        );
         Ok(())
     }
 
@@ -247,14 +327,14 @@ impl OpenTofuInstaller {
             ])
             .output()
             .map_err(|e| InstallationError::DownloadFailed {
-                tool: self.name().to_string(),
+                dependency: self.dependency(),
                 url: "https://get.opentofu.org/install-opentofu.sh".to_string(),
                 source: e,
             })?;
 
         if !output.status.success() {
             return Err(InstallationError::DownloadFailed {
-                tool: self.name().to_string(),
+                dependency: self.dependency(),
                 url: "https://get.opentofu.org/install-opentofu.sh".to_string(),
                 source: std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -273,7 +353,7 @@ impl OpenTofuInstaller {
             .args(["+x", "/tmp/install-opentofu.sh"])
             .output()
             .map_err(|e| InstallationError::CommandFailed {
-                tool: self.name().to_string(),
+                dependency: self.dependency(),
                 command: "chmod +x /tmp/install-opentofu.sh".to_string(),
                 source: e,
             })?;
@@ -291,7 +371,7 @@ impl OpenTofuInstaller {
             ])
             .output()
             .map_err(|e| InstallationError::CommandFailed {
-                tool: self.name().to_string(),
+                dependency: self.dependency(),
                 command: "sudo /tmp/install-opentofu.sh".to_string(),
                 source: e,
             })?;
@@ -299,7 +379,7 @@ impl OpenTofuInstaller {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(InstallationError::InstallFailed {
-                tool: self.name().to_string(),
+                dependency: self.dependency(),
                 message: stderr.to_string(),
             });
         }
@@ -324,56 +404,50 @@ impl OpenTofuInstaller {
 Update `src/manager.rs` to support installation:
 
 ```rust
-use crate::detector::{Dependency, ToolDetector};
-use crate::installer::ToolInstaller;
-use crate::error::{DetectionError, InstallationError};
-
-pub struct DependencyManager {
-    detectors: HashMap<Dependency, Box<dyn ToolDetector>>,
-    installers: HashMap<Dependency, Box<dyn ToolInstaller>>,
-}
+// Add to existing DependencyManager implementation
 
 impl DependencyManager {
-    pub fn new() -> Self {
-        let mut detectors = HashMap::new();
-        let mut installers = HashMap::new();
-
-        // Register detectors (from Phase 1)
-        detectors.insert(Dependency::CargoMachete, Box::new(CargoMacheteDetector::new()));
-        // ... other detectors
-
-        // Register installers (Phase 4)
-        installers.insert(Dependency::CargoMachete, Box::new(CargoMacheteInstaller::new()));
-        installers.insert(Dependency::OpenTofu, Box::new(OpenTofuInstaller::new()));
-        installers.insert(Dependency::Ansible, Box::new(AnsibleInstaller::new()));
-        installers.insert(Dependency::Lxd, Box::new(LxdInstaller::new()));
-
-        Self { detectors, installers }
+    /// Get a specific installer by dependency type
+    ///
+    /// Note: This creates a new installer instance on each call, which is acceptable
+    /// since installers are lightweight and stateless.
+    #[must_use]
+    pub fn get_installer(&self, dep: Dependency) -> Box<dyn DependencyInstaller> {
+        match dep {
+            Dependency::CargoMachete => Box::new(CargoMacheteInstaller::new()),
+            Dependency::OpenTofu => Box::new(OpenTofuInstaller::new()),
+            Dependency::Ansible => Box::new(AnsibleInstaller::new()),
+            Dependency::Lxd => Box::new(LxdInstaller::new()),
+        }
     }
 
     /// Install a specific dependency
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if installation fails
     pub async fn install(&self, dep: Dependency) -> Result<(), InstallationError> {
-        let installer = self.installers.get(&dep)
-            .ok_or_else(|| InstallationError::InstallerNotFound {
-                tool: format!("{:?}", dep),
-            })?;
-
+        let installer = self.get_installer(dep);
         installer.install().await
     }
 
     /// Install all dependencies
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any installation operation fails
     pub async fn install_all(&self) -> Result<Vec<InstallResult>, InstallationError> {
         let mut results = Vec::new();
 
         for dep in Dependency::all() {
-            let result = match self.install(dep).await {
-                Ok(_) => InstallResult {
-                    dependency: dep,
+            let result = match self.install(*dep).await {
+                Ok(()) => InstallResult {
+                    dependency: *dep,
                     success: true,
                     error: None,
                 },
                 Err(e) => InstallResult {
-                    dependency: dep,
+                    dependency: *dep,
                     success: false,
                     error: Some(e.to_string()),
                 },
@@ -386,6 +460,8 @@ impl DependencyManager {
     }
 }
 
+/// Result of installing a single dependency
+#[derive(Debug, Clone)]
 pub struct InstallResult {
     pub dependency: Dependency,
     pub success: bool,
@@ -393,93 +469,202 @@ pub struct InstallResult {
 }
 ```
 
-### Add Install Command to CLI
+### Add Install Command Handler
 
-Update `src/bin/dependency-installer.rs`:
+Create `src/handlers/install.rs`:
 
 ```rust
-#[derive(Subcommand)]
-enum Commands {
-    /// Check if dependencies are installed
-    Check {
-        #[arg(short, long)]
-        tool: Option<String>,
-    },
+//! Install command handler
+//!
+//! This module handles installing dependencies.
 
-    /// List all available tools and their status
-    List,
+// External crates
+use thiserror::Error;
+use tracing::{error, info};
 
-    /// Install dependencies
-    Install {
-        /// Specific tool to install (if omitted, installs all)
-        #[arg(short, long)]
-        tool: Option<String>,
+// Internal crate
+use crate::installer::InstallationError;
+use crate::{Dependency, DependencyManager};
 
-        /// Skip confirmation prompt
-        #[arg(short = 'y', long)]
-        yes: bool,
-    },
-}
+// ============================================================================
+// PUBLIC API - Functions
+// ============================================================================
 
-fn handle_install(
+/// Handle the install command
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Installation fails
+/// - Internal error occurs during installation
+pub async fn handle_install(
     manager: &DependencyManager,
-    tool: Option<String>,
-    yes: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
-    match tool {
-        Some(tool_name) => install_specific_tool(manager, &tool_name, yes),
-        None => install_all_tools(manager, yes),
-    }
-}
-
-async fn install_all_tools(
-    manager: &DependencyManager,
-    skip_confirm: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if !skip_confirm {
-        println!("This will install all required dependencies:");
-        println!("- cargo-machete");
-        println!("- OpenTofu");
-        println!("- Ansible");
-        println!("- LXD");
-        println!();
-        print!("Continue? [y/N] ");
-
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-
-        if !input.trim().eq_ignore_ascii_case("y") {
-            println!("Installation cancelled");
-            return Ok(());
-        }
+    dependency: Option<Dependency>,
+) -> Result<(), InstallError> {
+    match dependency {
+        Some(dep) => install_specific_dependency(manager, dep).await?,
+        None => install_all_dependencies(manager).await?,
     }
 
-    println!("Installing dependencies...\n");
+    Ok(())
+}
+
+// ============================================================================
+// PRIVATE - Helper Functions
+// ============================================================================
+
+async fn install_all_dependencies(
+    manager: &DependencyManager,
+) -> Result<(), InstallAllDependenciesError> {
+    info!("Installing all dependencies");
 
     let results = manager.install_all().await?;
+
     let mut failed_count = 0;
 
     for result in &results {
         if result.success {
-            println!("✓ {}: installed successfully", result.dependency);
+            info!(
+                dependency = %result.dependency,
+                status = "installed",
+                "Installation successful"
+            );
         } else {
-            println!("✗ {}: installation failed", result.dependency);
-            if let Some(error) = &result.error {
-                println!("  Error: {}", error);
-            }
+            error!(
+                dependency = %result.dependency,
+                status = "failed",
+                error = result.error.as_deref(),
+                "Installation failed"
+            );
             failed_count += 1;
         }
     }
 
-    println!();
     if failed_count > 0 {
-        println!("Failed to install {} out of {} dependencies", failed_count, results.len());
-        std::process::exit(1);
+        info!(
+            failed_count,
+            total_count = results.len(),
+            "Installation completed with failures"
+        );
+        Err(InstallAllDependenciesError::SomeInstallationsFailed {
+            failed_count,
+            total_count: results.len(),
+        })
     } else {
-        println!("All dependencies installed successfully");
+        info!("All dependencies installed successfully");
         Ok(())
     }
 }
+
+async fn install_specific_dependency(
+    manager: &DependencyManager,
+    dependency: Dependency,
+) -> Result<(), InstallSpecificDependencyError> {
+    info!(dependency = %dependency, "Installing specific dependency");
+
+    manager.install(dependency).await?;
+
+    info!(
+        dependency = %dependency,
+        status = "installed",
+        "Installation complete"
+    );
+
+    Ok(())
+}
+
+// ============================================================================
+// ERROR TYPES - Secondary Concerns
+// ============================================================================
+
+#[derive(Debug, Error)]
+pub enum InstallError {
+    #[error("Failed to install all dependencies: {0}")]
+    InstallAll(#[from] InstallAllDependenciesError),
+
+    #[error("Failed to install specific dependency: {0}")]
+    InstallSpecific(#[from] InstallSpecificDependencyError),
+}
+
+#[derive(Debug, Error)]
+pub enum InstallAllDependenciesError {
+    #[error("Failed to install dependencies: {failed_count} out of {total_count} failed")]
+    SomeInstallationsFailed {
+        failed_count: usize,
+        total_count: usize,
+    },
+
+    #[error("Installation process failed: {0}")]
+    InstallationFailed(#[from] InstallationError),
+}
+
+#[derive(Debug, Error)]
+pub enum InstallSpecificDependencyError {
+    #[error("Installation failed: {0}")]
+    InstallationFailed(#[from] InstallationError),
+}
+```
+
+### Update CLI and App
+
+Update `src/cli.rs` to add the Install command:
+
+```rust
+// Add to Commands enum
+#[derive(Subcommand)]
+pub enum Commands {
+    /// Check if dependencies are installed
+    Check {
+        /// Specific dependency to check (if omitted, checks all)
+        #[arg(short = 'd', long)]
+        dependency: Option<Dependency>,
+    },
+
+    /// List all available dependencies and their status
+    List,
+
+    /// Install dependencies
+    Install {
+        /// Specific dependency to install (if omitted, installs all)
+        #[arg(short = 'd', long)]
+        dependency: Option<Dependency>,
+    },
+}
+```
+
+Update `src/app.rs` to handle the new command:
+
+```rust
+use crate::handlers::{check, install, list};
+
+pub async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logging
+    crate::logging::init_logging(cli.log_level, cli.verbose);
+
+    let manager = DependencyManager::new();
+
+    match cli.command {
+        Commands::Check { dependency } => {
+            check::handle_check(&manager, dependency)?;
+        }
+        Commands::List => {
+            list::handle_list(&manager)?;
+        }
+        Commands::Install { dependency } => {
+            install::handle_install(&manager, dependency).await?;
+        }
+    }
+
+    Ok(())
+}
+```
+
+Update `src/handlers/mod.rs`:
+
+```rust
+pub mod check;
+pub mod install;  // Add this line
+pub mod list;
 ```
 
 ### Extended Docker Tests
@@ -505,18 +690,33 @@ async fn test_install_cargo_machete() {
         .start();
 
     // Verify cargo-machete is not installed
-    let check_before = container.exec(&["dependency-installer", "check", "--tool", "cargo-machete"]);
-    assert!(check_before.contains("not installed"));
+    let check_result = container.exec(&[
+        "dependency-installer",
+        "check",
+        "--dependency",
+        "cargo-machete",
+    ]);
+    assert!(check_result.contains("not installed"));
 
     // Install cargo-machete
-    let install_output = container.exec(&["dependency-installer", "install", "--tool", "cargo-machete", "-y"]);
-    assert!(install_output.contains("installed successfully"));
+    let install_result = container.exec(&[
+        "dependency-installer",
+        "install",
+        "--dependency",
+        "cargo-machete",
+    ]);
+    assert!(
+        install_result.contains("Installation complete")
+            || install_result.contains("installed")
+    );
 
     // Verify it's now installed
-    let check_after = container.exec(&["dependency-installer", "check", "--tool", "cargo-machete"]);
-    assert!(check_after.contains("installed"));
-
-    let exit_code = container.exec_with_exit_code(&["dependency-installer", "check", "--tool", "cargo-machete"]);
+    let exit_code = container.exec_with_exit_code(&[
+        "dependency-installer",
+        "check",
+        "--dependency",
+        "cargo-machete",
+    ]);
     assert_eq!(exit_code, 0);
 }
 
@@ -528,16 +728,29 @@ async fn test_install_opentofu() {
 
     let container = UbuntuContainer::new(&docker)
         .with_binary(&binary_path)
-        .with_sudo()  // Enable sudo for this test
+        .with_sudo() // Enable sudo for this test
         .start();
 
     // Install OpenTofu
-    let install_output = container.exec(&["dependency-installer", "install", "--tool", "opentofu", "-y"]);
-    assert!(install_output.contains("installed successfully"));
+    let install_result = container.exec(&[
+        "dependency-installer",
+        "install",
+        "--dependency",
+        "opentofu",
+    ]);
+    assert!(
+        install_result.contains("Installation complete")
+            || install_result.contains("installed")
+    );
 
     // Verify installation
-    let check_output = container.exec(&["dependency-installer", "check", "--tool", "opentofu"]);
-    assert!(check_output.contains("installed"));
+    let exit_code = container.exec_with_exit_code(&[
+        "dependency-installer",
+        "check",
+        "--dependency",
+        "opentofu",
+    ]);
+    assert_eq!(exit_code, 0);
 }
 
 /// Test that installation is idempotent
@@ -551,112 +764,207 @@ async fn test_install_idempotent() {
         .start();
 
     // Install once
-    container.exec(&["dependency-installer", "install", "--tool", "cargo-machete", "-y"]);
+    container.exec(&[
+        "dependency-installer",
+        "install",
+        "--dependency",
+        "cargo-machete",
+    ]);
 
     // Install again - should succeed without error
-    let output = container.exec(&["dependency-installer", "install", "--tool", "cargo-machete", "-y"]);
-    assert!(output.contains("installed successfully") || output.contains("already installed"));
-
-    let exit_code = container.exec_with_exit_code(&["dependency-installer", "install", "--tool", "cargo-machete", "-y"]);
+    let exit_code = container.exec_with_exit_code(&[
+        "dependency-installer",
+        "install",
+        "--dependency",
+        "cargo-machete",
+    ]);
     assert_eq!(exit_code, 0);
+}
+
+/// Test installing all dependencies
+#[tokio::test]
+async fn test_install_all() {
+    let docker = DockerCli::default();
+    let binary_path = get_binary_path();
+
+    let container = UbuntuContainer::new(&docker)
+        .with_binary(&binary_path)
+        .with_sudo()
+        .start();
+
+    // Install all dependencies
+    let install_result = container.exec(&["dependency-installer", "install"]);
+
+    // Check that we got success messages
+    assert!(
+        install_result.contains("Installation complete")
+            || install_result.contains("All dependencies installed")
+    );
+
+    // Verify all are installed
+    let exit_code =
+        container.exec_with_exit_code(&["dependency-installer", "check"]);
+    assert_eq!(exit_code, 0);
+}
+
+fn get_binary_path() -> std::path::PathBuf {
+    std::path::PathBuf::from("target/debug/dependency-installer")
 }
 ```
 
 ## Implementation Tasks
 
-### Installer Trait and Error Types
+### Phase 1: Installer Trait and Error Types
 
 - [ ] Create `src/installer/mod.rs`
-- [ ] Define `ToolInstaller` trait with `install()` method
-- [ ] Add `requires_sudo()` method to trait
-- [ ] Define `InstallationError` enum in `src/error.rs`:
-  - [ ] `CommandFailed` variant
-  - [ ] `DownloadFailed` variant
-  - [ ] `InstallFailed` variant
-  - [ ] `InstallerNotFound` variant
-  - [ ] Implement `Display` and `Error` traits
+- [ ] Define `DependencyInstaller` trait with:
+  - [ ] `name()` method
+  - [ ] `dependency()` method
+  - [ ] `install()` async method
+  - [ ] `requires_sudo()` method with default implementation
+- [ ] Define `InstallationError` enum with thiserror:
+  - [ ] `CommandFailed` variant with dependency, command, source
+  - [ ] `DownloadFailed` variant with dependency, url, source
+  - [ ] `InstallFailed` variant with dependency, message
+  - [ ] `InstallerNotFound` variant with dependency
 
-### Convert Bash Scripts to Rust Installers
+### Phase 2: Convert Bash Scripts to Rust Installers
 
-- [ ] Analyze each bash script in `scripts/setup/`:
-  - [ ] `install-cargo-machete.sh`
-  - [ ] `install-opentofu.sh`
-  - [ ] `install-ansible.sh`
-  - [ ] `install-lxd.sh`
-- [ ] Create `src/installer/cargo_machete.rs`
-  - [ ] Implement `CargoMacheteInstaller`
-  - [ ] Convert script logic to Rust commands
-  - [ ] Add error handling
-  - [ ] Add logging
-- [ ] Create `src/installer/opentofu.rs`
-  - [ ] Implement `OpenTofuInstaller`
-  - [ ] Handle multi-step installation (download, chmod, execute)
-  - [ ] Implement cleanup
-  - [ ] Mark as requiring sudo
-- [ ] Create `src/installer/ansible.rs`
-  - [ ] Implement `AnsibleInstaller`
-  - [ ] Convert apt-get commands
-  - [ ] Handle sudo requirements
-- [ ] Create `src/installer/lxd.rs`
-  - [ ] Implement `LxdInstaller`
+Analyze existing bash scripts in `scripts/setup/` and convert to Rust:
+
+- [ ] **Cargo-machete** (`install-cargo-machete.sh`):
+
+  - [ ] Create `src/installer/cargo_machete.rs`
+  - [ ] Implement `CargoMacheteInstaller` struct
+  - [ ] Implement `DependencyInstaller` trait
+  - [ ] Use `cargo install cargo-machete` command
+  - [ ] Add structured logging with tracing
+  - [ ] Handle errors with `InstallationError`
+
+- [ ] **OpenTofu** (`install-opentofu.sh`):
+
+  - [ ] Create `src/installer/opentofu.rs`
+  - [ ] Implement `OpenTofuInstaller` struct
+  - [ ] Implement multi-step installation:
+    - [ ] Download installer script with curl
+    - [ ] Make script executable with chmod
+    - [ ] Run installer with sudo
+    - [ ] Clean up temporary files
+  - [ ] Mark as `requires_sudo() = true`
+  - [ ] Add structured logging for each step
+
+- [ ] **Ansible** (`install-ansible.sh`):
+
+  - [ ] Create `src/installer/ansible.rs`
+  - [ ] Implement `AnsibleInstaller` struct
+  - [ ] Convert apt-get commands to Rust
+  - [ ] Mark as `requires_sudo() = true`
+  - [ ] Handle package manager operations
+
+- [ ] **LXD** (`install-lxd.sh`):
+  - [ ] Create `src/installer/lxd.rs`
+  - [ ] Implement `LxdInstaller` struct
   - [ ] Handle snap installation
-  - [ ] Handle group configuration
+  - [ ] Configure user groups if needed
+  - [ ] Mark as `requires_sudo() = true`
 
-### Update DependencyManager
+### Phase 3: Update DependencyManager
 
-- [ ] Add `installers` HashMap to `DependencyManager`
-- [ ] Register all installers in `new()`
-- [ ] Implement `install(&self, dep: Dependency)` method
-- [ ] Implement `install_all(&self)` method
-- [ ] Add `InstallResult` struct for results
-- [ ] Test that both detection and installation work together
+- [ ] Add `get_installer(&self, dep: Dependency)` method
+- [ ] Implement `install(&self, dep: Dependency)` async method
+- [ ] Implement `install_all(&self)` async method
+- [ ] Define `InstallResult` struct with:
+  - [ ] `dependency` field
+  - [ ] `success` field
+  - [ ] `error` field (Option<String>)
+- [ ] Test integration between detection and installation
 
-### Add Install Command to CLI
+### Phase 4: Add Install Command Handler
 
-- [ ] Add `Install` variant to `Commands` enum
-- [ ] Add `--yes` flag to skip confirmation
+- [ ] Create `src/handlers/install.rs`
 - [ ] Implement `handle_install()` function
-- [ ] Implement `install_all_tools()` with confirmation prompt
-- [ ] Implement `install_specific_tool()`
-- [ ] Add progress indicators during installation
-- [ ] Handle installation errors gracefully
+- [ ] Implement `install_all_dependencies()` helper
+- [ ] Implement `install_specific_dependency()` helper
+- [ ] Define error types with thiserror:
+  - [ ] `InstallError` enum
+  - [ ] `InstallAllDependenciesError` enum
+  - [ ] `InstallSpecificDependencyError` enum
+- [ ] Add structured logging with proper fields
+- [ ] Update `src/handlers/mod.rs` to export install module
 
-### Docker Test Infrastructure Updates
+### Phase 5: Update CLI and App
+
+- [ ] Update `src/cli.rs`:
+  - [ ] Add `Install` variant to `Commands` enum
+  - [ ] Add `--dependency` flag (optional, installs all if omitted)
+- [ ] Update `src/app.rs`:
+  - [ ] Add `install` handler import
+  - [ ] Add match arm for `Install` command
+  - [ ] Call `install::handle_install().await`
+- [ ] Ensure async support is properly configured
+- [ ] Update CLI help text
+
+### Phase 6: Docker Test Infrastructure
 
 - [ ] Update `tests/containers/ubuntu.rs`:
+
   - [ ] Add `with_sudo()` method to builder
-  - [ ] Configure container to support sudo
-- [ ] Create `tests/docker_install_command.rs`
-- [ ] Implement test: `test_install_cargo_machete`
-- [ ] Implement test: `test_install_opentofu`
-- [ ] Implement test: `test_install_ansible`
-- [ ] Implement test: `test_install_lxd`
-- [ ] Implement test: `test_install_idempotent`
-- [ ] Implement test: `test_install_all`
+  - [ ] Configure container to support sudo operations
+  - [ ] Test sudo configuration
 
-### Testing
+- [ ] Create `tests/docker_install_command.rs`:
+  - [ ] Implement `test_install_cargo_machete`
+  - [ ] Implement `test_install_opentofu`
+  - [ ] Implement `test_install_ansible`
+  - [ ] Implement `test_install_lxd`
+  - [ ] Implement `test_install_idempotent`
+  - [ ] Implement `test_install_all`
+  - [ ] Implement helper function `get_binary_path()`
 
-- [ ] Unit test each installer independently:
-  - [ ] Mock command execution
-  - [ ] Test error handling
-  - [ ] Test logging output
-- [ ] Integration test in Docker:
-  - [ ] Test each tool installation
-  - [ ] Test idempotency
+### Phase 7: Testing and Validation
+
+- [ ] **Unit tests** for each installer:
+
+  - [ ] Mock command execution where possible
+  - [ ] Test error handling paths
+  - [ ] Verify structured logging output
+
+- [ ] **Integration tests** in Docker:
+
+  - [ ] Test each dependency installation
+  - [ ] Verify idempotency (install twice, both succeed)
   - [ ] Test error scenarios
-  - [ ] Verify installations with check command
-- [ ] Run all tests: `cargo test`
-- [ ] Manual testing:
+  - [ ] Verify with check command after installation
+
+- [ ] **Manual testing**:
+
   - [ ] Build binary: `cargo build --bin dependency-installer`
-  - [ ] Test install command: `dependency-installer install --tool cargo-machete -y`
-  - [ ] Verify installation worked
+  - [ ] Test specific dependency: `dependency-installer install --dependency cargo-machete`
+  - [ ] Test all dependencies: `dependency-installer install`
+  - [ ] Verify with check command
 
-### Documentation
+- [ ] Run complete test suite: `cargo test`
 
-- [ ] Document each installer's requirements
-- [ ] Add installation examples to README
-- [ ] Document sudo requirements
-- [ ] Update CLI help text with install command
+### Phase 8: Documentation
+
+- [ ] Update `packages/dependency-installer/README.md`:
+
+  - [ ] Add install command examples
+  - [ ] Document exit codes (0=success, 1=failures, 2=invalid args, 3=internal error)
+  - [ ] Show structured logging output examples
+  - [ ] Document --dependency flag
+  - [ ] Document log level control
+
+- [ ] Document each installer:
+
+  - [ ] List requirements (Rust, curl, sudo, etc.)
+  - [ ] Document sudo requirements
+  - [ ] Note any platform-specific behavior
+
+- [ ] Update package documentation:
+  - [ ] Add module-level docs for installer module
+  - [ ] Document structured logging patterns
+  - [ ] Add usage examples
 
 ## Acceptance Criteria
 
@@ -666,92 +974,183 @@ async fn test_install_idempotent() {
 - [ ] All unit tests pass
 - [ ] All integration tests pass
 - [ ] Manual installation testing successful
+- [ ] No clippy warnings
+- [ ] Code is properly formatted with rustfmt
 
-**ToolInstaller Trait**:
+**DependencyInstaller Trait**:
 
 - [ ] Trait is well-defined with clear contract
-- [ ] All installers implement the trait
-- [ ] Error handling is comprehensive
-- [ ] Logging provides visibility
+- [ ] All 4 installers implement the trait correctly
+- [ ] Error handling uses `InstallationError` consistently
+- [ ] Structured logging provides visibility at appropriate levels
 
 **Installer Implementations**:
 
-- [ ] Cargo-machete installer works
-- [ ] OpenTofu installer works
-- [ ] Ansible installer works
-- [ ] LXD installer works
-- [ ] All installers are idempotent
-- [ ] Sudo requirements are handled correctly
+- [ ] Cargo-machete installer works in Docker
+- [ ] OpenTofu installer works in Docker (with sudo)
+- [ ] Ansible installer works in Docker (with sudo)
+- [ ] LXD installer works in Docker (with sudo)
+- [ ] All installers are idempotent (can run multiple times)
+- [ ] Sudo requirements are correctly marked
 - [ ] Installations can be verified with check command
+- [ ] Error messages are clear and actionable
 
 **CLI Install Command**:
 
-- [ ] `install` subcommand works for all tools
-- [ ] `install --tool <name>` works for specific tools
-- [ ] `install --yes` skips confirmation
-- [ ] Confirmation prompt is clear
-- [ ] Progress output is informative
-- [ ] Exit codes are correct
+- [ ] `install` subcommand works for all dependencies
+- [ ] `install --dependency <name>` works for specific dependencies
+- [ ] Structured logging output is informative and properly formatted
+- [ ] Exit codes are correct:
+  - 0 for success
+  - 1 for installation failures
+  - 2 for invalid arguments
+- [ ] Help text is accurate and helpful
 
 **Docker Tests**:
 
-- [ ] Tests verify actual installation in containers
-- [ ] Tests verify idempotency
-- [ ] Tests verify installations with check command
-- [ ] Tests handle both sudo and non-sudo tools
+- [ ] Tests verify actual installation in clean containers
+- [ ] Tests verify idempotency (install twice succeeds)
+- [ ] Tests verify installations using check command
+- [ ] Tests handle both sudo and non-sudo dependencies
 - [ ] All tests pass consistently
+- [ ] Container cleanup works properly
 
 **DependencyManager**:
 
-- [ ] Manager integrates detectors and installers
-- [ ] `install()` method works for single tool
-- [ ] `install_all()` method works for all tools
-- [ ] Results are tracked and reported
+- [ ] Manager successfully integrates detectors and installers
+- [ ] `get_installer()` returns correct installer for each dependency
+- [ ] `install()` method works for single dependency
+- [ ] `install_all()` method works for all dependencies
+- [ ] Results are properly tracked and reported
+- [ ] Error handling is comprehensive
 
 **Documentation**:
 
 - [ ] README updated with install command usage
-- [ ] Each installer is documented
-- [ ] Sudo requirements are documented
-- [ ] Examples are clear and complete
+- [ ] Each installer has clear documentation
+- [ ] Sudo requirements are clearly documented
+- [ ] Structured logging patterns are documented
+- [ ] Examples are complete and tested
 
 ## Example Usage After Completion
 
+### Installing All Dependencies
+
 ```bash
-# Install all dependencies
 $ dependency-installer install
-This will install all required dependencies:
-- cargo-machete
-- OpenTofu
-- Ansible
-- LXD
+2025-11-04T10:15:20.123456Z  INFO install: Installing all dependencies
+2025-11-04T10:15:21.234567Z  INFO install: Installing dependency dependency="cargo-machete"
+2025-11-04T10:15:25.345678Z  INFO install: Installation successful dependency="cargo-machete" status="installed"
+2025-11-04T10:15:26.456789Z  INFO install: Installing dependency dependency="OpenTofu"
+2025-11-04T10:15:35.567890Z  INFO install: Installation successful dependency="OpenTofu" status="installed"
+2025-11-04T10:15:36.678901Z  INFO install: Installing dependency dependency="Ansible"
+2025-11-04T10:15:45.789012Z  INFO install: Installation successful dependency="Ansible" status="installed"
+2025-11-04T10:15:46.890123Z  INFO install: Installing dependency dependency="LXD"
+2025-11-04T10:15:55.901234Z  INFO install: Installation successful dependency="LXD" status="installed"
+2025-11-04T10:15:56.012345Z  INFO install: All dependencies installed successfully
 
-Continue? [y/N] y
+$ echo $?
+0  # Success
+```
 
-Installing dependencies...
+### Installing Specific Dependency
 
-✓ cargo-machete: installed successfully
-✓ OpenTofu: installed successfully
-✓ Ansible: installed successfully
-✓ LXD: installed successfully
+```bash
+$ dependency-installer install --dependency opentofu
+2025-11-04T10:20:10.123456Z  INFO install: Installing specific dependency dependency="opentofu"
+2025-11-04T10:20:15.234567Z  INFO install: Installation complete dependency="opentofu" status="installed"
 
-All dependencies installed successfully
+$ echo $?
+0  # Success
+```
 
-# Install specific tool
-$ dependency-installer install --tool opentofu -y
-Installing OpenTofu...
-✓ OpenTofu: installed successfully
+### Installing with Verbose Logging
 
-# Verify installation
+```bash
+$ dependency-installer install --dependency opentofu --verbose
+2025-11-04T10:25:10.123456Z  INFO install: Installing specific dependency dependency="opentofu"
+2025-11-04T10:25:11.234567Z DEBUG opentofu_installer: Downloading installer script
+2025-11-04T10:25:13.345678Z DEBUG opentofu_installer: Making script executable
+2025-11-04T10:25:14.456789Z DEBUG opentofu_installer: Running installer with sudo
+2025-11-04T10:25:20.567890Z DEBUG opentofu_installer: Cleaning up installer script
+2025-11-04T10:25:20.678901Z  INFO install: Installation complete dependency="opentofu" status="installed"
+```
+
+### Verifying Installation
+
+```bash
 $ dependency-installer check
-Checking dependencies...
+2025-11-04T10:30:10.123456Z  INFO check: Checking all dependencies
+2025-11-04T10:30:10.234567Z  INFO check: Dependency check result dependency="cargo-machete" status="installed"
+2025-11-04T10:30:10.345678Z  INFO check: Dependency check result dependency="OpenTofu" status="installed"
+2025-11-04T10:30:10.456789Z  INFO check: Dependency check result dependency="Ansible" status="installed"
+2025-11-04T10:30:10.567890Z  INFO check: Dependency check result dependency="LXD" status="installed"
+2025-11-04T10:30:10.678901Z  INFO check: All dependencies are installed
 
-✓ cargo-machete: installed
-✓ OpenTofu: installed
-✓ Ansible: installed
-✓ LXD: installed
+$ echo $?
+0  # All installed
+```
 
-All dependencies are installed
+### Handling Errors
+
+```bash
+$ dependency-installer install --dependency nonexistent
+Error: Invalid value 'nonexistent' for '--dependency <DEPENDENCY>': Unknown dependency: nonexistent. Available: cargo-machete, opentofu, ansible, lxd
+
+$ echo $?
+2  # Invalid argument
+```
+
+## Logging Best Practices
+
+This tool uses structured logging with the `tracing` crate for automation-focused observability.
+
+### Log Levels
+
+- **ERROR**: Installation failures, unrecoverable errors
+- **WARN**: Non-critical issues (already installed, skipped optional steps)
+- **INFO**: High-level progress (start installation, completion, status updates)
+- **DEBUG**: Detailed operation steps (download, chmod, execute, cleanup)
+- **TRACE**: Very detailed execution (command output, internal state transitions)
+
+### Structured Fields
+
+Always include relevant context for observability:
+
+```rust
+// ✅ Good: Rich context with structured fields
+info!(
+    dependency = "OpenTofu",
+    status = "installed",
+    version = "1.6.0",
+    duration_ms = 15234,
+    "Installation complete"
+);
+
+// ❌ Bad: No context, just a message
+info!("Installation complete");
+```
+
+### Controlling Output
+
+Users control log verbosity through CLI flags or environment variables:
+
+```bash
+# Default (INFO and above)
+dependency-installer install
+
+# Verbose (DEBUG and above) - shows detailed steps
+dependency-installer install --verbose
+
+# Specific level
+dependency-installer install --log-level trace  # Most detailed
+dependency-installer install --log-level error  # Minimal output
+
+# Environment variable (overrides CLI flags)
+RUST_LOG=debug dependency-installer install
+
+# Complex filtering with RUST_LOG
+RUST_LOG=dependency_installer=debug,installer=trace dependency-installer install
 ```
 
 ## Related Documentation
@@ -759,59 +1158,62 @@ All dependencies are installed
 - [Issue 1-1-3](./116-1-1-3-create-docker-test-infrastructure.md) - Docker testing infrastructure extended here
 - [Issue 1-1-2](./115-1-1-2-create-cli-binary-with-check-command.md) - CLI binary extended with install command
 - [Issue 1-1-1](./114-1-1-1-create-detection-logic-package.md) - Detection logic used to verify installations
-- [Parent Issue 1-1](./create-dependency-installation-package-for-e2e-tests.md) - Overall package specification
-- [scripts/setup/](../../scripts/setup/) - Bash scripts to convert
+- [Parent Issue 1-1](./113-create-dependency-installation-package-for-e2e-tests.md) - Overall package specification
+- [scripts/setup/](../../scripts/setup/) - Original bash scripts to convert
+- [packages/dependency-installer/README.md](../../packages/dependency-installer/README.md) - Package README
 
 ## Notes
 
-### Estimated Time
+### Time Estimate
 
-**4-5 hours** total for this phase (largest phase).
+**4-5 hours** total for this phase (largest of the 4 phases).
 
-### Next Steps
+### Next Steps After Completion
 
-After completing this phase:
-
-1. The dependency-installer package is complete
+1. The dependency-installer package is **complete and fully functional**
 2. **Issue 1-2**: Integrate the package with existing E2E tests
-3. **Issue 1-3**: Update CI workflows to use the new binary
+3. **Issue 1-3**: Update CI workflows to use the new binary instead of bash scripts
 
-### Design Decisions
+### Key Design Decisions
 
-**Two-trait design**: Separating `ToolDetector` and `ToolInstaller` keeps concerns separated and allows reusing detection logic.
+**Two-trait design**: Separating `DependencyDetector` and `DependencyInstaller` keeps concerns separated, allows reusing detection logic, and follows single responsibility principle.
 
-**Idempotent installations**: Each installer checks if the tool is already installed and handles re-installation gracefully.
+**Idempotent installations**: Each installer must handle being run multiple times safely. Already-installed dependencies should not cause errors.
 
-**Confirmation prompt**: Following Unix conventions, we ask for confirmation before installing all tools but provide `-y` flag for automation.
+**Structured logging only**: No interactive prompts or user-facing `println!()` output. Designed for CI/CD automation where structured logs enable programmatic parsing and filtering.
 
-**Docker testing**: Testing in Docker ensures installations work in clean environments and don't depend on developer machine state.
+**Handler-based architecture**: Following existing pattern in the codebase with dedicated handler modules for each command.
+
+**Docker testing required**: Testing in Docker ensures installations work in clean environments and don't depend on developer machine state.
 
 ### Bash Script Conversion Strategy
 
-For each bash script:
+For each bash script in `scripts/setup/`:
 
-1. **Understand the logic** - Read and understand what the script does
-2. **Identify commands** - List all shell commands used
-3. **Map to Rust** - Use `std::process::Command` for shell commands
-4. **Add error handling** - Wrap each command with proper error handling
-5. **Add logging** - Use tracing for visibility
-6. **Test thoroughly** - Verify in Docker containers
+1. **Understand the logic** - Read and document what each script does
+2. **Identify commands** - List all shell commands used (curl, chmod, sudo, apt-get, snap, etc.)
+3. **Map to Rust** - Use `std::process::Command` for executing shell commands
+4. **Add error handling** - Wrap each command with proper `InstallationError` variants
+5. **Add structured logging** - Use tracing at appropriate levels (info, debug)
+6. **Test in Docker** - Verify the Rust version works identically to bash version
 
 ### Testing Strategy
 
-- **Unit tests**: Mock command execution, test error handling
-- **Integration tests**: Run actual installations in Docker
-- **Verification tests**: Use check command to verify installations worked
-- **Idempotency tests**: Install twice, verify both succeed
-- **Error tests**: Test failure scenarios (network issues, permissions, etc.)
+- **Unit tests**: Test individual installer methods, mock command execution where feasible
+- **Integration tests**: Run actual installations in Docker containers (Ubuntu 24.04)
+- **Verification tests**: Use `check` command to verify installations succeeded
+- **Idempotency tests**: Install twice, verify both succeed without errors
+- **Error scenario tests**: Test network failures, permission errors, missing dependencies
 
 ### Installation Requirements
 
-Some tools require sudo:
+Dependencies have different installation requirements:
 
-- **OpenTofu**: Requires sudo for system-wide installation
-- **Ansible**: Requires sudo for apt-get
-- **LXD**: Requires sudo for snap and group configuration
-- **Cargo-machete**: No sudo required (user-level cargo install)
+| Dependency    | Requires Sudo | Installation Method | Notes                         |
+| ------------- | ------------- | ------------------- | ----------------------------- |
+| cargo-machete | No            | `cargo install`     | User-level, no system changes |
+| OpenTofu      | Yes           | Curl script + deb   | System-wide installation      |
+| Ansible       | Yes           | `apt-get`           | System package manager        |
+| LXD           | Yes           | `snap` + groups     | System service + user config  |
 
-The `requires_sudo()` method in the trait documents these requirements.
+The `requires_sudo()` trait method documents these requirements for users and tests.
