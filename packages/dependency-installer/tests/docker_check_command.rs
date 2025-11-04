@@ -21,25 +21,10 @@ async fn test_check_all_reports_missing_dependencies() {
     // Run the check command
     let output = container.exec(&["dependency-installer", "check"]);
 
-    // Verify it reports missing dependencies
+    // Verify it reports missing dependencies in the error message
     assert!(
-        output.contains("cargo-machete: not installed"),
-        "Expected cargo-machete to be reported as not installed, got: {output}"
-    );
-
-    assert!(
-        output.contains("OpenTofu: not installed"),
-        "Expected OpenTofu to be reported as not installed, got: {output}"
-    );
-
-    assert!(
-        output.contains("Ansible: not installed"),
-        "Expected Ansible to be reported as not installed, got: {output}"
-    );
-
-    assert!(
-        output.contains("LXD: not installed"),
-        "Expected LXD to be reported as not installed, got: {output}"
+        output.contains("Missing 4 out of 4 required dependencies"),
+        "Expected missing dependencies error message, got: {output}"
     );
 
     // Verify exit code is non-zero (failure)
@@ -57,15 +42,13 @@ async fn test_check_specific_dependency() {
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
-    // Check a specific dependency (OpenTofu)
+    // Run check command for opentofu (which is not installed)
     let output = container.exec(&["dependency-installer", "check", "--dependency", "opentofu"]);
 
-    // The output contains "OpenTofu: not installed" in the status line
-    // We check for the plain text version since the ✗ symbol may not be present
-    // in all terminal environments or when output is redirected
+    // Verify it reports missing dependency in the error message
     assert!(
-        output.contains("OpenTofu: not installed"),
-        "Expected OpenTofu to be reported as not installed, got: {output}"
+        output.contains("opentofu: not installed"),
+        "Expected opentofu missing error message, got: {output}"
     );
 
     let exit_code = container.exec_with_exit_code(&[

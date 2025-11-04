@@ -3,7 +3,7 @@
 //! This module handles checking whether dependencies are installed.
 
 use thiserror::Error;
-use tracing::{error, info};
+use tracing::info;
 
 use crate::detector::DetectionError;
 use crate::{Dependency, DependencyManager};
@@ -123,7 +123,6 @@ pub fn handle_check(
 
 fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllDependenciesError> {
     info!("Checking all dependencies");
-    println!("Checking dependencies...\n");
 
     let results = manager.check_all()?;
 
@@ -133,24 +132,26 @@ fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllDep
         let detector = manager.get_detector(result.dependency);
         let name = detector.name();
         if result.installed {
-            println!("✓ {name}: installed");
+            info!(
+                dependency = name,
+                status = "installed",
+                "Dependency check result"
+            );
         } else {
-            println!("✗ {name}: not installed");
+            info!(
+                dependency = name,
+                status = "not installed",
+                "Dependency check result"
+            );
             missing_count += 1;
         }
     }
 
-    println!();
-
     if missing_count > 0 {
-        error!(
-            "Missing {} out of {} required dependencies",
+        info!(
             missing_count,
-            results.len()
-        );
-        eprintln!(
-            "Missing {missing_count} out of {} required dependencies",
-            results.len()
+            total_count = results.len(),
+            "Missing dependencies"
         );
         Err(CheckAllDependenciesError::MissingDependencies {
             missing_count,
@@ -158,7 +159,6 @@ fn check_all_dependencies(manager: &DependencyManager) -> Result<(), CheckAllDep
         })
     } else {
         info!("All dependencies are installed");
-        println!("All dependencies are installed");
         Ok(())
     }
 }
@@ -174,12 +174,18 @@ fn check_specific_dependency(
     let installed = detector.is_installed()?;
 
     if installed {
-        info!(dependency = detector.name(), "Dependency is installed");
-        println!("✓ {}: installed", detector.name());
+        info!(
+            dependency = detector.name(),
+            status = "installed",
+            "Dependency is installed"
+        );
         Ok(())
     } else {
-        error!(dependency = detector.name(), "Dependency is not installed");
-        eprintln!("✗ {}: not installed", detector.name());
+        info!(
+            dependency = detector.name(),
+            status = "not installed",
+            "Dependency is not installed"
+        );
         Err(CheckSpecificDependencyError::DependencyNotInstalled { dependency })
     }
 }

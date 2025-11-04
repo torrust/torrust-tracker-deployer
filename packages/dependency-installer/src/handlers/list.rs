@@ -35,7 +35,6 @@ impl From<DetectionError> for ListError {
 /// Returns an error if dependency checking fails
 pub fn handle_list(manager: &DependencyManager) -> Result<(), ListError> {
     info!("Listing all available dependencies");
-    println!("Available dependencies:\n");
 
     let results = manager.check_all()?;
 
@@ -47,7 +46,7 @@ pub fn handle_list(manager: &DependencyManager) -> Result<(), ListError> {
         } else {
             "not installed"
         };
-        println!("- {name} ({status})");
+        info!(dependency = name, status, "Available dependency");
     }
 
     Ok(())
