@@ -41,6 +41,166 @@
 
 use std::io::Write;
 
+/// Output theme controlling symbols and formatting
+///
+/// A theme defines the visual appearance of user-facing messages through
+/// configurable symbols. Themes enable consistent styling across all output
+/// and support different environments (terminals, CI/CD, accessibility needs).
+///
+/// # Predefined Themes
+///
+/// - **Emoji** (default): Unicode emoji symbols for interactive terminals
+/// - **Plain**: Text labels like `[INFO]`, `[OK]` for CI/CD environments
+/// - **ASCII**: Basic ASCII characters for limited terminal support
+///
+/// # Examples
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+///
+/// // Use emoji theme (default)
+/// let theme = Theme::emoji();
+/// assert_eq!(theme.progress_symbol(), "⏳");
+///
+/// // Use plain text theme for CI/CD
+/// let theme = Theme::plain();
+/// assert_eq!(theme.success_symbol(), "[OK]");
+///
+/// // Use ASCII theme for limited terminals
+/// let theme = Theme::ascii();
+/// assert_eq!(theme.error_symbol(), "[x]");
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_field_names)]
+pub struct Theme {
+    progress_symbol: String,
+    success_symbol: String,
+    warning_symbol: String,
+    error_symbol: String,
+}
+
+impl Theme {
+    /// Create emoji theme with Unicode symbols (default)
+    ///
+    /// Best for interactive terminals with good Unicode support.
+    /// Uses emoji characters that are visually distinctive and widely supported.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+    ///
+    /// let theme = Theme::emoji();
+    /// assert_eq!(theme.progress_symbol(), "⏳");
+    /// assert_eq!(theme.success_symbol(), "✅");
+    /// assert_eq!(theme.warning_symbol(), "⚠️");
+    /// assert_eq!(theme.error_symbol(), "❌");
+    /// ```
+    #[must_use]
+    pub fn emoji() -> Self {
+        Self {
+            progress_symbol: "⏳".to_string(),
+            success_symbol: "✅".to_string(),
+            warning_symbol: "⚠️".to_string(),
+            error_symbol: "❌".to_string(),
+        }
+    }
+
+    /// Create plain text theme for CI/CD environments
+    ///
+    /// Uses text labels like `[INFO]`, `[OK]`, `[WARN]`, `[ERROR]` that work
+    /// in any environment without Unicode support. Ideal for CI/CD pipelines
+    /// and log aggregation systems.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+    ///
+    /// let theme = Theme::plain();
+    /// assert_eq!(theme.progress_symbol(), "[INFO]");
+    /// assert_eq!(theme.success_symbol(), "[OK]");
+    /// assert_eq!(theme.warning_symbol(), "[WARN]");
+    /// assert_eq!(theme.error_symbol(), "[ERROR]");
+    /// ```
+    #[must_use]
+    pub fn plain() -> Self {
+        Self {
+            progress_symbol: "[INFO]".to_string(),
+            success_symbol: "[OK]".to_string(),
+            warning_symbol: "[WARN]".to_string(),
+            error_symbol: "[ERROR]".to_string(),
+        }
+    }
+
+    /// Create ASCII-only theme using basic characters
+    ///
+    /// Uses simple ASCII characters that work on any terminal.
+    /// Good for environments with limited character set support or
+    /// when maximum compatibility is required.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+    ///
+    /// let theme = Theme::ascii();
+    /// assert_eq!(theme.progress_symbol(), "=>");
+    /// assert_eq!(theme.success_symbol(), "[+]");
+    /// assert_eq!(theme.warning_symbol(), "[!]");
+    /// assert_eq!(theme.error_symbol(), "[x]");
+    /// ```
+    #[must_use]
+    pub fn ascii() -> Self {
+        Self {
+            progress_symbol: "=>".to_string(),
+            success_symbol: "[+]".to_string(),
+            warning_symbol: "[!]".to_string(),
+            error_symbol: "[x]".to_string(),
+        }
+    }
+
+    /// Get the progress symbol for this theme
+    #[must_use]
+    pub fn progress_symbol(&self) -> &str {
+        &self.progress_symbol
+    }
+
+    /// Get the success symbol for this theme
+    #[must_use]
+    pub fn success_symbol(&self) -> &str {
+        &self.success_symbol
+    }
+
+    /// Get the warning symbol for this theme
+    #[must_use]
+    pub fn warning_symbol(&self) -> &str {
+        &self.warning_symbol
+    }
+
+    /// Get the error symbol for this theme
+    #[must_use]
+    pub fn error_symbol(&self) -> &str {
+        &self.error_symbol
+    }
+}
+
+impl Default for Theme {
+    /// Create the default theme (emoji)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+    ///
+    /// let theme = Theme::default();
+    /// assert_eq!(theme.progress_symbol(), "⏳");
+    /// ```
+    fn default() -> Self {
+        Self::emoji()
+    }
+}
+
 /// Verbosity levels for user output
 ///
 /// Controls the amount of detail shown to users. Higher verbosity levels include
@@ -156,13 +316,14 @@ impl VerbosityFilter {
 /// output.result("Processing complete");
 /// ```
 pub struct UserOutput {
+    theme: Theme,
     verbosity_filter: VerbosityFilter,
     stdout_writer: Box<dyn Write + Send + Sync>,
     stderr_writer: Box<dyn Write + Send + Sync>,
 }
 
 impl UserOutput {
-    /// Create new `UserOutput` with default stdout/stderr channels
+    /// Create new `UserOutput` with default stdout/stderr channels and emoji theme
     ///
     /// # Examples
     ///
@@ -173,17 +334,74 @@ impl UserOutput {
     /// ```
     #[must_use]
     pub fn new(verbosity: VerbosityLevel) -> Self {
+        Self::with_theme(verbosity, Theme::default())
+    }
+
+    /// Create `UserOutput` with a specific theme
+    ///
+    /// Allows customization of output symbols while using default stdout/stderr channels.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel, Theme};
+    ///
+    /// // Use plain text theme for CI/CD
+    /// let output = UserOutput::with_theme(VerbosityLevel::Normal, Theme::plain());
+    ///
+    /// // Use ASCII theme for limited terminals
+    /// let output = UserOutput::with_theme(VerbosityLevel::Normal, Theme::ascii());
+    /// ```
+    #[must_use]
+    pub fn with_theme(verbosity: VerbosityLevel, theme: Theme) -> Self {
+        Self::with_theme_and_writers(
+            verbosity,
+            theme,
+            Box::new(std::io::stdout()),
+            Box::new(std::io::stderr()),
+        )
+    }
+
+    /// Create `UserOutput` with theme and custom writers (for testing)
+    ///
+    /// This constructor allows full customization including theme and writers,
+    /// primarily used for testing where output needs to be captured.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel, Theme};
+    /// use std::io::Cursor;
+    ///
+    /// let stdout_buf = Vec::new();
+    /// let stderr_buf = Vec::new();
+    ///
+    /// let output = UserOutput::with_theme_and_writers(
+    ///     VerbosityLevel::Normal,
+    ///     Theme::plain(),
+    ///     Box::new(Cursor::new(stdout_buf)),
+    ///     Box::new(Cursor::new(stderr_buf)),
+    /// );
+    /// ```
+    #[must_use]
+    pub fn with_theme_and_writers(
+        verbosity: VerbosityLevel,
+        theme: Theme,
+        stdout_writer: Box<dyn Write + Send + Sync>,
+        stderr_writer: Box<dyn Write + Send + Sync>,
+    ) -> Self {
         Self {
+            theme,
             verbosity_filter: VerbosityFilter::new(verbosity),
-            stdout_writer: Box::new(std::io::stdout()),
-            stderr_writer: Box::new(std::io::stderr()),
+            stdout_writer,
+            stderr_writer,
         }
     }
 
-    /// Create `UserOutput` for testing with custom writers
+    /// Create `UserOutput` for testing with custom writers (uses default emoji theme)
     ///
     /// This constructor allows injecting custom writers for testing,
-    /// enabling output capture and assertion.
+    /// enabling output capture and assertion. Uses the default emoji theme.
     ///
     /// # Examples
     ///
@@ -206,11 +424,7 @@ impl UserOutput {
         stdout_writer: Box<dyn Write + Send + Sync>,
         stderr_writer: Box<dyn Write + Send + Sync>,
     ) -> Self {
-        Self {
-            verbosity_filter: VerbosityFilter::new(verbosity),
-            stdout_writer,
-            stderr_writer,
-        }
+        Self::with_theme_and_writers(verbosity, Theme::default(), stdout_writer, stderr_writer)
     }
 
     /// Display progress message to stderr (Normal level and above)
@@ -229,7 +443,12 @@ impl UserOutput {
     /// ```
     pub fn progress(&mut self, message: &str) {
         if self.verbosity_filter.should_show_progress() {
-            writeln!(self.stderr_writer, "⏳ {message}").ok();
+            writeln!(
+                self.stderr_writer,
+                "{} {message}",
+                self.theme.progress_symbol()
+            )
+            .ok();
         }
     }
 
@@ -248,7 +467,12 @@ impl UserOutput {
     /// ```
     pub fn success(&mut self, message: &str) {
         if self.verbosity_filter.should_show_success() {
-            writeln!(self.stderr_writer, "✅ {message}").ok();
+            writeln!(
+                self.stderr_writer,
+                "{} {message}",
+                self.theme.success_symbol()
+            )
+            .ok();
         }
     }
 
@@ -265,7 +489,12 @@ impl UserOutput {
     /// ```
     pub fn warn(&mut self, message: &str) {
         if self.verbosity_filter.should_show_warnings() {
-            writeln!(self.stderr_writer, "⚠️  {message}").ok();
+            writeln!(
+                self.stderr_writer,
+                "{}  {message}",
+                self.theme.warning_symbol()
+            )
+            .ok();
         }
     }
 
@@ -284,7 +513,12 @@ impl UserOutput {
     /// ```
     pub fn error(&mut self, message: &str) {
         if self.verbosity_filter.should_show_errors() {
-            writeln!(self.stderr_writer, "❌ {message}").ok();
+            writeln!(
+                self.stderr_writer,
+                "{} {message}",
+                self.theme.error_symbol()
+            )
+            .ok();
         }
     }
 
@@ -465,7 +699,7 @@ pub mod test_support {
     }
 
     impl TestUserOutput {
-        /// Create a new test output with the specified verbosity level
+        /// Create a new test output with the specified verbosity level and default theme
         ///
         /// # Examples
         ///
@@ -474,13 +708,26 @@ pub mod test_support {
         /// ```
         #[must_use]
         pub fn new(verbosity: VerbosityLevel) -> Self {
+            Self::with_theme(verbosity, Theme::default())
+        }
+
+        /// Create a new test output with the specified verbosity level and theme
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// let test_output = TestUserOutput::with_theme(VerbosityLevel::Normal, Theme::plain());
+        /// ```
+        #[must_use]
+        pub fn with_theme(verbosity: VerbosityLevel, theme: Theme) -> Self {
             let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
             let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
 
             let stdout_writer = Box::new(TestWriter::new(Arc::clone(&stdout_buffer)));
             let stderr_writer = Box::new(TestWriter::new(Arc::clone(&stderr_buffer)));
 
-            let output = UserOutput::with_writers(verbosity, stdout_writer, stderr_writer);
+            let output =
+                UserOutput::with_theme_and_writers(verbosity, theme, stdout_writer, stderr_writer);
 
             Self {
                 output,
@@ -620,6 +867,82 @@ pub mod test_support {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ============================================================================
+    // Theme Tests
+    // ============================================================================
+
+    mod theme {
+        use super::*;
+
+        #[test]
+        fn it_should_create_emoji_theme_with_correct_symbols() {
+            let theme = Theme::emoji();
+
+            assert_eq!(theme.progress_symbol(), "⏳");
+            assert_eq!(theme.success_symbol(), "✅");
+            assert_eq!(theme.warning_symbol(), "⚠️");
+            assert_eq!(theme.error_symbol(), "❌");
+        }
+
+        #[test]
+        fn it_should_create_plain_theme_with_text_labels() {
+            let theme = Theme::plain();
+
+            assert_eq!(theme.progress_symbol(), "[INFO]");
+            assert_eq!(theme.success_symbol(), "[OK]");
+            assert_eq!(theme.warning_symbol(), "[WARN]");
+            assert_eq!(theme.error_symbol(), "[ERROR]");
+        }
+
+        #[test]
+        fn it_should_create_ascii_theme_with_ascii_characters() {
+            let theme = Theme::ascii();
+
+            assert_eq!(theme.progress_symbol(), "=>");
+            assert_eq!(theme.success_symbol(), "[+]");
+            assert_eq!(theme.warning_symbol(), "[!]");
+            assert_eq!(theme.error_symbol(), "[x]");
+        }
+
+        #[test]
+        fn it_should_use_emoji_theme_as_default() {
+            let theme = Theme::default();
+            let emoji_theme = Theme::emoji();
+
+            assert_eq!(theme, emoji_theme);
+        }
+
+        #[test]
+        fn it_should_support_clone() {
+            let theme = Theme::plain();
+            let cloned = theme.clone();
+
+            assert_eq!(theme, cloned);
+        }
+
+        #[test]
+        fn it_should_support_equality_comparison() {
+            let theme1 = Theme::emoji();
+            let theme2 = Theme::emoji();
+            let theme3 = Theme::plain();
+
+            assert_eq!(theme1, theme2);
+            assert_ne!(theme1, theme3);
+        }
+
+        #[test]
+        fn it_should_support_debug_formatting() {
+            let theme = Theme::emoji();
+            let debug_output = format!("{theme:?}");
+
+            assert!(debug_output.contains("Theme"));
+        }
+    }
+
+    // ============================================================================
+    // UserOutput Tests - Basic Output
+    // ============================================================================
 
     #[test]
     fn it_should_write_progress_messages_to_stderr() {
@@ -970,6 +1293,67 @@ mod tests {
             assert!(debug_filter.should_show(VerbosityLevel::Verbose));
             assert!(debug_filter.should_show(VerbosityLevel::VeryVerbose));
             assert!(debug_filter.should_show(VerbosityLevel::Debug));
+        }
+    }
+
+    // ============================================================================
+    // UserOutput with Theme Tests
+    // ============================================================================
+
+    mod user_output_with_themes {
+        use super::super::*;
+        use crate::presentation::user_output::test_support::TestUserOutput;
+
+        #[test]
+        fn it_should_use_emoji_theme_by_default() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            test_output.output.progress("Test");
+
+            assert_eq!(test_output.stderr(), "⏳ Test\n");
+        }
+
+        #[test]
+        fn it_should_use_plain_theme_when_specified() {
+            let mut test_output =
+                TestUserOutput::with_theme(VerbosityLevel::Normal, Theme::plain());
+
+            test_output.output.progress("Test");
+            test_output.output.success("Success");
+            test_output.output.warn("Warning");
+            test_output.output.error("Error");
+
+            let stderr = test_output.stderr();
+            assert!(stderr.contains("[INFO] Test"));
+            assert!(stderr.contains("[OK] Success"));
+            assert!(stderr.contains("[WARN]  Warning"));
+            assert!(stderr.contains("[ERROR] Error"));
+        }
+
+        #[test]
+        fn it_should_use_ascii_theme_when_specified() {
+            let mut test_output =
+                TestUserOutput::with_theme(VerbosityLevel::Normal, Theme::ascii());
+
+            test_output.output.progress("Test");
+            test_output.output.success("Success");
+            test_output.output.warn("Warning");
+            test_output.output.error("Error");
+
+            let stderr = test_output.stderr();
+            assert!(stderr.contains("=> Test"));
+            assert!(stderr.contains("[+] Success"));
+            assert!(stderr.contains("[!]  Warning"));
+            assert!(stderr.contains("[x] Error"));
+        }
+
+        #[test]
+        fn it_should_support_with_theme_constructor() {
+            let output = UserOutput::with_theme(VerbosityLevel::Normal, Theme::plain());
+
+            // Verify it compiles and creates output with the theme
+            // (actual output testing done through TestUserOutput)
+            drop(output);
         }
     }
 }

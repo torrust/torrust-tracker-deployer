@@ -51,4 +51,4 @@ pub use commands::destroy::DestroySubcommandError;
 pub use commands::{execute, handle_error};
 pub use errors::CommandError;
 pub use progress::ProgressReporter;
-pub use user_output::{UserOutput, VerbosityLevel};
+pub use user_output::{Theme, UserOutput, VerbosityLevel};
