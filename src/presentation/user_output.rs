@@ -1270,73 +1270,145 @@ mod tests {
     }
 
     // ============================================================================
-    // UserOutput Tests - Basic Output
+    // UserOutput Tests - Parameterized Tests
     // ============================================================================
+    //
+    // These tests use rstest for parameterized testing to reduce duplication
+    // and make the test matrix clear and maintainable.
+    //
+    // Test Matrix:
+    // Message Type | Symbol | Min Verbosity | Channel | Always Shown
+    // -------------|--------|---------------|---------|-------------
+    // progress     | ⏳     | Normal        | stderr  | No
+    // success      | ✅     | Normal        | stderr  | No
+    // warning      | ⚠️     | Normal        | stderr  | No
+    // error        | ❌     | Quiet         | stderr  | Yes
+    // result       | (none) | Quiet         | stdout  | Yes
+    // data         | (none) | Quiet         | stdout  | Yes
 
-    #[test]
-    fn it_should_write_progress_messages_to_stderr() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
+    mod parameterized_tests {
+        use super::*;
+        use rstest::rstest;
 
-        test_output.output.progress("Testing progress message");
+        /// Test that each message type routes to the correct output channel
+        ///
+        /// Verifies stdout vs stderr routing for all message types.
+        /// This replaces 5 individual channel routing tests with one parameterized test.
+        #[rstest]
+        #[case("progress", "⏳ Test message\n", VerbosityLevel::Normal, "stderr")]
+        #[case("success", "✅ Test message\n", VerbosityLevel::Normal, "stderr")]
+        #[case("warning", "⚠️  Test message\n", VerbosityLevel::Normal, "stderr")]
+        #[case("error", "❌ Test message\n", VerbosityLevel::Normal, "stderr")]
+        #[case("result", "Test message\n", VerbosityLevel::Normal, "stdout")]
+        fn it_should_route_message_to_correct_channel(
+            #[case] method: &str,
+            #[case] expected_output: &str,
+            #[case] verbosity: VerbosityLevel,
+            #[case] expected_channel: &str,
+        ) {
+            let mut test_output = test_support::TestUserOutput::new(verbosity);
 
-        // Verify message went to stderr
-        assert_eq!(test_output.stderr(), "⏳ Testing progress message\n");
+            // Call the appropriate method
+            match method {
+                "progress" => test_output.output.progress("Test message"),
+                "success" => test_output.output.success("Test message"),
+                "warning" => test_output.output.warn("Test message"),
+                "error" => test_output.output.error("Test message"),
+                "result" => test_output.output.result("Test message"),
+                _ => panic!("Unknown method: {}", method),
+            }
 
-        // Verify stdout is empty
-        assert_eq!(test_output.stdout(), "");
+            // Verify output went to the correct channel
+            match expected_channel {
+                "stdout" => {
+                    assert_eq!(test_output.stdout(), expected_output);
+                    assert_eq!(test_output.stderr(), "");
+                }
+                "stderr" => {
+                    assert_eq!(test_output.stderr(), expected_output);
+                    assert_eq!(test_output.stdout(), "");
+                }
+                _ => panic!("Unknown channel: {}", expected_channel),
+            }
+        }
+
+        /// Test that normal-level messages respect verbosity settings
+        ///
+        /// Progress, success, and warning messages should only appear at Normal or higher.
+        /// This replaces 3 individual verbosity tests with one parameterized test.
+        #[rstest]
+        #[case("progress", VerbosityLevel::Quiet, false)]
+        #[case("progress", VerbosityLevel::Normal, true)]
+        #[case("progress", VerbosityLevel::Verbose, true)]
+        #[case("success", VerbosityLevel::Quiet, false)]
+        #[case("success", VerbosityLevel::Normal, true)]
+        #[case("success", VerbosityLevel::Verbose, true)]
+        #[case("warning", VerbosityLevel::Quiet, false)]
+        #[case("warning", VerbosityLevel::Normal, true)]
+        #[case("warning", VerbosityLevel::Verbose, true)]
+        fn it_should_respect_verbosity_for_normal_level_messages(
+            #[case] method: &str,
+            #[case] verbosity: VerbosityLevel,
+            #[case] should_show: bool,
+        ) {
+            let mut test_output = test_support::TestUserOutput::new(verbosity);
+
+            match method {
+                "progress" => test_output.output.progress("Test"),
+                "success" => test_output.output.success("Test"),
+                "warning" => test_output.output.warn("Test"),
+                _ => panic!("Unknown method: {}", method),
+            }
+
+            if should_show {
+                assert!(!test_output.stderr().is_empty());
+            } else {
+                assert_eq!(test_output.stderr(), "");
+            }
+        }
+
+        /// Test that error messages are always shown regardless of verbosity
+        ///
+        /// Errors are critical and must be shown at all verbosity levels.
+        #[rstest]
+        #[case(VerbosityLevel::Quiet)]
+        #[case(VerbosityLevel::Normal)]
+        #[case(VerbosityLevel::Verbose)]
+        #[case(VerbosityLevel::VeryVerbose)]
+        #[case(VerbosityLevel::Debug)]
+        fn it_should_always_show_errors_at_all_verbosity_levels(#[case] verbosity: VerbosityLevel) {
+            let mut test_output = test_support::TestUserOutput::new(verbosity);
+
+            test_output.output.error("Critical error");
+
+            assert!(!test_output.stderr().is_empty());
+            assert!(test_output.stderr().contains("Critical error"));
+        }
+
+        /// Test that result messages are always shown at all verbosity levels
+        ///
+        /// Results are final outputs and must be shown at all verbosity levels.
+        #[rstest]
+        #[case(VerbosityLevel::Quiet)]
+        #[case(VerbosityLevel::Normal)]
+        #[case(VerbosityLevel::Verbose)]
+        #[case(VerbosityLevel::VeryVerbose)]
+        #[case(VerbosityLevel::Debug)]
+        fn it_should_always_show_results_at_all_verbosity_levels(#[case] verbosity: VerbosityLevel) {
+            let mut test_output = test_support::TestUserOutput::new(verbosity);
+
+            test_output.output.result("Result data");
+
+            assert_eq!(test_output.stdout(), "Result data\n");
+            assert_eq!(test_output.stderr(), "");
+        }
     }
 
-    #[test]
-    fn it_should_write_success_messages_to_stderr() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
-
-        test_output.output.success("Testing success message");
-
-        // Verify message went to stderr
-        assert_eq!(test_output.stderr(), "✅ Testing success message\n");
-
-        // Verify stdout is empty
-        assert_eq!(test_output.stdout(), "");
-    }
-
-    #[test]
-    fn it_should_write_warning_messages_to_stderr() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
-
-        test_output.output.warn("Testing warning message");
-
-        // Verify message went to stderr
-        assert_eq!(test_output.stderr(), "⚠️  Testing warning message\n");
-
-        // Verify stdout is empty
-        assert_eq!(test_output.stdout(), "");
-    }
-
-    #[test]
-    fn it_should_write_error_messages_to_stderr() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
-
-        test_output.output.error("Testing error message");
-
-        // Verify message went to stderr
-        assert_eq!(test_output.stderr(), "❌ Testing error message\n");
-
-        // Verify stdout is empty
-        assert_eq!(test_output.stdout(), "");
-    }
-
-    #[test]
-    fn it_should_write_results_to_stdout() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
-
-        test_output.output.result("Test result data");
-
-        // Verify message went to stdout
-        assert_eq!(test_output.stdout(), "Test result data\n");
-
-        // Verify stderr is empty
-        assert_eq!(test_output.stderr(), "");
-    }
+    // ============================================================================
+    // UserOutput Tests - Basic Output (Non-parameterized)
+    // ============================================================================
+    //
+    // These tests cover specific functionality not included in parameterized tests:
 
     #[test]
     fn it_should_write_data_to_stdout() {
@@ -1351,45 +1423,7 @@ mod tests {
         assert_eq!(test_output.stderr(), "");
     }
 
-    #[test]
-    fn it_should_respect_verbosity_levels_for_progress() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        test_output.output.progress("This should not appear");
-
-        // Verify no output at Quiet level
-        assert_eq!(test_output.stderr(), "");
-    }
-
-    #[test]
-    fn it_should_respect_verbosity_levels_for_success() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
-
-        test_output.output.success("This should not appear");
-
-        // Verify no output at Quiet level
-        assert_eq!(test_output.stderr(), "");
-    }
-
-    #[test]
-    fn it_should_respect_verbosity_levels_for_warn() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
-
-        test_output.output.warn("This should not appear");
-
-        // Verify no output at Quiet level
-        assert_eq!(test_output.stderr(), "");
-    }
-
-    #[test]
-    fn it_should_always_show_errors_regardless_of_verbosity() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
-
-        test_output.output.error("Critical error message");
-
-        // Verify error appears even at Quiet level
-        assert_eq!(test_output.stderr(), "❌ Critical error message\n");
-    }
 
     #[test]
     fn it_should_use_normal_as_default_verbosity() {
