@@ -27,3 +27,7 @@ testcontainers = "0.25"
 [[test]]
 name = "docker_check_command"
 path = "tests/docker_check_command.rs"
+
+[[test]]
+name = "docker_install_command"
+path = "tests/docker_install_command.rs"
