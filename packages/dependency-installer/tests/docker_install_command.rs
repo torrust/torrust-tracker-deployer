@@ -84,15 +84,10 @@ async fn it_should_handle_idempotent_installation_of_cargo_machete() {
 
 /// Test that `OpenTofu` can be installed
 #[tokio::test]
-#[ignore = "This test is expensive, run with --ignored flag"]
 async fn it_should_install_opentofu_successfully() {
     let binary_path = get_binary_path();
 
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
-
-    // Install curl (required for OpenTofu installation)
-    container.exec(&["apt-get", "update"]);
-    container.exec(&["apt-get", "install", "-y", "curl", "gnupg"]);
 
     // Install OpenTofu
     let output = container.exec(&[

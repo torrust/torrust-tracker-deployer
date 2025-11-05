@@ -20,6 +20,7 @@ LABEL purpose="dependency-installer-integration-testing"
 # - sudo: Required by some installers
 # - curl: Required by rustup installer
 # - build-essential: Required for compiling Rust projects (cargo-machete)
+# - gnupg: Required by OpenTofu installer for GPG key verification
 #
 # IMPORTANT: We run apt-get update and keep the apt cache as a PRE-CONDITION.
 # All installers assume package lists are up-to-date and do NOT run apt-get update themselves.
@@ -29,7 +30,8 @@ RUN apt-get update && \
     ca-certificates \
     sudo \
     curl \
-    build-essential
+    build-essential \
+    gnupg
 
 # Install Rust nightly via rustup
 # Using nightly-2025-10-15 to match local development environment
