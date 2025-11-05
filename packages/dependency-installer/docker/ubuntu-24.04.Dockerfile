@@ -21,6 +21,7 @@ LABEL purpose="dependency-installer-integration-testing"
 # - curl: Required by rustup installer
 # - build-essential: Required for compiling Rust projects (cargo-machete)
 # - gnupg: Required by OpenTofu installer for GPG key verification
+# - snapd: Required by LXD installer for snap package installation
 #
 # IMPORTANT: We run apt-get update and keep the apt cache as a PRE-CONDITION.
 # All installers assume package lists are up-to-date and do NOT run apt-get update themselves.
@@ -31,7 +32,8 @@ RUN apt-get update && \
     sudo \
     curl \
     build-essential \
-    gnupg
+    gnupg \
+    snapd
 
 # Install Rust nightly via rustup
 # Using nightly-2025-10-15 to match local development environment
