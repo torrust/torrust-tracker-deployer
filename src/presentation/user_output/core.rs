@@ -2,12 +2,10 @@
 
 use std::io::Write;
 
-use super::{
-    Channel, FormatterOverride, OutputMessage, OutputSink, Theme, VerbosityLevel,
-};
+use super::messages::*;
 use super::sinks::StandardSink;
 use super::verbosity::VerbosityFilter;
-use super::messages::*;
+use super::{Channel, FormatterOverride, OutputMessage, OutputSink, Theme, VerbosityLevel};
 
 pub struct UserOutput {
     theme: Theme,
@@ -492,12 +490,14 @@ impl UserOutput {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     // These imports are used by nested test modules
     #[allow(unused_imports)]
     use crate::presentation::user_output::formatters::JsonFormatter;
     #[allow(unused_imports)]
-    use crate::presentation::user_output::sinks::{CompositeSink, FileSink, StderrWriter, StdoutWriter, TelemetrySink};
+    use crate::presentation::user_output::sinks::writers::{StderrWriter, StdoutWriter};
+    #[allow(unused_imports)]
+    use crate::presentation::user_output::sinks::{CompositeSink, FileSink, TelemetrySink};
     #[allow(unused_imports)]
     use crate::presentation::user_output::test_support::{self, TestUserOutput, TestWriter};
 

@@ -8,9 +8,6 @@ pub use file::FileSink;
 pub use standard::StandardSink;
 pub use telemetry::TelemetrySink;
 
-// Re-export writers for use within user_output module (including tests)
-pub(in crate::presentation::user_output) use writers::{StderrWriter, StdoutWriter};
-
 mod composite;
 mod file;
 mod standard;
