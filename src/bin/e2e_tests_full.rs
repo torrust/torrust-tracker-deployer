@@ -57,6 +57,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use torrust_dependency_installer::Dependency;
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
@@ -65,14 +66,17 @@ use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, Log
 use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 use torrust_tracker_deployer_lib::shared::{Clock, SystemClock};
 use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deployer_lib::testing::e2e::tasks::{
-    preflight_cleanup::cleanup_previous_test_data,
-    run_configure_command::run_configure_command,
-    run_create_command::run_create_command,
-    run_test_command::run_test_command,
-    virtual_machine::{
-        preflight_cleanup::preflight_cleanup_previous_resources,
-        run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
+use torrust_tracker_deployer_lib::testing::e2e::{
+    dependencies::verify_dependencies,
+    tasks::{
+        preflight_cleanup::cleanup_previous_test_data,
+        run_configure_command::run_configure_command,
+        run_create_command::run_create_command,
+        run_test_command::run_test_command,
+        virtual_machine::{
+            preflight_cleanup::preflight_cleanup_previous_resources,
+            run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
+        },
     },
 };
 
@@ -130,6 +134,18 @@ pub async fn main() -> Result<()> {
         log_format = ?cli.log_format,
         "Starting E2E tests"
     );
+
+    // Verify all required dependencies before running tests
+    // Full E2E tests need: OpenTofu (provisioning), Ansible (configuration), and LXD (virtualization)
+    let required_deps = &[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];
+    if let Err(e) = verify_dependencies(required_deps) {
+        error!(
+            error = %e,
+            "Dependency verification failed"
+        );
+        eprintln!("\n{}\n", e.actionable_message());
+        return Err(anyhow::anyhow!("Missing required dependencies"));
+    }
 
     // Use absolute paths to project root for SSH keys to ensure they can be found by Ansible
     let project_root = std::env::current_dir().expect("Failed to get current directory");

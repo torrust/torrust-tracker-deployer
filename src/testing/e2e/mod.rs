@@ -9,6 +9,7 @@
 //! - `container` - Service dependency injection container for E2E tests
 //! - `context` - Test context configuration and management
 //! - `containers` - Container management for E2E testing scenarios
+//! - `dependencies` - Dependency verification for E2E test binaries
 //! - `tasks` - High-level testing tasks and workflows
 //!
 //! ## Testing Workflow
@@ -20,6 +21,7 @@
 pub mod container;
 pub mod containers;
 pub mod context;
+pub mod dependencies;
 pub mod tasks;
 
 // Re-export for convenience

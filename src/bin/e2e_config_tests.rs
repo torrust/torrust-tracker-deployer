@@ -61,6 +61,7 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::time::Instant;
+use torrust_dependency_installer::Dependency;
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configure_command::run_configure_command;
 use tracing::{error, info};
 
@@ -68,14 +69,17 @@ use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PO
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::shared::Username;
-use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deployer_lib::testing::e2e::tasks::{
-    container::{
-        cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},
-        run_provision_simulation::run_provision_simulation,
+use torrust_tracker_deployer_lib::testing::e2e::{
+    dependencies::verify_dependencies,
+    context::{TestContext, TestContextType},
+    tasks::{
+        container::{
+            cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},
+            run_provision_simulation::run_provision_simulation,
+        },
+        preflight_cleanup,
+        run_configuration_validation::run_configuration_validation,
     },
-    preflight_cleanup,
-    run_configuration_validation::run_configuration_validation,
 };
 
 #[derive(Parser)]
@@ -128,6 +132,18 @@ pub async fn main() -> Result<()> {
         log_format = ?cli.log_format,
         "Starting E2E configuration tests with Docker containers"
     );
+
+    // Verify required dependencies before running tests
+    // Config tests only need Ansible for configuration management
+    let required_deps = &[Dependency::Ansible];
+    if let Err(e) = verify_dependencies(required_deps) {
+        error!(
+            error = %e,
+            "Dependency verification failed"
+        );
+        eprintln!("\n{}\n", e.actionable_message());
+        return Err(anyhow::anyhow!("Missing required dependencies"));
+    }
 
     let test_start = Instant::now();
 

@@ -50,6 +50,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::net::IpAddr;
 use std::time::Instant;
+use torrust_dependency_installer::Dependency;
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
@@ -57,11 +58,14 @@ use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PO
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::shared::Username;
-use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::{
-    cleanup_infrastructure::cleanup_test_infrastructure,
-    preflight_cleanup::preflight_cleanup_previous_resources,
-    run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
+use torrust_tracker_deployer_lib::testing::e2e::{
+    dependencies::verify_dependencies,
+    context::{TestContext, TestContextType},
+    tasks::virtual_machine::{
+        cleanup_infrastructure::cleanup_test_infrastructure,
+        preflight_cleanup::preflight_cleanup_previous_resources,
+        run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
+    },
 };
 
 #[derive(Parser)]
@@ -122,6 +126,18 @@ pub async fn main() -> Result<()> {
         log_format = ?cli.log_format,
         "Starting E2E provisioning and destruction tests"
     );
+
+    // Verify required dependencies before running tests
+    // Provision tests only need Ansible for basic validation checks
+    let required_deps = &[Dependency::Ansible];
+    if let Err(e) = verify_dependencies(required_deps) {
+        error!(
+            error = %e,
+            "Dependency verification failed"
+        );
+        eprintln!("\n{}\n", e.actionable_message());
+        return Err(anyhow::anyhow!("Missing required dependencies"));
+    }
 
     // Create environment entity for e2e-provision testing
     let environment_name = EnvironmentName::new("e2e-provision".to_string())?;
