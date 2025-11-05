@@ -6,9 +6,15 @@ This directory contains Docker configurations for testing the dependency-install
 
 ### ubuntu-24.04.Dockerfile
 
-Base Ubuntu 24.04 image for testing the CLI binary in a clean environment.
+Pre-configured Ubuntu 24.04 image with all operating system prerequisites installed.
 
-**Purpose**: Verify that the `dependency-installer check` command correctly detects missing tools.
+**Purpose**: This Dockerfile represents the **operating system dependencies (pre-conditions)** required before using the dependency installers. It includes:
+
+- System packages: `ca-certificates`, `sudo`, `curl`, `build-essential`
+- Rust toolchain: `nightly-2025-10-15` installed via rustup
+- PATH configuration for cargo binaries
+
+The tests verify that given these OS pre-conditions, the installers can successfully install their target dependencies (cargo-machete, OpenTofu, Ansible, LXD).
 
 **Usage in tests**:
 
@@ -19,11 +25,19 @@ let image = GenericImage::new("ubuntu", "24.04")
 
 ## Testing Strategy
 
-1. Build the binary: `cargo build --bin dependency-installer`
-2. Copy binary into container using testcontainers
-3. Run `check` command in container
-4. Verify it correctly reports missing tools
-5. (Phase 4) Install tools and verify installation
+The Docker-based integration tests verify that the installers work correctly **given the declared OS pre-conditions**:
+
+1. **Pre-built Image**: Use `ubuntu-24.04.Dockerfile` with all OS dependencies pre-installed
+2. **Build Binary**: `cargo build --bin dependency-installer`
+3. **Copy Into Container**: Use testcontainers to copy binary into pre-configured container
+4. **Test Installers**: Run `install` commands and verify successful installation
+5. **Verify Detection**: Use `check` command to confirm installations are detected
+
+This approach ensures:
+
+- Fast test execution (OS dependencies installed once during image build)
+- Clear documentation of required OS pre-conditions (declared in Dockerfile)
+- Confidence that installers work in production environments matching the Dockerfile
 
 ## Building Images
 

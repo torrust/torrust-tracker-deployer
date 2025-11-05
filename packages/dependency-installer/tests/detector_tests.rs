@@ -5,10 +5,10 @@
 //! - `DependencyManager` functionality
 //! - Error handling
 
-use torrust_dependency_installer::{
-    AnsibleDetector, CargoMacheteDetector, CheckResult, Dependency, DependencyDetector,
-    DependencyManager, LxdDetector, OpenTofuDetector,
+use torrust_dependency_installer::detector::{
+    AnsibleDetector, CargoMacheteDetector, DependencyDetector, LxdDetector, OpenTofuDetector,
 };
+use torrust_dependency_installer::{CheckResult, Dependency, DependencyManager};
 
 // =============================================================================
 // DETECTOR TRAIT TESTS

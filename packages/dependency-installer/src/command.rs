@@ -109,3 +109,14 @@ pub enum CommandError {
     #[error("Command '{command}' not found in PATH")]
     CommandNotFound { command: String },
 }
+
+impl From<CommandError> for std::io::Error {
+    fn from(error: CommandError) -> Self {
+        match error {
+            CommandError::ExecutionFailed { source, .. } => source,
+            CommandError::CommandNotFound { command } => {
+                std::io::Error::new(std::io::ErrorKind::NotFound, command)
+            }
+        }
+    }
+}

@@ -93,6 +93,50 @@ impl RunningBinaryContainer {
         status.code().unwrap_or(1)
     }
 
+    /// Execute a command and return the exit code, suppressing stderr output
+    ///
+    /// This is useful for tests that intentionally trigger errors and want to
+    /// keep test output clean. The command's stderr is redirected to /dev/null
+    /// within the container.
+    ///
+    /// # Arguments
+    ///
+    /// * `command` - Command and arguments to execute
+    ///
+    /// # Returns
+    ///
+    /// The exit code of the command, or 1 if the process was terminated by a signal
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// // Test that expects an error but doesn't want stderr noise in test output
+    /// let exit_code = container.exec_with_exit_code_silent(&[
+    ///     "dependency-installer",
+    ///     "install",
+    ///     "--dependency",
+    ///     "invalid-name",
+    /// ]);
+    /// assert_ne!(exit_code, 0);
+    /// ```
+    #[allow(dead_code)] // Used by install_command tests but not check_command tests
+    pub fn exec_with_exit_code_silent(&self, command: &[&str]) -> ExitCode {
+        // Build the command with stderr redirected to /dev/null
+        let command_str = format!("{} 2>/dev/null", command.join(" "));
+
+        let status = Command::new("docker")
+            .arg("exec")
+            .arg(&self.container_id)
+            .arg("sh")
+            .arg("-c")
+            .arg(&command_str)
+            .status()
+            .expect("Failed to execute docker exec command");
+
+        // Return 1 (failure) if terminated by signal, otherwise use actual exit code
+        status.code().unwrap_or(1)
+    }
+
     /// Copy a file from the host into this running container
     ///
     /// This method uses Docker CLI to copy files into the running container.

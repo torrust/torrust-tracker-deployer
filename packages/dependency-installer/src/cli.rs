@@ -68,6 +68,13 @@ pub enum Commands {
         dependency: Option<Dependency>,
     },
 
+    /// Install dependencies
+    Install {
+        /// Specific dependency to install (if omitted, installs all)
+        #[arg(short = 'd', long)]
+        dependency: Option<Dependency>,
+    },
+
     /// List all available tools and their status
     List,
 }

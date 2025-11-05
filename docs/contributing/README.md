@@ -25,7 +25,14 @@ This guide will help you understand our development practices and contribution w
 ## 🚀 Getting Started
 
 1. **Fork and clone** the repository
-2. **Set up your development environment** following the main [README](../../README.md)
+2. **Install dependencies** using the automated installer:
+
+   ```bash
+   cargo run --bin dependency-installer install
+   ```
+
+   See [Dependency Installer](../../packages/dependency-installer/README.md) for details.
+
 3. **Read the branching** guidelines in [branching.md](./branching.md)
 4. **Install and run linters** as described in [linting.md](./linting.md)
 5. **Follow the commit process** outlined in [commit-process.md](./commit-process.md)

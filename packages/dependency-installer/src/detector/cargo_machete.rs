@@ -36,7 +36,7 @@ impl DependencyDetector for CargoMacheteDetector {
         let installed =
             command_exists("cargo-machete").map_err(|e| DetectionError::DetectionFailed {
                 dependency: Dependency::CargoMachete,
-                source: std::io::Error::other(e.to_string()),
+                source: e.into(),
             })?;
 
         if installed {

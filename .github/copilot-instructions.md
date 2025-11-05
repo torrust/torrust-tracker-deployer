@@ -20,7 +20,7 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 ## 📁 Key Directories
 
 - `src/` - Rust source code organized by DDD layers (`domain/`, `application/`, `infrastructure/`, `shared/`)
-- `src/bin/` - Binary executables (linter, E2E tests)
+- `src/bin/` - Binary executables (linter, E2E tests, dependency installer)
 - `data/` - Environment-specific data and source templates
 - `templates/` - Generated template examples and test fixtures
 - `build/` - Generated runtime configurations (git-ignored)
@@ -29,7 +29,9 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 - `docs/decisions/` - Architectural Decision Records (ADRs)
 - `scripts/` - Shell scripts for development tasks
 - `fixtures/` - Test data and keys for development
-- `packages/` - Rust workspace packages (linting tools)
+- `packages/` - Rust workspace packages (see `packages/README.md` for details)
+  - `dependency-installer/` - Dependency detection and installation for development setup
+  - `linting/` - Unified linting framework
 
 ## 📄 Key Configuration Files
 
@@ -103,6 +105,11 @@ These principles should guide all development decisions, code reviews, and featu
 
 ## 🧪 Build & Test
 
+- **Setup Dependencies**: `cargo run --bin dependency-installer install` (sets up required development tools)
+  - **Check dependencies**: `cargo run --bin dependency-installer check` (verifies installation)
+  - **List dependencies**: `cargo run --bin dependency-installer list` (shows all dependencies with status)
+  - Required tools: OpenTofu, Ansible, LXD, cargo-machete
+  - See [`packages/dependency-installer/README.md`](../packages/dependency-installer/README.md) for details
 - **Lint**: `cargo run --bin linter all` (comprehensive - tests stable & nightly toolchains)
   - Individual linters: `cargo run --bin linter {markdown|yaml|toml|cspell|clippy|rustfmt|shellcheck}`
   - Alternative: `./scripts/lint.sh` (wrapper that calls the Rust binary)
@@ -110,8 +117,10 @@ These principles should guide all development decisions, code reviews, and featu
 - **Build**: `cargo build`
 - **Test**: `cargo test`
 - **Unit Tests**: When writing unit tests, follow conventions described in [`docs/contributing/testing/`](../docs/contributing/testing/)
-- **E2E Tests**: `cargo run --bin e2e-tests-full` (comprehensive - all tests) or individual tests:
+- **E2E Tests**:
+  - `cargo run --bin e2e-tests-full` - Comprehensive tests (⚠️ **LOCAL ONLY** - cannot run on GitHub Actions due to network connectivity issues)
   - `cargo run --bin e2e-provision-tests` - Infrastructure provisioning tests
   - `cargo run --bin e2e-config-tests` - Configuration validation tests
+  - See [`docs/e2e-testing.md`](../docs/e2e-testing.md) for detailed information about CI limitations
 
 Follow the project conventions and ensure all checks pass.

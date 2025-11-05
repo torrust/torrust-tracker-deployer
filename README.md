@@ -64,10 +64,32 @@ This repository uses LXD virtual machines for local virtualization and developme
 
 This is a Rust application that automates deployment infrastructure using OpenTofu and Ansible.
 
-Install the required tools:
+#### Automated Setup (Recommended)
+
+The project provides a dependency installer tool that automatically detects and installs required dependencies:
 
 ```bash
-# Check installations
+# Install all required dependencies
+cargo run --bin dependency-installer install
+
+# Check which dependencies are installed
+cargo run --bin dependency-installer check
+
+# List all dependencies with status
+cargo run --bin dependency-installer list
+```
+
+The installer supports: **OpenTofu**, **Ansible**, **LXD**, and **cargo-machete**.
+
+For detailed information, see **[📖 Dependency Installer →](packages/dependency-installer/README.md)**.
+
+#### Manual Setup
+
+If you prefer manual installation or need to troubleshoot:
+
+**Check installations:**
+
+```bash
 lxd version && tofu version && ansible --version && cargo --version
 ```
 
@@ -76,7 +98,7 @@ lxd version && tofu version && ansible --version && cargo --version
 - **[📖 OpenTofu Setup Guide →](docs/tech-stack/opentofu.md)**
 - **[📖 Ansible Setup Guide →](docs/tech-stack/ansible.md)**
 
-**Quick install:**
+**Quick manual install:**
 
 ```bash
 # Install Rust (if not already installed)

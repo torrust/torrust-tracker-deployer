@@ -14,15 +14,20 @@ name = "dependency-installer"
 path = "src/bin/dependency-installer.rs"
 
 [dependencies]
+async-trait = "0.1"
 clap = { version = "4.0", features = [ "derive" ] }
 thiserror = "1.0"
+tokio = { version = "1.0", features = [ "full" ] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 
 [dev-dependencies]
 testcontainers = "0.25"
-tokio = { version = "1.0", features = [ "full" ] }
 
 [[test]]
-name = "docker_check_command"
-path = "tests/docker_check_command.rs"
+name = "check_command_docker_integration"
+path = "tests/check_command_docker_integration.rs"
+
+[[test]]
+name = "install_command_docker_integration"
+path = "tests/install_command_docker_integration.rs"
