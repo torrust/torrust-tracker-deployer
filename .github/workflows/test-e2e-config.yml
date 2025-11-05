@@ -41,8 +41,10 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install Ansible
-        run: ./scripts/setup/install-ansible.sh
+      - name: Install dependencies
+        run: |
+          cargo build -p torrust-dependency-installer --bin dependency-installer
+          cargo run -p torrust-dependency-installer --bin dependency-installer -- install
 
       - name: Setup Docker
         uses: docker/setup-buildx-action@v3
