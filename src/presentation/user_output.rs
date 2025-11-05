@@ -3262,10 +3262,8 @@ mod tests {
 
         #[test]
         fn it_should_create_simple_steps_directly() {
-            let message = StepsMessage::new(
-                "Title",
-                vec!["Step 1".to_string(), "Step 2".to_string()],
-            );
+            let message =
+                StepsMessage::new("Title", vec!["Step 1".to_string(), "Step 2".to_string()]);
 
             assert_eq!(message.title, "Title");
             assert_eq!(message.items, vec!["Step 1", "Step 2"]);
@@ -3300,10 +3298,8 @@ mod tests {
 
         #[test]
         fn it_should_accept_string_types_in_constructor() {
-            let message = StepsMessage::new(
-                "Title",
-                vec!["Step 1".to_string(), String::from("Step 2")],
-            );
+            let message =
+                StepsMessage::new("Title", vec!["Step 1".to_string(), String::from("Step 2")]);
 
             assert_eq!(message.items.len(), 2);
         }
@@ -3396,10 +3392,8 @@ mod tests {
 
         #[test]
         fn it_should_accept_string_types_in_info_block_constructor() {
-            let message = InfoBlockMessage::new(
-                "Title",
-                vec!["Line 1".to_string(), String::from("Line 2")],
-            );
+            let message =
+                InfoBlockMessage::new("Title", vec!["Line 1".to_string(), String::from("Line 2")]);
 
             assert_eq!(message.lines.len(), 2);
         }
@@ -3448,9 +3442,7 @@ mod tests {
         fn it_should_respect_verbosity_for_info_block_messages() {
             let mut test_output = TestUserOutput::new(VerbosityLevel::Quiet);
 
-            let message = InfoBlockMessage::builder("Info")
-                .add_line("Line 1")
-                .build();
+            let message = InfoBlockMessage::builder("Info").add_line("Line 1").build();
 
             test_output.output.write(&message);
 
@@ -3462,9 +3454,7 @@ mod tests {
         fn it_should_show_info_block_at_normal_level() {
             let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
 
-            let message = InfoBlockMessage::builder("Info")
-                .add_line("Line 1")
-                .build();
+            let message = InfoBlockMessage::builder("Info").add_line("Line 1").build();
 
             test_output.output.write(&message);
 
@@ -3497,12 +3487,15 @@ mod tests {
         fn it_should_maintain_backward_compatibility_for_info_blocks() {
             // Old way: UserOutput::info_block helper
             let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-            test_output.output.info_block("Title", &["Line 1", "Line 2"]);
+            test_output
+                .output
+                .info_block("Title", &["Line 1", "Line 2"]);
             let old_output = test_output.stderr();
 
             // New way: Direct message construction
             let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-            let message = InfoBlockMessage::new("Title", vec!["Line 1".to_string(), "Line 2".to_string()]);
+            let message =
+                InfoBlockMessage::new("Title", vec!["Line 1".to_string(), "Line 2".to_string()]);
             test_output.output.write(&message);
             let new_output = test_output.stderr();
 
