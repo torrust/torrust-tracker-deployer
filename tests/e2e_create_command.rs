@@ -22,10 +22,41 @@
 
 mod support;
 
+use anyhow::Result;
 use support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
+use torrust_dependency_installer::{verify_dependencies, Dependency};
+
+/// Verify that all required dependencies are installed for create command E2E tests.
+///
+/// **Current State**: No system dependencies required.
+///
+/// These black-box tests run the production binary as an external process and verify
+/// the create command workflow. Currently, they only test the command interface and
+/// environment persistence, without requiring infrastructure tools.
+///
+/// # Future Dependencies
+///
+/// If these tests evolve to verify actual infrastructure provisioning or configuration,
+/// add required dependencies here:
+/// ```ignore
+/// let required_deps = &[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if any required dependencies are missing or cannot be detected.
+fn verify_required_dependencies() -> Result<()> {
+    // Currently no system dependencies required - empty array
+    let required_deps: &[Dependency] = &[];
+    verify_dependencies(required_deps)?;
+    Ok(())
+}
 
 #[test]
 fn it_should_create_environment_from_config_file_black_box() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
     // Arrange: Create temporary workspace
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
@@ -59,6 +90,9 @@ fn it_should_create_environment_from_config_file_black_box() {
 
 #[test]
 fn it_should_fail_gracefully_with_invalid_config() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     // Create invalid configuration (missing required fields)
@@ -89,6 +123,9 @@ fn it_should_fail_gracefully_with_invalid_config() {
 
 #[test]
 fn it_should_fail_when_config_file_not_found() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     // Run command with non-existent config file
@@ -113,6 +150,9 @@ fn it_should_fail_when_config_file_not_found() {
 
 #[test]
 fn it_should_fail_when_environment_already_exists() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     let config = create_test_environment_config("duplicate-env");
