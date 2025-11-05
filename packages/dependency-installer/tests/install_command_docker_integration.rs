@@ -191,6 +191,9 @@ async fn it_should_install_ansible_successfully() {
 }
 
 /// Test that install command returns proper exit code on failure
+///
+/// Note: This test uses `exec_with_exit_code_silent` to suppress the expected
+/// error output, keeping test output clean while still validating the exit code.
 #[tokio::test]
 async fn it_should_return_error_exit_code_when_installation_fails() {
     let binary_path = get_binary_path();
@@ -198,7 +201,8 @@ async fn it_should_return_error_exit_code_when_installation_fails() {
     let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
     // Try to install an invalid/unknown dependency (should fail)
-    let exit_code = container.exec_with_exit_code(&[
+    // Use silent execution to avoid error noise in test output
+    let exit_code = container.exec_with_exit_code_silent(&[
         "dependency-installer",
         "install",
         "--dependency",
