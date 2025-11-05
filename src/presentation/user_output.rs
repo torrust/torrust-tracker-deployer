@@ -1225,7 +1225,7 @@ impl VerbosityFilter {
 }
 
 // ============================================================================
-// PRIVATE - Output Sink Implementations
+// Output Sink Implementations
 // ============================================================================
 
 /// Standard sink writing to stdout/stderr
@@ -1248,14 +1248,17 @@ impl VerbosityFilter {
 ///     Box::new(std::io::stderr())
 /// );
 /// ```
-struct StandardSink {
+pub struct StandardSink {
     stdout: StdoutWriter,
     stderr: StderrWriter,
 }
 
 impl StandardSink {
     /// Create a new standard sink with the given writers
-    fn new(stdout: Box<dyn Write + Send + Sync>, stderr: Box<dyn Write + Send + Sync>) -> Self {
+    ///
+    /// This is useful for testing or when you need custom writers.
+    #[must_use]
+    pub fn new(stdout: Box<dyn Write + Send + Sync>, stderr: Box<dyn Write + Send + Sync>) -> Self {
         Self {
             stdout: StdoutWriter::new(stdout),
             stderr: StderrWriter::new(stderr),
@@ -1266,7 +1269,8 @@ impl StandardSink {
     ///
     /// This is the default console sink that writes to the standard
     /// output and error streams.
-    fn default_console() -> Self {
+    #[must_use]
+    pub fn default_console() -> Self {
         Self::new(Box::new(std::io::stdout()), Box::new(std::io::stderr()))
     }
 }
