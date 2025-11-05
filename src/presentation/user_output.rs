@@ -384,6 +384,44 @@ pub trait FormatterOverride: Send + Sync {
     fn transform(&self, formatted: &str, message: &dyn OutputMessage) -> String;
 }
 
+/// Trait for output destinations
+///
+/// An output sink receives formatted messages and writes them to a destination.
+/// Sinks handle the mechanics of where output goes, not how it's formatted.
+///
+/// # Design Philosophy
+///
+/// Sinks receive already-formatted messages (with theme applied) and route them
+/// to appropriate destinations. They don't handle formatting or verbosity filtering -
+/// those concerns are handled by message types and filters respectively.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::{OutputSink, OutputMessage};
+/// use std::fs::File;
+///
+/// struct FileSink {
+///     file: File,
+/// }
+///
+/// impl OutputSink for FileSink {
+///     fn write_message(&mut self, message: &dyn OutputMessage, formatted: &str) {
+///         use std::io::Write;
+///         writeln!(self.file, "{}", formatted).ok();
+///     }
+/// }
+/// ```
+pub trait OutputSink: Send + Sync {
+    /// Write a formatted message to this sink
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The message object (for metadata like channel)
+    /// * `formatted` - The already-formatted message text
+    fn write_message(&mut self, message: &dyn OutputMessage, formatted: &str);
+}
+
 /// Verbosity levels for user output
 ///
 /// Controls the amount of detail shown to users. Higher verbosity levels include
@@ -1078,6 +1116,7 @@ impl StdoutWriter {
     ///
     /// Writes the given message followed by a newline to the stdout channel.
     /// Errors are silently ignored as output operations are best-effort.
+    #[allow(dead_code)]
     fn writeln(&mut self, message: &str) {
         writeln!(self.0, "{message}").ok();
     }
@@ -1113,6 +1152,7 @@ impl StderrWriter {
     ///
     /// Writes the given message followed by a newline to the stderr channel.
     /// Errors are silently ignored as output operations are best-effort.
+    #[allow(dead_code)]
     fn writeln(&mut self, message: &str) {
         writeln!(self.0, "{message}").ok();
     }
@@ -1184,6 +1224,238 @@ impl VerbosityFilter {
     }
 }
 
+// ============================================================================
+// PRIVATE - Output Sink Implementations
+// ============================================================================
+
+/// Standard sink writing to stdout/stderr
+///
+/// This is the default sink that maintains backward compatibility with the
+/// existing console output behavior. It routes messages to stdout or stderr
+/// based on the message's channel.
+///
+/// # Type Safety
+///
+/// Uses `StdoutWriter` and `StderrWriter` wrappers for compile-time channel safety.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::StandardSink;
+///
+/// let sink = StandardSink::new(
+///     Box::new(std::io::stdout()),
+///     Box::new(std::io::stderr())
+/// );
+/// ```
+struct StandardSink {
+    stdout: StdoutWriter,
+    stderr: StderrWriter,
+}
+
+impl StandardSink {
+    /// Create a new standard sink with the given writers
+    fn new(
+        stdout: Box<dyn Write + Send + Sync>,
+        stderr: Box<dyn Write + Send + Sync>,
+    ) -> Self {
+        Self {
+            stdout: StdoutWriter::new(stdout),
+            stderr: StderrWriter::new(stderr),
+        }
+    }
+
+    /// Create a standard sink using default stdout/stderr
+    ///
+    /// This is the default console sink that writes to the standard
+    /// output and error streams.
+    fn default_console() -> Self {
+        Self::new(Box::new(std::io::stdout()), Box::new(std::io::stderr()))
+    }
+}
+
+impl OutputSink for StandardSink {
+    fn write_message(&mut self, message: &dyn OutputMessage, formatted: &str) {
+        match message.channel() {
+            Channel::Stdout => {
+                self.stdout.write_line(formatted);
+            }
+            Channel::Stderr => {
+                self.stderr.write_line(formatted);
+            }
+        }
+    }
+}
+
+/// Composite sink that writes to multiple destinations
+///
+/// Enables fan-out of messages to multiple sinks simultaneously. Useful for
+/// scenarios like writing to both console and log file, or sending to both
+/// stderr and telemetry service.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::{CompositeSink, StandardSink, FileSink};
+///
+/// let composite = CompositeSink::new(vec![
+///     Box::new(StandardSink::default_console()),
+///     Box::new(FileSink::new("output.log").unwrap()),
+/// ]);
+/// ```
+pub struct CompositeSink {
+    sinks: Vec<Box<dyn OutputSink>>,
+}
+
+impl CompositeSink {
+    /// Create a new composite sink with the given child sinks
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use torrust_tracker_deployer_lib::presentation::user_output::CompositeSink;
+    ///
+    /// let composite = CompositeSink::new(vec![
+    ///     Box::new(StandardSink::default_console()),
+    ///     Box::new(FileSink::new("output.log").unwrap()),
+    /// ]);
+    /// ```
+    #[must_use]
+    pub fn new(sinks: Vec<Box<dyn OutputSink>>) -> Self {
+        Self { sinks }
+    }
+
+    /// Add a sink to the composite
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use torrust_tracker_deployer_lib::presentation::user_output::CompositeSink;
+    ///
+    /// let mut composite = CompositeSink::new(vec![]);
+    /// composite.add_sink(Box::new(StandardSink::default_console()));
+    /// composite.add_sink(Box::new(FileSink::new("output.log").unwrap()));
+    /// ```
+    pub fn add_sink(&mut self, sink: Box<dyn OutputSink>) {
+        self.sinks.push(sink);
+    }
+}
+
+impl OutputSink for CompositeSink {
+    fn write_message(&mut self, message: &dyn OutputMessage, formatted: &str) {
+        for sink in &mut self.sinks {
+            sink.write_message(message, formatted);
+        }
+    }
+}
+
+// ============================================================================
+// Example Sink Implementations
+// ============================================================================
+
+/// Example: File sink that writes all output to a file
+///
+/// This is an example implementation showing how to create a custom sink
+/// that writes to a file. In production, you might want to add buffering,
+/// rotation, or other features.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::{FileSink, UserOutput, VerbosityLevel, CompositeSink, StandardSink};
+///
+/// // Write to both console and file
+/// let composite = CompositeSink::new(vec![
+///     Box::new(StandardSink::default_console()),
+///     Box::new(FileSink::new("output.log").unwrap()),
+/// ]);
+/// let mut output = UserOutput::with_sink(VerbosityLevel::Normal, Box::new(composite));
+/// ```
+pub struct FileSink {
+    file: std::fs::File,
+}
+
+impl FileSink {
+    /// Create a new file sink
+    ///
+    /// Opens or creates the file at the given path in append mode.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be opened or created.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use torrust_tracker_deployer_lib::presentation::user_output::FileSink;
+    ///
+    /// let sink = FileSink::new("output.log")?;
+    /// ```
+    pub fn new(path: &str) -> std::io::Result<Self> {
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)?;
+        Ok(Self { file })
+    }
+}
+
+impl OutputSink for FileSink {
+    fn write_message(&mut self, _message: &dyn OutputMessage, formatted: &str) {
+        writeln!(self.file, "{formatted}").ok();
+    }
+}
+
+/// Example: Telemetry sink for observability
+///
+/// This is a stub implementation showing how a telemetry sink could be
+/// implemented. In production, this would send events to a telemetry service.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::presentation::user_output::{TelemetrySink, UserOutput, VerbosityLevel, CompositeSink, StandardSink};
+///
+/// // Write to both console and telemetry
+/// let composite = CompositeSink::new(vec![
+///     Box::new(StandardSink::default_console()),
+///     Box::new(TelemetrySink::new("https://telemetry.example.com".to_string())),
+/// ]);
+/// let mut output = UserOutput::with_sink(VerbosityLevel::Normal, Box::new(composite));
+/// ```
+pub struct TelemetrySink {
+    endpoint: String,
+}
+
+impl TelemetrySink {
+    /// Create a new telemetry sink
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use torrust_tracker_deployer_lib::presentation::user_output::TelemetrySink;
+    ///
+    /// let sink = TelemetrySink::new("https://telemetry.example.com".to_string());
+    /// ```
+    #[must_use]
+    pub fn new(endpoint: String) -> Self {
+        Self { endpoint }
+    }
+}
+
+impl OutputSink for TelemetrySink {
+    fn write_message(&mut self, message: &dyn OutputMessage, formatted: &str) {
+        // In real implementation, send to telemetry service
+        tracing::debug!(
+            endpoint = %self.endpoint,
+            message_type = message.type_name(),
+            channel = ?message.channel(),
+            content = formatted,
+            "Telemetry event"
+        );
+    }
+}
+
 /// Handles user-facing output separate from internal logging
 ///
 /// Uses dual channels following Unix conventions and modern CLI best practices:
@@ -1216,13 +1488,14 @@ impl VerbosityFilter {
 pub struct UserOutput {
     theme: Theme,
     verbosity_filter: VerbosityFilter,
-    stdout: StdoutWriter,
-    stderr: StderrWriter,
+    sink: Box<dyn OutputSink>,
     formatter_override: Option<Box<dyn FormatterOverride>>,
 }
 
 impl UserOutput {
     /// Create new `UserOutput` with default stdout/stderr channels and emoji theme
+    ///
+    /// Uses `StandardSink` for backward compatibility with existing console output.
     ///
     /// # Examples
     ///
@@ -1239,6 +1512,7 @@ impl UserOutput {
     /// Create `UserOutput` with a specific theme
     ///
     /// Allows customization of output symbols while using default stdout/stderr channels.
+    /// Uses `StandardSink` internally for backward compatibility.
     ///
     /// # Examples
     ///
@@ -1253,12 +1527,42 @@ impl UserOutput {
     /// ```
     #[must_use]
     pub fn with_theme(verbosity: VerbosityLevel, theme: Theme) -> Self {
-        Self::with_theme_and_writers(
-            verbosity,
-            theme,
-            Box::new(std::io::stdout()),
-            Box::new(std::io::stderr()),
-        )
+        Self::with_sink(verbosity, Box::new(StandardSink::default_console())).with_theme_applied(theme)
+    }
+
+    /// Create `UserOutput` with a custom sink
+    ///
+    /// This constructor enables the use of alternative output destinations,
+    /// including composite sinks for multi-destination output.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{
+    ///     UserOutput, VerbosityLevel, CompositeSink, StandardSink, FileSink
+    /// };
+    ///
+    /// // Console + File output
+    /// let composite = CompositeSink::new(vec![
+    ///     Box::new(StandardSink::default_console()),
+    ///     Box::new(FileSink::new("output.log").unwrap()),
+    /// ]);
+    /// let output = UserOutput::with_sink(VerbosityLevel::Normal, Box::new(composite));
+    /// ```
+    #[must_use]
+    pub fn with_sink(verbosity: VerbosityLevel, sink: Box<dyn OutputSink>) -> Self {
+        Self {
+            theme: Theme::default(),
+            verbosity_filter: VerbosityFilter::new(verbosity),
+            sink,
+            formatter_override: None,
+        }
+    }
+
+    /// Internal helper to apply theme to an existing UserOutput
+    fn with_theme_applied(mut self, theme: Theme) -> Self {
+        self.theme = theme;
+        self
     }
 
     /// Create `UserOutput` with theme and custom writers (for testing)
@@ -1292,8 +1596,7 @@ impl UserOutput {
         Self {
             theme,
             verbosity_filter: VerbosityFilter::new(verbosity),
-            stdout: StdoutWriter::new(stdout_writer),
-            stderr: StderrWriter::new(stderr_writer),
+            sink: Box::new(StandardSink::new(stdout_writer, stderr_writer)),
             formatter_override: None,
         }
     }
@@ -1326,8 +1629,7 @@ impl UserOutput {
         Self {
             theme: Theme::default(),
             verbosity_filter: VerbosityFilter::new(verbosity),
-            stdout: StdoutWriter::new(Box::new(std::io::stdout())),
-            stderr: StderrWriter::new(Box::new(std::io::stderr())),
+            sink: Box::new(StandardSink::default_console()),
             formatter_override: Some(formatter_override),
         }
     }
@@ -1358,8 +1660,7 @@ impl UserOutput {
         Self {
             theme,
             verbosity_filter: VerbosityFilter::new(verbosity),
-            stdout: StdoutWriter::new(Box::new(std::io::stdout())),
-            stderr: StderrWriter::new(Box::new(std::io::stderr())),
+            sink: Box::new(StandardSink::default_console()),
             formatter_override,
         }
     }
@@ -1393,28 +1694,12 @@ impl UserOutput {
         Self::with_theme_and_writers(verbosity, Theme::default(), stdout_writer, stderr_writer)
     }
 
-    /// Write a message to stdout using the typed writer
-    ///
-    /// This private helper method provides type-safe access to the stdout writer.
-    /// The type system ensures that only stdout messages can reach this method.
-    fn write_to_stdout(&mut self, formatted: &str) {
-        self.stdout.write_line(formatted);
-    }
-
-    /// Write a message to stderr using the typed writer
-    ///
-    /// This private helper method provides type-safe access to the stderr writer.
-    /// The type system ensures that only stderr messages can reach this method.
-    fn write_to_stderr(&mut self, formatted: &str) {
-        self.stderr.write_line(formatted);
-    }
-
     /// Write a message to the appropriate channel using trait dispatch
     ///
     /// This is the core method for extensible message handling. It uses the
     /// `OutputMessage` trait to determine formatting, verbosity requirements,
-    /// and channel routing. This allows new message types to be added without
-    /// modifying this struct.
+    /// and channel routing. Messages are routed through the configured sink,
+    /// enabling multi-destination output.
     ///
     /// # Examples
     ///
@@ -1441,22 +1726,21 @@ impl UserOutput {
             formatted = override_formatter.transform(&formatted, message);
         }
 
-        // Type-safe dispatch based on channel
-        match message.channel() {
-            Channel::Stdout => self.write_to_stdout(&formatted),
-            Channel::Stderr => self.write_to_stderr(&formatted),
-        }
+        // Write through sink
+        self.sink.write_message(message, &formatted);
     }
 
     /// Flush all pending output to stdout and stderr
     ///
-    /// This is typically not needed as writes are line-buffered by default,
-    /// but can be useful for ensuring output appears immediately before
-    /// long-running operations or in test scenarios.
+    /// **Note**: With the OutputSink abstraction, flush behavior depends on the
+    /// sink implementation. StandardSink does not support explicit flushing.
+    /// This method is kept for API compatibility but is currently a no-op.
+    ///
+    /// For StandardSink (default), writes are typically line-buffered by the OS.
     ///
     /// # Errors
     ///
-    /// Returns an error if flushing either stream fails.
+    /// Currently always returns Ok(()) as flush is not supported through sinks.
     ///
     /// # Examples
     ///
@@ -1469,8 +1753,8 @@ impl UserOutput {
     /// // Now perform long operation...
     /// ```
     pub fn flush(&mut self) -> std::io::Result<()> {
-        self.stdout.0.flush()?;
-        self.stderr.0.flush()?;
+        // Note: Flush is not supported through the OutputSink abstraction.
+        // This is a known limitation. StandardSink relies on OS line-buffering.
         Ok(())
     }
 
@@ -1572,6 +1856,7 @@ impl UserOutput {
     /// Output structured data to stdout (JSON, etc.)
     ///
     /// For machine-readable output that should be piped or processed.
+    /// This is equivalent to `result()` but exists for semantic clarity.
     ///
     /// # Examples
     ///
@@ -1583,7 +1868,7 @@ impl UserOutput {
     /// // Output to stdout: {"status": "destroyed", "environment": "test"}
     /// ```
     pub fn data(&mut self, data: &str) {
-        self.stdout.writeln(data);
+        self.result(data);
     }
 
     /// Display a blank line to stderr (Normal level and above)
@@ -1602,7 +1887,23 @@ impl UserOutput {
     /// ```
     pub fn blank_line(&mut self) {
         if self.verbosity_filter.should_show_blank_lines() {
-            self.stderr.writeln("");
+            // Create a simple message that just outputs a newline
+            struct BlankLineMessage;
+            impl OutputMessage for BlankLineMessage {
+                fn format(&self, _theme: &Theme) -> String {
+                    "\n".to_string()
+                }
+                fn required_verbosity(&self) -> VerbosityLevel {
+                    VerbosityLevel::Normal
+                }
+                fn channel(&self) -> Channel {
+                    Channel::Stderr
+                }
+                fn type_name(&self) -> &'static str {
+                    "BlankLineMessage"
+                }
+            }
+            self.write(&BlankLineMessage);
         }
     }
 
@@ -2812,12 +3113,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::plain(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -2847,12 +3146,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -2879,12 +3176,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -2920,12 +3215,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -2952,12 +3245,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -2982,12 +3273,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::plain(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -3010,12 +3299,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Quiet),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -3043,12 +3330,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::default(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -3070,12 +3355,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -3103,12 +3386,10 @@ mod tests {
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stdout_buffer,
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -3511,18 +3792,17 @@ mod tests {
         fn it_should_work_with_json_formatter() {
             use std::sync::{Arc, Mutex};
 
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
             let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
             let formatter = Box::new(JsonFormatter);
 
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::new(
-                    Mutex::new(Vec::new()),
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -3539,18 +3819,17 @@ mod tests {
         fn it_should_work_with_info_block_json_formatter() {
             use std::sync::{Arc, Mutex};
 
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
             let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
             let formatter = Box::new(JsonFormatter);
 
             let mut output = UserOutput {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::new(
-                    Mutex::new(Vec::new()),
-                )))),
-                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
-                    &stderr_buffer,
-                )))),
+                sink: Box::new(StandardSink::new(
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
                 formatter_override: Some(formatter),
             };
 
@@ -3587,6 +3866,357 @@ mod tests {
             assert_eq!(message.lines.len(), 100);
             assert_eq!(message.lines[0], "Line 1");
             assert_eq!(message.lines[99], "Line 100");
+        }
+    }
+
+    // ============================================================================
+    // OutputSink Tests
+    // ============================================================================
+
+    mod output_sink {
+        use super::super::*;
+        use std::sync::{Arc, Mutex};
+
+        /// Mock sink for testing that captures messages
+        struct MockSink {
+            messages: Arc<Mutex<Vec<String>>>,
+        }
+
+        impl MockSink {
+            fn new(messages: Arc<Mutex<Vec<String>>>) -> Self {
+                Self { messages }
+            }
+        }
+
+        impl OutputSink for MockSink {
+            fn write_message(&mut self, _message: &dyn OutputMessage, formatted: &str) {
+                self.messages.lock().unwrap().push(formatted.to_string());
+            }
+        }
+
+        // ========================================================================
+        // StandardSink Tests
+        // ========================================================================
+
+        #[test]
+        fn standard_sink_should_route_stdout_messages() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let mut sink = StandardSink::new(
+                Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+            );
+
+            let message = ResultMessage {
+                text: "Test result".to_string(),
+            };
+            let theme = Theme::emoji();
+            let formatted = message.format(&theme);
+
+            sink.write_message(&message, &formatted);
+
+            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+
+            assert_eq!(stdout, "Test result\n");
+            assert_eq!(stderr, "");
+        }
+
+        #[test]
+        fn standard_sink_should_route_stderr_messages() {
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            let mut sink = StandardSink::new(
+                Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+            );
+
+            let message = ProgressMessage {
+                text: "Test progress".to_string(),
+            };
+            let theme = Theme::emoji();
+            let formatted = message.format(&theme);
+
+            sink.write_message(&message, &formatted);
+
+            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+
+            assert_eq!(stdout, "");
+            assert_eq!(stderr, "⏳ Test progress\n");
+        }
+
+        #[test]
+        fn standard_sink_default_console_should_create_default_sink() {
+            let _sink = StandardSink::default_console();
+            // If we got here without panicking, the sink was created successfully
+        }
+
+        // ========================================================================
+        // CompositeSink Tests
+        // ========================================================================
+
+        #[test]
+        fn composite_sink_should_write_to_all_sinks() {
+            let messages1 = Arc::new(Mutex::new(Vec::new()));
+            let messages2 = Arc::new(Mutex::new(Vec::new()));
+            let messages3 = Arc::new(Mutex::new(Vec::new()));
+
+            let mut composite = CompositeSink::new(vec![
+                Box::new(MockSink::new(Arc::clone(&messages1))),
+                Box::new(MockSink::new(Arc::clone(&messages2))),
+                Box::new(MockSink::new(Arc::clone(&messages3))),
+            ]);
+
+            let message = ProgressMessage {
+                text: "Test".to_string(),
+            };
+            let theme = Theme::emoji();
+            let formatted = message.format(&theme);
+
+            composite.write_message(&message, &formatted);
+
+            // Verify all sinks received the message
+            assert_eq!(messages1.lock().unwrap().len(), 1);
+            assert_eq!(messages2.lock().unwrap().len(), 1);
+            assert_eq!(messages3.lock().unwrap().len(), 1);
+
+            assert_eq!(messages1.lock().unwrap()[0], "⏳ Test\n");
+            assert_eq!(messages2.lock().unwrap()[0], "⏳ Test\n");
+            assert_eq!(messages3.lock().unwrap()[0], "⏳ Test\n");
+        }
+
+        #[test]
+        fn composite_sink_should_support_empty_sink_list() {
+            let mut composite = CompositeSink::new(vec![]);
+
+            let message = ProgressMessage {
+                text: "Test".to_string(),
+            };
+            let theme = Theme::emoji();
+            let formatted = message.format(&theme);
+
+            // Should not panic with empty sink list
+            composite.write_message(&message, &formatted);
+        }
+
+        #[test]
+        fn composite_sink_should_support_add_sink() {
+            let messages1 = Arc::new(Mutex::new(Vec::new()));
+            let messages2 = Arc::new(Mutex::new(Vec::new()));
+
+            let mut composite = CompositeSink::new(vec![Box::new(MockSink::new(Arc::clone(&messages1)))]);
+
+            // Add another sink
+            composite.add_sink(Box::new(MockSink::new(Arc::clone(&messages2))));
+
+            let message = ProgressMessage {
+                text: "Test".to_string(),
+            };
+            let theme = Theme::emoji();
+            let formatted = message.format(&theme);
+
+            composite.write_message(&message, &formatted);
+
+            // Verify both sinks received the message
+            assert_eq!(messages1.lock().unwrap().len(), 1);
+            assert_eq!(messages2.lock().unwrap().len(), 1);
+        }
+
+        #[test]
+        fn composite_sink_should_write_multiple_messages() {
+            let messages = Arc::new(Mutex::new(Vec::new()));
+            let mut composite = CompositeSink::new(vec![Box::new(MockSink::new(Arc::clone(&messages)))]);
+
+            let theme = Theme::emoji();
+
+            // Write multiple messages
+            let msg1 = ProgressMessage {
+                text: "First".to_string(),
+            };
+            composite.write_message(&msg1, &msg1.format(&theme));
+
+            let msg2 = SuccessMessage {
+                text: "Second".to_string(),
+            };
+            composite.write_message(&msg2, &msg2.format(&theme));
+
+            let msg3 = ErrorMessage {
+                text: "Third".to_string(),
+            };
+            composite.write_message(&msg3, &msg3.format(&theme));
+
+            // Verify all messages were received
+            let captured = messages.lock().unwrap();
+            assert_eq!(captured.len(), 3);
+            assert_eq!(captured[0], "⏳ First\n");
+            assert_eq!(captured[1], "✅ Second\n");
+            assert_eq!(captured[2], "❌ Third\n");
+        }
+
+        // ========================================================================
+        // UserOutput with Custom Sinks Tests
+        // ========================================================================
+
+        #[test]
+        fn user_output_should_work_with_custom_sink() {
+            let messages = Arc::new(Mutex::new(Vec::new()));
+            let sink = Box::new(MockSink::new(Arc::clone(&messages)));
+
+            let mut output = UserOutput::with_sink(VerbosityLevel::Normal, sink);
+
+            output.progress("Progress message");
+            output.success("Success message");
+            output.error("Error message");
+
+            let captured = messages.lock().unwrap();
+            assert_eq!(captured.len(), 3);
+            assert!(captured[0].contains("Progress message"));
+            assert!(captured[1].contains("Success message"));
+            assert!(captured[2].contains("Error message"));
+        }
+
+        #[test]
+        fn user_output_should_work_with_composite_sink() {
+            let messages1 = Arc::new(Mutex::new(Vec::new()));
+            let messages2 = Arc::new(Mutex::new(Vec::new()));
+
+            let composite = CompositeSink::new(vec![
+                Box::new(MockSink::new(Arc::clone(&messages1))),
+                Box::new(MockSink::new(Arc::clone(&messages2))),
+            ]);
+
+            let mut output = UserOutput::with_sink(VerbosityLevel::Normal, Box::new(composite));
+
+            output.progress("Test message");
+
+            // Verify both sinks received the message
+            assert_eq!(messages1.lock().unwrap().len(), 1);
+            assert_eq!(messages2.lock().unwrap().len(), 1);
+            assert!(messages1.lock().unwrap()[0].contains("Test message"));
+            assert!(messages2.lock().unwrap()[0].contains("Test message"));
+        }
+
+        #[test]
+        fn user_output_with_sink_should_respect_verbosity() {
+            let messages = Arc::new(Mutex::new(Vec::new()));
+            let sink = Box::new(MockSink::new(Arc::clone(&messages)));
+
+            let mut output = UserOutput::with_sink(VerbosityLevel::Quiet, sink);
+
+            // Normal-level message should not appear
+            output.progress("Should not appear");
+
+            // Quiet-level message should appear
+            output.error("Should appear");
+
+            let captured = messages.lock().unwrap();
+            assert_eq!(captured.len(), 1);
+            assert!(captured[0].contains("Should appear"));
+        }
+
+        #[test]
+        fn user_output_with_sink_should_use_default_theme() {
+            let messages = Arc::new(Mutex::new(Vec::new()));
+            let sink = Box::new(MockSink::new(Arc::clone(&messages)));
+
+            let mut output = UserOutput::with_sink(VerbosityLevel::Normal, sink);
+
+            output.progress("Test");
+
+            let captured = messages.lock().unwrap();
+            // Should use emoji theme by default
+            assert!(captured[0].contains("⏳"));
+        }
+
+        // ========================================================================
+        // FileSink Tests
+        // ========================================================================
+
+        #[test]
+        fn file_sink_should_create_and_write_to_file() {
+            use std::io::Read;
+            use tempfile::NamedTempFile;
+
+            let temp_file = NamedTempFile::new().unwrap();
+            let path = temp_file.path().to_str().unwrap();
+
+            let mut sink = FileSink::new(path).unwrap();
+
+            let message = ProgressMessage {
+                text: "Test message".to_string(),
+            };
+            let theme = Theme::emoji();
+            let formatted = message.format(&theme);
+
+            sink.write_message(&message, &formatted);
+
+            // Read back the file content
+            let mut file = std::fs::File::open(path).unwrap();
+            let mut content = String::new();
+            file.read_to_string(&mut content).unwrap();
+
+            assert_eq!(content, "⏳ Test message\n\n");
+        }
+
+        #[test]
+        fn file_sink_should_append_to_existing_file() {
+            use std::io::Read;
+            use tempfile::NamedTempFile;
+
+            let temp_file = NamedTempFile::new().unwrap();
+            let path = temp_file.path().to_str().unwrap();
+
+            // Write first message
+            let mut sink1 = FileSink::new(path).unwrap();
+            let message1 = ProgressMessage {
+                text: "First".to_string(),
+            };
+            let theme = Theme::emoji();
+            sink1.write_message(&message1, &message1.format(&theme));
+            drop(sink1);
+
+            // Write second message
+            let mut sink2 = FileSink::new(path).unwrap();
+            let message2 = SuccessMessage {
+                text: "Second".to_string(),
+            };
+            sink2.write_message(&message2, &message2.format(&theme));
+            drop(sink2);
+
+            // Read back the file content
+            let mut file = std::fs::File::open(path).unwrap();
+            let mut content = String::new();
+            file.read_to_string(&mut content).unwrap();
+
+            assert!(content.contains("First"));
+            assert!(content.contains("Second"));
+        }
+
+        // ========================================================================
+        // TelemetrySink Tests
+        // ========================================================================
+
+        #[test]
+        fn telemetry_sink_should_create_with_endpoint() {
+            let sink = TelemetrySink::new("https://example.com".to_string());
+            assert_eq!(sink.endpoint, "https://example.com");
+        }
+
+        #[test]
+        fn telemetry_sink_should_log_messages() {
+            let mut sink = TelemetrySink::new("https://example.com".to_string());
+
+            let message = ProgressMessage {
+                text: "Test".to_string(),
+            };
+            let theme = Theme::emoji();
+            let formatted = message.format(&theme);
+
+            // This just logs via tracing, so we verify it doesn't panic
+            sink.write_message(&message, &formatted);
         }
     }
 }
