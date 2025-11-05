@@ -38,25 +38,8 @@ impl DependencyInstaller for AnsibleInstaller {
     async fn install(&self) -> Result<(), InstallationError> {
         info!(dependency = "ansible", "Installing Ansible");
 
-        // Update package lists
-        debug!("Updating apt package lists");
-        let output = Command::new("sudo")
-            .args(["apt-get", "update"])
-            .output()
-            .map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::Ansible,
-                source: e,
-            })?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(InstallationError::InstallationFailed {
-                dependency: Dependency::Ansible,
-                message: format!("apt-get update failed: {stderr}"),
-            });
-        }
-
         // Install Ansible
+        // Note: Assumes apt package lists are already updated (system pre-condition)
         debug!("Installing Ansible via apt-get");
         let output = Command::new("sudo")
             .args(["apt-get", "install", "-y", "ansible"])

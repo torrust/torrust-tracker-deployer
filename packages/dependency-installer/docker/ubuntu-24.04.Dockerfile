@@ -20,13 +20,16 @@ LABEL purpose="dependency-installer-integration-testing"
 # - sudo: Required by some installers
 # - curl: Required by rustup installer
 # - build-essential: Required for compiling Rust projects (cargo-machete)
+#
+# IMPORTANT: We run apt-get update and keep the apt cache as a PRE-CONDITION.
+# All installers assume package lists are up-to-date and do NOT run apt-get update themselves.
+# This is a system-level pre-condition, not an installer responsibility.
 RUN apt-get update && \
     apt-get install -y \
     ca-certificates \
     sudo \
     curl \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    build-essential
 
 # Install Rust nightly via rustup
 # Using nightly-2025-10-15 to match local development environment

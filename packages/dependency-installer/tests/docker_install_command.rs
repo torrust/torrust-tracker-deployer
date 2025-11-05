@@ -126,7 +126,6 @@ async fn it_should_install_opentofu_successfully() {
 
 /// Test that `Ansible` can be installed
 #[tokio::test]
-#[ignore = "This test is expensive, run with --ignored flag"]
 async fn it_should_install_ansible_successfully() {
     let binary_path = get_binary_path();
 

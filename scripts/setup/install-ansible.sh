@@ -1,5 +1,8 @@
 #!/bin/bash
 # Install Ansible automation platform
+#
+# Pre-condition: apt package lists should be up-to-date
+# (run 'sudo apt-get update' before using this installer)
 
 set -euo pipefail
 
@@ -9,5 +12,4 @@ if command -v ansible &> /dev/null; then
     exit 0
 fi
 
-sudo apt-get update
 sudo apt-get install -y ansible
