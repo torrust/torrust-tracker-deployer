@@ -59,8 +59,8 @@ use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, Log
 use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::e2e::{
-    dependencies::verify_dependencies,
     context::{TestContext, TestContextType},
+    dependencies::verify_dependencies,
     tasks::virtual_machine::{
         cleanup_infrastructure::cleanup_test_infrastructure,
         preflight_cleanup::preflight_cleanup_previous_resources,

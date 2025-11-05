@@ -70,8 +70,8 @@ use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, Log
 use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::e2e::{
-    dependencies::verify_dependencies,
     context::{TestContext, TestContextType},
+    dependencies::verify_dependencies,
     tasks::{
         container::{
             cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},

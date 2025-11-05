@@ -1,7 +1,7 @@
 //! E2E Test Dependency Verification
 //!
 //! This module provides dependency verification functionality for E2E test binaries.
-//! It ensures required system dependencies (OpenTofu, Ansible, LXD) are installed
+//! It ensures required system dependencies (`OpenTofu`, `Ansible`, `LXD`) are installed
 //! before running tests, providing clear error messages and installation guidance.
 
 use thiserror::Error;
@@ -47,7 +47,7 @@ pub fn verify_dependencies(dependencies: &[Dependency]) -> Result<(), Dependency
 
     for &dep in dependencies {
         let detector = manager.get_detector(dep);
-        
+
         match detector.is_installed() {
             Ok(true) => {
                 info!(
