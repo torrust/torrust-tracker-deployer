@@ -18,9 +18,10 @@ This epic is broken down into sub-issues:
 1-4. #120 - Configure GitHub Copilot Agent Environment (2-3 hours)
 1-5. #121 - Install Git Pre-Commit Hooks for Copilot Agent (2-3 hours)
 1-6. #146 - Update Pre-Commit Script for GitHub Runner-Compatible E2E Tests (1-1.5 hours)
+1-7. #147 - Configure Copilot Agent Firewall for Dependency Installer (0.75-1.5 hours)
 ```
 
-**Total Estimated Time**: 22-33.5 hours split across multiple focused sub-issues
+**Total Estimated Time**: 22.75-35 hours split across multiple focused sub-issues
 
 ## Overview
 
