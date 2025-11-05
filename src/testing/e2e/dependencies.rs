@@ -152,3 +152,46 @@ fn format_dependency_list(dependencies: &[Dependency]) -> String {
         .collect::<Vec<_>>()
         .join(", ")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_verify_dependencies_with_installed_dependency() {
+        // Test with Ansible which should be installed
+        let deps = &[Dependency::Ansible];
+        let result = verify_dependencies(deps);
+
+        // This should succeed since Ansible is installed
+        assert!(result.is_ok(), "Ansible dependency check should pass");
+    }
+
+    #[test]
+    fn test_dependency_verification_error_actionable_message() {
+        let error = DependencyVerificationError::MissingDependencies {
+            dependencies: vec![Dependency::OpenTofu, Dependency::Lxd],
+        };
+
+        let message = error.actionable_message();
+
+        // Verify the message contains key information
+        assert!(message.contains("opentofu"));
+        assert!(message.contains("lxd"));
+        assert!(message.contains("cargo run --bin dependency-installer install"));
+        assert!(message.contains("README.md"));
+    }
+
+    #[test]
+    fn test_dependency_verification_error_display() {
+        let error = DependencyVerificationError::MissingDependencies {
+            dependencies: vec![Dependency::Ansible],
+        };
+
+        let error_string = error.to_string();
+
+        // Verify the error display format
+        assert!(error_string.contains("Missing required dependencies"));
+        assert!(error_string.contains("ansible"));
+    }
+}
