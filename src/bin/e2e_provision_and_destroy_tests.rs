@@ -50,7 +50,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::net::IpAddr;
 use std::time::Instant;
-use torrust_dependency_installer::Dependency;
+use torrust_dependency_installer::{verify_dependencies, Dependency};
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
@@ -60,7 +60,6 @@ use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::e2e::{
     context::{TestContext, TestContextType},
-    dependencies::verify_dependencies,
     tasks::virtual_machine::{
         cleanup_infrastructure::cleanup_test_infrastructure,
         preflight_cleanup::preflight_cleanup_previous_resources,

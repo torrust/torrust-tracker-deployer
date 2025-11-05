@@ -57,7 +57,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use torrust_dependency_installer::Dependency;
+use torrust_dependency_installer::{verify_dependencies, Dependency};
 use tracing::{error, info};
 
 // Import E2E testing infrastructure
@@ -66,17 +66,14 @@ use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, Log
 use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 use torrust_tracker_deployer_lib::shared::{Clock, SystemClock};
 use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deployer_lib::testing::e2e::{
-    dependencies::verify_dependencies,
-    tasks::{
-        preflight_cleanup::cleanup_previous_test_data,
-        run_configure_command::run_configure_command,
-        run_create_command::run_create_command,
-        run_test_command::run_test_command,
-        virtual_machine::{
-            preflight_cleanup::preflight_cleanup_previous_resources,
-            run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
-        },
+use torrust_tracker_deployer_lib::testing::e2e::tasks::{
+    preflight_cleanup::cleanup_previous_test_data,
+    run_configure_command::run_configure_command,
+    run_create_command::run_create_command,
+    run_test_command::run_test_command,
+    virtual_machine::{
+        preflight_cleanup::preflight_cleanup_previous_resources,
+        run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
     },
 };
 

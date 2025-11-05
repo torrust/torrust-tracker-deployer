@@ -1,12 +1,13 @@
-//! E2E Test Dependency Verification
+//! Dependency Verification
 //!
-//! This module provides dependency verification functionality for E2E test binaries.
-//! It ensures required system dependencies (`OpenTofu`, `Ansible`, `LXD`) are installed
-//! before running tests, providing clear error messages and installation guidance.
+//! This module provides dependency verification functionality for applications
+//! that need to ensure required system dependencies are installed before execution.
+//! It checks dependencies and provides clear error messages with installation guidance.
 
 use thiserror::Error;
-use torrust_dependency_installer::{Dependency, DependencyManager};
 use tracing::{error, info};
+
+use crate::{Dependency, DependencyManager, DetectionError};
 
 // ============================================================================
 // PUBLIC API - Main Functions
@@ -27,14 +28,13 @@ use tracing::{error, info};
 /// # Example
 ///
 /// ```no_run
-/// use torrust_dependency_installer::Dependency;
-/// use torrust_tracker_deployer_lib::testing::e2e::dependencies::verify_dependencies;
+/// use torrust_dependency_installer::{Dependency, verify_dependencies};
 ///
-/// // For full E2E tests that need all dependencies
+/// // Verify all dependencies for a full workflow
 /// let deps = &[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];
 /// verify_dependencies(deps)?;
 ///
-/// // For configuration-only tests that only need Ansible
+/// // Verify only specific dependencies
 /// let deps = &[Dependency::Ansible];
 /// verify_dependencies(deps)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -43,7 +43,7 @@ pub fn verify_dependencies(dependencies: &[Dependency]) -> Result<(), Dependency
     let manager = DependencyManager::new();
     let mut missing = Vec::new();
 
-    info!("Verifying E2E test dependencies");
+    info!("Verifying dependencies");
 
     for &dep in dependencies {
         let detector = manager.get_detector(dep);
@@ -109,7 +109,7 @@ pub enum DependencyVerificationError {
         dependency: Dependency,
         /// The underlying detection error
         #[source]
-        source: torrust_dependency_installer::DetectionError,
+        source: DetectionError,
     },
 }
 
@@ -159,12 +159,12 @@ mod tests {
 
     #[test]
     fn test_verify_dependencies_with_installed_dependency() {
-        // Test with Ansible which should be installed
-        let deps = &[Dependency::Ansible];
+        // Test with cargo-machete which should be installed in CI
+        let deps = &[Dependency::CargoMachete];
         let result = verify_dependencies(deps);
 
-        // This should succeed since Ansible is installed
-        assert!(result.is_ok(), "Ansible dependency check should pass");
+        // This should succeed since cargo-machete is installed in CI
+        assert!(result.is_ok(), "cargo-machete dependency check should pass");
     }
 
     #[test]
@@ -193,5 +193,19 @@ mod tests {
         // Verify the error display format
         assert!(error_string.contains("Missing required dependencies"));
         assert!(error_string.contains("ansible"));
+    }
+
+    #[test]
+    fn test_format_dependency_list_single() {
+        let deps = vec![Dependency::Ansible];
+        let formatted = format_dependency_list(&deps);
+        assert_eq!(formatted, "ansible");
+    }
+
+    #[test]
+    fn test_format_dependency_list_multiple() {
+        let deps = vec![Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];
+        let formatted = format_dependency_list(&deps);
+        assert_eq!(formatted, "opentofu, ansible, lxd");
     }
 }

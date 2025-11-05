@@ -61,7 +61,7 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::time::Instant;
-use torrust_dependency_installer::Dependency;
+use torrust_dependency_installer::{verify_dependencies, Dependency};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configure_command::run_configure_command;
 use tracing::{error, info};
 
@@ -71,7 +71,6 @@ use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::e2e::{
     context::{TestContext, TestContextType},
-    dependencies::verify_dependencies,
     tasks::{
         container::{
             cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},
