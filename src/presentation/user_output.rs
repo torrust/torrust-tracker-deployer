@@ -1255,10 +1255,7 @@ struct StandardSink {
 
 impl StandardSink {
     /// Create a new standard sink with the given writers
-    fn new(
-        stdout: Box<dyn Write + Send + Sync>,
-        stderr: Box<dyn Write + Send + Sync>,
-    ) -> Self {
+    fn new(stdout: Box<dyn Write + Send + Sync>, stderr: Box<dyn Write + Send + Sync>) -> Self {
         Self {
             stdout: StdoutWriter::new(stdout),
             stderr: StderrWriter::new(stderr),
@@ -1527,7 +1524,8 @@ impl UserOutput {
     /// ```
     #[must_use]
     pub fn with_theme(verbosity: VerbosityLevel, theme: Theme) -> Self {
-        Self::with_sink(verbosity, Box::new(StandardSink::default_console())).with_theme_applied(theme)
+        Self::with_sink(verbosity, Box::new(StandardSink::default_console()))
+            .with_theme_applied(theme)
     }
 
     /// Create `UserOutput` with a custom sink
@@ -1559,7 +1557,7 @@ impl UserOutput {
         }
     }
 
-    /// Internal helper to apply theme to an existing UserOutput
+    /// Internal helper to apply theme to an existing `UserOutput`
     fn with_theme_applied(mut self, theme: Theme) -> Self {
         self.theme = theme;
         self
@@ -1732,15 +1730,15 @@ impl UserOutput {
 
     /// Flush all pending output to stdout and stderr
     ///
-    /// **Note**: With the OutputSink abstraction, flush behavior depends on the
-    /// sink implementation. StandardSink does not support explicit flushing.
+    /// **Note**: With the `OutputSink` abstraction, flush behavior depends on the
+    /// sink implementation. `StandardSink` does not support explicit flushing.
     /// This method is kept for API compatibility but is currently a no-op.
     ///
-    /// For StandardSink (default), writes are typically line-buffered by the OS.
+    /// For `StandardSink` (default), writes are typically line-buffered by the OS.
     ///
     /// # Errors
     ///
-    /// Currently always returns Ok(()) as flush is not supported through sinks.
+    /// Currently always returns `Ok(())` as flush is not supported through sinks.
     ///
     /// # Examples
     ///
@@ -3148,7 +3146,7 @@ mod tests {
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
                     Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -3178,7 +3176,7 @@ mod tests {
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
                     Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -3217,7 +3215,7 @@ mod tests {
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
                     Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -3247,7 +3245,7 @@ mod tests {
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
                     Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -3275,7 +3273,7 @@ mod tests {
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
                     Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -3301,7 +3299,7 @@ mod tests {
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Quiet),
                 sink: Box::new(StandardSink::new(
                     Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -3332,7 +3330,7 @@ mod tests {
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
                     Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -3357,7 +3355,7 @@ mod tests {
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
                     Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -3388,7 +3386,7 @@ mod tests {
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
                     Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -4007,7 +4005,8 @@ mod tests {
             let messages1 = Arc::new(Mutex::new(Vec::new()));
             let messages2 = Arc::new(Mutex::new(Vec::new()));
 
-            let mut composite = CompositeSink::new(vec![Box::new(MockSink::new(Arc::clone(&messages1)))]);
+            let mut composite =
+                CompositeSink::new(vec![Box::new(MockSink::new(Arc::clone(&messages1)))]);
 
             // Add another sink
             composite.add_sink(Box::new(MockSink::new(Arc::clone(&messages2))));
@@ -4028,7 +4027,8 @@ mod tests {
         #[test]
         fn composite_sink_should_write_multiple_messages() {
             let messages = Arc::new(Mutex::new(Vec::new()));
-            let mut composite = CompositeSink::new(vec![Box::new(MockSink::new(Arc::clone(&messages)))]);
+            let mut composite =
+                CompositeSink::new(vec![Box::new(MockSink::new(Arc::clone(&messages)))]);
 
             let theme = Theme::emoji();
 
