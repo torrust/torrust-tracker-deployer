@@ -17,9 +17,10 @@ This epic is broken down into sub-issues:
 1-3. #119 - Update CI Workflows and Remove Bash Scripts (2-4 hours)
 1-4. #120 - Configure GitHub Copilot Agent Environment (2-3 hours)
 1-5. #121 - Install Git Pre-Commit Hooks for Copilot Agent (2-3 hours)
+1-6. #146 - Update Pre-Commit Script for GitHub Runner-Compatible E2E Tests (1-1.5 hours)
 ```
 
-**Total Estimated Time**: 21-32 hours split across multiple focused sub-issues
+**Total Estimated Time**: 22-33.5 hours split across multiple focused sub-issues
 
 ## Overview
 
