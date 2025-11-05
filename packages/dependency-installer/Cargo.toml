@@ -25,9 +25,9 @@ tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 testcontainers = "0.25"
 
 [[test]]
-name = "docker_check_command"
-path = "tests/docker_check_command.rs"
+name = "check_command_docker_integration"
+path = "tests/check_command_docker_integration.rs"
 
 [[test]]
-name = "docker_install_command"
-path = "tests/docker_install_command.rs"
+name = "install_command_docker_integration"
+path = "tests/install_command_docker_integration.rs"
