@@ -20,6 +20,7 @@ This guide will help you understand our development practices and contribution w
 | Known issues and expected behaviors  | [known-issues.md](./known-issues.md)                         |
 | Logging best practices               | [logging-guide.md](./logging-guide.md)                       |
 | GitHub Markdown pitfalls             | [github-markdown-pitfalls.md](./github-markdown-pitfalls.md) |
+| GitHub Copilot agent firewall        | [copilot-agent-firewall.md](./copilot-agent-firewall.md)    |
 | Testing conventions and practices    | [testing/](./testing/)                                       |
 
 ## 🚀 Getting Started

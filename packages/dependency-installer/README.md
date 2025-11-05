@@ -42,6 +42,10 @@ This package can detect and install the following development dependencies:
 - **Ansible** - Configuration management tool
 - **LXD** - VM-based testing infrastructure
 
+### GitHub Copilot Agent Requirements
+
+When running in GitHub Copilot agent environment, network access to external domains is restricted by a firewall. The OpenTofu installer requires `opentofu.org` to be added to the custom allowlist. See [Copilot Agent Firewall Configuration](../../docs/contributing/copilot-agent-firewall.md) for details on configured domains and setup instructions.
+
 ## Usage
 
 ### CLI Binary
