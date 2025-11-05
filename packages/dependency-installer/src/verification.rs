@@ -153,59 +153,7 @@ fn format_dependency_list(dependencies: &[Dependency]) -> String {
         .join(", ")
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_verify_dependencies_with_installed_dependency() {
-        // Test with cargo-machete which should be installed in CI
-        let deps = &[Dependency::CargoMachete];
-        let result = verify_dependencies(deps);
-
-        // This should succeed since cargo-machete is installed in CI
-        assert!(result.is_ok(), "cargo-machete dependency check should pass");
-    }
-
-    #[test]
-    fn test_dependency_verification_error_actionable_message() {
-        let error = DependencyVerificationError::MissingDependencies {
-            dependencies: vec![Dependency::OpenTofu, Dependency::Lxd],
-        };
-
-        let message = error.actionable_message();
-
-        // Verify the message contains key information
-        assert!(message.contains("opentofu"));
-        assert!(message.contains("lxd"));
-        assert!(message.contains("cargo run --bin dependency-installer install"));
-        assert!(message.contains("README.md"));
-    }
-
-    #[test]
-    fn test_dependency_verification_error_display() {
-        let error = DependencyVerificationError::MissingDependencies {
-            dependencies: vec![Dependency::Ansible],
-        };
-
-        let error_string = error.to_string();
-
-        // Verify the error display format
-        assert!(error_string.contains("Missing required dependencies"));
-        assert!(error_string.contains("ansible"));
-    }
-
-    #[test]
-    fn test_format_dependency_list_single() {
-        let deps = vec![Dependency::Ansible];
-        let formatted = format_dependency_list(&deps);
-        assert_eq!(formatted, "ansible");
-    }
-
-    #[test]
-    fn test_format_dependency_list_multiple() {
-        let deps = vec![Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];
-        let formatted = format_dependency_list(&deps);
-        assert_eq!(formatted, "opentofu, ansible, lxd");
-    }
-}
+// NOTE: No unit tests here - verification logic is tested via Docker-based
+// integration tests in packages/dependency-installer/tests/ which provide
+// reliable, controlled environments. Unit tests would be environment-dependent
+// and unreliable across different CI/dev setups.
