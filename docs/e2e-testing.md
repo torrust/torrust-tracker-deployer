@@ -180,7 +180,35 @@ Combines both provision and configuration phases in a single LXD VM for comprehe
 
 ## 🛠️ Prerequisites
 
-### For E2E Provision Tests
+### Automated Setup (Recommended)
+
+The project provides a dependency installer tool that automatically detects and installs required dependencies:
+
+```bash
+# Install all required dependencies
+cargo run --bin dependency-installer install
+
+# Check which dependencies are installed
+cargo run --bin dependency-installer check
+
+# List all dependencies with status
+cargo run --bin dependency-installer list
+```
+
+The installer supports:
+
+- **cargo-machete** - Detects unused Rust dependencies
+- **OpenTofu** - Infrastructure provisioning tool
+- **Ansible** - Configuration management tool
+- **LXD** - VM-based testing infrastructure
+
+For detailed information, see [`packages/dependency-installer/README.md`](../packages/dependency-installer/README.md).
+
+### Manual Setup
+
+If you prefer manual installation or need to troubleshoot:
+
+#### For E2E Provision Tests
 
 1. **LXD installed and configured**
 
@@ -195,7 +223,7 @@ Combines both provision and configuration phases in a single LXD VM for comprehe
    # Installation instructions in docs/tech-stack/opentofu.md
    ```
 
-### For E2E Configuration Tests
+#### For E2E Configuration Tests
 
 1. **Docker installed**
 
@@ -210,9 +238,21 @@ Combines both provision and configuration phases in a single LXD VM for comprehe
    # Installation instructions in docs/tech-stack/ansible.md
    ```
 
-### For Full Local Tests (`e2e-tests-full`)
+#### For Full Local Tests (`e2e-tests-full`)
 
 Requires **all** of the above: LXD, OpenTofu, Docker, and Ansible.
+
+### Verification
+
+After setup (automated or manual), verify all dependencies are available:
+
+```bash
+# Quick check (exit code indicates success/failure)
+cargo run --bin dependency-installer check
+
+# Detailed check with logging
+cargo run --bin dependency-installer check --verbose
+```
 
 ## 🐛 Troubleshooting
 
