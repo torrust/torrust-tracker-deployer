@@ -61,6 +61,7 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::time::Instant;
+use torrust_dependency_installer::{verify_dependencies, Dependency};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configure_command::run_configure_command;
 use tracing::{error, info};
 
@@ -68,14 +69,16 @@ use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PO
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::shared::Username;
-use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
-use torrust_tracker_deployer_lib::testing::e2e::tasks::{
-    container::{
-        cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},
-        run_provision_simulation::run_provision_simulation,
+use torrust_tracker_deployer_lib::testing::e2e::{
+    context::{TestContext, TestContextType},
+    tasks::{
+        container::{
+            cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},
+            run_provision_simulation::run_provision_simulation,
+        },
+        preflight_cleanup,
+        run_configuration_validation::run_configuration_validation,
     },
-    preflight_cleanup,
-    run_configuration_validation::run_configuration_validation,
 };
 
 #[derive(Parser)]
@@ -128,6 +131,9 @@ pub async fn main() -> Result<()> {
         log_format = ?cli.log_format,
         "Starting E2E configuration tests with Docker containers"
     );
+
+    // Verify required dependencies before running tests
+    verify_required_dependencies()?;
 
     let test_start = Instant::now();
 
@@ -192,6 +198,29 @@ pub async fn main() -> Result<()> {
             Err(error)
         }
     }
+}
+
+/// Verify that all required dependencies are installed for config E2E tests.
+///
+/// Config E2E tests require:
+/// - `Ansible` (configuration management)
+///
+/// # Errors
+///
+/// Returns an error if any required dependencies are missing or cannot be detected.
+fn verify_required_dependencies() -> Result<()> {
+    let required_deps = &[Dependency::Ansible];
+
+    if let Err(e) = verify_dependencies(required_deps) {
+        error!(
+            error = %e,
+            "Dependency verification failed"
+        );
+        eprintln!("\n{}\n", e.actionable_message());
+        return Err(anyhow::anyhow!("Missing required dependencies"));
+    }
+
+    Ok(())
 }
 
 /// Run the complete configuration tests using extracted tasks

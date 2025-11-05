@@ -20,7 +20,35 @@
 
 mod support;
 
+use anyhow::Result;
 use support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
+use torrust_dependency_installer::{verify_dependencies, Dependency};
+
+/// Verify that all required dependencies are installed for destroy command E2E tests.
+///
+/// **Current State**: No system dependencies required.
+///
+/// These black-box tests run the production binary as an external process and verify
+/// the destroy command workflow. Currently, they only test the command interface and
+/// environment state transitions, without requiring infrastructure tools.
+///
+/// # Future Dependencies
+///
+/// If these tests evolve to verify actual infrastructure destruction or cleanup,
+/// add required dependencies here:
+/// ```ignore
+/// let required_deps = &[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if any required dependencies are missing or cannot be detected.
+fn verify_required_dependencies() -> Result<()> {
+    // Currently no system dependencies required - empty array
+    let required_deps: &[Dependency] = &[];
+    verify_dependencies(required_deps)?;
+    Ok(())
+}
 
 /// Helper function to create a test environment configuration
 fn create_test_environment_config(env_name: &str) -> String {
@@ -45,6 +73,9 @@ fn create_test_environment_config(env_name: &str) -> String {
 
 #[test]
 fn it_should_destroy_environment_with_default_working_directory() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
     // Arrange: Create temporary workspace
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
@@ -92,6 +123,9 @@ fn it_should_destroy_environment_with_default_working_directory() {
 
 #[test]
 fn it_should_destroy_environment_with_custom_working_directory() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
     // Arrange: Create temporary workspace
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
@@ -139,6 +173,9 @@ fn it_should_destroy_environment_with_custom_working_directory() {
 
 #[test]
 fn it_should_fail_when_environment_not_found_in_working_directory() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
     // Arrange: Create temporary workspace
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
@@ -164,6 +201,8 @@ fn it_should_fail_when_environment_not_found_in_working_directory() {
 
 #[test]
 fn it_should_complete_full_lifecycle_with_custom_working_directory() {
+    verify_required_dependencies().expect("Dependency verification failed");
+
     // Arrange: Create temporary workspace
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 

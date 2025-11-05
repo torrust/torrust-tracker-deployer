@@ -16,6 +16,11 @@
 //! The E2E testing system orchestrates complete deployment scenarios including
 //! provisioning, configuration, validation, and cleanup phases to ensure
 //! the entire deployment system works correctly.
+//!
+//! ## Dependency Verification
+//!
+//! E2E test binaries use the `torrust-dependency-installer` package to verify
+//! required system dependencies are installed before running tests.
 
 pub mod container;
 pub mod containers;
