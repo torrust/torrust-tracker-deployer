@@ -71,9 +71,10 @@ pub enum InstallationError {
 }
 
 impl InstallationError {
-    /// Helper to create a CommandFailed error from an io::Error
+    /// Helper to create a `CommandFailed` error from an `io::Error`
     ///
     /// This reduces boilerplate when mapping errors in installers.
+    #[must_use]
     pub fn command_failed(dependency: Dependency, source: std::io::Error) -> Self {
         Self::CommandFailed { dependency, source }
     }

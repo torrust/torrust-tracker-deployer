@@ -8,10 +8,18 @@ This package provides dependency detection and installation utilities for the To
 
 This design choice offers several benefits:
 
-- **Automation-friendly**: Structured logs are easy to parse and filter programmatically
+- **Automation-friendly**: Exit codes provide reliable success/failure indication
 - **Consistent**: Same output format as the rest of the Torrust ecosystem
 - **Simple**: The tool is straightforward enough that logging output is sufficient even for manual use
 - **Observable**: Rich contextual information through structured fields
+
+### For Automation and CI/CD
+
+**Always use exit codes to determine success or failure:**
+
+- ✅ **DO** check exit codes (0 = success, non-zero = failure)
+- ✅ **DO** use `--log-level off` to suppress output in scripts
+- ❌ **DON'T** parse log output - it's not a stable API and may change
 
 For manual usage, you can control log verbosity with the `--verbose` flag or `RUST_LOG` environment variable.
 
@@ -73,14 +81,42 @@ dependency-installer install --help
 
 #### Exit Codes
 
+**Exit codes are the official way to determine command success or failure.**
+Scripts and automation tools should rely on exit codes, not parse the logging output.
+
 - **0**: Success (all checks or installations passed)
 - **1**: Missing dependencies or installation failures
 - **2**: Invalid arguments
 - **3**: Internal error
 
+**For automation:**
+
+```bash
+# ✅ DO: Check exit code for success/failure
+if dependency-installer check --log-level off; then
+    echo "All dependencies installed"
+else
+    echo "Missing dependencies (exit code: $?)"
+fi
+
+# ✅ DO: Use exit code in CI/CD pipelines
+dependency-installer install --log-level off
+if [ $? -eq 0 ]; then
+    echo "Installation succeeded"
+    # Continue with next steps
+fi
+
+# ❌ DON'T: Parse log output - it may change and is not stable API
+# output=$(dependency-installer check)
+# if echo "$output" | grep -q "installed"; then  # FRAGILE - don't do this
+```
+
 #### Output Format
 
-The tool uses structured logging (via `tracing`) instead of plain text output:
+The tool uses structured logging (via `tracing`) for observability and debugging.
+This output is designed for human reading, **not for parsing by scripts**.
+
+**Important:** Logging format may change in future versions. Always use exit codes for automation.
 
 ```bash
 # Check all dependencies (default log level shows INFO and above)
