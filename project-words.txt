@@ -110,6 +110,7 @@ nslookup
 nullglob
 OAAAAN
 oneline
+Osherove
 pacman
 parameterizing
 parseable
