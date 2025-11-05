@@ -230,6 +230,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+## Testing
+
+### Operating System Pre-conditions
+
+The Docker-based integration tests use a pre-configured image (`docker/ubuntu-24.04.Dockerfile`) that documents the **operating system dependencies required** before using the installers. These pre-conditions include:
+
+- **System packages**: `ca-certificates`, `sudo`, `curl`, `build-essential`
+- **Rust toolchain**: `nightly-2025-10-15` via rustup (for cargo-machete installation)
+- **PATH configuration**: Cargo binaries accessible in PATH
+
+The Dockerfile serves as **explicit documentation** of what must be installed on the operating system before the dependency installers can work. This ensures:
+
+- Clear expectations for production environments
+- Fast test execution (OS dependencies installed once during image build)
+- Confidence that installers work given the declared pre-conditions
+
+### Running Tests
+
+```bash
+# Run all tests (unit tests run normally, Docker tests use pre-built image)
+cargo test -p torrust-dependency-installer
+
+# Run only Docker-based integration tests
+cargo test -p torrust-dependency-installer --test docker_install_command
+cargo test -p torrust-dependency-installer --test docker_check_command
+
+# Run expensive tests (OpenTofu, Ansible, LXD)
+cargo test -p torrust-dependency-installer -- --ignored
+
+# Build the test Docker image
+docker build -f docker/ubuntu-24.04.Dockerfile -t dependency-installer-test:ubuntu-24.04 .
+```
+
+See `docker/README.md` for detailed testing infrastructure documentation.
+
 ## Adding to Your Project
 
 Add to your `Cargo.toml`:

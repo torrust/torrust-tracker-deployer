@@ -2,7 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt};
+use testcontainers::core::WaitFor;
+use testcontainers::runners::AsyncRunner;
+use testcontainers::{GenericImage, ImageExt};
 
 use super::container_id::ContainerId;
 use super::running_binary_container::RunningBinaryContainer;
@@ -34,18 +36,24 @@ impl UbuntuContainerBuilder {
 
     /// Start the container with the binary
     ///
-    /// This method:
-    /// 1. Starts an Ubuntu 24.04 container
-    /// 2. Copies the binary into the container
-    /// 3. Makes the binary executable
+    /// This method uses a pre-built Docker image (dependency-installer-test:ubuntu-24.04)
+    /// that includes sudo, curl, build-essential, and Rust nightly.
+    ///
+    /// # Build the image first
+    ///
+    /// Before running tests, build the custom image:
+    /// ```bash
+    /// cd packages/dependency-installer
+    /// docker build -f docker/ubuntu-24.04.Dockerfile -t dependency-installer-test:ubuntu-24.04 .
+    /// ```
     ///
     /// # Returns
     ///
-    /// A running container ready for test execution
-    #[allow(dead_code)] // Used by other tests
+    /// A running container ready for test execution with all prerequisites installed
+    #[allow(dead_code)] // Used by tests
     pub async fn start(self) -> RunningBinaryContainer {
-        // Create Ubuntu 24.04 image
-        let image = GenericImage::new("ubuntu", "24.04")
+        // Use the custom pre-built image with all dependencies
+        let image = GenericImage::new("dependency-installer-test", "ubuntu-24.04")
             .with_wait_for(WaitFor::seconds(2))
             .with_cmd(vec!["sleep", "infinity"]);
 
@@ -58,48 +66,6 @@ impl UbuntuContainerBuilder {
 
         // Create the container wrapper
         let test_container = RunningBinaryContainer::new(container, container_id);
-
-        // Copy the binary into the container
-        test_container
-            .copy_file_to_container(&self.binary_path, "/usr/local/bin/dependency-installer");
-
-        // Make the binary executable
-        test_container.exec(&["chmod", "+x", "/usr/local/bin/dependency-installer"]);
-
-        test_container
-    }
-
-    /// Start the container with the binary and sudo installed
-    ///
-    /// This method:
-    /// 1. Starts an Ubuntu 24.04 container
-    /// 2. Installs sudo
-    /// 3. Copies the binary into the container
-    /// 4. Makes the binary executable
-    ///
-    /// # Returns
-    ///
-    /// A running container ready for test execution with sudo available
-    #[allow(dead_code)] // Used by install tests
-    pub async fn start_with_sudo(self) -> RunningBinaryContainer {
-        // Create Ubuntu 24.04 image
-        let image = GenericImage::new("ubuntu", "24.04")
-            .with_wait_for(WaitFor::seconds(2))
-            .with_cmd(vec!["sleep", "infinity"]);
-
-        // Start the container
-        let container = image.start().await.expect("Failed to start container");
-
-        // Get container ID for docker CLI operations
-        let container_id = ContainerId::new(container.id().to_string())
-            .expect("Docker container ID should always be valid hexadecimal");
-
-        // Create the container wrapper
-        let test_container = RunningBinaryContainer::new(container, container_id);
-
-        // Install sudo (required for some installers)
-        test_container.exec(&["apt-get", "update"]);
-        test_container.exec(&["apt-get", "install", "-y", "sudo"]);
 
         // Copy the binary into the container
         test_container

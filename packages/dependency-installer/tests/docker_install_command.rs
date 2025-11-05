@@ -11,19 +11,13 @@ use containers::ubuntu_container_builder::UbuntuContainerBuilder;
 
 /// Test that `cargo-machete` can be installed
 #[tokio::test]
-#[ignore = "Requires recent Rust/Cargo version, run with --ignored flag"]
 async fn it_should_install_cargo_machete_successfully() {
     // Get the binary path (built by cargo before running tests)
     let binary_path = get_binary_path();
 
-    // Start Ubuntu container with the binary and sudo
-    let container = UbuntuContainerBuilder::new(&binary_path)
-        .start_with_sudo()
-        .await;
-
-    // Install cargo first (required for cargo-machete)
-    container.exec(&["apt-get", "update"]);
-    container.exec(&["apt-get", "install", "-y", "cargo"]);
+    // Start Ubuntu container with the binary
+    // Note: Container uses pre-built image with Rust nightly, sudo, and build tools
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
     // Install cargo-machete
     let output = container.exec(&[
@@ -57,17 +51,12 @@ async fn it_should_install_cargo_machete_successfully() {
 
 /// Test that installation is idempotent (can run multiple times)
 #[tokio::test]
-#[ignore = "Requires recent Rust/Cargo version, run with --ignored flag"]
 async fn it_should_handle_idempotent_installation_of_cargo_machete() {
     let binary_path = get_binary_path();
 
-    let container = UbuntuContainerBuilder::new(&binary_path)
-        .start_with_sudo()
-        .await;
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
-    // Install cargo first
-    container.exec(&["apt-get", "update"]);
-    container.exec(&["apt-get", "install", "-y", "cargo"]);
+    // Note: Container uses pre-built image with Rust nightly, sudo, and build tools
 
     // Install cargo-machete first time
     let _output1 = container.exec(&[
@@ -99,9 +88,7 @@ async fn it_should_handle_idempotent_installation_of_cargo_machete() {
 async fn it_should_install_opentofu_successfully() {
     let binary_path = get_binary_path();
 
-    let container = UbuntuContainerBuilder::new(&binary_path)
-        .start_with_sudo()
-        .await;
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
     // Install curl (required for OpenTofu installation)
     container.exec(&["apt-get", "update"]);
@@ -143,9 +130,7 @@ async fn it_should_install_opentofu_successfully() {
 async fn it_should_install_ansible_successfully() {
     let binary_path = get_binary_path();
 
-    let container = UbuntuContainerBuilder::new(&binary_path)
-        .start_with_sudo()
-        .await;
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
     // Install Ansible
     let output = container.exec(&["dependency-installer", "install", "--dependency", "ansible"]);
@@ -178,9 +163,7 @@ async fn it_should_install_ansible_successfully() {
 async fn it_should_install_lxd_successfully() {
     let binary_path = get_binary_path();
 
-    let container = UbuntuContainerBuilder::new(&binary_path)
-        .start_with_sudo()
-        .await;
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
     // Install snapd (required for LXD)
     container.exec(&["apt-get", "update"]);
@@ -216,16 +199,14 @@ async fn it_should_install_lxd_successfully() {
 async fn it_should_return_error_exit_code_when_installation_fails() {
     let binary_path = get_binary_path();
 
-    let container = UbuntuContainerBuilder::new(&binary_path)
-        .start_with_sudo()
-        .await;
+    let container = UbuntuContainerBuilder::new(&binary_path).start().await;
 
-    // Try to install cargo-machete without cargo (should fail)
+    // Try to install an invalid/unknown dependency (should fail)
     let exit_code = container.exec_with_exit_code(&[
         "dependency-installer",
         "install",
         "--dependency",
-        "cargo-machete",
+        "invalid-dependency-name",
         "--log-level",
         "off",
     ]);
