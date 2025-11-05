@@ -133,16 +133,7 @@ pub async fn main() -> Result<()> {
     );
 
     // Verify required dependencies before running tests
-    // Config tests only need Ansible for configuration management
-    let required_deps = &[Dependency::Ansible];
-    if let Err(e) = verify_dependencies(required_deps) {
-        error!(
-            error = %e,
-            "Dependency verification failed"
-        );
-        eprintln!("\n{}\n", e.actionable_message());
-        return Err(anyhow::anyhow!("Missing required dependencies"));
-    }
+    verify_required_dependencies()?;
 
     let test_start = Instant::now();
 
@@ -207,6 +198,29 @@ pub async fn main() -> Result<()> {
             Err(error)
         }
     }
+}
+
+/// Verify that all required dependencies are installed for config E2E tests.
+///
+/// Config E2E tests require:
+/// - `Ansible` (configuration management)
+///
+/// # Errors
+///
+/// Returns an error if any required dependencies are missing or cannot be detected.
+fn verify_required_dependencies() -> Result<()> {
+    let required_deps = &[Dependency::Ansible];
+
+    if let Err(e) = verify_dependencies(required_deps) {
+        error!(
+            error = %e,
+            "Dependency verification failed"
+        );
+        eprintln!("\n{}\n", e.actionable_message());
+        return Err(anyhow::anyhow!("Missing required dependencies"));
+    }
+
+    Ok(())
 }
 
 /// Run the complete configuration tests using extracted tasks

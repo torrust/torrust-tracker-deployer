@@ -102,6 +102,7 @@ struct Cli {
 /// # Errors
 ///
 /// Returns an error if:
+/// - Required dependencies are missing
 /// - Invalid environment name provided via CLI
 /// - Pre-flight cleanup fails
 /// - Infrastructure provisioning fails  
@@ -132,17 +133,7 @@ pub async fn main() -> Result<()> {
         "Starting E2E tests"
     );
 
-    // Verify all required dependencies before running tests
-    // Full E2E tests need: OpenTofu (provisioning), Ansible (configuration), and LXD (virtualization)
-    let required_deps = &[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];
-    if let Err(e) = verify_dependencies(required_deps) {
-        error!(
-            error = %e,
-            "Dependency verification failed"
-        );
-        eprintln!("\n{}\n", e.actionable_message());
-        return Err(anyhow::anyhow!("Missing required dependencies"));
-    }
+    verify_required_dependencies()?;
 
     // Use absolute paths to project root for SSH keys to ensure they can be found by Ansible
     let project_root = std::env::current_dir().expect("Failed to get current directory");
@@ -262,6 +253,31 @@ pub async fn main() -> Result<()> {
             Err(deployment_err)
         }
     }
+}
+
+/// Verify that all required dependencies are installed for full E2E tests.
+///
+/// Full E2E tests require:
+/// - `OpenTofu` (infrastructure provisioning)
+/// - `Ansible` (configuration management)
+/// - `LXD` (virtualization)
+///
+/// # Errors
+///
+/// Returns an error if any required dependencies are missing or cannot be detected.
+fn verify_required_dependencies() -> Result<()> {
+    let required_deps = &[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];
+
+    if let Err(e) = verify_dependencies(required_deps) {
+        error!(
+            error = %e,
+            "Dependency verification failed"
+        );
+        eprintln!("\n{}\n", e.actionable_message());
+        return Err(anyhow::anyhow!("Missing required dependencies"));
+    }
+
+    Ok(())
 }
 
 async fn run_full_deployment_test(test_context: &mut TestContext) -> Result<()> {

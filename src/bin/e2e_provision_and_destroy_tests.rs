@@ -127,16 +127,7 @@ pub async fn main() -> Result<()> {
     );
 
     // Verify required dependencies before running tests
-    // Provision tests only need Ansible for basic validation checks
-    let required_deps = &[Dependency::Ansible];
-    if let Err(e) = verify_dependencies(required_deps) {
-        error!(
-            error = %e,
-            "Dependency verification failed"
-        );
-        eprintln!("\n{}\n", e.actionable_message());
-        return Err(anyhow::anyhow!("Missing required dependencies"));
-    }
+    verify_required_dependencies()?;
 
     // Create environment entity for e2e-provision testing
     let environment_name = EnvironmentName::new("e2e-provision".to_string())?;
@@ -201,6 +192,29 @@ pub async fn main() -> Result<()> {
             Err(provision_err)
         }
     }
+}
+
+/// Verify that all required dependencies are installed for provision E2E tests.
+///
+/// Provision E2E tests require:
+/// - `Ansible` (configuration management for basic validation)
+///
+/// # Errors
+///
+/// Returns an error if any required dependencies are missing or cannot be detected.
+fn verify_required_dependencies() -> Result<()> {
+    let required_deps = &[Dependency::Ansible];
+
+    if let Err(e) = verify_dependencies(required_deps) {
+        error!(
+            error = %e,
+            "Dependency verification failed"
+        );
+        eprintln!("\n{}\n", e.actionable_message());
+        return Err(anyhow::anyhow!("Missing required dependencies"));
+    }
+
+    Ok(())
 }
 
 /// Runs the provisioning test workflow
