@@ -67,10 +67,7 @@ impl DependencyInstaller for OpenTofuInstaller {
                     script_path,
                 ])
                 .output()
-                .map_err(|e| InstallationError::CommandFailed {
-                    dependency: Dependency::OpenTofu,
-                    source: e,
-                })?;
+                .map_err(|e| InstallationError::command_failed(Dependency::OpenTofu, e))?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -86,20 +83,14 @@ impl DependencyInstaller for OpenTofuInstaller {
                 script_path,
                 std::os::unix::fs::PermissionsExt::from_mode(0o755),
             )
-            .map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::OpenTofu,
-                source: e,
-            })?;
+            .map_err(|e| InstallationError::command_failed(Dependency::OpenTofu, e))?;
 
             // Run installer with sudo
             debug!("Running OpenTofu installer with sudo");
             let output = Command::new("sudo")
                 .args([script_path, "--install-method", "deb"])
                 .output()
-                .map_err(|e| InstallationError::CommandFailed {
-                    dependency: Dependency::OpenTofu,
-                    source: e,
-                })?;
+                .map_err(|e| InstallationError::command_failed(Dependency::OpenTofu, e))?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -113,10 +104,8 @@ impl DependencyInstaller for OpenTofuInstaller {
 
             // Clean up installer script
             debug!("Cleaning up installer script");
-            fs::remove_file(script_path).map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::OpenTofu,
-                source: e,
-            })?;
+            fs::remove_file(script_path)
+                .map_err(|e| InstallationError::command_failed(Dependency::OpenTofu, e))?;
 
             info!(
                 dependency = "opentofu",

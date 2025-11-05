@@ -63,17 +63,7 @@ pub async fn run() -> ExitCode {
 
     let manager = DependencyManager::new();
 
-    let result: Result<(), AppError> = match cli.command {
-        Commands::Check { dependency } => {
-            crate::handlers::check::handle_check(&manager, dependency).map_err(AppError::from)
-        }
-        Commands::Install { dependency } => {
-            crate::handlers::install::handle_install(&manager, dependency)
-                .await
-                .map_err(AppError::from)
-        }
-        Commands::List => crate::handlers::list::handle_list(&manager).map_err(AppError::from),
-    };
+    let result = execute_command(&cli.command, &manager).await;
 
     match result {
         Ok(()) => ExitCode::Success,
@@ -83,6 +73,27 @@ pub async fn run() -> ExitCode {
             e.to_exit_code()
         }
     }
+}
+
+/// Execute the command
+///
+/// # Errors
+///
+/// Returns an error if the command execution fails
+async fn execute_command(command: &Commands, manager: &DependencyManager) -> Result<(), AppError> {
+    match command {
+        Commands::Check { dependency } => {
+            crate::handlers::check::handle_check(manager, *dependency)?;
+        }
+        Commands::Install { dependency } => {
+            crate::handlers::install::handle_install(manager, *dependency).await?;
+        }
+        Commands::List => {
+            crate::handlers::list::handle_list(manager)?;
+        }
+    }
+
+    Ok(())
 }
 
 // ============================================================================

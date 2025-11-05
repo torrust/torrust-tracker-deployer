@@ -69,3 +69,12 @@ pub enum InstallationError {
     #[error("Installation requires sudo privileges but sudo is not available")]
     SudoNotAvailable,
 }
+
+impl InstallationError {
+    /// Helper to create a CommandFailed error from an io::Error
+    ///
+    /// This reduces boilerplate when mapping errors in installers.
+    pub fn command_failed(dependency: Dependency, source: std::io::Error) -> Self {
+        Self::CommandFailed { dependency, source }
+    }
+}

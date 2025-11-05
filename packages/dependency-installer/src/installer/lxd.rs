@@ -43,10 +43,7 @@ impl DependencyInstaller for LxdInstaller {
         let output = Command::new("sudo")
             .args(["snap", "install", "lxd"])
             .output()
-            .map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::Lxd,
-                source: e,
-            })?;
+            .map_err(|e| InstallationError::command_failed(Dependency::Lxd, e))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -65,10 +62,7 @@ impl DependencyInstaller for LxdInstaller {
         let output = Command::new("sudo")
             .args(["lxd", "init", "--auto"])
             .output()
-            .map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::Lxd,
-                source: e,
-            })?;
+            .map_err(|e| InstallationError::command_failed(Dependency::Lxd, e))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -84,10 +78,7 @@ impl DependencyInstaller for LxdInstaller {
             let output = Command::new("sudo")
                 .args(["usermod", "-a", "-G", "lxd", &username])
                 .output()
-                .map_err(|e| InstallationError::CommandFailed {
-                    dependency: Dependency::Lxd,
-                    source: e,
-                })?;
+                .map_err(|e| InstallationError::command_failed(Dependency::Lxd, e))?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -103,10 +94,7 @@ impl DependencyInstaller for LxdInstaller {
         let output = Command::new("sudo")
             .args(["chmod", "666", "/var/snap/lxd/common/lxd/unix.socket"])
             .output()
-            .map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::Lxd,
-                source: e,
-            })?;
+            .map_err(|e| InstallationError::command_failed(Dependency::Lxd, e))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -121,10 +109,7 @@ impl DependencyInstaller for LxdInstaller {
         let output = Command::new("sudo")
             .args(["lxc", "list"])
             .output()
-            .map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::Lxd,
-                source: e,
-            })?;
+            .map_err(|e| InstallationError::command_failed(Dependency::Lxd, e))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

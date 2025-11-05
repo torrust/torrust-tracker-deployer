@@ -33,7 +33,7 @@ impl DependencyDetector for LxdDetector {
         // Check for 'lxc' command (LXD client)
         let installed = command_exists("lxc").map_err(|e| DetectionError::DetectionFailed {
             dependency: Dependency::Lxd,
-            source: std::io::Error::other(e.to_string()),
+            source: e.into(),
         })?;
 
         if installed {

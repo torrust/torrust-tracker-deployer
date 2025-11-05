@@ -32,7 +32,7 @@ impl DependencyDetector for AnsibleDetector {
 
         let installed = command_exists("ansible").map_err(|e| DetectionError::DetectionFailed {
             dependency: Dependency::Ansible,
-            source: std::io::Error::other(e.to_string()),
+            source: e.into(),
         })?;
 
         if installed {

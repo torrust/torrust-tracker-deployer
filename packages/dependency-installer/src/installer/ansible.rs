@@ -44,10 +44,7 @@ impl DependencyInstaller for AnsibleInstaller {
         let output = Command::new("sudo")
             .args(["apt-get", "install", "-y", "ansible"])
             .output()
-            .map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::Ansible,
-                source: e,
-            })?;
+            .map_err(|e| InstallationError::command_failed(Dependency::Ansible, e))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

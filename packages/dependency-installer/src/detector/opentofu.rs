@@ -32,7 +32,7 @@ impl DependencyDetector for OpenTofuDetector {
 
         let installed = command_exists("tofu").map_err(|e| DetectionError::DetectionFailed {
             dependency: Dependency::OpenTofu,
-            source: std::io::Error::other(e.to_string()),
+            source: e.into(),
         })?;
 
         if installed {

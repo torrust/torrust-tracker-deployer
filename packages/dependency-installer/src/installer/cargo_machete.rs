@@ -43,10 +43,7 @@ impl DependencyInstaller for CargoMacheteInstaller {
         let output = Command::new("cargo")
             .args(["install", "cargo-machete"])
             .output()
-            .map_err(|e| InstallationError::CommandFailed {
-                dependency: Dependency::CargoMachete,
-                source: e,
-            })?;
+            .map_err(|e| InstallationError::command_failed(Dependency::CargoMachete, e))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
