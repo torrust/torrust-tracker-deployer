@@ -44,12 +44,6 @@ jobs:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
 
-      - name: Install and configure LXD
-        run: ./scripts/setup/install-lxd-ci.sh
-
-      - name: Install OpenTofu
-        run: ./scripts/setup/install-opentofu.sh
-
       - name: Setup Rust toolchain and build template system
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -57,6 +51,11 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: |
+          cargo build -p torrust-dependency-installer --bin dependency-installer
+          cargo run -p torrust-dependency-installer --bin dependency-installer -- install
 
       - name: Render template configurations
         run: |

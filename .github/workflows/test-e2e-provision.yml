@@ -37,11 +37,10 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install and configure LXD
-        run: ./scripts/setup/install-lxd-ci.sh
-
-      - name: Install OpenTofu
-        run: ./scripts/setup/install-opentofu.sh
+      - name: Install dependencies
+        run: |
+          cargo build -p torrust-dependency-installer --bin dependency-installer
+          cargo run -p torrust-dependency-installer --bin dependency-installer -- install
 
       - name: Verify installations
         run: |

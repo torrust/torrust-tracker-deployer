@@ -1,115 +1,100 @@
-# Setup Scripts
+# Setup Scripts - MIGRATION NOTICE
 
-This directory contains installation and configuration scripts for the tools required by the Torrust Tracker Deployer project.
+**⚠️ This directory has been migrated to the Rust-based dependency installer.**
 
-## Available Scripts
+## Migration Notice
 
-### Core Infrastructure Tools
+The bash installation scripts (`install-opentofu.sh`, `install-ansible.sh`, `install-lxd-ci.sh`) have been **removed** and replaced with the Rust-based `dependency-installer` binary.
 
-- **`install-opentofu.sh`** - Install OpenTofu (Terraform alternative)
-- **`install-ansible.sh`** - Install Ansible automation platform
+### New Installation Method
 
-### Container/VM Providers
-
-- **`install-lxd-ci.sh`** - Install and configure LXD (CI-optimized)
-
-## Usage
-
-### Individual Installation
+For dependency installation, use the `dependency-installer` binary:
 
 ```bash
-# Install OpenTofu
-./scripts/setup/install-opentofu.sh
+# Install all dependencies
+cargo run -p torrust-dependency-installer --bin dependency-installer -- install
 
-# Install Ansible
-./scripts/setup/install-ansible.sh
+# Check which dependencies are installed
+cargo run -p torrust-dependency-installer --bin dependency-installer -- check
 
-# Install LXD (CI environment)
-./scripts/setup/install-lxd-ci.sh
+# List all available dependencies
+cargo run -p torrust-dependency-installer --bin dependency-installer -- list
+
+# Install specific dependency
+cargo run -p torrust-dependency-installer --bin dependency-installer -- install --dependency opentofu
+
+# See all options
+cargo run -p torrust-dependency-installer --bin dependency-installer -- --help
 ```
 
-### Batch Installation
+### Benefits of the New Approach
 
-```bash
-# Install all core tools
-./scripts/setup/install-opentofu.sh
-./scripts/setup/install-ansible.sh
+- **Type-safe**: Rust's type system catches errors at compile time
+- **Better error handling**: Clear, actionable error messages
+- **Consistent logging**: Structured logging via `tracing` crate
+- **Testable**: Unit and integration tests ensure reliability
+- **Maintainable**: Single codebase for all dependency management
+- **Cross-platform ready**: Foundation for supporting multiple platforms
 
-# Install container provider
-./scripts/setup/install-lxd-ci.sh
+### Supported Dependencies
+
+The dependency installer supports:
+
+- **cargo-machete** - Detects unused Rust dependencies
+- **OpenTofu** - Infrastructure provisioning tool (Terraform alternative)
+- **Ansible** - Configuration management and automation platform
+- **LXD** - Lightweight VM manager for container-based testing
+
+### Documentation
+
+For complete documentation on the dependency installer, see:
+
+- **Package README**: [packages/dependency-installer/README.md](../../packages/dependency-installer/README.md)
+- **LXD Setup**: [templates/tofu/lxd/README.md](../../templates/tofu/lxd/README.md)
+- **LXD Tech Stack**: [docs/tech-stack/lxd.md](../../docs/tech-stack/lxd.md)
+
+### CI/CD Integration
+
+GitHub Actions workflows now use the dependency installer:
+
+- **`.github/workflows/test-e2e-provision.yml`** - E2E provision and destroy tests
+- **`.github/workflows/test-e2e-config.yml`** - E2E configuration tests
+- **`.github/workflows/test-lxd-provision.yml`** - LXD provisioning tests
+
+Example workflow step:
+
+```yaml
+- name: Install dependencies
+  run: |
+    cargo build -p torrust-dependency-installer --bin dependency-installer
+    cargo run -p torrust-dependency-installer --bin dependency-installer -- install
 ```
-
-## CI vs Local Development
-
-### CI Environment Detection
-
-The scripts automatically detect CI environments and apply appropriate configurations:
-
-- **CI Detection**: Checks for `CI=true`, `GITHUB_ACTIONS=true`, or `RUNNER_USER` environment variables
-- **CI Optimizations**: Uses `sudo` commands and socket permission fixes
-- **Logging**: Provides clear feedback about environment detection
 
 ### Local Development
 
-For local development, see the dedicated documentation:
+For local development, the dependency installer automatically handles:
 
-- **LXD**: [templates/tofu/lxd/README.md](../../templates/tofu/lxd/README.md)
-- **LXD Tech Stack**: [docs/tech-stack/lxd.md](../../docs/tech-stack/lxd.md)
+- **CI Detection**: Automatically applies CI-specific configurations when needed
+- **Permissions**: Proper handling of LXD socket permissions
+- **Group Membership**: Sets up appropriate user groups
 
-**Important**: The CI scripts use `sudo` commands and socket permission modifications that are **NOT recommended** for local development. Use proper group membership for local setups.
+**Important**: For local LXD development, follow the proper group membership approach documented in the tech stack guides.
 
-## Script Features
+### Troubleshooting
 
-### Common Features
+If you encounter issues with the dependency installer:
 
-- **Idempotent**: Safe to run multiple times
-- **Verbose Logging**: Clear progress indicators with colored output
-- **Error Handling**: Proper error checking and meaningful messages
-- **Version Detection**: Skips installation if tool is already installed
+1. **Check installation status**: `cargo run -p torrust-dependency-installer --bin dependency-installer -- check`
+2. **Enable debug logging**: Add `--verbose` flag or `--log-level debug`
+3. **View available dependencies**: `cargo run -p torrust-dependency-installer --bin dependency-installer -- list`
+4. **Check exit codes**: Exit code 0 = success, non-zero = failure
 
-### Error Handling
+For detailed troubleshooting, see the [dependency installer README](../../packages/dependency-installer/README.md).
 
-All scripts use `set -euo pipefail` for strict error handling:
+### Migration Timeline
 
-- **`-e`**: Exit on any command failure
-- **`-u`**: Exit on undefined variable usage
-- **`-o pipefail`**: Exit on pipe command failures
+- **Created**: Issue #113 (Create Dependency Installation Package)
+- **Migrated**: Issue #119 (Update CI Workflows and Remove Bash Scripts)
+- **Removed bash scripts**: November 2025
 
-### Logging Levels
-
-- **🟢 INFO**: Normal progress messages
-- **🟡 WARN**: Important notices or CI-specific actions
-- **🔴 ERROR**: Failure messages
-
-## Integration with Workflows
-
-These scripts replace duplicated installation code in GitHub Actions workflows:
-
-- **`.github/workflows/test-e2e.yml`**
-- **`.github/workflows/test-lxd-provision.yml`**
-
-## Troubleshooting
-
-### Permission Issues
-
-If you encounter permission errors:
-
-1. **For CI**: Scripts should handle permissions automatically
-2. **For Local**: Follow the group membership setup in the tech stack documentation
-
-### Installation Failures
-
-1. Check internet connectivity for download-based installations
-2. Verify system requirements (Ubuntu/Debian for apt-based installs)
-3. Check available disk space
-4. Review script output for specific error messages
-
-### Tool-Specific Issues
-
-- **OpenTofu**: Requires `curl` and package management tools
-- **Ansible**: Requires Python and pip (usually pre-installed)
-- **LXD**: Requires snap and sufficient privileges
-
-## Future Enhancements
-
-These bash scripts are designed to be simple and maintainable. For more complex installation logic, they may be replaced by Rust utilities in the future while maintaining the same interface.
+This directory is preserved for documentation purposes and may be removed in future versions.
