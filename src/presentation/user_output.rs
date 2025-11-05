@@ -650,22 +650,80 @@ impl OutputMessage for ResultMessage {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// Simple constructor for cases where you have all items upfront:
+///
+/// ```rust
 /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
 ///
-/// let message = StepsMessage {
-///     title: "Next steps:".to_string(),
-///     items: vec![
-///         "Edit the configuration file".to_string(),
-///         "Review the settings".to_string(),
-///     ],
-/// };
+/// let message = StepsMessage::new("Next steps:", vec![
+///     "Edit the configuration file".to_string(),
+///     "Review the settings".to_string(),
+/// ]);
+/// ```
+///
+/// Builder pattern for dynamic construction or better readability:
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+///
+/// let message = StepsMessage::builder("Next steps:")
+///     .add("Edit the configuration file")
+///     .add("Review the settings")
+///     .build();
 /// ```
 pub struct StepsMessage {
     /// The title for the steps list
     pub title: String,
     /// The list of step items
     pub items: Vec<String>,
+}
+
+impl StepsMessage {
+    /// Create a new steps message with the given title and items
+    ///
+    /// This is a convenience constructor for simple cases where you have
+    /// all items upfront. For dynamic construction or better readability,
+    /// consider using `StepsMessage::builder()` instead.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+    ///
+    /// let msg = StepsMessage::new("Next steps:", vec![
+    ///     "Edit config".to_string(),
+    ///     "Run tests".to_string(),
+    /// ]);
+    /// ```
+    #[must_use]
+    pub fn new(title: impl Into<String>, items: Vec<String>) -> Self {
+        Self {
+            title: title.into(),
+            items,
+        }
+    }
+
+    /// Create a builder for constructing steps messages with a fluent API
+    ///
+    /// The builder pattern is useful when:
+    /// - Adding items dynamically
+    /// - You want self-documenting, readable code
+    /// - Building the message in multiple steps
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+    ///
+    /// let msg = StepsMessage::builder("Next steps:")
+    ///     .add("Edit configuration")
+    ///     .add("Review settings")
+    ///     .build();
+    /// ```
+    #[must_use]
+    pub fn builder(title: impl Into<String>) -> StepsMessageBuilder {
+        StepsMessageBuilder::new(title)
+    }
 }
 
 impl OutputMessage for StepsMessage {
@@ -689,6 +747,300 @@ impl OutputMessage for StepsMessage {
 
     fn type_name(&self) -> &'static str {
         "StepsMessage"
+    }
+}
+
+/// Builder for constructing `StepsMessage` with a fluent API
+///
+/// Provides a consuming builder pattern for constructing step messages
+/// with optional customization. Use this for complex cases where items
+/// are added dynamically or for improved readability. Simple cases can
+/// use `StepsMessage::new()` directly.
+///
+/// # Examples
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+///
+/// let message = StepsMessage::builder("Next steps:")
+///     .add("Edit configuration")
+///     .add("Review settings")
+///     .add("Deploy changes")
+///     .build();
+/// ```
+///
+/// Empty builders are valid:
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+///
+/// let message = StepsMessage::builder("Title").build();
+/// ```
+pub struct StepsMessageBuilder {
+    title: String,
+    items: Vec<String>,
+}
+
+impl StepsMessageBuilder {
+    /// Create a new builder with the given title
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessageBuilder;
+    ///
+    /// let builder = StepsMessageBuilder::new("My steps:");
+    /// ```
+    #[must_use]
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            items: Vec::new(),
+        }
+    }
+
+    /// Add a step to the list (consuming self for method chaining)
+    ///
+    /// This method consumes the builder and returns it, enabling
+    /// method chaining in a fluent API style.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+    ///
+    /// let message = StepsMessage::builder("Steps:")
+    ///     .add("First step")
+    ///     .add("Second step")
+    ///     .build();
+    /// ```
+    #[must_use]
+    #[allow(clippy::should_implement_trait)]
+    pub fn add(mut self, step: impl Into<String>) -> Self {
+        self.items.push(step.into());
+        self
+    }
+
+    /// Build the final `StepsMessage`
+    ///
+    /// Consumes the builder and produces the final message.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+    ///
+    /// let message = StepsMessage::builder("Steps:")
+    ///     .add("Step 1")
+    ///     .build();
+    /// ```
+    #[must_use]
+    pub fn build(self) -> StepsMessage {
+        StepsMessage {
+            title: self.title,
+            items: self.items,
+        }
+    }
+}
+
+/// Informational block message for grouped information
+///
+/// Info block messages display a title followed by multiple lines of text.
+/// Useful for displaying grouped information, configuration details, or
+/// multi-line informational content.
+///
+/// # Examples
+///
+/// Simple constructor for cases where you have all lines upfront:
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+///
+/// let message = InfoBlockMessage::new("Environment Details", vec![
+///     "Name: production".to_string(),
+///     "Status: running".to_string(),
+/// ]);
+/// ```
+///
+/// Builder pattern for dynamic construction or better readability:
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+///
+/// let message = InfoBlockMessage::builder("Environment Details")
+///     .add_line("Name: production")
+///     .add_line("Status: running")
+///     .add_line("Uptime: 24 hours")
+///     .build();
+/// ```
+pub struct InfoBlockMessage {
+    /// The title for the info block
+    pub title: String,
+    /// The lines of information
+    pub lines: Vec<String>,
+}
+
+impl InfoBlockMessage {
+    /// Create a new info block message with the given title and lines
+    ///
+    /// This is a convenience constructor for simple cases where you have
+    /// all lines upfront. For dynamic construction or better readability,
+    /// consider using `InfoBlockMessage::builder()` instead.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+    ///
+    /// let msg = InfoBlockMessage::new("Configuration:", vec![
+    ///     "  - username: 'torrust'".to_string(),
+    ///     "  - port: 22".to_string(),
+    /// ]);
+    /// ```
+    #[must_use]
+    pub fn new(title: impl Into<String>, lines: Vec<String>) -> Self {
+        Self {
+            title: title.into(),
+            lines,
+        }
+    }
+
+    /// Create a builder for constructing info block messages with a fluent API
+    ///
+    /// The builder pattern is useful when:
+    /// - Adding lines dynamically
+    /// - You want self-documenting, readable code
+    /// - Building the message in multiple steps
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+    ///
+    /// let msg = InfoBlockMessage::builder("Environment Details")
+    ///     .add_line("Name: production")
+    ///     .add_line("Status: active")
+    ///     .build();
+    /// ```
+    #[must_use]
+    pub fn builder(title: impl Into<String>) -> InfoBlockMessageBuilder {
+        InfoBlockMessageBuilder::new(title)
+    }
+}
+
+impl OutputMessage for InfoBlockMessage {
+    fn format(&self, _theme: &Theme) -> String {
+        use std::fmt::Write;
+
+        let mut output = format!("{}\n", self.title);
+        for line in &self.lines {
+            writeln!(&mut output, "{line}").ok();
+        }
+        output
+    }
+
+    fn required_verbosity(&self) -> VerbosityLevel {
+        VerbosityLevel::Normal
+    }
+
+    fn channel(&self) -> Channel {
+        Channel::Stderr
+    }
+
+    fn type_name(&self) -> &'static str {
+        "InfoBlockMessage"
+    }
+}
+
+/// Builder for constructing `InfoBlockMessage` with a fluent API
+///
+/// Provides a consuming builder pattern for constructing info block messages
+/// with optional customization. Use this for complex cases where lines
+/// are added dynamically or for improved readability. Simple cases can
+/// use `InfoBlockMessage::new()` directly.
+///
+/// # Examples
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+///
+/// let message = InfoBlockMessage::builder("Environment Details")
+///     .add_line("Name: production")
+///     .add_line("Status: running")
+///     .add_line("Uptime: 24 hours")
+///     .build();
+/// ```
+///
+/// Empty builders are valid:
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+///
+/// let message = InfoBlockMessage::builder("Title").build();
+/// ```
+pub struct InfoBlockMessageBuilder {
+    title: String,
+    lines: Vec<String>,
+}
+
+impl InfoBlockMessageBuilder {
+    /// Create a new builder with the given title
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessageBuilder;
+    ///
+    /// let builder = InfoBlockMessageBuilder::new("My info block:");
+    /// ```
+    #[must_use]
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            lines: Vec::new(),
+        }
+    }
+
+    /// Add a line to the info block (consuming self for method chaining)
+    ///
+    /// This method consumes the builder and returns it, enabling
+    /// method chaining in a fluent API style.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+    ///
+    /// let message = InfoBlockMessage::builder("Info:")
+    ///     .add_line("First line")
+    ///     .add_line("Second line")
+    ///     .build();
+    /// ```
+    #[must_use]
+    pub fn add_line(mut self, line: impl Into<String>) -> Self {
+        self.lines.push(line.into());
+        self
+    }
+
+    /// Build the final `InfoBlockMessage`
+    ///
+    /// Consumes the builder and produces the final message.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+    ///
+    /// let message = InfoBlockMessage::builder("Info:")
+    ///     .add_line("Line 1")
+    ///     .build();
+    /// ```
+    #[must_use]
+    pub fn build(self) -> InfoBlockMessage {
+        InfoBlockMessage {
+            title: self.title,
+            lines: self.lines,
+        }
     }
 }
 
@@ -826,6 +1178,7 @@ impl VerbosityFilter {
     }
 
     /// Info blocks require Normal level
+    #[allow(dead_code)]
     fn should_show_info_blocks(&self) -> bool {
         self.should_show(VerbosityLevel::Normal)
     }
@@ -1303,12 +1656,10 @@ impl UserOutput {
     /// //   - key_path: path/to/key
     /// ```
     pub fn info_block(&mut self, title: &str, lines: &[&str]) {
-        if self.verbosity_filter.should_show_info_blocks() {
-            self.stderr.writeln(title);
-            for line in lines {
-                self.stderr.writeln(line);
-            }
-        }
+        self.write(&InfoBlockMessage {
+            title: title.to_string(),
+            lines: lines.iter().map(|s| (*s).to_string()).collect(),
+        });
     }
 }
 
@@ -2882,6 +3233,360 @@ mod tests {
             let stderr = test_output.stderr();
             assert!(stderr.contains("Message 1"));
             assert!(stderr.contains("Message 2"));
+        }
+    }
+
+    // ============================================================================
+    // Builder Pattern Tests
+    // ============================================================================
+
+    mod builder_pattern {
+        use super::super::*;
+        use crate::presentation::user_output::test_support::TestUserOutput;
+
+        // ========================================================================
+        // StepsMessageBuilder Tests
+        // ========================================================================
+
+        #[test]
+        fn it_should_build_steps_with_fluent_api() {
+            let message = StepsMessage::builder("Title")
+                .add("Step 1")
+                .add("Step 2")
+                .add("Step 3")
+                .build();
+
+            assert_eq!(message.title, "Title");
+            assert_eq!(message.items, vec!["Step 1", "Step 2", "Step 3"]);
+        }
+
+        #[test]
+        fn it_should_create_simple_steps_directly() {
+            let message =
+                StepsMessage::new("Title", vec!["Step 1".to_string(), "Step 2".to_string()]);
+
+            assert_eq!(message.title, "Title");
+            assert_eq!(message.items, vec!["Step 1", "Step 2"]);
+        }
+
+        #[test]
+        fn it_should_build_empty_steps() {
+            let message = StepsMessage::builder("Title").build();
+
+            assert_eq!(message.title, "Title");
+            assert!(message.items.is_empty());
+        }
+
+        #[test]
+        fn it_should_build_single_step() {
+            let message = StepsMessage::builder("Title").add("Single step").build();
+
+            assert_eq!(message.title, "Title");
+            assert_eq!(message.items, vec!["Single step"]);
+        }
+
+        #[test]
+        fn it_should_accept_string_types_in_builder() {
+            let message = StepsMessage::builder("Title")
+                .add("String literal")
+                .add(String::from("Owned string"))
+                .add("Another literal".to_string())
+                .build();
+
+            assert_eq!(message.items.len(), 3);
+        }
+
+        #[test]
+        fn it_should_accept_string_types_in_constructor() {
+            let message =
+                StepsMessage::new("Title", vec!["Step 1".to_string(), String::from("Step 2")]);
+
+            assert_eq!(message.items.len(), 2);
+        }
+
+        #[test]
+        fn it_should_format_builder_messages_correctly() {
+            let theme = Theme::emoji();
+            let message = StepsMessage::builder("Next steps:")
+                .add("Configure")
+                .add("Deploy")
+                .build();
+
+            let formatted = message.format(&theme);
+            assert!(formatted.contains("Next steps:"));
+            assert!(formatted.contains("1. Configure"));
+            assert!(formatted.contains("2. Deploy"));
+        }
+
+        #[test]
+        fn it_should_integrate_builder_with_user_output() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            let message = StepsMessage::builder("Next steps:")
+                .add("Edit config")
+                .add("Run tests")
+                .build();
+
+            test_output.output.write(&message);
+
+            let stderr = test_output.stderr();
+            assert!(stderr.contains("Next steps:"));
+            assert!(stderr.contains("1. Edit config"));
+            assert!(stderr.contains("2. Run tests"));
+        }
+
+        // ========================================================================
+        // InfoBlockMessageBuilder Tests
+        // ========================================================================
+
+        #[test]
+        fn it_should_build_info_block_with_fluent_api() {
+            let message = InfoBlockMessage::builder("Environment")
+                .add_line("Name: production")
+                .add_line("Status: active")
+                .build();
+
+            assert_eq!(message.title, "Environment");
+            assert_eq!(message.lines, vec!["Name: production", "Status: active"]);
+        }
+
+        #[test]
+        fn it_should_create_simple_info_block_directly() {
+            let message = InfoBlockMessage::new(
+                "Environment",
+                vec!["Name: production".to_string(), "Status: active".to_string()],
+            );
+
+            assert_eq!(message.title, "Environment");
+            assert_eq!(message.lines, vec!["Name: production", "Status: active"]);
+        }
+
+        #[test]
+        fn it_should_build_empty_info_block() {
+            let message = InfoBlockMessage::builder("Title").build();
+
+            assert_eq!(message.title, "Title");
+            assert!(message.lines.is_empty());
+        }
+
+        #[test]
+        fn it_should_build_single_line_info_block() {
+            let message = InfoBlockMessage::builder("Title")
+                .add_line("Single line")
+                .build();
+
+            assert_eq!(message.title, "Title");
+            assert_eq!(message.lines, vec!["Single line"]);
+        }
+
+        #[test]
+        fn it_should_accept_string_types_in_info_block_builder() {
+            let message = InfoBlockMessage::builder("Title")
+                .add_line("String literal")
+                .add_line(String::from("Owned string"))
+                .add_line("Another literal".to_string())
+                .build();
+
+            assert_eq!(message.lines.len(), 3);
+        }
+
+        #[test]
+        fn it_should_accept_string_types_in_info_block_constructor() {
+            let message =
+                InfoBlockMessage::new("Title", vec!["Line 1".to_string(), String::from("Line 2")]);
+
+            assert_eq!(message.lines.len(), 2);
+        }
+
+        #[test]
+        fn it_should_format_info_block_messages_correctly() {
+            let theme = Theme::emoji();
+            let message = InfoBlockMessage::builder("Environment")
+                .add_line("Name: production")
+                .add_line("Status: active")
+                .build();
+
+            let formatted = message.format(&theme);
+            assert!(formatted.contains("Environment"));
+            assert!(formatted.contains("Name: production"));
+            assert!(formatted.contains("Status: active"));
+        }
+
+        #[test]
+        fn it_should_integrate_info_block_builder_with_user_output() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            let message = InfoBlockMessage::builder("Configuration")
+                .add_line("  - username: torrust")
+                .add_line("  - port: 22")
+                .build();
+
+            test_output.output.write(&message);
+
+            let stderr = test_output.stderr();
+            assert!(stderr.contains("Configuration"));
+            assert!(stderr.contains("  - username: torrust"));
+            assert!(stderr.contains("  - port: 22"));
+        }
+
+        #[test]
+        fn it_should_show_info_block_message_has_correct_properties() {
+            let message = InfoBlockMessage::new("Title", vec!["Line 1".to_string()]);
+
+            assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
+            assert_eq!(message.channel(), Channel::Stderr);
+            assert_eq!(message.type_name(), "InfoBlockMessage");
+        }
+
+        #[test]
+        fn it_should_respect_verbosity_for_info_block_messages() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Quiet);
+
+            let message = InfoBlockMessage::builder("Info").add_line("Line 1").build();
+
+            test_output.output.write(&message);
+
+            // Should not appear at Quiet level
+            assert_eq!(test_output.stderr(), "");
+        }
+
+        #[test]
+        fn it_should_show_info_block_at_normal_level() {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            let message = InfoBlockMessage::builder("Info").add_line("Line 1").build();
+
+            test_output.output.write(&message);
+
+            // Should appear at Normal level
+            assert!(!test_output.stderr().is_empty());
+            assert!(test_output.stderr().contains("Info"));
+        }
+
+        // ========================================================================
+        // Backward Compatibility Tests
+        // ========================================================================
+
+        #[test]
+        fn it_should_maintain_backward_compatibility_for_steps() {
+            // Old way: direct construction
+            let old_message = StepsMessage {
+                title: "Steps".to_string(),
+                items: vec!["Step 1".to_string()],
+            };
+
+            // New way: constructor
+            let new_message = StepsMessage::new("Steps", vec!["Step 1".to_string()]);
+
+            // Should produce identical results
+            assert_eq!(old_message.title, new_message.title);
+            assert_eq!(old_message.items, new_message.items);
+        }
+
+        #[test]
+        fn it_should_maintain_backward_compatibility_for_info_blocks() {
+            // Old way: UserOutput::info_block helper
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+            test_output
+                .output
+                .info_block("Title", &["Line 1", "Line 2"]);
+            let old_output = test_output.stderr();
+
+            // New way: Direct message construction
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+            let message =
+                InfoBlockMessage::new("Title", vec!["Line 1".to_string(), "Line 2".to_string()]);
+            test_output.output.write(&message);
+            let new_output = test_output.stderr();
+
+            // Should produce identical output
+            assert_eq!(old_output, new_output);
+        }
+
+        // ========================================================================
+        // Integration Tests
+        // ========================================================================
+
+        #[test]
+        fn it_should_work_with_json_formatter() {
+            use std::sync::{Arc, Mutex};
+
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::emoji(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::new(
+                    Mutex::new(Vec::new()),
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
+                formatter_override: Some(formatter),
+            };
+
+            let message = StepsMessage::builder("Steps").add("Step 1").build();
+            output.write(&message);
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
+
+            assert_eq!(json["type"], "StepsMessage");
+        }
+
+        #[test]
+        fn it_should_work_with_info_block_json_formatter() {
+            use std::sync::{Arc, Mutex};
+
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+            let formatter = Box::new(JsonFormatter);
+
+            let mut output = UserOutput {
+                theme: Theme::emoji(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                stdout: StdoutWriter::new(Box::new(test_support::TestWriter::new(Arc::new(
+                    Mutex::new(Vec::new()),
+                )))),
+                stderr: StderrWriter::new(Box::new(test_support::TestWriter::new(Arc::clone(
+                    &stderr_buffer,
+                )))),
+                formatter_override: Some(formatter),
+            };
+
+            let message = InfoBlockMessage::builder("Info").add_line("Line 1").build();
+            output.write(&message);
+
+            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
+
+            assert_eq!(json["type"], "InfoBlockMessage");
+        }
+
+        #[test]
+        fn it_should_handle_many_items_in_builder() {
+            let mut builder = StepsMessage::builder("Many steps");
+            for i in 1..=100 {
+                builder = builder.add(format!("Step {i}"));
+            }
+            let message = builder.build();
+
+            assert_eq!(message.items.len(), 100);
+            assert_eq!(message.items[0], "Step 1");
+            assert_eq!(message.items[99], "Step 100");
+        }
+
+        #[test]
+        fn it_should_handle_many_lines_in_info_block_builder() {
+            let mut builder = InfoBlockMessage::builder("Many lines");
+            for i in 1..=100 {
+                builder = builder.add_line(format!("Line {i}"));
+            }
+            let message = builder.build();
+
+            assert_eq!(message.lines.len(), 100);
+            assert_eq!(message.lines[0], "Line 1");
+            assert_eq!(message.lines[99], "Line 100");
         }
     }
 }
