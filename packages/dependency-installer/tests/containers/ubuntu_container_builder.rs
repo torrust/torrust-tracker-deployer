@@ -7,6 +7,7 @@ use testcontainers::runners::AsyncRunner;
 use testcontainers::{GenericImage, ImageExt};
 
 use super::container_id::ContainerId;
+use super::image_builder::ImageBuilder;
 use super::running_binary_container::RunningBinaryContainer;
 
 /// Builder for creating Ubuntu test containers with a binary
@@ -36,23 +37,21 @@ impl UbuntuContainerBuilder {
 
     /// Start the container with the binary
     ///
-    /// This method uses a pre-built Docker image (dependency-installer-test:ubuntu-24.04)
-    /// that includes sudo, curl, build-essential, and Rust nightly.
-    ///
-    /// # Build the image first
-    ///
-    /// Before running tests, build the custom image:
-    /// ```bash
-    /// cd packages/dependency-installer
-    /// docker build -f docker/ubuntu-24.04.Dockerfile -t dependency-installer-test:ubuntu-24.04 .
-    /// ```
+    /// This method uses a Docker image (dependency-installer-test:ubuntu-24.04) that includes
+    /// sudo, curl, build-essential, and Rust nightly. The image is built automatically if it
+    /// doesn't exist locally.
     ///
     /// # Returns
     ///
     /// A running container ready for test execution with all prerequisites installed
     #[allow(dead_code)] // Used by tests
     pub async fn start(self) -> RunningBinaryContainer {
-        // Use the custom pre-built image with all dependencies
+        // Build the Docker image if it doesn't exist
+        ImageBuilder::new()
+            .build_if_missing()
+            .expect("Failed to build test Docker image");
+
+        // Use the custom image with all dependencies
         let image = GenericImage::new("dependency-installer-test", "ubuntu-24.04")
             .with_wait_for(WaitFor::seconds(2))
             .with_cmd(vec!["sleep", "infinity"]);
