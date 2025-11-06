@@ -34,8 +34,11 @@ When starting work on a new feature:
     - [x] **Child EPIC #9**: [App Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/9) - Core business logic
     - [x] **Child EPIC #10**: [UI Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/10) - CLI interface
 - [ ] **1.3** Refactor extract shared code between testing and production for app bootstrapping
-- [ ] **1.4** Improve command to use better abstraction to handle presentation layer
-  - types to handle user's views, etc
+- [x] **1.4** Improve command to use better abstraction to handle presentation layer ✅ Completed
+  - User output architecture improvements implemented
+  - Epic [#102](https://github.com/torrust/torrust-tracker-deployer/issues/102) completed
+  - Message trait system, sink abstraction, and theme support added
+  - Folder module structure with focused submodules
 - [x] **1.5** Create command `torrust-tracker-deployer create` to create a new environment ✅ Completed
   - EPIC: [Implement Create Environment Command](https://github.com/torrust/torrust-tracker-deployer/issues/34) - GitHub Issue #34
 - [ ] **1.6** Create command `torrust-tracker-deployer provision` to provision VM infrastructure (UI layer only)
@@ -56,9 +59,10 @@ When starting work on a new feature:
 
 **Note:** These are internal app layer commands (like ProvisionCommand or ConfigureCommand), not console commands. The approach is to slice by functional services rather than deployment stages - we fully deploy a working stack from the beginning and incrementally add new services.
 
-- [ ] **3.1** Finish ConfigureCommand - [Epic #16](https://github.com/torrust/torrust-tracker-deployer/issues/16)
-  - Add system security configuration (automatic updates, UFW firewall)
-  - Refactor Ansible templates to centralized variables pattern
+- [x] **3.1** Finish ConfigureCommand ✅ Completed - [Epic #16](https://github.com/torrust/torrust-tracker-deployer/issues/16)
+  - System security configuration added (automatic updates, UFW firewall)
+  - Ansible templates refactored to centralized variables pattern
+  - Tasks completed: [#17](https://github.com/torrust/torrust-tracker-deployer/issues/17), [#18](https://github.com/torrust/torrust-tracker-deployer/issues/18), [#19](https://github.com/torrust/torrust-tracker-deployer/issues/19)
 - [ ] **3.2** Implement ReleaseCommand (App layer business logic)
   - Core business logic for deploying Torrust Tracker application files and configuration
   - Template generation and file deployment to provisioned infrastructure
