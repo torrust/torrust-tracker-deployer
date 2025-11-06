@@ -1,0 +1,53 @@
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation,
+# and allow manual testing through the repository's "Actions" tab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    # Set the permissions to the lowest permissions possible needed for your steps.
+    # Copilot will be given its own token for its operations.
+    permissions:
+      # We need to clone the repository to build and run the dependency-installer binary
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Enable Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build dependency-installer binary
+        run: |
+          cd packages/dependency-installer
+          cargo build --release --bin dependency-installer
+
+      - name: Install all development dependencies
+        run: |
+          # Use the binary we just built to install all dependencies
+          sudo packages/dependency-installer/target/release/dependency-installer install
+        env:
+          # Ensure non-interactive installation
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: Verify installations
+        run: |
+          # Verify all tools are installed correctly
+          packages/dependency-installer/target/release/dependency-installer check
