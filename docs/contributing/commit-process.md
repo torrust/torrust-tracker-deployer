@@ -134,9 +134,28 @@ This script runs all mandatory checks:
 2. **Run all linters**: `cargo run --bin linter all` (stable & nightly toolchains)
 3. **Run tests**: `cargo test`
 4. **Test documentation builds**: `cargo doc --no-deps --bins --examples --workspace --all-features`
-5. **Run E2E tests**: `cargo run --bin e2e-tests-full`
+5. **Run E2E provision and destroy tests**: `cargo run --bin e2e-provision-and-destroy-tests`
+6. **Run E2E configuration tests**: `cargo run --bin e2e-config-tests`
+7. **Run code coverage check**: `cargo cov-check` (informational only)
 
 **All checks must pass** before committing. Fix any reported issues.
+
+### E2E Test Execution Strategy
+
+The pre-commit script runs E2E tests as **two separate commands** instead of a single comprehensive test:
+
+- **Provision and Destroy Tests**: Test infrastructure lifecycle (LXD VMs)
+- **Configuration Tests**: Test software installation and configuration (Docker containers)
+
+This split approach provides the same comprehensive coverage while being compatible with GitHub Actions runners. The split is necessary because GitHub Actions has networking limitations with nested LXD VMs that prevent the full E2E test suite from running.
+
+**For local development**, you can still run the full E2E test suite manually for convenience:
+
+```bash
+cargo run --bin e2e-tests-full
+```
+
+This provides the same coverage in a single run but is only supported in local environments with proper LXD networking.
 
 ### Running Individual Linters
 

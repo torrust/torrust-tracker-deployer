@@ -20,7 +20,8 @@ declare -a STEPS=(
     "Running linters|All linters passed|||cargo run --bin linter all"
     "Running tests|All tests passed|||cargo test"
     "Testing cargo documentation|Documentation builds successfully|||cargo doc --no-deps --bins --examples --workspace --all-features"
-    "Running comprehensive E2E tests|All E2E tests passed|(Filtering logs to WARNING level and above - this may take a few minutes)|RUST_LOG=warn|cargo run --bin e2e-tests-full"
+    "Running E2E provision and destroy tests|Provision and destroy tests passed|(Testing infrastructure lifecycle - this may take a few minutes)|RUST_LOG=warn|cargo run --bin e2e-provision-and-destroy-tests"
+    "Running E2E configuration tests|Configuration tests passed|(Testing software installation and configuration)|RUST_LOG=warn|cargo run --bin e2e-config-tests"
     "Running code coverage check|Coverage meets 75% threshold|(Informational only - does not block commits)||cargo cov-check"
 )
 
