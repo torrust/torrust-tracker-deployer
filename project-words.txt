@@ -15,6 +15,7 @@ childlogdir
 chkdsk
 chrono
 CIFS
+clig
 clippy
 clonable
 cloneable
@@ -54,6 +55,7 @@ eprintln
 executability
 exitcode
 getent
+getopt
 Gossman
 Graça
 handleable
@@ -73,6 +75,7 @@ keyrings
 larstobi
 lifecycles
 lineinfile
+Liskov
 listenfd
 listhost
 logfile
