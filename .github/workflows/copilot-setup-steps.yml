@@ -50,3 +50,7 @@ jobs:
         run: |
           # Verify all tools are installed correctly
           target/release/dependency-installer check
+
+      - name: Install Git pre-commit hooks
+        run: |
+          ./scripts/install-git-hooks.sh
