@@ -23,6 +23,7 @@ impl TelemetrySink {
 
     /// Get the endpoint URL
     #[cfg(test)]
+    #[must_use]
     pub fn endpoint(&self) -> &str {
         &self.endpoint
     }

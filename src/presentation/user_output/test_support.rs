@@ -6,7 +6,7 @@
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
-use super::*;
+use super::{Theme, UserOutput, VerbosityLevel};
 
 /// Writer implementation for tests that writes to a shared buffer
 ///

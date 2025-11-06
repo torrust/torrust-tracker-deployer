@@ -1,8 +1,11 @@
-//! Core UserOutput struct and implementation
+//! Core `UserOutput` struct and implementation
 
 use std::io::Write;
 
-use super::messages::*;
+use super::messages::{
+    ErrorMessage, InfoBlockMessage, ProgressMessage, ResultMessage, StepsMessage, SuccessMessage,
+    WarningMessage,
+};
 use super::sinks::StandardSink;
 use super::verbosity::VerbosityFilter;
 use super::{Channel, FormatterOverride, OutputMessage, OutputSink, Theme, VerbosityLevel};
