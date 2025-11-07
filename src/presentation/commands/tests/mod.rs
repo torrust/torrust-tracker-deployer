@@ -73,7 +73,7 @@ impl TestContext {
     pub fn new() -> Self {
         let temp_dir = TempDir::new().expect("Failed to create temporary directory");
         let working_dir = temp_dir.path().to_path_buf();
-        let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+        let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Silent)));
 
         Self {
             _temp_dir: temp_dir,
