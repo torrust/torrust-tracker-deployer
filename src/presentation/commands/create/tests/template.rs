@@ -1,8 +1,8 @@
 //! Integration Tests for Template Generation
 
-use crate::presentation::cli::CreateAction;
 use crate::presentation::commands::create;
 use crate::presentation::commands::tests::TestContext;
+use crate::presentation::input::cli::CreateAction;
 use crate::presentation::user_output::test_support::TestUserOutput;
 use crate::presentation::user_output::VerbosityLevel;
 

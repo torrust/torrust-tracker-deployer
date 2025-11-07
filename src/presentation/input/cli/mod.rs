@@ -181,10 +181,10 @@ mod tests {
         assert!(cli.command.is_some());
         match cli.command.unwrap() {
             Commands::Create { action } => match action {
-                crate::presentation::cli::CreateAction::Environment { env_file } => {
+                crate::presentation::input::cli::CreateAction::Environment { env_file } => {
                     assert_eq!(env_file, std::path::PathBuf::from("config.json"));
                 }
-                crate::presentation::cli::CreateAction::Template { .. } => {
+                crate::presentation::input::cli::CreateAction::Template { .. } => {
                     panic!("Expected Environment action")
                 }
             },
@@ -205,10 +205,10 @@ mod tests {
 
         match cli.command.unwrap() {
             Commands::Create { action } => match action {
-                crate::presentation::cli::CreateAction::Environment { env_file } => {
+                crate::presentation::input::cli::CreateAction::Environment { env_file } => {
                     assert_eq!(env_file, std::path::PathBuf::from("env.json"));
                 }
-                crate::presentation::cli::CreateAction::Template { .. } => {
+                crate::presentation::input::cli::CreateAction::Template { .. } => {
                     panic!("Expected Environment action")
                 }
             },
@@ -250,10 +250,10 @@ mod tests {
 
         match cli.command.unwrap() {
             Commands::Create { action } => match action {
-                crate::presentation::cli::CreateAction::Environment { env_file } => {
+                crate::presentation::input::cli::CreateAction::Environment { env_file } => {
                     assert_eq!(env_file, std::path::PathBuf::from("config.json"));
                 }
-                crate::presentation::cli::CreateAction::Template { .. } => {
+                crate::presentation::input::cli::CreateAction::Template { .. } => {
                     panic!("Expected Environment action")
                 }
             },
@@ -298,10 +298,10 @@ mod tests {
 
         match cli.command.unwrap() {
             Commands::Create { action } => match action {
-                crate::presentation::cli::CreateAction::Template { output_path } => {
+                crate::presentation::input::cli::CreateAction::Template { output_path } => {
                     assert!(output_path.is_none());
                 }
-                crate::presentation::cli::CreateAction::Environment { .. } => {
+                crate::presentation::input::cli::CreateAction::Environment { .. } => {
                     panic!("Expected Template action")
                 }
             },
@@ -321,13 +321,13 @@ mod tests {
 
         match cli.command.unwrap() {
             Commands::Create { action } => match action {
-                crate::presentation::cli::CreateAction::Template { output_path } => {
+                crate::presentation::input::cli::CreateAction::Template { output_path } => {
                     assert_eq!(
                         output_path,
                         Some(std::path::PathBuf::from("./config/my-env.json"))
                     );
                 }
-                crate::presentation::cli::CreateAction::Environment { .. } => {
+                crate::presentation::input::cli::CreateAction::Environment { .. } => {
                     panic!("Expected Template action")
                 }
             },

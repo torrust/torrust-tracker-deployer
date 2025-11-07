@@ -6,8 +6,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::presentation::cli::Commands;
 use crate::presentation::errors::CommandError;
+use crate::presentation::input::cli::Commands;
 use crate::presentation::user_output::UserOutput;
 
 // Re-export command modules
@@ -51,7 +51,7 @@ pub mod tests;
 ///
 /// ```rust
 /// use clap::Parser;
-/// use torrust_tracker_deployer_lib::presentation::{cli, commands, user_output};
+/// use torrust_tracker_deployer_lib::presentation::{input::cli, commands, user_output};
 /// use std::{path::Path, sync::{Arc, Mutex}};
 ///
 /// let cli = cli::Cli::parse();
@@ -112,7 +112,7 @@ pub fn execute(
 ///
 /// ```rust
 /// use clap::Parser;
-/// use torrust_tracker_deployer_lib::presentation::{commands, cli, errors, user_output};
+/// use torrust_tracker_deployer_lib::presentation::{commands, input::cli, errors, user_output};
 /// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroySubcommandError;
 /// use torrust_tracker_deployer_lib::domain::environment::name::EnvironmentNameError;
 /// use std::sync::{Arc, Mutex};

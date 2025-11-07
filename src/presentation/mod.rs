@@ -25,10 +25,11 @@
 //!
 //! ```text
 //! presentation/
-//! ├── cli/              # CLI argument parsing and structure
-//! │   ├── args.rs       # Global CLI arguments (logging config)
-//! │   ├── commands.rs   # Subcommand definitions
-//! │   └── mod.rs        # Main Cli struct and parsing logic
+//! ├── input/            # Input Layer - Input parsing and validation
+//! │   └── cli/          # CLI argument parsing and structure
+//! │       ├── args.rs   # Global CLI arguments (logging config)
+//! │       ├── commands.rs # Subcommand definitions
+//! │       └── mod.rs    # Main Cli struct and parsing logic
 //! ├── commands/         # Command execution handlers
 //! │   ├── destroy.rs    # Destroy command handler
 //! │   └── mod.rs        # Unified command dispatch and error handling
@@ -38,17 +39,17 @@
 //! ```
 
 // Core presentation modules
-pub mod cli;
 pub mod commands;
 pub mod errors;
+pub mod input;
 pub mod progress;
 pub mod user_output;
 
 // Re-export commonly used presentation types for convenience
-pub use cli::{Cli, Commands, GlobalArgs};
 pub use commands::create::CreateSubcommandError;
 pub use commands::destroy::DestroySubcommandError;
 pub use commands::{execute, handle_error};
 pub use errors::CommandError;
+pub use input::{Cli, Commands, GlobalArgs};
 pub use progress::ProgressReporter;
 pub use user_output::{Theme, UserOutput, VerbosityLevel};

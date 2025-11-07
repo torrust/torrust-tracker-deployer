@@ -23,7 +23,7 @@
 //! ```rust,no_run
 //! use std::path::{Path, PathBuf};
 //! use std::sync::{Arc, Mutex};
-//! use torrust_tracker_deployer_lib::presentation::cli::commands::CreateAction;
+//! use torrust_tracker_deployer_lib::presentation::input::cli::commands::CreateAction;
 //! use torrust_tracker_deployer_lib::presentation::commands::create;
 //! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 //!
