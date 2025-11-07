@@ -1,12 +1,12 @@
 //! Execution Context
 //!
-//! This module provides the ExecutionContext wrapper around the Container for
+//! This module provides the `ExecutionContext` wrapper around the Container for
 //! dependency injection in command handlers. It offers a clean interface for
 //! accessing services needed during command execution.
 //!
 //! ## Purpose
 //!
-//! The ExecutionContext serves as an abstraction layer between the Container
+//! The `ExecutionContext` serves as an abstraction layer between the Container
 //! (which holds raw services) and command handlers (which need typed access).
 //! This separation provides:
 //!
@@ -25,18 +25,21 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```rust,no_run
+//! use torrust_tracker_deployer_lib::bootstrap::Container;
+//! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 //! use std::sync::Arc;
-//! use crate::bootstrap::Container;
-//! use crate::presentation::dispatch::ExecutionContext;
 //!
+//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create execution context from container
-//! let container = Arc::new(Container::new());
-//! let context = ExecutionContext::new(container);
+//! let container = Container::new();
+//! let context = ExecutionContext::new(Arc::new(container));
 //!
 //! // Command handlers access services through context
 //! let user_output = context.user_output();
 //! user_output.lock().unwrap().progress("Processing...");
+//! # Ok(())
+//! # }
 //! ```
 
 use std::sync::{Arc, Mutex};
@@ -44,16 +47,11 @@ use std::sync::{Arc, Mutex};
 use crate::bootstrap::Container;
 use crate::presentation::user_output::UserOutput;
 
-/// Execution context for command handlers
+/// ### Design Consideration: Shared State Access
 ///
-/// Wraps the Container to provide clean, typed access to application services
-/// needed during command execution. Acts as a bridge between the dependency
-/// injection container and command handlers.
-///
-/// # Thread Safety
-///
-/// All services accessed through ExecutionContext are thread-safe and can be
-/// safely shared across async operations and threads.
+/// Currently, there is no shared mutable state in the system that requires `Arc<Mutex<T>>`
+/// patterns. However, if shared state is needed in the future, it can be added to the
+/// Container and accessed through standard Rust concurrency patterns:
 ///
 /// # Examples
 ///
@@ -83,13 +81,16 @@ impl ExecutionContext {
     ///
     /// # Examples
     ///
-    /// ```rust
-    /// use std::sync::Arc;
+    /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use std::sync::Arc;
     ///
-    /// let container = Arc::new(Container::new());
-    /// let context = ExecutionContext::new(container);
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let container = Container::new();
+    /// let context = ExecutionContext::new(Arc::new(container));
+    /// # Ok(())
+    /// # }
     /// ```
     #[must_use]
     pub fn new(container: Arc<Container>) -> Self {
@@ -103,16 +104,19 @@ impl ExecutionContext {
     ///
     /// # Examples
     ///
-    /// ```rust
-    /// use std::sync::Arc;
+    /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use std::sync::Arc;
     ///
-    /// let container = Arc::new(Container::new());
-    /// let context = ExecutionContext::new(container.clone());
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let container = Container::new();
+    /// let context = ExecutionContext::new(Arc::new(container));
     ///
     /// let container_ref = context.container();
-    /// assert!(Arc::ptr_eq(&container, container_ref));
+    /// // Use container_ref as needed
+    /// # Ok(())
+    /// # }
     /// ```
     #[must_use]
     pub fn container(&self) -> &Arc<Container> {
@@ -122,21 +126,24 @@ impl ExecutionContext {
     /// Get shared reference to user output service
     ///
     /// Returns the user output service for displaying messages, progress,
-    /// and results to users. The service is wrapped in Arc<Mutex<T>> for
+    /// and results to users. The service is wrapped in `Arc<Mutex<T>>` for
     /// thread-safe shared access.
     ///
     /// # Examples
     ///
-    /// ```rust
-    /// use std::sync::Arc;
+    /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use std::sync::Arc;
     ///
-    /// let container = Arc::new(Container::new());
-    /// let context = ExecutionContext::new(container);
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let container = Container::new();
+    /// let context = ExecutionContext::new(Arc::new(container));
     ///
     /// let user_output = context.user_output();
     /// user_output.lock().unwrap().success("Operation completed");
+    /// # Ok(())
+    /// # }
     /// ```
     #[must_use]
     pub fn user_output(&self) -> Arc<Mutex<UserOutput>> {

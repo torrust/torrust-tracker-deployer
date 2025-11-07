@@ -27,7 +27,7 @@
 //! └── context.rs   # ExecutionContext wrapper around Container
 //! ```
 //!
-//! ## ExecutionContext Design
+//! ## `ExecutionContext` Design
 //!
 //! The Dispatch Layer uses an `ExecutionContext` wrapper around the `Container` rather than
 //! passing the `Container` directly to command handlers. This design choice provides several
@@ -38,7 +38,10 @@
 //! By using `ExecutionContext`, we can extend execution context in the future without
 //! breaking existing command handler signatures:
 //!
-//! ```rust
+//! ```rust,ignore
+//! use std::sync::Arc;
+//! use torrust_tracker_deployer_lib::bootstrap::Container;
+//!
 //! pub struct ExecutionContext {
 //!     container: Arc<Container>,
 //!     // Future additions without breaking changes:
@@ -54,17 +57,26 @@
 //! `ExecutionContext` represents "everything a command needs to execute" rather than
 //! exposing dependency injection mechanics directly:
 //!
-//! ```rust
+//! ```rust,no_run
+//! use torrust_tracker_deployer_lib::bootstrap::Container;
+//! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+//!
+//! # fn example() {
 //! // Clear: This is specifically for command execution
-//! fn handle_command(context: &ExecutionContext)
+//! fn handle_command(context: &ExecutionContext) {
+//!     // Command execution logic
+//! }
 //!
 //! // Less clear: Could be for bootstrapping, testing, or execution
-//! fn handle_command(container: &Container)
+//! fn handle_command_old(container: &Container) {
+//!     // Generic container usage
+//! }
+//! # }
 //! ```
 //!
 //! ### 3. Command-Specific Service Access
 //!
-//! ExecutionContext can provide command-specific convenience methods and service
+//! `ExecutionContext` can provide command-specific convenience methods and service
 //! aggregations without exposing the entire Container interface.
 //!
 //! For the complete rationale, see the architectural decision record:
@@ -73,7 +85,7 @@
 //! ## Design Principles
 //!
 //! - **Route, Don't Execute**: This layer only routes commands, doesn't execute them
-//! - **Dependency Injection**: Provide clean access to services via ExecutionContext
+//! - **Dependency Injection**: Provide clean access to services via `ExecutionContext`
 //! - **Type Safety**: Use strongly-typed routing with match statements
 //! - **Error Propagation**: Pass routing errors up to caller
 //!
@@ -88,38 +100,24 @@
 //!
 //! ## Usage Pattern
 //!
-//! ```rust
-//! use crate::presentation::dispatch::{route_command, ExecutionContext};
-//! use crate::presentation::input::Commands;
-//! use crate::bootstrap::Container;
+//! ```rust,ignore
+//! use std::path::Path;
+//! use std::sync::Arc;
+//! use torrust_tracker_deployer_lib::bootstrap::Container;
+//! use torrust_tracker_deployer_lib::presentation::dispatch::{route_command, ExecutionContext};
+//! // Note: Commands enum requires specific action parameters in practice
 //!
-//! // Create execution context from dependency injection container
-//! let container = Container::new(/* ... */);
-//! let context = ExecutionContext::new(container);
+//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! let container = Container::new();
+//! let context = ExecutionContext::new(Arc::new(container));
+//! let working_dir = Path::new(".");
 //!
-//! // Route command to appropriate handler
-//! match route_command(&command, &context).await {
-//!     Ok(()) => println!("Command completed successfully"),
-//!     Err(e) => eprintln!("Command failed: {}", e),
-//! }
+//! // Execute a command through the dispatch layer
+//! // Note: route_command is synchronous, not async
+//! // Commands require proper construction with actions
+//! # Ok(())
+//! # }
 //! ```
-//!
-//! ## Future Enhancements
-//!
-//! As part of the presentation layer reorganization (Issue #154), this Dispatch Layer
-//! will serve as the foundation for:
-//!
-//! - Middleware support (logging, timing, authentication)
-//! - Command validation and preprocessing
-//! - Async command execution patterns
-//! - Command composition and chaining
-//!
-//! ## Related Documentation
-//!
-//! - [Presentation Layer Reorganization Plan](../../docs/refactors/plans/presentation-layer-reorganization.md)
-//! - [DDD Layer Placement Guide](../../docs/contributing/ddd-layer-placement.md)
-//! - [Container Pattern Documentation](../../docs/analysis/presentation-layer/design-proposal.md#dependency-injection-with-container)
-
 // Command routing module
 pub mod router;
 

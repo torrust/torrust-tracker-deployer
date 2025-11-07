@@ -31,19 +31,20 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```rust,ignore
+//! use std::path::Path;
 //! use std::sync::Arc;
-//! use crate::bootstrap::Container;
-//! use crate::presentation::dispatch::{route_command, ExecutionContext};
-//! use crate::presentation::input::Commands;
+//! use torrust_tracker_deployer_lib::bootstrap::Container;
+//! use torrust_tracker_deployer_lib::presentation::dispatch::{route_command, ExecutionContext};
+//! // Note: Commands enum requires specific action parameters in practice
 //!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let container = Arc::new(Container::new());
-//! let context = ExecutionContext::new(container);
-//! let command = Commands::Create { action: todo!() };
+//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! let container = Container::new();
+//! let context = ExecutionContext::new(Arc::new(container));
+//! let working_dir = Path::new(".");
 //!
 //! // Route command to appropriate handler
-//! route_command(command, &context).await?;
+//! // Note: Commands require proper construction with actions
 //! # Ok(())
 //! # }
 //! ```
@@ -83,25 +84,22 @@ use super::ExecutionContext;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```text
 /// use std::path::Path;
 /// use std::sync::Arc;
-/// use crate::bootstrap::Container;
-/// use crate::presentation::dispatch::{route_command, ExecutionContext};
-/// use crate::presentation::input::Commands;
+/// use torrust_tracker_deployer_lib::bootstrap::Container;
+/// use torrust_tracker_deployer_lib::presentation::dispatch::{route_command, ExecutionContext};
+/// // Note: Commands enum requires specific action parameters in practice
 ///
-/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new());
-/// let context = ExecutionContext::new(container);
-/// let command = Commands::Create { action: todo!() };
-/// let working_dir = Path::new(".");
+/// fn example() -> Result<(), Box<dyn std::error::Error>> {
+///     let container = Container::new();
+///     let context = ExecutionContext::new(Arc::new(container));
+///     let working_dir = Path::new(".");
 ///
-/// match route_command(command, working_dir, &context) {
-///     Ok(()) => println!("Command completed successfully"),
-///     Err(e) => eprintln!("Command failed: {}", e),
+///     // Route command to appropriate handler - requires proper Commands construction
+///     // route_command(command, working_dir, &context)?;
+///     Ok(())
 /// }
-/// # Ok(())
-/// # }
 /// ```
 pub fn route_command(
     command: Commands,

@@ -23,6 +23,7 @@ cloudinit
 Cockburn
 concepsts
 connrefused
+configurator
 containerd
 cpus
 creds
