@@ -24,16 +24,16 @@ if [ "${TORRUST_TD_SKIP_SLOW_TESTS:-false}" = "true" ]; then
     echo "The following tests are SKIPPED to stay within the 5-minute timeout limit:"
     echo "  • E2E provision and destroy tests (~44 seconds)"
     echo "  • E2E configuration tests (~48 seconds)"
-    echo "  • Code coverage check (~1 minute 29 seconds)"
     echo ""
     echo "💡 These tests will run automatically in CI after PR creation."
+    echo "Note: Code coverage is also checked automatically in CI."
     echo ""
     echo "If you want to run them manually before committing, use these commands:"
     echo "  cargo run --bin e2e-provision-and-destroy-tests  # ~44s"
     echo "  cargo run --bin e2e-config-tests                 # ~48s"
-    echo "  cargo cov-check                                  # ~1m 29s"
+    echo "  cargo cov-check                                  # For coverage check"
     echo ""
-    echo "Fast mode execution time: ~3 minutes 48 seconds"
+    echo "Fast mode execution time: ~2 minutes 30 seconds"
     echo ""
     
     declare -a STEPS=(
@@ -50,7 +50,6 @@ else
         "Testing cargo documentation|Documentation builds successfully|||cargo doc --no-deps --bins --examples --workspace --all-features"
         "Running E2E provision and destroy tests|Provision and destroy tests passed|(Testing infrastructure lifecycle - this may take a few minutes)|RUST_LOG=warn|cargo run --bin e2e-provision-and-destroy-tests"
         "Running E2E configuration tests|Configuration tests passed|(Testing software installation and configuration)|RUST_LOG=warn|cargo run --bin e2e-config-tests"
-        "Running code coverage check|Coverage meets 75% threshold|(Informational only - does not block commits)||cargo cov-check"
     )
 fi
 
@@ -69,6 +68,8 @@ format_time() {
         echo "${seconds}s"
     fi
 }
+
+# Function to format elapsed time
 
 # Function to run a step with timing
 run_step() {

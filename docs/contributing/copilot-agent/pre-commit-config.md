@@ -4,7 +4,7 @@ This document explains how to configure the `TORRUST_TD_SKIP_SLOW_TESTS` environ
 
 ## Why This Is Needed
 
-GitHub Copilot coding agent has a hardcoded ~5-6 minute timeout for command execution. Our full pre-commit verification (including E2E tests and coverage checks) takes ~5.5 minutes, causing the agent to timeout and retry infinitely.
+GitHub Copilot coding agent has a hardcoded ~5-6 minute timeout for command execution. Our full pre-commit verification (including E2E tests) takes ~4-5 minutes, which is close to the timeout limit and can cause timeouts during heavy load.
 
 **Related Issues:**
 
@@ -13,7 +13,9 @@ GitHub Copilot coding agent has a hardcoded ~5-6 minute timeout for command exec
 
 ## Solution
 
-We use an environment variable (`TORRUST_TD_SKIP_SLOW_TESTS=true`) to skip slow tests (E2E tests and code coverage) when Copilot agent runs pre-commit checks. This keeps checks under the timeout limit while maintaining full verification for local development.
+We use an environment variable (`TORRUST_TD_SKIP_SLOW_TESTS=true`) to skip slow tests (E2E tests) when Copilot agent runs pre-commit checks. This keeps checks well under the timeout limit while maintaining full verification for local development.
+
+**Note:** Code coverage was moved from pre-commit to CI workflows to simplify local development and improve reliability.
 
 **Note:** The variable name follows action-based naming (describes behavior, not context). For a comprehensive discussion on condition-based vs action-based environment variable naming, see [Environment Variables Naming Guide](../environment-variables-naming.md). All Torrust Tracker Deployer environment variables use the `TORRUST_TD_` prefix as documented in [Environment Variable Prefix ADR](../../decisions/environment-variable-prefix.md).
 
@@ -27,14 +29,15 @@ Understanding where time is spent helps explain why we skip certain tests for th
 | ------------- | ----------- | ---------- | -------- | --------------------- |
 | cargo machete | 0.08s       | 0.04%      | Instant  | ❌ No                 |
 | All linters   | 18.75s      | 5.7%       | Fast     | ❌ No                 |
-| Unit tests    | 1m 16s      | 22.9%      | Medium   | ❌ No                 |
-| cargo doc     | 44s         | 13.4%      | Medium   | ❌ No                 |
-| E2E provision | 44s         | 13.4%      | Medium   | ✅ **Yes**            |
-| E2E config    | 48s         | 14.4%      | Medium   | ✅ **Yes**            |
-| Coverage      | 1m 29s      | 26.9%      | Slowest  | ✅ **Yes**            |
-| **TOTAL**     | **~5m 30s** | **100%**   | -        | -                     |
+| Unit tests    | 1m 16s      | 36.6%      | Medium   | ❌ No                 |
+| cargo doc     | 44s         | 21.2%      | Medium   | ❌ No                 |
+| E2E provision | 44s         | 21.2%      | Medium   | ✅ **Yes**            |
+| E2E config    | 48s         | 23.1%      | Medium   | ✅ **Yes**            |
+| **TOTAL**     | **~4m 15s** | **100%**   | -        | -                     |
 
-**Fast Mode Total: ~3m 48s** (31% time reduction, ~2 minute safety margin below timeout)
+**Fast Mode Total: ~2m 45s** (35% time reduction, ~3 minute safety margin below timeout)
+
+**Coverage Note**: Code coverage was moved from pre-commit to CI workflows for better developer experience and reliability.
 
 ### Unit Tests Breakdown (cargo test)
 
@@ -59,12 +62,13 @@ The unit tests (`cargo test`) complete in **1m 16s** and include:
 - Integration tests provide critical coverage
 - Doc tests ensure documentation examples work
 
-**What We Skip:** E2E tests (1m 32s) and coverage (1m 29s) are skipped because:
+**What We Skip:** E2E tests (1m 32s) are skipped because:
 
-- They're the slowest checks (54.8% of total time combined)
+- They're the slowest remaining checks (44.3% of total time combined)
 - E2E tests run in CI workflows after PR creation
-- Coverage runs in CI and provides informational metrics
-- Skipping them provides ~3 minute time savings
+- Skipping them provides ~1.5 minute time savings and a 3-minute safety margin
+
+**Coverage Note:** Code coverage was moved from pre-commit to CI to improve developer experience and reduce complexity.
 
 ## How to Configure
 
@@ -93,7 +97,8 @@ The unit tests (`cargo test`) complete in **1m 16s** and include:
 When developers run `./scripts/pre-commit.sh` locally:
 
 - `TORRUST_TD_SKIP_SLOW_TESTS` is **not set** (defaults to `false`)
-- All checks run, including E2E tests and coverage (~5.5 minutes)
+- All checks run, including E2E tests (~4-5 minutes)
+- Coverage is checked separately in CI workflows
 - Full quality verification maintained
 
 ### For Copilot Agent (Fast Verification)
@@ -101,8 +106,8 @@ When developers run `./scripts/pre-commit.sh` locally:
 When Copilot agent runs the pre-commit hook:
 
 - `TORRUST_TD_SKIP_SLOW_TESTS=true` is injected from the `copilot` environment
-- E2E tests and coverage checks are **skipped** (~3.8 minutes total)
-- CI workflows will still run all tests after the PR is created
+- E2E tests are **skipped** (~2m 45s total)
+- CI workflows will still run all tests and coverage after the PR is created
 
 ## Verification
 
@@ -116,11 +121,10 @@ To verify the configuration is working:
 
 When `TORRUST_TD_SKIP_SLOW_TESTS=true`:
 
-**Skipped (saves ~3 minutes):**
+**Skipped (saves ~1m 30s):**
 
 - ❌ E2E provision and destroy tests (~44s)
 - ❌ E2E configuration tests (~48s)
-- ❌ Code coverage check (~1m 29s)
 
 **Still runs (maintains quality):**
 
@@ -129,14 +133,17 @@ When `TORRUST_TD_SKIP_SLOW_TESTS=true`:
 - ✅ Unit tests - 1529 tests across all suites (~1m 16s)
 - ✅ Cargo documentation build (~44s)
 
-**Total time: ~3m 48s** (vs ~5m 30s in full mode)
+**Total time: ~2m 45s** (vs ~4m 15s in full mode)
+
+**Coverage Note:** Code coverage is now checked only in CI workflows, not in pre-commit.
 
 ## CI Safety Net
 
-Even though slow tests are skipped in pre-commit for Copilot agent, they still run:
+Even though E2E tests are skipped in pre-commit for Copilot agent, they still run:
 
 - In GitHub Actions workflows on PR creation
 - In the full CI pipeline before merging
+- Code coverage is checked automatically in CI workflows
 
 This ensures no regressions slip through while keeping Copilot agent functional.
 
@@ -153,7 +160,7 @@ cargo run --bin e2e-provision-and-destroy-tests
 # Run E2E config tests (~48s)
 cargo run --bin e2e-config-tests
 
-# Run coverage check (~1m 29s)
+# Check coverage manually (if needed)
 cargo cov-check
 ```
 

@@ -42,6 +42,10 @@ jobs:
         name: Generate HTML Coverage Report
         run: cargo cov-html
 
+      - id: coverage-check
+        name: Verify Coverage Threshold (75%)
+        run: cargo cov-check
+
       - id: upload-coverage
         name: Upload HTML Coverage Report
         uses: actions/upload-artifact@v4

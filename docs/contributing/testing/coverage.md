@@ -184,72 +184,36 @@ All coverage commands use cargo aliases defined in `.cargo/config.toml`:
 | `cargo cov-codecov` | `cargo llvm-cov --codecov --output-path=./.coverage/codecov.json` | Generate Codecov JSON             |
 | `cargo cov-html`    | `cargo llvm-cov --html`                                           | Generate HTML report              |
 
-## 🚨 Pre-commit Coverage Check
+## 🚨 Coverage Enforcement Strategy
 
-The pre-commit script includes an **informational** coverage check that runs as the final step.
+Code coverage is **not checked in pre-commit** to keep local development fast and focused on core quality checks.
 
-### How It Works
+### Why No Pre-commit Coverage?
 
-When you run `./scripts/pre-commit.sh`, the coverage check:
+Coverage is excluded from pre-commit because:
 
-1. Runs **after** all other pre-commit checks succeed
-2. Executes `cargo cov-check` to measure coverage
-3. Shows current coverage percentage
-4. **Does NOT block commits** if coverage is low
+- **Speed**: Coverage analysis is slow (1-2 minutes) and would slow down local commits
+- **Reliability**: Coverage tools can fail due to missing binaries or tool issues
+- **Developer Experience**: Fast feedback loop for core quality checks (linting, tests)
+- **CI Enforcement**: Coverage threshold is enforced where it matters most - in CI
 
-### Configuration
+### Local Coverage (Optional)
 
-From `scripts/pre-commit.sh`:
+Developers can still check coverage locally when needed:
 
 ```bash
-"Running code coverage check|Coverage meets 75% threshold|(Informational only - does not block commits)||cargo cov-check"
+# Check current coverage (fast)
+cargo cov-check
+
+# Generate detailed HTML report
+cargo cov-html
 ```
 
-### Why Non-blocking?
+**Use cases for local coverage**:
 
-Coverage checks are informational to allow:
-
-- **Security Patches**: Critical fixes shouldn't be delayed
-- **Refactoring**: Code cleanup may temporarily reduce coverage
-- **Work-in-Progress**: Allows incremental commits during development
-- **Documentation Changes**: No coverage impact for docs-only changes
-
-### Example Output
-
-**When Coverage Passes**:
-
-```text
-[Step 6/6] Running code coverage check...
-           (Informational only - does not block commits)
-
-...
-TOTAL                           ...             ...          87.23%      ...
-PASSED: Coverage meets 75% threshold (1m 23s)
-
-==========================================
-SUCCESS: All pre-commit checks passed!
-Total time: 5m 42s
-==========================================
-```
-
-**When Coverage Fails**:
-
-```text
-[Step 6/6] Running code coverage check...
-           (Informational only - does not block commits)
-
-...
-TOTAL                           ...             ...          82.45%      ...
-
-error: coverage is below 75%
-
-==========================================
-FAILED: Pre-commit checks failed!
-Fix the errors above before committing.
-==========================================
-```
-
-**Note**: Even though the error shows "FAILED", this is the last step and only informational. The script continues, and the commit is not blocked.
+- Before submitting a PR with new features
+- Investigating coverage gaps in specific modules
+- Understanding which code paths need more testing
 
 ## 🔄 CI/CD Coverage Workflow
 
@@ -343,7 +307,7 @@ When refactoring code:
 Documentation-only changes:
 
 - **No coverage requirements** - tests are not needed
-- **Pre-commit coverage check** will still run but is informational
+- **Coverage is only checked in CI** - no local coverage overhead
 - **Focus** on markdown linting and link validation
 
 ### When Coverage Drops
