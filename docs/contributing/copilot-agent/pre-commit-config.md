@@ -15,7 +15,7 @@ GitHub Copilot coding agent has a hardcoded ~5-6 minute timeout for command exec
 
 We use an environment variable (`TORRUST_TD_SKIP_SLOW_TESTS=true`) to skip slow tests (E2E tests and code coverage) when Copilot agent runs pre-commit checks. This keeps checks under the timeout limit while maintaining full verification for local development.
 
-**Note:** The variable name follows the project's environment variable naming convention documented in [Environment Variable Prefix ADR](../../decisions/environment-variable-prefix.md). All Torrust Tracker Deployer environment variables use the `TORRUST_TD_` prefix.
+**Note:** The variable name follows action-based naming (describes behavior, not context). For a comprehensive discussion on condition-based vs action-based environment variable naming, see [Environment Variables Naming Guide](../environment-variables-naming.md). All Torrust Tracker Deployer environment variables use the `TORRUST_TD_` prefix as documented in [Environment Variable Prefix ADR](../../decisions/environment-variable-prefix.md).
 
 ## Pre-commit Timing Breakdown
 

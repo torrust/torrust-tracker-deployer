@@ -103,6 +103,8 @@ These principles should guide all development decisions, code reviews, and featu
 
 11. **When writing Markdown documentation**: Be aware of GitHub Flavored Markdown's automatic linking behavior. Read [`docs/contributing/github-markdown-pitfalls.md`](../docs/contributing/github-markdown-pitfalls.md) for critical patterns to avoid. **NEVER use hash-number patterns for enumeration or step numbering** - this creates unintended links to GitHub issues/PRs. Use ordered lists or alternative formats instead.
 
+12. **When creating new environment variables**: Read [`docs/contributing/environment-variables-naming.md`](../docs/contributing/environment-variables-naming.md) for comprehensive guidance on naming conventions (condition-based vs action-based), decision frameworks, and best practices. Also review [`docs/decisions/environment-variable-prefix.md`](../docs/decisions/environment-variable-prefix.md) to ensure all project environment variables use the `TORRUST_TD_` prefix for proper namespacing and avoiding conflicts with system or user variables.
+
 ## 🧪 Build & Test
 
 - **Setup Dependencies**: `cargo run --bin dependency-installer install` (sets up required development tools)
