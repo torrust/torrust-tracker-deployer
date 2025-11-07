@@ -36,7 +36,9 @@ jobs:
 
       - id: build-binaries
         name: Build All Binaries
-        run: cargo build --bins
+        run: |
+          cargo build --bins
+          cargo build -p torrust-dependency-installer --bin dependency-installer
 
       - id: coverage-text
         name: Generate Text Coverage Summary
