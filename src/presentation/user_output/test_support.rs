@@ -113,6 +113,22 @@ impl TestUserOutput {
         Arc::new(Mutex::new(test_output.output))
     }
 
+    /// Create wrapped test output with silent verbosity for clean test output
+    ///
+    /// This is a convenience method specifically for tests to avoid user-facing
+    /// messages appearing in test output.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// let output = TestUserOutput::wrapped_silent();
+    /// // Use with APIs that expect Arc<Mutex<UserOutput>> - no user output will appear
+    /// ```
+    #[must_use]
+    pub fn wrapped_silent() -> Arc<Mutex<UserOutput>> {
+        Self::wrapped(VerbosityLevel::Silent)
+    }
+
     /// Wrap an existing `UserOutput` in an `Arc<Mutex<>>` for use with APIs that require it
     ///
     /// Returns a tuple of (`Arc<Mutex<UserOutput>>`, stdout buffer, stderr buffer) for tests

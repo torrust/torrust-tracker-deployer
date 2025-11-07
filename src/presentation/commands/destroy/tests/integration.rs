@@ -22,7 +22,7 @@ fn it_should_reject_invalid_environment_names() {
     ];
 
     for name in invalid_names {
-        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let user_output = TestUserOutput::wrapped_silent();
         let result = handle_destroy_command(name, context.working_dir(), &user_output);
         assert!(
             result.is_err(),
@@ -39,7 +39,7 @@ fn it_should_reject_invalid_environment_names() {
     // Test too long name separately due to String allocation
     // The actual max length depends on domain validation rules
     let too_long_name = "a".repeat(64);
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+    let user_output = TestUserOutput::wrapped_silent();
     let result = handle_destroy_command(&too_long_name, context.working_dir(), &user_output);
     assert!(result.is_err(), "Should get some error for 64-char name");
     // Accept either InvalidEnvironmentName OR DestroyOperationFailed

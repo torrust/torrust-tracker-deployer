@@ -19,6 +19,8 @@
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum VerbosityLevel {
+    /// No output - suppress all user-facing messages
+    Silent,
     /// Minimal output - only errors and final results
     Quiet,
     /// Default level - essential progress and results
