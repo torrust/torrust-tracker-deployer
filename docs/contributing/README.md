@@ -4,24 +4,25 @@ This guide will help you understand our development practices and contribution w
 
 ## 📋 Quick Reference
 
-| Topic                                | File                                                         |
-| ------------------------------------ | ------------------------------------------------------------ |
-| DDD layer placement (architecture)   | [ddd-layer-placement.md](./ddd-layer-placement.md)           |
-| PR review guide for reviewers        | [pr-review-guide.md](./pr-review-guide.md)                   |
-| Creating roadmap issues              | [roadmap-issues.md](./roadmap-issues.md)                     |
-| Branching conventions                | [branching.md](./branching.md)                               |
-| Commit process and pre-commit checks | [commit-process.md](./commit-process.md)                     |
-| Code quality and linting             | [linting.md](./linting.md)                                   |
-| Module organization and imports      | [module-organization.md](./module-organization.md)           |
-| Error handling principles            | [error-handling.md](./error-handling.md)                     |
-| Working with Tera templates          | [templates.md](./templates.md)                               |
-| Debugging techniques                 | [debugging.md](./debugging.md)                               |
-| Spell checking and dictionaries      | [spelling.md](./spelling.md)                                 |
-| Known issues and expected behaviors  | [known-issues.md](./known-issues.md)                         |
-| Logging best practices               | [logging-guide.md](./logging-guide.md)                       |
-| GitHub Markdown pitfalls             | [github-markdown-pitfalls.md](./github-markdown-pitfalls.md) |
-| GitHub Copilot agent firewall        | [copilot-agent-firewall.md](./copilot-agent-firewall.md)    |
-| Testing conventions and practices    | [testing/](./testing/)                                       |
+| Topic                                | File                                                                 |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| DDD layer placement (architecture)   | [ddd-layer-placement.md](./ddd-layer-placement.md)                   |
+| PR review guide for reviewers        | [pr-review-guide.md](./pr-review-guide.md)                           |
+| Creating roadmap issues              | [roadmap-issues.md](./roadmap-issues.md)                             |
+| Branching conventions                | [branching.md](./branching.md)                                       |
+| Commit process and pre-commit checks | [commit-process.md](./commit-process.md)                             |
+| Code quality and linting             | [linting.md](./linting.md)                                           |
+| Module organization and imports      | [module-organization.md](./module-organization.md)                   |
+| Error handling principles            | [error-handling.md](./error-handling.md)                             |
+| Working with Tera templates          | [templates.md](./templates.md)                                       |
+| Environment variables naming         | [environment-variables-naming.md](./environment-variables-naming.md) |
+| Debugging techniques                 | [debugging.md](./debugging.md)                                       |
+| Spell checking and dictionaries      | [spelling.md](./spelling.md)                                         |
+| Known issues and expected behaviors  | [known-issues.md](./known-issues.md)                                 |
+| Logging best practices               | [logging-guide.md](./logging-guide.md)                               |
+| GitHub Markdown pitfalls             | [github-markdown-pitfalls.md](./github-markdown-pitfalls.md)         |
+| GitHub Copilot agent configuration   | [copilot-agent/](./copilot-agent/)                                   |
+| Testing conventions and practices    | [testing/](./testing/)                                               |
 
 ## 🚀 Getting Started
 

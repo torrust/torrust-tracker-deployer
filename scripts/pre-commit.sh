@@ -15,15 +15,44 @@ set -euo pipefail
 # - command: The command to execute
 # ============================================================================
 
-declare -a STEPS=(
-    "Checking for unused dependencies (cargo machete)|No unused dependencies found|||cargo machete"
-    "Running linters|All linters passed|||cargo run --bin linter all"
-    "Running tests|All tests passed|||cargo test"
-    "Testing cargo documentation|Documentation builds successfully|||cargo doc --no-deps --bins --examples --workspace --all-features"
-    "Running E2E provision and destroy tests|Provision and destroy tests passed|(Testing infrastructure lifecycle - this may take a few minutes)|RUST_LOG=warn|cargo run --bin e2e-provision-and-destroy-tests"
-    "Running E2E configuration tests|Configuration tests passed|(Testing software installation and configuration)|RUST_LOG=warn|cargo run --bin e2e-config-tests"
-    "Running code coverage check|Coverage meets 75% threshold|(Informational only - does not block commits)||cargo cov-check"
-)
+# Determine which steps to run based on environment
+# When TORRUST_TD_SKIP_SLOW_TESTS=true (set for Copilot agent), skip slow tests to avoid timeout issues
+# Slow tests include: E2E tests (~1m 32s) and code coverage (~1m 29s)
+if [ "${TORRUST_TD_SKIP_SLOW_TESTS:-false}" = "true" ]; then
+    echo "⚠️  Running in fast mode (skipping slow tests)"
+    echo ""
+    echo "The following tests are SKIPPED to stay within the 5-minute timeout limit:"
+    echo "  • E2E provision and destroy tests (~44 seconds)"
+    echo "  • E2E configuration tests (~48 seconds)"
+    echo "  • Code coverage check (~1 minute 29 seconds)"
+    echo ""
+    echo "💡 These tests will run automatically in CI after PR creation."
+    echo ""
+    echo "If you want to run them manually before committing, use these commands:"
+    echo "  cargo run --bin e2e-provision-and-destroy-tests  # ~44s"
+    echo "  cargo run --bin e2e-config-tests                 # ~48s"
+    echo "  cargo cov-check                                  # ~1m 29s"
+    echo ""
+    echo "Fast mode execution time: ~3 minutes 48 seconds"
+    echo ""
+    
+    declare -a STEPS=(
+        "Checking for unused dependencies (cargo machete)|No unused dependencies found|||cargo machete"
+        "Running linters|All linters passed|||cargo run --bin linter all"
+        "Running tests|All tests passed|||cargo test"
+        "Testing cargo documentation|Documentation builds successfully|||cargo doc --no-deps --bins --examples --workspace --all-features"
+    )
+else
+    declare -a STEPS=(
+        "Checking for unused dependencies (cargo machete)|No unused dependencies found|||cargo machete"
+        "Running linters|All linters passed|||cargo run --bin linter all"
+        "Running tests|All tests passed|||cargo test"
+        "Testing cargo documentation|Documentation builds successfully|||cargo doc --no-deps --bins --examples --workspace --all-features"
+        "Running E2E provision and destroy tests|Provision and destroy tests passed|(Testing infrastructure lifecycle - this may take a few minutes)|RUST_LOG=warn|cargo run --bin e2e-provision-and-destroy-tests"
+        "Running E2E configuration tests|Configuration tests passed|(Testing software installation and configuration)|RUST_LOG=warn|cargo run --bin e2e-config-tests"
+        "Running code coverage check|Coverage meets 75% threshold|(Informational only - does not block commits)||cargo cov-check"
+    )
+fi
 
 # ============================================================================
 # HELPER FUNCTIONS
