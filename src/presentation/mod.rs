@@ -30,6 +30,10 @@
 //! │       ├── args.rs   # Global CLI arguments (logging config)
 //! │       ├── commands.rs # Subcommand definitions
 //! │       └── mod.rs    # Main Cli struct and parsing logic
+//! ├── dispatch/         # Dispatch Layer - Command routing and execution context
+//! │   ├── mod.rs        # Layer exports and documentation
+//! │   ├── router.rs     # Command routing logic (route_command function)
+//! │   └── context.rs    # ExecutionContext wrapper around Container
 //! ├── commands/         # Command execution handlers
 //! │   ├── destroy.rs    # Destroy command handler
 //! │   └── mod.rs        # Unified command dispatch and error handling
@@ -40,6 +44,7 @@
 
 // Core presentation modules
 pub mod commands;
+pub mod dispatch;
 pub mod errors;
 pub mod input;
 pub mod progress;
@@ -48,7 +53,13 @@ pub mod user_output;
 // Re-export commonly used presentation types for convenience
 pub use commands::create::CreateSubcommandError;
 pub use commands::destroy::DestroySubcommandError;
-pub use commands::{execute, handle_error};
+pub use commands::handle_error;
+
+// Deprecated: Use dispatch layer instead
+#[deprecated(since = "0.1.0", note = "Use `dispatch::route_command` instead")]
+#[allow(deprecated)]
+pub use commands::execute;
+
 pub use errors::CommandError;
 pub use input::{Cli, Commands, GlobalArgs};
 pub use progress::ProgressReporter;
