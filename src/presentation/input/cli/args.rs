@@ -86,7 +86,7 @@ impl GlobalArgs {
     /// # Example
     ///
     /// ```rust
-    /// # use torrust_tracker_deployer_lib::presentation::cli::args::GlobalArgs;
+    /// # use torrust_tracker_deployer_lib::presentation::input::cli::args::GlobalArgs;
     /// # use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingConfig};
     /// # use std::path::PathBuf;
     /// // Create args with log configuration

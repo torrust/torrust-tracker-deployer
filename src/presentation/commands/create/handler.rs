@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use crate::presentation::cli::commands::CreateAction;
+use crate::presentation::input::cli::commands::CreateAction;
 use crate::presentation::user_output::UserOutput;
 
 use super::errors::CreateSubcommandError;

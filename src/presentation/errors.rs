@@ -74,7 +74,7 @@ impl CommandError {
     ///
     /// ```rust
     /// use clap::Parser;
-    /// use torrust_tracker_deployer_lib::presentation::{cli, errors};
+    /// use torrust_tracker_deployer_lib::presentation::{input::cli, errors};
     /// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroySubcommandError;
     /// use torrust_tracker_deployer_lib::application::command_handlers::destroy::DestroyCommandHandlerError;
     /// use std::path::PathBuf;

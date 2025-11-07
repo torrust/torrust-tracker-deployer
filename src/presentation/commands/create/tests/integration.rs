@@ -3,12 +3,12 @@
 //! This module tests the complete create command workflow including
 //! configuration loading, validation, and command execution.
 
-use crate::presentation::cli::CreateAction;
 use crate::presentation::commands::create;
 use crate::presentation::commands::tests::{
     create_config_with_invalid_name, create_config_with_missing_keys, create_invalid_json_config,
     create_valid_config, TestContext,
 };
+use crate::presentation::input::cli::CreateAction;
 use crate::presentation::user_output::test_support::TestUserOutput;
 use crate::presentation::user_output::VerbosityLevel;
 
