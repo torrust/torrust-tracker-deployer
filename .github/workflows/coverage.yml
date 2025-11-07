@@ -34,6 +34,10 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
+      - id: build-binaries
+        name: Build All Binaries
+        run: cargo build --bins
+
       - id: coverage-text
         name: Generate Text Coverage Summary
         run: cargo cov
