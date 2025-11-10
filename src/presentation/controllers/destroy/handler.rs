@@ -41,7 +41,7 @@ const DESTROY_WORKFLOW_STEPS: usize = 3;
 ///
 /// # Returns
 ///
-/// * `Ok(())` - Environment destroyed successfully
+/// * `Ok(Environment<Destroyed>)` - Environment destroyed successfully
 /// * `Err(DestroySubcommandError)` - Destroy operation failed
 ///
 /// # Errors
@@ -77,7 +77,7 @@ pub fn handle(
     environment_name: &str,
     working_dir: &std::path::Path,
     context: &crate::presentation::dispatch::context::ExecutionContext,
-) -> Result<(), DestroySubcommandError> {
+) -> Result<Environment<Destroyed>, DestroySubcommandError> {
     handle_destroy_command(
         environment_name,
         working_dir,
@@ -116,7 +116,7 @@ pub fn handle(
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` on success, or a `DestroySubcommandError` on failure.
+/// Returns `Ok(Environment<Destroyed>)` on success, or a `DestroySubcommandError` on failure.
 ///
 /// # Example
 ///
@@ -166,7 +166,7 @@ pub fn handle_destroy_command(
     repository_factory: Arc<RepositoryFactory>,
     clock: Arc<dyn Clock>,
     user_output: &Arc<Mutex<UserOutput>>,
-) -> Result<(), DestroySubcommandError> {
+) -> Result<Environment<Destroyed>, DestroySubcommandError> {
     DestroyCommandController::new(
         working_dir.to_path_buf(),
         repository_factory,
@@ -250,14 +250,21 @@ impl DestroyCommandController {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` on success, or a `DestroySubcommandError` if any step fails.
+    /// Returns `Ok(Environment<Destroyed>)` on success, or a `DestroySubcommandError` if any step fails.
     #[allow(clippy::result_large_err)]
-    pub fn execute(&mut self, environment_name: &str) -> Result<(), DestroySubcommandError> {
+    pub fn execute(
+        &mut self,
+        environment_name: &str,
+    ) -> Result<Environment<Destroyed>, DestroySubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
+
         let handler = self.initialize_dependencies()?;
-        let _destroyed = self.tear_down_infrastructure(&handler, &env_name)?;
+
+        let destroyed = self.tear_down_infrastructure(&handler, &env_name)?;
+
         self.complete_workflow(environment_name)?;
-        Ok(())
+
+        Ok(destroyed)
     }
 
     /// Validate the environment name format
@@ -293,6 +300,7 @@ impl DestroyCommandController {
         self.progress.start_step("Initializing dependencies")?;
         let handler = DestroyCommandHandler::new(self.repository.clone(), self.clock.clone());
         self.progress.complete_step(None)?;
+
         Ok(handler)
     }
 
