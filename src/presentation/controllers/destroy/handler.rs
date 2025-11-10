@@ -10,10 +10,12 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Destroyed;
 use crate::domain::environment::Environment;
-use crate::presentation::commands::factory::CommandHandlerFactory;
+use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::presentation::commands::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::progress::ProgressReporter;
 use crate::presentation::user_output::UserOutput;
 use crate::shared::clock::Clock;
+use crate::shared::SystemClock;
 
 use super::errors::DestroySubcommandError;
 
@@ -47,7 +49,6 @@ const DESTROY_WORKFLOW_STEPS: usize = 3;
 /// `DestroyCommandHandler`, maintaining clear separation of concerns.
 #[allow(unused)] // Temporary during refactoring
 pub struct DestroyCommandController {
-    // Direct service injection - single container approach
     repository: Arc<dyn EnvironmentRepository>,
     clock: Arc<dyn Clock>,
     user_output: Arc<std::sync::Mutex<UserOutput>>,
@@ -55,18 +56,17 @@ pub struct DestroyCommandController {
 }
 
 impl DestroyCommandController {
-    /// Create a new destroy command controller
+    /// Create a new destroy command controller from working directory
     ///
-    /// # Arguments
-    ///
-    /// * `repository` - Environment repository for persistence
-    /// * `clock` - Clock service for time operations
-    /// * `user_output` - Shared user output service for consistent formatting
-    pub fn new(
-        repository: Arc<dyn EnvironmentRepository>,
-        clock: Arc<dyn Clock>,
-        user_output: Arc<Mutex<UserOutput>>,
-    ) -> Self {
+    /// Creates a `DestroyCommandController` with direct service injection from working directory and user output.
+    /// This follows the single container architecture pattern.
+    pub fn new(working_dir: std::path::PathBuf, user_output: Arc<Mutex<UserOutput>>) -> Self {
+        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+
+        let repository = repository_factory.create(working_dir);
+
+        let clock = Arc::new(SystemClock);
+
         let progress = ProgressReporter::new(user_output.clone(), DESTROY_WORKFLOW_STEPS);
 
         Self {
@@ -75,24 +75,6 @@ impl DestroyCommandController {
             user_output,
             progress,
         }
-    }
-
-    /// Create a new destroy command controller from working directory (temporary bridge method)
-    ///
-    /// Bridge method: Creates a `DestroyCommandController` from working directory and user output
-    /// This maintains backward compatibility while we transition to direct dependency injection
-    ///
-    /// This method will be removed once refactoring is complete.
-    pub fn new_from_working_dir(
-        working_dir: std::path::PathBuf,
-        user_output: Arc<Mutex<UserOutput>>,
-    ) -> Self {
-        let factory = CommandHandlerFactory::new();
-        let ctx = factory.create_context(working_dir, user_output.clone());
-        let repository = ctx.repository().clone();
-        let clock = ctx.clock().clone();
-
-        Self::new(repository, clock, user_output)
     }
 
     /// Execute the complete destroy workflow
@@ -247,7 +229,7 @@ pub fn handle_destroy_command(
     working_dir: &std::path::Path,
     user_output: &Arc<Mutex<UserOutput>>,
 ) -> Result<(), DestroySubcommandError> {
-    DestroyCommandController::new_from_working_dir(working_dir.to_path_buf(), user_output.clone())
+    DestroyCommandController::new(working_dir.to_path_buf(), user_output.clone())
         .execute(environment_name)
 }
 
