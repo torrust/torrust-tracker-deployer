@@ -60,13 +60,14 @@ impl DestroyCommandController {
     ///
     /// Creates a `DestroyCommandController` with direct service injection from working directory and user output.
     /// This follows the single container architecture pattern.
-    pub fn new(working_dir: std::path::PathBuf, user_output: Arc<Mutex<UserOutput>>) -> Self {
-        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-
+    #[allow(clippy::needless_pass_by_value)] // Constructor takes ownership of Arc parameters
+    pub fn new(
+        working_dir: std::path::PathBuf,
+        repository_factory: Arc<RepositoryFactory>,
+        clock: Arc<dyn Clock>,
+        user_output: Arc<Mutex<UserOutput>>,
+    ) -> Self {
         let repository = repository_factory.create(working_dir);
-
-        let clock = Arc::new(SystemClock);
-
         let progress = ProgressReporter::new(user_output.clone(), DESTROY_WORKFLOW_STEPS);
 
         Self {
@@ -193,6 +194,8 @@ impl DestroyCommandController {
 ///
 /// * `environment_name` - The name of the environment to destroy
 /// * `working_dir` - Root directory for environment data storage
+/// * `repository_factory` - Factory for creating environment repositories
+/// * `clock` - Clock service for timing operations
 /// * `user_output` - Shared user output service for consistent output formatting
 ///
 /// # Errors
@@ -216,21 +219,34 @@ impl DestroyCommandController {
 /// use std::sync::{Arc, Mutex};
 /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
 /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+/// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+/// use torrust_tracker_deployer_lib::presentation::commands::constants::DEFAULT_LOCK_TIMEOUT;
+/// use torrust_tracker_deployer_lib::shared::SystemClock;
 ///
 /// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
-/// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), &user_output) {
+/// let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+/// let clock = Arc::new(SystemClock);
+/// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), repository_factory, clock, &user_output) {
 ///     eprintln!("Destroy failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
 /// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
+#[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
 pub fn handle_destroy_command(
     environment_name: &str,
     working_dir: &std::path::Path,
+    repository_factory: Arc<RepositoryFactory>,
+    clock: Arc<dyn Clock>,
     user_output: &Arc<Mutex<UserOutput>>,
 ) -> Result<(), DestroySubcommandError> {
-    DestroyCommandController::new(working_dir.to_path_buf(), user_output.clone())
-        .execute(environment_name)
+    DestroyCommandController::new(
+        working_dir.to_path_buf(),
+        repository_factory,
+        clock,
+        user_output.clone(),
+    )
+    .execute(environment_name)
 }
 
 // ============================================================================
@@ -286,7 +302,16 @@ pub fn handle(
     working_dir: &std::path::Path,
     context: &crate::presentation::dispatch::context::ExecutionContext,
 ) -> Result<(), DestroySubcommandError> {
-    handle_destroy_command(environment_name, working_dir, &context.user_output())
+    let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+    let clock = Arc::new(SystemClock);
+
+    handle_destroy_command(
+        environment_name,
+        working_dir,
+        repository_factory,
+        clock,
+        &context.user_output(),
+    )
 }
 
 // ============================================================================
@@ -306,9 +331,17 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+        let clock = Arc::new(SystemClock);
 
         // Test with invalid environment name (contains underscore)
-        let result = handle_destroy_command("invalid_name", working_dir, &user_output);
+        let result = handle_destroy_command(
+            "invalid_name",
+            working_dir,
+            repository_factory,
+            clock,
+            &user_output,
+        );
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -324,8 +357,11 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+        let clock = Arc::new(SystemClock);
 
-        let result = handle_destroy_command("", working_dir, &user_output);
+        let result =
+            handle_destroy_command("", working_dir, repository_factory, clock, &user_output);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -341,9 +377,17 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+        let clock = Arc::new(SystemClock);
 
         // Try to destroy an environment that doesn't exist
-        let result = handle_destroy_command("nonexistent-env", working_dir, &user_output);
+        let result = handle_destroy_command(
+            "nonexistent-env",
+            working_dir,
+            repository_factory,
+            clock,
+            &user_output,
+        );
 
         assert!(result.is_err());
         // Should get DestroyOperationFailed because environment doesn't exist
@@ -360,6 +404,8 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+        let clock = Arc::new(SystemClock);
 
         // Create a mock environment directory to test validation
         let env_dir = working_dir.join("test-env");
@@ -367,7 +413,13 @@ mod tests {
 
         // Valid environment name should pass validation, but will fail
         // at destroy operation since we don't have a real environment setup
-        let result = handle_destroy_command("test-env", working_dir, &user_output);
+        let result = handle_destroy_command(
+            "test-env",
+            working_dir,
+            repository_factory,
+            clock,
+            &user_output,
+        );
 
         // Should fail at operation, not at name validation
         if let Err(DestroySubcommandError::InvalidEnvironmentName { .. }) = result {

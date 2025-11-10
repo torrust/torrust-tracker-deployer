@@ -19,11 +19,16 @@
 //! ```rust,no_run
 //! use std::path::Path;
 //! use std::sync::{Arc, Mutex};
+//! use std::time::Duration;
 //! use torrust_tracker_deployer_lib::presentation::controllers::destroy;
 //! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+//! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+//! use torrust_tracker_deployer_lib::shared::clock::SystemClock;
 //!
 //! let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
-//! if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), &output) {
+//! let repository_factory = Arc::new(RepositoryFactory::new(Duration::from_secs(30)));
+//! let clock = Arc::new(SystemClock);
+//! if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), repository_factory, clock, &output) {
 //!     eprintln!("Destroy failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
