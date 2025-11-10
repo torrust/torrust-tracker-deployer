@@ -3,17 +3,17 @@
 //! This module handles the destroy command execution at the presentation layer,
 //! including environment validation, repository initialization, and user interaction.
 
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use crate::application::command_handlers::DestroyCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
+use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Destroyed;
-use crate::domain::Environment;
-use crate::presentation::commands::context::CommandContext;
+use crate::domain::environment::Environment;
 use crate::presentation::commands::factory::CommandHandlerFactory;
 use crate::presentation::progress::ProgressReporter;
 use crate::presentation::user_output::UserOutput;
+use crate::shared::clock::Clock;
 
 use super::errors::DestroySubcommandError;
 
@@ -45,9 +45,12 @@ const DESTROY_WORKFLOW_STEPS: usize = 3;
 /// This controller sits in the presentation layer and handles all user-facing
 /// concerns. It delegates actual business logic to the application layer's
 /// `DestroyCommandHandler`, maintaining clear separation of concerns.
+#[allow(unused)] // Temporary during refactoring
 pub struct DestroyCommandController {
-    factory: CommandHandlerFactory,
-    ctx: CommandContext,
+    // Direct service injection - single container approach
+    repository: Arc<dyn EnvironmentRepository>,
+    clock: Arc<dyn Clock>,
+    user_output: Arc<std::sync::Mutex<UserOutput>>,
     progress: ProgressReporter,
 }
 
@@ -56,18 +59,40 @@ impl DestroyCommandController {
     ///
     /// # Arguments
     ///
-    /// * `working_dir` - Root directory for environment data storage
+    /// * `repository` - Environment repository for persistence
+    /// * `clock` - Clock service for time operations
     /// * `user_output` - Shared user output service for consistent formatting
-    pub fn new(working_dir: PathBuf, user_output: Arc<Mutex<UserOutput>>) -> Self {
-        let factory = CommandHandlerFactory::new();
-        let ctx = factory.create_context(working_dir, user_output.clone());
-        let progress = ProgressReporter::new(user_output, DESTROY_WORKFLOW_STEPS);
+    pub fn new(
+        repository: Arc<dyn EnvironmentRepository>,
+        clock: Arc<dyn Clock>,
+        user_output: Arc<Mutex<UserOutput>>,
+    ) -> Self {
+        let progress = ProgressReporter::new(user_output.clone(), DESTROY_WORKFLOW_STEPS);
 
         Self {
-            factory,
-            ctx,
+            repository,
+            clock,
+            user_output,
             progress,
         }
+    }
+
+    /// Create a new destroy command controller from working directory (temporary bridge method)
+    ///
+    /// Bridge method: Creates a `DestroyCommandController` from working directory and user output
+    /// This maintains backward compatibility while we transition to direct dependency injection
+    ///
+    /// This method will be removed once refactoring is complete.
+    pub fn new_from_working_dir(
+        working_dir: std::path::PathBuf,
+        user_output: Arc<Mutex<UserOutput>>,
+    ) -> Self {
+        let factory = CommandHandlerFactory::new();
+        let ctx = factory.create_context(working_dir, user_output.clone());
+        let repository = ctx.repository().clone();
+        let clock = ctx.clock().clone();
+
+        Self::new(repository, clock, user_output)
     }
 
     /// Execute the complete destroy workflow
@@ -133,7 +158,7 @@ impl DestroyCommandController {
     #[allow(clippy::result_large_err)]
     fn initialize_dependencies(&mut self) -> Result<DestroyCommandHandler, DestroySubcommandError> {
         self.progress.start_step("Initializing dependencies")?;
-        let handler = self.factory.create_destroy_handler(&self.ctx);
+        let handler = DestroyCommandHandler::new(self.repository.clone(), self.clock.clone());
         self.progress.complete_step(None)?;
         Ok(handler)
     }
@@ -222,7 +247,7 @@ pub fn handle_destroy_command(
     working_dir: &std::path::Path,
     user_output: &Arc<Mutex<UserOutput>>,
 ) -> Result<(), DestroySubcommandError> {
-    DestroyCommandController::new(working_dir.to_path_buf(), user_output.clone())
+    DestroyCommandController::new_from_working_dir(working_dir.to_path_buf(), user_output.clone())
         .execute(environment_name)
 }
 
