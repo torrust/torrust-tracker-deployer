@@ -17,7 +17,7 @@ use crate::presentation::user_output::UserOutput;
 use crate::shared::clock::SystemClock;
 
 use super::config_loader::ConfigLoader;
-use super::errors::CreateSubcommandError;
+use super::errors::CreateEnvironmentCommandError;
 
 /// Handle environment creation from configuration file
 ///
@@ -39,7 +39,7 @@ use super::errors::CreateSubcommandError;
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` on success, or a `CreateSubcommandError` if any step fails.
+/// Returns `Ok(())` on success, or a `CreateEnvironmentCommandError` if any step fails.
 ///
 /// # Errors
 ///
@@ -53,7 +53,7 @@ pub fn handle_environment_creation(
     env_file: &Path,
     working_dir: &Path,
     context: &ExecutionContext,
-) -> Result<(), CreateSubcommandError> {
+) -> Result<(), CreateEnvironmentCommandError> {
     // Create progress reporter for 3 main steps
     let mut progress = ProgressReporter::new(context.user_output().clone(), 3);
 
@@ -122,12 +122,12 @@ pub fn handle_environment_creation(
 pub(crate) fn load_configuration(
     progress: &mut ProgressReporter,
     env_file: &Path,
-) -> Result<EnvironmentCreationConfig, CreateSubcommandError> {
+) -> Result<EnvironmentCreationConfig, CreateEnvironmentCommandError> {
     let user_output = progress.output();
 
     user_output
         .lock()
-        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?
+        .map_err(|_| CreateEnvironmentCommandError::UserOutputLockFailed)?
         .progress(&format!(
             "Loading configuration from '{}'...",
             env_file.display()
@@ -137,7 +137,7 @@ pub(crate) fn load_configuration(
 
     loader
         .load_from_file(env_file)
-        .inspect_err(|err: &CreateSubcommandError| {
+        .inspect_err(|err: &CreateEnvironmentCommandError| {
             // Attempt to log error, but don't fail if mutex is poisoned
             if let Ok(mut output) = user_output.lock() {
                 output.error(&err.to_string());
@@ -168,12 +168,12 @@ pub(crate) fn execute_create_command(
     progress: &mut ProgressReporter,
     command_handler: &CreateCommandHandler,
     config: EnvironmentCreationConfig,
-) -> Result<Environment, CreateSubcommandError> {
+) -> Result<Environment, CreateEnvironmentCommandError> {
     let user_output = progress.output();
 
     user_output
         .lock()
-        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?
+        .map_err(|_| CreateEnvironmentCommandError::UserOutputLockFailed)?
         .progress(&format!(
             "Creating environment '{}'...",
             config.environment.name
@@ -181,12 +181,12 @@ pub(crate) fn execute_create_command(
 
     user_output
         .lock()
-        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?
+        .map_err(|_| CreateEnvironmentCommandError::UserOutputLockFailed)?
         .progress("Validating configuration and creating environment...");
 
     #[allow(clippy::manual_inspect)]
     command_handler.execute(config).map_err(|source| {
-        let error = CreateSubcommandError::CommandFailed { source };
+        let error = CreateEnvironmentCommandError::CommandFailed { source };
         // Attempt to log error, but don't fail if mutex is poisoned
         if let Ok(mut output) = user_output.lock() {
             output.error(&error.to_string());
@@ -210,7 +210,7 @@ pub(crate) fn execute_create_command(
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` on success, or `CreateSubcommandError::UserOutputLockFailed`
+/// Returns `Ok(())` on success, or `CreateEnvironmentCommandError::UserOutputLockFailed`
 /// if the `UserOutput` mutex is poisoned.
 ///
 /// # Errors
@@ -220,10 +220,10 @@ pub(crate) fn execute_create_command(
 pub(crate) fn display_creation_results(
     user_output: &Arc<Mutex<UserOutput>>,
     environment: &Environment,
-) -> Result<(), CreateSubcommandError> {
+) -> Result<(), CreateEnvironmentCommandError> {
     let mut output = user_output
         .lock()
-        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?;
+        .map_err(|_| CreateEnvironmentCommandError::UserOutputLockFailed)?;
 
     output.success(&format!(
         "Environment '{}' created successfully",

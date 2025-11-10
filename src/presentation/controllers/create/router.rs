@@ -9,7 +9,7 @@ use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::commands::CreateAction;
 
 use super::subcommands;
-use super::subcommands::environment::CreateSubcommandError;
+use super::subcommands::environment::CreateEnvironmentCommandError;
 
 /// Route the create command to its appropriate subcommand
 ///
@@ -23,7 +23,7 @@ use super::subcommands::environment::CreateSubcommandError;
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` on success, or a `CreateSubcommandError` on failure.
+/// Returns `Ok(())` on success, or a `CreateEnvironmentCommandError` on failure.
 ///
 /// # Errors
 ///
@@ -33,7 +33,7 @@ pub fn route_command(
     action: CreateAction,
     working_dir: &Path,
     context: &ExecutionContext,
-) -> Result<(), CreateSubcommandError> {
+) -> Result<(), CreateEnvironmentCommandError> {
     match action {
         CreateAction::Environment { env_file } => {
             subcommands::handle_environment_creation(&env_file, working_dir, context)

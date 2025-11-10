@@ -46,4 +46,4 @@ mod tests;
 
 // Re-export commonly used types for convenience
 pub use router::route_command;
-pub use subcommands::environment::{ConfigFormat, ConfigLoader, CreateSubcommandError};
+pub use subcommands::environment::{ConfigFormat, ConfigLoader, CreateEnvironmentCommandError};

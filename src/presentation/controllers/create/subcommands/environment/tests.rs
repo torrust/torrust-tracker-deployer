@@ -11,7 +11,7 @@ use std::time::Duration;
 use tempfile::TempDir;
 
 use super::config_loader::ConfigLoader;
-use super::errors::CreateSubcommandError;
+use super::errors::CreateEnvironmentCommandError;
 use super::handler::{execute_create_command, handle_environment_creation, load_configuration};
 use crate::bootstrap::Container;
 use crate::presentation::dispatch::ExecutionContext;
@@ -88,7 +88,7 @@ fn it_should_return_error_for_missing_config_file() {
 
     assert!(result.is_err());
     match result.unwrap_err() {
-        CreateSubcommandError::ConfigFileNotFound { path } => {
+        CreateEnvironmentCommandError::ConfigFileNotFound { path } => {
             assert_eq!(path, config_path);
         }
         other => panic!("Expected ConfigFileNotFound, got: {other:?}"),
@@ -110,7 +110,7 @@ fn it_should_return_error_for_invalid_json() {
 
     assert!(result.is_err());
     match result.unwrap_err() {
-        CreateSubcommandError::ConfigParsingFailed { .. } => {
+        CreateEnvironmentCommandError::ConfigParsingFailed { .. } => {
             // Expected
         }
         other => panic!("Expected ConfigParsingFailed, got: {other:?}"),
@@ -155,7 +155,7 @@ fn it_should_return_error_for_duplicate_environment() {
     assert!(result2.is_err(), "Second create should fail");
 
     match result2.unwrap_err() {
-        CreateSubcommandError::CommandFailed { .. } => {
+        CreateEnvironmentCommandError::CommandFailed { .. } => {
             // Expected - environment already exists
         }
         other => panic!("Expected CommandFailed, got: {other:?}"),
@@ -253,7 +253,7 @@ mod load_configuration_tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            CreateSubcommandError::ConfigFileNotFound { path } => {
+            CreateEnvironmentCommandError::ConfigFileNotFound { path } => {
                 assert_eq!(path, config_path);
             }
             other => panic!("Expected ConfigFileNotFound, got: {other:?}"),
@@ -272,7 +272,7 @@ mod load_configuration_tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            CreateSubcommandError::ConfigParsingFailed { .. } => {
+            CreateEnvironmentCommandError::ConfigParsingFailed { .. } => {
                 // Expected
             }
             other => panic!("Expected ConfigParsingFailed, got: {other:?}"),
@@ -371,7 +371,7 @@ mod execute_create_command_tests {
         assert!(result2.is_err(), "Second execution should fail");
 
         match result2.unwrap_err() {
-            CreateSubcommandError::CommandFailed { .. } => {
+            CreateEnvironmentCommandError::CommandFailed { .. } => {
                 // Expected
             }
             other => panic!("Expected CommandFailed, got: {other:?}"),

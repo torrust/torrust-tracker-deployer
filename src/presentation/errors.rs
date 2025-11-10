@@ -20,7 +20,7 @@
 use thiserror::Error;
 
 use crate::presentation::controllers::{
-    create::CreateSubcommandError, destroy::DestroySubcommandError,
+    create::CreateEnvironmentCommandError, destroy::DestroySubcommandError,
 };
 
 /// Errors that can occur during CLI command execution
@@ -35,7 +35,7 @@ pub enum CommandError {
     /// Encapsulates all errors that can occur during environment creation.
     /// Use `.help()` for detailed troubleshooting steps.
     #[error("Create command failed: {0}")]
-    Create(Box<CreateSubcommandError>),
+    Create(Box<CreateEnvironmentCommandError>),
 
     /// Destroy command specific errors
     ///
@@ -52,8 +52,8 @@ pub enum CommandError {
     UserOutputLockFailed,
 }
 
-impl From<CreateSubcommandError> for CommandError {
-    fn from(error: CreateSubcommandError) -> Self {
+impl From<CreateEnvironmentCommandError> for CommandError {
+    fn from(error: CreateEnvironmentCommandError) -> Self {
         Self::Create(Box::new(error))
     }
 }

@@ -25,13 +25,13 @@ impl std::fmt::Display for ConfigFormat {
     }
 }
 
-/// Errors that can occur during create subcommand execution
+/// Errors that can occur during create environment command execution
 ///
 /// These errors represent failures in the CLI presentation layer when
-/// handling the create command. They provide structured context for
+/// handling the create environment command. They provide structured context for
 /// troubleshooting and user feedback.
 #[derive(Debug, Error)]
-pub enum CreateSubcommandError {
+pub enum CreateEnvironmentCommandError {
     // ===== Configuration File Errors =====
     /// Configuration file not found
     ///
@@ -134,13 +134,13 @@ Tip: This is a critical bug - please report it with full logs using --log-output
 // ERROR CONVERSIONS
 // ============================================================================
 
-impl From<ProgressReporterError> for CreateSubcommandError {
+impl From<ProgressReporterError> for CreateEnvironmentCommandError {
     fn from(source: ProgressReporterError) -> Self {
         Self::ProgressReportingFailed { source }
     }
 }
 
-impl CreateSubcommandError {
+impl CreateEnvironmentCommandError {
     /// Provides detailed troubleshooting guidance for this error
     ///
     /// Returns context-specific help text that guides users toward resolving
@@ -150,10 +150,10 @@ impl CreateSubcommandError {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::controllers::create::CreateSubcommandError;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::create::CreateEnvironmentCommandError;
     /// use std::path::PathBuf;
     ///
-    /// let error = CreateSubcommandError::ConfigFileNotFound {
+    /// let error = CreateEnvironmentCommandError::ConfigFileNotFound {
     ///     path: PathBuf::from("config.json"),
     /// };
     ///
@@ -280,7 +280,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_config_file_not_found() {
-        let error = CreateSubcommandError::ConfigFileNotFound {
+        let error = CreateEnvironmentCommandError::ConfigFileNotFound {
             path: PathBuf::from("missing.json"),
         };
 
@@ -293,7 +293,7 @@ mod tests {
     #[test]
     fn it_should_provide_help_for_json_parsing_failed() {
         let source = std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid json");
-        let error = CreateSubcommandError::ConfigParsingFailed {
+        let error = CreateEnvironmentCommandError::ConfigParsingFailed {
             path: PathBuf::from("config.json"),
             format: ConfigFormat::Json,
             source: Box::new(source),
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn it_should_display_config_file_path_in_error() {
-        let error = CreateSubcommandError::ConfigFileNotFound {
+        let error = CreateEnvironmentCommandError::ConfigFileNotFound {
             path: PathBuf::from("/path/to/config.json"),
         };
 
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn it_should_display_format_in_parsing_error() {
         let source = std::io::Error::new(std::io::ErrorKind::InvalidData, "test");
-        let error = CreateSubcommandError::ConfigParsingFailed {
+        let error = CreateEnvironmentCommandError::ConfigParsingFailed {
             path: PathBuf::from("config.json"),
             format: ConfigFormat::Json,
             source: Box::new(source),
@@ -336,16 +336,16 @@ mod tests {
         use crate::domain::EnvironmentNameError;
         use crate::presentation::progress::ProgressReporterError;
 
-        let errors: Vec<CreateSubcommandError> = vec![
-            CreateSubcommandError::ConfigFileNotFound {
+        let errors: Vec<CreateEnvironmentCommandError> = vec![
+            CreateEnvironmentCommandError::ConfigFileNotFound {
                 path: PathBuf::from("test.json"),
             },
-            CreateSubcommandError::ConfigParsingFailed {
+            CreateEnvironmentCommandError::ConfigParsingFailed {
                 path: PathBuf::from("test.json"),
                 format: ConfigFormat::Json,
                 source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "test")),
             },
-            CreateSubcommandError::ConfigValidationFailed {
+            CreateEnvironmentCommandError::ConfigValidationFailed {
                 source: CreateConfigError::InvalidEnvironmentName(
                     EnvironmentNameError::InvalidFormat {
                         attempted_name: "test".to_string(),
@@ -354,8 +354,8 @@ mod tests {
                     },
                 ),
             },
-            CreateSubcommandError::UserOutputLockFailed,
-            CreateSubcommandError::ProgressReportingFailed {
+            CreateEnvironmentCommandError::UserOutputLockFailed,
+            CreateEnvironmentCommandError::ProgressReportingFailed {
                 source: ProgressReporterError::UserOutputMutexPoisoned,
             },
         ];

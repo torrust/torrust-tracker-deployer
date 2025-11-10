@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
-use crate::presentation::controllers::create::subcommands::environment::CreateSubcommandError;
+use crate::presentation::controllers::create::subcommands::environment::CreateEnvironmentCommandError;
 use crate::presentation::dispatch::ExecutionContext;
 
 /// Handle template generation
@@ -21,7 +21,7 @@ use crate::presentation::dispatch::ExecutionContext;
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` on success, or a `CreateSubcommandError` on failure.
+/// Returns `Ok(())` on success, or a `CreateEnvironmentCommandError` on failure.
 ///
 /// # Errors
 ///
@@ -35,12 +35,12 @@ use crate::presentation::dispatch::ExecutionContext;
 pub fn handle_template_generation(
     output_path: &Path,
     context: &ExecutionContext,
-) -> Result<(), CreateSubcommandError> {
+) -> Result<(), CreateEnvironmentCommandError> {
     // Lock user output for progress messages
     let user_output = context.user_output();
     let mut output = user_output
         .lock()
-        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?;
+        .map_err(|_| CreateEnvironmentCommandError::UserOutputLockFailed)?;
 
     output.progress("Generating configuration template...");
 
@@ -51,7 +51,9 @@ pub fn handle_template_generation(
         .block_on(async {
             EnvironmentCreationConfig::generate_template_file(output_path)
                 .await
-                .map_err(|source| CreateSubcommandError::TemplateGenerationFailed { source })
+                .map_err(
+                    |source| CreateEnvironmentCommandError::TemplateGenerationFailed { source },
+                )
         })?;
 
     output.success(&format!(
