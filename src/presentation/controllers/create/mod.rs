@@ -14,9 +14,9 @@
 //! ## Components
 //!
 //! - `config_loader` - Figment integration for JSON configuration loading
-//! - `errors` - Presentation layer error types with `.help()` methods
 //! - `handler` - Main command handler routing between subcommands
 //! - `subcommands` - Individual subcommand implementations (environment, template)
+//!   - `environment` - Contains environment creation logic and error types
 //!
 //! ## Usage Example
 //!
@@ -40,7 +40,6 @@
 //! ```
 
 pub mod config_loader;
-pub mod errors;
 pub mod handler;
 pub mod subcommands;
 
@@ -50,5 +49,5 @@ pub mod subcommands;
 
 // Re-export commonly used types for convenience
 pub use config_loader::ConfigLoader;
-pub use errors::{ConfigFormat, CreateSubcommandError};
 pub use handler::handle;
+pub use subcommands::environment::{ConfigFormat, CreateSubcommandError};

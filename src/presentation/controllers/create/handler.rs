@@ -8,8 +8,8 @@ use std::path::Path;
 use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::commands::CreateAction;
 
-use super::errors::CreateSubcommandError;
 use super::subcommands;
+use super::subcommands::environment::CreateSubcommandError;
 
 /// Handle the create command with its subcommands
 ///

@@ -8,7 +8,7 @@ use std::path::Path;
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::presentation::dispatch::ExecutionContext;
 
-use super::super::errors::CreateSubcommandError;
+use super::environment::CreateSubcommandError;
 
 /// Handle template generation
 ///
