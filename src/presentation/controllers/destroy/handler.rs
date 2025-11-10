@@ -11,11 +11,9 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Destroyed;
 use crate::domain::environment::Environment;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::commands::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::progress::ProgressReporter;
 use crate::presentation::user_output::UserOutput;
 use crate::shared::clock::Clock;
-use crate::shared::SystemClock;
 
 use super::errors::DestroySubcommandError;
 
@@ -214,6 +212,27 @@ impl DestroyCommandController {
 ///
 /// # Example
 ///
+/// Using with Container and `ExecutionContext` (recommended):
+///
+/// ```rust
+/// use std::path::Path;
+/// use std::sync::Arc;
+/// use torrust_tracker_deployer_lib::bootstrap::Container;
+/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+/// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
+/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+///
+/// let container = Container::new(VerbosityLevel::Normal);
+/// let context = ExecutionContext::new(Arc::new(container));
+///
+/// if let Err(e) = destroy::handle("test-env", Path::new("."), &context) {
+///     eprintln!("Destroy failed: {e}");
+///     eprintln!("Help: {}", e.help());
+/// }
+/// ```
+///
+/// Direct usage (for testing or specialized scenarios):
+///
 /// ```rust
 /// use std::path::Path;
 /// use std::sync::{Arc, Mutex};
@@ -286,9 +305,10 @@ pub fn handle_destroy_command(
 /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
 /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
+/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new());
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
 /// let context = ExecutionContext::new(container);
 /// let working_dir = Path::new("./test");
 ///
@@ -302,14 +322,11 @@ pub fn handle(
     working_dir: &std::path::Path,
     context: &crate::presentation::dispatch::context::ExecutionContext,
 ) -> Result<(), DestroySubcommandError> {
-    let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
-    let clock = Arc::new(SystemClock);
-
     handle_destroy_command(
         environment_name,
         working_dir,
-        repository_factory,
-        clock,
+        context.repository_factory(),
+        context.clock(),
         &context.user_output(),
     )
 }
@@ -321,8 +338,10 @@ pub fn handle(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::commands::constants::DEFAULT_LOCK_TIMEOUT;
     use crate::presentation::user_output::test_support::TestUserOutput;
     use crate::presentation::user_output::VerbosityLevel;
+    use crate::shared::SystemClock;
     use std::fs;
     use tempfile::TempDir;
 

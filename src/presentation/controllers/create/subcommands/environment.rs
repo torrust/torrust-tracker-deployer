@@ -260,7 +260,7 @@ mod tests {
         _working_dir: &Path,
         _user_output: Arc<Mutex<UserOutput>>,
     ) -> ExecutionContext {
-        let container = Container::new();
+        let container = Container::new(VerbosityLevel::Silent);
         ExecutionContext::new(Arc::new(container))
     }
 

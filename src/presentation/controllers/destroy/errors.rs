@@ -109,7 +109,28 @@ impl DestroySubcommandError {
     ///
     /// # Example
     ///
-    /// ```rust,no_run
+    /// Using with Container and `ExecutionContext` (recommended):
+    ///
+    /// ```rust
+    /// use std::path::Path;
+    /// use std::sync::Arc;
+    /// use torrust_tracker_deployer_lib::bootstrap::Container;
+    /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    ///
+    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let context = ExecutionContext::new(Arc::new(container));
+    ///
+    /// if let Err(e) = destroy::handle("test-env", Path::new("."), &context) {
+    ///     eprintln!("Error: {e}");
+    ///     eprintln!("\nTroubleshooting:\n{}", e.help());
+    /// }
+    /// ```
+    ///
+    /// Direct usage (for testing):
+    ///
+    /// ```rust
     /// use std::path::Path;
     /// use std::sync::{Arc, Mutex};
     /// use std::time::Duration;

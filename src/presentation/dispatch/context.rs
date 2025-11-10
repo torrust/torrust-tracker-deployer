@@ -27,12 +27,13 @@
 //!
 //! ```rust,no_run
 //! use torrust_tracker_deployer_lib::bootstrap::Container;
+//! use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
 //! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 //! use std::sync::Arc;
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create execution context from container
-//! let container = Container::new();
+//! let container = Container::new(VerbosityLevel::Normal);
 //! let context = ExecutionContext::new(Arc::new(container));
 //!
 //! // Command handlers access services through context
@@ -45,7 +46,9 @@
 use std::sync::{Arc, Mutex};
 
 use crate::bootstrap::Container;
+use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::user_output::UserOutput;
+use crate::shared::clock::Clock;
 
 /// ### Design Consideration: Shared State Access
 ///
@@ -58,9 +61,10 @@ use crate::presentation::user_output::UserOutput;
 /// ```rust
 /// use std::sync::Arc;
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
+/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 ///
-/// let container = Arc::new(Container::new());
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
 /// let context = ExecutionContext::new(container);
 ///
 /// // Access user output service
@@ -83,11 +87,12 @@ impl ExecutionContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new();
+    /// let container = Container::new(VerbosityLevel::Normal);
     /// let context = ExecutionContext::new(Arc::new(container));
     /// # Ok(())
     /// # }
@@ -106,11 +111,12 @@ impl ExecutionContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new();
+    /// let container = Container::new(VerbosityLevel::Normal);
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
     /// let container_ref = context.container();
@@ -133,11 +139,12 @@ impl ExecutionContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new();
+    /// let container = Container::new(VerbosityLevel::Normal);
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
     /// let user_output = context.user_output();
@@ -150,14 +157,57 @@ impl ExecutionContext {
         self.container.user_output()
     }
 
-    // TODO: Add more service accessors as Container expands
-    //
-    // Future services that will be added to Container and accessed here:
-    // - opentofu_client() -> Arc<dyn OpenTofuClient>
-    // - ansible_client() -> Arc<dyn AnsibleClient>
-    // - environment_repository() -> Arc<dyn EnvironmentRepository>
-    // - clock() -> Arc<dyn Clock>
-    //
-    // These will be added as the Container is expanded in future proposals
-    // to support the full dependency injection pattern.
+    /// Get shared reference to repository factory service
+    ///
+    /// Returns the repository factory service for creating environment
+    /// repositories. The service is wrapped in `Arc<T>` for shared access.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use torrust_tracker_deployer_lib::bootstrap::Container;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use std::sync::Arc;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let context = ExecutionContext::new(Arc::new(container));
+    ///
+    /// let repository_factory = context.repository_factory();
+    /// // Use repository_factory to create repositories
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn repository_factory(&self) -> Arc<RepositoryFactory> {
+        self.container.repository_factory()
+    }
+
+    /// Get shared reference to clock service
+    ///
+    /// Returns the clock service for time-related operations.
+    /// The service is wrapped in `Arc<dyn Clock>` for shared access.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use torrust_tracker_deployer_lib::bootstrap::Container;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use std::sync::Arc;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let context = ExecutionContext::new(Arc::new(container));
+    ///
+    /// let clock = context.clock();
+    /// // Use clock for time operations
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn clock(&self) -> Arc<dyn Clock> {
+        self.container.clock()
+    }
 }

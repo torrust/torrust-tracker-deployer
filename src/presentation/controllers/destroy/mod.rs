@@ -16,7 +16,45 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust,no_run
+//! ### Basic Usage
+//!
+//! ```rust
+//! use std::path::Path;
+//! use std::sync::Arc;
+//! use torrust_tracker_deployer_lib::bootstrap::Container;
+//! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+//! use torrust_tracker_deployer_lib::presentation::controllers::destroy;
+//! use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+//!
+//! let container = Container::new(VerbosityLevel::Normal);
+//! let context = ExecutionContext::new(Arc::new(container));
+//!
+//! // Call the destroy handler
+//! let result = destroy::handler::handle("my-environment", Path::new("."), &context);
+//! ```
+//!
+//! ### Direct Usage (For Testing)
+//!
+//! ```rust
+//! use std::path::Path;
+//! use std::sync::Arc;
+//! use torrust_tracker_deployer_lib::bootstrap::Container;
+//! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+//! use torrust_tracker_deployer_lib::presentation::controllers::destroy;
+//! use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+//!
+//! let container = Container::new(VerbosityLevel::Normal);
+//! let context = ExecutionContext::new(Arc::new(container));
+//!
+//! if let Err(e) = destroy::handle("test-env", Path::new("."), &context) {
+//!     eprintln!("Destroy failed: {e}");
+//!     eprintln!("\n{}", e.help());
+//! }
+//! ```
+//!
+//! ## Direct Usage (For Testing)
+//!
+//! ```rust
 //! use std::path::Path;
 //! use std::sync::{Arc, Mutex};
 //! use std::time::Duration;
