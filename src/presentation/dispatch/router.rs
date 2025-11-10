@@ -51,7 +51,8 @@
 
 use std::path::Path;
 
-use crate::presentation::commands::{create, destroy};
+use crate::presentation::commands::destroy;
+use crate::presentation::controllers::create;
 use crate::presentation::errors::CommandError;
 use crate::presentation::input::Commands;
 
@@ -108,7 +109,7 @@ pub fn route_command(
 ) -> Result<(), CommandError> {
     match command {
         Commands::Create { action } => {
-            create::handle_create_command(action, working_dir, &context.user_output())?;
+            create::handle(action, working_dir, context)?;
             Ok(())
         }
         Commands::Destroy { environment } => {

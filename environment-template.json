@@ -1,0 +1,11 @@
+{
+  "environment": {
+    "name": "REPLACE_WITH_ENVIRONMENT_NAME"
+  },
+  "ssh_credentials": {
+    "private_key_path": "REPLACE_WITH_SSH_PRIVATE_KEY_PATH",
+    "public_key_path": "REPLACE_WITH_SSH_PUBLIC_KEY_PATH",
+    "username": "torrust",
+    "port": 22
+  }
+}

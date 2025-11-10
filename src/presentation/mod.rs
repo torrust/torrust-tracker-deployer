@@ -34,7 +34,11 @@
 //! │   ├── mod.rs        # Layer exports and documentation
 //! │   ├── router.rs     # Command routing logic (route_command function)
 //! │   └── context.rs    # ExecutionContext wrapper around Container
-//! ├── commands/         # Command execution handlers
+//! ├── controllers/      # Controllers Layer - Command handlers (MVC pattern)
+//! │   ├── create/       # Create command controller
+//! │   ├── destroy/      # Destroy command controller  
+//! │   └── mod.rs        # Controller exports and documentation
+//! ├── commands/         # Command execution handlers (legacy - to be removed)
 //! │   ├── destroy.rs    # Destroy command handler
 //! │   └── mod.rs        # Unified command dispatch and error handling
 //! ├── errors.rs         # Unified error types for all commands
@@ -44,6 +48,7 @@
 
 // Core presentation modules
 pub mod commands;
+pub mod controllers;
 pub mod dispatch;
 pub mod error;
 pub mod errors;
@@ -52,8 +57,8 @@ pub mod progress;
 pub mod user_output;
 
 // Re-export commonly used presentation types for convenience
-pub use commands::create::CreateSubcommandError;
 pub use commands::destroy::DestroySubcommandError;
+pub use controllers::create::CreateSubcommandError;
 
 // Re-export error handling function from error module
 pub use error::handle_error;
