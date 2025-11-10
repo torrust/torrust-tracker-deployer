@@ -4,7 +4,7 @@
 //! deployment environments from configuration files.
 
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
@@ -13,6 +13,7 @@ use crate::domain::Environment;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::progress::ProgressReporter;
+use crate::presentation::user_output::UserOutput;
 use crate::shared::clock::SystemClock;
 
 use super::super::config_loader::ConfigLoader;
@@ -91,7 +92,7 @@ pub fn handle_environment_creation(
     ))?;
 
     // Display final results
-    display_creation_results(&mut progress, &environment);
+    display_creation_results(&context.user_output(), &environment)?;
 
     Ok(())
 }
@@ -202,26 +203,25 @@ fn execute_create_command(
 ///
 /// # Arguments
 ///
-/// * `progress` - Progress reporter for result messages
+/// * `user_output` - Shared user output for displaying messages
 /// * `environment` - The successfully created environment
 ///
-/// # Panics
+/// # Returns
 ///
-/// This function will panic if the `UserOutput` mutex is poisoned. Since this is
-/// called after successful environment creation (when operation is complete),
-/// a poisoned mutex indicates an irrecoverable state and panicking is acceptable.
+/// Returns `Ok(())` on success, or `CreateSubcommandError::UserOutputLockFailed`
+/// if the UserOutput mutex is poisoned.
 ///
-/// The panic message provides detailed context matching our error handling principles:
-/// clear explanation of what happened, why it's critical, and that it indicates a bug.
-fn display_creation_results(progress: &mut ProgressReporter, environment: &Environment) {
-    let user_output = progress.output();
-
-    let mut output = user_output.lock().expect(
-        "CRITICAL: UserOutput mutex poisoned after successful environment creation. \
-         This indicates a panic occurred in another thread while holding the output lock. \
-         The environment was created successfully, but we cannot display the results. \
-         This is a bug - please report it with full logs using --log-output file-and-stderr",
-    );
+/// # Errors
+///
+/// This function will return an error if the `UserOutput` mutex is poisoned,
+/// which indicates a panic occurred in another thread while holding the output lock.
+fn display_creation_results(
+    user_output: &Arc<Mutex<UserOutput>>,
+    environment: &Environment,
+) -> Result<(), CreateSubcommandError> {
+    let mut output = user_output
+        .lock()
+        .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?;
 
     output.success(&format!(
         "Environment '{}' created successfully",
@@ -242,6 +242,8 @@ fn display_creation_results(progress: &mut ProgressReporter, environment: &Envir
         "Build directory: {}",
         environment.build_dir().display()
     ));
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -666,14 +668,12 @@ mod tests {
                 UserOutput::with_writers(VerbosityLevel::Normal, stdout_writer, stderr_writer);
             let display_output = Arc::new(Mutex::new(output));
 
-            // Create progress reporter for display function
-            let mut display_progress = ProgressReporter::new(display_output, 5);
-
-            // This should not panic and should output messages
-            display_creation_results(&mut display_progress, &environment);
+            // Test display function with the user output directly
+            let result = display_creation_results(&display_output, &environment);
+            assert!(result.is_ok(), "display_creation_results should succeed");
 
             // Note: We can't easily verify the exact output without refactoring UserOutput
-            // to expose the buffers, but the important thing is it doesn't panic
+            // to expose the buffers, but the important thing is it succeeds
         }
     }
 }

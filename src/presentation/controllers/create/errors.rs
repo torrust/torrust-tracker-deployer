@@ -353,6 +353,7 @@ mod tests {
                     },
                 ),
             },
+            CreateSubcommandError::UserOutputLockFailed,
             CreateSubcommandError::ProgressReportingFailed {
                 source: ProgressReporterError::UserOutputMutexPoisoned,
             },
