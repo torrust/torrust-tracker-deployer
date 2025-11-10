@@ -7,7 +7,6 @@
 
 // Re-export command modules
 pub mod constants;
-pub mod context;
 
 // Shared test utilities
 #[cfg(test)]
