@@ -28,6 +28,34 @@ pub mod tests;
 
 /// Execute the given command
 ///
+/// **DEPRECATED**: This function is deprecated in favor of the new Dispatch Layer.
+/// Use `crate::presentation::dispatch::route_command` instead.
+///
+/// This function will be removed in a future version. The new dispatch layer
+/// provides better separation of concerns and cleaner architecture.
+///
+/// # Migration Guide
+///
+/// Old code:
+/// ```rust,ignore
+/// use std::sync::{Arc, Mutex};
+/// use crate::presentation::{commands, user_output::UserOutput};
+///
+/// let user_output = Arc::new(Mutex::new(UserOutput::new(/* ... */)));
+/// commands::execute(command, working_dir, &user_output)?;
+/// ```
+///
+/// New code:
+/// ```rust,ignore
+/// use std::sync::Arc;
+/// use crate::bootstrap::Container;
+/// use crate::presentation::dispatch::{route_command, ExecutionContext};
+///
+/// let container = Arc::new(Container::new());
+/// let context = ExecutionContext::new(container);
+/// route_command(command, working_dir, &context)?;
+/// ```
+///
 /// This function serves as the central dispatcher for all CLI commands.
 /// It matches the command type and delegates execution to the appropriate
 /// command handler module.
@@ -48,6 +76,27 @@ pub mod tests;
 /// Returns an error if command execution fails.
 ///
 /// # Example
+///
+/// ```rust
+/// use clap::Parser;
+/// use torrust_tracker_deployer_lib::presentation::{input::cli, commands, user_output};
+/// use std::{path::Path, sync::{Arc, Mutex}};
+///
+/// let cli = cli::Cli::parse();
+/// if let Some(command) = cli.command {
+///     let working_dir = Path::new(".");
+///     let user_output = Arc::new(Mutex::new(user_output::UserOutput::new(user_output::VerbosityLevel::Normal)));
+///     let result = commands::execute(command, working_dir, &user_output);
+///     match result {
+///         Ok(_) => println!("Command executed successfully"),
+///         Err(e) => commands::handle_error(&e, &user_output),
+///     }
+/// }
+/// ```
+#[deprecated(
+    since = "0.1.0",
+    note = "Use `crate::presentation::dispatch::route_command` instead"
+)]
 ///
 /// ```rust
 /// use clap::Parser;

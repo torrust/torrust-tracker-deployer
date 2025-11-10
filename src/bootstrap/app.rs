@@ -17,6 +17,8 @@
 //! - **Single Responsibility**: Focus only on application bootstrap concerns
 //! - **Clean Separation**: No CLI parsing or business logic in this module
 
+use std::sync::Arc;
+
 use clap::Parser;
 use tracing::info;
 
@@ -56,14 +58,15 @@ pub fn run() {
     );
 
     // Initialize service container for dependency injection
-    let container = bootstrap::Container::new();
+    let container = Arc::new(bootstrap::Container::new());
+    let context = presentation::dispatch::ExecutionContext::new(container);
 
     match cli.command {
         Some(command) => {
             if let Err(e) =
-                presentation::execute(command, &cli.global.working_dir, &container.user_output())
+                presentation::dispatch::route_command(command, &cli.global.working_dir, &context)
             {
-                presentation::handle_error(&e, &container.user_output());
+                presentation::handle_error(&e, &context.user_output());
                 std::process::exit(1);
             }
         }
