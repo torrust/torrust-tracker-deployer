@@ -16,6 +16,7 @@
 //! - `router` - Main command router routing between subcommands
 //! - `subcommands` - Individual subcommand implementations (environment, template)
 //!   - `environment` - Contains environment creation logic, error types, and config loading
+//! - `errors` - Unified error types for all create subcommands
 //!
 //! ## Usage Example
 //!
@@ -38,6 +39,7 @@
 //! }
 //! ```
 
+pub mod errors;
 pub mod router;
 pub mod subcommands;
 
@@ -45,5 +47,7 @@ pub mod subcommands;
 mod tests;
 
 // Re-export commonly used types for convenience
+pub use errors::CreateCommandError;
 pub use router::route_command;
 pub use subcommands::environment::{ConfigFormat, ConfigLoader, CreateEnvironmentCommandError};
+pub use subcommands::template::CreateEnvironmentTemplateCommandError;

@@ -20,7 +20,7 @@
 use thiserror::Error;
 
 use crate::presentation::controllers::{
-    create::CreateEnvironmentCommandError, destroy::DestroySubcommandError,
+    create::CreateCommandError, destroy::DestroySubcommandError,
 };
 
 /// Errors that can occur during CLI command execution
@@ -32,10 +32,10 @@ use crate::presentation::controllers::{
 pub enum CommandError {
     /// Create command specific errors
     ///
-    /// Encapsulates all errors that can occur during environment creation.
+    /// Encapsulates all errors that can occur during create operations (environment or template).
     /// Use `.help()` for detailed troubleshooting steps.
     #[error("Create command failed: {0}")]
-    Create(Box<CreateEnvironmentCommandError>),
+    Create(Box<CreateCommandError>),
 
     /// Destroy command specific errors
     ///
@@ -52,8 +52,8 @@ pub enum CommandError {
     UserOutputLockFailed,
 }
 
-impl From<CreateEnvironmentCommandError> for CommandError {
-    fn from(error: CreateEnvironmentCommandError) -> Self {
+impl From<CreateCommandError> for CommandError {
+    fn from(error: CreateCommandError) -> Self {
         Self::Create(Box::new(error))
     }
 }

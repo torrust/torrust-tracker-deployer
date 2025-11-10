@@ -17,7 +17,7 @@ use crate::presentation::user_output::VerbosityLevel;
 fn handle_environment_creation(
     config_path: &std::path::Path,
     working_dir: &std::path::Path,
-) -> Result<(), create::CreateEnvironmentCommandError> {
+) -> Result<(), create::CreateCommandError> {
     let action = CreateAction::Environment {
         env_file: config_path.to_path_buf(),
     };
@@ -60,7 +60,9 @@ fn it_should_reject_nonexistent_config_file() {
 
     assert!(result.is_err(), "Should fail for nonexistent file");
     match result.unwrap_err() {
-        create::CreateEnvironmentCommandError::ConfigFileNotFound { path } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::ConfigFileNotFound { path },
+        ) => {
             assert_eq!(path, nonexistent_path);
         }
         other => panic!("Expected ConfigFileNotFound, got: {other:?}"),
@@ -76,7 +78,9 @@ fn it_should_reject_invalid_json() {
 
     assert!(result.is_err(), "Should fail for invalid JSON");
     match result.unwrap_err() {
-        create::CreateEnvironmentCommandError::ConfigParsingFailed { path, .. } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::ConfigParsingFailed { path, .. },
+        ) => {
             assert_eq!(path, config_path);
         }
         other => panic!("Expected ConfigParsingFailed, got: {other:?}"),
@@ -92,7 +96,9 @@ fn it_should_reject_invalid_environment_name() {
 
     assert!(result.is_err(), "Should fail for invalid environment name");
     match result.unwrap_err() {
-        create::CreateEnvironmentCommandError::ConfigValidationFailed { .. } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::ConfigValidationFailed { .. },
+        ) => {
             // Expected
         }
         other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
@@ -108,7 +114,9 @@ fn it_should_reject_missing_ssh_keys() {
 
     assert!(result.is_err(), "Should fail for missing SSH keys");
     match result.unwrap_err() {
-        create::CreateEnvironmentCommandError::ConfigValidationFailed { .. } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::ConfigValidationFailed { .. },
+        ) => {
             // Expected
         }
         other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
@@ -129,7 +137,9 @@ fn it_should_reject_duplicate_environment() {
     assert!(result2.is_err(), "Second create should fail");
 
     match result2.unwrap_err() {
-        create::CreateEnvironmentCommandError::CommandFailed { .. } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::CommandFailed { .. },
+        ) => {
             // Expected - environment already exists
         }
         other => panic!("Expected CommandFailed, got: {other:?}"),
