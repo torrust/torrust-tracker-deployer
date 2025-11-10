@@ -4,13 +4,16 @@
 //! deployment environments from configuration files.
 
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::time::Duration;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
+use crate::application::command_handlers::CreateCommandHandler;
 use crate::domain::Environment;
-use crate::presentation::commands::factory::CommandHandlerFactory;
+use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::progress::ProgressReporter;
-use crate::presentation::user_output::UserOutput;
+use crate::shared::clock::SystemClock;
 
 use super::super::config_loader::ConfigLoader;
 use super::super::errors::CreateSubcommandError;
@@ -31,7 +34,7 @@ use super::super::errors::CreateSubcommandError;
 ///
 /// * `env_file` - Path to the environment configuration file (JSON format)
 /// * `working_dir` - Root directory for environment data storage
-/// * `user_output` - Shared user output service for consistent output formatting
+/// * `context` - Execution context providing access to application services
 ///
 /// # Returns
 ///
@@ -48,17 +51,14 @@ use super::super::errors::CreateSubcommandError;
 pub fn handle_environment_creation(
     env_file: &Path,
     working_dir: &Path,
-    user_output: &Arc<Mutex<UserOutput>>,
+    context: &ExecutionContext,
 ) -> Result<(), CreateSubcommandError> {
-    let factory = CommandHandlerFactory::new();
-    let ctx = factory.create_context(working_dir.to_path_buf(), user_output.clone());
-
     // Create progress reporter for 3 main steps
-    let mut progress = ProgressReporter::new(ctx.user_output().clone(), 3);
+    let mut progress = ProgressReporter::new(context.user_output().clone(), 3);
 
     // Step 1: Load configuration
     progress.start_step("Loading configuration")?;
-    let config = load_configuration(progress.output(), env_file)?;
+    let config = load_configuration(&mut progress, env_file)?;
     progress.complete_step(Some(&format!(
         "Configuration loaded: {}",
         config.environment.name
@@ -66,12 +66,19 @@ pub fn handle_environment_creation(
 
     // Step 2: Initialize dependencies
     progress.start_step("Initializing dependencies")?;
-    let command_handler = factory.create_create_handler(&ctx);
+
+    // Create repository and clock services
+    // TODO: Once Container is expanded, get these from context.container()
+    let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+    let repository = repository_factory.create(working_dir.to_path_buf());
+    let clock = Arc::new(SystemClock);
+
+    let command_handler = CreateCommandHandler::new(repository, clock);
     progress.complete_step(None)?;
 
     // Step 3: Execute create command (provision infrastructure)
     progress.start_step("Creating environment")?;
-    let environment = execute_create_command(progress.output(), &command_handler, config)?;
+    let environment = execute_create_command(&mut progress, &command_handler, config)?;
     progress.complete_step(Some(&format!(
         "Instance created: {}",
         environment.instance_name().as_str()
@@ -84,7 +91,7 @@ pub fn handle_environment_creation(
     ))?;
 
     // Display final results
-    display_creation_results(progress.output(), &environment);
+    display_creation_results(&mut progress, &environment);
 
     Ok(())
 }
@@ -98,7 +105,7 @@ pub fn handle_environment_creation(
 ///
 /// # Arguments
 ///
-/// * `output` - User output for progress messages
+/// * `progress` - Progress reporter for user feedback
 /// * `env_file` - Path to the configuration file
 ///
 /// # Returns
@@ -112,9 +119,11 @@ pub fn handle_environment_creation(
 /// - JSON parsing fails
 /// - Domain validation fails
 fn load_configuration(
-    user_output: &Arc<Mutex<UserOutput>>,
+    progress: &mut ProgressReporter,
     env_file: &Path,
 ) -> Result<EnvironmentCreationConfig, CreateSubcommandError> {
+    let user_output = progress.output();
+
     user_output
         .lock()
         .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?
@@ -141,7 +150,7 @@ fn load_configuration(
 ///
 /// # Arguments
 ///
-/// * `output` - User output for progress messages
+/// * `progress` - Progress reporter for user feedback
 /// * `command_handler` - Pre-created command handler
 /// * `config` - Validated environment creation configuration
 ///
@@ -153,10 +162,12 @@ fn load_configuration(
 ///
 /// Returns an error if command execution fails (e.g., environment already exists).
 fn execute_create_command(
-    user_output: &Arc<Mutex<UserOutput>>,
-    command_handler: &crate::application::command_handlers::CreateCommandHandler,
+    progress: &mut ProgressReporter,
+    command_handler: &CreateCommandHandler,
     config: EnvironmentCreationConfig,
 ) -> Result<Environment, CreateSubcommandError> {
+    let user_output = progress.output();
+
     user_output
         .lock()
         .map_err(|_| CreateSubcommandError::UserOutputLockFailed)?
@@ -191,7 +202,7 @@ fn execute_create_command(
 ///
 /// # Arguments
 ///
-/// * `user_output` - Shared user output for result messages
+/// * `progress` - Progress reporter for result messages
 /// * `environment` - The successfully created environment
 ///
 /// # Panics
@@ -202,7 +213,9 @@ fn execute_create_command(
 ///
 /// The panic message provides detailed context matching our error handling principles:
 /// clear explanation of what happened, why it's critical, and that it indicates a bug.
-fn display_creation_results(user_output: &Arc<Mutex<UserOutput>>, environment: &Environment) {
+fn display_creation_results(progress: &mut ProgressReporter, environment: &Environment) {
+    let user_output = progress.output();
+
     let mut output = user_output.lock().expect(
         "CRITICAL: UserOutput mutex poisoned after successful environment creation. \
          This indicates a panic occurred in another thread while holding the output lock. \
@@ -234,10 +247,22 @@ fn display_creation_results(user_output: &Arc<Mutex<UserOutput>>, environment: &
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bootstrap::Container;
+    use crate::presentation::controllers::create::config_loader::ConfigLoader;
+    use crate::presentation::dispatch::ExecutionContext;
     use crate::presentation::user_output::test_support::TestUserOutput;
-    use crate::presentation::user_output::VerbosityLevel;
+    use crate::presentation::user_output::{UserOutput, VerbosityLevel};
     use std::fs;
+    use std::sync::{Arc, Mutex};
     use tempfile::TempDir;
+
+    fn create_test_context(
+        _working_dir: &Path,
+        _user_output: Arc<Mutex<UserOutput>>,
+    ) -> ExecutionContext {
+        let container = Container::new();
+        ExecutionContext::new(Arc::new(container))
+    }
 
     #[test]
     fn it_should_create_environment_from_valid_config() {
@@ -265,7 +290,8 @@ mod tests {
 
         let working_dir = temp_dir.path();
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-        let result = handle_environment_creation(&config_path, working_dir, &user_output);
+        let context = create_test_context(working_dir, user_output);
+        let result = handle_environment_creation(&config_path, working_dir, &context);
 
         assert!(
             result.is_ok(),
@@ -289,8 +315,9 @@ mod tests {
         let config_path = temp_dir.path().join("nonexistent.json");
         let working_dir = temp_dir.path();
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let context = create_test_context(working_dir, user_output);
 
-        let result = handle_environment_creation(&config_path, working_dir, &user_output);
+        let result = handle_environment_creation(&config_path, working_dir, &context);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -311,7 +338,8 @@ mod tests {
 
         let working_dir = temp_dir.path();
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-        let result = handle_environment_creation(&config_path, working_dir, &user_output);
+        let context = create_test_context(working_dir, user_output);
+        let result = handle_environment_creation(&config_path, working_dir, &context);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -347,13 +375,16 @@ mod tests {
 
         let working_dir = temp_dir.path();
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let context = create_test_context(working_dir, user_output);
 
         // Create environment first time
-        let result1 = handle_environment_creation(&config_path, working_dir, &user_output);
+        let result1 = handle_environment_creation(&config_path, working_dir, &context);
         assert!(result1.is_ok(), "First create should succeed");
 
-        // Try to create same environment again
-        let result2 = handle_environment_creation(&config_path, working_dir, &user_output);
+        // Try to create same environment again (use new context to avoid any state issues)
+        let user_output2 = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let context2 = create_test_context(working_dir, user_output2);
+        let result2 = handle_environment_creation(&config_path, working_dir, &context2);
         assert!(result2.is_err(), "Second create should fail");
 
         match result2.unwrap_err() {
@@ -391,7 +422,8 @@ mod tests {
         fs::write(&config_path, config_json).unwrap();
 
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-        let result = handle_environment_creation(&config_path, &custom_working_dir, &user_output);
+        let context = create_test_context(&custom_working_dir, user_output);
+        let result = handle_environment_creation(&config_path, &custom_working_dir, &context);
 
         assert!(result.is_ok(), "Should create in custom working dir");
 
@@ -435,7 +467,8 @@ mod tests {
             fs::write(&config_path, config_json).unwrap();
 
             let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-            let result = load_configuration(&user_output, &config_path);
+            let mut progress = ProgressReporter::new(user_output, 5);
+            let result = load_configuration(&mut progress, &config_path);
 
             assert!(result.is_ok(), "Should load valid configuration");
             let config = result.unwrap();
@@ -448,7 +481,8 @@ mod tests {
             let config_path = temp_dir.path().join("missing.json");
 
             let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-            let result = load_configuration(&user_output, &config_path);
+            let mut progress = ProgressReporter::new(user_output, 5);
+            let result = load_configuration(&mut progress, &config_path);
 
             assert!(result.is_err());
             match result.unwrap_err() {
@@ -466,7 +500,8 @@ mod tests {
             fs::write(&config_path, r#"{"broken json"#).unwrap();
 
             let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-            let result = load_configuration(&user_output, &config_path);
+            let mut progress = ProgressReporter::new(user_output, 5);
+            let result = load_configuration(&mut progress, &config_path);
 
             assert!(result.is_err());
             match result.unwrap_err() {
@@ -504,13 +539,20 @@ mod tests {
             fs::write(&config_path, config_json).unwrap();
 
             let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+            let _context = create_test_context(temp_dir.path(), user_output.clone());
             let loader = ConfigLoader;
             let config = loader.load_from_file(&config_path).unwrap();
 
-            let factory = CommandHandlerFactory::new();
-            let ctx = factory.create_context(temp_dir.path().to_path_buf(), user_output.clone());
-            let command_handler = factory.create_create_handler(&ctx);
-            let result = execute_create_command(&user_output, &command_handler, config);
+            // Create command handler using manual dependency creation
+            // TODO: Once Container is expanded, get these from context.container()
+            let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+            let repository = repository_factory.create(temp_dir.path().to_path_buf());
+            let clock = Arc::new(SystemClock);
+            let command_handler = CreateCommandHandler::new(repository, clock);
+
+            // Create ProgressReporter for the function call (use 5 total steps)
+            let mut progress = ProgressReporter::new(user_output, 5);
+            let result = execute_create_command(&mut progress, &command_handler, config);
 
             assert!(result.is_ok(), "Should execute command successfully");
             let environment = result.unwrap();
@@ -540,20 +582,25 @@ mod tests {
             fs::write(&config_path, config_json).unwrap();
 
             let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+            let _context = create_test_context(temp_dir.path(), user_output.clone());
             let loader = ConfigLoader;
             let config = loader.load_from_file(&config_path).unwrap();
 
-            let factory = CommandHandlerFactory::new();
-            let ctx = factory.create_context(temp_dir.path().to_path_buf(), user_output.clone());
+            // Create command handler using manual dependency creation
+            // TODO: Once Container is expanded, get these from context.container()
+            let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+            let repository = repository_factory.create(temp_dir.path().to_path_buf());
+            let clock = Arc::new(SystemClock);
+            let command_handler = CreateCommandHandler::new(repository, clock);
 
             // Create environment first time
-            let command_handler1 = factory.create_create_handler(&ctx);
-            let result1 = execute_create_command(&user_output, &command_handler1, config.clone());
+            let mut progress1 = ProgressReporter::new(user_output.clone(), 5);
+            let result1 = execute_create_command(&mut progress1, &command_handler, config.clone());
             assert!(result1.is_ok(), "First execution should succeed");
 
             // Try to create same environment again
-            let command_handler2 = factory.create_create_handler(&ctx);
-            let result2 = execute_create_command(&user_output, &command_handler2, config);
+            let mut progress2 = ProgressReporter::new(user_output, 5);
+            let result2 = execute_create_command(&mut progress2, &command_handler, config);
             assert!(result2.is_err(), "Second execution should fail");
 
             match result2.unwrap_err() {
@@ -594,13 +641,20 @@ mod tests {
 
             // Create environment
             let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-            let factory = CommandHandlerFactory::new();
-            let ctx = factory.create_context(temp_dir.path().to_path_buf(), user_output.clone());
+            let _context = create_test_context(temp_dir.path(), user_output.clone());
             let loader = ConfigLoader;
             let config = loader.load_from_file(&config_path).unwrap();
-            let command_handler = factory.create_create_handler(&ctx);
+
+            // Create command handler using manual dependency creation
+            // TODO: Once Container is expanded, get these from context.container()
+            let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+            let repository = repository_factory.create(temp_dir.path().to_path_buf());
+            let clock = Arc::new(SystemClock);
+            let command_handler = CreateCommandHandler::new(repository, clock);
+
+            let mut progress = ProgressReporter::new(user_output, 5);
             let environment =
-                execute_create_command(&user_output, &command_handler, config).unwrap();
+                execute_create_command(&mut progress, &command_handler, config).unwrap();
 
             // Test display function with custom output
             let stderr_buf = Vec::new();
@@ -612,8 +666,11 @@ mod tests {
                 UserOutput::with_writers(VerbosityLevel::Normal, stdout_writer, stderr_writer);
             let display_output = Arc::new(Mutex::new(output));
 
+            // Create progress reporter for display function
+            let mut display_progress = ProgressReporter::new(display_output, 5);
+
             // This should not panic and should output messages
-            display_creation_results(&display_output, &environment);
+            display_creation_results(&mut display_progress, &environment);
 
             // Note: We can't easily verify the exact output without refactoring UserOutput
             // to expose the buffers, but the important thing is it doesn't panic

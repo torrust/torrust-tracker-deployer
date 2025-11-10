@@ -150,7 +150,7 @@ impl CreateSubcommandError {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::commands::create::CreateSubcommandError;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::create::CreateSubcommandError;
     /// use std::path::PathBuf;
     ///
     /// let error = CreateSubcommandError::ConfigFileNotFound {

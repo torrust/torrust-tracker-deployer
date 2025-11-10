@@ -36,8 +36,7 @@ pub fn handle(
 ) -> Result<(), CreateSubcommandError> {
     match action {
         CreateAction::Environment { env_file } => {
-            // TODO: Temporarily using old signature until environment subcommand is updated
-            subcommands::handle_environment_creation(&env_file, working_dir, &context.user_output())
+            subcommands::handle_environment_creation(&env_file, working_dir, context)
         }
         CreateAction::Template { output_path } => {
             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
