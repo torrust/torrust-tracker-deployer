@@ -10,14 +10,32 @@
 //! The goal is to align all command controllers with the clean architecture
 //! established by the destroy command controller.
 //!
+//! ## Command Architecture Types
+//!
+//! There are two types of commands in the system, each with different internal structure:
+//!
+//! ### 1. Single Commands (Direct Execution)
+//!
+//! Commands that execute directly without subcommands (e.g., `destroy`).
+//! These follow the clean handler pattern with direct execution.
+//!
+//! ### 2. Commands with Subcommands (Router + Subcontrollers)
+//!
+//! Commands that route to multiple subcommands (e.g., `create environment`, `create template`).
+//! These have an **extra routing layer** but subcommands maintain the same internal
+//! structure as single commands.
+//!
+//! **Key Principle**: Subcommands should have internally the same structure as normal
+//! commands, but with an additional routing layer to dispatch between subcommands.
+//!
 //! ## Controller Maturity Levels
 //!
-//! ### ✅ Reference Implementation: Destroy Controller
-//! 
-//! The `destroy` controller demonstrates the target architecture:
+//! ### ✅ Reference Implementation: Destroy Controller (Single Command)
+//!
+//! The `destroy` controller demonstrates the target architecture for single commands:
 //! - **Clean Handler Pattern**: Single `handler.rs` with focused responsibility
 //! - **Dedicated Error Types**: Command-specific errors with help methods
-//! - **Minimal Dependencies**: Takes ExecutionContext, delegates to application layer
+//! - **Minimal Dependencies**: Takes `ExecutionContext`, delegates to application layer
 //! - **Comprehensive Tests**: Full test coverage with clear test organization
 //!
 //! ```text
@@ -28,10 +46,11 @@
 //! └── mod.rs          # Module exports
 //! ```
 //!
-//! ### 🚧 Needs Refactoring: Create Controller
+//! ### 🚧 Needs Refactoring: Create Controller (Command with Subcommands)
 //!
-//! The `create` controller needs refactoring to match the destroy pattern.
-//! Currently has subcommands that should be separate controllers:
+//! The `create` controller needs refactoring to match the target pattern for commands
+//! with subcommands. It demonstrates the **router + subcontroller** pattern but needs
+//! architectural cleanup.
 //!
 //! **Current Structure (Transitional)**:
 //! ```text
@@ -48,19 +67,27 @@
 //! ```
 //!
 //! **Target Structure (After Refactoring)**:
+//!
+//! The refactoring will split this into separate controllers for each subcommand,
+//! each following the same clean structure as single commands:
+//!
 //! ```text
 //! create_environment/  # NEW: Dedicated environment controller
-//! ├── handler.rs      # Environment creation handler
+//! ├── handler.rs      # Environment creation handler (same structure as destroy)
 //! ├── errors.rs       # Environment-specific errors
 //! ├── tests/          # Environment tests
 //! └── mod.rs          # Module exports
 //!
 //! create_template/     # NEW: Dedicated template controller
-//! ├── handler.rs      # Template generation handler
+//! ├── handler.rs      # Template generation handler (same structure as destroy)
 //! ├── errors.rs       # Template-specific errors
 //! ├── tests/          # Template tests
 //! └── mod.rs          # Module exports
 //! ```
+//!
+//! **Key Insight**: Each subcommand becomes a separate controller with the same
+//! internal structure as single commands. The routing is handled at the dispatch
+//! layer, not within controllers.
 //!
 //! ## 🎯 Controller Design Principles
 //!
@@ -68,14 +95,17 @@
 //!
 //! ### 1. Single Responsibility
 //! - Each controller handles **one specific command** (destroy, create environment, create template)
-//! - No routing logic within controllers - handled by dispatch layer
+//! - No routing logic within controllers - routing handled by dispatch layer for subcommands
 //! - No presentation logic - controllers coordinate, views handle output
 //!
-//! ### 2. Clean Handler Pattern
+//! ### 2. Clean Handler Pattern (Universal for All Controllers)
 //! - Main logic in `handler.rs` with descriptive function name (`handle_destroy_command`)
 //! - Take `ExecutionContext` for dependencies
 //! - Return command-specific error types
 //! - Focus on orchestrating application layer services
+//!
+//! **Note**: This pattern applies to both single commands and subcommand controllers.
+//! Subcommand controllers have the same internal structure, just different routing.
 //!
 //! ### 3. Dedicated Error Types
 //! - Command-specific error enums (e.g., `DestroySubcommandError`)
@@ -89,38 +119,78 @@
 //! - Handle application errors and convert to presentation errors
 //! - Don't contain business logic - delegate to application layer
 //!
+//! ## 🔀 Subcommand Routing Architecture
+//!
+//! For commands with subcommands (like `create`), the current architecture uses:
+//!
+//! 1. **Dispatch Layer**: Receives full command (e.g., `create environment`)
+//! 2. **Router**: Routes to appropriate subcommand handler based on action type
+//! 3. **Subcommand Handler**: Executes specific logic (environment creation or template generation)
+//!
+//! **Current Implementation Example** (from `create/router.rs`):
+//! ```rust
+//! pub fn route_command(
+//!     action: CreateAction,
+//!     working_dir: &Path,
+//!     context: &ExecutionContext,
+//! ) -> Result<(), CreateCommandError> {
+//!     match action {
+//!         CreateAction::Environment { env_file } => {
+//!             subcommands::handle_environment_creation(&env_file, working_dir, context)
+//!         }
+//!         CreateAction::Template { output_path } => {
+//!             subcommands::handle_template_generation(&template_path, context)
+//!         }
+//!     }
+//! }
+//! ```
+//!
+//! **Target Architecture**: Move routing to dispatch layer, make each subcommand
+//! a separate controller with the same structure as single commands.
+//!
 //! ## 📋 Refactoring Plan for Create Controller
 //!
-//! To complete Proposal #3, the create controller needs to be split:
+//! To complete Proposal #3, the create controller needs to be split into separate
+//! controllers that each follow the same clean structure as single commands:
+//!
+//! ### Current Challenge
+//! The `create` command currently uses internal routing with subcommands. This needs
+//! to be refactored so each subcommand becomes a separate controller with the same
+//! internal structure as single commands.
 //!
 //! ### Step 1: Create Environment Controller
 //! 1. Create `src/presentation/controllers/create_environment/`
 //! 2. Move environment logic from `create/subcommands/environment/`
-//! 3. Create clean handler following destroy pattern
+//! 3. Create clean handler following destroy pattern (same structure)
 //! 4. Move environment tests to new controller
 //!
 //! ### Step 2: Create Template Controller  
 //! 1. Create `src/presentation/controllers/create_template/`
 //! 2. Move template logic from `create/subcommands/template/`
-//! 3. Create clean handler following destroy pattern
+//! 3. Create clean handler following destroy pattern (same structure)
 //! 4. Move template tests to new controller
 //!
 //! ### Step 3: Update Dispatch Router
-//! 1. Remove create router (no more subcommand routing needed)
-//! 2. Update dispatch router to call separate controllers directly
+//! 1. Remove create controller router (no more internal subcommand routing)
+//! 2. Update dispatch layer to route directly to separate controllers
 //! 3. Update error handling for separate error types
+//! 4. Each subcommand treated as independent controller
 //!
 //! ### Step 4: Remove Old Create Structure
 //! 1. Remove `create/` directory entirely
 //! 2. Update imports throughout codebase
 //! 3. Update documentation and tests
 //!
+//! **Result**: Both `create environment` and `create template` will be handled by
+//! separate controllers with identical structure to `destroy` - just different routing
+//! at the dispatch level.
+//!
 //! ## 🧪 Testing Strategy
 //!
 //! Each controller should have comprehensive test coverage:
 //! - **Unit Tests**: Handler function behavior with various inputs
 //! - **Error Tests**: All error variants and help text validation
-//! - **Integration Tests**: End-to-end command execution with ExecutionContext
+//! - **Integration Tests**: End-to-end command execution with `ExecutionContext`
 //!
 //! Tests should be **isolated** - each controller's tests run independently
 //! without depending on other controllers or external state.
@@ -134,7 +204,7 @@
 //! controllers/
 //! ├── create_environment/  # Environment creation
 //! ├── create_template/     # Template generation
-//! ├── destroy/            # Environment destruction ✅ 
+//! ├── destroy/            # Environment destruction ✅
 //! ├── provision/          # Future: Infrastructure provisioning
 //! ├── configure/          # Future: Software configuration
 //! ├── release/            # Future: Application deployment

@@ -224,3 +224,5 @@ writeln
 ключ
 конфиг
 файл
+subcontroller
+subcontrollers

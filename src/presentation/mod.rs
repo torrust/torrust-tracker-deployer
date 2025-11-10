@@ -72,13 +72,41 @@
 //!
 //! ### ✅ Dispatch Layer (`dispatch/`)
 //! - **Command Routing**: Determining which controller to execute
-//! - **Execution Context**: Providing dependencies through ExecutionContext wrapper
+//! - **Subcommand Routing**: For commands with subcommands (e.g., `create environment` vs `create template`)
+//! - **Execution Context**: Providing dependencies through `ExecutionContext` wrapper
 //! - **Service Location**: Bridge between CLI and business logic
 //!
 //! ### 🚧 Controllers Layer (`controllers/`) - IN PROGRESS
 //! - **Command Handling**: Business logic coordination for each command
+//! - **Two Command Types**:
+//!   - Single commands (e.g., `destroy`) - direct execution
+//!   - Commands with subcommands (e.g., `create`) - each subcommand becomes separate controller
+//! - **Uniform Structure**: All controllers (single or subcommand) follow same internal pattern
 //! - **Error Management**: Command-specific error types and handling
 //! - **Application Integration**: Calling application layer services
+//!
+//! #### Command Architecture Patterns:
+//!
+//! **Single Commands** (Direct execution):
+//! ```text
+//! destroy/
+//! ├── handler.rs    # handle_destroy_command()
+//! ├── errors.rs     # DestroySubcommandError
+//! └── tests/        # Command-specific tests
+//! ```
+//!
+//! **Commands with Subcommands** (Router + separate controllers):
+//! ```text
+//! # Current (transitional):
+//! create/router.rs -> subcommands/environment/ + subcommands/template/
+//!
+//! # Target (after refactoring):
+//! create_environment/handler.rs  # handle_create_environment_command()
+//! create_template/handler.rs     # handle_create_template_command()
+//! ```
+//!
+//! **Key Insight**: Subcommands have the same internal structure as single commands,
+//! but routing happens at the dispatch layer instead of within controllers.
 //!
 //! #### Controller Maturity Levels:
 //! - **✅ Destroy Controller**: Reference implementation with clean handler pattern
