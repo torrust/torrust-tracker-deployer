@@ -41,9 +41,8 @@
 pub mod router;
 pub mod subcommands;
 
-// TODO: Update tests to use ExecutionContext interface
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod tests;
 
 // Re-export commonly used types for convenience
 pub use router::route_command;

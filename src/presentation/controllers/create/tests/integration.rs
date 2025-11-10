@@ -3,13 +3,14 @@
 //! This module tests the complete create command workflow including
 //! configuration loading, validation, and command execution.
 
+use crate::bootstrap::Container;
 use crate::presentation::controllers::create;
 use crate::presentation::controllers::tests::{
     create_config_with_invalid_name, create_config_with_missing_keys, create_invalid_json_config,
     create_valid_config, TestContext,
 };
+use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::CreateAction;
-use crate::presentation::user_output::test_support::TestUserOutput;
 use crate::presentation::user_output::VerbosityLevel;
 
 /// Helper function to call the environment creation handler
@@ -20,8 +21,9 @@ fn handle_environment_creation(
     let action = CreateAction::Environment {
         env_file: config_path.to_path_buf(),
     };
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    create::route_command(action, working_dir, &user_output)
+    let container = Container::new(VerbosityLevel::Silent);
+    let context = ExecutionContext::new(std::sync::Arc::new(container));
+    create::route_command(action, working_dir, &context)
 }
 
 #[test]

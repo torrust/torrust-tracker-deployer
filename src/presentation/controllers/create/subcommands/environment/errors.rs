@@ -272,3 +272,101 @@ Verify the state of your environment before retrying."
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn it_should_provide_help_for_config_file_not_found() {
+        let error = CreateSubcommandError::ConfigFileNotFound {
+            path: PathBuf::from("missing.json"),
+        };
+
+        let help = error.help();
+        assert!(help.contains("File Not Found"));
+        assert!(help.contains("Check that the file path"));
+        assert!(help.contains("ls -la"));
+    }
+
+    #[test]
+    fn it_should_provide_help_for_json_parsing_failed() {
+        let source = std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid json");
+        let error = CreateSubcommandError::ConfigParsingFailed {
+            path: PathBuf::from("config.json"),
+            format: ConfigFormat::Json,
+            source: Box::new(source),
+        };
+
+        let help = error.help();
+        assert!(help.contains("JSON"));
+        assert!(help.contains("syntax"));
+        assert!(help.contains("jq"));
+    }
+
+    #[test]
+    fn it_should_display_config_file_path_in_error() {
+        let error = CreateSubcommandError::ConfigFileNotFound {
+            path: PathBuf::from("/path/to/config.json"),
+        };
+
+        let message = error.to_string();
+        assert!(message.contains("/path/to/config.json"));
+        assert!(message.contains("not found"));
+    }
+
+    #[test]
+    fn it_should_display_format_in_parsing_error() {
+        let source = std::io::Error::new(std::io::ErrorKind::InvalidData, "test");
+        let error = CreateSubcommandError::ConfigParsingFailed {
+            path: PathBuf::from("config.json"),
+            format: ConfigFormat::Json,
+            source: Box::new(source),
+        };
+
+        let message = error.to_string();
+        assert!(message.contains("JSON"));
+        assert!(message.contains("config.json"));
+    }
+
+    #[test]
+    fn it_should_have_help_for_all_error_variants() {
+        use crate::application::command_handlers::create::config::CreateConfigError;
+        use crate::domain::EnvironmentNameError;
+        use crate::presentation::progress::ProgressReporterError;
+
+        let errors: Vec<CreateSubcommandError> = vec![
+            CreateSubcommandError::ConfigFileNotFound {
+                path: PathBuf::from("test.json"),
+            },
+            CreateSubcommandError::ConfigParsingFailed {
+                path: PathBuf::from("test.json"),
+                format: ConfigFormat::Json,
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "test")),
+            },
+            CreateSubcommandError::ConfigValidationFailed {
+                source: CreateConfigError::InvalidEnvironmentName(
+                    EnvironmentNameError::InvalidFormat {
+                        attempted_name: "test".to_string(),
+                        reason: "invalid".to_string(),
+                        valid_examples: vec!["dev".to_string()],
+                    },
+                ),
+            },
+            CreateSubcommandError::UserOutputLockFailed,
+            CreateSubcommandError::ProgressReportingFailed {
+                source: ProgressReporterError::UserOutputMutexPoisoned,
+            },
+        ];
+
+        for error in errors {
+            let help = error.help();
+            assert!(!help.is_empty(), "Help text should not be empty");
+            assert!(
+                help.contains("Troubleshooting") || help.contains("Fix") || help.len() > 50,
+                "Help should contain actionable guidance"
+            );
+        }
+    }
+}

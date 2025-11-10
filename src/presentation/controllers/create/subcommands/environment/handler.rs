@@ -247,3 +247,74 @@ pub(crate) fn display_creation_results(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+    use std::sync::{Arc, Mutex};
+    use std::time::Duration;
+    use tempfile::TempDir;
+
+    use crate::application::command_handlers::CreateCommandHandler;
+    use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+    use crate::presentation::controllers::create::subcommands::environment::config_loader::ConfigLoader;
+    use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+    use crate::shared::clock::SystemClock;
+
+    mod display_creation_results_tests {
+        use super::*;
+
+        #[test]
+        fn it_should_display_environment_details() {
+            let temp_dir = TempDir::new().unwrap();
+            let config_path = temp_dir.path().join("config.json");
+
+            let project_root = env!("CARGO_MANIFEST_DIR");
+            let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+            let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+            let config_json = format!(
+                r#"{{
+                "environment": {{
+                    "name": "test-display"
+                }},
+                "ssh_credentials": {{
+                    "private_key_path": "{private_key_path}",
+                    "public_key_path": "{public_key_path}"
+                }}
+            }}"#
+            );
+            std::fs::write(&config_path, config_json).unwrap();
+
+            // Create environment
+            let loader = ConfigLoader;
+            let config = loader.load_from_file(&config_path).unwrap();
+
+            // Create command handler using manual dependency creation
+            let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+            let repository = repository_factory.create(temp_dir.path().to_path_buf());
+            let clock = Arc::new(SystemClock);
+            let command_handler = CreateCommandHandler::new(repository, clock);
+
+            let environment = command_handler.execute(config).unwrap();
+
+            // Test display function with custom output
+            let stderr_buf = Vec::new();
+            let stderr_writer = Box::new(Cursor::new(stderr_buf));
+            let stdout_buf = Vec::new();
+            let stdout_writer = Box::new(Cursor::new(stdout_buf));
+
+            let output =
+                UserOutput::with_writers(VerbosityLevel::Normal, stdout_writer, stderr_writer);
+            let display_output = Arc::new(Mutex::new(output));
+
+            // Test display function
+            let result = display_creation_results(&display_output, &environment);
+            assert!(result.is_ok(), "display_creation_results should succeed");
+
+            // Note: We can't easily verify the exact output without refactoring UserOutput
+            // to expose the buffers, but the important thing is it succeeds
+        }
+    }
+}

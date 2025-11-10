@@ -1,9 +1,10 @@
 //! Integration Tests for Template Generation
 
+use crate::bootstrap::Container;
 use crate::presentation::controllers::create;
 use crate::presentation::controllers::tests::TestContext;
+use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::CreateAction;
-use crate::presentation::user_output::test_support::TestUserOutput;
 use crate::presentation::user_output::VerbosityLevel;
 
 #[test]
@@ -15,9 +16,10 @@ fn it_should_generate_template_with_default_path() {
     std::env::set_current_dir(test_context.working_dir()).unwrap();
 
     let action = CreateAction::Template { output_path: None };
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+    let container = Container::new(VerbosityLevel::Silent);
+    let context = ExecutionContext::new(std::sync::Arc::new(container));
 
-    let result = create::route_command(action, test_context.working_dir(), &user_output);
+    let result = create::route_command(action, test_context.working_dir(), &context);
 
     // Restore original directory
     std::env::set_current_dir(original_dir).unwrap();
@@ -59,9 +61,10 @@ fn it_should_generate_template_with_custom_path() {
     let action = CreateAction::Template {
         output_path: Some(custom_path.clone()),
     };
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+    let container = Container::new(VerbosityLevel::Silent);
+    let context = ExecutionContext::new(std::sync::Arc::new(container));
 
-    let result = create::route_command(action, test_context.working_dir(), &user_output);
+    let result = create::route_command(action, test_context.working_dir(), &context);
 
     assert!(result.is_ok(), "Template generation should succeed");
 
@@ -84,9 +87,10 @@ fn it_should_generate_valid_json_template() {
     let action = CreateAction::Template {
         output_path: Some(template_path.clone()),
     };
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+    let container = Container::new(VerbosityLevel::Silent);
+    let context = ExecutionContext::new(std::sync::Arc::new(container));
 
-    create::route_command(action, test_context.working_dir(), &user_output).unwrap();
+    create::route_command(action, test_context.working_dir(), &context).unwrap();
 
     // Read and parse the generated template
     let file_content = std::fs::read_to_string(&template_path).unwrap();
@@ -129,9 +133,10 @@ fn it_should_create_parent_directories() {
     let action = CreateAction::Template {
         output_path: Some(deep_path.clone()),
     };
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+    let container = Container::new(VerbosityLevel::Silent);
+    let context = ExecutionContext::new(std::sync::Arc::new(container));
 
-    let result = create::route_command(action, test_context.working_dir(), &user_output);
+    let result = create::route_command(action, test_context.working_dir(), &context);
 
     assert!(result.is_ok(), "Should create parent directories");
     assert!(
