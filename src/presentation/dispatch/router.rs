@@ -110,7 +110,7 @@ pub fn route_command(
 ) -> Result<(), CommandError> {
     match command {
         Commands::Create { action } => {
-            create::handle(action, working_dir, context)?;
+            create::route_command(action, working_dir, context)?;
             Ok(())
         }
         Commands::Destroy { environment } => {

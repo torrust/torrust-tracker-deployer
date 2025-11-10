@@ -13,10 +13,9 @@
 //!
 //! ## Components
 //!
-//! - `config_loader` - Figment integration for JSON configuration loading
-//! - `handler` - Main command handler routing between subcommands
+//! - `router` - Main command router routing between subcommands
 //! - `subcommands` - Individual subcommand implementations (environment, template)
-//!   - `environment` - Contains environment creation logic and error types
+//!   - `environment` - Contains environment creation logic, error types, and config loading
 //!
 //! ## Usage Example
 //!
@@ -33,14 +32,13 @@
 //! // Note: ExecutionContext would be provided by the application bootstrap
 //! # let context = todo!(); // Mock for documentation example
 //!
-//! if let Err(e) = create::handle(action, Path::new("."), &context) {
+//! if let Err(e) = create::route_command(action, Path::new("."), &context) {
 //!     eprintln!("Create failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
 //! ```
 
-pub mod config_loader;
-pub mod handler;
+pub mod router;
 pub mod subcommands;
 
 // TODO: Update tests to use ExecutionContext interface
@@ -48,6 +46,5 @@ pub mod subcommands;
 // mod tests;
 
 // Re-export commonly used types for convenience
-pub use config_loader::ConfigLoader;
-pub use handler::handle;
-pub use subcommands::environment::{ConfigFormat, CreateSubcommandError};
+pub use router::route_command;
+pub use subcommands::environment::{ConfigFormat, ConfigLoader, CreateSubcommandError};

@@ -13,7 +13,7 @@ use figment::{
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 
-use super::subcommands::environment::{ConfigFormat, CreateSubcommandError};
+use super::errors::{ConfigFormat, CreateSubcommandError};
 
 /// Configuration loader using Figment for JSON file parsing
 ///
@@ -56,7 +56,7 @@ impl ConfigLoader {
     ///
     /// ```rust,no_run
     /// use std::path::Path;
-    /// use torrust_tracker_deployer_lib::presentation::controllers::create::ConfigLoader;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment::ConfigLoader;
     ///
     /// let loader = ConfigLoader;
     /// let config = loader.load_from_file(Path::new("config/environment.json"))?;

@@ -21,7 +21,7 @@ fn handle_environment_creation(
         env_file: config_path.to_path_buf(),
     };
     let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    create::handle(action, working_dir, &user_output)
+    create::route_command(action, working_dir, &user_output)
 }
 
 #[test]

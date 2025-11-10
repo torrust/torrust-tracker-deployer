@@ -1,14 +1,13 @@
-//! Template Generation Subcommand
+//! Template Generation Handler
 //!
-//! This module handles the template generation subcommand for creating
-//! configuration file templates with placeholder values.
+//! This module handles template generation for creating configuration
+//! file templates with placeholder values.
 
 use std::path::Path;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
+use crate::presentation::controllers::create::subcommands::environment::CreateSubcommandError;
 use crate::presentation::dispatch::ExecutionContext;
-
-use super::environment::CreateSubcommandError;
 
 /// Handle template generation
 ///

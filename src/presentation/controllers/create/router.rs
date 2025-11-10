@@ -1,4 +1,4 @@
-//! Create Command Handler
+//! Create Command Router
 //!
 //! This module handles the create command execution at the presentation layer,
 //! routing between different subcommands (environment creation or template generation).
@@ -11,7 +11,7 @@ use crate::presentation::input::cli::commands::CreateAction;
 use super::subcommands;
 use super::subcommands::environment::CreateSubcommandError;
 
-/// Handle the create command with its subcommands
+/// Route the create command to its appropriate subcommand
 ///
 /// This function routes between different create subcommands (environment or template).
 ///
@@ -29,7 +29,7 @@ use super::subcommands::environment::CreateSubcommandError;
 ///
 /// Returns an error if the subcommand execution fails.
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle(
+pub fn route_command(
     action: CreateAction,
     working_dir: &Path,
     context: &ExecutionContext,
