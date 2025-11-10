@@ -66,7 +66,7 @@ pub fn run() {
             if let Err(e) =
                 presentation::dispatch::route_command(command, &cli.global.working_dir, &context)
             {
-                presentation::handle_error(&e, &context.user_output());
+                presentation::error::handle_error(&e, &context.user_output());
                 std::process::exit(1);
             }
         }

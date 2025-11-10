@@ -118,6 +118,7 @@
 //! # Ok(())
 //! # }
 //! ```
+
 // Command routing module
 pub mod router;
 

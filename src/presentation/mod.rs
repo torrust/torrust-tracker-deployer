@@ -45,6 +45,7 @@
 // Core presentation modules
 pub mod commands;
 pub mod dispatch;
+pub mod error;
 pub mod errors;
 pub mod input;
 pub mod progress;
@@ -53,12 +54,9 @@ pub mod user_output;
 // Re-export commonly used presentation types for convenience
 pub use commands::create::CreateSubcommandError;
 pub use commands::destroy::DestroySubcommandError;
-pub use commands::handle_error;
 
-// Deprecated: Use dispatch layer instead
-#[deprecated(since = "0.1.0", note = "Use `dispatch::route_command` instead")]
-#[allow(deprecated)]
-pub use commands::execute;
+// Re-export error handling function from error module
+pub use error::handle_error;
 
 pub use errors::CommandError;
 pub use input::{Cli, Commands, GlobalArgs};
