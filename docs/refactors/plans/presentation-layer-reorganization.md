@@ -75,11 +75,11 @@ This refactoring followed a systematic 5-step engineering process:
 ## 📊 Progress Tracking
 
 **Total Proposals**: 6  
-**Completed**: 0/6 (0%)  
-**In Progress**: 0/6 (0%)  
-**Not Started**: 6/6 (100%)
+**Completed**: 2/6 (33%)  
+**In Progress**: 1/6 (17%)  
+**Not Started**: 3/6 (50%)
 
-**Estimated Total Time**: 12-15 hours
+**Estimated Total Time**: 12-15 hours (6-7h completed, 6-8h remaining)
 
 ### Proposal Summary
 
@@ -87,9 +87,9 @@ Each proposal is **independently mergeable** - it leaves the codebase in a compl
 
 | #   | Proposal                      | Status         | Impact      | Effort      | Est. Time |
 | --- | ----------------------------- | -------------- | ----------- | ----------- | --------- |
-| 1   | Create Input Layer            | ⏳ Not Started | 🟢🟢 Medium | 🔵🔵 Medium | 2-3h      |
-| 2   | Create Dispatch Layer         | ⏳ Not Started | 🟢🟢🟢 High | 🔵🔵 Medium | 2-3h      |
-| 3   | Create Controllers Layer      | ⏳ Not Started | 🟢🟢🟢 High | 🔵🔵🔵 High | 3-4h      |
+| 1   | Create Input Layer            | ✅ Completed   | 🟢🟢 Medium | 🔵🔵 Medium | 2-3h      |
+| 2   | Create Dispatch Layer         | ✅ Completed   | 🟢🟢🟢 High | 🔵🔵 Medium | 2-3h      |
+| 3   | Create Controllers Layer      | 🚧 In Progress | 🟢🟢🟢 High | 🔵🔵🔵 High | 3-4h      |
 | 4   | Create Views Layer            | ⏳ Not Started | 🟢🟢🟢 High | 🔵🔵🔵 High | 3-4h      |
 | 5   | Integrate Progress into Views | ⏳ Not Started | 🟢🟢 Medium | 🔵 Low      | 1-2h      |
 | 6   | Remove Old Commands Structure | ⏳ Not Started | 🟢 Low      | 🔵 Low      | 1h        |
@@ -243,7 +243,22 @@ After completion:
 
 ### Implementation Details
 
-**To be detailed after Proposal #2 completes** - Details will be added based on learnings from earlier proposals.
+**Implementation now available**: See detailed specification in [docs/issues/162-create-controllers-layer.md](../../issues/162-create-controllers-layer.md) with:
+
+- Complete analysis of current vs target structure
+- ExecutionContext integration specifications
+- Router integration updates
+- 6-phase implementation plan with specific tasks
+- Acceptance criteria and testing requirements
+
+**Key Changes from Original Plan**:
+
+- Proposal #2 successfully created ExecutionContext wrapper around Container
+- Router integration is working and ready for controller transition
+- Factory pattern removal confirmed necessary (duplicates Container)
+- Handler function renaming simplified (`handle_create_command` → `handle`)
+
+**Next Steps**: Create GitHub issue from specification and begin implementation.
 
 ---
 
