@@ -57,8 +57,8 @@ pub mod progress;
 pub mod user_output;
 
 // Re-export commonly used presentation types for convenience
-pub use commands::destroy::DestroySubcommandError;
 pub use controllers::create::CreateSubcommandError;
+pub use controllers::destroy::DestroySubcommandError;
 
 // Re-export error handling function from error module
 pub use error::handle_error;

@@ -19,8 +19,9 @@
 
 use thiserror::Error;
 
-use crate::presentation::commands::destroy::DestroySubcommandError;
-use crate::presentation::controllers::create::CreateSubcommandError;
+use crate::presentation::controllers::{
+    create::CreateSubcommandError, destroy::DestroySubcommandError,
+};
 
 /// Errors that can occur during CLI command execution
 ///
@@ -75,7 +76,7 @@ impl CommandError {
     /// ```rust
     /// use clap::Parser;
     /// use torrust_tracker_deployer_lib::presentation::{input::cli, errors};
-    /// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroySubcommandError;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::destroy::DestroySubcommandError;
     /// use torrust_tracker_deployer_lib::application::command_handlers::destroy::DestroyCommandHandlerError;
     /// use std::path::PathBuf;
     ///

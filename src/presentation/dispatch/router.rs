@@ -51,8 +51,7 @@
 
 use std::path::Path;
 
-use crate::presentation::commands::destroy;
-use crate::presentation::controllers::create;
+use crate::presentation::controllers::{create, destroy};
 use crate::presentation::errors::CommandError;
 use crate::presentation::input::Commands;
 
@@ -113,7 +112,7 @@ pub fn route_command(
             Ok(())
         }
         Commands::Destroy { environment } => {
-            destroy::handle_destroy_command(&environment, working_dir, &context.user_output())?;
+            destroy::handle(&environment, working_dir, context)?;
             Ok(())
         } // Future commands will be added here as the Controller Layer expands:
           //

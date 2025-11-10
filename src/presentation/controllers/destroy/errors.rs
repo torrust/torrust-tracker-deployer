@@ -112,7 +112,7 @@ impl DestroySubcommandError {
     /// ```rust
     /// use std::path::Path;
     /// use std::sync::{Arc, Mutex};
-    /// use torrust_tracker_deployer_lib::presentation::commands::destroy;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {

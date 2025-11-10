@@ -8,7 +8,6 @@
 // Re-export command modules
 pub mod constants;
 pub mod context;
-pub mod destroy;
 pub mod factory;
 
 // Shared test utilities

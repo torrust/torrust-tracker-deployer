@@ -59,7 +59,7 @@ use crate::presentation::user_output::UserOutput;
 /// ```rust
 /// use clap::Parser;
 /// use torrust_tracker_deployer_lib::presentation::{error, input::cli, errors, user_output};
-/// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroySubcommandError;
+/// use torrust_tracker_deployer_lib::presentation::controllers::destroy::DestroySubcommandError;
 /// use torrust_tracker_deployer_lib::domain::environment::name::EnvironmentNameError;
 /// use std::sync::{Arc, Mutex};
 ///

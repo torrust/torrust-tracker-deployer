@@ -5,8 +5,8 @@
 
 use std::fs;
 
-use crate::presentation::commands::destroy::{handle_destroy_command, DestroySubcommandError};
 use crate::presentation::commands::tests::TestContext;
+use crate::presentation::controllers::destroy::{handle_destroy_command, DestroySubcommandError};
 use crate::presentation::user_output::test_support::TestUserOutput;
 use crate::presentation::user_output::VerbosityLevel;
 

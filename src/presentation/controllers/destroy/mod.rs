@@ -19,7 +19,7 @@
 //! ```rust,no_run
 //! use std::path::Path;
 //! use std::sync::{Arc, Mutex};
-//! use torrust_tracker_deployer_lib::presentation::commands::destroy;
+//! use torrust_tracker_deployer_lib::presentation::controllers::destroy;
 //! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 //!
 //! let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
@@ -37,4 +37,4 @@ mod tests;
 
 // Re-export commonly used types for convenience
 pub use errors::DestroySubcommandError;
-pub use handler::handle_destroy_command;
+pub use handler::{handle, handle_destroy_command};

@@ -207,7 +207,7 @@ impl DestroyCommandController {
 /// ```rust
 /// use std::path::Path;
 /// use std::sync::{Arc, Mutex};
-/// use torrust_tracker_deployer_lib::presentation::commands::destroy;
+/// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
 /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 ///
 /// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
@@ -224,6 +224,62 @@ pub fn handle_destroy_command(
 ) -> Result<(), DestroySubcommandError> {
     DestroyCommandController::new(working_dir.to_path_buf(), user_output.clone())
         .execute(environment_name)
+}
+
+// ============================================================================
+// EXECUTION CONTEXT API
+// ============================================================================
+
+/// Handle destroy command using `ExecutionContext` pattern
+///
+/// This function provides a clean interface for destroying deployment environments,
+/// integrating with the `ExecutionContext` pattern for dependency injection.
+///
+/// # Arguments
+///
+/// * `environment_name` - Name of the environment to destroy
+/// * `working_dir` - Working directory path for operations
+/// * `context` - Execution context providing access to services
+///
+/// # Returns
+///
+/// * `Ok(())` - Environment destroyed successfully
+/// * `Err(DestroySubcommandError)` - Destroy operation failed
+///
+/// # Errors
+///
+/// Returns `DestroySubcommandError` when:
+/// * Environment name is invalid or contains special characters
+/// * Working directory is not accessible or doesn't exist
+/// * Environment is not found in the working directory
+/// * Infrastructure destruction fails (OpenTofu/LXD errors)
+/// * File system operations fail (permission errors, disk space)
+///
+/// # Examples
+///
+/// ```rust
+/// use std::path::Path;
+/// use std::sync::Arc;
+/// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
+/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
+/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let container = Arc::new(Container::new());
+/// let context = ExecutionContext::new(container);
+/// let working_dir = Path::new("./test");
+///
+/// destroy::handle("my-env", working_dir, &context)?;
+/// # Ok(())
+/// # }
+/// ```
+#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
+pub fn handle(
+    environment_name: &str,
+    working_dir: &std::path::Path,
+    context: &crate::presentation::dispatch::context::ExecutionContext,
+) -> Result<(), DestroySubcommandError> {
+    handle_destroy_command(environment_name, working_dir, &context.user_output())
 }
 
 // ============================================================================
