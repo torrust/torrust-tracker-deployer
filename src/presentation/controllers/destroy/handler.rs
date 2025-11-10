@@ -232,7 +232,7 @@ impl DestroyCommandController {
     ///
     /// Orchestrates all steps of the destroy command:
     /// 1. Validate environment name
-    /// 2. Initialize dependencies
+    /// 2. Create command handler
     /// 3. Tear down infrastructure
     /// 4. Complete with success message
     ///
@@ -258,7 +258,7 @@ impl DestroyCommandController {
     ) -> Result<Environment<Destroyed>, DestroySubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
 
-        let handler = self.initialize_dependencies()?;
+        let handler = self.create_command_handler()?;
 
         let destroyed = self.tear_down_infrastructure(&handler, &env_name)?;
 
@@ -291,13 +291,13 @@ impl DestroyCommandController {
         Ok(env_name)
     }
 
-    /// Initialize application layer dependencies
+    /// Create application layer command handler
     ///
     /// Creates the application layer command handler with all required
     /// dependencies (repository, clock, etc.).
     #[allow(clippy::result_large_err)]
-    fn initialize_dependencies(&mut self) -> Result<DestroyCommandHandler, DestroySubcommandError> {
-        self.progress.start_step("Initializing dependencies")?;
+    fn create_command_handler(&mut self) -> Result<DestroyCommandHandler, DestroySubcommandError> {
+        self.progress.start_step("Creating command handler")?;
         let handler = DestroyCommandHandler::new(self.repository.clone(), self.clock.clone());
         self.progress.complete_step(None)?;
 
