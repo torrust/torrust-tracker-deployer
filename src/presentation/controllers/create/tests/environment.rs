@@ -1,6 +1,6 @@
-//! Integration Tests for Create Command CLI
+//! Environment Creation Tests
 //!
-//! This module tests the complete create command workflow including
+//! This module tests the environment creation workflow including
 //! configuration loading, validation, and command execution.
 
 use crate::bootstrap::Container;

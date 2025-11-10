@@ -1,4 +1,7 @@
-//! Integration Tests for Template Generation
+//! Template Generation Tests
+//!
+//! This module tests the template generation workflow for creating
+//! configuration file templates with placeholder values.
 
 use crate::bootstrap::Container;
 use crate::presentation::controllers::create;

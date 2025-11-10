@@ -1,7 +1,8 @@
-//! Integration Tests for Create Command
+//! Tests for Create Command
 //!
-//! This module contains integration tests for the create command presentation
-//! layer, including CLI integration, configuration loading, and error handling.
+//! This module contains tests for the create command presentation layer:
+//! - `environment` - Tests for environment creation functionality
+//! - `template` - Tests for configuration template generation
 
-pub mod integration;
+pub mod environment;
 pub mod template;
