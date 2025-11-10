@@ -38,16 +38,12 @@
 //! │   ├── create/       # Create command controller
 //! │   ├── destroy/      # Destroy command controller  
 //! │   └── mod.rs        # Controller exports and documentation
-//! ├── commands/         # Command execution handlers (legacy - to be removed)
-//! │   ├── destroy.rs    # Destroy command handler
-//! │   └── mod.rs        # Unified command dispatch and error handling
 //! ├── errors.rs         # Unified error types for all commands
 //! ├── user_output.rs    # User-facing output management
 //! └── mod.rs            # This file - layer exports and documentation
 //! ```
 
 // Core presentation modules
-pub mod commands;
 pub mod controllers;
 pub mod dispatch;
 pub mod error;

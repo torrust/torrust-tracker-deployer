@@ -7,9 +7,9 @@ use std::fs;
 use std::sync::Arc;
 
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::commands::constants::DEFAULT_LOCK_TIMEOUT;
-use crate::presentation::commands::tests::TestContext;
+use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::controllers::destroy::{handle_destroy_command, DestroySubcommandError};
+use crate::presentation::controllers::tests::TestContext;
 use crate::presentation::user_output::test_support::TestUserOutput;
 use crate::presentation::user_output::VerbosityLevel;
 use crate::shared::SystemClock;

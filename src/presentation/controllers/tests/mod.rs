@@ -14,7 +14,7 @@
 //! # Usage
 //!
 //! ```rust,no_run
-//! use torrust_tracker_deployer_lib::presentation::commands::tests::{TestContext, create_valid_config};
+//! use torrust_tracker_deployer_lib::presentation::controllers::tests::{TestContext, create_valid_config};
 //!
 //! fn example_usage() {
 //!     let context = TestContext::new();
@@ -44,7 +44,7 @@ use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 /// # Example
 ///
 /// ```rust,no_run
-/// use torrust_tracker_deployer_lib::presentation::commands::tests::TestContext;
+/// use torrust_tracker_deployer_lib::presentation::controllers::tests::TestContext;
 ///
 /// fn example_usage() {
 ///     let context = TestContext::new();
@@ -131,7 +131,7 @@ impl Default for TestContext {
 ///
 /// ```rust,no_run
 /// use tempfile::TempDir;
-/// use torrust_tracker_deployer_lib::presentation::commands::tests::create_valid_config;
+/// use torrust_tracker_deployer_lib::presentation::controllers::tests::create_valid_config;
 ///
 /// let temp_dir = TempDir::new().unwrap();
 /// let config_path = create_valid_config(temp_dir.path(), "my-env");
@@ -184,7 +184,7 @@ pub fn create_valid_config(path: &Path, env_name: &str) -> PathBuf {
 ///
 /// ```rust,no_run
 /// use tempfile::TempDir;
-/// use torrust_tracker_deployer_lib::presentation::commands::tests::create_invalid_json_config;
+/// use torrust_tracker_deployer_lib::presentation::controllers::tests::create_invalid_json_config;
 ///
 /// let temp_dir = TempDir::new().unwrap();
 /// let config_path = create_invalid_json_config(temp_dir.path());
@@ -221,7 +221,7 @@ pub fn create_invalid_json_config(path: &Path) -> PathBuf {
 ///
 /// ```rust,no_run
 /// use tempfile::TempDir;
-/// use torrust_tracker_deployer_lib::presentation::commands::tests::create_config_with_invalid_name;
+/// use torrust_tracker_deployer_lib::presentation::controllers::tests::create_config_with_invalid_name;
 ///
 /// let temp_dir = TempDir::new().unwrap();
 /// let config_path = create_config_with_invalid_name(temp_dir.path());
@@ -273,7 +273,7 @@ pub fn create_config_with_invalid_name(path: &Path) -> PathBuf {
 ///
 /// ```rust,no_run
 /// use tempfile::TempDir;
-/// use torrust_tracker_deployer_lib::presentation::commands::tests::create_config_with_missing_keys;
+/// use torrust_tracker_deployer_lib::presentation::controllers::tests::create_config_with_missing_keys;
 ///
 /// let temp_dir = TempDir::new().unwrap();
 /// let config_path = create_config_with_missing_keys(temp_dir.path());

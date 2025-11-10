@@ -147,7 +147,7 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
 /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-/// use torrust_tracker_deployer_lib::presentation::commands::constants::DEFAULT_LOCK_TIMEOUT;
+/// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 /// use torrust_tracker_deployer_lib::shared::SystemClock;
 ///
 /// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
@@ -342,7 +342,7 @@ impl DestroyCommandController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::presentation::commands::constants::DEFAULT_LOCK_TIMEOUT;
+    use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
     use crate::presentation::user_output::test_support::TestUserOutput;
     use crate::presentation::user_output::VerbosityLevel;
     use crate::shared::SystemClock;

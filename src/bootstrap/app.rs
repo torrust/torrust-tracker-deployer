@@ -59,7 +59,7 @@ pub fn run() {
 
     // Initialize service container for dependency injection
     let container = Arc::new(bootstrap::Container::new(
-        crate::presentation::commands::constants::DEFAULT_VERBOSITY,
+        crate::presentation::controllers::constants::DEFAULT_VERBOSITY,
     ));
     let context = presentation::dispatch::ExecutionContext::new(container);
 

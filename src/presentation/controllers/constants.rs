@@ -18,7 +18,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use torrust_tracker_deployer_lib::presentation::commands::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
+//! use torrust_tracker_deployer_lib::presentation::controllers::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
 //! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 //! use torrust_tracker_deployer_lib::presentation::user_output::UserOutput;
 //!

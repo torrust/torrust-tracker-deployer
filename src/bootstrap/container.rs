@@ -6,7 +6,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::commands::constants::DEFAULT_LOCK_TIMEOUT;
+use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 use crate::shared::clock::Clock;
 use crate::shared::SystemClock;
