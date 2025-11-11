@@ -95,6 +95,7 @@ mlockfile
 mockall
 mocksecret
 momentjs
+mpsc
 mtorrust
 multiprocess
 MVVM
@@ -135,6 +136,7 @@ publickey
 Pulumi
 pytest
 RAII
+reentrancy
 Repomix
 reprioritize
 reprovisioning
