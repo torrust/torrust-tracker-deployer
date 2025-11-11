@@ -232,7 +232,7 @@ impl CreateEnvironmentCommandController {
     ///
     /// Orchestrates all steps of the environment creation command:
     /// 1. Load and validate configuration from file
-    /// 2. Initialize dependencies and command handler  
+    /// 2. Create application layer command handler  
     /// 3. Execute environment creation through application layer
     /// 4. Display creation results and environment details
     ///
@@ -259,7 +259,7 @@ impl CreateEnvironmentCommandController {
     ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
         let config = self.load_configuration(env_file)?;
 
-        let command_handler = self.initialize_dependencies(working_dir)?;
+        let command_handler = self.create_command_handler(working_dir)?;
 
         let environment = self.execute_create_command(&command_handler, config)?;
 
@@ -321,7 +321,7 @@ impl CreateEnvironmentCommandController {
         Ok(config)
     }
 
-    /// Initialize dependencies and command handler
+    /// Create application layer command handler
     ///
     /// This step handles:
     /// - Creating repository using factory
@@ -334,11 +334,11 @@ impl CreateEnvironmentCommandController {
     /// # Returns
     ///
     /// Returns the initialized `CreateCommandHandler`.
-    fn initialize_dependencies(
+    fn create_command_handler(
         &mut self,
         working_dir: &Path,
     ) -> Result<CreateCommandHandler, CreateEnvironmentCommandError> {
-        self.progress.start_step("Initializing dependencies")?;
+        self.progress.start_step("Creating command handler")?;
 
         let repository = self.repository_factory.create(working_dir.to_path_buf());
 
