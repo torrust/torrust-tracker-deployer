@@ -4,25 +4,25 @@
 //! It manages how information is presented to users, separate from internal logging and
 //! application logic.
 //!
-//! ## 🏗️ Current Architecture (Proposal #3 in Progress)
+//! ## 🏗️ Current Architecture (Proposal #3 Complete)
 //!
-//! The presentation layer is being reorganized following a four-layer MVC architecture.
+//! The presentation layer follows a four-layer MVC architecture.
 //! This is part of [Presentation Layer Reorganization](../../docs/refactors/plans/presentation-layer-reorganization.md).
 //!
-//! **Progress**: 3/6 proposals completed (50%), currently implementing Proposal #3
+//! **Progress**: 3/6 proposals completed (50%), Proposal #3 complete - ready for Proposal #4
 //!
 //! ### Layer Architecture
 //!
 //! ```text
 //! Input → Dispatch → Controllers → Views
-//!   ✅       ✅         🚧         ⏳
+//!   ✅       ✅         ✅         ⏳
 //! ```
 //!
 //! | Layer        | Status           | Purpose                                        |
 //! |-------------|------------------|------------------------------------------------|
 //! | **Input**    | ✅ Complete      | CLI argument parsing and validation           |
 //! | **Dispatch** | ✅ Complete      | Command routing and execution context         |
-//! | **Controllers** | 🚧 In Progress | Command handling and business logic coordination |
+//! | **Controllers** | ✅ Complete   | Command handling and business logic coordination |
 //! | **Views**    | ⏳ Planned       | Output formatting and presentation            |
 //!
 //! ## Current Module Structure
@@ -40,20 +40,29 @@
 //! │   ├── router.rs     # Command routing logic (route_command function)
 //! │   └── context.rs    # ExecutionContext wrapper around Container
 //! │
-//! ├── controllers/      # 🚧 Controllers Layer - Command handlers (IN PROGRESS)
-//! │   ├── create/       # Create command controller (🚧 Needs subcontroller refactor)
+//! ├── controllers/      # ✅ Controllers Layer - Command handlers (COMPLETE)
+//! │   ├── create/       # Create command with subcommand controllers
+//! │   │   ├── router.rs       # Routes to environment/template subcommands
 //! │   │   ├── errors.rs       # Unified create command errors
-//! │   │   ├── router.rs       # Create subcommand routing
-//! │   │   ├── subcommands/    # Subcommand implementations
-//! │   │   │   ├── environment/ # Environment creation logic
-//! │   │   │   └── template/    # Template generation logic
-//! │   │   └── tests/          # Create command tests
-//! │   │       ├── environment.rs # Environment creation tests
-//! │   │       └── template.rs    # Template generation tests
-//! │   ├── destroy/      # ✅ Destroy command controller (REFERENCE IMPLEMENTATION)
-//! │   │   ├── handler.rs      # Clean handler implementation
+//! │   │   ├── subcommands/    # Subcommand controller implementations
+//! │   │   │   ├── environment/ # Environment creation controller
+//! │   │   │   │   ├── handler.rs      # Main command handler
+//! │   │   │   │   ├── config_loader.rs # Configuration loading
+//! │   │   │   │   ├── errors.rs       # Environment-specific errors
+//! │   │   │   │   └── tests.rs        # Integration tests
+//! │   │   │   └── template/    # Template generation controller
+//! │   │   │       ├── handler.rs      # Main command handler
+//! │   │   │       ├── errors.rs       # Template-specific errors
+//! │   │   │       └── tests.rs        # Integration tests
+//! │   │   └── tests/          # Create command level tests
+//! │   │       ├── environment.rs # Environment creation integration tests
+//! │   │       └── template.rs    # Template generation integration tests
+//! │   ├── destroy/      # ✅ Destroy command controller
+//! │   │   ├── handler.rs      # Main command handler
 //! │   │   ├── errors.rs       # Command-specific errors
 //! │   │   └── tests/          # Destroy command tests
+//! │   ├── constants.rs  # Shared constants across controllers
+//! │   ├── tests/        # Controller layer integration tests
 //! │   └── mod.rs        # Controller layer exports
 //! │
 //! ├── user_output/      # ⏳ Future Views Layer (will be renamed to views/)
@@ -76,14 +85,14 @@
 //! - **Execution Context**: Providing dependencies through `ExecutionContext` wrapper
 //! - **Service Location**: Bridge between CLI and business logic
 //!
-//! ### 🚧 Controllers Layer (`controllers/`) - IN PROGRESS
+//! ### ✅ Controllers Layer (`controllers/`) - COMPLETE
 //! - **Command Handling**: Business logic coordination for each command
 //! - **Two Command Types**:
-//!   - Single commands (e.g., `destroy`) - direct execution
-//!   - Commands with subcommands (e.g., `create`) - each subcommand becomes separate controller
-//! - **Uniform Structure**: All controllers (single or subcommand) follow same internal pattern
-//! - **Error Management**: Command-specific error types and handling
-//! - **Application Integration**: Calling application layer services
+//!   - Single commands (e.g., `destroy`) - direct execution via handler
+//!   - Commands with subcommands (e.g., `create`) - router delegates to subcommand controllers
+//! - **Uniform Structure**: All controllers (single or subcommand) follow consistent patterns
+//! - **Error Management**: Command-specific error types with actionable help
+//! - **Application Integration**: Calling application layer services through `ExecutionContext`
 //!
 //! #### Command Architecture Patterns:
 //!
@@ -97,23 +106,29 @@
 //!
 //! **Commands with Subcommands** (Router + separate controllers):
 //! ```text
-//! # Current (transitional):
-//! create/router.rs -> subcommands/environment/ + subcommands/template/
-//!
-//! # Target (after refactoring):
-//! create_environment/handler.rs  # handle_create_environment_command()
-//! create_template/handler.rs     # handle_create_template_command()
+//! create/
+//! ├── router.rs           # Routes to subcommand controllers
+//! ├── errors.rs           # Shared create command errors
+//! ├── subcommands/
+//! │   ├── environment/    # Environment creation controller
+//! │   │   ├── handler.rs          # handle_environment_creation()
+//! │   │   ├── config_loader.rs    # Configuration loading logic
+//! │   │   ├── errors.rs           # Environment-specific errors
+//! │   │   └── tests.rs           # Integration tests
+//! │   └── template/       # Template generation controller
+//! │       ├── handler.rs          # handle_template_generation()
+//! │       ├── errors.rs           # Template-specific errors
+//! │       └── tests.rs           # Integration tests
+//! └── tests/             # Create command level tests
 //! ```
 //!
-//! **Key Insight**: Subcommands have the same internal structure as single commands,
-//! but routing happens at the dispatch layer instead of within controllers.
+//! **Key Insight**: All controllers follow the same internal structure (handler + errors + tests),
+//! providing consistency whether they are single commands or subcommand controllers.
 //!
-//! #### Controller Maturity Levels:
-//! - **✅ Destroy Controller**: Reference implementation with clean handler pattern
-//! - **🚧 Create Controller**: Needs refactoring to match destroy pattern:
-//!   - Split environment and template into separate controllers
-//!   - Create dedicated handlers for each subcommand
-//!   - Align with destroy's clean architecture
+//! #### Current Controller Status:
+//! - **✅ Create Controller**: Complete with environment and template subcommand controllers
+//! - **✅ Destroy Controller**: Complete single command controller
+//! - **✅ All Controllers**: Follow consistent `ExecutionContext` pattern for dependency injection
 //!
 //! ### ⏳ Views Layer (Future)
 //! - **Output Formatting**: Structuring output for users
@@ -131,20 +146,19 @@
 //! - **Error Handling**: Structured errors with tiered help system
 //! - **Unix Conventions**: stdout for results, stderr for operational messages
 //!
-//! ## 🔄 Next Steps (Proposal #3 Completion)
+//! ## 🔄 Next Steps (Proposal #4: Views Layer)
 //!
-//! To complete the Controllers layer refactoring:
+//! With the Controllers layer complete, the next phase focuses on organizing the Views layer:
 //!
-//! 1. **Create Environment Controller**: Extract environment creation into dedicated controller
-//! 2. **Create Template Controller**: Extract template generation into dedicated controller
-//! 3. **Align with Destroy Pattern**: Follow the clean handler pattern established by destroy
-//! 4. **Update Router**: Modify create router to delegate to separate controllers
-//! 5. **Update Tests**: Ensure all tests pass with new controller structure
+//! 1. **Rename `user_output/` to `views/`**: Align with MVC terminology
+//! 2. **Organize view submodules**: Group related presentation concerns
+//! 3. **Move `progress.rs` to `views/progress/`**: Place progress indicators with other views
+//! 4. **Implement theme system**: Structured output formatting and customization
+//! 5. **Channel separation**: Proper stdout/stderr management for Unix conventions
 //!
-//! After Proposal #3, the next steps will be:
-//! - **Proposal #4**: Rename `user_output/` to `views/` with organized submodules
-//! - **Proposal #5**: Move `progress.rs` into `views/progress/`
-//! - **Proposal #6**: Remove vestigial old command structures
+//! After Proposal #4, the final steps will be:
+//! - **Proposal #5**: Enhanced error presentation and help system integration
+//! - **Proposal #6**: Remove any vestigial structures from the old architecture
 //!
 //! ## 📚 Related Documentation
 //!
@@ -163,7 +177,9 @@ pub mod progress;
 pub mod user_output;
 
 // Re-export commonly used presentation types for convenience
-pub use controllers::create::CreateCommandError;
+pub use controllers::create::{
+    CreateCommandError, CreateEnvironmentCommandError, CreateEnvironmentTemplateCommandError,
+};
 pub use controllers::destroy::DestroySubcommandError;
 
 // Re-export error handling function from error module
