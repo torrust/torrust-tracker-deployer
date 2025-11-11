@@ -75,24 +75,24 @@ This refactoring followed a systematic 5-step engineering process:
 ## 📊 Progress Tracking
 
 **Total Proposals**: 6  
-**Completed**: 2/6 (33%)  
+**Completed**: 3/6 (50%)  
 **In Progress**: 1/6 (17%)  
-**Not Started**: 3/6 (50%)
+**Not Started**: 2/6 (33%)
 
-**Estimated Total Time**: 12-15 hours (6-7h completed, 6-8h remaining)
+**Estimated Total Time**: 12-15 hours (9-10h completed, 3-5h remaining)
 
 ### Proposal Summary
 
 Each proposal is **independently mergeable** - it leaves the codebase in a complete, functional state with updated documentation and passing tests.
 
-| #   | Proposal                      | Status         | Impact      | Effort      | Est. Time |
-| --- | ----------------------------- | -------------- | ----------- | ----------- | --------- |
-| 1   | Create Input Layer            | ✅ Completed   | 🟢🟢 Medium | 🔵🔵 Medium | 2-3h      |
-| 2   | Create Dispatch Layer         | ✅ Completed   | 🟢🟢🟢 High | 🔵🔵 Medium | 2-3h      |
-| 3   | Create Controllers Layer      | 🚧 In Progress | 🟢🟢🟢 High | 🔵🔵🔵 High | 3-4h      |
-| 4   | Create Views Layer            | ⏳ Not Started | 🟢🟢🟢 High | 🔵🔵🔵 High | 3-4h      |
-| 5   | Integrate Progress into Views | ⏳ Not Started | 🟢🟢 Medium | 🔵 Low      | 1-2h      |
-| 6   | Remove Old Commands Structure | ⏳ Not Started | 🟢 Low      | 🔵 Low      | 1h        |
+| #   | Proposal                      | Status         | Impact      | Effort      | Est. Time | Issue |
+| --- | ----------------------------- | -------------- | ----------- | ----------- | --------- | ----- |
+| 1   | Create Input Layer            | ✅ Completed   | 🟢🟢 Medium | 🔵🔵 Medium | 2-3h      | #155  |
+| 2   | Create Dispatch Layer         | ✅ Completed   | 🟢🟢🟢 High | 🔵🔵 Medium | 2-3h      | #156  |
+| 3   | Create Controllers Layer      | ✅ Completed   | 🟢🟢🟢 High | 🔵🔵🔵 High | 3-4h      | #162  |
+| 4   | Create Views Layer            | 🚧 In Progress | 🟢🟢🟢 High | 🔵🔵🔵 High | 3-4h      | #165  |
+| 5   | Integrate Progress into Views | ⏳ Not Started | 🟢🟢 Medium | 🔵 Low      | 1-2h      | -     |
+| 6   | Remove Old Commands Structure | ⏳ Not Started | 🟢 Low      | 🔵 Low      | 1h        | -     |
 
 ## 🎯 Key Problems Identified
 
@@ -213,10 +213,11 @@ After completion:
 
 ## Proposal #3: Create Controllers Layer
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵🔵🔵 High  
-**Estimated Time**: 3-4 hours
+**Estimated Time**: 3-4 hours  
+**Issue**: [#162 - Proposal 3: Create Controllers Layer](https://github.com/torrust/torrust-tracker-deployer/issues/162)
 
 ### Goal
 
@@ -264,10 +265,11 @@ After completion:
 
 ## Proposal #4: Create Views Layer
 
-**Status**: ⏳ Not Started  
+**Status**: 🚧 In Progress  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵🔵🔵 High  
-**Estimated Time**: 3-4 hours
+**Estimated Time**: 3-4 hours  
+**Issue**: [#165 - Proposal 4: Create Views Layer](https://github.com/torrust/torrust-tracker-deployer/issues/165)
 
 ### Goal
 
@@ -295,7 +297,9 @@ After completion:
 
 ### Implementation Details
 
-**To be detailed after Proposal #3 completes** - Structure will be refined based on earlier implementation experience.
+**Specification**: [docs/issues/165-create-views-layer.md](../issues/165-create-views-layer.md)
+
+This proposal is **ready for implementation** with detailed specification, implementation plan, and acceptance criteria in the linked GitHub issue.
 
 ---
 
