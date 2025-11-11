@@ -470,7 +470,7 @@ impl ExecutionContext {
 
 ## References
 
-- GitHub Issue: (To be created)
+- GitHub Issue: [#164 - Refactor UserOutput to remove Arc<Mutex<>> pattern](https://github.com/torrust/torrust-tracker-deployer/issues/164)
 - ProgressReporter Deadlock Investigation (2025-11-11)
 - [Rust Book: Ownership and Borrowing](https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html)
 - [Rust Anti-patterns: Shared Mutability](https://rust-unofficial.github.io/patterns/anti_patterns/borrow_clone.html)
