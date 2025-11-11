@@ -81,6 +81,16 @@ pub enum ProgressReporterError {
 Tip: This is a critical bug - please report it with full logs using --log-output file-and-stderr"
     )]
     UserOutputMutexPoisoned,
+
+    /// Failed to acquire `UserOutput` mutex within timeout
+    ///
+    /// Could not acquire the mutex for user output within the expected time.
+    /// This may indicate a deadlock or that another operation is taking too long.
+    #[error(
+        "Progress reporting timeout: Could not acquire output lock within expected time
+Tip: This may indicate a deadlock - try running with --test-threads=1 or report as a bug"
+    )]
+    UserOutputMutexTimeout,
 }
 
 /// Progress reporter for multi-step operations
@@ -144,6 +154,44 @@ impl ProgressReporter {
         }
     }
 
+    /// Timeout for acquiring the `UserOutput` mutex (prevents deadlocks)
+    const OUTPUT_LOCK_TIMEOUT: Duration = Duration::from_millis(5000);
+
+    /// Acquire `UserOutput` mutex with timeout to prevent deadlocks
+    ///
+    /// Attempts to acquire the mutex within a reasonable timeout to avoid
+    /// indefinite blocking that can occur with nested mutex usage in test scenarios.
+    ///
+    /// # Errors
+    ///
+    /// * `ProgressReporterError::UserOutputMutexPoisoned` - Mutex was poisoned by a panic
+    /// * `ProgressReporterError::UserOutputMutexTimeout` - Could not acquire lock within timeout
+    fn acquire_output_with_timeout(
+        &self,
+    ) -> Result<std::sync::MutexGuard<'_, UserOutput>, ProgressReporterError> {
+        // Try immediate acquisition first (common case)
+        if let Ok(guard) = self.output.try_lock() {
+            return Ok(guard);
+        }
+
+        // Fall back to polling with timeout
+        let start = Instant::now();
+        while start.elapsed() < Self::OUTPUT_LOCK_TIMEOUT {
+            match self.output.try_lock() {
+                Ok(guard) => return Ok(guard),
+                Err(std::sync::TryLockError::Poisoned(_)) => {
+                    return Err(ProgressReporterError::UserOutputMutexPoisoned);
+                }
+                Err(std::sync::TryLockError::WouldBlock) => {
+                    // Brief sleep to avoid busy-waiting
+                    std::thread::sleep(Duration::from_millis(10));
+                }
+            }
+        }
+
+        Err(ProgressReporterError::UserOutputMutexTimeout)
+    }
+
     /// Start a new step with a description
     ///
     /// Increments the current step counter and displays a progress message
@@ -177,13 +225,10 @@ impl ProgressReporter {
         self.current_step += 1;
         self.step_start = Some(Instant::now());
 
-        self.output
-            .lock()
-            .map_err(|_| ProgressReporterError::UserOutputMutexPoisoned)?
-            .progress(&format!(
-                "[{}/{}] {}...",
-                self.current_step, self.total_steps, description
-            ));
+        self.acquire_output_with_timeout()?.progress(&format!(
+            "[{}/{}] {}...",
+            self.current_step, self.total_steps, description
+        ));
 
         Ok(())
     }
@@ -225,10 +270,7 @@ impl ProgressReporter {
     pub fn complete_step(&mut self, result: Option<&str>) -> Result<(), ProgressReporterError> {
         if let Some(start) = self.step_start {
             let duration = start.elapsed();
-            let mut output = self
-                .output
-                .lock()
-                .map_err(|_| ProgressReporterError::UserOutputMutexPoisoned)?;
+            let mut output = self.acquire_output_with_timeout()?;
 
             if let Some(msg) = result {
                 output.result(&format!("  ✓ {} (took {})", msg, format_duration(duration)));
@@ -274,9 +316,7 @@ impl ProgressReporter {
     /// # }
     /// ```
     pub fn sub_step(&mut self, description: &str) -> Result<(), ProgressReporterError> {
-        self.output
-            .lock()
-            .map_err(|_| ProgressReporterError::UserOutputMutexPoisoned)?
+        self.acquire_output_with_timeout()?
             .result(&format!("    → {description}"));
         Ok(())
     }
@@ -313,10 +353,7 @@ impl ProgressReporter {
     /// # }
     /// ```
     pub fn complete(&mut self, summary: &str) -> Result<(), ProgressReporterError> {
-        self.output
-            .lock()
-            .map_err(|_| ProgressReporterError::UserOutputMutexPoisoned)?
-            .success(summary);
+        self.acquire_output_with_timeout()?.success(summary);
         Ok(())
     }
 

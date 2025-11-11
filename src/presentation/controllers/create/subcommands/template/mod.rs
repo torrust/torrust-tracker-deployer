@@ -7,7 +7,7 @@ pub mod errors;
 pub mod handler;
 
 // Re-export the main handler function
-pub use handler::handle_template_generation;
+pub use handler::handle;
 
 // Re-export error types
 pub use errors::CreateEnvironmentTemplateCommandError;

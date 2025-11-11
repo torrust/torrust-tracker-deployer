@@ -128,7 +128,13 @@
 //! 3. **Subcommand Handler**: Executes specific logic (environment creation or template generation)
 //!
 //! **Current Implementation Example** (from `create/router.rs`):
-//! ```rust
+//! ```rust,no_run
+//! use std::path::Path;
+//! use torrust_tracker_deployer_lib::presentation::input::cli::commands::CreateAction;
+//! use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
+//! use torrust_tracker_deployer_lib::presentation::controllers::create::errors::CreateCommandError;
+//! use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands;
+//!
 //! pub fn route_command(
 //!     action: CreateAction,
 //!     working_dir: &Path,
@@ -137,9 +143,12 @@
 //!     match action {
 //!         CreateAction::Environment { env_file } => {
 //!             subcommands::handle_environment_creation(&env_file, working_dir, context)
+//!                 .map_err(CreateCommandError::Environment)
 //!         }
 //!         CreateAction::Template { output_path } => {
+//!             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
 //!             subcommands::handle_template_generation(&template_path, context)
+//!                 .map_err(CreateCommandError::Template)
 //!         }
 //!     }
 //! }

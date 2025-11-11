@@ -7,4 +7,4 @@ pub mod template;
 
 // Re-export subcommand handlers for convenience
 pub use environment::handle_environment_creation;
-pub use template::handle_template_generation;
+pub use template::handle as handle_template_generation;

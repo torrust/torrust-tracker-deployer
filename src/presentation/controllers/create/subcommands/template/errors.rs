@@ -6,6 +6,8 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
+use crate::presentation::progress::ProgressReporterError;
+
 /// Errors that can occur during template generation commands
 ///
 /// This error type covers all failure scenarios that can occur during template
@@ -42,6 +44,19 @@ Tip: Check directory permissions and available disk space"
         /// The underlying error that caused template generation to fail
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    /// Progress reporting failed
+    ///
+    /// This error occurs when the progress reporting system fails, typically
+    /// due to mutex poisoning or other critical system-level issues.
+    #[error(
+        "Failed to report progress: {source}
+Tip: This is a critical bug - please report it with full logs using --log-output file-and-stderr"
+    )]
+    ProgressReportingFailed {
+        #[source]
+        source: ProgressReporterError,
     },
 }
 
@@ -108,7 +123,36 @@ For more information, see the troubleshooting guide."
 If the problem persists, run with --verbose for detailed logs and report
 the issue with system details."
             }
+
+            Self::ProgressReportingFailed { .. } => {
+                "Progress Reporting Failed - Detailed Troubleshooting:
+
+1. This is a critical system-level error that occurs when the progress
+   reporting system fails, typically due to mutex poisoning.
+
+2. Try the following steps:
+   - Restart the command
+   - If the error persists, restart your terminal
+   - Check for any background processes that might interfere
+
+3. If the problem continues:
+   - Check system resources (memory, CPU usage)
+   - Consider running with --verbose for more detailed error information
+   - Report the issue with full logs as this indicates a bug
+
+For more information, see the troubleshooting guide."
+            }
         }
+    }
+}
+
+// ============================================================================
+// ERROR CONVERSIONS
+// ============================================================================
+
+impl From<ProgressReporterError> for CreateEnvironmentTemplateCommandError {
+    fn from(source: ProgressReporterError) -> Self {
+        Self::ProgressReportingFailed { source }
     }
 }
 
@@ -153,6 +197,9 @@ mod tests {
             CreateEnvironmentTemplateCommandError::TemplateGenerationFailed {
                 path: PathBuf::from("/test"),
                 source: Box::new(std::io::Error::other("test")),
+            },
+            CreateEnvironmentTemplateCommandError::ProgressReportingFailed {
+                source: ProgressReporterError::UserOutputMutexPoisoned,
             },
         ];
 

@@ -246,6 +246,71 @@ impl EnvironmentCreationConfig {
 
         Ok(())
     }
+
+    /// Generates a configuration template file at the specified path (synchronous version)
+    ///
+    /// This is a synchronous version of [`generate_template_file`](Self::generate_template_file)
+    /// that uses standard library file operations instead of tokio async I/O.
+    /// This method is suitable for use in synchronous contexts where creating
+    /// a tokio runtime is problematic (e.g., tests, CLI handlers).
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path where the template file should be created
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Template file created successfully
+    /// * `Err(CreateConfigError)` - File creation or serialization failed
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Parent directory cannot be created
+    /// - Template serialization fails (unlikely - indicates a bug)
+    /// - File cannot be written due to permissions or I/O errors
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
+    /// use std::path::Path;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// EnvironmentCreationConfig::generate_template_file_sync(
+    ///     Path::new("./environment-config.json")
+    /// )?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn generate_template_file_sync(path: &std::path::Path) -> Result<(), CreateConfigError> {
+        // Create template instance with placeholders
+        let template = Self::template();
+
+        // Serialize to pretty-printed JSON
+        let json = serde_json::to_string_pretty(&template)
+            .map_err(|source| CreateConfigError::TemplateSerializationFailed { source })?;
+
+        // Create parent directories if they don't exist
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|source| {
+                CreateConfigError::TemplateDirectoryCreationFailed {
+                    path: parent.to_path_buf(),
+                    source,
+                }
+            })?;
+        }
+
+        // Write template to file
+        std::fs::write(path, json).map_err(|source| {
+            CreateConfigError::TemplateFileWriteFailed {
+                path: path.to_path_buf(),
+                source,
+            }
+        })?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -636,5 +701,49 @@ mod tests {
         let content = std::fs::read_to_string(&template_path).unwrap();
         assert!(content.contains("REPLACE_WITH_ENVIRONMENT_NAME"));
         assert!(!content.contains("old content"));
+    }
+
+    #[test]
+    fn test_generate_template_file_sync() {
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let template_path = temp_dir.path().join("config.json");
+
+        let result = EnvironmentCreationConfig::generate_template_file_sync(&template_path);
+        assert!(result.is_ok());
+
+        // Verify file exists
+        assert!(template_path.exists());
+
+        // Verify content is valid JSON
+        let content = std::fs::read_to_string(&template_path).unwrap();
+        let parsed: EnvironmentCreationConfig = serde_json::from_str(&content).unwrap();
+
+        // Verify placeholders are present
+        assert_eq!(parsed.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
+        assert_eq!(
+            parsed.ssh_credentials.private_key_path,
+            "REPLACE_WITH_SSH_PRIVATE_KEY_PATH"
+        );
+    }
+
+    #[test]
+    fn test_generate_template_file_sync_creates_parent_directories() {
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let nested_path = temp_dir
+            .path()
+            .join("configs")
+            .join("env")
+            .join("test.json");
+
+        let result = EnvironmentCreationConfig::generate_template_file_sync(&nested_path);
+        assert!(result.is_ok());
+
+        // Verify nested directories were created
+        assert!(nested_path.exists());
+        assert!(nested_path.parent().unwrap().exists());
     }
 }
