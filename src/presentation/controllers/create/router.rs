@@ -35,12 +35,13 @@ pub fn route_command(
 ) -> Result<(), CreateCommandError> {
     match action {
         CreateAction::Environment { env_file } => {
-            subcommands::handle_environment_creation(&env_file, working_dir, context)
+            subcommands::handle(&env_file, working_dir, context)
+                .map(|_| ()) // Convert Environment<Created> to ()
                 .map_err(CreateCommandError::Environment)
         }
         CreateAction::Template { output_path } => {
             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
-            subcommands::handle_template_generation(&template_path, context)
+            subcommands::handle_template_creation(&template_path, context)
                 .map_err(CreateCommandError::Template)
         }
     }

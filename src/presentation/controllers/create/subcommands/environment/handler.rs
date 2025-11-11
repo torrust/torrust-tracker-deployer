@@ -1,320 +1,438 @@
-//! Environment Creation Handler
+//! Environment Creation Command Handler
 //!
-//! This module contains the main handler function for environment creation
-//! and its supporting helper functions.
+//! This module handles the environment creation command execution at the presentation layer,
+//! including configuration loading, validation, and user interaction.
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::application::command_handlers::CreateCommandHandler;
+use crate::domain::environment::state::Created;
 use crate::domain::Environment;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::progress::ProgressReporter;
 use crate::presentation::user_output::UserOutput;
-use crate::shared::clock::SystemClock;
+use crate::shared::clock::Clock;
 
 use super::config_loader::ConfigLoader;
 use super::errors::CreateEnvironmentCommandError;
 
-/// Handle environment creation from configuration file
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/// Number of main steps in the environment creation workflow
+const ENVIRONMENT_CREATION_WORKFLOW_STEPS: usize = 3;
+
+// ============================================================================
+// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
+// ============================================================================
+
+/// Handle environment creation command using `ExecutionContext` pattern
 ///
-/// This function orchestrates the environment creation workflow with progress reporting:
-///
-/// 1. Load configuration from file
-/// 2. Initialize dependencies
-/// 3. Validate environment
-/// 4. Execute create command
-/// 5. Display creation results
-///
-/// Each step is tracked and timed using `ProgressReporter` for clear user feedback.
+/// This function provides a clean interface for creating deployment environments,
+/// integrating with the `ExecutionContext` pattern for dependency injection.
 ///
 /// # Arguments
 ///
 /// * `env_file` - Path to the environment configuration file (JSON format)
-/// * `working_dir` - Root directory for environment data storage
-/// * `context` - Execution context providing access to application services
+/// * `working_dir` - Working directory path for environment storage
+/// * `context` - Execution context providing access to services
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` on success, or a `CreateEnvironmentCommandError` if any step fails.
+/// * `Ok(Environment<Created>)` - Environment created successfully
+/// * `Err(CreateEnvironmentCommandError)` - Environment creation failed
 ///
 /// # Errors
 ///
-/// This function will return an error if:
-/// - Configuration file cannot be loaded or validated
-/// - Command execution fails
+/// Returns `CreateEnvironmentCommandError` when:
+/// * Configuration file cannot be loaded or is malformed
+/// * Environment name is invalid or already exists
+/// * Working directory is not accessible or doesn't exist
+/// * Infrastructure provisioning fails (OpenTofu/LXD errors)
+/// * File system operations fail (permission errors, disk space)
+/// * User output system fails (mutex poisoning)
 ///
-/// All errors include detailed context and actionable troubleshooting guidance.
+/// # Examples
+///
+/// ```rust
+/// use std::path::Path;
+/// use std::sync::Arc;
+/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment;
+/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
+/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
+/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
+/// let context = ExecutionContext::new(container);
+/// let env_file = Path::new("./environment.json");
+/// let working_dir = Path::new("./");
+///
+/// environment::handle(env_file, working_dir, &context)?;
+/// # Ok(())
+/// # }
+/// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle_environment_creation(
+pub fn handle(
     env_file: &Path,
     working_dir: &Path,
-    context: &ExecutionContext,
-) -> Result<(), CreateEnvironmentCommandError> {
-    // Create progress reporter for 3 main steps
-    let mut progress = ProgressReporter::new(context.user_output().clone(), 3);
-
-    // Step 1: Load configuration
-    progress.start_step("Loading configuration")?;
-    let config = load_configuration(&mut progress, env_file)?;
-    progress.complete_step(Some(&format!(
-        "Configuration loaded: {}",
-        config.environment.name
-    )))?;
-
-    // Step 2: Initialize dependencies
-    progress.start_step("Initializing dependencies")?;
-
-    // Create repository and clock services
-    // TODO: Once Container is expanded, get these from context.container()
-    let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
-    let repository = repository_factory.create(working_dir.to_path_buf());
-    let clock = Arc::new(SystemClock);
-
-    let command_handler = CreateCommandHandler::new(repository, clock);
-    progress.complete_step(None)?;
-
-    // Step 3: Execute create command (provision infrastructure)
-    progress.start_step("Creating environment")?;
-    let environment = execute_create_command(&mut progress, &command_handler, config)?;
-    progress.complete_step(Some(&format!(
-        "Instance created: {}",
-        environment.instance_name().as_str()
-    )))?;
-
-    // Complete with summary
-    progress.complete(&format!(
-        "Environment '{}' created successfully",
-        environment.name().as_str()
-    ))?;
-
-    // Display final results
-    display_creation_results(&context.user_output(), &environment)?;
-
-    Ok(())
+    context: &crate::presentation::dispatch::context::ExecutionContext,
+) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
+    handle_environment_creation_command(
+        env_file,
+        working_dir,
+        &context.repository_factory(),
+        &context.clock(),
+        &context.user_output(),
+    )
 }
 
-/// Load and validate configuration from file
+// ============================================================================
+// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
+// ============================================================================
+
+/// Handle the environment creation command
 ///
-/// This step handles:
-/// - Loading configuration file using Figment
-/// - Parsing JSON content
-/// - Validating configuration using domain rules
+/// This is a thin wrapper over `CreateEnvironmentCommandController` that serves as
+/// the public entry point for the environment creation command.
 ///
 /// # Arguments
 ///
-/// * `progress` - Progress reporter for user feedback
-/// * `env_file` - Path to the configuration file
-///
-/// # Returns
-///
-/// Returns the loaded and validated `EnvironmentCreationConfig`.
+/// * `env_file` - Path to the environment configuration file  
+/// * `working_dir` - Working directory path for environment storage
+/// * `repository_factory` - Factory for creating environment repositories
+/// * `clock` - System clock service for timestamps
+/// * `user_output` - Shared user output service for consistent output formatting
 ///
 /// # Errors
 ///
 /// Returns an error if:
-/// - Configuration file is not found
-/// - JSON parsing fails
-/// - Domain validation fails
-pub(crate) fn load_configuration(
-    progress: &mut ProgressReporter,
+/// - Configuration loading or validation fails
+/// - Environment creation fails
+/// - Progress reporting encounters a poisoned mutex
+///
+/// All errors include detailed context and actionable troubleshooting guidance.
+///
+/// # Returns
+///
+/// Returns `Ok(Environment<Created>)` on success, or a `CreateEnvironmentCommandError` on failure.
+///
+/// # Example
+///
+/// Using with Container and `ExecutionContext` (recommended):
+///
+/// ```rust
+/// use std::path::Path;
+/// use std::sync::Arc;
+/// use torrust_tracker_deployer_lib::bootstrap::Container;
+/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment;
+/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+///
+/// let container = Container::new(VerbosityLevel::Normal);
+/// let context = ExecutionContext::new(Arc::new(container));
+///
+/// if let Err(e) = environment::handle(
+///     Path::new("config.json"),
+///     Path::new("./"),
+///     &context
+/// ) {
+///     eprintln!("Environment creation failed: {e}");
+///     eprintln!("Help: {}", e.help());
+/// }
+/// ```
+///
+/// Direct usage (for testing or specialized scenarios):
+///
+/// ```rust
+/// use std::path::Path;
+/// use std::sync::Arc;
+/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment::handler::handle;
+/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
+/// use torrust_tracker_deployer_lib::bootstrap::Container;
+/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+///
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
+/// let context = ExecutionContext::new(container);
+///
+/// if let Err(e) = handle(
+///     Path::new("config.json"),
+///     Path::new("./"),
+///     &context
+/// ) {
+///     eprintln!("Environment creation failed: {e}");
+///     eprintln!("Help: {}", e.help());
+/// }
+/// ```
+#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
+pub fn handle_environment_creation_command(
     env_file: &Path,
-) -> Result<EnvironmentCreationConfig, CreateEnvironmentCommandError> {
-    let user_output = progress.output();
+    working_dir: &Path,
+    repository_factory: &Arc<RepositoryFactory>,
+    clock: &Arc<dyn Clock>,
+    user_output: &Arc<Mutex<UserOutput>>,
+) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
+    CreateEnvironmentCommandController::new(repository_factory.clone(), clock.clone(), user_output)
+        .execute(env_file, working_dir)
+}
 
-    user_output
-        .lock()
-        .map_err(|_| CreateEnvironmentCommandError::UserOutputLockFailed)?
-        .progress(&format!(
+// ============================================================================
+// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
+// ============================================================================
+
+/// Presentation layer controller for environment creation command workflow
+///
+/// Coordinates user interaction, progress reporting, and output formatting
+/// before delegating to the application layer environment creation logic.
+///
+/// # Responsibilities
+///
+/// - Load and validate configuration from file
+/// - Show progress updates to the user
+/// - Initialize dependencies and command handler
+/// - Execute environment creation through application layer
+/// - Format success/error messages for display
+/// - Display creation results with environment details
+///
+/// # Architecture
+///
+/// This controller sits in the presentation layer and handles all user-facing
+/// concerns. It delegates actual environment creation to the application layer's
+/// `CreateCommandHandler`, maintaining clear separation of concerns.
+pub struct CreateEnvironmentCommandController {
+    repository_factory: Arc<RepositoryFactory>,
+    clock: Arc<dyn Clock>,
+    progress: ProgressReporter,
+}
+
+impl CreateEnvironmentCommandController {
+    /// Create a new environment creation command controller
+    ///
+    /// Creates a `CreateEnvironmentCommandController` with dependency injection.
+    /// This follows the single container architecture pattern.
+    pub fn new(
+        repository_factory: Arc<RepositoryFactory>,
+        clock: Arc<dyn Clock>,
+        user_output: &Arc<Mutex<UserOutput>>,
+    ) -> Self {
+        let progress =
+            ProgressReporter::new(user_output.clone(), ENVIRONMENT_CREATION_WORKFLOW_STEPS);
+
+        Self {
+            repository_factory,
+            clock,
+            progress,
+        }
+    }
+
+    /// Execute the complete environment creation workflow
+    ///
+    /// Orchestrates all steps of the environment creation command:
+    /// 1. Load and validate configuration from file
+    /// 2. Initialize dependencies and command handler  
+    /// 3. Execute environment creation through application layer
+    /// 4. Display creation results and environment details
+    ///
+    /// # Arguments
+    ///
+    /// * `env_file` - Path to the environment configuration file
+    /// * `working_dir` - Working directory path for environment storage
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Configuration loading or validation fails
+    /// - Environment creation fails
+    /// - Progress reporting encounters a poisoned mutex
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Environment<Created>)` on success, or a `CreateEnvironmentCommandError` if any step fails.
+    #[allow(clippy::result_large_err)]
+    pub fn execute(
+        &mut self,
+        env_file: &Path,
+        working_dir: &Path,
+    ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
+        let config = self.load_configuration(env_file)?;
+
+        let command_handler = self.initialize_dependencies(working_dir)?;
+
+        let environment = self.execute_create_command(&command_handler, config)?;
+
+        self.display_creation_results(&environment)?;
+
+        Ok(environment)
+    }
+
+    /// Load and validate configuration from file
+    ///
+    /// This step handles:
+    /// - Loading configuration file using `ConfigLoader`
+    /// - Parsing JSON content
+    /// - Validating configuration using domain rules
+    ///
+    /// # Arguments
+    ///
+    /// * `env_file` - Path to the configuration file
+    ///
+    /// # Returns
+    ///
+    /// Returns the loaded and validated `EnvironmentCreationConfig`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Configuration file is not found
+    /// - JSON parsing fails
+    /// - Domain validation fails
+    fn load_configuration(
+        &mut self,
+        env_file: &Path,
+    ) -> Result<EnvironmentCreationConfig, CreateEnvironmentCommandError> {
+        self.progress.start_step("Loading configuration")?;
+
+        self.progress.sub_step(&format!(
             "Loading configuration from '{}'...",
             env_file.display()
-        ));
+        ))?;
 
-    let loader = ConfigLoader;
+        let loader = ConfigLoader;
 
-    loader
-        .load_from_file(env_file)
-        .inspect_err(|err: &CreateEnvironmentCommandError| {
-            // Attempt to log error, but don't fail if mutex is poisoned
-            if let Ok(mut output) = user_output.lock() {
-                output.error(&err.to_string());
-            }
-        })
-}
+        let config = loader.load_from_file(env_file).inspect_err(
+            |err: &CreateEnvironmentCommandError| {
+                // Log error details for debugging
+                tracing::error!(
+                    error = %err,
+                    config_file = %env_file.display(),
+                    "Configuration loading failed"
+                );
+            },
+        )?;
 
-/// Execute the create command with the given configuration
-///
-/// This step handles:
-/// - Executing the create command with the given handler
-/// - Handling command execution errors
-///
-/// # Arguments
-///
-/// * `progress` - Progress reporter for user feedback
-/// * `command_handler` - Pre-created command handler
-/// * `config` - Validated environment creation configuration
-///
-/// # Returns
-///
-/// Returns the created `Environment` on success.
-///
-/// # Errors
-///
-/// Returns an error if command execution fails (e.g., environment already exists).
-pub(crate) fn execute_create_command(
-    progress: &mut ProgressReporter,
-    command_handler: &CreateCommandHandler,
-    config: EnvironmentCreationConfig,
-) -> Result<Environment, CreateEnvironmentCommandError> {
-    let user_output = progress.output();
+        self.progress.complete_step(Some(&format!(
+            "Configuration loaded: {}",
+            config.environment.name
+        )))?;
 
-    user_output
-        .lock()
-        .map_err(|_| CreateEnvironmentCommandError::UserOutputLockFailed)?
-        .progress(&format!(
+        Ok(config)
+    }
+
+    /// Initialize dependencies and command handler
+    ///
+    /// This step handles:
+    /// - Creating repository using factory
+    /// - Setting up command handler with dependencies
+    ///
+    /// # Arguments
+    ///
+    /// * `working_dir` - Working directory path for environment storage
+    ///
+    /// # Returns
+    ///
+    /// Returns the initialized `CreateCommandHandler`.
+    fn initialize_dependencies(
+        &mut self,
+        working_dir: &Path,
+    ) -> Result<CreateCommandHandler, CreateEnvironmentCommandError> {
+        self.progress.start_step("Initializing dependencies")?;
+
+        let repository = self.repository_factory.create(working_dir.to_path_buf());
+
+        let command_handler = CreateCommandHandler::new(repository, self.clock.clone());
+
+        self.progress.complete_step(None)?;
+
+        Ok(command_handler)
+    }
+
+    /// Execute the create command with the given configuration
+    ///
+    /// This step handles:
+    /// - Executing the create command with the given handler
+    /// - Handling command execution errors
+    ///
+    /// # Arguments
+    ///
+    /// * `command_handler` - Pre-created command handler
+    /// * `config` - Validated environment creation configuration
+    ///
+    /// # Returns
+    ///
+    /// Returns the created `Environment` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if command execution fails (e.g., environment already exists).
+    fn execute_create_command(
+        &mut self,
+        command_handler: &CreateCommandHandler,
+        config: EnvironmentCreationConfig,
+    ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
+        self.progress.start_step("Creating environment")?;
+
+        self.progress.sub_step(&format!(
             "Creating environment '{}'...",
             config.environment.name
-        ));
+        ))?;
 
-    user_output
-        .lock()
-        .map_err(|_| CreateEnvironmentCommandError::UserOutputLockFailed)?
-        .progress("Validating configuration and creating environment...");
+        self.progress
+            .sub_step("Validating configuration and creating environment...")?;
 
-    #[allow(clippy::manual_inspect)]
-    command_handler.execute(config).map_err(|source| {
-        let error = CreateEnvironmentCommandError::CommandFailed { source };
-        // Attempt to log error, but don't fail if mutex is poisoned
-        if let Ok(mut output) = user_output.lock() {
-            output.error(&error.to_string());
-        }
-        error
-    })
-}
+        let environment = command_handler
+            .execute(config)
+            .map_err(|source| CreateEnvironmentCommandError::CommandFailed { source })?;
 
-/// Display the results of successful environment creation
-///
-/// This step outputs:
-/// - Success message with environment name
-/// - Instance name
-/// - Data directory location
-/// - Build directory location
-///
-/// # Arguments
-///
-/// * `user_output` - Shared user output for displaying messages
-/// * `environment` - The successfully created environment
-///
-/// # Returns
-///
-/// Returns `Ok(())` on success, or `CreateEnvironmentCommandError::UserOutputLockFailed`
-/// if the `UserOutput` mutex is poisoned.
-///
-/// # Errors
-///
-/// This function will return an error if the `UserOutput` mutex is poisoned,
-/// which indicates a panic occurred in another thread while holding the output lock.
-pub(crate) fn display_creation_results(
-    user_output: &Arc<Mutex<UserOutput>>,
-    environment: &Environment,
-) -> Result<(), CreateEnvironmentCommandError> {
-    let mut output = user_output
-        .lock()
-        .map_err(|_| CreateEnvironmentCommandError::UserOutputLockFailed)?;
+        self.progress.complete_step(Some(&format!(
+            "Environment created: {}",
+            environment.name().as_str()
+        )))?;
 
-    output.success(&format!(
-        "Environment '{}' created successfully",
-        environment.name().as_str()
-    ));
+        Ok(environment)
+    }
 
-    output.result(&format!(
-        "Instance name: {}",
-        environment.instance_name().as_str()
-    ));
+    /// Display the results of successful environment creation
+    ///
+    /// This step outputs:
+    /// - Final completion message with environment name
+    /// - Instance details (name, data directory, build directory)
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The successfully created environment
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or `CreateEnvironmentCommandError` if progress reporting fails.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if progress reporting encounters issues,
+    /// which indicates the environment was created but we couldn't display results.
+    fn display_creation_results(
+        &mut self,
+        environment: &Environment<Created>,
+    ) -> Result<(), CreateEnvironmentCommandError> {
+        self.progress.complete(&format!(
+            "Environment '{}' created successfully",
+            environment.name().as_str()
+        ))?;
 
-    output.result(&format!(
-        "Data directory: {}",
-        environment.data_dir().display()
-    ));
+        self.progress.blank_line()?;
 
-    output.result(&format!(
-        "Build directory: {}",
-        environment.build_dir().display()
-    ));
+        self.progress.steps(
+            "Environment Details:",
+            &[
+                &format!("Environment name: {}", environment.name().as_str()),
+                &format!("Instance name: {}", environment.instance_name().as_str()),
+                &format!("Data directory: {}", environment.data_dir().display()),
+                &format!("Build directory: {}", environment.build_dir().display()),
+            ],
+        )?;
 
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Cursor;
-    use std::sync::{Arc, Mutex};
-    use std::time::Duration;
-    use tempfile::TempDir;
-
-    use crate::application::command_handlers::CreateCommandHandler;
-    use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-    use crate::presentation::controllers::create::subcommands::environment::config_loader::ConfigLoader;
-    use crate::presentation::user_output::{UserOutput, VerbosityLevel};
-    use crate::shared::clock::SystemClock;
-
-    mod display_creation_results_tests {
-        use super::*;
-
-        #[test]
-        fn it_should_display_environment_details() {
-            let temp_dir = TempDir::new().unwrap();
-            let config_path = temp_dir.path().join("config.json");
-
-            let project_root = env!("CARGO_MANIFEST_DIR");
-            let private_key_path = format!("{project_root}/fixtures/testing_rsa");
-            let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
-
-            let config_json = format!(
-                r#"{{
-                "environment": {{
-                    "name": "test-display"
-                }},
-                "ssh_credentials": {{
-                    "private_key_path": "{private_key_path}",
-                    "public_key_path": "{public_key_path}"
-                }}
-            }}"#
-            );
-            std::fs::write(&config_path, config_json).unwrap();
-
-            // Create environment
-            let loader = ConfigLoader;
-            let config = loader.load_from_file(&config_path).unwrap();
-
-            // Create command handler using manual dependency creation
-            let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
-            let repository = repository_factory.create(temp_dir.path().to_path_buf());
-            let clock = Arc::new(SystemClock);
-            let command_handler = CreateCommandHandler::new(repository, clock);
-
-            let environment = command_handler.execute(config).unwrap();
-
-            // Test display function with custom output
-            let stderr_buf = Vec::new();
-            let stderr_writer = Box::new(Cursor::new(stderr_buf));
-            let stdout_buf = Vec::new();
-            let stdout_writer = Box::new(Cursor::new(stdout_buf));
-
-            let output =
-                UserOutput::with_writers(VerbosityLevel::Normal, stdout_writer, stderr_writer);
-            let display_output = Arc::new(Mutex::new(output));
-
-            // Test display function
-            let result = display_creation_results(&display_output, &environment);
-            assert!(result.is_ok(), "display_creation_results should succeed");
-
-            // Note: We can't easily verify the exact output without refactoring UserOutput
-            // to expose the buffers, but the important thing is it succeeds
-        }
+        Ok(())
     }
 }

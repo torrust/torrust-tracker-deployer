@@ -13,4 +13,4 @@ mod tests;
 // Re-export the main handler function, error types, and config loader
 pub use config_loader::ConfigLoader;
 pub use errors::{ConfigFormat, CreateEnvironmentCommandError};
-pub use handler::handle_environment_creation;
+pub use handler::handle;
