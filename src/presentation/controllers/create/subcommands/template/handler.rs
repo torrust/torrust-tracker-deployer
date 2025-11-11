@@ -141,7 +141,7 @@ pub fn handle_template_creation_command(
     output_path: &Path,
     user_output: &Arc<Mutex<UserOutput>>,
 ) -> Result<(), CreateEnvironmentTemplateCommandError> {
-    CreateTemplateCommandController::new(user_output.clone()).execute(output_path)
+    CreateTemplateCommandController::new(user_output).execute(output_path)
 }
 
 // ============================================================================
@@ -167,7 +167,6 @@ pub fn handle_template_creation_command(
 /// concerns. It delegates actual template generation to the application layer's
 /// `EnvironmentCreationConfig::generate_template_file`, maintaining clear separation of concerns.
 pub struct CreateTemplateCommandController {
-    user_output: Arc<Mutex<UserOutput>>,
     progress: ProgressReporter,
 }
 
@@ -176,13 +175,10 @@ impl CreateTemplateCommandController {
     ///
     /// Creates a `CreateTemplateCommandController` with user output service injection.
     /// This follows the single container architecture pattern.
-    pub fn new(user_output: Arc<Mutex<UserOutput>>) -> Self {
+    pub fn new(user_output: &Arc<Mutex<UserOutput>>) -> Self {
         let progress = ProgressReporter::new(user_output.clone(), TEMPLATE_CREATION_WORKFLOW_STEPS);
 
-        Self {
-            user_output,
-            progress,
-        }
+        Self { progress }
     }
 
     /// Execute the complete template creation workflow
@@ -255,28 +251,20 @@ impl CreateTemplateCommandController {
     ) -> Result<(), CreateEnvironmentTemplateCommandError> {
         self.progress.start_step("Preparing user guidance")?;
 
-        // Scope the user_output lock to avoid deadlock with progress.complete()
-        {
-            let mut user_output = self
-                .user_output
-                .lock()
-                .map_err(|_| CreateEnvironmentTemplateCommandError::UserOutputLockFailed)?;
+        // Use ProgressReporter wrapper methods to avoid dual mutex acquisition
+        self.progress.blank_line()?;
+        self.progress.steps(
+            "Next steps:",
+            &[
+                "Edit the template file and replace placeholder values:\n   - REPLACE_WITH_ENVIRONMENT_NAME: Choose a unique environment name (e.g., 'dev', 'staging')\n   - REPLACE_WITH_SSH_PRIVATE_KEY_PATH: Path to your SSH private key\n   - REPLACE_WITH_SSH_PUBLIC_KEY_PATH: Path to your SSH public key",
+                "Review default values:\n   - username: 'torrust' (can be changed if needed)\n   - port: 22 (standard SSH port)",
+                &format!(
+                    "Create the environment:\n   torrust-tracker-deployer create environment --env-file {}",
+                    output_path.display()
+                ),
+            ],
+        )?;
 
-            user_output.blank_line();
-            user_output.steps(
-                "Next steps:",
-                &[
-                    "Edit the template file and replace placeholder values:\n   - REPLACE_WITH_ENVIRONMENT_NAME: Choose a unique environment name (e.g., 'dev', 'staging')\n   - REPLACE_WITH_SSH_PRIVATE_KEY_PATH: Path to your SSH private key\n   - REPLACE_WITH_SSH_PUBLIC_KEY_PATH: Path to your SSH public key",
-                    "Review default values:\n   - username: 'torrust' (can be changed if needed)\n   - port: 22 (standard SSH port)",
-                    &format!(
-                        "Create the environment:\n   torrust-tracker-deployer create environment --env-file {}",
-                        output_path.display()
-                    ),
-                ],
-            );
-        } // ← user_output lock is released here
-
-        // Now it's safe to call progress.complete() as the lock is released
         self.progress.complete(&format!(
             "Configuration template ready: {}",
             output_path.display()
@@ -343,7 +331,7 @@ mod tests {
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Silent);
 
         // Test controller directly
-        let mut controller = CreateTemplateCommandController::new(user_output);
+        let mut controller = CreateTemplateCommandController::new(&user_output);
         let result = controller.execute(&output_path);
 
         assert!(result.is_ok(), "Controller should succeed: {result:?}");
@@ -387,7 +375,7 @@ mod tests {
     #[test]
     fn it_should_create_controller_successfully() {
         let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-        let _controller = CreateTemplateCommandController::new(user_output);
+        let _controller = CreateTemplateCommandController::new(&user_output);
 
         // Controller should be created successfully
         // (Just testing that constructor works without panicking)

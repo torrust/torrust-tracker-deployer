@@ -380,6 +380,77 @@ impl ProgressReporter {
     pub fn output(&self) -> &Arc<Mutex<UserOutput>> {
         &self.output
     }
+
+    /// Add a blank line to the output
+    ///
+    /// This is a wrapper around `UserOutput::blank_line()` that handles
+    /// mutex acquisition with timeout protection.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ProgressReporterError::UserOutputMutexPoisoned` if the mutex is poisoned.
+    /// Returns `ProgressReporterError::UserOutputMutexTimeout` if the mutex cannot be acquired within the timeout.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::sync::{Arc, Mutex};
+    /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let mut progress = ProgressReporter::new(output, 3);
+    ///
+    /// progress.blank_line()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn blank_line(&self) -> Result<(), ProgressReporterError> {
+        let mut output = self.acquire_output_with_timeout()?;
+        output.blank_line();
+        Ok(())
+    }
+
+    /// Display a list of steps with a title
+    ///
+    /// This is a wrapper around `UserOutput::steps()` that handles
+    /// mutex acquisition with timeout protection.
+    ///
+    /// # Arguments
+    ///
+    /// * `title` - The title for the steps list
+    /// * `steps` - Array of step descriptions
+    ///
+    /// # Errors
+    ///
+    /// Returns `ProgressReporterError::UserOutputMutexPoisoned` if the mutex is poisoned.
+    /// Returns `ProgressReporterError::UserOutputMutexTimeout` if the mutex cannot be acquired within the timeout.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::sync::{Arc, Mutex};
+    /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
+    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let mut progress = ProgressReporter::new(output, 3);
+    ///
+    /// progress.steps("Next steps:", &[
+    ///     "Edit the configuration file",
+    ///     "Review the settings",
+    ///     "Run the deploy command"
+    /// ])?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn steps(&self, title: &str, steps: &[&str]) -> Result<(), ProgressReporterError> {
+        let mut output = self.acquire_output_with_timeout()?;
+        output.steps(title, steps);
+        Ok(())
+    }
 }
 
 /// Format duration in a human-readable way
