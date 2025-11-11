@@ -211,79 +211,14 @@ impl EnvironmentCreationConfig {
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
     /// use std::path::Path;
     ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// EnvironmentCreationConfig::generate_template_file(
-    ///     Path::new("./environment-config.json")
-    /// ).await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn generate_template_file(path: &std::path::Path) -> Result<(), CreateConfigError> {
-        // Create template instance with placeholders
-        let template = Self::template();
-
-        // Serialize to pretty-printed JSON
-        let json = serde_json::to_string_pretty(&template)
-            .map_err(|source| CreateConfigError::TemplateSerializationFailed { source })?;
-
-        // Create parent directories if they don't exist
-        if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent).await.map_err(|source| {
-                CreateConfigError::TemplateDirectoryCreationFailed {
-                    path: parent.to_path_buf(),
-                    source,
-                }
-            })?;
-        }
-
-        // Write template to file
-        tokio::fs::write(path, json).await.map_err(|source| {
-            CreateConfigError::TemplateFileWriteFailed {
-                path: path.to_path_buf(),
-                source,
-            }
-        })?;
-
-        Ok(())
-    }
-
-    /// Generates a configuration template file at the specified path (synchronous version)
-    ///
-    /// This is a synchronous version of [`generate_template_file`](Self::generate_template_file)
-    /// that uses standard library file operations instead of tokio async I/O.
-    /// This method is suitable for use in synchronous contexts where creating
-    /// a tokio runtime is problematic (e.g., tests, CLI handlers).
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - Path where the template file should be created
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(())` - Template file created successfully
-    /// * `Err(CreateConfigError)` - File creation or serialization failed
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - Parent directory cannot be created
-    /// - Template serialization fails (unlikely - indicates a bug)
-    /// - File cannot be written due to permissions or I/O errors
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
-    /// use std::path::Path;
-    ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// EnvironmentCreationConfig::generate_template_file_sync(
+    /// EnvironmentCreationConfig::generate_template_file(
     ///     Path::new("./environment-config.json")
     /// )?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn generate_template_file_sync(path: &std::path::Path) -> Result<(), CreateConfigError> {
+    pub fn generate_template_file(path: &std::path::Path) -> Result<(), CreateConfigError> {
         // Create template instance with placeholders
         let template = Self::template();
 
@@ -639,14 +574,14 @@ mod tests {
         assert!(template_obj.contains_key("ssh_credentials"));
     }
 
-    #[tokio::test]
-    async fn test_generate_template_file() {
+    #[test]
+    fn test_generate_template_file() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
         let template_path = temp_dir.path().join("config.json");
 
-        let result = EnvironmentCreationConfig::generate_template_file(&template_path).await;
+        let result = EnvironmentCreationConfig::generate_template_file(&template_path);
         assert!(result.is_ok());
 
         // Verify file exists
@@ -664,8 +599,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_generate_template_file_creates_parent_directories() {
+    #[test]
+    fn test_generate_template_file_creates_parent_directories() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -675,7 +610,7 @@ mod tests {
             .join("env")
             .join("test.json");
 
-        let result = EnvironmentCreationConfig::generate_template_file(&nested_path).await;
+        let result = EnvironmentCreationConfig::generate_template_file(&nested_path);
         assert!(result.is_ok());
 
         // Verify nested directories were created
@@ -683,8 +618,8 @@ mod tests {
         assert!(nested_path.parent().unwrap().exists());
     }
 
-    #[tokio::test]
-    async fn test_generate_template_file_overwrites_existing() {
+    #[test]
+    fn test_generate_template_file_overwrites_existing() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -694,7 +629,7 @@ mod tests {
         std::fs::write(&template_path, "old content").unwrap();
 
         // Generate template should overwrite
-        let result = EnvironmentCreationConfig::generate_template_file(&template_path).await;
+        let result = EnvironmentCreationConfig::generate_template_file(&template_path);
         assert!(result.is_ok());
 
         // Verify content was replaced
@@ -710,7 +645,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_path = temp_dir.path().join("config.json");
 
-        let result = EnvironmentCreationConfig::generate_template_file_sync(&template_path);
+        let result = EnvironmentCreationConfig::generate_template_file(&template_path);
         assert!(result.is_ok());
 
         // Verify file exists
@@ -739,7 +674,7 @@ mod tests {
             .join("env")
             .join("test.json");
 
-        let result = EnvironmentCreationConfig::generate_template_file_sync(&nested_path);
+        let result = EnvironmentCreationConfig::generate_template_file(&nested_path);
         assert!(result.is_ok());
 
         // Verify nested directories were created

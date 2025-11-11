@@ -225,7 +225,7 @@ impl CreateTemplateCommandController {
 
         // Use synchronous version to avoid creating a tokio runtime
         // This prevents blocking and performance issues in test environments
-        EnvironmentCreationConfig::generate_template_file_sync(output_path).map_err(|source| {
+        EnvironmentCreationConfig::generate_template_file(output_path).map_err(|source| {
             CreateEnvironmentTemplateCommandError::TemplateGenerationFailed {
                 path: output_path.to_path_buf(),
                 source: Box::new(source),
@@ -290,7 +290,7 @@ mod tests {
         let output_path = temp_dir.path().join("test-template.json");
 
         // Test just the template generation without progress reporter
-        let result = EnvironmentCreationConfig::generate_template_file_sync(&output_path);
+        let result = EnvironmentCreationConfig::generate_template_file(&output_path);
 
         assert!(result.is_ok(), "Template generation should work");
         assert!(output_path.exists(), "File should be created");
@@ -346,7 +346,7 @@ mod tests {
         let output_path = temp_dir.path().join("test-template.json");
 
         // Test the synchronous method directly
-        let result = EnvironmentCreationConfig::generate_template_file_sync(&output_path);
+        let result = EnvironmentCreationConfig::generate_template_file(&output_path);
 
         assert!(result.is_ok(), "Sync method should work: {result:?}");
         assert!(output_path.exists(), "File should be created");
