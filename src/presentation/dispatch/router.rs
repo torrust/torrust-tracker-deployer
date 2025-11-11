@@ -36,10 +36,11 @@
 //! use std::sync::Arc;
 //! use torrust_tracker_deployer_lib::bootstrap::Container;
 //! use torrust_tracker_deployer_lib::presentation::dispatch::{route_command, ExecutionContext};
+//! use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
 //! // Note: Commands enum requires specific action parameters in practice
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let container = Container::new();
+//! let container = Container::new(VerbosityLevel::Normal);
 //! let context = ExecutionContext::new(Arc::new(container));
 //! let working_dir = Path::new(".");
 //!
@@ -51,7 +52,7 @@
 
 use std::path::Path;
 
-use crate::presentation::commands::{create, destroy};
+use crate::presentation::controllers::{create, destroy};
 use crate::presentation::errors::CommandError;
 use crate::presentation::input::Commands;
 
@@ -89,10 +90,11 @@ use super::ExecutionContext;
 /// use std::sync::Arc;
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::{route_command, ExecutionContext};
+/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
 /// // Note: Commands enum requires specific action parameters in practice
 ///
 /// fn example() -> Result<(), Box<dyn std::error::Error>> {
-///     let container = Container::new();
+///     let container = Container::new(VerbosityLevel::Normal);
 ///     let context = ExecutionContext::new(Arc::new(container));
 ///     let working_dir = Path::new(".");
 ///
@@ -108,11 +110,11 @@ pub fn route_command(
 ) -> Result<(), CommandError> {
     match command {
         Commands::Create { action } => {
-            create::handle_create_command(action, working_dir, &context.user_output())?;
+            create::route_command(action, working_dir, context)?;
             Ok(())
         }
         Commands::Destroy { environment } => {
-            destroy::handle_destroy_command(&environment, working_dir, &context.user_output())?;
+            destroy::handle(&environment, working_dir, context)?;
             Ok(())
         } // Future commands will be added here as the Controller Layer expands:
           //

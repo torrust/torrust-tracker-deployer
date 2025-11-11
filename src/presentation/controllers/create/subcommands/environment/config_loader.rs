@@ -13,7 +13,7 @@ use figment::{
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 
-use super::errors::{ConfigFormat, CreateSubcommandError};
+use super::errors::{ConfigFormat, CreateEnvironmentCommandError};
 
 /// Configuration loader using Figment for JSON file parsing
 ///
@@ -41,7 +41,7 @@ impl ConfigLoader {
     /// # Returns
     ///
     /// * `Ok(EnvironmentCreationConfig)` - Successfully loaded and validated configuration
-    /// * `Err(CreateSubcommandError)` - File not found, parsing failed, or validation failed
+    /// * `Err(CreateEnvironmentCommandError)` - File not found, parsing failed, or validation failed
     ///
     /// # Errors
     ///
@@ -56,7 +56,7 @@ impl ConfigLoader {
     ///
     /// ```rust,no_run
     /// use std::path::Path;
-    /// use torrust_tracker_deployer_lib::presentation::commands::create::ConfigLoader;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment::ConfigLoader;
     ///
     /// let loader = ConfigLoader;
     /// let config = loader.load_from_file(Path::new("config/environment.json"))?;
@@ -67,10 +67,10 @@ impl ConfigLoader {
     pub fn load_from_file(
         &self,
         config_path: &Path,
-    ) -> Result<EnvironmentCreationConfig, CreateSubcommandError> {
+    ) -> Result<EnvironmentCreationConfig, CreateEnvironmentCommandError> {
         // Step 1: Verify file exists
         if !config_path.exists() {
-            return Err(CreateSubcommandError::ConfigFileNotFound {
+            return Err(CreateEnvironmentCommandError::ConfigFileNotFound {
                 path: config_path.to_path_buf(),
             });
         }
@@ -80,18 +80,20 @@ impl ConfigLoader {
         let config: EnvironmentCreationConfig = Figment::new()
             .merge(Json::file(config_path))
             .extract()
-            .map_err(|source| CreateSubcommandError::ConfigParsingFailed {
-                path: config_path.to_path_buf(),
-                format: ConfigFormat::Json,
-                source: Box::new(source),
-            })?;
+            .map_err(
+                |source| CreateEnvironmentCommandError::ConfigParsingFailed {
+                    path: config_path.to_path_buf(),
+                    format: ConfigFormat::Json,
+                    source: Box::new(source),
+                },
+            )?;
 
         // Step 3: Validate using domain rules
         // This converts string-based config to domain types and validates
         config
             .clone()
             .to_environment_params()
-            .map_err(|source| CreateSubcommandError::ConfigValidationFailed { source })?;
+            .map_err(|source| CreateEnvironmentCommandError::ConfigValidationFailed { source })?;
 
         Ok(config)
     }
@@ -145,7 +147,7 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            CreateSubcommandError::ConfigFileNotFound { path } => {
+            CreateEnvironmentCommandError::ConfigFileNotFound { path } => {
                 assert_eq!(path, config_path);
             }
             _ => panic!("Expected ConfigFileNotFound error"),
@@ -165,7 +167,7 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            CreateSubcommandError::ConfigParsingFailed { path, format, .. } => {
+            CreateEnvironmentCommandError::ConfigParsingFailed { path, format, .. } => {
                 assert_eq!(path, config_path);
                 assert!(matches!(format, ConfigFormat::Json));
             }
@@ -217,7 +219,7 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            CreateSubcommandError::ConfigValidationFailed { .. } => {
+            CreateEnvironmentCommandError::ConfigValidationFailed { .. } => {
                 // Expected - validation should catch invalid environment name
             }
             other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
@@ -246,7 +248,7 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            CreateSubcommandError::ConfigValidationFailed { .. } => {
+            CreateEnvironmentCommandError::ConfigValidationFailed { .. } => {
                 // Expected - validation should catch missing SSH keys
             }
             other => panic!("Expected ConfigValidationFailed, got: {other:?}"),

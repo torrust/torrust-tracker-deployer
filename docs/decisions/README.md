@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status      | Date       | Decision                                                                                            | Summary                                                                                   |
 | ----------- | ---------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ✅ Accepted | 2025-11-11 | [Remove UserOutput Mutex](./user-output-mutex-removal.md)                                           | Remove Arc<Mutex<UserOutput>> pattern for simplified, deadlock-free architecture          |
 | ✅ Accepted | 2025-11-07 | [ExecutionContext Wrapper Pattern](./execution-context-wrapper.md)                                  | Use ExecutionContext wrapper around Container for future-proof command signatures         |
 | ✅ Accepted | 2025-11-03 | [Environment Variable Prefix](./environment-variable-prefix.md)                                     | Use `TORRUST_TD_` prefix for all environment variables                                    |
 | ✅ Accepted | 2025-10-15 | [External Tool Adapters Organization](./external-tool-adapters-organization.md)                     | Consolidate external tool wrappers in `src/adapters/` for better discoverability          |

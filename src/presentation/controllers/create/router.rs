@@ -1,18 +1,16 @@
-//! Create Command Handler
+//! Create Command Router
 //!
 //! This module handles the create command execution at the presentation layer,
 //! routing between different subcommands (environment creation or template generation).
 
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 
+use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::commands::CreateAction;
-use crate::presentation::user_output::UserOutput;
 
-use super::errors::CreateSubcommandError;
-use super::subcommands;
+use super::{errors::CreateCommandError, subcommands};
 
-/// Handle the create command with its subcommands
+/// Route the create command to its appropriate subcommand
 ///
 /// This function routes between different create subcommands (environment or template).
 ///
@@ -20,28 +18,31 @@ use super::subcommands;
 ///
 /// * `action` - The create action to perform (environment creation or template generation)
 /// * `working_dir` - Root directory for environment data storage
-/// * `user_output` - Shared user output service for consistent output formatting
+/// * `context` - Execution context providing access to application services
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` on success, or a `CreateSubcommandError` on failure.
+/// Returns `Ok(())` on success, or a `CreateCommandError` on failure.
 ///
 /// # Errors
 ///
 /// Returns an error if the subcommand execution fails.
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle_create_command(
+pub fn route_command(
     action: CreateAction,
     working_dir: &Path,
-    user_output: &Arc<Mutex<UserOutput>>,
-) -> Result<(), CreateSubcommandError> {
+    context: &ExecutionContext,
+) -> Result<(), CreateCommandError> {
     match action {
         CreateAction::Environment { env_file } => {
-            subcommands::handle_environment_creation(&env_file, working_dir, user_output)
+            subcommands::handle(&env_file, working_dir, context)
+                .map(|_| ()) // Convert Environment<Created> to ()
+                .map_err(CreateCommandError::Environment)
         }
         CreateAction::Template { output_path } => {
             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
-            subcommands::handle_template_generation(&template_path, user_output)
+            subcommands::handle_template_creation(&template_path, context)
+                .map_err(CreateCommandError::Template)
         }
     }
 }

@@ -1,27 +1,29 @@
-//! Integration Tests for Create Command CLI
+//! Environment Creation Tests
 //!
-//! This module tests the complete create command workflow including
+//! This module tests the environment creation workflow including
 //! configuration loading, validation, and command execution.
 
-use crate::presentation::commands::create;
-use crate::presentation::commands::tests::{
+use crate::bootstrap::Container;
+use crate::presentation::controllers::create;
+use crate::presentation::controllers::tests::{
     create_config_with_invalid_name, create_config_with_missing_keys, create_invalid_json_config,
     create_valid_config, TestContext,
 };
+use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::CreateAction;
-use crate::presentation::user_output::test_support::TestUserOutput;
 use crate::presentation::user_output::VerbosityLevel;
 
 /// Helper function to call the environment creation handler
 fn handle_environment_creation(
     config_path: &std::path::Path,
     working_dir: &std::path::Path,
-) -> Result<(), create::CreateSubcommandError> {
+) -> Result<(), create::CreateCommandError> {
     let action = CreateAction::Environment {
         env_file: config_path.to_path_buf(),
     };
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    create::handle_create_command(action, working_dir, &user_output)
+    let container = Container::new(VerbosityLevel::Silent);
+    let context = ExecutionContext::new(std::sync::Arc::new(container));
+    create::route_command(action, working_dir, &context)
 }
 
 #[test]
@@ -58,7 +60,9 @@ fn it_should_reject_nonexistent_config_file() {
 
     assert!(result.is_err(), "Should fail for nonexistent file");
     match result.unwrap_err() {
-        create::CreateSubcommandError::ConfigFileNotFound { path } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::ConfigFileNotFound { path },
+        ) => {
             assert_eq!(path, nonexistent_path);
         }
         other => panic!("Expected ConfigFileNotFound, got: {other:?}"),
@@ -74,7 +78,9 @@ fn it_should_reject_invalid_json() {
 
     assert!(result.is_err(), "Should fail for invalid JSON");
     match result.unwrap_err() {
-        create::CreateSubcommandError::ConfigParsingFailed { path, .. } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::ConfigParsingFailed { path, .. },
+        ) => {
             assert_eq!(path, config_path);
         }
         other => panic!("Expected ConfigParsingFailed, got: {other:?}"),
@@ -90,7 +96,9 @@ fn it_should_reject_invalid_environment_name() {
 
     assert!(result.is_err(), "Should fail for invalid environment name");
     match result.unwrap_err() {
-        create::CreateSubcommandError::ConfigValidationFailed { .. } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::ConfigValidationFailed { .. },
+        ) => {
             // Expected
         }
         other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
@@ -106,7 +114,9 @@ fn it_should_reject_missing_ssh_keys() {
 
     assert!(result.is_err(), "Should fail for missing SSH keys");
     match result.unwrap_err() {
-        create::CreateSubcommandError::ConfigValidationFailed { .. } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::ConfigValidationFailed { .. },
+        ) => {
             // Expected
         }
         other => panic!("Expected ConfigValidationFailed, got: {other:?}"),
@@ -127,7 +137,9 @@ fn it_should_reject_duplicate_environment() {
     assert!(result2.is_err(), "Second create should fail");
 
     match result2.unwrap_err() {
-        create::CreateSubcommandError::CommandFailed { .. } => {
+        create::CreateCommandError::Environment(
+            create::CreateEnvironmentCommandError::CommandFailed { .. },
+        ) => {
             // Expected - environment already exists
         }
         other => panic!("Expected CommandFailed, got: {other:?}"),

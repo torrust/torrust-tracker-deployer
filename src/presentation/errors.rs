@@ -19,8 +19,9 @@
 
 use thiserror::Error;
 
-use crate::presentation::commands::create::CreateSubcommandError;
-use crate::presentation::commands::destroy::DestroySubcommandError;
+use crate::presentation::controllers::{
+    create::CreateCommandError, destroy::DestroySubcommandError,
+};
 
 /// Errors that can occur during CLI command execution
 ///
@@ -31,10 +32,10 @@ use crate::presentation::commands::destroy::DestroySubcommandError;
 pub enum CommandError {
     /// Create command specific errors
     ///
-    /// Encapsulates all errors that can occur during environment creation.
+    /// Encapsulates all errors that can occur during create operations (environment or template).
     /// Use `.help()` for detailed troubleshooting steps.
     #[error("Create command failed: {0}")]
-    Create(Box<CreateSubcommandError>),
+    Create(Box<CreateCommandError>),
 
     /// Destroy command specific errors
     ///
@@ -51,8 +52,8 @@ pub enum CommandError {
     UserOutputLockFailed,
 }
 
-impl From<CreateSubcommandError> for CommandError {
-    fn from(error: CreateSubcommandError) -> Self {
+impl From<CreateCommandError> for CommandError {
+    fn from(error: CreateCommandError) -> Self {
         Self::Create(Box::new(error))
     }
 }
@@ -75,7 +76,7 @@ impl CommandError {
     /// ```rust
     /// use clap::Parser;
     /// use torrust_tracker_deployer_lib::presentation::{input::cli, errors};
-    /// use torrust_tracker_deployer_lib::presentation::commands::destroy::DestroySubcommandError;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::destroy::DestroySubcommandError;
     /// use torrust_tracker_deployer_lib::application::command_handlers::destroy::DestroyCommandHandlerError;
     /// use std::path::PathBuf;
     ///
