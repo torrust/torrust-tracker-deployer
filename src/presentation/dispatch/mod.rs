@@ -105,7 +105,7 @@
 //! use std::sync::Arc;
 //! use torrust_tracker_deployer_lib::bootstrap::Container;
 //! use torrust_tracker_deployer_lib::presentation::dispatch::{route_command, ExecutionContext};
-//! use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+//! use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 //! // Note: Commands enum requires specific action parameters in practice
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {

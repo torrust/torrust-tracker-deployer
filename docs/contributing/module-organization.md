@@ -50,7 +50,7 @@ Always import types and use their short names rather than fully-qualified paths,
 
 ```rust
 use std::sync::Arc;
-use crate::presentation::user_output::UserOutput;
+use crate::presentation::views::UserOutput;
 
 pub struct CommandHandler {
     output: Arc<UserOutput>,
@@ -73,11 +73,11 @@ impl CommandHandler {
 ```rust
 // Don't do this - it's verbose and hard to read
 pub struct CommandHandler {
-    output: std::sync::Arc<crate::presentation::user_output::UserOutput>,
+    output: std::sync::Arc<crate::presentation::views::UserOutput>,
 }
 
 impl CommandHandler {
-    pub fn new(output: std::sync::Arc<crate::presentation::user_output::UserOutput>) -> Self {
+    pub fn new(output: std::sync::Arc<crate::presentation::views::UserOutput>) -> Self {
         Self { output }
     }
 }

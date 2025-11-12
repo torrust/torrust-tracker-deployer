@@ -15,7 +15,7 @@ use crate::domain::environment::state::Destroyed;
 use crate::domain::environment::Environment;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::progress::ProgressReporter;
-use crate::presentation::user_output::UserOutput;
+use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
 use super::errors::DestroySubcommandError;
@@ -64,7 +64,7 @@ const DESTROY_WORKFLOW_STEPS: usize = 3;
 /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
 /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let container = Arc::new(Container::new(VerbosityLevel::Normal));
@@ -131,7 +131,7 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// let container = Container::new(VerbosityLevel::Normal);
 /// let context = ExecutionContext::new(Arc::new(container));
@@ -150,7 +150,7 @@ pub fn handle(
 /// use parking_lot::ReentrantMutex;
 /// use std::cell::RefCell;
 /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
-/// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 /// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 /// use torrust_tracker_deployer_lib::shared::SystemClock;
@@ -348,8 +348,8 @@ impl DestroyCommandController {
 mod tests {
     use super::*;
     use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
-    use crate::presentation::user_output::test_support::TestUserOutput;
-    use crate::presentation::user_output::VerbosityLevel;
+    use crate::presentation::views::test_support::TestUserOutput;
+    use crate::presentation::views::VerbosityLevel;
     use crate::shared::SystemClock;
     use std::fs;
     use tempfile::TempDir;

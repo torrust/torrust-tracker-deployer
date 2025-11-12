@@ -44,8 +44,8 @@ impl Write for TestWriter {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use torrust_tracker_deployer_lib::presentation::user_output::test_support::TestUserOutput;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::test_support::TestUserOutput;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
 ///

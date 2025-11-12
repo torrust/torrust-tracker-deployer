@@ -22,7 +22,7 @@ use super::writers::{StderrWriter, StdoutWriter};
 /// # Examples
 ///
 /// ```rust,ignore
-/// use torrust_tracker_deployer_lib::presentation::user_output::StandardSink;
+/// use torrust_tracker_deployer_lib::presentation::views::StandardSink;
 ///
 /// let sink = StandardSink::new(
 ///     Box::new(std::io::stdout()),

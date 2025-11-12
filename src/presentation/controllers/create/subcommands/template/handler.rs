@@ -11,7 +11,7 @@ use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::presentation::progress::ProgressReporter;
-use crate::presentation::user_output::UserOutput;
+use crate::presentation::views::UserOutput;
 
 use super::errors::CreateEnvironmentTemplateCommandError;
 
@@ -57,7 +57,7 @@ const TEMPLATE_CREATION_WORKFLOW_STEPS: usize = 2;
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
 /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let container = Arc::new(Container::new(VerbosityLevel::Normal));
@@ -113,7 +113,7 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// let container = Container::new(VerbosityLevel::Normal);
 /// let context = ExecutionContext::new(Arc::new(container));
@@ -133,7 +133,7 @@ pub fn handle(
 /// use parking_lot::ReentrantMutex;
 /// use std::cell::RefCell;
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template::handler::handle_template_creation_command;
-/// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 ///
 /// let user_output = Arc::new(ReentrantMutex::<RefCell<UserOutput>>::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 ///
@@ -283,8 +283,8 @@ impl CreateTemplateCommandController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::presentation::user_output::test_support::TestUserOutput;
-    use crate::presentation::user_output::VerbosityLevel;
+    use crate::presentation::views::test_support::TestUserOutput;
+    use crate::presentation::views::VerbosityLevel;
     use std::fs;
     use tempfile::TempDir;
 

@@ -11,7 +11,7 @@ use crate::presentation::controllers::tests::{
 };
 use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::CreateAction;
-use crate::presentation::user_output::VerbosityLevel;
+use crate::presentation::views::VerbosityLevel;
 
 /// Helper function to call the environment creation handler
 fn handle_environment_creation(

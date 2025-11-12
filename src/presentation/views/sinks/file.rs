@@ -17,7 +17,7 @@ use super::super::{OutputMessage, OutputSink};
 /// # Examples
 ///
 /// ```rust,ignore
-/// use torrust_tracker_deployer_lib::presentation::user_output::{FileSink, UserOutput, VerbosityLevel, CompositeSink, StandardSink};
+/// use torrust_tracker_deployer_lib::presentation::views::{FileSink, UserOutput, VerbosityLevel, CompositeSink, StandardSink};
 ///
 /// // Write to both console and file
 /// let composite = CompositeSink::new(vec![
@@ -42,7 +42,7 @@ impl FileSink {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use torrust_tracker_deployer_lib::presentation::user_output::FileSink;
+    /// use torrust_tracker_deployer_lib::presentation::views::FileSink;
     ///
     /// let sink = FileSink::new("output.log")?;
     /// ```

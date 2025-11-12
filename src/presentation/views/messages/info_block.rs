@@ -11,7 +11,7 @@ use super::super::{Channel, OutputMessage, Theme, VerbosityLevel};
 /// Simple constructor for cases where you have all lines upfront:
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+/// use torrust_tracker_deployer_lib::presentation::views::InfoBlockMessage;
 ///
 /// let message = InfoBlockMessage::new("Environment Details", vec![
 ///     "Name: production".to_string(),
@@ -22,7 +22,7 @@ use super::super::{Channel, OutputMessage, Theme, VerbosityLevel};
 /// Builder pattern for dynamic construction or better readability:
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+/// use torrust_tracker_deployer_lib::presentation::views::InfoBlockMessage;
 ///
 /// let message = InfoBlockMessage::builder("Environment Details")
 ///     .add_line("Name: production")
@@ -47,7 +47,7 @@ impl InfoBlockMessage {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+    /// use torrust_tracker_deployer_lib::presentation::views::InfoBlockMessage;
     ///
     /// let msg = InfoBlockMessage::new("Configuration:", vec![
     ///     "  - username: 'torrust'".to_string(),
@@ -72,7 +72,7 @@ impl InfoBlockMessage {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+    /// use torrust_tracker_deployer_lib::presentation::views::InfoBlockMessage;
     ///
     /// let msg = InfoBlockMessage::builder("Environment Details")
     ///     .add_line("Name: production")
@@ -119,7 +119,7 @@ impl OutputMessage for InfoBlockMessage {
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+/// use torrust_tracker_deployer_lib::presentation::views::InfoBlockMessage;
 ///
 /// let message = InfoBlockMessage::builder("Environment Details")
 ///     .add_line("Name: production")
@@ -131,7 +131,7 @@ impl OutputMessage for InfoBlockMessage {
 /// Empty builders are valid:
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+/// use torrust_tracker_deployer_lib::presentation::views::InfoBlockMessage;
 ///
 /// let message = InfoBlockMessage::builder("Title").build();
 /// ```
@@ -146,7 +146,7 @@ impl InfoBlockMessageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessageBuilder;
+    /// use torrust_tracker_deployer_lib::presentation::views::InfoBlockMessageBuilder;
     ///
     /// let builder = InfoBlockMessageBuilder::new("My info block:");
     /// ```
@@ -166,7 +166,7 @@ impl InfoBlockMessageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+    /// use torrust_tracker_deployer_lib::presentation::views::InfoBlockMessage;
     ///
     /// let message = InfoBlockMessage::builder("Info:")
     ///     .add_line("First line")
@@ -186,7 +186,7 @@ impl InfoBlockMessageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::InfoBlockMessage;
+    /// use torrust_tracker_deployer_lib::presentation::views::InfoBlockMessage;
     ///
     /// let message = InfoBlockMessage::builder("Info:")
     ///     .add_line("Line 1")

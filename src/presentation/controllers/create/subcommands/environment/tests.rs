@@ -12,7 +12,7 @@ use super::errors::CreateEnvironmentCommandError;
 use super::handler::handle;
 use crate::bootstrap::Container;
 use crate::presentation::dispatch::ExecutionContext;
-use crate::presentation::user_output::VerbosityLevel;
+use crate::presentation::views::VerbosityLevel;
 
 fn create_test_context() -> ExecutionContext {
     let container = Container::new(VerbosityLevel::Silent);

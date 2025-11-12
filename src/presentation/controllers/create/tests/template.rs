@@ -8,7 +8,7 @@ use crate::presentation::controllers::create;
 use crate::presentation::controllers::tests::TestContext;
 use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::CreateAction;
-use crate::presentation::user_output::VerbosityLevel;
+use crate::presentation::views::VerbosityLevel;
 
 #[test]
 fn it_should_generate_template_with_default_path() {
