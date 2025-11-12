@@ -73,66 +73,6 @@ impl TestUserOutput {
         }
     }
 
-    /// Create wrapped test output for use with APIs that require `Arc<Mutex<UserOutput>>`
-    ///
-    /// This is a convenience method for tests that just need a wrapped output
-    /// without access to the buffers.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// let output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    /// // Use with APIs that expect Arc<Mutex<UserOutput>>
-    /// ```
-    #[must_use]
-    pub fn wrapped(verbosity: VerbosityLevel) -> Arc<Mutex<UserOutput>> {
-        let test_output = Self::new(verbosity);
-        Arc::new(Mutex::new(test_output.output))
-    }
-
-    /// Create wrapped test output with silent verbosity for clean test output
-    ///
-    /// This is a convenience method specifically for tests to avoid user-facing
-    /// messages appearing in test output.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// let output = TestUserOutput::wrapped_silent();
-    /// // Use with APIs that expect Arc<Mutex<UserOutput>> - no user output will appear
-    /// ```
-    #[must_use]
-    pub fn wrapped_silent() -> Arc<Mutex<UserOutput>> {
-        Self::wrapped(VerbosityLevel::Silent)
-    }
-
-    /// Wrap an existing `UserOutput` in an `Arc<Mutex<>>` for use with APIs that require it
-    ///
-    /// Returns a tuple of (`Arc<Mutex<UserOutput>>`, stdout buffer, stderr buffer) for tests
-    /// that need access to both the wrapped output and the buffers.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-    /// let (wrapped, stdout_buf, stderr_buf) = test_output.into_wrapped();
-    /// // Use `wrapped` with APIs that expect Arc<Mutex<UserOutput>>
-    /// // Use buffers to assert on output content
-    /// ```
-    #[must_use]
-    #[allow(clippy::type_complexity)]
-    pub fn into_wrapped(
-        self,
-    ) -> (
-        Arc<Mutex<UserOutput>>,
-        Arc<Mutex<Vec<u8>>>,
-        Arc<Mutex<Vec<u8>>>,
-    ) {
-        let stdout_buf = Arc::clone(&self.stdout_buffer);
-        let stderr_buf = Arc::clone(&self.stderr_buffer);
-        (Arc::new(Mutex::new(self.output)), stdout_buf, stderr_buf)
-    }
-
     /// Create wrapped `UserOutput` with `ReentrantMutex` for the new architecture
     ///
     /// Returns a tuple containing the wrapped `UserOutput` and its output buffers.
@@ -200,48 +140,6 @@ impl TestUserOutput {
     #[must_use]
     pub fn stderr(&self) -> String {
         String::from_utf8(self.stderr_buffer.lock().clone()).expect("stderr should be valid UTF-8")
-    }
-
-    /// Get both stdout and stderr content as a tuple
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-    /// test_output.output.progress("Working...");
-    /// test_output.output.result("Done");
-    /// let (stdout, stderr) = test_output.output_pair();
-    /// assert_eq!(stdout, "Done\n");
-    /// assert_eq!(stderr, "⏳ Working...\n");
-    /// ```
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn output_pair(&self) -> (String, String) {
-        (self.stdout(), self.stderr())
-    }
-
-    /// Clear all captured output
-    ///
-    /// Useful when testing multiple operations in the same test.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-    /// test_output.output.progress("Step 1");
-    /// test_output.clear();
-    /// test_output.output.progress("Step 2");
-    /// assert_eq!(test_output.stderr(), "⏳ Step 2\n");
-    /// ```
-    ///
-    /// Clear both stdout and stderr buffers
-    ///
-    /// Resets the captured content for both output streams. Useful for
-    /// running multiple test scenarios with the same wrapper.
-    #[allow(dead_code)]
-    pub fn clear(&mut self) {
-        self.stdout_buffer.lock().clear();
-        self.stderr_buffer.lock().clear();
     }
 
     /// Create wrapped `UserOutput` with `ReentrantMutex` for convenient testing
