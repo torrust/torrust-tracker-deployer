@@ -10,7 +10,7 @@ use std::sync::Arc;
 use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
-use crate::presentation::progress::ProgressReporter;
+use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
 use super::errors::CreateEnvironmentTemplateCommandError;
