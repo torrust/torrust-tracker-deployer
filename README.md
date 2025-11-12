@@ -392,7 +392,6 @@ This project follows a structured development roadmap to evolve from the current
 ├── target/                 # 🦀 Rust build artifacts (git-ignored)
 ├── Cargo.toml             # Rust workspace configuration
 ├── Cargo.lock             # Rust dependency lock file
-├── environment-template.json # Environment configuration template
 ├── cspell.json            # Spell checking configuration
 ├── project-words.txt      # Custom dictionary for spell checking
 ├── .markdownlint.json     # Markdown linting configuration
