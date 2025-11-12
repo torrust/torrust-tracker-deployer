@@ -60,6 +60,10 @@
 //! - **stdout**: Deployment results, configuration summaries, structured data (JSON)
 //! - **stderr**: Step progress, status updates, warnings, error messages with actionable guidance
 //!
+//! ## Progress Indicators
+//!
+//! The [`progress`] module provides components for displaying real-time progress during long operations.
+//!
 //! See also: [`docs/research/UX/user-output-vs-logging-separation.md`](../../docs/research/UX/user-output-vs-logging-separation.md)
 
 // Re-export core types and traits for backward compatibility
@@ -84,6 +88,9 @@ mod sinks;
 mod theme;
 mod traits;
 mod verbosity;
+
+// Progress indicators module (moved from presentation root for clear ownership)
+pub mod progress;
 
 // Test support module (public for use in tests across the codebase)
 pub mod test_support;

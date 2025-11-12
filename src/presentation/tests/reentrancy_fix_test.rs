@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
-use crate::presentation::progress::ProgressReporter;
+use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::{UserOutput, VerbosityLevel};
 
 /// Test to verify that `ReentrantMutex` fixes the reentrancy deadlock issue #164

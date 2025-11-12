@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::application::command_handlers::destroy::DestroyCommandHandlerError;
 use crate::domain::environment::name::EnvironmentNameError;
-use crate::presentation::progress::ProgressReporterError;
+use crate::presentation::views::progress::ProgressReporterError;
 
 /// Destroy command specific errors
 ///

@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
-use crate::presentation::progress::ProgressReporterError;
+use crate::presentation::views::progress::ProgressReporterError;
 
 /// Errors that can occur during template generation commands
 ///

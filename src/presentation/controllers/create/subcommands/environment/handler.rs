@@ -14,7 +14,7 @@ use crate::application::command_handlers::CreateCommandHandler;
 use crate::domain::environment::state::Created;
 use crate::domain::Environment;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::progress::ProgressReporter;
+use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 

@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use crate::application::command_handlers::create::CreateCommandHandlerError;
-use crate::presentation::progress::ProgressReporterError;
+use crate::presentation::views::progress::ProgressReporterError;
 
 /// Format of configuration file
 #[derive(Debug, Clone, Copy)]

@@ -66,8 +66,8 @@
 //! │   └── mod.rs        # Controller layer exports
 //! │
 //! ├── views/           # ✅ Views Layer - Output formatting and presentation
+//! │   ├── progress/     # ✅ Progress indicators (moved from root)
 //! │   └── ...           # User interface output and formatting
-//! ├── progress.rs       # ⏳ Will move to views/progress/
 //! ├── errors.rs         # Unified error types for all commands
 //! └── mod.rs            # This file - layer exports and documentation
 //! ```
@@ -150,11 +150,11 @@
 //!
 //! With the Controllers layer complete, the next phase focuses on organizing the Views layer:
 //!
-//! 1. **Rename `user_output/` to `views/`**: Align with MVC terminology
-//! 2. **Organize view submodules**: Group related presentation concerns
-//! 3. **Move `progress.rs` to `views/progress/`**: Place progress indicators with other views
-//! 4. **Implement theme system**: Structured output formatting and customization
-//! 5. **Channel separation**: Proper stdout/stderr management for Unix conventions
+//! 1. ✅ **Rename `user_output/` to `views/`**: Align with MVC terminology
+//! 2. ✅ **Organize view submodules**: Group related presentation concerns
+//! 3. ✅ **Move `progress.rs` to `views/progress/`**: Place progress indicators with other views
+//! 4. ✅ **Implement theme system**: Structured output formatting and customization
+//! 5. ✅ **Channel separation**: Proper stdout/stderr management for Unix conventions
 //!
 //! After Proposal #4, the final steps will be:
 //! - **Proposal #5**: Enhanced error presentation and help system integration
@@ -173,7 +173,6 @@ pub mod dispatch;
 pub mod error;
 pub mod errors;
 pub mod input;
-pub mod progress;
 pub mod views;
 
 // Re-export commonly used presentation types for convenience
@@ -187,7 +186,7 @@ pub use error::handle_error;
 
 pub use errors::CommandError;
 pub use input::{Cli, Commands, GlobalArgs};
-pub use progress::ProgressReporter;
+pub use views::progress::ProgressReporter;
 pub use views::{Theme, UserOutput, VerbosityLevel};
 
 #[cfg(test)]

@@ -14,7 +14,7 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Destroyed;
 use crate::domain::environment::Environment;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::progress::ProgressReporter;
+use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
