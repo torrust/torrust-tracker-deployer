@@ -21,7 +21,7 @@ This issue addresses specific presentation layer testing improvements and cleanu
 
 ### Success Criteria
 
-- [ ] test_support.rs split into logical modules with clear responsibilities
+- [x] test_support.rs split into logical modules with clear responsibilities ✅ **COMPLETED**
 - [ ] No unused public methods in test support modules
 - [ ] Clean test output without `--nocapture` flag
 - [ ] Well-organized test groups in core.rs following project conventions
@@ -139,10 +139,10 @@ src/presentation/views/test_support/
 
 ### Task 1: Module Split
 
-- [ ] test_support.rs split into focused modules (mod.rs, test_writer.rs, test_user_output.rs, test_wrapper.rs)
-- [ ] All imports updated across codebase
-- [ ] Module organization follows project conventions
-- [ ] All existing functionality preserved
+- [x] test_support.rs split into focused modules (mod.rs, test_writer.rs, test_user_output.rs, test_wrapper.rs) ✅ **COMPLETED**
+- [x] All imports updated across codebase ✅ **COMPLETED**
+- [x] Module organization follows project conventions ✅ **COMPLETED**
+- [x] All existing functionality preserved ✅ **COMPLETED**
 
 ### Task 2: Code Cleanup
 
@@ -185,7 +185,7 @@ src/presentation/views/test_support/
 
 **Task Priority**:
 
-1. **Task 1** (Module Split) - Foundation for other work
+1. ~~**Task 1** (Module Split) - Foundation for other work~~ ✅ **COMPLETED**
 2. **Task 2** (Clean Unused Code) - Remove technical debt
 3. **Task 5** (Naming Conventions) - Align with standards
 4. **Task 4** (Test Organization) - Improve maintainability
