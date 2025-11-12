@@ -502,9 +502,7 @@ mod tests {
     #[allow(unused_imports)]
     use crate::presentation::views::sinks::{CompositeSink, FileSink, TelemetrySink};
     #[allow(unused_imports)]
-    use crate::presentation::views::testing::{
-        self, TestOutputWrapper, TestUserOutput, TestWriter,
-    };
+    use crate::presentation::views::testing::{self, TestUserOutput, TestWriter};
     #[allow(unused_imports)]
     use parking_lot::ReentrantMutex;
     #[allow(unused_imports)]
@@ -768,16 +766,11 @@ mod tests {
 
     #[test]
     fn it_should_not_write_steps_at_quiet_level() {
-        let test_user_output = testing::TestUserOutput::new(VerbosityLevel::Quiet);
-        let stdout_buf = Arc::clone(&test_user_output.stdout_buffer);
-        let stderr_buf = Arc::clone(&test_user_output.stderr_buffer);
-        let test_output = TestOutputWrapper::new(
-            Arc::new(ReentrantMutex::new(RefCell::new(test_user_output.output))),
-            stdout_buf,
-            stderr_buf,
-        );
+        let mut test_output = testing::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        test_output.steps("Next steps:", &["Step 1", "Step 2"]);
+        test_output
+            .output
+            .steps("Next steps:", &["Step 1", "Step 2"]);
 
         // Verify no output at Quiet level
         assert_eq!(test_output.stderr(), "");
@@ -807,16 +800,11 @@ mod tests {
 
     #[test]
     fn it_should_not_write_info_block_at_quiet_level() {
-        let test_user_output = testing::TestUserOutput::new(VerbosityLevel::Quiet);
-        let stdout_buf = Arc::clone(&test_user_output.stdout_buffer);
-        let stderr_buf = Arc::clone(&test_user_output.stderr_buffer);
-        let test_output = TestOutputWrapper::new(
-            Arc::new(ReentrantMutex::new(RefCell::new(test_user_output.output))),
-            stdout_buf,
-            stderr_buf,
-        );
+        let mut test_output = testing::TestUserOutput::new(VerbosityLevel::Quiet);
 
-        test_output.info_block("Info:", &["Line 1", "Line 2"]);
+        test_output
+            .output
+            .info_block("Info:", &["Line 1", "Line 2"]);
 
         // Verify no output at Quiet level
         assert_eq!(test_output.stderr(), "");
