@@ -354,19 +354,36 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
-    #[test]
-    fn it_should_return_error_for_invalid_environment_name() {
-        let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path();
+    /// Create test dependencies for destroy command handler tests
+    ///
+    /// Returns the common dependencies needed for testing `handle_destroy_command`:
+    /// - `user_output`: `ReentrantMutex`-wrapped `UserOutput` for thread-safe access
+    /// - `repository_factory`: Factory for creating environment repositories
+    /// - `clock`: System clock for timing operations
+    #[allow(clippy::type_complexity)] // Test helper with complex but clear types
+    fn create_test_dependencies() -> (
+        Arc<ReentrantMutex<RefCell<UserOutput>>>,
+        Arc<RepositoryFactory>,
+        Arc<dyn Clock>,
+    ) {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
         let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
         let clock = Arc::new(SystemClock);
 
+        (user_output, repository_factory, clock)
+    }
+
+    #[test]
+    fn it_should_return_error_for_invalid_environment_name() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let (user_output, repository_factory, clock) = create_test_dependencies();
+
         // Test with invalid environment name (contains underscore)
         let result = handle_destroy_command(
             "invalid_name",
-            working_dir,
+            temp_dir.path(),
             repository_factory,
             clock,
             &user_output,
@@ -384,14 +401,11 @@ mod tests {
     #[test]
     fn it_should_return_error_for_empty_environment_name() {
         let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path();
-        let (user_output, _, _) =
-            TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
-        let clock = Arc::new(SystemClock);
+
+        let (user_output, repository_factory, clock) = create_test_dependencies();
 
         let result =
-            handle_destroy_command("", working_dir, repository_factory, clock, &user_output);
+            handle_destroy_command("", temp_dir.path(), repository_factory, clock, &user_output);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -405,16 +419,13 @@ mod tests {
     #[test]
     fn it_should_return_error_for_nonexistent_environment() {
         let temp_dir = TempDir::new().unwrap();
-        let working_dir = temp_dir.path();
-        let (user_output, _, _) =
-            TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
-        let clock = Arc::new(SystemClock);
+
+        let (user_output, repository_factory, clock) = create_test_dependencies();
 
         // Try to destroy an environment that doesn't exist
         let result = handle_destroy_command(
             "nonexistent-env",
-            working_dir,
+            temp_dir.path(),
             repository_factory,
             clock,
             &user_output,
@@ -434,10 +445,8 @@ mod tests {
     fn it_should_accept_valid_environment_name() {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
-        let (user_output, _, _) =
-            TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
-        let clock = Arc::new(SystemClock);
+
+        let (user_output, repository_factory, clock) = create_test_dependencies();
 
         // Create a mock environment directory to test validation
         let env_dir = working_dir.join("test-env");
