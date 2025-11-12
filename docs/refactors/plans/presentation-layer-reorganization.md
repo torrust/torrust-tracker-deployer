@@ -305,10 +305,12 @@ This proposal is **ready for implementation** with detailed specification, imple
 
 ## Proposal #5: Integrate Progress into Views
 
-**Status**: ⏳ Not Started  
+**Status**: 🔄 In Progress (Issue Created)  
 **Impact**: 🟢🟢 Medium  
 **Effort**: 🔵 Low  
 **Estimated Time**: 1-2 hours
+**GitHub Issue**: #168
+**Specification**: [docs/issues/168-integrate-progress-into-views.md](../issues/168-integrate-progress-into-views.md)
 
 ### Goal
 
@@ -333,7 +335,9 @@ After completion:
 
 ### Implementation Details
 
-**To be detailed after Proposal #4 completes** - Details will be straightforward given the small scope.
+**Detailed specification available** - Complete implementation plan, acceptance criteria, and risk assessment documented in GitHub issue #168 and specification document [docs/issues/168-integrate-progress-into-views.md](../issues/168-integrate-progress-into-views.md).
+
+This proposal is **ready for implementation** with comprehensive documentation.
 
 ---
 
