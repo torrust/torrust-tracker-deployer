@@ -361,6 +361,7 @@ This project follows a structured development roadmap to evolve from the current
 │   ├── testing_rsa*         # SSH key pair for testing
 │   └── tofu/               # OpenTofu test fixtures
 ├── packages/                # Rust workspace packages
+│   ├── dependency-installer/  # Dependency detection and installation
 │   └── linting/            # Linting utilities package
 │       └── src/            # Linting implementation source code
 ├── scripts/                 # Development and utility scripts
@@ -376,9 +377,12 @@ This project follows a structured development roadmap to evolve from the current
 │   ├── application/        # Application layer (use cases, commands)
 │   ├── domain/             # Domain layer (business logic, entities)
 │   ├── infrastructure/     # Infrastructure layer (external systems)
+│   ├── presentation/       # Presentation layer (CLI interface)
+│   ├── adapters/           # External tool adapters (OpenTofu, Ansible, SSH, LXD)
 │   ├── shared/             # Shared utilities and common code
 │   ├── testing/            # Testing utilities and mocks
 │   ├── config/             # Configuration handling
+│   ├── bootstrap/          # Application bootstrapping
 │   └── e2e/                # End-to-end testing infrastructure
 ├── templates/               # 📁 Template configurations (git-tracked)
 │   ├── tofu/               # 🏗️ OpenTofu/Terraform templates
@@ -388,9 +392,11 @@ This project follows a structured development roadmap to evolve from the current
 ├── target/                 # 🦀 Rust build artifacts (git-ignored)
 ├── Cargo.toml             # Rust workspace configuration
 ├── Cargo.lock             # Rust dependency lock file
+├── environment-template.json # Environment configuration template
 ├── cspell.json            # Spell checking configuration
 ├── project-words.txt      # Custom dictionary for spell checking
 ├── .markdownlint.json     # Markdown linting configuration
+├── .prettierignore        # Prettier ignore rules (for Tera templates)
 ├── .taplo.toml            # TOML formatting configuration
 ├── .yamllint-ci.yml       # YAML linting configuration for CI
 ├── README.md              # This file - project overview
