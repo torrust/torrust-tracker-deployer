@@ -502,7 +502,7 @@ mod tests {
     #[allow(unused_imports)]
     use crate::presentation::views::sinks::{CompositeSink, FileSink, TelemetrySink};
     #[allow(unused_imports)]
-    use crate::presentation::views::test_support::{self, TestUserOutput, TestWriter};
+    use crate::presentation::views::testing::{self, TestUserOutput, TestWriter};
 
     // ============================================================================
     // Type-Safe Writer Wrapper Tests
@@ -519,8 +519,8 @@ mod tests {
             let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
             let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
 
-            let stdout_writer = Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer)));
-            let stderr_writer = Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer)));
+            let stdout_writer = Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer)));
+            let stderr_writer = Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer)));
 
             let mut stdout = StdoutWriter::new(stdout_writer);
             let mut stderr = StderrWriter::new(stderr_writer);
@@ -544,7 +544,7 @@ mod tests {
         fn user_output_uses_typed_wrappers_internally() {
             // This test verifies that UserOutput uses typed wrappers internally
             // and that channel routing is type-safe
-            let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
+            let mut test_output = testing::TestUserOutput::new(VerbosityLevel::Normal);
 
             // These calls go through type-safe dispatch
             test_output.output.progress("Progress message");
@@ -593,7 +593,7 @@ mod tests {
             #[case] verbosity: VerbosityLevel,
             #[case] expected_channel: &str,
         ) {
-            let mut test_output = test_support::TestUserOutput::new(verbosity);
+            let mut test_output = testing::TestUserOutput::new(verbosity);
 
             // Call the appropriate method
             match method {
@@ -638,7 +638,7 @@ mod tests {
             #[case] verbosity: VerbosityLevel,
             #[case] should_show: bool,
         ) {
-            let mut test_output = test_support::TestUserOutput::new(verbosity);
+            let mut test_output = testing::TestUserOutput::new(verbosity);
 
             match method {
                 "progress" => test_output.output.progress("Test"),
@@ -664,7 +664,7 @@ mod tests {
         #[case(VerbosityLevel::VeryVerbose)]
         #[case(VerbosityLevel::Debug)]
         fn it_should_always_show_errors_at_all_verbosity_levels(#[case] verbosity: VerbosityLevel) {
-            let mut test_output = test_support::TestUserOutput::new(verbosity);
+            let mut test_output = testing::TestUserOutput::new(verbosity);
 
             test_output.output.error("Critical error");
 
@@ -684,7 +684,7 @@ mod tests {
         fn it_should_always_show_results_at_all_verbosity_levels(
             #[case] verbosity: VerbosityLevel,
         ) {
-            let mut test_output = test_support::TestUserOutput::new(verbosity);
+            let mut test_output = testing::TestUserOutput::new(verbosity);
 
             test_output.output.result("Result data");
 
@@ -701,7 +701,7 @@ mod tests {
 
     #[test]
     fn it_should_write_data_to_stdout() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
+        let mut test_output = testing::TestUserOutput::new(VerbosityLevel::Normal);
 
         test_output.output.data(r#"{"status": "destroyed"}"#);
 
@@ -714,7 +714,7 @@ mod tests {
 
     #[test]
     fn it_should_write_blank_line_to_stderr() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
+        let mut test_output = testing::TestUserOutput::new(VerbosityLevel::Normal);
 
         test_output.output.blank_line();
 
@@ -727,7 +727,7 @@ mod tests {
 
     #[test]
     fn it_should_not_write_blank_line_at_quiet_level() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
+        let mut test_output = testing::TestUserOutput::new(VerbosityLevel::Quiet);
 
         test_output.output.blank_line();
 
@@ -737,7 +737,7 @@ mod tests {
 
     #[test]
     fn it_should_write_steps_to_stderr() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
+        let mut test_output = testing::TestUserOutput::new(VerbosityLevel::Normal);
 
         test_output.output.steps(
             "Next steps:",
@@ -761,7 +761,7 @@ mod tests {
     #[test]
     fn it_should_not_write_steps_at_quiet_level() {
         let test_output =
-            test_support::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
+            testing::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
 
         test_output.steps("Next steps:", &["Step 1", "Step 2"]);
 
@@ -771,7 +771,7 @@ mod tests {
 
     #[test]
     fn it_should_write_info_block_to_stderr() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
+        let mut test_output = testing::TestUserOutput::new(VerbosityLevel::Normal);
 
         test_output.output.info_block(
             "Configuration options:",
@@ -794,7 +794,7 @@ mod tests {
     #[test]
     fn it_should_not_write_info_block_at_quiet_level() {
         let test_output =
-            test_support::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
+            testing::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
 
         test_output.info_block("Info:", &["Line 1", "Line 2"]);
 
@@ -808,7 +808,7 @@ mod tests {
 
     mod output_message_trait {
         use super::super::*;
-        use crate::presentation::views::test_support::TestUserOutput;
+        use crate::presentation::views::testing::TestUserOutput;
 
         #[test]
         fn user_output_write_should_respect_verbosity_filter() {
@@ -938,7 +938,7 @@ mod tests {
 
     mod user_output_with_themes {
         use super::super::*;
-        use crate::presentation::views::test_support::TestUserOutput;
+        use crate::presentation::views::testing::TestUserOutput;
 
         #[test]
         fn it_should_use_emoji_theme_by_default() {
@@ -1000,7 +1000,7 @@ mod tests {
     mod formatter_override {
         use super::super::*;
         use crate::presentation::views::formatters::JsonFormatter;
-        use crate::presentation::views::test_support::{self, TestUserOutput};
+        use crate::presentation::views::testing::{self, TestUserOutput};
         use parking_lot::Mutex;
         use std::sync::Arc;
 
@@ -1028,8 +1028,8 @@ mod tests {
                 theme: Theme::plain(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1061,8 +1061,8 @@ mod tests {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1091,8 +1091,8 @@ mod tests {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1130,8 +1130,8 @@ mod tests {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1160,8 +1160,8 @@ mod tests {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1188,8 +1188,8 @@ mod tests {
                 theme: Theme::plain(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1214,8 +1214,8 @@ mod tests {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Quiet),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1245,8 +1245,8 @@ mod tests {
                 theme: Theme::default(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1270,8 +1270,8 @@ mod tests {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1301,8 +1301,8 @@ mod tests {
                 theme: Theme::emoji(),
                 verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
                 sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
                 )),
                 formatter_override: Some(formatter),
             };
@@ -1335,7 +1335,7 @@ mod tests {
 
     mod buffering {
         use super::super::*;
-        use crate::presentation::views::test_support::TestUserOutput;
+        use crate::presentation::views::testing::TestUserOutput;
 
         #[test]
         fn it_should_flush_all_writers() {
@@ -1437,7 +1437,7 @@ mod tests {
 
     mod output_sink {
         use super::super::*;
-        use crate::presentation::views::test_support;
+        use crate::presentation::views::testing;
         use crate::presentation::views::{CompositeSink, FileSink, TelemetrySink};
         use parking_lot::Mutex;
         use std::sync::Arc;
@@ -1469,8 +1469,8 @@ mod tests {
             let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
 
             let mut sink = StandardSink::new(
-                Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
             );
 
             let message = ResultMessage {
@@ -1494,8 +1494,8 @@ mod tests {
             let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
 
             let mut sink = StandardSink::new(
-                Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
+                Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer))),
+                Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer))),
             );
 
             let message = ProgressMessage {

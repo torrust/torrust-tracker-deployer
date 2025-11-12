@@ -92,5 +92,5 @@ mod verbosity;
 // Progress indicators module (moved from presentation root for clear ownership)
 pub mod progress;
 
-// Test support module (public for use in tests across the codebase)
-pub mod test_support;
+// Testing utilities module (public for use in tests across the codebase)
+pub mod testing;
