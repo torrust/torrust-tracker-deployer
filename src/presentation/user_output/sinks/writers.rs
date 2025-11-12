@@ -73,3 +73,85 @@ impl StderrWriter {
         writeln!(self.0, "{message}").ok();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::presentation::user_output::test_support;
+    use parking_lot::Mutex;
+    use std::sync::Arc;
+
+    #[test]
+    fn stdout_writer_should_wrap_writer() {
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+
+        let mut stdout = StdoutWriter::new(writer);
+        stdout.write_line("Test output");
+
+        let output = String::from_utf8(buffer.lock().clone()).unwrap();
+        assert_eq!(output, "Test output");
+    }
+
+    #[test]
+    fn stderr_writer_should_wrap_writer() {
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+
+        let mut stderr = StderrWriter::new(writer);
+        stderr.write_line("Test error");
+
+        let output = String::from_utf8(buffer.lock().clone()).unwrap();
+        assert_eq!(output, "Test error");
+    }
+
+    #[test]
+    fn stdout_writer_should_write_multiple_lines() {
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+
+        let mut stdout = StdoutWriter::new(writer);
+        stdout.write_line("Line 1\n");
+        stdout.write_line("Line 2\n");
+
+        let output = String::from_utf8(buffer.lock().clone()).unwrap();
+        assert_eq!(output, "Line 1\nLine 2\n");
+    }
+
+    #[test]
+    fn stderr_writer_should_write_multiple_lines() {
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+
+        let mut stderr = StderrWriter::new(writer);
+        stderr.write_line("Error 1\n");
+        stderr.write_line("Error 2\n");
+
+        let output = String::from_utf8(buffer.lock().clone()).unwrap();
+        assert_eq!(output, "Error 1\nError 2\n");
+    }
+
+    #[test]
+    fn stdout_writer_writeln_adds_newline() {
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+
+        let mut stdout = StdoutWriter::new(writer);
+        stdout.writeln("Test");
+
+        let output = String::from_utf8(buffer.lock().clone()).unwrap();
+        assert_eq!(output, "Test\n");
+    }
+
+    #[test]
+    fn stderr_writer_writeln_adds_newline() {
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+
+        let mut stderr = StderrWriter::new(writer);
+        stderr.writeln("Error");
+
+        let output = String::from_utf8(buffer.lock().clone()).unwrap();
+        assert_eq!(output, "Error\n");
+    }
+}
