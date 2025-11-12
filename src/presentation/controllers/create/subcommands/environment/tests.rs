@@ -4,7 +4,6 @@
 //! functionality, including integration tests and unit tests for helper functions.
 
 use std::fs;
-use std::path::Path;
 use std::sync::Arc;
 
 use tempfile::TempDir;
@@ -13,10 +12,9 @@ use super::errors::CreateEnvironmentCommandError;
 use super::handler::handle;
 use crate::bootstrap::Container;
 use crate::presentation::dispatch::ExecutionContext;
-use crate::presentation::user_output::test_support::TestUserOutput;
 use crate::presentation::user_output::VerbosityLevel;
 
-fn create_test_context(_working_dir: &Path) -> ExecutionContext {
+fn create_test_context() -> ExecutionContext {
     let container = Container::new(VerbosityLevel::Silent);
     ExecutionContext::new(Arc::new(container))
 }
@@ -46,8 +44,7 @@ fn it_should_create_environment_from_valid_config() {
     fs::write(&config_path, config_json).unwrap();
 
     let working_dir = temp_dir.path();
-    let _user_output = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-    let context = create_test_context(working_dir);
+    let context = create_test_context();
     let result = handle(&config_path, working_dir, &context);
 
     assert!(
@@ -71,8 +68,7 @@ fn it_should_return_error_for_missing_config_file() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("nonexistent.json");
     let working_dir = temp_dir.path();
-    let _user_output = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-    let context = create_test_context(working_dir);
+    let context = create_test_context();
 
     let result = handle(&config_path, working_dir, &context);
 
@@ -94,8 +90,7 @@ fn it_should_return_error_for_invalid_json() {
     fs::write(&config_path, r#"{"invalid json"#).unwrap();
 
     let working_dir = temp_dir.path();
-    let _user_output = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-    let context = create_test_context(working_dir);
+    let context = create_test_context();
     let result = handle(&config_path, working_dir, &context);
 
     assert!(result.is_err());
@@ -131,16 +126,14 @@ fn it_should_return_error_for_duplicate_environment() {
     fs::write(&config_path, config_json).unwrap();
 
     let working_dir = temp_dir.path();
-    let _user_output = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-    let context = create_test_context(working_dir);
+    let context = create_test_context();
 
     // Create environment first time
     let result1 = handle(&config_path, working_dir, &context);
     assert!(result1.is_ok(), "First create should succeed");
 
     // Try to create same environment again (use new context to avoid any state issues)
-    let _user_output2 = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-    let context2 = create_test_context(working_dir);
+    let context2 = create_test_context();
     let result2 = handle(&config_path, working_dir, &context2);
     assert!(result2.is_err(), "Second create should fail");
 
@@ -178,8 +171,7 @@ fn it_should_create_environment_in_custom_working_dir() {
     );
     fs::write(&config_path, config_json).unwrap();
 
-    let _user_output = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-    let context = create_test_context(&custom_working_dir);
+    let context = create_test_context();
     let result = handle(&config_path, &custom_working_dir, &context);
 
     assert!(result.is_ok(), "Should create in custom working dir");
