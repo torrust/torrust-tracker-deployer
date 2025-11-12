@@ -3,7 +3,10 @@
 //! This module provides centralized initialization of application-wide services
 //! that need consistent configuration across the entire application.
 
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::sync::Arc;
+
+use parking_lot::ReentrantMutex;
 
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
@@ -25,11 +28,11 @@ use crate::shared::SystemClock;
 ///
 /// let container = Container::new(VerbosityLevel::Normal);
 /// let user_output = container.user_output();
-/// user_output.lock().unwrap().success("Operation completed");
+/// user_output.lock().borrow_mut().success("Operation completed");
 /// ```
 #[derive(Clone)]
 pub struct Container {
-    user_output: Arc<Mutex<UserOutput>>,
+    user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     repository_factory: Arc<RepositoryFactory>,
     clock: Arc<dyn Clock>,
 }
@@ -60,7 +63,9 @@ impl Container {
     /// ```
     #[must_use]
     pub fn new(verbosity_level: VerbosityLevel) -> Self {
-        let user_output = Arc::new(Mutex::new(UserOutput::new(verbosity_level)));
+        let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(
+            verbosity_level,
+        ))));
         let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 
@@ -73,8 +78,10 @@ impl Container {
 
     /// Get shared reference to user output service
     ///
-    /// Returns an `Arc<Mutex<UserOutput>>` that can be cheaply cloned and shared
-    /// across threads and function calls. Lock the mutex to access the user output.
+    /// Returns an `Arc<ReentrantMutex<RefCell<UserOutput>>>` that can be safely cloned and shared
+    /// across threads and function calls. Use the reentrant lock to acquire access, then `borrow_mut()`
+    /// to get mutable access to the user output. The reentrant mutex prevents deadlocks when the
+    /// same thread needs to acquire the lock multiple times.
     ///
     /// # Example
     ///
@@ -84,10 +91,10 @@ impl Container {
     ///
     /// let container = Container::new(VerbosityLevel::Normal);
     /// let user_output = container.user_output();
-    /// user_output.lock().unwrap().success("Operation completed");
+    /// user_output.lock().borrow_mut().success("Operation completed");
     /// ```
     #[must_use]
-    pub fn user_output(&self) -> Arc<Mutex<UserOutput>> {
+    pub fn user_output(&self) -> Arc<ReentrantMutex<RefCell<UserOutput>>> {
         Arc::clone(&self.user_output)
     }
 

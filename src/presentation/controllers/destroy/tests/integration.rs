@@ -26,7 +26,8 @@ fn it_should_reject_invalid_environment_names() {
     ];
 
     for name in invalid_names {
-        let user_output = TestUserOutput::wrapped_silent();
+        let (user_output, _, _) =
+            TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped();
         let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
         let clock = Arc::new(SystemClock);
         let result = handle_destroy_command(
@@ -51,7 +52,7 @@ fn it_should_reject_invalid_environment_names() {
     // Test too long name separately due to String allocation
     // The actual max length depends on domain validation rules
     let too_long_name = "a".repeat(64);
-    let user_output = TestUserOutput::wrapped_silent();
+    let (user_output, _, _) = TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped();
     let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
     let clock = Arc::new(SystemClock);
     let result = handle_destroy_command(
@@ -79,7 +80,8 @@ fn it_should_accept_valid_environment_names() {
     ];
 
     for name in valid_names {
-        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let (user_output, _, _) =
+            TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
         let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
         let clock = Arc::new(SystemClock);
         let result = handle_destroy_command(
@@ -100,7 +102,7 @@ fn it_should_accept_valid_environment_names() {
 
     // Test max length separately due to String allocation
     let max_length_name = "a".repeat(63);
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+    let (user_output, _, _) = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
     let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
     let clock = Arc::new(SystemClock);
     let result = handle_destroy_command(
@@ -119,7 +121,7 @@ fn it_should_accept_valid_environment_names() {
 #[test]
 fn it_should_fail_for_nonexistent_environment() {
     let context = TestContext::new();
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+    let (user_output, _, _) = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
     let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
     let clock = Arc::new(SystemClock);
 

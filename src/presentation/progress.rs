@@ -15,12 +15,14 @@
 //! ## Example Usage
 //!
 //! ```rust
-//! use std::sync::{Arc, Mutex};
+//! use std::sync::Arc;
+//! use std::cell::RefCell;
+//! use parking_lot::ReentrantMutex;
 //! use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
 //! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+//! let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 //! let mut progress = ProgressReporter::new(output, 3);
 //!
 //! // Step 1: Load configuration
@@ -62,8 +64,11 @@
 //! ✅ Environment 'test-env' created successfully
 //! ```
 
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
+
+use parking_lot::ReentrantMutex;
 
 use thiserror::Error;
 
@@ -81,16 +86,6 @@ pub enum ProgressReporterError {
 Tip: This is a critical bug - please report it with full logs using --log-output file-and-stderr"
     )]
     UserOutputMutexPoisoned,
-
-    /// Failed to acquire `UserOutput` mutex within timeout
-    ///
-    /// Could not acquire the mutex for user output within the expected time.
-    /// This may indicate a deadlock or that another operation is taking too long.
-    #[error(
-        "Progress reporting timeout: Could not acquire output lock within expected time
-Tip: This may indicate a deadlock - try running with --test-threads=1 or report as a bug"
-    )]
-    UserOutputMutexTimeout,
 }
 
 /// Progress reporter for multi-step operations
@@ -101,12 +96,14 @@ Tip: This may indicate a deadlock - try running with --test-threads=1 or report 
 /// # Examples
 ///
 /// ```rust
-/// use std::sync::{Arc, Mutex};
+/// use std::sync::Arc;
+/// use std::cell::RefCell;
+/// use parking_lot::ReentrantMutex;
 /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
 /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+/// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 /// let mut progress = ProgressReporter::new(output, 2);
 ///
 /// progress.start_step("Step 1")?;
@@ -120,7 +117,7 @@ Tip: This may indicate a deadlock - try running with --test-threads=1 or report 
 /// # }
 /// ```
 pub struct ProgressReporter {
-    output: Arc<Mutex<UserOutput>>,
+    output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     total_steps: usize,
     current_step: usize,
     step_start: Option<Instant>,
@@ -137,15 +134,17 @@ impl ProgressReporter {
     /// # Examples
     ///
     /// ```rust
-    /// use std::sync::{Arc, Mutex};
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let progress = ProgressReporter::new(output, 5);
     /// ```
     #[must_use]
-    pub fn new(output: Arc<Mutex<UserOutput>>, total_steps: usize) -> Self {
+    pub fn new(output: Arc<ReentrantMutex<RefCell<UserOutput>>>, total_steps: usize) -> Self {
         Self {
             output,
             total_steps,
@@ -154,42 +153,19 @@ impl ProgressReporter {
         }
     }
 
-    /// Timeout for acquiring the `UserOutput` mutex (prevents deadlocks)
-    const OUTPUT_LOCK_TIMEOUT: Duration = Duration::from_millis(5000);
-
-    /// Acquire `UserOutput` mutex with timeout to prevent deadlocks
+    /// Execute a function with the locked `UserOutput`
     ///
-    /// Attempts to acquire the mutex within a reasonable timeout to avoid
-    /// indefinite blocking that can occur with nested mutex usage in test scenarios.
-    ///
-    /// # Errors
-    ///
-    /// * `ProgressReporterError::UserOutputMutexPoisoned` - Mutex was poisoned by a panic
-    /// * `ProgressReporterError::UserOutputMutexTimeout` - Could not acquire lock within timeout
-    fn acquire_output_with_timeout(
-        &self,
-    ) -> Result<std::sync::MutexGuard<'_, UserOutput>, ProgressReporterError> {
-        // Try immediate acquisition first (common case)
-        if let Ok(guard) = self.output.try_lock() {
-            return Ok(guard);
-        }
-
-        // Fall back to polling with timeout
-        let start = Instant::now();
-        while start.elapsed() < Self::OUTPUT_LOCK_TIMEOUT {
-            match self.output.try_lock() {
-                Ok(guard) => return Ok(guard),
-                Err(std::sync::TryLockError::Poisoned(_)) => {
-                    return Err(ProgressReporterError::UserOutputMutexPoisoned);
-                }
-                Err(std::sync::TryLockError::WouldBlock) => {
-                    // Brief sleep to avoid busy-waiting
-                    std::thread::sleep(Duration::from_millis(10));
-                }
-            }
-        }
-
-        Err(ProgressReporterError::UserOutputMutexTimeout)
+    /// With `ReentrantMutex`, we can safely lock multiple times on the same thread.
+    /// The `RefCell` provides interior mutability.
+    fn with_output<F, R>(&self, f: F) -> Result<R, ProgressReporterError>
+    where
+        F: FnOnce(&mut UserOutput) -> R,
+    {
+        let guard = self.output.lock();
+        let mut user_output = guard
+            .try_borrow_mut()
+            .map_err(|_| ProgressReporterError::UserOutputMutexPoisoned)?;
+        Ok(f(&mut user_output))
     }
 
     /// Start a new step with a description
@@ -208,12 +184,14 @@ impl ProgressReporter {
     /// # Examples
     ///
     /// ```rust
-    /// use std::sync::{Arc, Mutex};
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let mut progress = ProgressReporter::new(output, 3);
     ///
     /// progress.start_step("Loading configuration")?;
@@ -225,10 +203,12 @@ impl ProgressReporter {
         self.current_step += 1;
         self.step_start = Some(Instant::now());
 
-        self.acquire_output_with_timeout()?.progress(&format!(
-            "[{}/{}] {}...",
-            self.current_step, self.total_steps, description
-        ));
+        self.with_output(|output| {
+            output.progress(&format!(
+                "[{}/{}] {}...",
+                self.current_step, self.total_steps, description
+            ));
+        })?;
 
         Ok(())
     }
@@ -249,12 +229,14 @@ impl ProgressReporter {
     /// # Examples
     ///
     /// ```rust
-    /// use std::sync::{Arc, Mutex};
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let mut progress = ProgressReporter::new(output, 2);
     ///
     /// progress.start_step("Loading data")?;
@@ -270,13 +252,13 @@ impl ProgressReporter {
     pub fn complete_step(&mut self, result: Option<&str>) -> Result<(), ProgressReporterError> {
         if let Some(start) = self.step_start {
             let duration = start.elapsed();
-            let mut output = self.acquire_output_with_timeout()?;
-
-            if let Some(msg) = result {
-                output.result(&format!("  ✓ {} (took {})", msg, format_duration(duration)));
-            } else {
-                output.result(&format!("  ✓ Done (took {})", format_duration(duration)));
-            }
+            self.with_output(|output| {
+                if let Some(msg) = result {
+                    output.result(&format!("  ✓ {} (took {})", msg, format_duration(duration)));
+                } else {
+                    output.result(&format!("  ✓ Done (took {})", format_duration(duration)));
+                }
+            })?;
         }
 
         self.step_start = None;
@@ -299,12 +281,14 @@ impl ProgressReporter {
     /// # Examples
     ///
     /// ```rust
-    /// use std::sync::{Arc, Mutex};
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let mut progress = ProgressReporter::new(output.clone(), 1);
     ///
     /// progress.start_step("Provisioning infrastructure")?;
@@ -316,8 +300,9 @@ impl ProgressReporter {
     /// # }
     /// ```
     pub fn sub_step(&mut self, description: &str) -> Result<(), ProgressReporterError> {
-        self.acquire_output_with_timeout()?
-            .result(&format!("    → {description}"));
+        self.with_output(|output| {
+            output.result(&format!("    → {description}"));
+        })?;
         Ok(())
     }
 
@@ -337,12 +322,14 @@ impl ProgressReporter {
     /// # Examples
     ///
     /// ```rust
-    /// use std::sync::{Arc, Mutex};
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let mut progress = ProgressReporter::new(output.clone(), 1);
     ///
     /// progress.start_step("Creating environment")?;
@@ -353,7 +340,7 @@ impl ProgressReporter {
     /// # }
     /// ```
     pub fn complete(&mut self, summary: &str) -> Result<(), ProgressReporterError> {
-        self.acquire_output_with_timeout()?.success(summary);
+        self.with_output(|output| output.success(summary))?;
         Ok(())
     }
 
@@ -365,19 +352,21 @@ impl ProgressReporter {
     /// # Examples
     ///
     /// ```rust
-    /// use std::sync::{Arc, Mutex};
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
-    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let mut progress = ProgressReporter::new(output.clone(), 1);
     ///
     /// progress.start_step("Checking conditions");
-    /// progress.output().lock().unwrap().warn("Some non-critical warning");
+    /// progress.output().lock().borrow_mut().warn("Some non-critical warning");
     /// progress.complete_step(None);
     /// ```
     #[must_use]
-    pub fn output(&self) -> &Arc<Mutex<UserOutput>> {
+    pub fn output(&self) -> &Arc<ReentrantMutex<RefCell<UserOutput>>> {
         &self.output
     }
 
@@ -394,12 +383,14 @@ impl ProgressReporter {
     /// # Examples
     ///
     /// ```rust
-    /// use std::sync::{Arc, Mutex};
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let mut progress = ProgressReporter::new(output, 3);
     ///
     /// progress.blank_line()?;
@@ -407,8 +398,7 @@ impl ProgressReporter {
     /// # }
     /// ```
     pub fn blank_line(&self) -> Result<(), ProgressReporterError> {
-        let mut output = self.acquire_output_with_timeout()?;
-        output.blank_line();
+        self.with_output(UserOutput::blank_line)?;
         Ok(())
     }
 
@@ -430,12 +420,14 @@ impl ProgressReporter {
     /// # Examples
     ///
     /// ```rust
-    /// use std::sync::{Arc, Mutex};
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let mut progress = ProgressReporter::new(output, 3);
     ///
     /// progress.steps("Next steps:", &[
@@ -447,8 +439,7 @@ impl ProgressReporter {
     /// # }
     /// ```
     pub fn steps(&self, title: &str, steps: &[&str]) -> Result<(), ProgressReporterError> {
-        let mut output = self.acquire_output_with_timeout()?;
-        output.steps(title, steps);
+        self.with_output(|output| output.steps(title, steps))?;
         Ok(())
     }
 }
@@ -484,7 +475,7 @@ mod tests {
     #[test]
     fn it_should_create_progress_reporter_with_total_steps() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, _stdout, _stderr) = test_output.into_wrapped();
+        let (output, _stdout, _stderr) = test_output.into_reentrant_wrapped();
         let progress = ProgressReporter::new(output, 5);
 
         assert_eq!(progress.total_steps, 5);
@@ -495,7 +486,7 @@ mod tests {
     #[test]
     fn it_should_start_step_and_increment_counter() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, _stdout, stderr) = test_output.into_wrapped();
+        let (output, _stdout, stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 3);
 
         progress
@@ -505,14 +496,14 @@ mod tests {
         assert_eq!(progress.current_step, 1);
         assert!(progress.step_start.is_some());
 
-        let stderr_content = String::from_utf8(stderr.lock().unwrap().clone()).unwrap();
+        let stderr_content = String::from_utf8(stderr.lock().clone()).unwrap();
         assert!(stderr_content.contains("[1/3] Loading configuration..."));
     }
 
     #[test]
     fn it_should_track_multiple_steps() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, _stdout, stderr) = test_output.into_wrapped();
+        let (output, _stdout, stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 3);
 
         progress
@@ -530,7 +521,7 @@ mod tests {
             .expect("Failed to start step 3");
         assert_eq!(progress.current_step, 3);
 
-        let stderr_content = String::from_utf8(stderr.lock().unwrap().clone()).unwrap();
+        let stderr_content = String::from_utf8(stderr.lock().clone()).unwrap();
         assert!(stderr_content.contains("[1/3] Step 1..."));
         assert!(stderr_content.contains("[2/3] Step 2..."));
         assert!(stderr_content.contains("[3/3] Step 3..."));
@@ -539,7 +530,7 @@ mod tests {
     #[test]
     fn it_should_complete_step_with_result_message() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, stdout, _stderr) = test_output.into_wrapped();
+        let (output, stdout, _stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -549,7 +540,7 @@ mod tests {
             .complete_step(Some("Data loaded successfully"))
             .expect("Failed to complete step");
 
-        let stdout_content = String::from_utf8(stdout.lock().unwrap().clone()).unwrap();
+        let stdout_content = String::from_utf8(stdout.lock().clone()).unwrap();
         assert!(stdout_content.contains("✓ Data loaded successfully"));
         assert!(stdout_content.contains("took"));
         assert!(progress.step_start.is_none());
@@ -558,7 +549,7 @@ mod tests {
     #[test]
     fn it_should_complete_step_without_result_message() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, stdout, _stderr) = test_output.into_wrapped();
+        let (output, stdout, _stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -568,7 +559,7 @@ mod tests {
             .complete_step(None)
             .expect("Failed to complete step");
 
-        let stdout_content = String::from_utf8(stdout.lock().unwrap().clone()).unwrap();
+        let stdout_content = String::from_utf8(stdout.lock().clone()).unwrap();
         assert!(stdout_content.contains("✓ Done"));
         assert!(stdout_content.contains("took"));
         assert!(progress.step_start.is_none());
@@ -577,7 +568,7 @@ mod tests {
     #[test]
     fn it_should_report_sub_steps() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, stdout, _stderr) = test_output.into_wrapped();
+        let (output, stdout, _stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -593,7 +584,7 @@ mod tests {
             .complete_step(None)
             .expect("Failed to complete step");
 
-        let stdout_content = String::from_utf8(stdout.lock().unwrap().clone()).unwrap();
+        let stdout_content = String::from_utf8(stdout.lock().clone()).unwrap();
         assert!(stdout_content.contains("→ Creating VM"));
         assert!(stdout_content.contains("→ Configuring network"));
     }
@@ -601,7 +592,7 @@ mod tests {
     #[test]
     fn it_should_display_completion_summary() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, _stdout, stderr) = test_output.into_wrapped();
+        let (output, _stdout, stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -614,30 +605,28 @@ mod tests {
             .complete("Environment created successfully")
             .expect("Failed to complete");
 
-        let stderr_content = String::from_utf8(stderr.lock().unwrap().clone()).unwrap();
+        let stderr_content = String::from_utf8(stderr.lock().clone()).unwrap();
         assert!(stderr_content.contains("✅ Environment created successfully"));
     }
 
     #[test]
     fn it_should_provide_access_to_output() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, _stdout, stderr) = test_output.into_wrapped();
-        let progress = ProgressReporter::new(output, 1);
+        let (output, _stdout, stderr) = test_output.into_reentrant_wrapped();
+        let progress = ProgressReporter::new(output.clone(), 1);
 
         progress
-            .output()
-            .lock()
-            .expect("UserOutput mutex poisoned")
-            .warn("Test warning");
+            .with_output(|user_output| user_output.warn("Test warning"))
+            .expect("Failed to write to output");
 
-        let stderr_content = String::from_utf8(stderr.lock().unwrap().clone()).unwrap();
+        let stderr_content = String::from_utf8(stderr.lock().clone()).expect("Invalid UTF-8");
         assert!(stderr_content.contains("⚠️  Test warning"));
     }
 
     #[test]
     fn it_should_respect_verbosity_levels() {
         let test_output = TestUserOutput::new(VerbosityLevel::Quiet);
-        let (output, _stdout, stderr) = test_output.into_wrapped();
+        let (output, _stdout, stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress.start_step("Step 1").expect("Failed to start step");
@@ -646,7 +635,7 @@ mod tests {
             .expect("Failed to complete step");
 
         // At Quiet level, progress messages should not appear
-        let stderr_content = String::from_utf8(stderr.lock().unwrap().clone()).unwrap();
+        let stderr_content = String::from_utf8(stderr.lock().clone()).expect("Invalid UTF-8");
         assert_eq!(stderr_content, "");
     }
 
@@ -674,7 +663,7 @@ mod tests {
     #[test]
     fn it_should_handle_full_workflow() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, stdout, stderr) = test_output.into_wrapped();
+        let (output, stdout, stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 3);
 
         // Step 1
@@ -712,13 +701,13 @@ mod tests {
             .complete("Environment 'test-env' created successfully")
             .expect("Failed to complete");
 
-        let stderr_content = String::from_utf8(stderr.lock().unwrap().clone()).unwrap();
+        let stderr_content = String::from_utf8(stderr.lock().clone()).expect("Invalid UTF-8");
         assert!(stderr_content.contains("[1/3] Loading configuration..."));
         assert!(stderr_content.contains("[2/3] Provisioning infrastructure..."));
         assert!(stderr_content.contains("[3/3] Finalizing environment..."));
         assert!(stderr_content.contains("✅ Environment 'test-env' created successfully"));
 
-        let stdout_content = String::from_utf8(stdout.lock().unwrap().clone()).unwrap();
+        let stdout_content = String::from_utf8(stdout.lock().clone()).expect("Invalid UTF-8");
         assert!(stdout_content.contains("✓ Configuration loaded: test-env"));
         assert!(stdout_content.contains("→ Creating virtual machine"));
         assert!(stdout_content.contains("→ Configuring network"));

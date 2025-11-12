@@ -3,8 +3,11 @@
 //! This module handles the environment creation command execution at the presentation layer,
 //! including configuration loading, validation, and user interaction.
 
+use std::cell::RefCell;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+
+use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::application::command_handlers::CreateCommandHandler;
@@ -173,7 +176,7 @@ pub fn handle_environment_creation_command(
     working_dir: &Path,
     repository_factory: &Arc<RepositoryFactory>,
     clock: &Arc<dyn Clock>,
-    user_output: &Arc<Mutex<UserOutput>>,
+    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
 ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
     CreateEnvironmentCommandController::new(repository_factory.clone(), clock.clone(), user_output)
         .execute(env_file, working_dir)
@@ -216,7 +219,7 @@ impl CreateEnvironmentCommandController {
     pub fn new(
         repository_factory: Arc<RepositoryFactory>,
         clock: Arc<dyn Clock>,
-        user_output: &Arc<Mutex<UserOutput>>,
+        user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
         let progress =
             ProgressReporter::new(user_output.clone(), ENVIRONMENT_CREATION_WORKFLOW_STEPS);

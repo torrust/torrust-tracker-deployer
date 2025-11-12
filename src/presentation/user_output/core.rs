@@ -510,7 +510,8 @@ mod tests {
 
     mod type_safe_wrappers {
         use super::*;
-        use std::sync::{Arc, Mutex};
+        use parking_lot::Mutex;
+        use std::sync::Arc;
 
         #[test]
         fn stdout_writer_should_wrap_writer() {
@@ -520,7 +521,7 @@ mod tests {
             let mut stdout = StdoutWriter::new(writer);
             stdout.write_line("Test output");
 
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+            let output = String::from_utf8(buffer.lock().clone()).unwrap();
             assert_eq!(output, "Test output");
         }
 
@@ -532,7 +533,7 @@ mod tests {
             let mut stderr = StderrWriter::new(writer);
             stderr.write_line("Test error");
 
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+            let output = String::from_utf8(buffer.lock().clone()).unwrap();
             assert_eq!(output, "Test error");
         }
 
@@ -545,7 +546,7 @@ mod tests {
             stdout.write_line("Line 1\n");
             stdout.write_line("Line 2\n");
 
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+            let output = String::from_utf8(buffer.lock().clone()).unwrap();
             assert_eq!(output, "Line 1\nLine 2\n");
         }
 
@@ -558,7 +559,7 @@ mod tests {
             stderr.write_line("Error 1\n");
             stderr.write_line("Error 2\n");
 
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+            let output = String::from_utf8(buffer.lock().clone()).unwrap();
             assert_eq!(output, "Error 1\nError 2\n");
         }
 
@@ -578,8 +579,8 @@ mod tests {
             stdout.write_line("stdout data");
             stderr.write_line("stderr message");
 
-            let stdout_output = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
-            let stderr_output = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stdout_output = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
+            let stderr_output = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
 
             assert_eq!(stdout_output, "stdout data");
             assert_eq!(stderr_output, "stderr message");
@@ -612,7 +613,7 @@ mod tests {
             let mut stdout = StdoutWriter::new(writer);
             stdout.writeln("Test");
 
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+            let output = String::from_utf8(buffer.lock().clone()).unwrap();
             assert_eq!(output, "Test\n");
         }
 
@@ -624,7 +625,7 @@ mod tests {
             let mut stderr = StderrWriter::new(writer);
             stderr.writeln("Error");
 
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+            let output = String::from_utf8(buffer.lock().clone()).unwrap();
             assert_eq!(output, "Error\n");
         }
     }
@@ -933,11 +934,10 @@ mod tests {
 
     #[test]
     fn it_should_not_write_steps_at_quiet_level() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
+        let test_output =
+            test_support::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
 
-        test_output
-            .output
-            .steps("Next steps:", &["Step 1", "Step 2"]);
+        test_output.steps("Next steps:", &["Step 1", "Step 2"]);
 
         // Verify no output at Quiet level
         assert_eq!(test_output.stderr(), "");
@@ -967,11 +967,10 @@ mod tests {
 
     #[test]
     fn it_should_not_write_info_block_at_quiet_level() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
+        let test_output =
+            test_support::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
 
-        test_output
-            .output
-            .info_block("Info:", &["Line 1", "Line 2"]);
+        test_output.info_block("Info:", &["Line 1", "Line 2"]);
 
         // Verify no output at Quiet level
         assert_eq!(test_output.stderr(), "");
@@ -1399,7 +1398,8 @@ mod tests {
         use super::super::*;
         use crate::presentation::user_output::formatters::JsonFormatter;
         use crate::presentation::user_output::test_support::{self, TestUserOutput};
-        use std::sync::{Arc, Mutex};
+        use parking_lot::Mutex;
+        use std::sync::Arc;
 
         // Custom test formatter to verify override is applied
         struct TestFormatter {
@@ -1433,7 +1433,7 @@ mod tests {
 
             output.progress("Test message");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             assert_eq!(stderr, "[TEST] [INFO] Test message\n");
         }
 
@@ -1466,7 +1466,7 @@ mod tests {
 
             output.progress("Test message");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
 
             // Parse JSON to verify structure (trim to remove trailing newline)
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).expect("Valid JSON");
@@ -1500,7 +1500,7 @@ mod tests {
             output.warn("Warning");
             output.error("Error");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let lines: Vec<&str> = stderr.lines().collect();
 
             let progress_json: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
@@ -1536,8 +1536,8 @@ mod tests {
             output.progress("Stderr message");
             output.result("Stdout message");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
-            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
+            let stdout = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
 
             let stderr_json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
             assert_eq!(stderr_json["channel"], "Stderr");
@@ -1565,7 +1565,7 @@ mod tests {
 
             output.progress("Test");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             // Content should not have trailing newline
@@ -1593,7 +1593,7 @@ mod tests {
 
             output.progress("Test");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             // Content should reflect plain theme
@@ -1620,13 +1620,13 @@ mod tests {
             // Normal-level message should be filtered at Quiet level
             output.progress("Should not appear");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             assert_eq!(stderr, "");
 
             // Quiet-level message should appear
             output.error("Should appear");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
             assert_eq!(json["type"], "ErrorMessage");
         }
@@ -1650,7 +1650,7 @@ mod tests {
 
             output.progress("Test");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             assert_eq!(json["type"], "ProgressMessage");
@@ -1675,7 +1675,7 @@ mod tests {
 
             output.steps("Next steps:", &["Step 1", "Step 2"]);
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             assert_eq!(json["type"], "StepsMessage");
@@ -1713,14 +1713,14 @@ mod tests {
             output.steps("Steps:", &["Step 1"]);
 
             // Verify all stderr messages are valid JSON
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             for line in stderr.lines() {
                 let json: Result<serde_json::Value, _> = serde_json::from_str(line);
                 assert!(json.is_ok(), "Invalid JSON: {line}");
             }
 
             // Verify stdout message is valid JSON
-            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
+            let stdout = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
             let json: Result<serde_json::Value, _> = serde_json::from_str(stdout.trim());
             assert!(json.is_ok(), "Invalid JSON in stdout");
         }
@@ -2102,7 +2102,8 @@ mod tests {
 
         #[test]
         fn it_should_work_with_json_formatter() {
-            use std::sync::{Arc, Mutex};
+            use parking_lot::Mutex;
+            use std::sync::Arc;
 
             let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
             let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
@@ -2121,7 +2122,7 @@ mod tests {
             let message = StepsMessage::builder("Steps").add("Step 1").build();
             output.write(&message);
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             assert_eq!(json["type"], "StepsMessage");
@@ -2129,7 +2130,8 @@ mod tests {
 
         #[test]
         fn it_should_work_with_info_block_json_formatter() {
-            use std::sync::{Arc, Mutex};
+            use parking_lot::Mutex;
+            use std::sync::Arc;
 
             let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
             let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
@@ -2148,7 +2150,7 @@ mod tests {
             let message = InfoBlockMessage::builder("Info").add_line("Line 1").build();
             output.write(&message);
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             assert_eq!(json["type"], "InfoBlockMessage");
@@ -2189,7 +2191,8 @@ mod tests {
         use super::super::*;
         use crate::presentation::user_output::test_support;
         use crate::presentation::user_output::{CompositeSink, FileSink, TelemetrySink};
-        use std::sync::{Arc, Mutex};
+        use parking_lot::Mutex;
+        use std::sync::Arc;
 
         /// Mock sink for testing that captures messages
         struct MockSink {
@@ -2204,7 +2207,7 @@ mod tests {
 
         impl OutputSink for MockSink {
             fn write_message(&mut self, _message: &dyn OutputMessage, formatted: &str) {
-                self.messages.lock().unwrap().push(formatted.to_string());
+                self.messages.lock().push(formatted.to_string());
             }
         }
 
@@ -2230,8 +2233,8 @@ mod tests {
 
             sink.write_message(&message, &formatted);
 
-            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stdout = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
 
             assert_eq!(stdout, "Test result\n");
             assert_eq!(stderr, "");
@@ -2255,8 +2258,8 @@ mod tests {
 
             sink.write_message(&message, &formatted);
 
-            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stdout = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
 
             assert_eq!(stdout, "");
             assert_eq!(stderr, "⏳ Test progress\n");
@@ -2293,13 +2296,13 @@ mod tests {
             composite.write_message(&message, &formatted);
 
             // Verify all sinks received the message
-            assert_eq!(messages1.lock().unwrap().len(), 1);
-            assert_eq!(messages2.lock().unwrap().len(), 1);
-            assert_eq!(messages3.lock().unwrap().len(), 1);
+            assert_eq!(messages1.lock().len(), 1);
+            assert_eq!(messages2.lock().len(), 1);
+            assert_eq!(messages3.lock().len(), 1);
 
-            assert_eq!(messages1.lock().unwrap()[0], "⏳ Test\n");
-            assert_eq!(messages2.lock().unwrap()[0], "⏳ Test\n");
-            assert_eq!(messages3.lock().unwrap()[0], "⏳ Test\n");
+            assert_eq!(messages1.lock()[0], "⏳ Test\n");
+            assert_eq!(messages2.lock()[0], "⏳ Test\n");
+            assert_eq!(messages3.lock()[0], "⏳ Test\n");
         }
 
         #[test]
@@ -2336,8 +2339,8 @@ mod tests {
             composite.write_message(&message, &formatted);
 
             // Verify both sinks received the message
-            assert_eq!(messages1.lock().unwrap().len(), 1);
-            assert_eq!(messages2.lock().unwrap().len(), 1);
+            assert_eq!(messages1.lock().len(), 1);
+            assert_eq!(messages2.lock().len(), 1);
         }
 
         #[test]
@@ -2365,7 +2368,7 @@ mod tests {
             composite.write_message(&msg3, &msg3.format(&theme));
 
             // Verify all messages were received
-            let captured = messages.lock().unwrap();
+            let captured = messages.lock();
             assert_eq!(captured.len(), 3);
             assert_eq!(captured[0], "⏳ First\n");
             assert_eq!(captured[1], "✅ Second\n");
@@ -2387,7 +2390,7 @@ mod tests {
             output.success("Success message");
             output.error("Error message");
 
-            let captured = messages.lock().unwrap();
+            let captured = messages.lock();
             assert_eq!(captured.len(), 3);
             assert!(captured[0].contains("Progress message"));
             assert!(captured[1].contains("Success message"));
@@ -2409,10 +2412,10 @@ mod tests {
             output.progress("Test message");
 
             // Verify both sinks received the message
-            assert_eq!(messages1.lock().unwrap().len(), 1);
-            assert_eq!(messages2.lock().unwrap().len(), 1);
-            assert!(messages1.lock().unwrap()[0].contains("Test message"));
-            assert!(messages2.lock().unwrap()[0].contains("Test message"));
+            assert_eq!(messages1.lock().len(), 1);
+            assert_eq!(messages2.lock().len(), 1);
+            assert!(messages1.lock()[0].contains("Test message"));
+            assert!(messages2.lock()[0].contains("Test message"));
         }
 
         #[test]
@@ -2428,7 +2431,7 @@ mod tests {
             // Quiet-level message should appear
             output.error("Should appear");
 
-            let captured = messages.lock().unwrap();
+            let captured = messages.lock();
             assert_eq!(captured.len(), 1);
             assert!(captured[0].contains("Should appear"));
         }
@@ -2442,7 +2445,7 @@ mod tests {
 
             output.progress("Test");
 
-            let captured = messages.lock().unwrap();
+            let captured = messages.lock();
             // Should use emoji theme by default
             assert!(captured[0].contains("⏳"));
         }

@@ -334,7 +334,6 @@ mod tests {
     fn it_should_have_help_for_all_error_variants() {
         use crate::application::command_handlers::create::config::CreateConfigError;
         use crate::domain::EnvironmentNameError;
-        use crate::presentation::progress::ProgressReporterError;
 
         let errors: Vec<CreateEnvironmentCommandError> = vec![
             CreateEnvironmentCommandError::ConfigFileNotFound {
@@ -355,9 +354,6 @@ mod tests {
                 ),
             },
             CreateEnvironmentCommandError::UserOutputLockFailed,
-            CreateEnvironmentCommandError::ProgressReportingFailed {
-                source: ProgressReporterError::UserOutputMutexPoisoned,
-            },
         ];
 
         for error in errors {
