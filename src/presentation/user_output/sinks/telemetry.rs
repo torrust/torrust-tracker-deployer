@@ -41,3 +41,14 @@ impl OutputSink for TelemetrySink {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn telemetry_sink_should_create_with_endpoint() {
+        let sink = TelemetrySink::new("https://example.com".to_string());
+        assert_eq!(sink.endpoint(), "https://example.com");
+    }
+}

@@ -28,3 +28,32 @@ impl OutputMessage for ResultMessage {
         "ResultMessage"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn result_message_should_use_stdout_channel() {
+        let message = ResultMessage {
+            text: "Output data".to_string(),
+        };
+
+        assert_eq!(message.channel(), Channel::Stdout);
+    }
+
+    #[test]
+    fn result_message_should_not_include_symbols() {
+        let theme = Theme::emoji();
+        let message = ResultMessage {
+            text: "Plain output".to_string(),
+        };
+
+        let formatted = message.format(&theme);
+
+        // Result messages should not include theme symbols
+        assert!(!formatted.contains("⏳"));
+        assert!(!formatted.contains("✅"));
+        assert_eq!(formatted, "Plain output\n");
+    }
+}

@@ -28,3 +28,21 @@ impl OutputMessage for WarningMessage {
         "WarningMessage"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn warning_message_should_include_extra_space() {
+        let theme = Theme::emoji();
+        let message = WarningMessage {
+            text: "Warning text".to_string(),
+        };
+
+        let formatted = message.format(&theme);
+
+        // Warning messages include two spaces after the symbol
+        assert_eq!(formatted, "⚠️  Warning text\n");
+    }
+}
