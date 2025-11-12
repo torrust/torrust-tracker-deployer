@@ -1,5 +1,7 @@
 Tracker Deploy - AI Assistant Instructions
 
+**Repository**: [torrust/torrust-tracker-deployer](https://github.com/torrust/torrust-tracker-deployer)
+
 ## 📋 Project Overview
 
 This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. It uses OpenTofu (Terraform), Ansible, and Rust to provision and manage deployment environments with LXD VM instances.
@@ -19,7 +21,7 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 
 ## 📁 Key Directories
 
-- `src/` - Rust source code organized by DDD layers (`domain/`, `application/`, `infrastructure/`, `shared/`)
+- `src/` - Rust source code organized by DDD layers (`domain/`, `application/`, `infrastructure/`, `presentation/`, `shared/`)
 - `src/bin/` - Binary executables (linter, E2E tests, dependency installer)
 - `data/` - Environment-specific data and source templates
 - `templates/` - Generated template examples and test fixtures
