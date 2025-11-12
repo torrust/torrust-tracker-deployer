@@ -17,7 +17,7 @@ use super::super::{FormatterOverride, OutputMessage};
 /// # Examples
 ///
 /// ```rust,ignore
-/// use torrust_tracker_deployer_lib::presentation::user_output::{JsonFormatter, UserOutput, VerbosityLevel};
+/// use torrust_tracker_deployer_lib::presentation::views::{JsonFormatter, UserOutput, VerbosityLevel};
 ///
 /// let formatter = JsonFormatter;
 /// let mut output = UserOutput::with_formatter_override(

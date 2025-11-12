@@ -22,7 +22,7 @@ use super::{Channel, Theme, VerbosityLevel};
 /// # Examples
 ///
 /// ```rust,ignore
-/// use torrust_tracker_deployer_lib::presentation::user_output::{OutputMessage, Theme, VerbosityLevel, Channel};
+/// use torrust_tracker_deployer_lib::presentation::views::{OutputMessage, Theme, VerbosityLevel, Channel};
 ///
 /// struct CustomMessage {
 ///     text: String,
@@ -114,7 +114,7 @@ pub trait OutputMessage {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use torrust_tracker_deployer_lib::presentation::user_output::{FormatterOverride, OutputMessage};
+/// use torrust_tracker_deployer_lib::presentation::views::{FormatterOverride, OutputMessage};
 ///
 /// struct JsonFormatter;
 ///
@@ -157,7 +157,7 @@ pub trait FormatterOverride: Send + Sync {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use torrust_tracker_deployer_lib::presentation::user_output::{OutputSink, OutputMessage};
+/// use torrust_tracker_deployer_lib::presentation::views::{OutputSink, OutputMessage};
 /// use std::fs::File;
 ///
 /// struct FileSink {

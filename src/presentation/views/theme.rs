@@ -18,7 +18,7 @@
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+/// use torrust_tracker_deployer_lib::presentation::views::Theme;
 ///
 /// // Use emoji theme (default)
 /// let theme = Theme::emoji();
@@ -50,7 +50,7 @@ impl Theme {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+    /// use torrust_tracker_deployer_lib::presentation::views::Theme;
     ///
     /// let theme = Theme::emoji();
     /// assert_eq!(theme.progress_symbol(), "⏳");
@@ -77,7 +77,7 @@ impl Theme {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+    /// use torrust_tracker_deployer_lib::presentation::views::Theme;
     ///
     /// let theme = Theme::plain();
     /// assert_eq!(theme.progress_symbol(), "[INFO]");
@@ -104,7 +104,7 @@ impl Theme {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+    /// use torrust_tracker_deployer_lib::presentation::views::Theme;
     ///
     /// let theme = Theme::ascii();
     /// assert_eq!(theme.progress_symbol(), "=>");
@@ -153,7 +153,7 @@ impl Default for Theme {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::Theme;
+    /// use torrust_tracker_deployer_lib::presentation::views::Theme;
     ///
     /// let theme = Theme::default();
     /// assert_eq!(theme.progress_symbol(), "⏳");

@@ -1,8 +1,9 @@
-//! User-facing output handling
+//! Views Layer - User Interface Output
 //!
-//! This module provides user-facing output functionality separate from internal logging.
-//! It implements a dual-channel strategy following Unix conventions and modern CLI best practices
-//! (similar to cargo, docker, npm):
+//! This module implements the Views layer of the MVC presentation architecture, handling
+//! user-facing output formatting and presentation. It provides clean separation between
+//! internal logging and user interface output, implementing a dual-channel strategy
+//! following Unix conventions and modern CLI best practices (similar to cargo, docker, npm):
 //!
 //! - **stdout (Results Channel)**: Final results, structured data, output for piping/redirection
 //! - **stderr (Progress/Operational Channel)**: Progress updates, status messages, warnings, errors
@@ -38,7 +39,7 @@
 //! ## Example Usage
 //!
 //! ```rust
-//! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+//! use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 //!
 //! let mut output = UserOutput::new(VerbosityLevel::Normal);
 //!

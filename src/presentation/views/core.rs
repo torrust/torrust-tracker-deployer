@@ -25,7 +25,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let output = UserOutput::new(VerbosityLevel::Normal);
     /// ```
@@ -42,7 +42,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel, Theme};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel, Theme};
     ///
     /// // Use plain text theme for CI/CD
     /// let output = UserOutput::with_theme(VerbosityLevel::Normal, Theme::plain());
@@ -64,7 +64,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{
+    /// use torrust_tracker_deployer_lib::presentation::views::{
     ///     UserOutput, VerbosityLevel, CompositeSink, StandardSink, FileSink
     /// };
     ///
@@ -99,7 +99,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel, Theme};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel, Theme};
     /// use std::io::Cursor;
     ///
     /// let stdout_buf = Vec::new();
@@ -135,7 +135,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{
+    /// use torrust_tracker_deployer_lib::presentation::views::{
     ///     UserOutput, VerbosityLevel, JsonFormatter
     /// };
     ///
@@ -167,7 +167,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{
+    /// use torrust_tracker_deployer_lib::presentation::views::{
     ///     UserOutput, VerbosityLevel, Theme, JsonFormatter
     /// };
     ///
@@ -199,7 +199,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     /// use std::io::Cursor;
     ///
     /// let stdout_buf = Vec::new();
@@ -230,7 +230,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel, ProgressMessage};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel, ProgressMessage};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.write(&ProgressMessage {
@@ -271,7 +271,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.progress("Starting long operation...");
@@ -292,7 +292,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.progress("Destroying environment...");
@@ -311,7 +311,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.success("Environment destroyed successfully");
@@ -328,7 +328,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.warn("Infrastructure may already be destroyed");
@@ -347,7 +347,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Quiet);
     /// output.error("Failed to destroy environment");
@@ -367,7 +367,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.result("Deployment complete");
@@ -387,7 +387,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.data(r#"{"status": "destroyed", "environment": "test"}"#);
@@ -404,7 +404,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.success("Configuration template generated");
@@ -440,7 +440,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.steps("Next steps:", &[
@@ -468,7 +468,7 @@ impl UserOutput {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Normal);
     /// output.info_block("Configuration options:", &[
@@ -496,13 +496,13 @@ mod tests {
 
     // These imports are used by nested test modules
     #[allow(unused_imports)]
-    use crate::presentation::user_output::formatters::JsonFormatter;
+    use crate::presentation::views::formatters::JsonFormatter;
     #[allow(unused_imports)]
-    use crate::presentation::user_output::sinks::writers::{StderrWriter, StdoutWriter};
+    use crate::presentation::views::sinks::writers::{StderrWriter, StdoutWriter};
     #[allow(unused_imports)]
-    use crate::presentation::user_output::sinks::{CompositeSink, FileSink, TelemetrySink};
+    use crate::presentation::views::sinks::{CompositeSink, FileSink, TelemetrySink};
     #[allow(unused_imports)]
-    use crate::presentation::user_output::test_support::{self, TestUserOutput, TestWriter};
+    use crate::presentation::views::test_support::{self, TestUserOutput, TestWriter};
 
     // ============================================================================
     // Type-Safe Writer Wrapper Tests
@@ -808,7 +808,7 @@ mod tests {
 
     mod output_message_trait {
         use super::super::*;
-        use crate::presentation::user_output::test_support::TestUserOutput;
+        use crate::presentation::views::test_support::TestUserOutput;
 
         #[test]
         fn user_output_write_should_respect_verbosity_filter() {
@@ -938,7 +938,7 @@ mod tests {
 
     mod user_output_with_themes {
         use super::super::*;
-        use crate::presentation::user_output::test_support::TestUserOutput;
+        use crate::presentation::views::test_support::TestUserOutput;
 
         #[test]
         fn it_should_use_emoji_theme_by_default() {
@@ -999,8 +999,8 @@ mod tests {
 
     mod formatter_override {
         use super::super::*;
-        use crate::presentation::user_output::formatters::JsonFormatter;
-        use crate::presentation::user_output::test_support::{self, TestUserOutput};
+        use crate::presentation::views::formatters::JsonFormatter;
+        use crate::presentation::views::test_support::{self, TestUserOutput};
         use parking_lot::Mutex;
         use std::sync::Arc;
 
@@ -1335,7 +1335,7 @@ mod tests {
 
     mod buffering {
         use super::super::*;
-        use crate::presentation::user_output::test_support::TestUserOutput;
+        use crate::presentation::views::test_support::TestUserOutput;
 
         #[test]
         fn it_should_flush_all_writers() {
@@ -1437,8 +1437,8 @@ mod tests {
 
     mod output_sink {
         use super::super::*;
-        use crate::presentation::user_output::test_support;
-        use crate::presentation::user_output::{CompositeSink, FileSink, TelemetrySink};
+        use crate::presentation::views::test_support;
+        use crate::presentation::views::{CompositeSink, FileSink, TelemetrySink};
         use parking_lot::Mutex;
         use std::sync::Arc;
 

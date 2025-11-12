@@ -10,7 +10,7 @@ use parking_lot::ReentrantMutex;
 
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+use crate::presentation::views::{UserOutput, VerbosityLevel};
 use crate::shared::clock::Clock;
 use crate::shared::SystemClock;
 
@@ -24,7 +24,7 @@ use crate::shared::SystemClock;
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// let container = Container::new(VerbosityLevel::Normal);
 /// let user_output = container.user_output();
@@ -53,7 +53,7 @@ impl Container {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     ///
     /// // For normal application use
     /// let container = Container::new(VerbosityLevel::Normal);
@@ -87,7 +87,7 @@ impl Container {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     ///
     /// let container = Container::new(VerbosityLevel::Normal);
     /// let user_output = container.user_output();
@@ -107,7 +107,7 @@ impl Container {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     ///
     /// let container = Container::new(VerbosityLevel::Normal);
     /// let repository_factory = container.repository_factory();
@@ -127,7 +127,7 @@ impl Container {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     ///
     /// let container = Container::new(VerbosityLevel::Normal);
     /// let clock = container.clock();

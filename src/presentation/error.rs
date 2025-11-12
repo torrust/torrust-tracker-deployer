@@ -31,10 +31,10 @@
 //! use std::sync::Arc;
 //! use std::cell::RefCell;
 //! use parking_lot::ReentrantMutex;
-//! use torrust_tracker_deployer_lib::presentation::{error, user_output};
+//! use torrust_tracker_deployer_lib::presentation::{error, views};
 //! use torrust_tracker_deployer_lib::presentation::errors::CommandError;
 //!
-//! # fn example(error: CommandError, user_output: Arc<ReentrantMutex<RefCell<user_output::UserOutput>>>) {
+//! # fn example(error: CommandError, user_output: Arc<ReentrantMutex<RefCell<views::UserOutput>>>) {
 //! // Display error with detailed troubleshooting
 //! error::handle_error(&error, &user_output);
 //! # }
@@ -46,7 +46,7 @@ use std::sync::Arc;
 use parking_lot::ReentrantMutex;
 
 use crate::presentation::errors::CommandError;
-use crate::presentation::user_output::UserOutput;
+use crate::presentation::views::UserOutput;
 
 /// Handle command errors with consistent user output
 ///
@@ -66,7 +66,7 @@ use crate::presentation::user_output::UserOutput;
 /// use std::sync::Arc;
 /// use std::cell::RefCell;
 /// use parking_lot::ReentrantMutex;
-/// use torrust_tracker_deployer_lib::presentation::{error, input::cli, errors, user_output};
+/// use torrust_tracker_deployer_lib::presentation::{error, input::cli, errors, views};
 /// use torrust_tracker_deployer_lib::presentation::controllers::destroy::DestroySubcommandError;
 /// use torrust_tracker_deployer_lib::domain::environment::name::EnvironmentNameError;
 ///
@@ -83,7 +83,7 @@ use crate::presentation::user_output::UserOutput;
 ///         source: name_error,
 ///     })
 /// );
-/// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(user_output::UserOutput::new(user_output::VerbosityLevel::Normal))));
+/// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(views::UserOutput::new(views::VerbosityLevel::Normal))));
 /// error::handle_error(&sample_error, &user_output);
 /// # Ok(())
 /// # }

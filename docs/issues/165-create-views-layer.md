@@ -98,7 +98,7 @@ src/presentation/views/
 All imports will change from:
 
 ```rust
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+use crate::presentation::views::{UserOutput, VerbosityLevel};
 ```
 
 To:

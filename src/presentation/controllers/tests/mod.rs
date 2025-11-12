@@ -33,7 +33,7 @@ use tempfile::TempDir;
 
 use parking_lot::ReentrantMutex;
 
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+use crate::presentation::views::{UserOutput, VerbosityLevel};
 
 // ============================================================================
 // PUBLIC API - Test Context

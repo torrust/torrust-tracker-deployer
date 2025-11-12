@@ -19,7 +19,7 @@
 //! use std::cell::RefCell;
 //! use parking_lot::ReentrantMutex;
 //! use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-//! use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+//! use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
@@ -72,7 +72,7 @@ use parking_lot::ReentrantMutex;
 
 use thiserror::Error;
 
-use crate::presentation::user_output::UserOutput;
+use crate::presentation::views::UserOutput;
 
 /// Errors that can occur during progress reporting
 #[derive(Debug, Error)]
@@ -100,7 +100,7 @@ Tip: This is a critical bug - please report it with full logs using --log-output
 /// use std::cell::RefCell;
 /// use parking_lot::ReentrantMutex;
 /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-/// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
@@ -138,7 +138,7 @@ impl ProgressReporter {
     /// use std::cell::RefCell;
     /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let progress = ProgressReporter::new(output, 5);
@@ -188,7 +188,7 @@ impl ProgressReporter {
     /// use std::cell::RefCell;
     /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
@@ -233,7 +233,7 @@ impl ProgressReporter {
     /// use std::cell::RefCell;
     /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
@@ -285,7 +285,7 @@ impl ProgressReporter {
     /// use std::cell::RefCell;
     /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
@@ -326,7 +326,7 @@ impl ProgressReporter {
     /// use std::cell::RefCell;
     /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
@@ -356,7 +356,7 @@ impl ProgressReporter {
     /// use std::cell::RefCell;
     /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let mut progress = ProgressReporter::new(output.clone(), 1);
@@ -387,7 +387,7 @@ impl ProgressReporter {
     /// use std::cell::RefCell;
     /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
@@ -424,7 +424,7 @@ impl ProgressReporter {
     /// use std::cell::RefCell;
     /// use parking_lot::ReentrantMutex;
     /// use torrust_tracker_deployer_lib::presentation::progress::ProgressReporter;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
@@ -469,8 +469,8 @@ fn format_duration(duration: Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::presentation::user_output::test_support::TestUserOutput;
-    use crate::presentation::user_output::VerbosityLevel;
+    use crate::presentation::views::test_support::TestUserOutput;
+    use crate::presentation::views::VerbosityLevel;
 
     #[test]
     fn it_should_create_progress_reporter_with_total_steps() {

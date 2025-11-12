@@ -10,7 +10,7 @@ use super::super::{Channel, OutputMessage, Theme, VerbosityLevel};
 /// # Examples
 ///
 /// ```rust,ignore
-/// use torrust_tracker_deployer_lib::presentation::user_output::ProgressMessage;
+/// use torrust_tracker_deployer_lib::presentation::views::ProgressMessage;
 ///
 /// let message = ProgressMessage {
 ///     text: "Destroying environment...".to_string(),

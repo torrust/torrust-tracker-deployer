@@ -11,11 +11,11 @@ use std::io::Write;
 /// The wrapper provides a zero-cost abstraction - it has the same
 /// memory layout and performance characteristics as the wrapped type,
 /// but provides compile-time type safety.
-pub(in crate::presentation::user_output) struct StdoutWriter(Box<dyn Write + Send + Sync>);
+pub(in crate::presentation::views) struct StdoutWriter(Box<dyn Write + Send + Sync>);
 
 impl StdoutWriter {
     /// Create a new stdout writer wrapper
-    pub(in crate::presentation::user_output) fn new(writer: Box<dyn Write + Send + Sync>) -> Self {
+    pub(in crate::presentation::views) fn new(writer: Box<dyn Write + Send + Sync>) -> Self {
         Self(writer)
     }
 
@@ -24,7 +24,7 @@ impl StdoutWriter {
     /// Writes the given message to the stdout channel.
     /// The message should include any necessary newline characters.
     /// Errors are silently ignored as output operations are best-effort.
-    pub(in crate::presentation::user_output) fn write_line(&mut self, message: &str) {
+    pub(in crate::presentation::views) fn write_line(&mut self, message: &str) {
         write!(self.0, "{message}").ok();
     }
 
@@ -33,7 +33,7 @@ impl StdoutWriter {
     /// Writes the given message followed by a newline to the stdout channel.
     /// Errors are silently ignored as output operations are best-effort.
     #[allow(dead_code)]
-    pub(in crate::presentation::user_output) fn writeln(&mut self, message: &str) {
+    pub(in crate::presentation::views) fn writeln(&mut self, message: &str) {
         writeln!(self.0, "{message}").ok();
     }
 }
@@ -47,11 +47,11 @@ impl StdoutWriter {
 /// The wrapper provides a zero-cost abstraction - it has the same
 /// memory layout and performance characteristics as the wrapped type,
 /// but provides compile-time type safety.
-pub(in crate::presentation::user_output) struct StderrWriter(Box<dyn Write + Send + Sync>);
+pub(in crate::presentation::views) struct StderrWriter(Box<dyn Write + Send + Sync>);
 
 impl StderrWriter {
     /// Create a new stderr writer wrapper
-    pub(in crate::presentation::user_output) fn new(writer: Box<dyn Write + Send + Sync>) -> Self {
+    pub(in crate::presentation::views) fn new(writer: Box<dyn Write + Send + Sync>) -> Self {
         Self(writer)
     }
 
@@ -60,7 +60,7 @@ impl StderrWriter {
     /// Writes the given message to the stderr channel.
     /// The message should include any necessary newline characters.
     /// Errors are silently ignored as output operations are best-effort.
-    pub(in crate::presentation::user_output) fn write_line(&mut self, message: &str) {
+    pub(in crate::presentation::views) fn write_line(&mut self, message: &str) {
         write!(self.0, "{message}").ok();
     }
 
@@ -69,7 +69,7 @@ impl StderrWriter {
     /// Writes the given message followed by a newline to the stderr channel.
     /// Errors are silently ignored as output operations are best-effort.
     #[allow(dead_code)]
-    pub(in crate::presentation::user_output) fn writeln(&mut self, message: &str) {
+    pub(in crate::presentation::views) fn writeln(&mut self, message: &str) {
         writeln!(self.0, "{message}").ok();
     }
 }
@@ -77,7 +77,7 @@ impl StderrWriter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::presentation::user_output::test_support;
+    use crate::presentation::views::test_support;
     use parking_lot::Mutex;
     use std::sync::Arc;
 

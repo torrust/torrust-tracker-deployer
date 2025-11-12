@@ -107,7 +107,7 @@ impl DestroySubcommandError {
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     ///
     /// let container = Container::new(VerbosityLevel::Normal);
     /// let context = ExecutionContext::new(Arc::new(container));
@@ -127,7 +127,7 @@ impl DestroySubcommandError {
     /// use parking_lot::ReentrantMutex;
     /// use std::cell::RefCell;
     /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
     /// use torrust_tracker_deployer_lib::shared::clock::SystemClock;
     ///

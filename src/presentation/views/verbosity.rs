@@ -11,7 +11,7 @@
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// let level = VerbosityLevel::Normal;
 /// assert!(level >= VerbosityLevel::Quiet);

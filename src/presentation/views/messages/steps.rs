@@ -12,7 +12,7 @@ use super::super::{Channel, OutputMessage, Theme, VerbosityLevel};
 /// Simple constructor for cases where you have all items upfront:
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+/// use torrust_tracker_deployer_lib::presentation::views::StepsMessage;
 ///
 /// let message = StepsMessage::new("Next steps:", vec![
 ///     "Edit the configuration file".to_string(),
@@ -23,7 +23,7 @@ use super::super::{Channel, OutputMessage, Theme, VerbosityLevel};
 /// Builder pattern for dynamic construction or better readability:
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+/// use torrust_tracker_deployer_lib::presentation::views::StepsMessage;
 ///
 /// let message = StepsMessage::builder("Next steps:")
 ///     .add("Edit the configuration file")
@@ -47,7 +47,7 @@ impl StepsMessage {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+    /// use torrust_tracker_deployer_lib::presentation::views::StepsMessage;
     ///
     /// let msg = StepsMessage::new("Next steps:", vec![
     ///     "Edit config".to_string(),
@@ -72,7 +72,7 @@ impl StepsMessage {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+    /// use torrust_tracker_deployer_lib::presentation::views::StepsMessage;
     ///
     /// let msg = StepsMessage::builder("Next steps:")
     ///     .add("Edit configuration")
@@ -119,7 +119,7 @@ impl OutputMessage for StepsMessage {
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+/// use torrust_tracker_deployer_lib::presentation::views::StepsMessage;
 ///
 /// let message = StepsMessage::builder("Next steps:")
 ///     .add("Edit configuration")
@@ -131,7 +131,7 @@ impl OutputMessage for StepsMessage {
 /// Empty builders are valid:
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+/// use torrust_tracker_deployer_lib::presentation::views::StepsMessage;
 ///
 /// let message = StepsMessage::builder("Title").build();
 /// ```
@@ -146,7 +146,7 @@ impl StepsMessageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessageBuilder;
+    /// use torrust_tracker_deployer_lib::presentation::views::StepsMessageBuilder;
     ///
     /// let builder = StepsMessageBuilder::new("My steps:");
     /// ```
@@ -166,7 +166,7 @@ impl StepsMessageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+    /// use torrust_tracker_deployer_lib::presentation::views::StepsMessage;
     ///
     /// let message = StepsMessage::builder("Steps:")
     ///     .add("First step")
@@ -187,7 +187,7 @@ impl StepsMessageBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::user_output::StepsMessage;
+    /// use torrust_tracker_deployer_lib::presentation::views::StepsMessage;
     ///
     /// let message = StepsMessage::builder("Steps:")
     ///     .add("Step 1")

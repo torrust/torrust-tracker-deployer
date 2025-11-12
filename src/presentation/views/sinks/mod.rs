@@ -12,4 +12,4 @@ mod composite;
 mod file;
 mod standard;
 mod telemetry;
-pub(in crate::presentation::user_output) mod writers;
+pub(in crate::presentation::views) mod writers;

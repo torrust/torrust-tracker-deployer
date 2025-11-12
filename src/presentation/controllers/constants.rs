@@ -20,7 +20,7 @@
 //! ```rust
 //! use torrust_tracker_deployer_lib::presentation::controllers::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
 //! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-//! use torrust_tracker_deployer_lib::presentation::user_output::UserOutput;
+//! use torrust_tracker_deployer_lib::presentation::views::UserOutput;
 //!
 //! // Use default lock timeout for repository operations
 //! let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
@@ -31,7 +31,7 @@
 
 use std::time::Duration;
 
-use crate::presentation::user_output::VerbosityLevel;
+use crate::presentation::views::VerbosityLevel;
 
 /// Default timeout for file lock operations in repository
 ///

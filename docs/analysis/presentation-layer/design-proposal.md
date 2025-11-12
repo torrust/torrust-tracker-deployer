@@ -791,7 +791,7 @@ src/presentation/
 
 ```rust
 use crate::presentation::commands::destroy::handle_destroy_command;
-use crate::presentation::user_output::UserOutput;
+use crate::presentation::views::UserOutput;
 ```
 
 **Proposed**:

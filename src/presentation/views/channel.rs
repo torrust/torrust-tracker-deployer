@@ -13,7 +13,7 @@
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::presentation::user_output::Channel;
+/// use torrust_tracker_deployer_lib::presentation::views::Channel;
 ///
 /// let channel = Channel::Stdout;
 /// assert_eq!(channel, Channel::Stdout);

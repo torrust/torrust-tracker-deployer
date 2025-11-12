@@ -15,7 +15,7 @@ use crate::domain::environment::state::Created;
 use crate::domain::Environment;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::progress::ProgressReporter;
-use crate::presentation::user_output::UserOutput;
+use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
 use super::config_loader::ConfigLoader;
@@ -66,7 +66,7 @@ const ENVIRONMENT_CREATION_WORKFLOW_STEPS: usize = 3;
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
 /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let container = Arc::new(Container::new(VerbosityLevel::Normal));
@@ -133,7 +133,7 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// let container = Container::new(VerbosityLevel::Normal);
 /// let context = ExecutionContext::new(Arc::new(container));
@@ -156,7 +156,7 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment::handler::handle;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// let container = Arc::new(Container::new(VerbosityLevel::Normal));
 /// let context = ExecutionContext::new(container);

@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
-use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
+use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 
 /// Test that verifies same-thread reentrancy works without deadlocking
 ///

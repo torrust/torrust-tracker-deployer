@@ -12,7 +12,7 @@ impl TelemetrySink {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use torrust_tracker_deployer_lib::presentation::user_output::TelemetrySink;
+    /// use torrust_tracker_deployer_lib::presentation::views::TelemetrySink;
     ///
     /// let sink = TelemetrySink::new("https://telemetry.example.com".to_string());
     /// ```

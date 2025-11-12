@@ -12,7 +12,7 @@ impl CompositeSink {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use torrust_tracker_deployer_lib::presentation::user_output::CompositeSink;
+    /// use torrust_tracker_deployer_lib::presentation::views::CompositeSink;
     ///
     /// let composite = CompositeSink::new(vec![
     ///     Box::new(StandardSink::default_console()),
@@ -29,7 +29,7 @@ impl CompositeSink {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use torrust_tracker_deployer_lib::presentation::user_output::CompositeSink;
+    /// use torrust_tracker_deployer_lib::presentation::views::CompositeSink;
     ///
     /// let mut composite = CompositeSink::new(vec![]);
     /// composite.add_sink(Box::new(StandardSink::default_console()));

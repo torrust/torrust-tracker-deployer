@@ -27,7 +27,7 @@
 //!
 //! ```rust,no_run
 //! use torrust_tracker_deployer_lib::bootstrap::Container;
-//! use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+//! use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 //! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 //! use std::sync::Arc;
 //!
@@ -50,7 +50,7 @@ use parking_lot::ReentrantMutex;
 
 use crate::bootstrap::Container;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::user_output::UserOutput;
+use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
 /// ### Design Consideration: Shared State Access
@@ -64,7 +64,7 @@ use crate::shared::clock::Clock;
 /// ```rust
 /// use std::sync::Arc;
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 ///
 /// let container = Arc::new(Container::new(VerbosityLevel::Normal));
@@ -90,7 +90,7 @@ impl ExecutionContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
     ///
@@ -114,7 +114,7 @@ impl ExecutionContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
     ///
@@ -142,7 +142,7 @@ impl ExecutionContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
     ///
@@ -169,7 +169,7 @@ impl ExecutionContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
     ///
@@ -196,7 +196,7 @@ impl ExecutionContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
-    /// use torrust_tracker_deployer_lib::presentation::user_output::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
     ///
