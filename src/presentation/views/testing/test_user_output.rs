@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use parking_lot::{Mutex, ReentrantMutex};
 
-use super::{TestOutputWrapper, TestWriter};
+use super::TestWriter;
 use crate::presentation::views::{Theme, UserOutput, VerbosityLevel};
 
 /// Test wrapper for `UserOutput` that simplifies test code
@@ -31,8 +31,10 @@ use crate::presentation::views::{Theme, UserOutput, VerbosityLevel};
 pub struct TestUserOutput {
     /// The `UserOutput` instance being tested
     pub output: UserOutput,
-    stdout_buffer: Arc<Mutex<Vec<u8>>>,
-    stderr_buffer: Arc<Mutex<Vec<u8>>>,
+    /// Stdout buffer for capturing output
+    pub stdout_buffer: Arc<Mutex<Vec<u8>>>,
+    /// Stderr buffer for capturing output  
+    pub stderr_buffer: Arc<Mutex<Vec<u8>>>,
 }
 
 impl TestUserOutput {
@@ -140,31 +142,5 @@ impl TestUserOutput {
     #[must_use]
     pub fn stderr(&self) -> String {
         String::from_utf8(self.stderr_buffer.lock().clone()).expect("stderr should be valid UTF-8")
-    }
-
-    /// Create wrapped `UserOutput` with `ReentrantMutex` for convenient testing
-    ///
-    /// Returns a convenient test wrapper that provides direct access to the wrapped output
-    /// and methods for checking output content. This is the recommended method for tests
-    /// that need to both use the wrapped output and check what was written.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// let mut test_output = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_test_wrapper();
-    /// test_output.progress("Working...");
-    /// assert_eq!(test_output.stderr(), "⏳ Working...\n");
-    /// ```
-    #[must_use]
-    pub fn into_reentrant_test_wrapper(
-        self,
-    ) -> TestOutputWrapper<ReentrantMutex<RefCell<UserOutput>>> {
-        let stdout_buf = Arc::clone(&self.stdout_buffer);
-        let stderr_buf = Arc::clone(&self.stderr_buffer);
-        TestOutputWrapper::new(
-            Arc::new(ReentrantMutex::new(RefCell::new(self.output))),
-            stdout_buf,
-            stderr_buf,
-        )
     }
 }

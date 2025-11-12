@@ -25,9 +25,20 @@
 //! For tests that need wrapped output (e.g., with `Arc<ReentrantMutex<RefCell<UserOutput>>>`):
 //!
 //! ```rust,ignore
-//! let mut test_output = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_test_wrapper();
-//! test_output.progress("Working...");
-//! assert_eq!(test_output.stderr(), "⏳ Working...\n");
+//! use std::cell::RefCell;
+//! use std::sync::Arc;
+//! use parking_lot::ReentrantMutex;
+//!
+//! let test_user_output = TestUserOutput::new(VerbosityLevel::Normal);
+//! let stdout_buf = Arc::clone(&test_user_output.stdout_buffer);
+//! let stderr_buf = Arc::clone(&test_user_output.stderr_buffer);
+//! let test_output = TestOutputWrapper::new(
+//!     Arc::new(ReentrantMutex::new(RefCell::new(test_user_output.output))),
+//!     stdout_buf,
+//!     stderr_buf,
+//! );
+//! test_output.steps("Working...", &["Step 1"]);
+//! assert_eq!(test_output.stderr(), "Working...\n  1. Step 1\n");
 //! ```
 
 pub mod test_user_output;

@@ -502,7 +502,15 @@ mod tests {
     #[allow(unused_imports)]
     use crate::presentation::views::sinks::{CompositeSink, FileSink, TelemetrySink};
     #[allow(unused_imports)]
-    use crate::presentation::views::testing::{self, TestUserOutput, TestWriter};
+    use crate::presentation::views::testing::{
+        self, TestOutputWrapper, TestUserOutput, TestWriter,
+    };
+    #[allow(unused_imports)]
+    use parking_lot::ReentrantMutex;
+    #[allow(unused_imports)]
+    use std::cell::RefCell;
+    #[allow(unused_imports)]
+    use std::sync::Arc;
 
     // ============================================================================
     // Type-Safe Writer Wrapper Tests
@@ -760,8 +768,14 @@ mod tests {
 
     #[test]
     fn it_should_not_write_steps_at_quiet_level() {
-        let test_output =
-            testing::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
+        let test_user_output = testing::TestUserOutput::new(VerbosityLevel::Quiet);
+        let stdout_buf = Arc::clone(&test_user_output.stdout_buffer);
+        let stderr_buf = Arc::clone(&test_user_output.stderr_buffer);
+        let test_output = TestOutputWrapper::new(
+            Arc::new(ReentrantMutex::new(RefCell::new(test_user_output.output))),
+            stdout_buf,
+            stderr_buf,
+        );
 
         test_output.steps("Next steps:", &["Step 1", "Step 2"]);
 
@@ -793,8 +807,14 @@ mod tests {
 
     #[test]
     fn it_should_not_write_info_block_at_quiet_level() {
-        let test_output =
-            testing::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
+        let test_user_output = testing::TestUserOutput::new(VerbosityLevel::Quiet);
+        let stdout_buf = Arc::clone(&test_user_output.stdout_buffer);
+        let stderr_buf = Arc::clone(&test_user_output.stderr_buffer);
+        let test_output = TestOutputWrapper::new(
+            Arc::new(ReentrantMutex::new(RefCell::new(test_user_output.output))),
+            stdout_buf,
+            stderr_buf,
+        );
 
         test_output.info_block("Info:", &["Line 1", "Line 2"]);
 
