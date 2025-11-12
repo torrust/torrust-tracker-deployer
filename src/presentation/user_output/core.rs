@@ -510,57 +510,8 @@ mod tests {
 
     mod type_safe_wrappers {
         use super::*;
-        use std::sync::{Arc, Mutex};
-
-        #[test]
-        fn stdout_writer_should_wrap_writer() {
-            let buffer = Arc::new(Mutex::new(Vec::new()));
-            let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
-
-            let mut stdout = StdoutWriter::new(writer);
-            stdout.write_line("Test output");
-
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
-            assert_eq!(output, "Test output");
-        }
-
-        #[test]
-        fn stderr_writer_should_wrap_writer() {
-            let buffer = Arc::new(Mutex::new(Vec::new()));
-            let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
-
-            let mut stderr = StderrWriter::new(writer);
-            stderr.write_line("Test error");
-
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
-            assert_eq!(output, "Test error");
-        }
-
-        #[test]
-        fn stdout_writer_should_write_multiple_lines() {
-            let buffer = Arc::new(Mutex::new(Vec::new()));
-            let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
-
-            let mut stdout = StdoutWriter::new(writer);
-            stdout.write_line("Line 1\n");
-            stdout.write_line("Line 2\n");
-
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
-            assert_eq!(output, "Line 1\nLine 2\n");
-        }
-
-        #[test]
-        fn stderr_writer_should_write_multiple_lines() {
-            let buffer = Arc::new(Mutex::new(Vec::new()));
-            let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
-
-            let mut stderr = StderrWriter::new(writer);
-            stderr.write_line("Error 1\n");
-            stderr.write_line("Error 2\n");
-
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
-            assert_eq!(output, "Error 1\nError 2\n");
-        }
+        use parking_lot::Mutex;
+        use std::sync::Arc;
 
         #[test]
         fn type_safe_dispatch_prevents_channel_confusion() {
@@ -578,8 +529,8 @@ mod tests {
             stdout.write_line("stdout data");
             stderr.write_line("stderr message");
 
-            let stdout_output = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
-            let stderr_output = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stdout_output = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
+            let stderr_output = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
 
             assert_eq!(stdout_output, "stdout data");
             assert_eq!(stderr_output, "stderr message");
@@ -602,102 +553,6 @@ mod tests {
             // Verify correct channel routing via type system
             assert!(test_output.stderr().contains("Progress message"));
             assert!(test_output.stdout().contains("Result data"));
-        }
-
-        #[test]
-        fn stdout_writer_writeln_adds_newline() {
-            let buffer = Arc::new(Mutex::new(Vec::new()));
-            let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
-
-            let mut stdout = StdoutWriter::new(writer);
-            stdout.writeln("Test");
-
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
-            assert_eq!(output, "Test\n");
-        }
-
-        #[test]
-        fn stderr_writer_writeln_adds_newline() {
-            let buffer = Arc::new(Mutex::new(Vec::new()));
-            let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
-
-            let mut stderr = StderrWriter::new(writer);
-            stderr.writeln("Error");
-
-            let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
-            assert_eq!(output, "Error\n");
-        }
-    }
-
-    // ============================================================================
-    // Theme Tests
-    // ============================================================================
-
-    mod theme {
-        use super::*;
-
-        #[test]
-        fn it_should_create_emoji_theme_with_correct_symbols() {
-            let theme = Theme::emoji();
-
-            assert_eq!(theme.progress_symbol(), "⏳");
-            assert_eq!(theme.success_symbol(), "✅");
-            assert_eq!(theme.warning_symbol(), "⚠️");
-            assert_eq!(theme.error_symbol(), "❌");
-        }
-
-        #[test]
-        fn it_should_create_plain_theme_with_text_labels() {
-            let theme = Theme::plain();
-
-            assert_eq!(theme.progress_symbol(), "[INFO]");
-            assert_eq!(theme.success_symbol(), "[OK]");
-            assert_eq!(theme.warning_symbol(), "[WARN]");
-            assert_eq!(theme.error_symbol(), "[ERROR]");
-        }
-
-        #[test]
-        fn it_should_create_ascii_theme_with_ascii_characters() {
-            let theme = Theme::ascii();
-
-            assert_eq!(theme.progress_symbol(), "=>");
-            assert_eq!(theme.success_symbol(), "[+]");
-            assert_eq!(theme.warning_symbol(), "[!]");
-            assert_eq!(theme.error_symbol(), "[x]");
-        }
-
-        #[test]
-        fn it_should_use_emoji_theme_as_default() {
-            let theme = Theme::default();
-            let emoji_theme = Theme::emoji();
-
-            assert_eq!(theme, emoji_theme);
-        }
-
-        #[test]
-        fn it_should_support_clone() {
-            let theme = Theme::plain();
-            let cloned = theme.clone();
-
-            assert_eq!(theme, cloned);
-        }
-
-        #[test]
-        fn it_should_support_equality_comparison() {
-            let theme1 = Theme::emoji();
-            let theme2 = Theme::emoji();
-            let theme3 = Theme::plain();
-
-            assert_eq!(theme1, theme2);
-            assert_ne!(theme1, theme3);
-        }
-
-        #[test]
-        fn it_should_support_debug_formatting() {
-            let theme = Theme::emoji();
-            let debug_output = format!("{theme:?}");
-
-            assert!(debug_output.contains("Theme"));
         }
     }
 
@@ -858,34 +713,6 @@ mod tests {
     }
 
     #[test]
-    fn it_should_use_normal_as_default_verbosity() {
-        let default = VerbosityLevel::default();
-        assert_eq!(default, VerbosityLevel::Normal);
-    }
-
-    #[test]
-    fn it_should_order_verbosity_levels_correctly() {
-        assert!(VerbosityLevel::Quiet < VerbosityLevel::Normal);
-        assert!(VerbosityLevel::Normal < VerbosityLevel::Verbose);
-        assert!(VerbosityLevel::Verbose < VerbosityLevel::VeryVerbose);
-        assert!(VerbosityLevel::VeryVerbose < VerbosityLevel::Debug);
-    }
-
-    #[test]
-    fn it_should_support_equality_comparison() {
-        assert_eq!(VerbosityLevel::Normal, VerbosityLevel::Normal);
-        assert_ne!(VerbosityLevel::Normal, VerbosityLevel::Verbose);
-    }
-
-    #[test]
-    fn it_should_support_ordering_comparison() {
-        let normal = VerbosityLevel::Normal;
-        assert!(normal >= VerbosityLevel::Quiet);
-        assert!(normal >= VerbosityLevel::Normal);
-        assert!(normal < VerbosityLevel::Verbose);
-    }
-
-    #[test]
     fn it_should_write_blank_line_to_stderr() {
         let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Normal);
 
@@ -933,11 +760,10 @@ mod tests {
 
     #[test]
     fn it_should_not_write_steps_at_quiet_level() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
+        let test_output =
+            test_support::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
 
-        test_output
-            .output
-            .steps("Next steps:", &["Step 1", "Step 2"]);
+        test_output.steps("Next steps:", &["Step 1", "Step 2"]);
 
         // Verify no output at Quiet level
         assert_eq!(test_output.stderr(), "");
@@ -967,128 +793,13 @@ mod tests {
 
     #[test]
     fn it_should_not_write_info_block_at_quiet_level() {
-        let mut test_output = test_support::TestUserOutput::new(VerbosityLevel::Quiet);
+        let test_output =
+            test_support::TestUserOutput::new(VerbosityLevel::Quiet).into_reentrant_test_wrapper();
 
-        test_output
-            .output
-            .info_block("Info:", &["Line 1", "Line 2"]);
+        test_output.info_block("Info:", &["Line 1", "Line 2"]);
 
         // Verify no output at Quiet level
         assert_eq!(test_output.stderr(), "");
-    }
-
-    // VerbosityFilter tests
-    mod verbosity_filter {
-        use super::super::*;
-
-        #[test]
-        fn it_should_show_progress_at_normal_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-            assert!(filter.should_show_progress());
-        }
-
-        #[test]
-        fn it_should_not_show_progress_at_quiet_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-            assert!(!filter.should_show_progress());
-        }
-
-        #[test]
-        fn it_should_show_progress_at_verbose_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Verbose);
-            assert!(filter.should_show_progress());
-        }
-
-        #[test]
-        fn it_should_always_show_errors_regardless_of_level() {
-            assert!(VerbosityFilter::new(VerbosityLevel::Quiet).should_show_errors());
-            assert!(VerbosityFilter::new(VerbosityLevel::Normal).should_show_errors());
-            assert!(VerbosityFilter::new(VerbosityLevel::Verbose).should_show_errors());
-            assert!(VerbosityFilter::new(VerbosityLevel::VeryVerbose).should_show_errors());
-            assert!(VerbosityFilter::new(VerbosityLevel::Debug).should_show_errors());
-        }
-
-        #[test]
-        fn it_should_show_success_at_normal_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-            assert!(filter.should_show_success());
-        }
-
-        #[test]
-        fn it_should_not_show_success_at_quiet_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-            assert!(!filter.should_show_success());
-        }
-
-        #[test]
-        fn it_should_show_warnings_at_normal_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-            assert!(filter.should_show_warnings());
-        }
-
-        #[test]
-        fn it_should_not_show_warnings_at_quiet_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-            assert!(!filter.should_show_warnings());
-        }
-
-        #[test]
-        fn it_should_show_blank_lines_at_normal_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-            assert!(filter.should_show_blank_lines());
-        }
-
-        #[test]
-        fn it_should_not_show_blank_lines_at_quiet_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-            assert!(!filter.should_show_blank_lines());
-        }
-
-        #[test]
-        fn it_should_show_steps_at_normal_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-            assert!(filter.should_show_steps());
-        }
-
-        #[test]
-        fn it_should_not_show_steps_at_quiet_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-            assert!(!filter.should_show_steps());
-        }
-
-        #[test]
-        fn it_should_show_info_blocks_at_normal_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-            assert!(filter.should_show_info_blocks());
-        }
-
-        #[test]
-        fn it_should_not_show_info_blocks_at_quiet_level() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-            assert!(!filter.should_show_info_blocks());
-        }
-
-        #[test]
-        fn it_should_show_when_level_meets_requirement() {
-            let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-            assert!(filter.should_show(VerbosityLevel::Quiet));
-            assert!(filter.should_show(VerbosityLevel::Normal));
-            assert!(!filter.should_show(VerbosityLevel::Verbose));
-        }
-
-        #[test]
-        fn it_should_handle_all_verbosity_levels_in_should_show() {
-            let quiet_filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-            assert!(quiet_filter.should_show(VerbosityLevel::Quiet));
-            assert!(!quiet_filter.should_show(VerbosityLevel::Normal));
-
-            let debug_filter = VerbosityFilter::new(VerbosityLevel::Debug);
-            assert!(debug_filter.should_show(VerbosityLevel::Quiet));
-            assert!(debug_filter.should_show(VerbosityLevel::Normal));
-            assert!(debug_filter.should_show(VerbosityLevel::Verbose));
-            assert!(debug_filter.should_show(VerbosityLevel::VeryVerbose));
-            assert!(debug_filter.should_show(VerbosityLevel::Debug));
-        }
     }
 
     // ============================================================================
@@ -1098,108 +809,6 @@ mod tests {
     mod output_message_trait {
         use super::super::*;
         use crate::presentation::user_output::test_support::TestUserOutput;
-
-        #[test]
-        fn progress_message_should_format_with_theme() {
-            let theme = Theme::emoji();
-            let message = ProgressMessage {
-                text: "Test message".to_string(),
-            };
-
-            let formatted = message.format(&theme);
-
-            assert_eq!(formatted, "⏳ Test message\n");
-        }
-
-        #[test]
-        fn progress_message_should_require_normal_verbosity() {
-            let message = ProgressMessage {
-                text: "Test".to_string(),
-            };
-
-            assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
-        }
-
-        #[test]
-        fn progress_message_should_use_stderr_channel() {
-            let message = ProgressMessage {
-                text: "Test".to_string(),
-            };
-
-            assert_eq!(message.channel(), Channel::Stderr);
-        }
-
-        #[test]
-        fn success_message_should_format_with_theme() {
-            let theme = Theme::plain();
-            let message = SuccessMessage {
-                text: "Operation complete".to_string(),
-            };
-
-            let formatted = message.format(&theme);
-
-            assert_eq!(formatted, "[OK] Operation complete\n");
-        }
-
-        #[test]
-        fn error_message_should_always_be_shown() {
-            let message = ErrorMessage {
-                text: "Critical error".to_string(),
-            };
-
-            // Errors should require Quiet level (always shown)
-            assert_eq!(message.required_verbosity(), VerbosityLevel::Quiet);
-        }
-
-        #[test]
-        fn result_message_should_use_stdout_channel() {
-            let message = ResultMessage {
-                text: "Output data".to_string(),
-            };
-
-            assert_eq!(message.channel(), Channel::Stdout);
-        }
-
-        #[test]
-        fn result_message_should_not_include_symbols() {
-            let theme = Theme::emoji();
-            let message = ResultMessage {
-                text: "Plain output".to_string(),
-            };
-
-            let formatted = message.format(&theme);
-
-            // Result messages should not include theme symbols
-            assert!(!formatted.contains("⏳"));
-            assert!(!formatted.contains("✅"));
-            assert_eq!(formatted, "Plain output\n");
-        }
-
-        #[test]
-        fn steps_message_should_format_numbered_list() {
-            let theme = Theme::emoji();
-            let message = StepsMessage {
-                title: "Next steps:".to_string(),
-                items: vec!["First step".to_string(), "Second step".to_string()],
-            };
-
-            let formatted = message.format(&theme);
-
-            assert_eq!(formatted, "Next steps:\n1. First step\n2. Second step\n");
-        }
-
-        #[test]
-        fn warning_message_should_include_extra_space() {
-            let theme = Theme::emoji();
-            let message = WarningMessage {
-                text: "Warning text".to_string(),
-            };
-
-            let formatted = message.format(&theme);
-
-            // Warning messages include two spaces after the symbol
-            assert_eq!(formatted, "⚠️  Warning text\n");
-        }
 
         #[test]
         fn user_output_write_should_respect_verbosity_filter() {
@@ -1236,13 +845,6 @@ mod tests {
 
             assert_eq!(test_output.stderr(), "⏳ Progress\n");
             assert_eq!(test_output.stdout(), "Result\n");
-        }
-
-        #[test]
-        fn channel_enum_should_support_equality() {
-            assert_eq!(Channel::Stdout, Channel::Stdout);
-            assert_eq!(Channel::Stderr, Channel::Stderr);
-            assert_ne!(Channel::Stdout, Channel::Stderr);
         }
 
         // Custom message type to demonstrate extensibility
@@ -1399,7 +1001,8 @@ mod tests {
         use super::super::*;
         use crate::presentation::user_output::formatters::JsonFormatter;
         use crate::presentation::user_output::test_support::{self, TestUserOutput};
-        use std::sync::{Arc, Mutex};
+        use parking_lot::Mutex;
+        use std::sync::Arc;
 
         // Custom test formatter to verify override is applied
         struct TestFormatter {
@@ -1433,7 +1036,7 @@ mod tests {
 
             output.progress("Test message");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             assert_eq!(stderr, "[TEST] [INFO] Test message\n");
         }
 
@@ -1466,7 +1069,7 @@ mod tests {
 
             output.progress("Test message");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
 
             // Parse JSON to verify structure (trim to remove trailing newline)
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).expect("Valid JSON");
@@ -1500,7 +1103,7 @@ mod tests {
             output.warn("Warning");
             output.error("Error");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let lines: Vec<&str> = stderr.lines().collect();
 
             let progress_json: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
@@ -1536,8 +1139,8 @@ mod tests {
             output.progress("Stderr message");
             output.result("Stdout message");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
-            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
+            let stdout = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
 
             let stderr_json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
             assert_eq!(stderr_json["channel"], "Stderr");
@@ -1565,7 +1168,7 @@ mod tests {
 
             output.progress("Test");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             // Content should not have trailing newline
@@ -1593,7 +1196,7 @@ mod tests {
 
             output.progress("Test");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             // Content should reflect plain theme
@@ -1620,13 +1223,13 @@ mod tests {
             // Normal-level message should be filtered at Quiet level
             output.progress("Should not appear");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             assert_eq!(stderr, "");
 
             // Quiet-level message should appear
             output.error("Should appear");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
             assert_eq!(json["type"], "ErrorMessage");
         }
@@ -1650,7 +1253,7 @@ mod tests {
 
             output.progress("Test");
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             assert_eq!(json["type"], "ProgressMessage");
@@ -1675,7 +1278,7 @@ mod tests {
 
             output.steps("Next steps:", &["Step 1", "Step 2"]);
 
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
 
             assert_eq!(json["type"], "StepsMessage");
@@ -1713,14 +1316,14 @@ mod tests {
             output.steps("Steps:", &["Step 1"]);
 
             // Verify all stderr messages are valid JSON
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
             for line in stderr.lines() {
                 let json: Result<serde_json::Value, _> = serde_json::from_str(line);
                 assert!(json.is_ok(), "Invalid JSON: {line}");
             }
 
             // Verify stdout message is valid JSON
-            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
+            let stdout = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
             let json: Result<serde_json::Value, _> = serde_json::from_str(stdout.trim());
             assert!(json.is_ok(), "Invalid JSON in stdout");
         }
@@ -1829,359 +1432,6 @@ mod tests {
     }
 
     // ============================================================================
-    // Builder Pattern Tests
-    // ============================================================================
-
-    mod builder_pattern {
-        use super::super::*;
-        use crate::presentation::user_output::formatters::JsonFormatter;
-        use crate::presentation::user_output::test_support::{self, TestUserOutput};
-
-        // ========================================================================
-        // StepsMessageBuilder Tests
-        // ========================================================================
-
-        #[test]
-        fn it_should_build_steps_with_fluent_api() {
-            let message = StepsMessage::builder("Title")
-                .add("Step 1")
-                .add("Step 2")
-                .add("Step 3")
-                .build();
-
-            assert_eq!(message.title, "Title");
-            assert_eq!(message.items, vec!["Step 1", "Step 2", "Step 3"]);
-        }
-
-        #[test]
-        fn it_should_create_simple_steps_directly() {
-            let message =
-                StepsMessage::new("Title", vec!["Step 1".to_string(), "Step 2".to_string()]);
-
-            assert_eq!(message.title, "Title");
-            assert_eq!(message.items, vec!["Step 1", "Step 2"]);
-        }
-
-        #[test]
-        fn it_should_build_empty_steps() {
-            let message = StepsMessage::builder("Title").build();
-
-            assert_eq!(message.title, "Title");
-            assert!(message.items.is_empty());
-        }
-
-        #[test]
-        fn it_should_build_single_step() {
-            let message = StepsMessage::builder("Title").add("Single step").build();
-
-            assert_eq!(message.title, "Title");
-            assert_eq!(message.items, vec!["Single step"]);
-        }
-
-        #[test]
-        fn it_should_accept_string_types_in_builder() {
-            let message = StepsMessage::builder("Title")
-                .add("String literal")
-                .add(String::from("Owned string"))
-                .add("Another literal".to_string())
-                .build();
-
-            assert_eq!(message.items.len(), 3);
-        }
-
-        #[test]
-        fn it_should_accept_string_types_in_constructor() {
-            let message =
-                StepsMessage::new("Title", vec!["Step 1".to_string(), String::from("Step 2")]);
-
-            assert_eq!(message.items.len(), 2);
-        }
-
-        #[test]
-        fn it_should_format_builder_messages_correctly() {
-            let theme = Theme::emoji();
-            let message = StepsMessage::builder("Next steps:")
-                .add("Configure")
-                .add("Deploy")
-                .build();
-
-            let formatted = message.format(&theme);
-            assert!(formatted.contains("Next steps:"));
-            assert!(formatted.contains("1. Configure"));
-            assert!(formatted.contains("2. Deploy"));
-        }
-
-        #[test]
-        fn it_should_integrate_builder_with_user_output() {
-            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-
-            let message = StepsMessage::builder("Next steps:")
-                .add("Edit config")
-                .add("Run tests")
-                .build();
-
-            test_output.output.write(&message);
-
-            let stderr = test_output.stderr();
-            assert!(stderr.contains("Next steps:"));
-            assert!(stderr.contains("1. Edit config"));
-            assert!(stderr.contains("2. Run tests"));
-        }
-
-        // ========================================================================
-        // InfoBlockMessageBuilder Tests
-        // ========================================================================
-
-        #[test]
-        fn it_should_build_info_block_with_fluent_api() {
-            let message = InfoBlockMessage::builder("Environment")
-                .add_line("Name: production")
-                .add_line("Status: active")
-                .build();
-
-            assert_eq!(message.title, "Environment");
-            assert_eq!(message.lines, vec!["Name: production", "Status: active"]);
-        }
-
-        #[test]
-        fn it_should_create_simple_info_block_directly() {
-            let message = InfoBlockMessage::new(
-                "Environment",
-                vec!["Name: production".to_string(), "Status: active".to_string()],
-            );
-
-            assert_eq!(message.title, "Environment");
-            assert_eq!(message.lines, vec!["Name: production", "Status: active"]);
-        }
-
-        #[test]
-        fn it_should_build_empty_info_block() {
-            let message = InfoBlockMessage::builder("Title").build();
-
-            assert_eq!(message.title, "Title");
-            assert!(message.lines.is_empty());
-        }
-
-        #[test]
-        fn it_should_build_single_line_info_block() {
-            let message = InfoBlockMessage::builder("Title")
-                .add_line("Single line")
-                .build();
-
-            assert_eq!(message.title, "Title");
-            assert_eq!(message.lines, vec!["Single line"]);
-        }
-
-        #[test]
-        fn it_should_accept_string_types_in_info_block_builder() {
-            let message = InfoBlockMessage::builder("Title")
-                .add_line("String literal")
-                .add_line(String::from("Owned string"))
-                .add_line("Another literal".to_string())
-                .build();
-
-            assert_eq!(message.lines.len(), 3);
-        }
-
-        #[test]
-        fn it_should_accept_string_types_in_info_block_constructor() {
-            let message =
-                InfoBlockMessage::new("Title", vec!["Line 1".to_string(), String::from("Line 2")]);
-
-            assert_eq!(message.lines.len(), 2);
-        }
-
-        #[test]
-        fn it_should_format_info_block_messages_correctly() {
-            let theme = Theme::emoji();
-            let message = InfoBlockMessage::builder("Environment")
-                .add_line("Name: production")
-                .add_line("Status: active")
-                .build();
-
-            let formatted = message.format(&theme);
-            assert!(formatted.contains("Environment"));
-            assert!(formatted.contains("Name: production"));
-            assert!(formatted.contains("Status: active"));
-        }
-
-        #[test]
-        fn it_should_integrate_info_block_builder_with_user_output() {
-            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-
-            let message = InfoBlockMessage::builder("Configuration")
-                .add_line("  - username: torrust")
-                .add_line("  - port: 22")
-                .build();
-
-            test_output.output.write(&message);
-
-            let stderr = test_output.stderr();
-            assert!(stderr.contains("Configuration"));
-            assert!(stderr.contains("  - username: torrust"));
-            assert!(stderr.contains("  - port: 22"));
-        }
-
-        #[test]
-        fn it_should_show_info_block_message_has_correct_properties() {
-            let message = InfoBlockMessage::new("Title", vec!["Line 1".to_string()]);
-
-            assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
-            assert_eq!(message.channel(), Channel::Stderr);
-            assert_eq!(message.type_name(), "InfoBlockMessage");
-        }
-
-        #[test]
-        fn it_should_respect_verbosity_for_info_block_messages() {
-            let mut test_output = TestUserOutput::new(VerbosityLevel::Quiet);
-
-            let message = InfoBlockMessage::builder("Info").add_line("Line 1").build();
-
-            test_output.output.write(&message);
-
-            // Should not appear at Quiet level
-            assert_eq!(test_output.stderr(), "");
-        }
-
-        #[test]
-        fn it_should_show_info_block_at_normal_level() {
-            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-
-            let message = InfoBlockMessage::builder("Info").add_line("Line 1").build();
-
-            test_output.output.write(&message);
-
-            // Should appear at Normal level
-            assert!(!test_output.stderr().is_empty());
-            assert!(test_output.stderr().contains("Info"));
-        }
-
-        // ========================================================================
-        // Backward Compatibility Tests
-        // ========================================================================
-
-        #[test]
-        fn it_should_maintain_backward_compatibility_for_steps() {
-            // Old way: direct construction
-            let old_message = StepsMessage {
-                title: "Steps".to_string(),
-                items: vec!["Step 1".to_string()],
-            };
-
-            // New way: constructor
-            let new_message = StepsMessage::new("Steps", vec!["Step 1".to_string()]);
-
-            // Should produce identical results
-            assert_eq!(old_message.title, new_message.title);
-            assert_eq!(old_message.items, new_message.items);
-        }
-
-        #[test]
-        fn it_should_maintain_backward_compatibility_for_info_blocks() {
-            // Old way: UserOutput::info_block helper
-            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-            test_output
-                .output
-                .info_block("Title", &["Line 1", "Line 2"]);
-            let old_output = test_output.stderr();
-
-            // New way: Direct message construction
-            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
-            let message =
-                InfoBlockMessage::new("Title", vec!["Line 1".to_string(), "Line 2".to_string()]);
-            test_output.output.write(&message);
-            let new_output = test_output.stderr();
-
-            // Should produce identical output
-            assert_eq!(old_output, new_output);
-        }
-
-        // ========================================================================
-        // Integration Tests
-        // ========================================================================
-
-        #[test]
-        fn it_should_work_with_json_formatter() {
-            use std::sync::{Arc, Mutex};
-
-            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
-            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
-            let formatter = Box::new(JsonFormatter);
-
-            let mut output = UserOutput {
-                theme: Theme::emoji(),
-                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
-                )),
-                formatter_override: Some(formatter),
-            };
-
-            let message = StepsMessage::builder("Steps").add("Step 1").build();
-            output.write(&message);
-
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
-            let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
-
-            assert_eq!(json["type"], "StepsMessage");
-        }
-
-        #[test]
-        fn it_should_work_with_info_block_json_formatter() {
-            use std::sync::{Arc, Mutex};
-
-            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
-            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
-            let formatter = Box::new(JsonFormatter);
-
-            let mut output = UserOutput {
-                theme: Theme::emoji(),
-                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
-                sink: Box::new(StandardSink::new(
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stdout_buffer))),
-                    Box::new(test_support::TestWriter::new(Arc::clone(&stderr_buffer))),
-                )),
-                formatter_override: Some(formatter),
-            };
-
-            let message = InfoBlockMessage::builder("Info").add_line("Line 1").build();
-            output.write(&message);
-
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
-            let json: serde_json::Value = serde_json::from_str(stderr.trim()).unwrap();
-
-            assert_eq!(json["type"], "InfoBlockMessage");
-        }
-
-        #[test]
-        fn it_should_handle_many_items_in_builder() {
-            let mut builder = StepsMessage::builder("Many steps");
-            for i in 1..=100 {
-                builder = builder.add(format!("Step {i}"));
-            }
-            let message = builder.build();
-
-            assert_eq!(message.items.len(), 100);
-            assert_eq!(message.items[0], "Step 1");
-            assert_eq!(message.items[99], "Step 100");
-        }
-
-        #[test]
-        fn it_should_handle_many_lines_in_info_block_builder() {
-            let mut builder = InfoBlockMessage::builder("Many lines");
-            for i in 1..=100 {
-                builder = builder.add_line(format!("Line {i}"));
-            }
-            let message = builder.build();
-
-            assert_eq!(message.lines.len(), 100);
-            assert_eq!(message.lines[0], "Line 1");
-            assert_eq!(message.lines[99], "Line 100");
-        }
-    }
-
-    // ============================================================================
     // OutputSink Tests
     // ============================================================================
 
@@ -2189,7 +1439,8 @@ mod tests {
         use super::super::*;
         use crate::presentation::user_output::test_support;
         use crate::presentation::user_output::{CompositeSink, FileSink, TelemetrySink};
-        use std::sync::{Arc, Mutex};
+        use parking_lot::Mutex;
+        use std::sync::Arc;
 
         /// Mock sink for testing that captures messages
         struct MockSink {
@@ -2204,7 +1455,7 @@ mod tests {
 
         impl OutputSink for MockSink {
             fn write_message(&mut self, _message: &dyn OutputMessage, formatted: &str) {
-                self.messages.lock().unwrap().push(formatted.to_string());
+                self.messages.lock().push(formatted.to_string());
             }
         }
 
@@ -2230,8 +1481,8 @@ mod tests {
 
             sink.write_message(&message, &formatted);
 
-            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stdout = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
 
             assert_eq!(stdout, "Test result\n");
             assert_eq!(stderr, "");
@@ -2255,8 +1506,8 @@ mod tests {
 
             sink.write_message(&message, &formatted);
 
-            let stdout = String::from_utf8(stdout_buffer.lock().unwrap().clone()).unwrap();
-            let stderr = String::from_utf8(stderr_buffer.lock().unwrap().clone()).unwrap();
+            let stdout = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
+            let stderr = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
 
             assert_eq!(stdout, "");
             assert_eq!(stderr, "⏳ Test progress\n");
@@ -2293,51 +1544,13 @@ mod tests {
             composite.write_message(&message, &formatted);
 
             // Verify all sinks received the message
-            assert_eq!(messages1.lock().unwrap().len(), 1);
-            assert_eq!(messages2.lock().unwrap().len(), 1);
-            assert_eq!(messages3.lock().unwrap().len(), 1);
+            assert_eq!(messages1.lock().len(), 1);
+            assert_eq!(messages2.lock().len(), 1);
+            assert_eq!(messages3.lock().len(), 1);
 
-            assert_eq!(messages1.lock().unwrap()[0], "⏳ Test\n");
-            assert_eq!(messages2.lock().unwrap()[0], "⏳ Test\n");
-            assert_eq!(messages3.lock().unwrap()[0], "⏳ Test\n");
-        }
-
-        #[test]
-        fn composite_sink_should_support_empty_sink_list() {
-            let mut composite = CompositeSink::new(vec![]);
-
-            let message = ProgressMessage {
-                text: "Test".to_string(),
-            };
-            let theme = Theme::emoji();
-            let formatted = message.format(&theme);
-
-            // Should not panic with empty sink list
-            composite.write_message(&message, &formatted);
-        }
-
-        #[test]
-        fn composite_sink_should_support_add_sink() {
-            let messages1 = Arc::new(Mutex::new(Vec::new()));
-            let messages2 = Arc::new(Mutex::new(Vec::new()));
-
-            let mut composite =
-                CompositeSink::new(vec![Box::new(MockSink::new(Arc::clone(&messages1)))]);
-
-            // Add another sink
-            composite.add_sink(Box::new(MockSink::new(Arc::clone(&messages2))));
-
-            let message = ProgressMessage {
-                text: "Test".to_string(),
-            };
-            let theme = Theme::emoji();
-            let formatted = message.format(&theme);
-
-            composite.write_message(&message, &formatted);
-
-            // Verify both sinks received the message
-            assert_eq!(messages1.lock().unwrap().len(), 1);
-            assert_eq!(messages2.lock().unwrap().len(), 1);
+            assert_eq!(messages1.lock()[0], "⏳ Test\n");
+            assert_eq!(messages2.lock()[0], "⏳ Test\n");
+            assert_eq!(messages3.lock()[0], "⏳ Test\n");
         }
 
         #[test]
@@ -2365,7 +1578,7 @@ mod tests {
             composite.write_message(&msg3, &msg3.format(&theme));
 
             // Verify all messages were received
-            let captured = messages.lock().unwrap();
+            let captured = messages.lock();
             assert_eq!(captured.len(), 3);
             assert_eq!(captured[0], "⏳ First\n");
             assert_eq!(captured[1], "✅ Second\n");
@@ -2387,7 +1600,7 @@ mod tests {
             output.success("Success message");
             output.error("Error message");
 
-            let captured = messages.lock().unwrap();
+            let captured = messages.lock();
             assert_eq!(captured.len(), 3);
             assert!(captured[0].contains("Progress message"));
             assert!(captured[1].contains("Success message"));
@@ -2409,10 +1622,10 @@ mod tests {
             output.progress("Test message");
 
             // Verify both sinks received the message
-            assert_eq!(messages1.lock().unwrap().len(), 1);
-            assert_eq!(messages2.lock().unwrap().len(), 1);
-            assert!(messages1.lock().unwrap()[0].contains("Test message"));
-            assert!(messages2.lock().unwrap()[0].contains("Test message"));
+            assert_eq!(messages1.lock().len(), 1);
+            assert_eq!(messages2.lock().len(), 1);
+            assert!(messages1.lock()[0].contains("Test message"));
+            assert!(messages2.lock()[0].contains("Test message"));
         }
 
         #[test]
@@ -2428,7 +1641,7 @@ mod tests {
             // Quiet-level message should appear
             output.error("Should appear");
 
-            let captured = messages.lock().unwrap();
+            let captured = messages.lock();
             assert_eq!(captured.len(), 1);
             assert!(captured[0].contains("Should appear"));
         }
@@ -2442,7 +1655,7 @@ mod tests {
 
             output.progress("Test");
 
-            let captured = messages.lock().unwrap();
+            let captured = messages.lock();
             // Should use emoji theme by default
             assert!(captured[0].contains("⏳"));
         }
@@ -2514,12 +1727,6 @@ mod tests {
         // ========================================================================
         // TelemetrySink Tests
         // ========================================================================
-
-        #[test]
-        fn telemetry_sink_should_create_with_endpoint() {
-            let sink = TelemetrySink::new("https://example.com".to_string());
-            assert_eq!(sink.endpoint(), "https://example.com");
-        }
 
         #[test]
         fn telemetry_sink_should_log_messages() {

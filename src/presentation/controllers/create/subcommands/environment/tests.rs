@@ -4,8 +4,7 @@
 //! functionality, including integration tests and unit tests for helper functions.
 
 use std::fs;
-use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use tempfile::TempDir;
 
@@ -13,13 +12,9 @@ use super::errors::CreateEnvironmentCommandError;
 use super::handler::handle;
 use crate::bootstrap::Container;
 use crate::presentation::dispatch::ExecutionContext;
-use crate::presentation::user_output::test_support::TestUserOutput;
-use crate::presentation::user_output::{UserOutput, VerbosityLevel};
+use crate::presentation::user_output::VerbosityLevel;
 
-fn create_test_context(
-    _working_dir: &Path,
-    _user_output: Arc<Mutex<UserOutput>>,
-) -> ExecutionContext {
+fn create_test_context() -> ExecutionContext {
     let container = Container::new(VerbosityLevel::Silent);
     ExecutionContext::new(Arc::new(container))
 }
@@ -49,8 +44,7 @@ fn it_should_create_environment_from_valid_config() {
     fs::write(&config_path, config_json).unwrap();
 
     let working_dir = temp_dir.path();
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    let context = create_test_context(working_dir, user_output);
+    let context = create_test_context();
     let result = handle(&config_path, working_dir, &context);
 
     assert!(
@@ -74,8 +68,7 @@ fn it_should_return_error_for_missing_config_file() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("nonexistent.json");
     let working_dir = temp_dir.path();
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    let context = create_test_context(working_dir, user_output);
+    let context = create_test_context();
 
     let result = handle(&config_path, working_dir, &context);
 
@@ -97,8 +90,7 @@ fn it_should_return_error_for_invalid_json() {
     fs::write(&config_path, r#"{"invalid json"#).unwrap();
 
     let working_dir = temp_dir.path();
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    let context = create_test_context(working_dir, user_output);
+    let context = create_test_context();
     let result = handle(&config_path, working_dir, &context);
 
     assert!(result.is_err());
@@ -134,16 +126,14 @@ fn it_should_return_error_for_duplicate_environment() {
     fs::write(&config_path, config_json).unwrap();
 
     let working_dir = temp_dir.path();
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    let context = create_test_context(working_dir, user_output);
+    let context = create_test_context();
 
     // Create environment first time
     let result1 = handle(&config_path, working_dir, &context);
     assert!(result1.is_ok(), "First create should succeed");
 
     // Try to create same environment again (use new context to avoid any state issues)
-    let user_output2 = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    let context2 = create_test_context(working_dir, user_output2);
+    let context2 = create_test_context();
     let result2 = handle(&config_path, working_dir, &context2);
     assert!(result2.is_err(), "Second create should fail");
 
@@ -181,8 +171,7 @@ fn it_should_create_environment_in_custom_working_dir() {
     );
     fs::write(&config_path, config_json).unwrap();
 
-    let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-    let context = create_test_context(&custom_working_dir, user_output);
+    let context = create_test_context();
     let result = handle(&config_path, &custom_working_dir, &context);
 
     assert!(result.is_ok(), "Should create in custom working dir");
@@ -196,18 +185,3 @@ fn it_should_create_environment_in_custom_working_dir() {
         env_state_file.display()
     );
 }
-
-// ============================================================================
-// Test Coverage Notes
-// ============================================================================
-//
-// All functionality that was previously tested in commented unit test blocks
-// is now covered by:
-//
-// 1. Configuration loading unit tests in `config_loader.rs` module
-// 2. Integration tests above that test the full workflow through the public API
-//
-// This provides better test organization and coverage:
-// - Unit tests are in the appropriate module (config_loader.rs)
-// - Integration tests use the public API (more realistic)
-// - No redundant tests for internal implementation details

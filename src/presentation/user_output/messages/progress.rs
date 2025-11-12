@@ -38,3 +38,38 @@ impl OutputMessage for ProgressMessage {
         "ProgressMessage"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn progress_message_should_format_with_theme() {
+        let theme = Theme::emoji();
+        let message = ProgressMessage {
+            text: "Test message".to_string(),
+        };
+
+        let formatted = message.format(&theme);
+
+        assert_eq!(formatted, "⏳ Test message\n");
+    }
+
+    #[test]
+    fn progress_message_should_require_normal_verbosity() {
+        let message = ProgressMessage {
+            text: "Test".to_string(),
+        };
+
+        assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
+    }
+
+    #[test]
+    fn progress_message_should_use_stderr_channel() {
+        let message = ProgressMessage {
+            text: "Test".to_string(),
+        };
+
+        assert_eq!(message.channel(), Channel::Stderr);
+    }
+}

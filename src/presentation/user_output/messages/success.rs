@@ -28,3 +28,20 @@ impl OutputMessage for SuccessMessage {
         "SuccessMessage"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn success_message_should_format_with_theme() {
+        let theme = Theme::plain();
+        let message = SuccessMessage {
+            text: "Operation complete".to_string(),
+        };
+
+        let formatted = message.format(&theme);
+
+        assert_eq!(formatted, "[OK] Operation complete\n");
+    }
+}

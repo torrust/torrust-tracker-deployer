@@ -4,7 +4,9 @@
 //! controlling time in tests for deterministic behavior.
 
 use chrono::{DateTime, Duration, Utc};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+
+use parking_lot::Mutex;
 
 use crate::shared::Clock;
 
@@ -84,7 +86,7 @@ impl MockClock {
     /// assert_eq!(clock.now(), expected);
     /// ```
     pub fn advance(&self, duration: Duration) {
-        let mut time = self.current_time.lock().expect("MockClock mutex poisoned");
+        let mut time = self.current_time.lock();
         *time += duration;
     }
 
@@ -132,14 +134,14 @@ impl MockClock {
     /// assert_eq!(clock.now(), new_time);
     /// ```
     pub fn set_time(&self, time: DateTime<Utc>) {
-        let mut current = self.current_time.lock().expect("MockClock mutex poisoned");
+        let mut current = self.current_time.lock();
         *current = time;
     }
 }
 
 impl Clock for MockClock {
     fn now(&self) -> DateTime<Utc> {
-        *self.current_time.lock().expect("MockClock mutex poisoned")
+        *self.current_time.lock()
     }
 }
 

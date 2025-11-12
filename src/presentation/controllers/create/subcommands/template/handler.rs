@@ -3,8 +3,11 @@
 //! This module handles the template creation command execution at the presentation layer,
 //! including output path validation, template generation, and user guidance.
 
+use std::cell::RefCell;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+
+use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::presentation::progress::ProgressReporter;
@@ -125,11 +128,14 @@ pub fn handle(
 ///
 /// ```rust,no_run
 /// use std::path::Path;
-/// use std::sync::{Arc, Mutex};
+/// use std::sync::Arc;
+/// use parking_lot::RawMutex;
+/// use parking_lot::ReentrantMutex;
+/// use std::cell::RefCell;
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template::handler::handle_template_creation_command;
 /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
 ///
-/// let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+/// let user_output = Arc::new(ReentrantMutex::<RefCell<UserOutput>>::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 ///
 /// if let Err(e) = handle_template_creation_command(Path::new("template.json"), &user_output) {
 ///     eprintln!("Template creation failed: {e}");
@@ -139,7 +145,7 @@ pub fn handle(
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
 pub fn handle_template_creation_command(
     output_path: &Path,
-    user_output: &Arc<Mutex<UserOutput>>,
+    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
 ) -> Result<(), CreateEnvironmentTemplateCommandError> {
     CreateTemplateCommandController::new(user_output).execute(output_path)
 }
@@ -175,7 +181,7 @@ impl CreateTemplateCommandController {
     ///
     /// Creates a `CreateTemplateCommandController` with user output service injection.
     /// This follows the single container architecture pattern.
-    pub fn new(user_output: &Arc<Mutex<UserOutput>>) -> Self {
+    pub fn new(user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>) -> Self {
         let progress = ProgressReporter::new(user_output.clone(), TEMPLATE_CREATION_WORKFLOW_STEPS);
 
         Self { progress }
@@ -303,7 +309,8 @@ mod tests {
     fn it_should_create_template_file() {
         let temp_dir = TempDir::new().unwrap();
         let output_path = temp_dir.path().join("test-template.json");
-        let user_output = TestUserOutput::wrapped(VerbosityLevel::Silent); // Use Silent to avoid output issues
+        let (user_output, _, _) =
+            TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped(); // Use Silent to avoid output issues
 
         let result = handle_template_creation_command(&output_path, &user_output);
 
@@ -328,7 +335,8 @@ mod tests {
     fn it_should_execute_controller_directly() {
         let temp_dir = TempDir::new().unwrap();
         let output_path = temp_dir.path().join("test-template.json");
-        let user_output = TestUserOutput::wrapped(VerbosityLevel::Silent);
+        let (user_output, _, _) =
+            TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped();
 
         // Test controller directly
         let mut controller = CreateTemplateCommandController::new(&user_output);
@@ -359,7 +367,8 @@ mod tests {
     fn it_should_handle_invalid_output_path() {
         // Try to create template in a non-existent directory
         let invalid_path = std::path::Path::new("/non/existent/directory/template.json");
-        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let (user_output, _, _) =
+            TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
 
         let result = handle_template_creation_command(invalid_path, &user_output);
 
@@ -374,7 +383,8 @@ mod tests {
 
     #[test]
     fn it_should_create_controller_successfully() {
-        let user_output = TestUserOutput::wrapped(VerbosityLevel::Normal);
+        let (user_output, _, _) =
+            TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
         let _controller = CreateTemplateCommandController::new(&user_output);
 
         // Controller should be created successfully

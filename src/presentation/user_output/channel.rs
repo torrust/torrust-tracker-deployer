@@ -25,3 +25,15 @@ pub enum Channel {
     /// Standard error stream for progress and operational messages
     Stderr,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn channel_enum_should_support_equality() {
+        assert_eq!(Channel::Stdout, Channel::Stdout);
+        assert_eq!(Channel::Stderr, Channel::Stderr);
+        assert_ne!(Channel::Stdout, Channel::Stderr);
+    }
+}

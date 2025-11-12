@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+**Superseded** by [Use ReentrantMutex Pattern for UserOutput Reentrancy](./reentrant-mutex-useroutput-pattern.md)
 
 ## Date
 
@@ -12,41 +12,7 @@ Accepted
 
 The current `UserOutput` implementation uses `Arc<Mutex<UserOutput>>` throughout the codebase to prevent mixed output during operations. However, this approach has introduced several significant problems:
 
-### Deadlock Issues
-
-We recently encountered a critical reentrancy deadlock in `CreateTemplateCommandController` where:
-
-1. `display_success_and_guidance()` acquired the `UserOutput` mutex
-2. While holding the lock, it called `self.progress.complete()`
-3. `ProgressReporter.complete()` attempted to acquire the same mutex again
-4. **Deadlock**: Tests hung indefinitely requiring timeout mechanisms
-
-This pattern is fragile and could easily recur as the codebase grows, especially when using `UserOutput` through multiple wrapper types (like `ProgressReporter`).
-
-### Application Characteristics
-
-The Torrust Tracker Deployer has specific characteristics that make complex concurrency unnecessary:
-
-- **Single-user tool**: Intended for individual developers deploying on their machines
-- **Short execution time**: Total deployment time < 5 minutes
-- **Sequential operations**: Most steps must execute sequentially (provision → configure → deploy)
-- **Error recovery priority**: Clear error states more important than minor performance gains
-
-### Current Complexity vs Benefits
-
-The mutex introduces significant complexity:
-
-- Timeout mechanisms needed to prevent deadlocks
-- Complex error handling for mutex poisoning
-- Difficult debugging when deadlocks occur
-- `Arc<Mutex<>>` patterns throughout the codebase
-- Multiple access paths to the same mutex (direct + through wrappers)
-
-The benefits (preventing mixed output) don't justify this complexity for a sequential, single-user deployment tool.
-
-## Decision
-
-**Remove the `Arc<Mutex<UserOutput>>` pattern entirely and use direct ownership/borrowing of `UserOutput`.**
+**Note**: This ADR was superseded by the ReentrantMutex pattern approach, which solves the same deadlock issues while maintaining thread safety and requiring minimal architectural changes.
 
 ### Core Changes
 

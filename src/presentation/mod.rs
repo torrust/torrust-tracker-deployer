@@ -189,3 +189,8 @@ pub use errors::CommandError;
 pub use input::{Cli, Commands, GlobalArgs};
 pub use progress::ProgressReporter;
 pub use user_output::{Theme, UserOutput, VerbosityLevel};
+
+#[cfg(test)]
+mod tests {
+    mod reentrancy_fix_test;
+}

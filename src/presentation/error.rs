@@ -28,17 +28,22 @@
 //! ## Usage
 //!
 //! ```rust
-//! use std::sync::{Arc, Mutex};
+//! use std::sync::Arc;
+//! use std::cell::RefCell;
+//! use parking_lot::ReentrantMutex;
 //! use torrust_tracker_deployer_lib::presentation::{error, user_output};
 //! use torrust_tracker_deployer_lib::presentation::errors::CommandError;
 //!
-//! # fn example(error: CommandError, user_output: Arc<Mutex<user_output::UserOutput>>) {
+//! # fn example(error: CommandError, user_output: Arc<ReentrantMutex<RefCell<user_output::UserOutput>>>) {
 //! // Display error with detailed troubleshooting
 //! error::handle_error(&error, &user_output);
 //! # }
 //! ```
 
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::sync::Arc;
+
+use parking_lot::ReentrantMutex;
 
 use crate::presentation::errors::CommandError;
 use crate::presentation::user_output::UserOutput;
@@ -58,10 +63,12 @@ use crate::presentation::user_output::UserOutput;
 ///
 /// ```rust
 /// use clap::Parser;
+/// use std::sync::Arc;
+/// use std::cell::RefCell;
+/// use parking_lot::ReentrantMutex;
 /// use torrust_tracker_deployer_lib::presentation::{error, input::cli, errors, user_output};
 /// use torrust_tracker_deployer_lib::presentation::controllers::destroy::DestroySubcommandError;
 /// use torrust_tracker_deployer_lib::domain::environment::name::EnvironmentNameError;
-/// use std::sync::{Arc, Mutex};
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // Example of handling a command error (simulated for testing)
@@ -76,33 +83,18 @@ use crate::presentation::user_output::UserOutput;
 ///         source: name_error,
 ///     })
 /// );
-/// let user_output = Arc::new(Mutex::new(user_output::UserOutput::new(user_output::VerbosityLevel::Normal)));
+/// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(user_output::UserOutput::new(user_output::VerbosityLevel::Normal))));
 /// error::handle_error(&sample_error, &user_output);
 /// # Ok(())
 /// # }
 /// ```
-pub fn handle_error(error: &CommandError, user_output: &Arc<Mutex<UserOutput>>) {
+pub fn handle_error(error: &CommandError, user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>) {
     let help_text = error.help();
 
-    if let Ok(mut output) = user_output.lock() {
-        output.error(&format!("{error}"));
-        output.blank_line();
-        output.info_block("For detailed troubleshooting:", &[help_text]);
-    } else {
-        // Cannot acquire lock - print to stderr directly as fallback
-        //
-        // RATIONALE: Plain text formatting without emojis/styling is intentional.
-        // When the mutex is poisoned, we're in a degraded error state where another
-        // thread has panicked. Using plain eprintln! ensures maximum compatibility
-        // and avoids any additional complexity that could fail in this critical path.
-        // The goal here is reliability over aesthetics - get the error message to
-        // the user no matter what, even if it's not pretty.
-        eprintln!("ERROR: {error}");
-        eprintln!();
-        eprintln!("CRITICAL: Failed to acquire user output lock.");
-        eprintln!("This indicates a panic occurred in another thread.");
-        eprintln!();
-        eprintln!("For detailed troubleshooting:");
-        eprintln!("{help_text}");
-    }
+    // With ReentrantMutex, we can safely acquire the lock multiple times from the same thread
+    let lock = user_output.lock();
+    let mut output = lock.borrow_mut();
+    output.error(&format!("{error}"));
+    output.blank_line();
+    output.info_block("For detailed troubleshooting:", &[help_text]);
 }

@@ -200,3 +200,103 @@ impl InfoBlockMessageBuilder {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_should_build_info_block_with_fluent_api() {
+        let message = InfoBlockMessage::builder("Environment")
+            .add_line("Name: production")
+            .add_line("Status: active")
+            .build();
+
+        assert_eq!(message.title, "Environment");
+        assert_eq!(message.lines, vec!["Name: production", "Status: active"]);
+    }
+
+    #[test]
+    fn it_should_create_simple_info_block_directly() {
+        let message = InfoBlockMessage::new(
+            "Environment",
+            vec!["Name: production".to_string(), "Status: active".to_string()],
+        );
+
+        assert_eq!(message.title, "Environment");
+        assert_eq!(message.lines, vec!["Name: production", "Status: active"]);
+    }
+
+    #[test]
+    fn it_should_build_empty_info_block() {
+        let message = InfoBlockMessage::builder("Title").build();
+
+        assert_eq!(message.title, "Title");
+        assert!(message.lines.is_empty());
+    }
+
+    #[test]
+    fn it_should_build_single_line_info_block() {
+        let message = InfoBlockMessage::builder("Title")
+            .add_line("Single line")
+            .build();
+
+        assert_eq!(message.title, "Title");
+        assert_eq!(message.lines, vec!["Single line"]);
+    }
+
+    #[test]
+    fn it_should_accept_string_types_in_info_block_builder() {
+        let message = InfoBlockMessage::builder("Title")
+            .add_line("String literal")
+            .add_line(String::from("Owned string"))
+            .add_line("Another literal".to_string())
+            .build();
+
+        assert_eq!(message.lines.len(), 3);
+    }
+
+    #[test]
+    fn it_should_accept_string_types_in_info_block_constructor() {
+        let message =
+            InfoBlockMessage::new("Title", vec!["Line 1".to_string(), String::from("Line 2")]);
+
+        assert_eq!(message.lines.len(), 2);
+    }
+
+    #[test]
+    fn it_should_format_info_block_messages_correctly() {
+        let theme = Theme::emoji();
+        let message = InfoBlockMessage::builder("Environment")
+            .add_line("Name: production")
+            .add_line("Status: active")
+            .build();
+
+        let formatted = message.format(&theme);
+        assert!(formatted.contains("Environment"));
+        assert!(formatted.contains("Name: production"));
+        assert!(formatted.contains("Status: active"));
+    }
+
+    #[test]
+    fn it_should_show_info_block_message_has_correct_properties() {
+        let message = InfoBlockMessage::new("Title", vec!["Line 1".to_string()]);
+
+        assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
+        assert_eq!(message.channel(), Channel::Stderr);
+        assert_eq!(message.type_name(), "InfoBlockMessage");
+    }
+
+    #[test]
+    fn it_should_handle_many_lines_in_info_block_builder() {
+        let mut builder = InfoBlockMessage::builder("Many lines");
+        for i in 1..=100 {
+            builder = builder.add_line(format!("Line {i}"));
+        }
+        let message = builder.build();
+
+        assert_eq!(message.lines.len(), 100);
+        assert_eq!(message.lines[0], "Line 1");
+        assert_eq!(message.lines[99], "Line 100");
+    }
+}

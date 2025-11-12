@@ -198,9 +198,6 @@ mod tests {
                 path: PathBuf::from("/test"),
                 source: Box::new(std::io::Error::other("test")),
             },
-            CreateEnvironmentTemplateCommandError::ProgressReportingFailed {
-                source: ProgressReporterError::UserOutputMutexPoisoned,
-            },
         ];
 
         for error in errors {

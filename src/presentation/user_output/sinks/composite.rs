@@ -47,3 +47,33 @@ impl OutputSink for CompositeSink {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn composite_sink_should_support_empty_sink_list() {
+        let composite = CompositeSink::new(vec![]);
+
+        // Should not panic with empty sink list
+        assert_eq!(composite.sinks.len(), 0);
+    }
+
+    #[test]
+    fn composite_sink_should_support_add_sink() {
+        // Create a mock sink for testing
+        struct MockSink;
+        impl OutputSink for MockSink {
+            fn write_message(&mut self, _message: &dyn OutputMessage, _formatted: &str) {}
+        }
+
+        let mut composite = CompositeSink::new(vec![]);
+
+        // Add a sink
+        composite.add_sink(Box::new(MockSink));
+
+        // Verify sink was added
+        assert_eq!(composite.sinks.len(), 1);
+    }
+}

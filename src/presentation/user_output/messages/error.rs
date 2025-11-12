@@ -28,3 +28,18 @@ impl OutputMessage for ErrorMessage {
         "ErrorMessage"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_message_should_always_be_shown() {
+        let message = ErrorMessage {
+            text: "Critical error".to_string(),
+        };
+
+        // Errors should require Quiet level (always shown)
+        assert_eq!(message.required_verbosity(), VerbosityLevel::Quiet);
+    }
+}

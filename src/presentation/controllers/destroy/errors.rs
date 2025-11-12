@@ -67,16 +67,6 @@ Tip: Check logs and try running with --log-output file-and-stderr for more detai
     },
 
     // ===== Internal Errors =====
-    /// `UserOutput` mutex poisoned
-    ///
-    /// The shared `UserOutput` mutex was poisoned by a panic in another thread.
-    /// This indicates a critical internal error that should be reported.
-    #[error(
-        "Internal error: UserOutput mutex was poisoned
-Tip: This is a critical bug - please report it with full logs using --log-output file-and-stderr"
-    )]
-    UserOutputMutexPoisoned,
-
     /// Progress reporting failed
     ///
     /// Failed to report progress to the user due to an internal error.
@@ -132,14 +122,16 @@ impl DestroySubcommandError {
     ///
     /// ```rust
     /// use std::path::Path;
-    /// use std::sync::{Arc, Mutex};
+    /// use std::sync::Arc;
     /// use std::time::Duration;
+    /// use parking_lot::ReentrantMutex;
+    /// use std::cell::RefCell;
     /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
     /// use torrust_tracker_deployer_lib::presentation::user_output::{UserOutput, VerbosityLevel};
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
     /// use torrust_tracker_deployer_lib::shared::clock::SystemClock;
     ///
-    /// let output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Normal)));
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let repository_factory = Arc::new(RepositoryFactory::new(Duration::from_secs(30)));
     /// let clock = Arc::new(SystemClock);
     /// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), repository_factory, clock, &output) {
@@ -256,32 +248,6 @@ For persistent issues, check the infrastructure documentation."
 If the problem persists, check system logs and contact administrator."
             }
 
-            Self::UserOutputMutexPoisoned => {
-                "UserOutput Mutex Poisoned - Critical Internal Error:
-
-This is a critical bug that indicates a panic occurred while holding the UserOutput mutex lock.
-This should never happen in normal operation.
-
-1. Immediate actions:
-   - Save all relevant logs and error messages
-   - Note what operation was being performed
-   - Record the environment state
-
-2. Report the issue:
-   - This is a bug that needs to be reported
-   - Include full logs: --log-output file-and-stderr
-   - Provide steps to reproduce if possible
-   - Include system information (OS, versions)
-
-3. Workaround:
-   - Restart the application
-   - Try the operation again
-   - Check for resource exhaustion (memory, threads)
-
-This error indicates a serious bug in the application's error handling or concurrency management.
-Please report it to the development team with full details."
-            }
-
             Self::ProgressReportingFailed { .. } => {
                 "Progress Reporting Failed - Critical Internal Error:
 
@@ -370,10 +336,6 @@ mod tests {
             DestroySubcommandError::RepositoryAccessFailed {
                 data_dir: "/tmp".to_string(),
                 reason: "permission denied".to_string(),
-            },
-            DestroySubcommandError::UserOutputMutexPoisoned,
-            DestroySubcommandError::ProgressReportingFailed {
-                source: ProgressReporterError::UserOutputMutexPoisoned,
             },
         ];
 

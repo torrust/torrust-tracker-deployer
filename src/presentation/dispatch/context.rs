@@ -38,12 +38,15 @@
 //!
 //! // Command handlers access services through context
 //! let user_output = context.user_output();
-//! user_output.lock().unwrap().progress("Processing...");
+//! user_output.lock().borrow_mut().progress("Processing...");
 //! # Ok(())
 //! # }
 //! ```
 
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::sync::Arc;
+
+use parking_lot::ReentrantMutex;
 
 use crate::bootstrap::Container;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
@@ -69,7 +72,7 @@ use crate::shared::clock::Clock;
 ///
 /// // Access user output service
 /// let user_output = context.user_output();
-/// user_output.lock().unwrap().success("Operation completed");
+/// user_output.lock().borrow_mut().success("Operation completed");
 /// ```
 #[derive(Clone)]
 pub struct ExecutionContext {
@@ -148,12 +151,12 @@ impl ExecutionContext {
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
     /// let user_output = context.user_output();
-    /// user_output.lock().unwrap().success("Operation completed");
+    /// user_output.lock().borrow_mut().success("Operation completed");
     /// # Ok(())
     /// # }
     /// ```
     #[must_use]
-    pub fn user_output(&self) -> Arc<Mutex<UserOutput>> {
+    pub fn user_output(&self) -> Arc<ReentrantMutex<RefCell<UserOutput>>> {
         self.container.user_output()
     }
 

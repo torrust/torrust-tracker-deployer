@@ -25,10 +25,13 @@
 //! }
 //! ```
 
+use std::cell::RefCell;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tempfile::TempDir;
+
+use parking_lot::ReentrantMutex;
 
 use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 
@@ -60,7 +63,7 @@ use crate::presentation::user_output::{UserOutput, VerbosityLevel};
 pub struct TestContext {
     _temp_dir: TempDir,
     working_dir: PathBuf,
-    user_output: Arc<Mutex<UserOutput>>,
+    user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
 }
 
 impl TestContext {
@@ -73,7 +76,9 @@ impl TestContext {
     pub fn new() -> Self {
         let temp_dir = TempDir::new().expect("Failed to create temporary directory");
         let working_dir = temp_dir.path().to_path_buf();
-        let user_output = Arc::new(Mutex::new(UserOutput::new(VerbosityLevel::Silent)));
+        let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(
+            VerbosityLevel::Silent,
+        ))));
 
         Self {
             _temp_dir: temp_dir,
@@ -93,7 +98,7 @@ impl TestContext {
 
     /// Get a reference to the shared user output
     #[must_use]
-    pub fn user_output(&self) -> Arc<Mutex<UserOutput>> {
+    pub fn user_output(&self) -> Arc<ReentrantMutex<RefCell<UserOutput>>> {
         Arc::clone(&self.user_output)
     }
 }
