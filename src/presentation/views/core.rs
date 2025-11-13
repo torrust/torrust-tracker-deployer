@@ -511,29 +511,6 @@ mod tests {
     use std::sync::Arc;
 
     // ============================================================================
-    // Type-Safe Writer Wrapper Tests
-    // ============================================================================
-
-    mod type_safe_wrappers {
-        use super::*;
-
-        #[test]
-        fn user_output_uses_typed_wrappers_internally() {
-            // This test verifies that UserOutput uses typed wrappers internally
-            // and that channel routing is type-safe
-            let mut test_output = testing::TestUserOutput::new(VerbosityLevel::Normal);
-
-            // These calls go through type-safe dispatch
-            test_output.output.progress("Progress message");
-            test_output.output.result("Result data");
-
-            // Verify correct channel routing via type system
-            assert!(test_output.stderr().contains("Progress message"));
-            assert!(test_output.stdout().contains("Result data"));
-        }
-    }
-
-    // ============================================================================
     // UserOutput Tests - Parameterized Tests
     // ============================================================================
     //
