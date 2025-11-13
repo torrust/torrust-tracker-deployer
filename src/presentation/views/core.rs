@@ -3,11 +3,12 @@
 use std::io::Write;
 
 use super::messages::{
-    ErrorMessage, InfoBlockMessage, ProgressMessage, ResultMessage, StepsMessage, SuccessMessage,
-    WarningMessage,
+    BlankLineMessage, ErrorMessage, InfoBlockMessage, ProgressMessage, ResultMessage, StepsMessage,
+    SuccessMessage, WarningMessage,
 };
 use super::sinks::StandardSink;
 use super::verbosity::VerbosityFilter;
+#[allow(unused_imports)] // Channel is used in tests
 use super::{Channel, FormatterOverride, OutputMessage, OutputSink, Theme, VerbosityLevel};
 
 pub struct UserOutput {
@@ -413,22 +414,6 @@ impl UserOutput {
     /// ```
     pub fn blank_line(&mut self) {
         if self.verbosity_filter.should_show_blank_lines() {
-            // Create a simple message that just outputs a newline
-            struct BlankLineMessage;
-            impl OutputMessage for BlankLineMessage {
-                fn format(&self, _theme: &Theme) -> String {
-                    "\n".to_string()
-                }
-                fn required_verbosity(&self) -> VerbosityLevel {
-                    VerbosityLevel::Normal
-                }
-                fn channel(&self) -> Channel {
-                    Channel::Stderr
-                }
-                fn type_name(&self) -> &'static str {
-                    "BlankLineMessage"
-                }
-            }
             self.write(&BlankLineMessage);
         }
     }
