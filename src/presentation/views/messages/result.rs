@@ -43,6 +43,15 @@ mod tests {
     }
 
     #[test]
+    fn it_should_require_quiet_verbosity_when_displaying_result() {
+        let message = ResultMessage {
+            text: "Output data".to_string(),
+        };
+
+        assert_eq!(message.required_verbosity(), VerbosityLevel::Quiet);
+    }
+
+    #[test]
     fn it_should_not_include_symbols_when_formatting_result() {
         let theme = Theme::emoji();
         let message = ResultMessage {

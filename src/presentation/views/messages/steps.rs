@@ -220,6 +220,16 @@ mod tests {
     }
 
     #[test]
+    fn it_should_require_normal_verbosity_when_displaying_steps() {
+        let message = StepsMessage {
+            title: "Next steps:".to_string(),
+            items: vec!["First step".to_string()],
+        };
+
+        assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
+    }
+
+    #[test]
     fn it_should_use_stderr_channel_when_displaying_steps() {
         let message = StepsMessage {
             title: "Next steps:".to_string(),

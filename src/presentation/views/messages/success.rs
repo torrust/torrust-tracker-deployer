@@ -46,6 +46,15 @@ mod tests {
     }
 
     #[test]
+    fn it_should_require_normal_verbosity_when_displaying_success() {
+        let message = SuccessMessage {
+            text: "Operation complete".to_string(),
+        };
+
+        assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
+    }
+
+    #[test]
     fn it_should_use_stderr_channel_when_displaying_success() {
         let message = SuccessMessage {
             text: "Operation complete".to_string(),
