@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                            | Summary                                                                                   |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ✅ Accepted   | 2025-11-13 | [Migration to AGENTS.md Standard](./agents-md-migration.md)                                         | Adopt open AGENTS.md standard for multi-agent compatibility while keeping GitHub redirect |
 | ✅ Accepted   | 2025-11-11 | [Use ReentrantMutex Pattern for UserOutput Reentrancy](./reentrant-mutex-useroutput-pattern.md)     | Use Arc<ReentrantMutex<RefCell<UserOutput>>> to fix same-thread deadlock in issue #164    |
 | ❌ Superseded | 2025-11-11 | [Remove UserOutput Mutex](./user-output-mutex-removal.md)                                           | Remove Arc<Mutex<UserOutput>> pattern for simplified, deadlock-free architecture          |
 | ✅ Accepted   | 2025-11-07 | [ExecutionContext Wrapper Pattern](./execution-context-wrapper.md)                                  | Use ExecutionContext wrapper around Container for future-proof command signatures         |
