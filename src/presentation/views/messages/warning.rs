@@ -34,7 +34,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn warning_message_should_include_extra_space() {
+    fn it_should_include_extra_space_when_formatting_warning() {
         let theme = Theme::emoji();
         let message = WarningMessage {
             text: "Warning text".to_string(),
@@ -44,5 +44,14 @@ mod tests {
 
         // Warning messages include two spaces after the symbol
         assert_eq!(formatted, "⚠️  Warning text\n");
+    }
+
+    #[test]
+    fn it_should_use_stderr_channel_when_displaying_warning() {
+        let message = WarningMessage {
+            text: "Warning text".to_string(),
+        };
+
+        assert_eq!(message.channel(), Channel::Stderr);
     }
 }

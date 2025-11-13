@@ -34,12 +34,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn error_message_should_always_be_shown() {
+    fn it_should_always_be_shown_when_error_occurs() {
         let message = ErrorMessage {
             text: "Critical error".to_string(),
         };
 
         // Errors should require Quiet level (always shown)
         assert_eq!(message.required_verbosity(), VerbosityLevel::Quiet);
+    }
+
+    #[test]
+    fn it_should_use_stderr_channel_when_displaying_error() {
+        let message = ErrorMessage {
+            text: "Critical error".to_string(),
+        };
+
+        assert_eq!(message.channel(), Channel::Stderr);
     }
 }

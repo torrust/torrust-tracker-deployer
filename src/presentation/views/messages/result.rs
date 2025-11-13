@@ -34,7 +34,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn result_message_should_use_stdout_channel() {
+    fn it_should_use_stdout_channel_when_displaying_result() {
         let message = ResultMessage {
             text: "Output data".to_string(),
         };
@@ -43,7 +43,7 @@ mod tests {
     }
 
     #[test]
-    fn result_message_should_not_include_symbols() {
+    fn it_should_not_include_symbols_when_formatting_result() {
         let theme = Theme::emoji();
         let message = ResultMessage {
             text: "Plain output".to_string(),

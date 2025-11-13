@@ -44,7 +44,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn progress_message_should_format_with_theme() {
+    fn it_should_format_with_theme_when_displaying_progress() {
         let theme = Theme::emoji();
         let message = ProgressMessage {
             text: "Test message".to_string(),
@@ -56,7 +56,7 @@ mod tests {
     }
 
     #[test]
-    fn progress_message_should_require_normal_verbosity() {
+    fn it_should_require_normal_verbosity_when_displaying_progress() {
         let message = ProgressMessage {
             text: "Test".to_string(),
         };
@@ -65,7 +65,7 @@ mod tests {
     }
 
     #[test]
-    fn progress_message_should_use_stderr_channel() {
+    fn it_should_use_stderr_channel_when_displaying_progress() {
         let message = ProgressMessage {
             text: "Test".to_string(),
         };
