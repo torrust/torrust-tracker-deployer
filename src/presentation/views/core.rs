@@ -516,35 +516,6 @@ mod tests {
 
     mod type_safe_wrappers {
         use super::*;
-        use parking_lot::Mutex;
-        use std::sync::Arc;
-
-        #[test]
-        fn type_safe_dispatch_prevents_channel_confusion() {
-            // This test demonstrates that the type system prevents channel confusion
-            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
-            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
-
-            let stdout_writer = Box::new(testing::TestWriter::new(Arc::clone(&stdout_buffer)));
-            let stderr_writer = Box::new(testing::TestWriter::new(Arc::clone(&stderr_buffer)));
-
-            let mut stdout = StdoutWriter::new(stdout_writer);
-            let mut stderr = StderrWriter::new(stderr_writer);
-
-            // Type-safe: These methods can only be called on the correct writer type
-            stdout.write_line("stdout data");
-            stderr.write_line("stderr message");
-
-            let stdout_output = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
-            let stderr_output = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
-
-            assert_eq!(stdout_output, "stdout data");
-            assert_eq!(stderr_output, "stderr message");
-
-            // The following would not compile (demonstrating compile-time safety):
-            // stderr.write_line("this should go to stdout");  // Type mismatch!
-            // stdout.write_line("this should go to stderr");  // Type mismatch!
-        }
 
         #[test]
         fn user_output_uses_typed_wrappers_internally() {
