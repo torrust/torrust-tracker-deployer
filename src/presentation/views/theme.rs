@@ -168,8 +168,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn emoji_theme_should_use_emoji_symbols() {
+    fn it_should_return_emoji_symbols_when_using_emoji_theme() {
         let theme = Theme::emoji();
+
         assert_eq!(theme.progress_symbol(), "⏳");
         assert_eq!(theme.success_symbol(), "✅");
         assert_eq!(theme.warning_symbol(), "⚠️");
@@ -177,8 +178,9 @@ mod tests {
     }
 
     #[test]
-    fn plain_theme_should_use_text_labels() {
+    fn it_should_return_text_labels_when_using_plain_theme() {
         let theme = Theme::plain();
+
         assert_eq!(theme.progress_symbol(), "[INFO]");
         assert_eq!(theme.success_symbol(), "[OK]");
         assert_eq!(theme.warning_symbol(), "[WARN]");
@@ -186,8 +188,9 @@ mod tests {
     }
 
     #[test]
-    fn ascii_theme_should_use_ascii_symbols() {
+    fn it_should_return_ascii_symbols_when_using_ascii_theme() {
         let theme = Theme::ascii();
+
         assert_eq!(theme.progress_symbol(), "=>");
         assert_eq!(theme.success_symbol(), "[+]");
         assert_eq!(theme.warning_symbol(), "[!]");
@@ -195,8 +198,9 @@ mod tests {
     }
 
     #[test]
-    fn default_theme_should_be_emoji() {
+    fn it_should_default_to_emoji_theme_when_using_default() {
         let theme = Theme::default();
+
         assert_eq!(theme, Theme::emoji());
     }
 
