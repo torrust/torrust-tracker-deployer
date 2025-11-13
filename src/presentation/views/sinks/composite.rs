@@ -53,15 +53,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn composite_sink_should_support_empty_sink_list() {
+    fn it_should_create_composite_sink_when_given_empty_sink_list() {
         let composite = CompositeSink::new(vec![]);
 
-        // Should not panic with empty sink list
         assert_eq!(composite.sinks.len(), 0);
     }
 
     #[test]
-    fn composite_sink_should_support_add_sink() {
+    fn it_should_add_sink_to_composite_when_add_sink_is_called() {
         // Create a mock sink for testing
         struct MockSink;
         impl OutputSink for MockSink {
@@ -70,10 +69,8 @@ mod tests {
 
         let mut composite = CompositeSink::new(vec![]);
 
-        // Add a sink
         composite.add_sink(Box::new(MockSink));
 
-        // Verify sink was added
         assert_eq!(composite.sinks.len(), 1);
     }
 }

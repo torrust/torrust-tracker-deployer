@@ -34,7 +34,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn success_message_should_format_with_theme() {
+    fn it_should_format_with_theme_when_displaying_success() {
         let theme = Theme::plain();
         let message = SuccessMessage {
             text: "Operation complete".to_string(),
@@ -43,5 +43,23 @@ mod tests {
         let formatted = message.format(&theme);
 
         assert_eq!(formatted, "[OK] Operation complete\n");
+    }
+
+    #[test]
+    fn it_should_require_normal_verbosity_when_displaying_success() {
+        let message = SuccessMessage {
+            text: "Operation complete".to_string(),
+        };
+
+        assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
+    }
+
+    #[test]
+    fn it_should_use_stderr_channel_when_displaying_success() {
+        let message = SuccessMessage {
+            text: "Operation complete".to_string(),
+        };
+
+        assert_eq!(message.channel(), Channel::Stderr);
     }
 }

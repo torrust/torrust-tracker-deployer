@@ -31,9 +31,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn channel_enum_should_support_equality() {
+    fn it_should_compare_equal_when_channels_are_same() {
         assert_eq!(Channel::Stdout, Channel::Stdout);
         assert_eq!(Channel::Stderr, Channel::Stderr);
+    }
+
+    #[test]
+    fn it_should_compare_not_equal_when_channels_are_different() {
         assert_ne!(Channel::Stdout, Channel::Stderr);
     }
 }

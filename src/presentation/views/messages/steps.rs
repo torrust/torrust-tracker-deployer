@@ -207,7 +207,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn steps_message_should_format_numbered_list() {
+    fn it_should_format_numbered_list_when_displaying_steps() {
         let theme = Theme::emoji();
         let message = StepsMessage {
             title: "Next steps:".to_string(),
@@ -217,6 +217,26 @@ mod tests {
         let formatted = message.format(&theme);
 
         assert_eq!(formatted, "Next steps:\n1. First step\n2. Second step\n");
+    }
+
+    #[test]
+    fn it_should_require_normal_verbosity_when_displaying_steps() {
+        let message = StepsMessage {
+            title: "Next steps:".to_string(),
+            items: vec!["First step".to_string()],
+        };
+
+        assert_eq!(message.required_verbosity(), VerbosityLevel::Normal);
+    }
+
+    #[test]
+    fn it_should_use_stderr_channel_when_displaying_steps() {
+        let message = StepsMessage {
+            title: "Next steps:".to_string(),
+            items: vec!["First step".to_string()],
+        };
+
+        assert_eq!(message.channel(), Channel::Stderr);
     }
 
     #[test]

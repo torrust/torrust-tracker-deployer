@@ -77,14 +77,14 @@ impl StderrWriter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::presentation::views::test_support;
+    use crate::presentation::views::testing;
     use parking_lot::Mutex;
     use std::sync::Arc;
 
     #[test]
     fn stdout_writer_should_wrap_writer() {
         let buffer = Arc::new(Mutex::new(Vec::new()));
-        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+        let writer = Box::new(testing::TestWriter::new(Arc::clone(&buffer)));
 
         let mut stdout = StdoutWriter::new(writer);
         stdout.write_line("Test output");
@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn stderr_writer_should_wrap_writer() {
         let buffer = Arc::new(Mutex::new(Vec::new()));
-        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+        let writer = Box::new(testing::TestWriter::new(Arc::clone(&buffer)));
 
         let mut stderr = StderrWriter::new(writer);
         stderr.write_line("Test error");
@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn stdout_writer_should_write_multiple_lines() {
         let buffer = Arc::new(Mutex::new(Vec::new()));
-        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+        let writer = Box::new(testing::TestWriter::new(Arc::clone(&buffer)));
 
         let mut stdout = StdoutWriter::new(writer);
         stdout.write_line("Line 1\n");
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn stderr_writer_should_write_multiple_lines() {
         let buffer = Arc::new(Mutex::new(Vec::new()));
-        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+        let writer = Box::new(testing::TestWriter::new(Arc::clone(&buffer)));
 
         let mut stderr = StderrWriter::new(writer);
         stderr.write_line("Error 1\n");
@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn stdout_writer_writeln_adds_newline() {
         let buffer = Arc::new(Mutex::new(Vec::new()));
-        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+        let writer = Box::new(testing::TestWriter::new(Arc::clone(&buffer)));
 
         let mut stdout = StdoutWriter::new(writer);
         stdout.writeln("Test");
@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn stderr_writer_writeln_adds_newline() {
         let buffer = Arc::new(Mutex::new(Vec::new()));
-        let writer = Box::new(test_support::TestWriter::new(Arc::clone(&buffer)));
+        let writer = Box::new(testing::TestWriter::new(Arc::clone(&buffer)));
 
         let mut stderr = StderrWriter::new(writer);
         stderr.writeln("Error");

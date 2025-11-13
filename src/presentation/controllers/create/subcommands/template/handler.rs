@@ -283,7 +283,7 @@ impl CreateTemplateCommandController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::presentation::views::test_support::TestUserOutput;
+    use crate::presentation::views::testing::TestUserOutput;
     use crate::presentation::views::VerbosityLevel;
     use std::fs;
     use tempfile::TempDir;

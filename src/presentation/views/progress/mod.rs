@@ -469,7 +469,7 @@ fn format_duration(duration: Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::presentation::views::test_support::TestUserOutput;
+    use crate::presentation::views::testing::TestUserOutput;
     use crate::presentation::views::VerbosityLevel;
 
     #[test]

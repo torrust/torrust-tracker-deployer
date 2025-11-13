@@ -52,48 +52,6 @@ impl VerbosityFilter {
     pub(super) fn should_show(&self, required_level: VerbosityLevel) -> bool {
         self.level >= required_level
     }
-
-    /// Progress messages require Normal level
-    #[allow(dead_code)]
-    pub(super) fn should_show_progress(&self) -> bool {
-        self.should_show(VerbosityLevel::Normal)
-    }
-
-    /// Success messages require Normal level
-    #[allow(dead_code)]
-    pub(super) fn should_show_success(&self) -> bool {
-        self.should_show(VerbosityLevel::Normal)
-    }
-
-    /// Warning messages require Normal level
-    #[allow(dead_code)]
-    pub(super) fn should_show_warnings(&self) -> bool {
-        self.should_show(VerbosityLevel::Normal)
-    }
-
-    /// Errors are always shown regardless of verbosity level
-    #[allow(clippy::unused_self)]
-    #[allow(dead_code)]
-    pub(super) fn should_show_errors(&self) -> bool {
-        true
-    }
-
-    /// Blank lines require Normal level
-    pub(super) fn should_show_blank_lines(&self) -> bool {
-        self.should_show(VerbosityLevel::Normal)
-    }
-
-    /// Steps require Normal level
-    #[allow(dead_code)]
-    pub(super) fn should_show_steps(&self) -> bool {
-        self.should_show(VerbosityLevel::Normal)
-    }
-
-    /// Info blocks require Normal level
-    #[allow(dead_code)]
-    pub(super) fn should_show_info_blocks(&self) -> bool {
-        self.should_show(VerbosityLevel::Normal)
-    }
 }
 
 #[cfg(test)]
@@ -101,24 +59,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn verbosity_filter_at_quiet_level_should_only_show_required_quiet() {
+    fn it_should_show_only_quiet_messages_when_filter_is_set_to_quiet_level() {
         let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
+
         assert!(filter.should_show(VerbosityLevel::Quiet));
         assert!(!filter.should_show(VerbosityLevel::Normal));
         assert!(!filter.should_show(VerbosityLevel::Verbose));
     }
 
     #[test]
-    fn verbosity_filter_at_normal_level_should_show_quiet_and_normal() {
+    fn it_should_show_quiet_and_normal_messages_when_filter_is_set_to_normal_level() {
         let filter = VerbosityFilter::new(VerbosityLevel::Normal);
+
         assert!(filter.should_show(VerbosityLevel::Quiet));
         assert!(filter.should_show(VerbosityLevel::Normal));
         assert!(!filter.should_show(VerbosityLevel::Verbose));
     }
 
     #[test]
-    fn verbosity_filter_at_verbose_level_should_show_all_up_to_verbose() {
+    fn it_should_show_messages_up_to_verbose_when_filter_is_set_to_verbose_level() {
         let filter = VerbosityFilter::new(VerbosityLevel::Verbose);
+
         assert!(filter.should_show(VerbosityLevel::Quiet));
         assert!(filter.should_show(VerbosityLevel::Normal));
         assert!(filter.should_show(VerbosityLevel::Verbose));
@@ -126,8 +87,9 @@ mod tests {
     }
 
     #[test]
-    fn verbosity_filter_at_debug_level_should_show_all_messages() {
+    fn it_should_show_all_messages_when_filter_is_set_to_debug_level() {
         let filter = VerbosityFilter::new(VerbosityLevel::Debug);
+
         assert!(filter.should_show(VerbosityLevel::Quiet));
         assert!(filter.should_show(VerbosityLevel::Normal));
         assert!(filter.should_show(VerbosityLevel::Verbose));
@@ -136,7 +98,7 @@ mod tests {
     }
 
     #[test]
-    fn verbosity_levels_should_be_ordered() {
+    fn it_should_order_verbosity_levels_from_quiet_to_debug() {
         assert!(VerbosityLevel::Quiet < VerbosityLevel::Normal);
         assert!(VerbosityLevel::Normal < VerbosityLevel::Verbose);
         assert!(VerbosityLevel::Verbose < VerbosityLevel::VeryVerbose);
@@ -144,149 +106,34 @@ mod tests {
     }
 
     #[test]
-    fn default_verbosity_level_should_be_normal() {
+    fn it_should_default_to_normal_level_when_using_default() {
         let level = VerbosityLevel::default();
+
         assert_eq!(level, VerbosityLevel::Normal);
     }
 
     #[test]
-    fn verbosity_filter_should_show_errors_at_any_level() {
-        let quiet_filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-        let normal_filter = VerbosityFilter::new(VerbosityLevel::Normal);
-        assert!(quiet_filter.should_show_errors());
-        assert!(normal_filter.should_show_errors());
-    }
-
-    #[test]
-    fn verbosity_filter_should_show_progress_only_at_normal_or_higher() {
-        let quiet_filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-        let normal_filter = VerbosityFilter::new(VerbosityLevel::Normal);
-        assert!(!quiet_filter.should_show_progress());
-        assert!(normal_filter.should_show_progress());
-    }
-
-    #[test]
-    fn verbosity_filter_should_show_blank_lines_only_at_normal_or_higher() {
-        let quiet_filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-        let normal_filter = VerbosityFilter::new(VerbosityLevel::Normal);
-        assert!(!quiet_filter.should_show_blank_lines());
-        assert!(normal_filter.should_show_blank_lines());
-    }
-
-    #[test]
-    fn it_should_show_progress_at_verbose_level() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Verbose);
-        assert!(filter.should_show_progress());
-    }
-
-    #[test]
-    fn it_should_always_show_errors_regardless_of_level() {
-        assert!(VerbosityFilter::new(VerbosityLevel::Quiet).should_show_errors());
-        assert!(VerbosityFilter::new(VerbosityLevel::Normal).should_show_errors());
-        assert!(VerbosityFilter::new(VerbosityLevel::Verbose).should_show_errors());
-        assert!(VerbosityFilter::new(VerbosityLevel::VeryVerbose).should_show_errors());
-        assert!(VerbosityFilter::new(VerbosityLevel::Debug).should_show_errors());
-    }
-
-    #[test]
-    fn it_should_show_success_at_normal_level() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-        assert!(filter.should_show_success());
-    }
-
-    #[test]
-    fn it_should_not_show_success_at_quiet_level() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-        assert!(!filter.should_show_success());
-    }
-
-    #[test]
-    fn it_should_show_warnings_at_normal_level() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-        assert!(filter.should_show_warnings());
-    }
-
-    #[test]
-    fn it_should_not_show_warnings_at_quiet_level() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-        assert!(!filter.should_show_warnings());
-    }
-
-    #[test]
-    fn it_should_show_steps_at_normal_level() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-        assert!(filter.should_show_steps());
-    }
-
-    #[test]
-    fn it_should_not_show_steps_at_quiet_level() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-        assert!(!filter.should_show_steps());
-    }
-
-    #[test]
-    fn it_should_show_info_blocks_at_normal_level() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-        assert!(filter.should_show_info_blocks());
-    }
-
-    #[test]
-    fn it_should_not_show_info_blocks_at_quiet_level() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-        assert!(!filter.should_show_info_blocks());
-    }
-
-    #[test]
-    fn it_should_show_when_level_meets_requirement() {
-        let filter = VerbosityFilter::new(VerbosityLevel::Normal);
-        assert!(filter.should_show(VerbosityLevel::Quiet));
-        assert!(filter.should_show(VerbosityLevel::Normal));
-        assert!(!filter.should_show(VerbosityLevel::Verbose));
-    }
-
-    #[test]
-    fn it_should_handle_all_verbosity_levels_in_should_show() {
-        let quiet_filter = VerbosityFilter::new(VerbosityLevel::Quiet);
-        assert!(quiet_filter.should_show(VerbosityLevel::Quiet));
-        assert!(!quiet_filter.should_show(VerbosityLevel::Normal));
-
-        let debug_filter = VerbosityFilter::new(VerbosityLevel::Debug);
-        assert!(debug_filter.should_show(VerbosityLevel::Quiet));
-        assert!(debug_filter.should_show(VerbosityLevel::Normal));
-        assert!(debug_filter.should_show(VerbosityLevel::Verbose));
-        assert!(debug_filter.should_show(VerbosityLevel::VeryVerbose));
-        assert!(debug_filter.should_show(VerbosityLevel::Debug));
-    }
-
-    // ========================================================================
-    // VerbosityLevel Tests
-    // ========================================================================
-
-    #[test]
-    fn it_should_use_normal_as_default_verbosity() {
-        let default = VerbosityLevel::default();
-        assert_eq!(default, VerbosityLevel::Normal);
-    }
-
-    #[test]
-    fn it_should_order_verbosity_levels_correctly() {
-        assert!(VerbosityLevel::Quiet < VerbosityLevel::Normal);
-        assert!(VerbosityLevel::Normal < VerbosityLevel::Verbose);
-        assert!(VerbosityLevel::Verbose < VerbosityLevel::VeryVerbose);
-        assert!(VerbosityLevel::VeryVerbose < VerbosityLevel::Debug);
-    }
-
-    #[test]
-    fn it_should_support_equality_comparison() {
+    fn it_should_compare_equal_when_verbosity_levels_are_same() {
         assert_eq!(VerbosityLevel::Normal, VerbosityLevel::Normal);
+    }
+
+    #[test]
+    fn it_should_compare_not_equal_when_verbosity_levels_are_different() {
         assert_ne!(VerbosityLevel::Normal, VerbosityLevel::Verbose);
     }
 
     #[test]
-    fn it_should_support_ordering_comparison() {
+    fn it_should_support_ordering_comparisons_with_greater_or_equal() {
         let normal = VerbosityLevel::Normal;
+
         assert!(normal >= VerbosityLevel::Quiet);
         assert!(normal >= VerbosityLevel::Normal);
+    }
+
+    #[test]
+    fn it_should_support_ordering_comparisons_with_less_than() {
+        let normal = VerbosityLevel::Normal;
+
         assert!(normal < VerbosityLevel::Verbose);
     }
 }

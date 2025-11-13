@@ -348,7 +348,7 @@ impl DestroyCommandController {
 mod tests {
     use super::*;
     use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
-    use crate::presentation::views::test_support::TestUserOutput;
+    use crate::presentation::views::testing::TestUserOutput;
     use crate::presentation::views::VerbosityLevel;
     use crate::shared::SystemClock;
     use std::fs;
