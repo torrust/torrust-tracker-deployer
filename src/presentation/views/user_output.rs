@@ -72,6 +72,28 @@ impl UserOutput {
         Self::with_theme(verbosity, Theme::default())
     }
 
+    /// Create `UserOutput` with a specific theme
+    ///
+    /// Allows customization of output symbols while using default stdout/stderr channels.
+    /// Uses `StandardSink` internally for backward compatibility.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel, Theme};
+    ///
+    /// // Use plain text theme for CI/CD
+    /// let output = UserOutput::with_theme(VerbosityLevel::Normal, Theme::plain());
+    ///
+    /// // Use ASCII theme for limited terminals
+    /// let output = UserOutput::with_theme(VerbosityLevel::Normal, Theme::ascii());
+    /// ```
+    #[must_use]
+    pub fn with_theme(verbosity: VerbosityLevel, theme: Theme) -> Self {
+        Self::with_sink(verbosity, Box::new(StandardSink::default_console()))
+            .with_theme_applied(theme)
+    }
+
     /// Create `UserOutput` with theme and custom writers (for testing)
     ///
     /// This constructor allows full customization including theme and writers,
@@ -295,28 +317,6 @@ impl UserOutput {
         });
     }
 
-    /// Create `UserOutput` with a specific theme
-    ///
-    /// Allows customization of output symbols while using default stdout/stderr channels.
-    /// Uses `StandardSink` internally for backward compatibility.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel, Theme};
-    ///
-    /// // Use plain text theme for CI/CD
-    /// let output = UserOutput::with_theme(VerbosityLevel::Normal, Theme::plain());
-    ///
-    /// // Use ASCII theme for limited terminals
-    /// let output = UserOutput::with_theme(VerbosityLevel::Normal, Theme::ascii());
-    /// ```
-    #[must_use]
-    fn with_theme(verbosity: VerbosityLevel, theme: Theme) -> Self {
-        Self::with_sink(verbosity, Box::new(StandardSink::default_console()))
-            .with_theme_applied(theme)
-    }
-
     /// Create `UserOutput` with a custom sink
     ///
     /// This constructor enables the use of alternative output destinations,
@@ -386,5 +386,296 @@ impl UserOutput {
 
         // Write through sink
         self.sink.write_message(message, &formatted);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod verbosity {
+        use super::*;
+        use crate::presentation::views::testing::TestUserOutput;
+        use crate::presentation::views::Channel;
+
+        /// Test message that requires Verbose level
+        struct TestVerboseMessage {
+            text: String,
+        }
+
+        impl OutputMessage for TestVerboseMessage {
+            fn format(&self, _theme: &Theme) -> String {
+                format!("TEST: {}\n", self.text)
+            }
+
+            fn required_verbosity(&self) -> VerbosityLevel {
+                VerbosityLevel::Verbose
+            }
+
+            fn channel(&self) -> Channel {
+                Channel::Stderr
+            }
+
+            fn type_name(&self) -> &'static str {
+                "TestVerboseMessage"
+            }
+        }
+
+        #[test]
+        fn it_should_ignore_message_when_verbosity_level_is_below_required() {
+            // Create UserOutput with Normal verbosity
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            // Create a message that requires Verbose level (higher than Normal)
+            let message = TestVerboseMessage {
+                text: "This should not appear".to_string(),
+            };
+
+            // Try to write the message - should be ignored due to insufficient verbosity
+            test_output.output.write(&message);
+
+            // Both stdout and stderr should be empty since message was filtered out
+            assert_eq!(test_output.stdout(), "");
+            assert_eq!(test_output.stderr(), "");
+        }
+    }
+
+    mod formatter {
+        use super::*;
+        use crate::presentation::views::formatters::JsonFormatter;
+        use crate::presentation::views::testing::TestWriter;
+        use crate::presentation::views::Channel;
+        use parking_lot::Mutex;
+        use std::sync::Arc;
+
+        /// Test message with Normal verbosity for formatter testing
+        struct TestNormalMessage {
+            text: String,
+        }
+
+        impl OutputMessage for TestNormalMessage {
+            fn format(&self, _theme: &Theme) -> String {
+                format!("MSG: {}\n", self.text)
+            }
+
+            fn required_verbosity(&self) -> VerbosityLevel {
+                VerbosityLevel::Normal
+            }
+
+            fn channel(&self) -> Channel {
+                Channel::Stderr
+            }
+
+            fn type_name(&self) -> &'static str {
+                "TestNormalMessage"
+            }
+        }
+
+        #[test]
+        fn it_should_apply_formatter_override_to_transform_message() {
+            // Create buffers for capturing output
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            // Create UserOutput with JsonFormatter
+            let mut output = UserOutput {
+                theme: Theme::default(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                sink: Box::new(StandardSink::new(
+                    Box::new(TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
+                formatter_override: Some(Box::new(JsonFormatter)),
+            };
+
+            // Create and write a test message
+            let message = TestNormalMessage {
+                text: "test message".to_string(),
+            };
+            output.write(&message);
+
+            // Verify the formatter transformed the output to JSON format
+            let stderr_output = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
+
+            // Parse JSON to verify structure (timestamp is dynamic, so we check fields exist)
+            let json: serde_json::Value = serde_json::from_str(&stderr_output).unwrap();
+            assert_eq!(json["type"], "TestNormalMessage");
+            assert_eq!(json["channel"], "Stderr");
+            assert_eq!(json["content"], "MSG: test message");
+            assert!(json["timestamp"].is_string());
+
+            // Stdout should be empty (message goes to stderr)
+            let stdout_output = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
+            assert_eq!(stdout_output, "");
+        }
+    }
+
+    mod theme {
+        use super::*;
+        use crate::presentation::views::testing::TestUserOutput;
+        use crate::presentation::views::Channel;
+        use rstest::rstest;
+
+        /// Test message that uses theme symbols in formatting
+        struct TestThemedMessage {
+            text: String,
+        }
+
+        impl OutputMessage for TestThemedMessage {
+            fn format(&self, theme: &Theme) -> String {
+                format!("{} {}\n", theme.success_symbol(), self.text)
+            }
+
+            fn required_verbosity(&self) -> VerbosityLevel {
+                VerbosityLevel::Normal
+            }
+
+            fn channel(&self) -> Channel {
+                Channel::Stderr
+            }
+
+            fn type_name(&self) -> &'static str {
+                "TestThemedMessage"
+            }
+        }
+
+        #[rstest]
+        #[case(Theme::emoji(), "✅ Operation completed\n")]
+        #[case(Theme::plain(), "[OK] Operation completed\n")]
+        #[case(Theme::ascii(), "[+] Operation completed\n")]
+        fn it_should_format_message_differently_with_different_themes(
+            #[case] theme: Theme,
+            #[case] expected_output: &str,
+        ) {
+            let mut test_output = TestUserOutput::with_theme(VerbosityLevel::Normal, theme);
+
+            let message = TestThemedMessage {
+                text: "Operation completed".to_string(),
+            };
+
+            test_output.output.write(&message);
+
+            assert_eq!(test_output.stderr(), expected_output);
+        }
+    }
+
+    mod sink {
+        use super::*;
+        use crate::presentation::views::testing::TestWriter;
+        use crate::presentation::views::Channel;
+        use parking_lot::Mutex;
+        use std::sync::Arc;
+
+        /// Test message for sink redirection testing
+        struct TestSinkMessage {
+            text: String,
+        }
+
+        impl OutputMessage for TestSinkMessage {
+            fn format(&self, _theme: &Theme) -> String {
+                format!("SINK_TEST: {}\n", self.text)
+            }
+
+            fn required_verbosity(&self) -> VerbosityLevel {
+                VerbosityLevel::Normal
+            }
+
+            fn channel(&self) -> Channel {
+                Channel::Stderr
+            }
+
+            fn type_name(&self) -> &'static str {
+                "TestSinkMessage"
+            }
+        }
+
+        #[test]
+        fn it_should_write_output_to_custom_sink() {
+            // Create custom buffers to capture output
+            let stderr_buffer = Arc::new(Mutex::new(Vec::new()));
+            let stdout_buffer = Arc::new(Mutex::new(Vec::new()));
+
+            // Create UserOutput with custom sink using TestWriter
+            let mut output = UserOutput {
+                theme: Theme::default(),
+                verbosity_filter: VerbosityFilter::new(VerbosityLevel::Normal),
+                sink: Box::new(StandardSink::new(
+                    Box::new(TestWriter::new(Arc::clone(&stdout_buffer))),
+                    Box::new(TestWriter::new(Arc::clone(&stderr_buffer))),
+                )),
+                formatter_override: None,
+            };
+
+            // Write a message
+            let message = TestSinkMessage {
+                text: "custom sink output".to_string(),
+            };
+            output.write(&message);
+
+            // Verify output was captured in custom sink (stderr buffer)
+            let stderr_output = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
+            assert_eq!(stderr_output, "SINK_TEST: custom sink output\n");
+
+            // Stdout should be empty (message goes to stderr)
+            let stdout_output = String::from_utf8(stdout_buffer.lock().clone()).unwrap();
+            assert_eq!(stdout_output, "");
+        }
+    }
+
+    mod channel_routing {
+        use super::*;
+        use crate::presentation::views::testing::TestUserOutput;
+        use crate::presentation::views::Channel;
+        use rstest::rstest;
+
+        /// Test message that can be configured to go to either channel
+        struct TestChannelMessage {
+            text: String,
+            target_channel: Channel,
+        }
+
+        impl OutputMessage for TestChannelMessage {
+            fn format(&self, _theme: &Theme) -> String {
+                format!("CHANNEL: {}\n", self.text)
+            }
+
+            fn required_verbosity(&self) -> VerbosityLevel {
+                VerbosityLevel::Normal
+            }
+
+            fn channel(&self) -> Channel {
+                self.target_channel
+            }
+
+            fn type_name(&self) -> &'static str {
+                "TestChannelMessage"
+            }
+        }
+
+        #[rstest]
+        #[case(Channel::Stdout, "CHANNEL: stdout message\n", "")]
+        #[case(Channel::Stderr, "", "CHANNEL: stderr message\n")]
+        fn it_should_route_message_to_correct_channel(
+            #[case] channel: Channel,
+            #[case] expected_stdout: &str,
+            #[case] expected_stderr: &str,
+        ) {
+            let mut test_output = TestUserOutput::new(VerbosityLevel::Normal);
+
+            let message_text = match channel {
+                Channel::Stdout => "stdout message",
+                Channel::Stderr => "stderr message",
+            };
+
+            let message = TestChannelMessage {
+                text: message_text.to_string(),
+                target_channel: channel,
+            };
+
+            test_output.output.write(&message);
+
+            assert_eq!(test_output.stdout(), expected_stdout);
+            assert_eq!(test_output.stderr(), expected_stderr);
+        }
     }
 }
