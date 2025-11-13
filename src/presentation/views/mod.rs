@@ -68,7 +68,6 @@
 
 // Re-export core types and traits for backward compatibility
 pub use channel::Channel;
-pub use core::UserOutput;
 pub use formatters::JsonFormatter;
 pub use messages::{
     ErrorMessage, InfoBlockMessage, InfoBlockMessageBuilder, ProgressMessage, ResultMessage,
@@ -77,16 +76,17 @@ pub use messages::{
 pub use sinks::{CompositeSink, FileSink, StandardSink, TelemetrySink};
 pub use theme::Theme;
 pub use traits::{FormatterOverride, OutputMessage, OutputSink};
+pub use user_output::UserOutput;
 pub use verbosity::VerbosityLevel;
 
 // Internal modules
 mod channel;
-mod core;
 mod formatters;
 mod messages;
 mod sinks;
 mod theme;
 mod traits;
+mod user_output;
 mod verbosity;
 
 // Progress indicators module (moved from presentation root for clear ownership)

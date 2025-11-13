@@ -1,4 +1,4 @@
-//! Core `UserOutput` struct and implementation
+//! UserOutput struct and implementation
 
 use std::io::Write;
 
@@ -8,8 +8,7 @@ use super::messages::{
 };
 use super::sinks::StandardSink;
 use super::verbosity::VerbosityFilter;
-#[allow(unused_imports)] // Channel is used in tests
-use super::{Channel, FormatterOverride, OutputMessage, OutputSink, Theme, VerbosityLevel};
+use super::{FormatterOverride, OutputMessage, OutputSink, Theme, VerbosityLevel};
 
 pub struct UserOutput {
     theme: Theme,
