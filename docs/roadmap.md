@@ -41,7 +41,7 @@ When starting work on a new feature:
   - Folder module structure with focused submodules
 - [x] **1.5** Create command `torrust-tracker-deployer create` to create a new environment ✅ Completed
   - EPIC: [Implement Create Environment Command](https://github.com/torrust/torrust-tracker-deployer/issues/34) - GitHub Issue #34
-- [ ] **1.6** Create command `torrust-tracker-deployer provision` to provision VM infrastructure (UI layer only)
+- [ ] **1.6** Create command `torrust-tracker-deployer provision` to provision VM infrastructure (UI layer only) - [Issue #174](https://github.com/torrust/torrust-tracker-deployer/issues/174)
   - **Note:** The App layer ProvisionCommand is already implemented, this task focuses on the console subcommand interface
   - Implementation should call the existing ProvisionCommand business logic
   - Handle user input, validation, and output presentation
