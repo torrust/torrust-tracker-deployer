@@ -177,6 +177,8 @@ impl ProvisionCommandHandler {
     {
         let ssh_credentials = environment.ssh_credentials();
 
+        let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
+
         // Track current step and execute each step
         // If an error occurs, we return it along with the current step
 
@@ -199,13 +201,9 @@ impl ProvisionCommandHandler {
             .map_err(|e| (e, current_step))?;
 
         let current_step = ProvisionStep::WaitSshConnectivity;
-        self.wait_for_readiness(
-            &environment.ansible_build_dir(),
-            ssh_credentials,
-            instance_ip,
-        )
-        .await
-        .map_err(|e| (e, current_step))?;
+        self.wait_for_readiness(&ansible_client, ssh_credentials, instance_ip)
+            .await
+            .map_err(|e| (e, current_step))?;
 
         // Transition to Provisioned state
         let provisioned = environment.clone().provisioned();
@@ -304,18 +302,17 @@ impl ProvisionCommandHandler {
     /// Returns an error if SSH connectivity fails or cloud-init does not complete
     async fn wait_for_readiness(
         &self,
-        ansible_working_dir: &std::path::Path,
+        ansible_client: &Arc<AnsibleClient>,
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
     ) -> Result<(), ProvisionCommandHandlerError> {
         let ssh_config = SshConfig::with_default_port(ssh_credentials.clone(), instance_ip);
+
         WaitForSSHConnectivityStep::new(ssh_config)
             .execute()
             .await?;
 
-        let ansible_client = Arc::new(AnsibleClient::new(ansible_working_dir));
-
-        WaitForCloudInitStep::new(Arc::clone(&ansible_client)).execute()?;
+        WaitForCloudInitStep::new(Arc::clone(ansible_client)).execute()?;
 
         Ok(())
     }
