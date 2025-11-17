@@ -142,14 +142,11 @@ pub async fn run_provision_command(
 ) -> Result<(), ProvisionTaskError> {
     info!("Provisioning test infrastructure");
 
-    // Create repository for this environment
-    let repository = test_context.create_repository();
-
     // Use the new ProvisionCommandHandler to handle all infrastructure provisioning steps
     let provision_command_handler = ProvisionCommandHandler::new(
         Arc::clone(&test_context.services.clock),
         Arc::clone(&test_context.services.template_manager),
-        repository,
+        Arc::clone(&test_context.services.repository_factory),
     );
 
     // Execute provisioning with environment in Created state

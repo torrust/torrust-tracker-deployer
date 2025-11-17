@@ -60,7 +60,7 @@ pub struct Services {
 
     // Persistence layer
     /// Factory for creating environment-specific repositories
-    pub repository_factory: RepositoryFactory,
+    pub repository_factory: Arc<RepositoryFactory>,
 }
 
 impl Services {
@@ -120,7 +120,7 @@ impl Services {
             clock,
 
             // Persistence layer
-            repository_factory,
+            repository_factory: Arc::new(repository_factory),
         }
     }
 }
