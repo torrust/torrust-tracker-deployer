@@ -50,7 +50,6 @@ use crate::shared::error::Traceable;
 pub struct ProvisionCommandHandler {
     pub(crate) tofu_template_renderer: Arc<TofuTemplateRenderer>,
     pub(crate) ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-    pub(crate) ansible_client: Arc<AnsibleClient>,
     pub(crate) opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
     pub(crate) repository: TypedEnvironmentRepository,
@@ -62,7 +61,6 @@ impl ProvisionCommandHandler {
     pub fn new(
         tofu_template_renderer: Arc<TofuTemplateRenderer>,
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-        ansible_client: Arc<AnsibleClient>,
         opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
         clock: Arc<dyn crate::shared::Clock>,
         repository: Arc<dyn EnvironmentRepository>,
@@ -70,7 +68,6 @@ impl ProvisionCommandHandler {
         Self {
             tofu_template_renderer,
             ansible_template_renderer,
-            ansible_client,
             opentofu_client,
             clock,
             repository: TypedEnvironmentRepository::new(repository),
@@ -202,9 +199,13 @@ impl ProvisionCommandHandler {
             .map_err(|e| (e, current_step))?;
 
         let current_step = ProvisionStep::WaitSshConnectivity;
-        self.wait_for_readiness(ssh_credentials, instance_ip)
-            .await
-            .map_err(|e| (e, current_step))?;
+        self.wait_for_readiness(
+            &environment.ansible_build_dir(),
+            ssh_credentials,
+            instance_ip,
+        )
+        .await
+        .map_err(|e| (e, current_step))?;
 
         // Transition to Provisioned state
         let provisioned = environment.clone().provisioned();
@@ -303,6 +304,7 @@ impl ProvisionCommandHandler {
     /// Returns an error if SSH connectivity fails or cloud-init does not complete
     async fn wait_for_readiness(
         &self,
+        ansible_working_dir: &std::path::Path,
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
     ) -> Result<(), ProvisionCommandHandlerError> {
@@ -311,7 +313,9 @@ impl ProvisionCommandHandler {
             .execute()
             .await?;
 
-        WaitForCloudInitStep::new(Arc::clone(&self.ansible_client)).execute()?;
+        let ansible_client = Arc::new(AnsibleClient::new(ansible_working_dir));
+
+        WaitForCloudInitStep::new(Arc::clone(&ansible_client)).execute()?;
 
         Ok(())
     }

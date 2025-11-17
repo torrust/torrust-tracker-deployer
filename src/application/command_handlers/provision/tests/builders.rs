@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 use tempfile::TempDir;
 
-use crate::adapters::ansible::AnsibleClient;
 use crate::adapters::ssh::SshCredentials;
 use crate::application::command_handlers::provision::ProvisionCommandHandler;
 use crate::domain::{InstanceName, ProfileName};
@@ -79,8 +78,6 @@ impl ProvisionCommandHandlerTestBuilder {
             template_manager,
         ));
 
-        let ansible_client = Arc::new(AnsibleClient::new(self.temp_dir.path()));
-
         let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
             self.temp_dir.path(),
         ));
@@ -96,7 +93,6 @@ impl ProvisionCommandHandlerTestBuilder {
         let command_handler = ProvisionCommandHandler::new(
             tofu_renderer,
             ansible_renderer,
-            ansible_client,
             opentofu_client,
             clock,
             repository,
