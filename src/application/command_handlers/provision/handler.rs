@@ -50,10 +50,8 @@ use crate::shared::error::Traceable;
 /// State is persisted after each transition using the injected repository.
 /// Persistence failures are logged but don't fail the command handler (state remains valid in memory).
 pub struct ProvisionCommandHandler {
-    tofu_template_renderer: Arc<TofuTemplateRenderer>,
-    ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
     clock: Arc<dyn crate::shared::Clock>,
-    _template_manager: Arc<TemplateManager>,
+    template_manager: Arc<TemplateManager>,
     repository: TypedEnvironmentRepository,
 }
 
@@ -61,17 +59,13 @@ impl ProvisionCommandHandler {
     /// Create a new `ProvisionCommandHandler`
     #[must_use]
     pub fn new(
-        tofu_template_renderer: Arc<TofuTemplateRenderer>,
-        ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
         clock: Arc<dyn crate::shared::Clock>,
         template_manager: Arc<TemplateManager>,
         repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
-            tofu_template_renderer,
-            ansible_template_renderer,
             clock,
-            _template_manager: template_manager,
+            template_manager,
             repository: TypedEnvironmentRepository::new(repository),
         }
     }
@@ -179,14 +173,26 @@ impl ProvisionCommandHandler {
     {
         let ssh_credentials = environment.ssh_credentials();
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
+        let tofu_template_renderer = Arc::new(TofuTemplateRenderer::new(
+            self.template_manager.clone(),
+            environment.build_dir(),
+            environment.ssh_credentials().clone(),
+            environment.instance_name().clone(),
+            environment.profile_name().clone(),
+        ));
         let opentofu_client = Arc::new(OpenTofuClient::new(environment.tofu_build_dir()));
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
+        let ansible_template_renderer = Arc::new(AnsibleTemplateRenderer::new(
+            environment.build_dir(),
+            self.template_manager.clone(),
+        ));
 
         // Track current step and execute each step
         // If an error occurs, we return it along with the current step
 
         let current_step = ProvisionStep::RenderOpenTofuTemplates;
-        self.render_opentofu_templates()
+        self.render_opentofu_templates(&tofu_template_renderer)
             .await
             .map_err(|e| (e, current_step))?;
 
@@ -199,10 +205,14 @@ impl ProvisionCommandHandler {
         let instance_ip = instance_info.ip_address;
 
         let current_step = ProvisionStep::RenderAnsibleTemplates;
-        let ssh_port = environment.ssh_port();
-        self.render_ansible_templates(ssh_credentials, instance_ip, ssh_port)
-            .await
-            .map_err(|e| (e, current_step))?;
+        self.render_ansible_templates(
+            &ansible_template_renderer,
+            ssh_credentials,
+            instance_ip,
+            environment.ssh_port(),
+        )
+        .await
+        .map_err(|e| (e, current_step))?;
 
         let current_step = ProvisionStep::WaitSshConnectivity;
         self.wait_for_readiness(&ansible_client, ssh_credentials, instance_ip)
@@ -224,10 +234,14 @@ impl ProvisionCommandHandler {
     /// # Errors
     ///
     /// Returns an error if template rendering fails
-    async fn render_opentofu_templates(&self) -> Result<(), ProvisionCommandHandlerError> {
-        RenderOpenTofuTemplatesStep::new(Arc::clone(&self.tofu_template_renderer))
+    async fn render_opentofu_templates(
+        &self,
+        tofu_template_renderer: &Arc<TofuTemplateRenderer>,
+    ) -> Result<(), ProvisionCommandHandlerError> {
+        RenderOpenTofuTemplatesStep::new(tofu_template_renderer.clone())
             .execute()
             .await?;
+
         Ok(())
     }
 
@@ -281,6 +295,7 @@ impl ProvisionCommandHandler {
     /// Returns an error if template rendering fails
     async fn render_ansible_templates(
         &self,
+        ansible_template_renderer: &Arc<AnsibleTemplateRenderer>,
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
         ssh_port: u16,
@@ -288,7 +303,7 @@ impl ProvisionCommandHandler {
         let socket_addr = std::net::SocketAddr::new(instance_ip, ssh_port);
 
         RenderAnsibleTemplatesStep::new(
-            Arc::clone(&self.ansible_template_renderer),
+            ansible_template_renderer.clone(),
             ssh_credentials.clone(),
             socket_addr,
         )

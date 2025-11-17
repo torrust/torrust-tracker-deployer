@@ -9,9 +9,6 @@ use tempfile::TempDir;
 
 use crate::adapters::ssh::SshCredentials;
 use crate::application::command_handlers::provision::ProvisionCommandHandler;
-use crate::domain::{InstanceName, ProfileName};
-use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
-use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::shared::Username;
 
 /// Test builder for `ProvisionCommandHandler` that manages dependencies and lifecycle
@@ -66,20 +63,6 @@ impl ProvisionCommandHandlerTestBuilder {
             )
         });
 
-        let tofu_renderer = Arc::new(TofuTemplateRenderer::new(
-            template_manager.clone(),
-            self.temp_dir.path(),
-            ssh_credentials.clone(),
-            InstanceName::new("torrust-tracker-vm".to_string())
-                .expect("Valid hardcoded instance name"),
-            ProfileName::new("default-profile".to_string()).expect("Valid hardcoded profile name"),
-        ));
-
-        let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(
-            self.temp_dir.path(),
-            template_manager.clone(),
-        ));
-
         let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 
         let repository_factory =
@@ -88,13 +71,7 @@ impl ProvisionCommandHandlerTestBuilder {
             );
         let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-        let command_handler = ProvisionCommandHandler::new(
-            tofu_renderer,
-            ansible_renderer,
-            clock,
-            template_manager,
-            repository,
-        );
+        let command_handler = ProvisionCommandHandler::new(clock, template_manager, repository);
 
         (command_handler, self.temp_dir, ssh_credentials)
     }
