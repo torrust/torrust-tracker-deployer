@@ -34,6 +34,25 @@ pub enum Commands {
         /// created through the provision command.
         environment: String,
     },
+
+    /// Provision a new deployment environment infrastructure
+    ///
+    /// This command provisions the virtual machine infrastructure for a deployment
+    /// environment that was previously created. It will:
+    /// - Render and apply `OpenTofu` templates
+    /// - Create LXD VM instances
+    /// - Configure networking
+    /// - Wait for SSH connectivity
+    /// - Wait for cloud-init completion
+    ///
+    /// The environment must be in "Created" state (use 'create environment' first).
+    Provision {
+        /// Name of the environment to provision
+        ///
+        /// The environment name must match an existing environment that was
+        /// previously created and is in "Created" state.
+        environment: String,
+    },
     // Future commands will be added here:
     //
     // /// Provision a new deployment environment

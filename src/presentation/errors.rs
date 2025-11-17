@@ -21,6 +21,7 @@ use thiserror::Error;
 
 use crate::presentation::controllers::{
     create::CreateCommandError, destroy::DestroySubcommandError,
+    provision::ProvisionSubcommandError,
 };
 
 /// Errors that can occur during CLI command execution
@@ -44,6 +45,13 @@ pub enum CommandError {
     #[error("Destroy command failed: {0}")]
     Destroy(Box<DestroySubcommandError>),
 
+    /// Provision command specific errors
+    ///
+    /// Encapsulates all errors that can occur during infrastructure provisioning.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Provision command failed: {0}")]
+    Provision(Box<ProvisionSubcommandError>),
+
     /// User output lock acquisition failed
     ///
     /// Failed to acquire the mutex lock for user output. This typically indicates
@@ -61,6 +69,12 @@ impl From<CreateCommandError> for CommandError {
 impl From<DestroySubcommandError> for CommandError {
     fn from(error: DestroySubcommandError) -> Self {
         Self::Destroy(Box::new(error))
+    }
+}
+
+impl From<ProvisionSubcommandError> for CommandError {
+    fn from(error: ProvisionSubcommandError) -> Self {
+        Self::Provision(Box::new(error))
     }
 }
 
@@ -102,6 +116,7 @@ impl CommandError {
         match self {
             Self::Create(e) => e.help(),
             Self::Destroy(e) => e.help(),
+            Self::Provision(e) => e.help(),
             Self::UserOutputLockFailed => {
                 "User Output Lock Failed - Detailed Troubleshooting:
 

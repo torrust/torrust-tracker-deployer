@@ -231,12 +231,12 @@
 pub mod constants;
 pub mod create;
 pub mod destroy;
+pub mod provision;
 
 // Shared test utilities
 #[cfg(test)]
 pub mod tests;
 
 // Future command modules will be added here:
-// pub mod provision;
 // pub mod configure;
 // pub mod release;

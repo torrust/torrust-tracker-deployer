@@ -52,7 +52,7 @@
 
 use std::path::Path;
 
-use crate::presentation::controllers::{create, destroy};
+use crate::presentation::controllers::{create, destroy, provision};
 use crate::presentation::errors::CommandError;
 use crate::presentation::input::Commands;
 
@@ -116,12 +116,11 @@ pub fn route_command(
         Commands::Destroy { environment } => {
             destroy::handle(&environment, working_dir, context)?;
             Ok(())
+        }
+        Commands::Provision { environment } => {
+            provision::handle(&environment, working_dir, context)?;
+            Ok(())
         } // Future commands will be added here as the Controller Layer expands:
-          //
-          // Commands::Provision { environment, provider } => {
-          //     provision::handle_provision_command(&environment, &provider, context)?;
-          //     Ok(())
-          // }
           //
           // Commands::Configure { environment } => {
           //     configure::handle_configure_command(&environment, context)?;
