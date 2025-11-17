@@ -49,10 +49,6 @@ impl ProvisionCommandHandlerTestBuilder {
     /// The `temp_dir` must be kept alive for the duration of the test.
     #[allow(dead_code)]
     pub fn build(self) -> (ProvisionCommandHandler, TempDir, SshCredentials) {
-        let template_manager = Arc::new(crate::domain::template::TemplateManager::new(
-            self.temp_dir.path(),
-        ));
-
         // Use provided SSH credentials or create defaults
         let ssh_credentials = self.ssh_credentials.unwrap_or_else(|| {
             let ssh_key_path = self.temp_dir.path().join("test_key");
@@ -69,7 +65,7 @@ impl ProvisionCommandHandlerTestBuilder {
         let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
         let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-        let command_handler = ProvisionCommandHandler::new(clock, template_manager, repository);
+        let command_handler = ProvisionCommandHandler::new(clock, repository);
 
         (command_handler, self.temp_dir, ssh_credentials)
     }

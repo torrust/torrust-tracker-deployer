@@ -21,7 +21,7 @@ use crate::domain::environment::repository::{
 };
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
-use crate::domain::{EnvironmentName, TemplateManager};
+use crate::domain::EnvironmentName;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::shared::error::Traceable;
@@ -53,7 +53,6 @@ use crate::shared::error::Traceable;
 /// Persistence failures are logged but don't fail the command handler (state remains valid in memory).
 pub struct ProvisionCommandHandler {
     clock: Arc<dyn crate::shared::Clock>,
-    template_manager: Arc<TemplateManager>,
     repository: TypedEnvironmentRepository,
 }
 
@@ -62,12 +61,10 @@ impl ProvisionCommandHandler {
     #[must_use]
     pub fn new(
         clock: Arc<dyn crate::shared::Clock>,
-        template_manager: Arc<TemplateManager>,
         repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
             clock,
-            template_manager,
             repository: TypedEnvironmentRepository::new(repository),
         }
     }
@@ -228,7 +225,7 @@ impl ProvisionCommandHandler {
         environment: &Environment<Provisioning>,
     ) -> StepResult<IpAddr, ProvisionCommandHandlerError, ProvisionStep> {
         let (tofu_template_renderer, opentofu_client) =
-            self.build_infrastructure_dependencies(environment);
+            Self::build_infrastructure_dependencies(environment);
 
         let current_step = ProvisionStep::RenderOpenTofuTemplates;
         self.render_opentofu_templates(&tofu_template_renderer)
@@ -260,17 +257,21 @@ impl ProvisionCommandHandler {
     /// - `TofuTemplateRenderer` - For rendering `OpenTofu` templates
     /// - `OpenTofuClient` - For executing `OpenTofu` operations
     fn build_infrastructure_dependencies(
-        &self,
         environment: &Environment<Provisioning>,
     ) -> (Arc<TofuTemplateRenderer>, Arc<OpenTofuClient>) {
+        let opentofu_client = Arc::new(OpenTofuClient::new(environment.tofu_build_dir()));
+
+        let template_manager = Arc::new(crate::domain::TemplateManager::new(
+            environment.templates_dir(),
+        ));
+
         let tofu_template_renderer = Arc::new(TofuTemplateRenderer::new(
-            self.template_manager.clone(),
+            template_manager,
             environment.build_dir(),
             environment.ssh_credentials().clone(),
             environment.instance_name().clone(),
             environment.profile_name().clone(),
         ));
-        let opentofu_client = Arc::new(OpenTofuClient::new(environment.tofu_build_dir()));
 
         (tofu_template_renderer, opentofu_client)
     }
@@ -296,7 +297,7 @@ impl ProvisionCommandHandler {
         instance_ip: IpAddr,
     ) -> StepResult<(), ProvisionCommandHandlerError, ProvisionStep> {
         let (ansible_client, ansible_template_renderer) =
-            self.build_configuration_dependencies(environment);
+            Self::build_configuration_dependencies(environment);
 
         let ssh_credentials = environment.ssh_credentials();
 
@@ -332,13 +333,17 @@ impl ProvisionCommandHandler {
     /// - `AnsibleClient` - For executing Ansible playbooks
     /// - `AnsibleTemplateRenderer` - For rendering Ansible templates
     fn build_configuration_dependencies(
-        &self,
         environment: &Environment<Provisioning>,
     ) -> (Arc<AnsibleClient>, Arc<AnsibleTemplateRenderer>) {
         let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
+
+        let template_manager = Arc::new(crate::domain::TemplateManager::new(
+            environment.templates_dir(),
+        ));
+
         let ansible_template_renderer = Arc::new(AnsibleTemplateRenderer::new(
             environment.build_dir(),
-            self.template_manager.clone(),
+            template_manager,
         ));
 
         (ansible_client, ansible_template_renderer)

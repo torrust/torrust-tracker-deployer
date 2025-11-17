@@ -151,11 +151,8 @@ pub async fn run_provision_command(
         .create(base_data_dir);
 
     // Use the new ProvisionCommandHandler to handle all infrastructure provisioning steps
-    let provision_command_handler = ProvisionCommandHandler::new(
-        Arc::clone(&test_context.services.clock),
-        Arc::clone(&test_context.services.template_manager),
-        repository,
-    );
+    let provision_command_handler =
+        ProvisionCommandHandler::new(Arc::clone(&test_context.services.clock), repository);
 
     // Execute provisioning - application layer handles state validation
     let env_name = test_context.environment.name();

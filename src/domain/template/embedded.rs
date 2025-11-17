@@ -105,7 +105,7 @@ impl TemplateManager {
     /// Clean and prepare the templates directory to ensure fresh embedded templates
     ///
     /// This method combines `clean_templates_dir()` and `ensure_templates_dir()` to provide
-    /// a clean slate for template operations. It's particularly useful in testing and
+    /// a clean state for template operations. It's particularly useful in testing and
     /// development environments where you want to ensure fresh templates from embedded resources.
     ///
     /// # Errors

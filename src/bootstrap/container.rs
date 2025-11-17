@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
-use crate::domain::TemplateManager;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::views::{UserOutput, VerbosityLevel};
@@ -36,7 +35,6 @@ pub struct Container {
     user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     repository_factory: Arc<RepositoryFactory>,
     clock: Arc<dyn Clock>,
-    template_manager: Arc<TemplateManager>,
 }
 
 impl Container {
@@ -70,14 +68,11 @@ impl Container {
         ))));
         let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
-        let template_manager =
-            Arc::new(TemplateManager::new(std::path::PathBuf::from("templates")));
 
         Self {
             user_output,
             repository_factory,
             clock,
-            template_manager,
         }
     }
 
@@ -141,26 +136,6 @@ impl Container {
     #[must_use]
     pub fn clock(&self) -> Arc<dyn Clock> {
         Arc::clone(&self.clock)
-    }
-
-    /// Get shared reference to template manager service
-    ///
-    /// Returns an `Arc<TemplateManager>` that can be cheaply cloned and shared
-    /// across threads and function calls.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-    ///
-    /// let container = Container::new(VerbosityLevel::Normal);
-    /// let template_manager = container.template_manager();
-    /// // Use template_manager for template operations
-    /// ```
-    #[must_use]
-    pub fn template_manager(&self) -> Arc<TemplateManager> {
-        Arc::clone(&self.template_manager)
     }
 }
 

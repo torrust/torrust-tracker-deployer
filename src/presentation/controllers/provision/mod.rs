@@ -55,7 +55,7 @@
 //! ## Direct Usage (For Testing)
 //!
 //! ```rust
-//! use std::path::{Path, PathBuf};
+//! use std::path::Path;
 //! use std::sync::Arc;
 //! use std::time::Duration;
 //! use parking_lot::ReentrantMutex;
@@ -64,13 +64,11 @@
 //! use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 //! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 //! use torrust_tracker_deployer_lib::shared::clock::SystemClock;
-//! use torrust_tracker_deployer_lib::domain::TemplateManager;
 //!
 //! let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 //! let repository_factory = Arc::new(RepositoryFactory::new(Duration::from_secs(30)));
 //! let clock = Arc::new(SystemClock);
-//! let template_manager = Arc::new(TemplateManager::new(PathBuf::from("templates")));
-//! if let Err(e) = provision::handle_provision_command("test-env", Path::new("."), repository_factory, clock, template_manager, &output) {
+//! if let Err(e) = provision::handle_provision_command("test-env", Path::new("."), repository_factory, clock, &output) {
 //!     eprintln!("Provision failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }

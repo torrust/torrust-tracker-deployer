@@ -49,7 +49,6 @@ use std::sync::Arc;
 use parking_lot::ReentrantMutex;
 
 use crate::bootstrap::Container;
-use crate::domain::TemplateManager;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -213,32 +212,5 @@ impl ExecutionContext {
     #[must_use]
     pub fn clock(&self) -> Arc<dyn Clock> {
         self.container.clock()
-    }
-
-    /// Get shared reference to template manager service
-    ///
-    /// Returns the template manager service for template operations.
-    /// The service is wrapped in `Arc<TemplateManager>` for shared access.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// use torrust_tracker_deployer_lib::bootstrap::Container;
-    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-    /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-    /// use std::sync::Arc;
-    ///
-    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new(VerbosityLevel::Normal);
-    /// let context = ExecutionContext::new(Arc::new(container));
-    ///
-    /// let template_manager = context.template_manager();
-    /// // Use template_manager for template operations
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[must_use]
-    pub fn template_manager(&self) -> Arc<TemplateManager> {
-        self.container.template_manager()
     }
 }

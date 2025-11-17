@@ -73,7 +73,7 @@ Tip: Check logs and try running with --log-output file-and-stderr for more detai
     ProvisionOperationFailed {
         name: String,
         #[source]
-        source: ProvisionCommandHandlerError,
+        source: Box<ProvisionCommandHandlerError>,
     },
 
     // ===== Internal Errors =====
@@ -140,13 +140,11 @@ impl ProvisionSubcommandError {
     /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
     /// use torrust_tracker_deployer_lib::shared::clock::SystemClock;
-    /// use torrust_tracker_deployer_lib::domain::TemplateManager;
     ///
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let repository_factory = Arc::new(RepositoryFactory::new(Duration::from_secs(30)));
     /// let clock = Arc::new(SystemClock);
-    /// let template_manager = Arc::new(TemplateManager::new(PathBuf::from("templates")));
-    /// if let Err(e) = provision::handle_provision_command("test-env", Path::new("."), repository_factory, clock, template_manager, &output) {
+    /// if let Err(e) = provision::handle_provision_command("test-env", Path::new("."), repository_factory, clock, &output) {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
