@@ -2,31 +2,11 @@
 //!
 //! This module contains integration tests for the `ProvisionCommandHandler`.
 
-use std::sync::Arc;
-
-use super::builders::ProvisionCommandHandlerTestBuilder;
 use crate::adapters::ssh::SshError;
 use crate::adapters::tofu::client::OpenTofuError;
 use crate::application::command_handlers::provision::ProvisionCommandHandlerError;
 use crate::infrastructure::external_tools::tofu::ProvisionTemplateError;
 use crate::shared::command::CommandError;
-
-#[test]
-fn it_should_create_provision_command_handler_with_all_dependencies() {
-    let (command_handler, _temp_dir, _ssh_credentials) =
-        ProvisionCommandHandlerTestBuilder::new().build();
-
-    // Verify the command handler was created (basic structure test)
-    // This test just verifies that the command handler can be created with the dependencies
-    assert_eq!(
-        Arc::strong_count(&command_handler.tofu_template_renderer),
-        1
-    );
-    assert_eq!(
-        Arc::strong_count(&command_handler.ansible_template_renderer),
-        1
-    );
-}
 
 #[test]
 fn it_should_have_correct_error_type_conversions() {

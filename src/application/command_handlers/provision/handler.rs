@@ -48,11 +48,11 @@ use crate::shared::error::Traceable;
 /// State is persisted after each transition using the injected repository.
 /// Persistence failures are logged but don't fail the command handler (state remains valid in memory).
 pub struct ProvisionCommandHandler {
-    pub(crate) tofu_template_renderer: Arc<TofuTemplateRenderer>,
-    pub(crate) ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-    pub(crate) opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
-    pub(crate) clock: Arc<dyn crate::shared::Clock>,
-    pub(crate) repository: TypedEnvironmentRepository,
+    tofu_template_renderer: Arc<TofuTemplateRenderer>,
+    ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
+    opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
+    clock: Arc<dyn crate::shared::Clock>,
+    repository: TypedEnvironmentRepository,
 }
 
 impl ProvisionCommandHandler {

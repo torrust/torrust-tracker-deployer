@@ -22,6 +22,7 @@ use crate::shared::Username;
 /// - Allowing selective customization of dependencies
 /// - Returning only the command handler and necessary test artifacts
 pub struct ProvisionCommandHandlerTestBuilder {
+    #[allow(dead_code)]
     temp_dir: TempDir,
     ssh_credentials: Option<SshCredentials>,
 }
@@ -48,6 +49,7 @@ impl ProvisionCommandHandlerTestBuilder {
     ///
     /// Returns: (`command_handler`, `temp_dir`, `ssh_credentials`)
     /// The `temp_dir` must be kept alive for the duration of the test.
+    #[allow(dead_code)]
     pub fn build(self) -> (ProvisionCommandHandler, TempDir, SshCredentials) {
         let template_manager = Arc::new(crate::domain::template::TemplateManager::new(
             self.temp_dir.path(),
