@@ -13,7 +13,6 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Provisioned;
 use crate::domain::environment::Environment;
-use crate::domain::TemplateManager;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::dispatch::context::ExecutionContext;
 use crate::presentation::views::progress::ProgressReporter;
@@ -78,7 +77,6 @@ const PROVISION_WORKFLOW_STEPS: usize = 9;
 /// # Ok(())
 /// # }
 /// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
 pub fn handle(
     environment_name: &str,
     working_dir: &std::path::Path,
@@ -89,7 +87,6 @@ pub fn handle(
         working_dir,
         context.repository_factory(),
         context.clock(),
-        context.template_manager(),
         &context.user_output(),
     )
 }
@@ -109,7 +106,6 @@ pub fn handle(
 /// * `working_dir` - Root directory for environment data storage
 /// * `repository_factory` - Factory for creating environment repositories
 /// * `clock` - Clock service for timing operations
-/// * `template_manager` - Template manager for rendering configuration files
 /// * `user_output` - Shared user output service for consistent output formatting
 ///
 /// # Errors
@@ -151,7 +147,7 @@ pub fn handle(
 /// Direct usage (for testing or specialized scenarios):
 ///
 /// ```rust
-/// use std::path::{Path, PathBuf};
+/// use std::path::Path;
 /// use std::sync::Arc;
 /// use parking_lot::ReentrantMutex;
 /// use std::cell::RefCell;
@@ -160,13 +156,11 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 /// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 /// use torrust_tracker_deployer_lib::shared::SystemClock;
-/// use torrust_tracker_deployer_lib::domain::TemplateManager;
 ///
 /// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 /// let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
 /// let clock = Arc::new(SystemClock);
-/// let template_manager = Arc::new(TemplateManager::new(PathBuf::from("templates")));
-/// if let Err(e) = provision::handle_provision_command("test-env", Path::new("."), repository_factory, clock, template_manager, &user_output) {
+/// if let Err(e) = provision::handle_provision_command("test-env", Path::new("."), repository_factory, clock, &user_output) {
 ///     eprintln!("Provision failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
@@ -178,14 +172,12 @@ pub fn handle_provision_command(
     working_dir: &std::path::Path,
     repository_factory: Arc<RepositoryFactory>,
     clock: Arc<dyn Clock>,
-    template_manager: Arc<TemplateManager>,
     user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
 ) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
     ProvisionCommandController::new(
         working_dir.to_path_buf(),
         repository_factory,
         clock,
-        template_manager,
         user_output.clone(),
     )
     .execute(environment_name)
@@ -217,7 +209,6 @@ pub struct ProvisionCommandController {
     repository: Arc<dyn EnvironmentRepository>,
     repository_factory: Arc<RepositoryFactory>,
     clock: Arc<dyn Clock>,
-    template_manager: Arc<TemplateManager>,
     user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     progress: ProgressReporter,
 }
@@ -232,17 +223,16 @@ impl ProvisionCommandController {
         working_dir: std::path::PathBuf,
         repository_factory: Arc<RepositoryFactory>,
         clock: Arc<dyn Clock>,
-        template_manager: Arc<TemplateManager>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let repository = repository_factory.create(working_dir);
+        let data_dir = working_dir.join("data");
+        let repository = repository_factory.create(data_dir);
         let progress = ProgressReporter::new(user_output.clone(), PROVISION_WORKFLOW_STEPS);
 
         Self {
             repository,
             repository_factory,
             clock,
-            template_manager,
             user_output,
             progress,
         }
@@ -316,17 +306,13 @@ impl ProvisionCommandController {
     /// Create application layer command handler
     ///
     /// Creates the application layer command handler with all required
-    /// dependencies (repository, clock, template manager, etc.).
+    /// dependencies (repository, clock).
     #[allow(clippy::result_large_err)]
     fn create_command_handler(
         &mut self,
     ) -> Result<ProvisionCommandHandler, ProvisionSubcommandError> {
         self.progress.start_step("Creating command handler")?;
-        let handler = ProvisionCommandHandler::new(
-            self.clock.clone(),
-            self.template_manager.clone(),
-            self.repository.clone(),
-        );
+        let handler = ProvisionCommandHandler::new(self.clock.clone(), self.repository.clone());
         self.progress.complete_step(None)?;
 
         Ok(handler)
@@ -363,7 +349,7 @@ impl ProvisionCommandController {
             .map_err(
                 |source| ProvisionSubcommandError::ProvisionOperationFailed {
                     name: env_name.to_string(),
-                    source,
+                    source: Box::new(source),
                 },
             )?;
 
@@ -397,26 +383,18 @@ mod tests {
     /// - `user_output`: `ReentrantMutex`-wrapped `UserOutput` for thread-safe access
     /// - `repository_factory`: Factory for creating environment repositories
     /// - `clock`: System clock for timing operations
-    /// - `template_manager`: Template manager for rendering configuration files
     #[allow(clippy::type_complexity)] // Test helper with complex but clear types
     fn create_test_dependencies() -> (
         Arc<ReentrantMutex<RefCell<UserOutput>>>,
         Arc<RepositoryFactory>,
         Arc<dyn Clock>,
-        Arc<TemplateManager>,
     ) {
-        use tempfile::TempDir;
-
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
         let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
         let clock = Arc::new(SystemClock);
 
-        // Create a temporary templates directory for testing
-        let temp_dir = TempDir::new().unwrap();
-        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
-
-        (user_output, repository_factory, clock, template_manager)
+        (user_output, repository_factory, clock)
     }
 
     #[test]
@@ -425,7 +403,7 @@ mod tests {
 
         let temp_dir = TempDir::new().unwrap();
 
-        let (user_output, repository_factory, clock, template_manager) = create_test_dependencies();
+        let (user_output, repository_factory, clock) = create_test_dependencies();
 
         // Test with invalid environment name (contains underscore)
         let result = handle_provision_command(
@@ -433,7 +411,6 @@ mod tests {
             temp_dir.path(),
             repository_factory,
             clock,
-            template_manager,
             &user_output,
         );
 
@@ -452,16 +429,10 @@ mod tests {
 
         let temp_dir = TempDir::new().unwrap();
 
-        let (user_output, repository_factory, clock, template_manager) = create_test_dependencies();
+        let (user_output, repository_factory, clock) = create_test_dependencies();
 
-        let result = handle_provision_command(
-            "",
-            temp_dir.path(),
-            repository_factory,
-            clock,
-            template_manager,
-            &user_output,
-        );
+        let result =
+            handle_provision_command("", temp_dir.path(), repository_factory, clock, &user_output);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -478,7 +449,7 @@ mod tests {
 
         let temp_dir = TempDir::new().unwrap();
 
-        let (user_output, repository_factory, clock, template_manager) = create_test_dependencies();
+        let (user_output, repository_factory, clock) = create_test_dependencies();
 
         // Try to provision an environment that doesn't exist
         let result = handle_provision_command(
@@ -486,7 +457,6 @@ mod tests {
             temp_dir.path(),
             repository_factory,
             clock,
-            template_manager,
             &user_output,
         );
 
@@ -508,7 +478,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
 
-        let (user_output, repository_factory, clock, template_manager) = create_test_dependencies();
+        let (user_output, repository_factory, clock) = create_test_dependencies();
 
         // Create a mock environment directory to test validation
         let env_dir = working_dir.join("test-env");
@@ -521,7 +491,6 @@ mod tests {
             working_dir,
             repository_factory,
             clock,
-            template_manager,
             &user_output,
         );
 
