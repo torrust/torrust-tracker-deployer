@@ -111,20 +111,20 @@ impl ProvisionCommandHandler {
             "Starting complete infrastructure provisioning workflow"
         );
 
-        // 1. Load the environment from storage
-        let environment = self
+        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
+        let any_env = self
             .repository
             .inner()
             .load(env_name)
             .map_err(ProvisionCommandHandlerError::StatePersistence)?;
 
         // 2. Check if environment exists
-        let environment = environment.ok_or_else(|| {
+        let any_env = any_env.ok_or_else(|| {
             ProvisionCommandHandlerError::StatePersistence(RepositoryError::NotFound)
         })?;
 
-        // 3. Validate environment is in Created state - we can only provision from Created state
-        let environment = environment.try_into_created()?;
+        // 3. Validate environment is in Created state and restore type safety
+        let environment = any_env.try_into_created()?;
 
         // 4. Capture start time before transitioning to Provisioning state
         let started_at = self.clock.now();

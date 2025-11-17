@@ -7,8 +7,11 @@ use tracing::{info, instrument};
 use super::errors::DestroyCommandHandlerError;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::DestroyInfrastructureStep;
-use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
+use crate::domain::environment::repository::{
+    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
+};
 use crate::domain::environment::{Destroyed, Environment};
+use crate::domain::{AnyEnvironmentState, EnvironmentName};
 use crate::shared::error::Traceable;
 
 /// `DestroyCommandHandler` orchestrates the complete infrastructure destruction workflow
@@ -84,33 +87,28 @@ impl DestroyCommandHandler {
     )]
     pub fn execute(
         &self,
-        env_name: &crate::domain::environment::name::EnvironmentName,
-    ) -> Result<crate::domain::environment::Environment<Destroyed>, DestroyCommandHandlerError>
-    {
-        use crate::domain::environment::state::AnyEnvironmentState;
-
+        env_name: &EnvironmentName,
+    ) -> Result<Environment<Destroyed>, DestroyCommandHandlerError> {
         info!(
             command = "destroy",
             environment = %env_name,
             "Starting complete infrastructure destruction workflow"
         );
 
-        // 1. Load the environment from storage
-        let environment = self
+        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
+        let any_env = self
             .repository
             .inner()
             .load(env_name)
             .map_err(DestroyCommandHandlerError::StatePersistence)?;
 
         // 2. Check if environment exists
-        let environment = environment.ok_or_else(|| {
-            DestroyCommandHandlerError::StatePersistence(
-                crate::domain::environment::repository::RepositoryError::NotFound,
-            )
+        let any_env = any_env.ok_or_else(|| {
+            DestroyCommandHandlerError::StatePersistence(RepositoryError::NotFound)
         })?;
 
         // 3. Check if environment is already destroyed
-        if let AnyEnvironmentState::Destroyed(env) = environment {
+        if let AnyEnvironmentState::Destroyed(env) = any_env {
             info!(
                 command = "destroy",
                 environment = %env_name,
@@ -122,12 +120,12 @@ impl DestroyCommandHandler {
         // 4. Capture start time before transitioning to Destroying state
         let started_at = self.clock.now();
 
-        // 5. Get the build directory from the environment context (before consuming environment)
-        let opentofu_build_dir = environment.tofu_build_dir();
+        // 5. Get the build directory from the environment context (before consuming any_env)
+        let opentofu_build_dir = any_env.tofu_build_dir();
 
         // 6. Transition to Destroying state
-        // Since we have AnyEnvironmentState, we need to match on it and call start_destroying on the typed environment
-        let destroying_env = match environment {
+        // Match on AnyEnvironmentState and call start_destroying on each typed environment
+        let destroying_env = match any_env {
             AnyEnvironmentState::Created(env) => env.start_destroying(),
             AnyEnvironmentState::Provisioning(env) => env.start_destroying(),
             AnyEnvironmentState::Provisioned(env) => env.start_destroying(),
