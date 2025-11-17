@@ -146,13 +146,21 @@ pub async fn main() -> Result<()> {
     let ssh_port = DEFAULT_SSH_PORT;
     let environment = Environment::new(environment_name, ssh_credentials, ssh_port);
 
+    // Cleanup any artifacts from previous test runs that may have failed to clean up
+    // This ensures a clean slate before starting new tests
+    // IMPORTANT: Must run BEFORE TestContext::init() which persists the environment
+    let cleanup_context = TestContext::from_environment(
+        cli.keep,
+        environment.clone(),
+        TestContextType::VirtualMachine,
+    )?;
+
+    preflight_cleanup_previous_resources(&cleanup_context)?;
+
+    // Now initialize the test context and persist the environment after cleanup
     let mut test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
             .init()?;
-
-    // Cleanup any artifacts from previous test runs that may have failed to clean up
-    // This ensures a clean slate before starting new tests
-    preflight_cleanup_previous_resources(&test_context)?;
 
     let test_start = Instant::now();
 

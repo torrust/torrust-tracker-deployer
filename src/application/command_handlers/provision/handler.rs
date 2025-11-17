@@ -16,13 +16,12 @@ use crate::application::steps::{
     PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
     ValidateInfrastructureStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
-use crate::domain::environment::repository::TypedEnvironmentRepository;
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
-use crate::domain::environment::{Created, Environment, Provisioned, Provisioning};
+use crate::domain::environment::{Environment, Provisioned, Provisioning};
 use crate::domain::TemplateManager;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::error::Traceable;
 
 /// `ProvisionCommandHandler` orchestrates the complete infrastructure provisioning workflow
@@ -53,7 +52,7 @@ use crate::shared::error::Traceable;
 pub struct ProvisionCommandHandler {
     clock: Arc<dyn crate::shared::Clock>,
     template_manager: Arc<TemplateManager>,
-    repository_factory: Arc<RepositoryFactory>,
+    repository: TypedEnvironmentRepository,
 }
 
 impl ProvisionCommandHandler {
@@ -62,12 +61,12 @@ impl ProvisionCommandHandler {
     pub fn new(
         clock: Arc<dyn crate::shared::Clock>,
         template_manager: Arc<TemplateManager>,
-        repository_factory: Arc<RepositoryFactory>,
+        repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
             clock,
             template_manager,
-            repository_factory,
+            repository: TypedEnvironmentRepository::new(repository),
         }
     }
 
@@ -75,15 +74,16 @@ impl ProvisionCommandHandler {
     ///
     /// # Arguments
     ///
-    /// * `environment` - The environment in `Created` state to provision
+    /// * `env_name` - The name of the environment to provision
     ///
     /// # Returns
     ///
-    /// Returns a tuple of the provisioned environment and its IP address
+    /// Returns the provisioned environment
     ///
     /// # Errors
     ///
     /// Returns an error if any step in the provisioning workflow fails:
+    /// * Environment not found or not in `Created` state
     /// * Template rendering fails
     /// * `OpenTofu` initialization, planning, or apply fails
     /// * Unable to retrieve instance information
@@ -96,32 +96,44 @@ impl ProvisionCommandHandler {
         skip_all,
         fields(
             command_type = "provision",
-            environment = %environment.name()
+            environment = %env_name
         )
     )]
     pub async fn execute(
         &self,
-        environment: Environment<Created>,
+        env_name: &crate::domain::environment::name::EnvironmentName,
     ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
         info!(
             command = "provision",
-            environment = %environment.name(),
+            environment = %env_name,
             "Starting complete infrastructure provisioning workflow"
         );
 
-        // Capture start time before transitioning to Provisioning state
+        // 1. Load the environment from storage
+        let environment = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(ProvisionCommandHandlerError::StatePersistence)?;
+
+        // 2. Check if environment exists
+        let environment = environment.ok_or_else(|| {
+            ProvisionCommandHandlerError::StatePersistence(
+                crate::domain::environment::repository::RepositoryError::NotFound,
+            )
+        })?;
+
+        // 3. Validate environment is in Created state - we can only provision from Created state
+        let environment = environment.try_into_created()?;
+
+        // 4. Capture start time before transitioning to Provisioning state
         let started_at = self.clock.now();
 
         // Transition to Provisioning state
         let environment = environment.start_provisioning();
 
-        let repository = TypedEnvironmentRepository::new(
-            self.repository_factory
-                .create(environment.data_dir().clone()),
-        );
-
         // Persist intermediate state
-        repository.save_provisioning(&environment)?;
+        self.repository.save_provisioning(&environment)?;
 
         // Execute provisioning workflow with explicit step tracking
         // This allows us to know exactly which step failed if an error occurs
@@ -131,7 +143,7 @@ impl ProvisionCommandHandler {
                 let provisioned = provisioned.with_instance_ip(instance_ip);
 
                 // Persist final state
-                repository.save_provisioned(&provisioned)?;
+                self.repository.save_provisioned(&provisioned)?;
 
                 info!(
                     command = "provision",
@@ -150,7 +162,7 @@ impl ProvisionCommandHandler {
                 let failed = environment.provision_failed(context);
 
                 // Persist error state
-                repository.save_provision_failed(&failed)?;
+                self.repository.save_provision_failed(&failed)?;
 
                 Err(e)
             }

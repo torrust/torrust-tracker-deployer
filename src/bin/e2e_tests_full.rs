@@ -161,13 +161,21 @@ pub async fn main() -> Result<()> {
     )
     .map_err(|e| anyhow::anyhow!("{e}"))?;
 
+    // Additional preflight cleanup for infrastructure (OpenTofu, LXD resources)
+    // This handles any lingering infrastructure from interrupted previous runs
+    // IMPORTANT: Must run BEFORE TestContext::init() which persists the environment
+    let cleanup_context = TestContext::from_environment(
+        cli.keep,
+        environment.clone(),
+        TestContextType::VirtualMachine,
+    )?;
+    
+    preflight_cleanup_previous_resources(&cleanup_context)?;
+
+    // Now initialize the test context and persist the environment after cleanup
     let mut test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
             .init()?;
-
-    // Additional preflight cleanup for infrastructure (OpenTofu, LXD resources)
-    // This handles any lingering infrastructure from interrupted previous runs
-    preflight_cleanup_previous_resources(&test_context)?;
 
     let test_start = Instant::now();
 

@@ -67,9 +67,9 @@ impl ProvisionCommandHandlerTestBuilder {
         let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 
         let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
+        let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-        let command_handler =
-            ProvisionCommandHandler::new(clock, template_manager, repository_factory.into());
+        let command_handler = ProvisionCommandHandler::new(clock, template_manager, repository);
 
         (command_handler, self.temp_dir, ssh_credentials)
     }

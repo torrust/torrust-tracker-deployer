@@ -142,26 +142,25 @@ pub async fn run_provision_command(
 ) -> Result<(), ProvisionTaskError> {
     info!("Provisioning test infrastructure");
 
+    // Create repository for this environment
+    // Pass the parent "data" directory - repository adds environment name subdirectory
+    let base_data_dir = std::path::PathBuf::from("data");
+    let repository = test_context
+        .services
+        .repository_factory
+        .create(base_data_dir);
+
     // Use the new ProvisionCommandHandler to handle all infrastructure provisioning steps
     let provision_command_handler = ProvisionCommandHandler::new(
         Arc::clone(&test_context.services.clock),
         Arc::clone(&test_context.services.template_manager),
-        Arc::clone(&test_context.services.repository_factory),
+        repository,
     );
 
-    // Execute provisioning with environment in Created state
-    // Extract the Created environment from AnyEnvironmentState
-    let created_env = test_context
-        .environment
-        .clone()
-        .try_into_created()
-        .map_err(|source| ProvisionTaskError::InvalidState {
-            state_type: test_context.environment.state_name().to_string(),
-            source,
-        })?;
-
+    // Execute provisioning - application layer handles state validation
+    let env_name = test_context.environment.name();
     let provisioned_env = provision_command_handler
-        .execute(created_env)
+        .execute(env_name)
         .await
         .map_err(|source| ProvisionTaskError::ProvisioningFailed { source })?;
 

@@ -316,7 +316,7 @@ impl ProvisionCommandController {
     /// Create application layer command handler
     ///
     /// Creates the application layer command handler with all required
-    /// dependencies (repository factory, clock, template manager, etc.).
+    /// dependencies (repository, clock, template manager, etc.).
     #[allow(clippy::result_large_err)]
     fn create_command_handler(
         &mut self,
@@ -325,7 +325,7 @@ impl ProvisionCommandController {
         let handler = ProvisionCommandHandler::new(
             self.clock.clone(),
             self.template_manager.clone(),
-            self.repository_factory.clone(),
+            self.repository.clone(),
         );
         self.progress.complete_step(None)?;
 
@@ -337,44 +337,17 @@ impl ProvisionCommandController {
     /// Delegates to the application layer `ProvisionCommandHandler` to
     /// orchestrate the actual infrastructure provisioning workflow.
     ///
-    /// This method:
-    /// 1. Loads the environment from repository
-    /// 2. Calls the application handler (which validates state internally)
+    /// The application layer handles:
+    /// - Loading the environment from repository
+    /// - Validating the environment state (must be Created)
+    /// - Complete provisioning workflow
+    /// - State transitions and persistence
     #[allow(clippy::result_large_err)]
     fn provision_infrastructure(
         &mut self,
         handler: &ProvisionCommandHandler,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
-        self.progress
-            .start_step("Loading environment from repository")?;
-
-        // Load environment from repository
-        let environment = self.repository.load(env_name).map_err(|e| {
-            ProvisionSubcommandError::RepositoryAccessFailed {
-                data_dir: env_name.to_string(),
-                reason: e.to_string(),
-            }
-        })?;
-
-        // Check if environment exists
-        let environment =
-            environment.ok_or_else(|| ProvisionSubcommandError::EnvironmentNotAccessible {
-                name: env_name.to_string(),
-                data_dir: "data".to_string(),
-            })?;
-
-        // Convert to Created state - domain layer handles state validation
-        let environment = environment.try_into_created().map_err(|e| {
-            ProvisionSubcommandError::InvalidEnvironmentState {
-                name: env_name.to_string(),
-                current_state: e.to_string(),
-            }
-        })?;
-
-        self.progress
-            .complete_step(Some("Environment loaded and validated"))?;
-
         self.progress.start_step("Provisioning infrastructure")?;
 
         // Use tokio runtime to execute async handler
@@ -386,7 +359,7 @@ impl ProvisionCommandController {
         })?;
 
         let provisioned = runtime
-            .block_on(handler.execute(environment))
+            .block_on(handler.execute(env_name))
             .map_err(
                 |source| ProvisionSubcommandError::ProvisionOperationFailed {
                     name: env_name.to_string(),
@@ -518,12 +491,12 @@ mod tests {
         );
 
         assert!(result.is_err());
-        // Should get EnvironmentNotAccessible because environment doesn't exist
+        // After refactoring, repository NotFound error is wrapped in ProvisionOperationFailed
         match result.unwrap_err() {
-            ProvisionSubcommandError::EnvironmentNotAccessible { name, .. } => {
+            ProvisionSubcommandError::ProvisionOperationFailed { name, .. } => {
                 assert_eq!(name, "nonexistent-env");
             }
-            other => panic!("Expected EnvironmentNotAccessible, got: {other:?}"),
+            other => panic!("Expected ProvisionOperationFailed, got: {other:?}"),
         }
     }
 
