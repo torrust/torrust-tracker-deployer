@@ -62,8 +62,9 @@ use torrust_tracker_deployer_lib::testing::e2e::{
     context::{TestContext, TestContextType},
     tasks::virtual_machine::{
         cleanup_infrastructure::cleanup_test_infrastructure,
-        preflight_cleanup::preflight_cleanup_previous_resources,
-        run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
+        preflight_cleanup::{preflight_cleanup_previous_resources, PreflightCleanupContext},
+        run_destroy_command::run_destroy_command,
+        run_provision_command::run_provision_command,
     },
 };
 
@@ -149,11 +150,16 @@ pub async fn main() -> Result<()> {
     // Cleanup any artifacts from previous test runs that may have failed to clean up
     // This ensures a clean slate before starting new tests
     // IMPORTANT: Must run BEFORE TestContext::init() which persists the environment
-    let cleanup_context = TestContext::from_environment(
-        cli.keep,
-        environment.clone(),
-        TestContextType::VirtualMachine,
-    )?;
+    //
+    // We create a minimal PreflightCleanupContext with only the information needed
+    // for cleanup, rather than creating a full TestContext just to delete it.
+    let cleanup_context = PreflightCleanupContext::new(
+        environment.build_dir().clone(),
+        environment.templates_dir().clone(),
+        environment.name().clone(),
+        environment.instance_name().clone(),
+        environment.profile_name().clone(),
+    );
 
     preflight_cleanup_previous_resources(&cleanup_context)?;
 
