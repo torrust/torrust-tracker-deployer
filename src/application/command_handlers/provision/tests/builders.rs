@@ -80,10 +80,6 @@ impl ProvisionCommandHandlerTestBuilder {
             template_manager,
         ));
 
-        let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
-            self.temp_dir.path(),
-        ));
-
         let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 
         let repository_factory =
@@ -92,13 +88,8 @@ impl ProvisionCommandHandlerTestBuilder {
             );
         let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-        let command_handler = ProvisionCommandHandler::new(
-            tofu_renderer,
-            ansible_renderer,
-            opentofu_client,
-            clock,
-            repository,
-        );
+        let command_handler =
+            ProvisionCommandHandler::new(tofu_renderer, ansible_renderer, clock, repository);
 
         (command_handler, self.temp_dir, ssh_credentials)
     }

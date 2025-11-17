@@ -9,6 +9,7 @@ use super::errors::ProvisionCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::adapters::ssh::{SshConfig, SshCredentials};
 use crate::adapters::tofu::client::InstanceInfo;
+use crate::adapters::OpenTofuClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
@@ -50,7 +51,6 @@ use crate::shared::error::Traceable;
 pub struct ProvisionCommandHandler {
     tofu_template_renderer: Arc<TofuTemplateRenderer>,
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-    opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
     clock: Arc<dyn crate::shared::Clock>,
     repository: TypedEnvironmentRepository,
 }
@@ -61,14 +61,12 @@ impl ProvisionCommandHandler {
     pub fn new(
         tofu_template_renderer: Arc<TofuTemplateRenderer>,
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-        opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
         clock: Arc<dyn crate::shared::Clock>,
         repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
             tofu_template_renderer,
             ansible_template_renderer,
-            opentofu_client,
             clock,
             repository: TypedEnvironmentRepository::new(repository),
         }
@@ -178,6 +176,7 @@ impl ProvisionCommandHandler {
         let ssh_credentials = environment.ssh_credentials();
 
         let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
+        let opentofu_client = Arc::new(OpenTofuClient::new(environment.tofu_build_dir()));
 
         // Track current step and execute each step
         // If an error occurs, we return it along with the current step
@@ -188,10 +187,11 @@ impl ProvisionCommandHandler {
             .map_err(|e| (e, current_step))?;
 
         let current_step = ProvisionStep::OpenTofuInit;
-        self.create_instance().map_err(|e| (e, current_step))?;
+        Self::create_instance(&opentofu_client).map_err(|e| (e, current_step))?;
 
         let current_step = ProvisionStep::GetInstanceInfo;
-        let instance_info = self.get_instance_info().map_err(|e| (e, current_step))?;
+        let instance_info =
+            Self::get_instance_info(&opentofu_client).map_err(|e| (e, current_step))?;
         let instance_ip = instance_info.ip_address;
 
         let current_step = ProvisionStep::RenderAnsibleTemplates;
@@ -238,11 +238,14 @@ impl ProvisionCommandHandler {
     /// # Errors
     ///
     /// Returns an error if any `OpenTofu` operation fails
-    fn create_instance(&self) -> Result<(), ProvisionCommandHandlerError> {
-        InitializeInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
-        ValidateInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
-        PlanInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
-        ApplyInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
+    fn create_instance(
+        opentofu_client: &Arc<OpenTofuClient>,
+    ) -> Result<(), ProvisionCommandHandlerError> {
+        InitializeInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
+        ValidateInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
+        PlanInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
+        ApplyInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
+
         Ok(())
     }
 
@@ -253,9 +256,10 @@ impl ProvisionCommandHandler {
     /// # Errors
     ///
     /// Returns an error if instance information cannot be retrieved
-    fn get_instance_info(&self) -> Result<InstanceInfo, ProvisionCommandHandlerError> {
-        let instance_info =
-            GetInstanceInfoStep::new(Arc::clone(&self.opentofu_client)).execute()?;
+    fn get_instance_info(
+        opentofu_client: &Arc<OpenTofuClient>,
+    ) -> Result<InstanceInfo, ProvisionCommandHandlerError> {
+        let instance_info = GetInstanceInfoStep::new(Arc::clone(opentofu_client)).execute()?;
         Ok(instance_info)
     }
 
@@ -278,6 +282,7 @@ impl ProvisionCommandHandler {
         ssh_port: u16,
     ) -> Result<(), ProvisionCommandHandlerError> {
         let socket_addr = std::net::SocketAddr::new(instance_ip, ssh_port);
+
         RenderAnsibleTemplatesStep::new(
             Arc::clone(&self.ansible_template_renderer),
             ssh_credentials.clone(),
@@ -285,6 +290,7 @@ impl ProvisionCommandHandler {
         )
         .execute()
         .await?;
+
         Ok(())
     }
 
