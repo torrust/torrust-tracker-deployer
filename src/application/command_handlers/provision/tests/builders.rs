@@ -77,7 +77,7 @@ impl ProvisionCommandHandlerTestBuilder {
 
         let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(
             self.temp_dir.path(),
-            template_manager,
+            template_manager.clone(),
         ));
 
         let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
@@ -88,8 +88,13 @@ impl ProvisionCommandHandlerTestBuilder {
             );
         let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-        let command_handler =
-            ProvisionCommandHandler::new(tofu_renderer, ansible_renderer, clock, repository);
+        let command_handler = ProvisionCommandHandler::new(
+            tofu_renderer,
+            ansible_renderer,
+            clock,
+            template_manager,
+            repository,
+        );
 
         (command_handler, self.temp_dir, ssh_credentials)
     }

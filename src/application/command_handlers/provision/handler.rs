@@ -19,6 +19,7 @@ use crate::application::steps::{
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Created, Environment, Provisioned, Provisioning};
+use crate::domain::TemplateManager;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::shared::error::Traceable;
@@ -52,6 +53,7 @@ pub struct ProvisionCommandHandler {
     tofu_template_renderer: Arc<TofuTemplateRenderer>,
     ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
     clock: Arc<dyn crate::shared::Clock>,
+    _template_manager: Arc<TemplateManager>,
     repository: TypedEnvironmentRepository,
 }
 
@@ -62,12 +64,14 @@ impl ProvisionCommandHandler {
         tofu_template_renderer: Arc<TofuTemplateRenderer>,
         ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
         clock: Arc<dyn crate::shared::Clock>,
+        template_manager: Arc<TemplateManager>,
         repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
             tofu_template_renderer,
             ansible_template_renderer,
             clock,
+            _template_manager: template_manager,
             repository: TypedEnvironmentRepository::new(repository),
         }
     }
