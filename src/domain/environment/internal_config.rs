@@ -83,9 +83,53 @@ impl InternalConfig {
     /// ```
     #[must_use]
     pub fn new(env_name: &EnvironmentName) -> Self {
-        // Generate environment-specific directories
+        // Generate environment-specific directories (relative paths)
         let data_dir = PathBuf::from(DATA_DIR_NAME).join(env_name.as_str());
         let build_dir = PathBuf::from(BUILD_DIR_NAME).join(env_name.as_str());
+
+        Self {
+            build_dir,
+            data_dir,
+        }
+    }
+
+    /// Creates a new `InternalConfig` with directories relative to a working directory
+    ///
+    /// This version creates absolute paths by prepending the working directory
+    /// to the generated data and build directories.
+    ///
+    /// # Arguments
+    ///
+    /// * `env_name` - The environment name used to generate directories
+    /// * `working_dir` - The base working directory for operations
+    ///
+    /// # Returns
+    ///
+    /// A new `InternalConfig` with:
+    /// - `data_dir`: `{working_dir}/data/{env_name}`
+    /// - `build_dir`: `{working_dir}/build/{env_name}`
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::environment::internal_config::InternalConfig;
+    /// use torrust_tracker_deployer_lib::domain::environment::EnvironmentName;
+    /// use std::path::PathBuf;
+    ///
+    /// let env_name = EnvironmentName::new("production".to_string())?;
+    /// let working_dir = PathBuf::from("/opt/deployments");
+    /// let config = InternalConfig::with_working_dir(&env_name, &working_dir);
+    ///
+    /// assert_eq!(config.data_dir, PathBuf::from("/opt/deployments/data/production"));
+    /// assert_eq!(config.build_dir, PathBuf::from("/opt/deployments/build/production"));
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub fn with_working_dir(env_name: &EnvironmentName, working_dir: &std::path::Path) -> Self {
+        // Generate environment-specific directories relative to working directory
+        let data_dir = working_dir.join(DATA_DIR_NAME).join(env_name.as_str());
+        let build_dir = working_dir.join(BUILD_DIR_NAME).join(env_name.as_str());
 
         Self {
             build_dir,

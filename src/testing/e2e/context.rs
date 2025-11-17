@@ -445,8 +445,8 @@ impl TestContext {
     ) -> std::sync::Arc<dyn crate::domain::environment::repository::EnvironmentRepository> {
         // Pass the parent "data" directory, not the environment-specific directory
         // The repository will add the environment name subdirectory automatically
-        // e.g., "data" + "e2e-provision" = "data/e2e-provision/environment.json"
-        let base_data_dir = std::path::PathBuf::from("data");
+        // e.g., "{project_root}/data" + "e2e-provision" = "{project_root}/data/e2e-provision/environment.json"
+        let base_data_dir = self.config.project_root.join("data");
         self.services.repository_factory.create(base_data_dir)
     }
 }

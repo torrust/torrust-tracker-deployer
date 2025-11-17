@@ -150,10 +150,14 @@ pub async fn main() -> Result<()> {
     let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 
+    // Get working directory (current directory for E2E tests)
+    let working_dir = std::env::current_dir().expect("Failed to get current directory");
+
     // Create environment via CreateCommandHandler
     let environment = run_create_command(
         &repository_factory,
         clock,
+        &working_dir,
         "e2e-full",
         ssh_private_key_path.to_string_lossy().to_string(),
         ssh_public_key_path.to_string_lossy().to_string(),

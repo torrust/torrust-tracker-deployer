@@ -42,6 +42,7 @@ use crate::shared::Clock;
 ///
 /// * `repository_factory` - Repository factory for creating environment repositories
 /// * `clock` - Clock service for timestamp generation
+/// * `working_dir` - Working directory for environment storage
 /// * `environment_name` - Name of the environment to create
 /// * `ssh_private_key_path` - Path to SSH private key file
 /// * `ssh_public_key_path` - Path to SSH public key file
@@ -58,9 +59,11 @@ use crate::shared::Clock;
 /// - Configuration is invalid
 /// - Environment already exists
 /// - Repository operations fail
+#[allow(clippy::too_many_arguments)]
 pub fn run_create_command(
     repository_factory: &RepositoryFactory,
     clock: Arc<dyn Clock>,
+    working_dir: &std::path::Path,
     environment_name: &str,
     ssh_private_key_path: String,
     ssh_public_key_path: String,
@@ -72,9 +75,8 @@ pub fn run_create_command(
         "Creating environment via CreateCommandHandler"
     );
 
-    // Create repository using RepositoryFactory with "data" as base directory
-    let base_data_dir = std::path::PathBuf::from("data");
-    let repository = repository_factory.create(base_data_dir);
+    // Create repository using RepositoryFactory with working directory
+    let repository = repository_factory.create(working_dir.to_path_buf());
 
     // Create the command handler
     let create_command = CreateCommandHandler::new(repository, clock);
@@ -94,7 +96,7 @@ pub fn run_create_command(
 
     // Execute the command
     let environment = create_command
-        .execute(config)
+        .execute(config, working_dir)
         .map_err(|source| CreateTaskError::CreationFailed { source })?;
 
     info!(

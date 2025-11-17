@@ -52,8 +52,9 @@
 //!     ),
 //! );
 //!
-//! // Execute command
-//! match command.execute(config) {
+//! // Execute command with working directory
+//! let working_dir = std::path::Path::new(".");
+//! match command.execute(config, working_dir) {
 //!     Ok(environment) => {
 //!         println!("Created environment: {}", environment.name());
 //!     }

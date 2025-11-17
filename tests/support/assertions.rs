@@ -78,7 +78,7 @@ impl EnvironmentStateAssertions {
     /// Panics if the data directory or environment JSON file doesn't exist.
     #[allow(dead_code)]
     pub fn assert_data_directory_structure(&self, env_name: &str) {
-        let data_dir = self.workspace_path.join(env_name);
+        let data_dir = self.workspace_path.join("data").join(env_name);
         assert!(
             data_dir.exists(),
             "Data directory should exist at: {}",
@@ -112,7 +112,10 @@ impl EnvironmentStateAssertions {
     }
 
     fn environment_json_path(&self, env_name: &str) -> PathBuf {
-        self.workspace_path.join(env_name).join("environment.json")
+        self.workspace_path
+            .join("data")
+            .join(env_name)
+            .join("environment.json")
     }
 
     fn read_environment_json(&self, env_name: &str) -> Result<Value> {

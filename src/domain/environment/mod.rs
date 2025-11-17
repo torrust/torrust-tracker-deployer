@@ -259,6 +259,70 @@ impl Environment {
             state: Created,
         }
     }
+
+    /// Creates a new environment in Created state with directories relative to a working directory
+    ///
+    /// This version creates absolute paths for data and build directories by
+    /// using the provided working directory as the base. This is the recommended
+    /// constructor when the working directory is known at environment creation time.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The unique environment name
+    /// * `ssh_credentials` - SSH credentials for accessing the provisioned instance
+    /// * `ssh_port` - SSH port for connections (typically 22)
+    /// * `working_dir` - The base working directory for all operations
+    ///
+    /// # Returns
+    ///
+    /// A new environment in the `Created` state with paths relative to the working directory.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::environment::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::adapters::SshCredentials;
+    /// use torrust_tracker_deployer_lib::shared::Username;
+    /// use std::path::PathBuf;
+    ///
+    /// let env_name = EnvironmentName::new("production".to_string())?;
+    /// let username = Username::new("torrust".to_string())?;
+    /// let ssh_credentials = SshCredentials::new(
+    ///     PathBuf::from("keys/prod_rsa"),
+    ///     PathBuf::from("keys/prod_rsa.pub"),
+    ///     username,
+    /// );
+    /// let ssh_port = 22;
+    /// let working_dir = PathBuf::from("/opt/deployments");
+    /// let environment = Environment::with_working_dir(env_name, ssh_credentials, ssh_port, &working_dir);
+    ///
+    /// assert_eq!(environment.instance_name().as_str(), "torrust-tracker-vm-production");
+    /// assert_eq!(*environment.data_dir(), PathBuf::from("/opt/deployments/data/production"));
+    /// assert_eq!(*environment.build_dir(), PathBuf::from("/opt/deployments/build/production"));
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// This function does not panic. All instance name generation is guaranteed
+    /// to succeed for valid environment names.
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
+    pub fn with_working_dir(
+        name: EnvironmentName,
+        ssh_credentials: SshCredentials,
+        ssh_port: u16,
+        working_dir: &std::path::Path,
+    ) -> Environment<Created> {
+        let context =
+            EnvironmentContext::with_working_dir(&name, ssh_credentials, ssh_port, working_dir);
+
+        Environment {
+            context,
+            state: Created,
+        }
+    }
 }
 
 // Common transitions available from any state

@@ -222,7 +222,9 @@ impl DestroyCommandController {
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let repository = repository_factory.create(working_dir);
+        // Repository expects BASE data directory, will append environment name internally
+        let data_dir = working_dir.join("data");
+        let repository = repository_factory.create(data_dir);
         let progress = ProgressReporter::new(user_output.clone(), DESTROY_WORKFLOW_STEPS);
 
         Self {
