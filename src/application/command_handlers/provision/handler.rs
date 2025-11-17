@@ -16,10 +16,12 @@ use crate::application::steps::{
     PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
     ValidateInfrastructureStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
-use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
+use crate::domain::environment::repository::{
+    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
+};
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
-use crate::domain::TemplateManager;
+use crate::domain::{EnvironmentName, TemplateManager};
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::shared::error::Traceable;
@@ -101,7 +103,7 @@ impl ProvisionCommandHandler {
     )]
     pub async fn execute(
         &self,
-        env_name: &crate::domain::environment::name::EnvironmentName,
+        env_name: &EnvironmentName,
     ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
         info!(
             command = "provision",
@@ -118,9 +120,7 @@ impl ProvisionCommandHandler {
 
         // 2. Check if environment exists
         let environment = environment.ok_or_else(|| {
-            ProvisionCommandHandlerError::StatePersistence(
-                crate::domain::environment::repository::RepositoryError::NotFound,
-            )
+            ProvisionCommandHandlerError::StatePersistence(RepositoryError::NotFound)
         })?;
 
         // 3. Validate environment is in Created state - we can only provision from Created state
