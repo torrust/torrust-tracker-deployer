@@ -41,11 +41,16 @@ When starting work on a new feature:
   - Folder module structure with focused submodules
 - [x] **1.5** Create command `torrust-tracker-deployer create` to create a new environment ✅ Completed
   - EPIC: [Implement Create Environment Command](https://github.com/torrust/torrust-tracker-deployer/issues/34) - GitHub Issue #34
-- [ ] **1.6** Create command `torrust-tracker-deployer provision` to provision VM infrastructure (UI layer only) - [Issue #174](https://github.com/torrust/torrust-tracker-deployer/issues/174)
+- [x] **1.6** Create command `torrust-tracker-deployer provision` to provision VM infrastructure (UI layer only) ✅ Completed - [Issue #174](https://github.com/torrust/torrust-tracker-deployer/issues/174)
   - **Note:** The App layer ProvisionCommand is already implemented, this task focuses on the console subcommand interface
   - Implementation should call the existing ProvisionCommand business logic
   - Handle user input, validation, and output presentation
-- [ ] **1.7** Add levels of verbosity as described in the UX research
+- [ ] **1.7** Create command `torrust-tracker-deployer configure` to configure provisioned infrastructure (UI layer only) - [Issue #180](https://github.com/torrust/torrust-tracker-deployer/issues/180)
+  - **Note:** The App layer ConfigureCommand is already implemented, this task focuses on the console subcommand interface
+  - Implementation should call the existing ConfigureCommandHandler business logic
+  - Handle user input, validation, and output presentation
+  - Enables transition from "provisioned" to "configured" state via CLI
+- [ ] **1.8** Add levels of verbosity as described in the UX research
 
 **Note:** See [`docs/research/UX/`](./research/UX/) for detailed UX research that will be useful to implement the features in this section.
 
