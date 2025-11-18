@@ -146,11 +146,13 @@ impl RenderAnsibleTemplatesStep {
         let host = AnsibleHost::from(self.ssh_socket_addr.ip());
         let ssh_key = SshPrivateKeyFile::new(&self.ssh_credentials.ssh_priv_key_path)?;
         let ssh_port = AnsiblePort::new(self.ssh_socket_addr.port())?;
+        let ansible_user = self.ssh_credentials.ssh_username.as_str().to_string();
 
         InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(ssh_port)
+            .with_ansible_user(ansible_user)
             .build()
             .map_err(RenderAnsibleTemplatesError::from)
     }

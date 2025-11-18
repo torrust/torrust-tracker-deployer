@@ -70,7 +70,8 @@ all:
       # The username to use when connecting via SSH
       # 🔗 LXD VM: This must match the user created in cloud-init
       # 🔗 CONTAINER: This must match the pre-configured user in the container image
-      ansible_user: torrust
+      # 🔗 CONFIGURED: Set via ssh_credentials.username in environment config
+      ansible_user: {{ansible_user}}
 
       # Connection method - we're using SSH
       ansible_connection: ssh

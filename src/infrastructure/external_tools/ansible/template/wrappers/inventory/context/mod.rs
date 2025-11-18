@@ -34,6 +34,10 @@ pub enum InventoryContextError {
     /// Missing SSH port in context  
     #[error("Missing SSH port - must be set before building")]
     MissingSshPort,
+
+    /// Missing Ansible user in context
+    #[error("Missing Ansible user - must be set before building")]
+    MissingAnsibleUser,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -42,6 +46,7 @@ pub struct InventoryContext {
     ansible_host: AnsibleHost,
     ansible_ssh_private_key_file: SshPrivateKeyFile,
     ansible_port: AnsiblePort,
+    ansible_user: String,
 }
 
 /// Builder for `InventoryContext` with fluent interface
@@ -51,6 +56,7 @@ pub struct InventoryContextBuilder {
     ansible_host: Option<AnsibleHost>,
     ansible_ssh_private_key_file: Option<SshPrivateKeyFile>,
     ansible_port: Option<AnsiblePort>,
+    ansible_user: Option<String>,
 }
 
 impl InventoryContextBuilder {
@@ -81,6 +87,13 @@ impl InventoryContextBuilder {
         self
     }
 
+    /// Sets the Ansible user for the builder.
+    #[must_use]
+    pub fn with_ansible_user(mut self, ansible_user: String) -> Self {
+        self.ansible_user = Some(ansible_user);
+        self
+    }
+
     /// Builds the `InventoryContext`
     ///
     /// # Errors
@@ -99,10 +112,15 @@ impl InventoryContextBuilder {
             .ansible_port
             .ok_or(InventoryContextError::MissingSshPort)?;
 
+        let ansible_user = self
+            .ansible_user
+            .ok_or(InventoryContextError::MissingAnsibleUser)?;
+
         Ok(InventoryContext {
             ansible_host,
             ansible_ssh_private_key_file,
             ansible_port,
+            ansible_user,
         })
     }
 }
@@ -118,11 +136,13 @@ impl InventoryContext {
         ansible_host: AnsibleHost,
         ansible_ssh_private_key_file: SshPrivateKeyFile,
         ansible_port: AnsiblePort,
+        ansible_user: String,
     ) -> Result<Self, InventoryContextError> {
         Ok(Self {
             ansible_host,
             ansible_ssh_private_key_file,
             ansible_port,
+            ansible_user,
         })
     }
 
@@ -150,6 +170,12 @@ impl InventoryContext {
         self.ansible_port.as_u16()
     }
 
+    /// Get the ansible user
+    #[must_use]
+    pub fn ansible_user(&self) -> &str {
+        &self.ansible_user
+    }
+
     /// Get the ansible host wrapper
     #[must_use]
     pub fn ansible_host_wrapper(&self) -> &AnsibleHost {
@@ -175,6 +201,7 @@ mod tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(AnsiblePort::new(22).unwrap())
+            .with_ansible_user("torrust".to_string())
             .build()
             .unwrap();
 
@@ -195,6 +222,7 @@ mod tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(AnsiblePort::new(22).unwrap())
+            .with_ansible_user("ubuntu".to_string())
             .build()
             .unwrap();
 
@@ -204,6 +232,7 @@ mod tests {
             "/home/user/.ssh/id_rsa"
         );
         assert_eq!(inventory_context.ansible_port(), 22);
+        assert_eq!(inventory_context.ansible_user(), "ubuntu");
     }
 
     #[test]
@@ -216,6 +245,7 @@ mod tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(AnsiblePort::new(22).unwrap())
+            .with_ansible_user("testuser".to_string())
             .build()
             .unwrap();
 
@@ -271,13 +301,30 @@ mod tests {
     }
 
     #[test]
+    fn it_should_fail_when_builder_missing_ansible_user() {
+        // Test that builder fails when ansible_user is missing
+        let host = AnsibleHost::from_str("192.168.1.100").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
+        let result = InventoryContext::builder()
+            .with_host(host)
+            .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(AnsiblePort::new(22).unwrap())
+            .build();
+
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Missing Ansible user"));
+    }
+
+    #[test]
     fn it_should_create_new_inventory_context_with_typed_parameters() {
         // Test the new direct constructor with typed parameters
         let host = AnsibleHost::from_str("192.168.1.50").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/etc/ssh/test_key").unwrap();
         let ssh_port = AnsiblePort::new(22).unwrap();
+        let user = "ubuntu".to_string();
 
-        let inventory_context = InventoryContext::new(host, ssh_key, ssh_port).unwrap();
+        let inventory_context = InventoryContext::new(host, ssh_key, ssh_port, user).unwrap();
 
         assert_eq!(inventory_context.ansible_host(), "192.168.1.50");
         assert_eq!(
@@ -285,5 +332,6 @@ mod tests {
             "/etc/ssh/test_key"
         );
         assert_eq!(inventory_context.ansible_port(), 22);
+        assert_eq!(inventory_context.ansible_user(), "ubuntu");
     }
 }
