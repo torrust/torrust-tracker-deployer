@@ -11,9 +11,12 @@ use crate::application::steps::{
     ConfigureFirewallStep, ConfigureSecurityUpdatesStep, InstallDockerComposeStep,
     InstallDockerStep,
 };
-use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
+use crate::domain::environment::repository::{
+    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
+};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
-use crate::domain::environment::{Configured, Configuring, Environment, Provisioned};
+use crate::domain::environment::{Configured, Configuring, Environment};
+use crate::domain::EnvironmentName;
 use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::error::Traceable;
 
@@ -62,7 +65,7 @@ impl ConfigureCommandHandler {
     ///
     /// # Arguments
     ///
-    /// * `environment` - The environment in `Provisioned` state to configure
+    /// * `env_name` - The name of the environment to configure
     ///
     /// # Returns
     ///
@@ -71,6 +74,7 @@ impl ConfigureCommandHandler {
     /// # Errors
     ///
     /// Returns an error if any step in the configuration workflow fails:
+    /// * Environment not found or not in `Provisioned` state
     /// * Docker installation fails
     /// * Docker Compose installation fails
     /// * Security updates configuration fails
@@ -81,18 +85,33 @@ impl ConfigureCommandHandler {
         skip_all,
         fields(
             command_type = "configure",
-            environment = %environment.name()
+            environment = %env_name
         )
     )]
     pub fn execute(
         &self,
-        environment: Environment<Provisioned>,
+        env_name: &EnvironmentName,
     ) -> Result<Environment<Configured>, ConfigureCommandHandlerError> {
         info!(
             command = "configure",
-            environment = %environment.name(),
+            environment = %env_name,
             "Starting complete infrastructure configuration workflow"
         );
+
+        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(ConfigureCommandHandlerError::StatePersistence)?;
+
+        // 2. Check if environment exists
+        let any_env = any_env.ok_or_else(|| {
+            ConfigureCommandHandlerError::StatePersistence(RepositoryError::NotFound)
+        })?;
+
+        // 3. Validate environment is in Provisioned state and restore type safety
+        let environment = any_env.try_into_provisioned()?;
 
         // Capture start time before transitioning to Configuring state
         let started_at = self.clock.now();

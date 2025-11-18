@@ -1,5 +1,6 @@
 //! Error types for the Configure command handler
 
+use crate::domain::environment::state::StateTypeError;
 use crate::shared::command::CommandError;
 
 /// Comprehensive error type for the `ConfigureCommandHandler`
@@ -10,6 +11,9 @@ pub enum ConfigureCommandHandlerError {
 
     #[error("Failed to persist environment state: {0}")]
     StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+
+    #[error("Environment is in an invalid state for configuration: {0}")]
+    InvalidState(#[from] StateTypeError),
 }
 
 impl crate::shared::Traceable for ConfigureCommandHandlerError {
@@ -21,13 +25,16 @@ impl crate::shared::Traceable for ConfigureCommandHandlerError {
             Self::StatePersistence(e) => {
                 format!("ConfigureCommandHandlerError: Failed to persist environment state - {e}")
             }
+            Self::InvalidState(e) => {
+                format!("ConfigureCommandHandlerError: Environment is in an invalid state for configuration - {e}")
+            }
         }
     }
 
     fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
         match self {
             Self::Command(e) => Some(e),
-            Self::StatePersistence(_) => None,
+            Self::StatePersistence(_) | Self::InvalidState(_) => None,
         }
     }
 
@@ -35,6 +42,7 @@ impl crate::shared::Traceable for ConfigureCommandHandlerError {
         match self {
             Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
             Self::StatePersistence(_) => crate::shared::ErrorKind::StatePersistence,
+            Self::InvalidState(_) => crate::shared::ErrorKind::Configuration,
         }
     }
 }
@@ -107,6 +115,29 @@ If partially created files exist, remove them and retry.
 
 If the problem persists, report it with full system details."
             }
+            Self::InvalidState(_) => {
+                "Invalid Environment State - Troubleshooting:
+
+1. Verify the environment is in the correct state for configuration:
+   - Check the environment state: cat data/<env-name>/environment.json
+   - Configuration requires the environment to be in 'Provisioned' state
+
+2. If environment is not provisioned:
+   - Run the provision command first: <tool> provision <env-name>
+   - Verify provisioning completed successfully before configuring
+
+3. If environment is in an error state:
+   - Check the error details in the environment state file
+   - Review trace files in data/<env-name>/traces/ for diagnostics
+   - Fix underlying issues before retrying configuration
+
+4. If environment state file is corrupted:
+   - Back up data/<env-name>/ directory
+   - Restore from a known good state or recreate the environment
+
+For more information about environment states and transitions,
+see the documentation on environment lifecycle management."
+            }
         }
     }
 }
@@ -143,6 +174,19 @@ mod tests {
     }
 
     #[test]
+    fn it_should_provide_help_for_invalid_state() {
+        let error = ConfigureCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
+            expected: "provisioned",
+            actual: "created".to_string(),
+        });
+
+        let help = error.help();
+        assert!(help.contains("Invalid Environment State"));
+        assert!(help.contains("Troubleshooting"));
+        assert!(help.contains("Provisioned"));
+    }
+
+    #[test]
     fn it_should_have_help_for_all_error_variants() {
         let errors = vec![
             ConfigureCommandHandlerError::Command(CommandError::ExecutionFailed {
@@ -152,6 +196,10 @@ mod tests {
                 stderr: "error".to_string(),
             }),
             ConfigureCommandHandlerError::StatePersistence(RepositoryError::NotFound),
+            ConfigureCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
+                expected: "provisioned",
+                actual: "created".to_string(),
+            }),
         ];
 
         for error in errors {

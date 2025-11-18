@@ -30,13 +30,12 @@ use tracing::info;
 
 use crate::application::command_handlers::configure::ConfigureCommandHandlerError;
 use crate::application::command_handlers::ConfigureCommandHandler;
-use crate::domain::environment::state::StateTypeError;
 use crate::testing::e2e::context::TestContext;
 
 /// Configure infrastructure using Ansible playbooks
 ///
 /// This function executes Ansible configuration using the `ConfigureCommandHandler` for E2E tests.
-/// It extracts the provisioned environment from the `TestContext` and applies configuration,
+/// It extracts the environment name from the `TestContext` and applies configuration,
 /// ensuring type-safe state transitions.
 ///
 /// This function updates the `TestContext`'s internal environment to reflect the
@@ -46,26 +45,19 @@ use crate::testing::e2e::context::TestContext;
 /// # Errors
 ///
 /// Returns an error if:
-/// - Environment is not in `Provisioned` state
+/// - Environment is not found or not in `Provisioned` state
 /// - `ConfigureCommandHandler` execution fails
 /// - Infrastructure configuration fails
 pub fn run_configure_command(test_context: &mut TestContext) -> Result<(), ConfigureTaskError> {
     info!("Configuring test infrastructure");
 
-    // Extract provisioned environment from TestContext for configuration
-    let provisioned_env = test_context
-        .environment
-        .clone()
-        .try_into_provisioned()
-        .map_err(|source| ConfigureTaskError::InvalidState {
-            state_type: test_context.environment.state_name().to_string(),
-            source,
-        })?;
+    // Extract environment name from TestContext
+    let env_name = test_context.environment.name();
 
     // Create repository for this environment
     let repository = test_context.create_repository();
 
-    // Use the new ConfigureCommandHandler to handle all infrastructure configuration steps
+    // Use the ConfigureCommandHandler to handle all infrastructure configuration steps
     let configure_command_handler = ConfigureCommandHandler::new(
         Arc::clone(&test_context.services.ansible_client),
         Arc::clone(&test_context.services.clock),
@@ -73,7 +65,7 @@ pub fn run_configure_command(test_context: &mut TestContext) -> Result<(), Confi
     );
 
     let configured_env = configure_command_handler
-        .execute(provisioned_env)
+        .execute(env_name)
         .map_err(|source| ConfigureTaskError::ConfigurationFailed { source })?;
 
     info!(
@@ -91,17 +83,6 @@ pub fn run_configure_command(test_context: &mut TestContext) -> Result<(), Confi
 /// Errors that can occur during the configure task
 #[derive(Debug, Error)]
 pub enum ConfigureTaskError {
-    /// Environment is not in the correct state for configuration
-    #[error(
-        "Environment must be in Provisioned state to configure, but got: {state_type}
-Tip: Run the provision command successfully before attempting configuration"
-    )]
-    InvalidState {
-        state_type: String,
-        #[source]
-        source: StateTypeError,
-    },
-
     /// Configuration command execution failed
     #[error(
         "Failed to configure infrastructure: {source}
@@ -123,38 +104,23 @@ impl ConfigureTaskError {
     ///
     /// ```rust
     /// # use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configure_command::ConfigureTaskError;
-    /// # use torrust_tracker_deployer_lib::domain::environment::state::StateTypeError;
-    /// let error = ConfigureTaskError::InvalidState {
-    ///     state_type: "Created".to_string(),
-    ///     source: StateTypeError::UnexpectedState {
-    ///         expected: "provisioned",
-    ///         actual: "created".to_string(),
-    ///     },
+    /// # use torrust_tracker_deployer_lib::application::command_handlers::configure::ConfigureCommandHandlerError;
+    /// # use torrust_tracker_deployer_lib::shared::command::CommandError;
+    /// let error = ConfigureTaskError::ConfigurationFailed {
+    ///     source: ConfigureCommandHandlerError::Command(
+    ///         CommandError::ExecutionFailed {
+    ///             command: "ansible-playbook".to_string(),
+    ///             exit_code: "1".to_string(),
+    ///             stdout: String::new(),
+    ///             stderr: "error".to_string(),
+    ///         }
+    ///     ),
     /// };
     /// println!("{}", error.help());
     /// ```
     #[must_use]
     pub fn help(&self) -> &'static str {
         match self {
-            Self::InvalidState { .. } => {
-                "Invalid State for Configuration - Detailed Troubleshooting:
-
-1. Verify provisioning completed successfully:
-   - Check that the provision command finished without errors
-   - Ensure the environment.json shows 'Provisioned' state
-
-2. Check instance connectivity:
-   - Verify the instance IP address is accessible
-   - Test SSH connectivity to the instance
-   - Ensure cloud-init has completed
-
-3. If provisioning failed previously:
-   - Re-run the provision command to complete provisioning
-   - Or destroy and recreate the environment from scratch
-
-For more information, see the E2E testing documentation."
-            }
-
             Self::ConfigurationFailed { .. } => {
                 "Configuration Failed - Detailed Troubleshooting:
 

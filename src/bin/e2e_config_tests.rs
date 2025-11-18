@@ -241,7 +241,13 @@ async fn run_configuration_tests(test_context: &mut TestContext) -> Result<()> {
     let provisioned_env = created_env.start_provisioning().provisioned();
 
     // Update TestContext with the simulated provisioned environment
-    test_context.update_from_provisioned(provisioned_env);
+    test_context.update_from_provisioned(provisioned_env.clone());
+
+    // Persist the provisioned environment to the repository so the ConfigureCommandHandler can load it
+    let repository = test_context.create_repository();
+    repository
+        .save(&provisioned_env.into_any())
+        .context("Failed to persist provisioned environment for configure command")?;
 
     // Step 3: Run Ansible configuration with typed environment
     // The TestContext is updated internally with the new environment state
