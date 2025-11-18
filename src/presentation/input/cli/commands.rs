@@ -53,22 +53,24 @@ pub enum Commands {
         /// previously created and is in "Created" state.
         environment: String,
     },
+
+    /// Configure a provisioned deployment environment
+    ///
+    /// This command configures the infrastructure of a provisioned deployment
+    /// environment. It will:
+    /// - Install Docker engine
+    /// - Install Docker Compose
+    /// - Configure system services
+    ///
+    /// The environment must be in "Provisioned" state (use 'provision' command first).
+    Configure {
+        /// Name of the environment to configure
+        ///
+        /// The environment name must match an existing environment that was
+        /// previously provisioned and is in "Provisioned" state.
+        environment: String,
+    },
     // Future commands will be added here:
-    //
-    // /// Provision a new deployment environment
-    // Provision {
-    //     /// Name of the environment to create
-    //     environment: String,
-    //     /// Infrastructure provider to use (lxd, multipass, etc.)
-    //     #[arg(long, default_value = "lxd")]
-    //     provider: String,
-    // },
-    //
-    // /// Configure an existing deployment environment
-    // Configure {
-    //     /// Name of the environment to configure
-    //     environment: String,
-    // },
     //
     // /// Create a new release of the deployed application
     // Release {

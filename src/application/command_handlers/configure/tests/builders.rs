@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 use tempfile::TempDir;
 
-use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::configure::ConfigureCommandHandler;
 
 /// Test builder for `ConfigureCommandHandler` that manages dependencies and lifecycle
@@ -33,7 +32,6 @@ impl ConfigureCommandHandlerTestBuilder {
     /// Returns: (`command`, `temp_dir`)
     /// The `temp_dir` must be kept alive for the duration of the test.
     pub fn build(self) -> (ConfigureCommandHandler, TempDir) {
-        let ansible_client = Arc::new(AnsibleClient::new(self.temp_dir.path()));
         let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 
         let repository_factory =
@@ -42,7 +40,7 @@ impl ConfigureCommandHandlerTestBuilder {
             );
         let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-        let command_handler = ConfigureCommandHandler::new(ansible_client, clock, repository);
+        let command_handler = ConfigureCommandHandler::new(clock, repository);
 
         (command_handler, self.temp_dir)
     }

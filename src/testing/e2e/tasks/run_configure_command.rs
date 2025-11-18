@@ -58,11 +58,8 @@ pub fn run_configure_command(test_context: &mut TestContext) -> Result<(), Confi
     let repository = test_context.create_repository();
 
     // Use the ConfigureCommandHandler to handle all infrastructure configuration steps
-    let configure_command_handler = ConfigureCommandHandler::new(
-        Arc::clone(&test_context.services.ansible_client),
-        Arc::clone(&test_context.services.clock),
-        repository,
-    );
+    let configure_command_handler =
+        ConfigureCommandHandler::new(Arc::clone(&test_context.services.clock), repository);
 
     let configured_env = configure_command_handler
         .execute(env_name)
