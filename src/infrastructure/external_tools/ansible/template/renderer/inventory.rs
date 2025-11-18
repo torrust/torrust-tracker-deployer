@@ -219,6 +219,7 @@ mod tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(ssh_port)
+            .with_ansible_user("torrust".to_string())
             .build()
             .expect("Failed to build inventory context")
     }
@@ -233,7 +234,7 @@ mod tests {
     torrust-tracker-vm:
       ansible_host: {{ ansible_host }}
       ansible_port: {{ ansible_port }}
-      ansible_user: torrust
+      ansible_user: {{ ansible_user }}
       ansible_connection: ssh
       ansible_ssh_private_key_file: {{ ansible_ssh_private_key_file }}
       ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
@@ -304,7 +305,7 @@ mod tests {
         );
         assert!(
             output_content.contains("ansible_user: torrust"),
-            "Output should contain ansible_user: {output_content}"
+            "Output should contain ansible_user with correct value: {output_content}"
         );
     }
 
@@ -323,7 +324,7 @@ mod tests {
   hosts:
     torrust-tracker-vm:
       ansible_host: {{ ansible_host }}
-      ansible_user: torrust
+      ansible_user: {{ ansible_user }}
       missing_field: {{ non_existent_field }}
 ";
 

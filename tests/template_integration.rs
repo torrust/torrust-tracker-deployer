@@ -47,6 +47,7 @@ mod integration_tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(ssh_port)
+            .with_ansible_user("torrust".to_string())
             .build()?;
         let inventory = InventoryTemplate::new(&template_file, inventory_context)?;
 
@@ -101,6 +102,7 @@ mod integration_tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(ssh_port)
+            .with_ansible_user("ubuntu".to_string())
             .build()?;
         let result = InventoryTemplate::new(&template_file, inventory_context);
 
@@ -126,6 +128,7 @@ mod integration_tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(ssh_port)
+            .with_ansible_user("admin".to_string())
             .build()?;
         let result = InventoryTemplate::new(&invalid_template_file, inventory_context.clone());
 
@@ -171,6 +174,7 @@ mod integration_tests {
                 .with_host(host)
                 .with_ssh_priv_key_path(ssh_key)
                 .with_ssh_port(ssh_port)
+                .with_ansible_user(format!("user{i}"))
                 .build()?;
             let inventory = InventoryTemplate::new(&template_file, inventory_context)?;
 
@@ -218,6 +222,7 @@ mod integration_tests {
                 .with_host(host)
                 .with_ssh_priv_key_path(ssh_key)
                 .with_ssh_port(ssh_port)
+                .with_ansible_user("testuser".to_string())
                 .build()?;
             let inventory = InventoryTemplate::new(&template_file, inventory_context)?;
 

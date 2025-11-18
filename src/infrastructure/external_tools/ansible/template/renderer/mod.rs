@@ -37,6 +37,7 @@
 //!     .with_host(host)
 //!     .with_ssh_priv_key_path(ssh_key)
 //!     .with_ssh_port(ssh_port)
+//!     .with_ansible_user("torrust".to_string())
 //!     .build()?;
 //!
 //! // Note: This would require actual template files to work
@@ -437,7 +438,7 @@ impl AnsibleTemplateRenderer {
 mod tests {
     use super::*;
     use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::{
-        AnsibleHost, InventoryContext, SshPrivateKeyFile,
+        AnsibleHost, AnsiblePort, InventoryContext, SshPrivateKeyFile,
     };
     use std::str::FromStr;
     use tempfile::TempDir;
@@ -447,10 +448,13 @@ mod tests {
     fn create_test_inventory_context() -> InventoryContext {
         let host = AnsibleHost::from_str("192.168.1.100").expect("Valid IP address");
         let ssh_key = SshPrivateKeyFile::new("/path/to/ssh/key").expect("Valid SSH key path");
+        let ssh_port = AnsiblePort::new(22).expect("Valid SSH port");
 
         InventoryContext::builder()
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
+            .with_ssh_port(ssh_port)
+            .with_ansible_user("torrust".to_string())
             .build()
             .expect("Valid inventory context")
     }

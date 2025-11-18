@@ -93,6 +93,7 @@ mod tests {
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(ssh_port)
+            .with_ansible_user("torrust".to_string())
             .build()
             .unwrap()
     }
