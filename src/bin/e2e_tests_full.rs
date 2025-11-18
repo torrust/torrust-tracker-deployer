@@ -55,6 +55,7 @@
 
 use anyhow::Result;
 use clap::Parser;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use torrust_dependency_installer::{verify_dependencies, Dependency};
@@ -72,8 +73,9 @@ use torrust_tracker_deployer_lib::testing::e2e::tasks::{
     run_create_command::run_create_command,
     run_test_command::run_test_command,
     virtual_machine::{
-        preflight_cleanup::preflight_cleanup_previous_resources,
-        run_destroy_command::run_destroy_command, run_provision_command::run_provision_command,
+        preflight_cleanup::{preflight_cleanup_previous_resources, PreflightCleanupContext},
+        run_destroy_command::run_destroy_command,
+        run_provision_command::run_provision_command,
     },
 };
 
@@ -149,10 +151,14 @@ pub async fn main() -> Result<()> {
     let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 
+    // Use relative path like CLI default for consistency
+    let working_dir = PathBuf::from(".");
+
     // Create environment via CreateCommandHandler
     let environment = run_create_command(
         &repository_factory,
         clock,
+        &working_dir,
         "e2e-full",
         ssh_private_key_path.to_string_lossy().to_string(),
         ssh_public_key_path.to_string_lossy().to_string(),
@@ -161,14 +167,26 @@ pub async fn main() -> Result<()> {
     )
     .map_err(|e| anyhow::anyhow!("{e}"))?;
 
+    // Additional preflight cleanup for infrastructure (OpenTofu, LXD resources)
+    // This handles any lingering infrastructure from interrupted previous runs
+    // IMPORTANT: Must run BEFORE TestContext::init() which persists the environment
+    //
+    // We create a minimal PreflightCleanupContext with only the information needed
+    // for cleanup, rather than creating a full TestContext just to delete it.
+    let cleanup_context = PreflightCleanupContext::new(
+        environment.build_dir().clone(),
+        environment.templates_dir().clone(),
+        environment.name().clone(),
+        environment.instance_name().clone(),
+        environment.profile_name().clone(),
+    );
+
+    preflight_cleanup_previous_resources(&cleanup_context)?;
+
+    // Now initialize the test context and persist the environment after cleanup
     let mut test_context =
         TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
             .init()?;
-
-    // Additional preflight cleanup for infrastructure (OpenTofu, LXD resources)
-    // This handles any lingering infrastructure from interrupted previous runs
-    preflight_cleanup_previous_resources(&test_context)?;
-
     let test_start = Instant::now();
 
     let deployment_result = run_full_deployment_test(&mut test_context).await;

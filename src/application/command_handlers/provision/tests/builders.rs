@@ -7,12 +7,9 @@ use std::sync::Arc;
 
 use tempfile::TempDir;
 
-use crate::adapters::ansible::AnsibleClient;
 use crate::adapters::ssh::SshCredentials;
 use crate::application::command_handlers::provision::ProvisionCommandHandler;
-use crate::domain::{InstanceName, ProfileName};
-use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
-use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
+use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Username;
 
 /// Test builder for `ProvisionCommandHandler` that manages dependencies and lifecycle
@@ -23,6 +20,7 @@ use crate::shared::Username;
 /// - Allowing selective customization of dependencies
 /// - Returning only the command handler and necessary test artifacts
 pub struct ProvisionCommandHandlerTestBuilder {
+    #[allow(dead_code)]
     temp_dir: TempDir,
     ssh_credentials: Option<SshCredentials>,
 }
@@ -49,11 +47,8 @@ impl ProvisionCommandHandlerTestBuilder {
     ///
     /// Returns: (`command_handler`, `temp_dir`, `ssh_credentials`)
     /// The `temp_dir` must be kept alive for the duration of the test.
+    #[allow(dead_code)]
     pub fn build(self) -> (ProvisionCommandHandler, TempDir, SshCredentials) {
-        let template_manager = Arc::new(crate::domain::template::TemplateManager::new(
-            self.temp_dir.path(),
-        ));
-
         // Use provided SSH credentials or create defaults
         let ssh_credentials = self.ssh_credentials.unwrap_or_else(|| {
             let ssh_key_path = self.temp_dir.path().join("test_key");
@@ -65,42 +60,12 @@ impl ProvisionCommandHandlerTestBuilder {
             )
         });
 
-        let tofu_renderer = Arc::new(TofuTemplateRenderer::new(
-            template_manager.clone(),
-            self.temp_dir.path(),
-            ssh_credentials.clone(),
-            InstanceName::new("torrust-tracker-vm".to_string())
-                .expect("Valid hardcoded instance name"),
-            ProfileName::new("default-profile".to_string()).expect("Valid hardcoded profile name"),
-        ));
-
-        let ansible_renderer = Arc::new(AnsibleTemplateRenderer::new(
-            self.temp_dir.path(),
-            template_manager,
-        ));
-
-        let ansible_client = Arc::new(AnsibleClient::new(self.temp_dir.path()));
-
-        let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
-            self.temp_dir.path(),
-        ));
-
         let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 
-        let repository_factory =
-            crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
-                std::time::Duration::from_secs(30),
-            );
+        let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
         let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
 
-        let command_handler = ProvisionCommandHandler::new(
-            tofu_renderer,
-            ansible_renderer,
-            ansible_client,
-            opentofu_client,
-            clock,
-            repository,
-        );
+        let command_handler = ProvisionCommandHandler::new(clock, repository);
 
         (command_handler, self.temp_dir, ssh_credentials)
     }

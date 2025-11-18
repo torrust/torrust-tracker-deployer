@@ -264,7 +264,7 @@ impl CreateEnvironmentCommandController {
 
         let command_handler = self.create_command_handler(working_dir)?;
 
-        let environment = self.execute_create_command(&command_handler, config)?;
+        let environment = self.execute_create_command(&command_handler, config, working_dir)?;
 
         self.display_creation_results(&environment)?;
 
@@ -343,7 +343,10 @@ impl CreateEnvironmentCommandController {
     ) -> Result<CreateCommandHandler, CreateEnvironmentCommandError> {
         self.progress.start_step("Creating command handler")?;
 
-        let repository = self.repository_factory.create(working_dir.to_path_buf());
+        // Repository expects the BASE data directory, not the working directory
+        // It will append the environment name to create environment-specific paths
+        let data_dir = working_dir.join("data");
+        let repository = self.repository_factory.create(data_dir);
 
         let command_handler = CreateCommandHandler::new(repository, self.clock.clone());
 
@@ -362,6 +365,7 @@ impl CreateEnvironmentCommandController {
     ///
     /// * `command_handler` - Pre-created command handler
     /// * `config` - Validated environment creation configuration
+    /// * `working_dir` - Working directory path for environment storage
     ///
     /// # Returns
     ///
@@ -374,6 +378,7 @@ impl CreateEnvironmentCommandController {
         &mut self,
         command_handler: &CreateCommandHandler,
         config: EnvironmentCreationConfig,
+        working_dir: &Path,
     ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
         self.progress.start_step("Creating environment")?;
 
@@ -386,7 +391,7 @@ impl CreateEnvironmentCommandController {
             .sub_step("Validating configuration and creating environment...")?;
 
         let environment = command_handler
-            .execute(config)
+            .execute(config, working_dir)
             .map_err(|source| CreateEnvironmentCommandError::CommandFailed { source })?;
 
         self.progress.complete_step(Some(&format!(

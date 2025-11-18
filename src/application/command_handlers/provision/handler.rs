@@ -9,15 +9,19 @@ use super::errors::ProvisionCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::adapters::ssh::{SshConfig, SshCredentials};
 use crate::adapters::tofu::client::InstanceInfo;
+use crate::adapters::OpenTofuClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
     ValidateInfrastructureStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
-use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
+use crate::domain::environment::repository::{
+    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
+};
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
-use crate::domain::environment::{Created, Environment, Provisioned, Provisioning};
+use crate::domain::environment::{Environment, Provisioned, Provisioning};
+use crate::domain::EnvironmentName;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::shared::error::Traceable;
@@ -48,30 +52,18 @@ use crate::shared::error::Traceable;
 /// State is persisted after each transition using the injected repository.
 /// Persistence failures are logged but don't fail the command handler (state remains valid in memory).
 pub struct ProvisionCommandHandler {
-    pub(crate) tofu_template_renderer: Arc<TofuTemplateRenderer>,
-    pub(crate) ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-    pub(crate) ansible_client: Arc<AnsibleClient>,
-    pub(crate) opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
-    pub(crate) clock: Arc<dyn crate::shared::Clock>,
-    pub(crate) repository: TypedEnvironmentRepository,
+    clock: Arc<dyn crate::shared::Clock>,
+    repository: TypedEnvironmentRepository,
 }
 
 impl ProvisionCommandHandler {
     /// Create a new `ProvisionCommandHandler`
     #[must_use]
     pub fn new(
-        tofu_template_renderer: Arc<TofuTemplateRenderer>,
-        ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
-        ansible_client: Arc<AnsibleClient>,
-        opentofu_client: Arc<crate::adapters::tofu::client::OpenTofuClient>,
         clock: Arc<dyn crate::shared::Clock>,
         repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
-            tofu_template_renderer,
-            ansible_template_renderer,
-            ansible_client,
-            opentofu_client,
             clock,
             repository: TypedEnvironmentRepository::new(repository),
         }
@@ -81,15 +73,16 @@ impl ProvisionCommandHandler {
     ///
     /// # Arguments
     ///
-    /// * `environment` - The environment in `Created` state to provision
+    /// * `env_name` - The name of the environment to provision
     ///
     /// # Returns
     ///
-    /// Returns a tuple of the provisioned environment and its IP address
+    /// Returns the provisioned environment
     ///
     /// # Errors
     ///
     /// Returns an error if any step in the provisioning workflow fails:
+    /// * Environment not found or not in `Created` state
     /// * Template rendering fails
     /// * `OpenTofu` initialization, planning, or apply fails
     /// * Unable to retrieve instance information
@@ -102,20 +95,35 @@ impl ProvisionCommandHandler {
         skip_all,
         fields(
             command_type = "provision",
-            environment = %environment.name()
+            environment = %env_name
         )
     )]
     pub async fn execute(
         &self,
-        environment: Environment<Created>,
+        env_name: &EnvironmentName,
     ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
         info!(
             command = "provision",
-            environment = %environment.name(),
+            environment = %env_name,
             "Starting complete infrastructure provisioning workflow"
         );
 
-        // Capture start time before transitioning to Provisioning state
+        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(ProvisionCommandHandlerError::StatePersistence)?;
+
+        // 2. Check if environment exists
+        let any_env = any_env.ok_or_else(|| {
+            ProvisionCommandHandlerError::StatePersistence(RepositoryError::NotFound)
+        })?;
+
+        // 3. Validate environment is in Created state and restore type safety
+        let environment = any_env.try_into_created()?;
+
+        // 4. Capture start time before transitioning to Provisioning state
         let started_at = self.clock.now();
 
         // Transition to Provisioning state
@@ -124,9 +132,9 @@ impl ProvisionCommandHandler {
         // Persist intermediate state
         self.repository.save_provisioning(&environment)?;
 
-        // Execute provisioning steps with explicit step tracking
+        // Execute provisioning workflow with explicit step tracking
         // This allows us to know exactly which step failed if an error occurs
-        match self.execute_provisioning_with_tracking(&environment).await {
+        match self.execute_provisioning_workflow(&environment).await {
             Ok((provisioned, instance_ip)) => {
                 // Store instance IP in the environment context
                 let provisioned = provisioned.with_instance_ip(instance_ip);
@@ -158,11 +166,15 @@ impl ProvisionCommandHandler {
         }
     }
 
-    /// Execute the provisioning steps with step tracking
+    /// Execute the provisioning workflow
     ///
-    /// This method executes all provisioning steps while tracking which step is currently
-    /// being executed. If an error occurs, it returns both the error and the step that
-    /// was being executed, enabling accurate failure context generation.
+    /// This method orchestrates the complete provisioning workflow across multiple phases:
+    /// 1. Infrastructure provisioning (`OpenTofu`)
+    /// 2. Configuration preparation (Ansible templates and system readiness)
+    /// 3. State transition to Provisioned
+    ///
+    /// If an error occurs, it returns both the error and the step that was being
+    /// executed, enabling accurate failure context generation.
     ///
     /// # Errors
     ///
@@ -173,46 +185,169 @@ impl ProvisionCommandHandler {
     /// Returns a tuple of:
     /// - The provisioned environment
     /// - The instance IP address
-    async fn execute_provisioning_with_tracking(
+    async fn execute_provisioning_workflow(
         &self,
         environment: &Environment<Provisioning>,
     ) -> StepResult<(Environment<Provisioned>, IpAddr), ProvisionCommandHandlerError, ProvisionStep>
     {
-        let ssh_credentials = environment.ssh_credentials();
+        let instance_ip = self.provision_infrastructure(environment).await?;
 
-        // Track current step and execute each step
-        // If an error occurs, we return it along with the current step
+        self.prepare_for_configuration(environment, instance_ip)
+            .await?;
 
-        let current_step = ProvisionStep::RenderOpenTofuTemplates;
-        self.render_opentofu_templates()
-            .await
-            .map_err(|e| (e, current_step))?;
-
-        let current_step = ProvisionStep::OpenTofuInit;
-        self.create_instance().map_err(|e| (e, current_step))?;
-
-        let current_step = ProvisionStep::GetInstanceInfo;
-        let instance_info = self.get_instance_info().map_err(|e| (e, current_step))?;
-        let instance_ip = instance_info.ip_address;
-
-        let current_step = ProvisionStep::RenderAnsibleTemplates;
-        let ssh_port = environment.ssh_port();
-        self.render_ansible_templates(ssh_credentials, instance_ip, ssh_port)
-            .await
-            .map_err(|e| (e, current_step))?;
-
-        let current_step = ProvisionStep::WaitSshConnectivity;
-        self.wait_for_readiness(ssh_credentials, instance_ip)
-            .await
-            .map_err(|e| (e, current_step))?;
-
-        // Transition to Provisioned state
         let provisioned = environment.clone().provisioned();
 
         Ok((provisioned, instance_ip))
     }
 
     // Private helper methods - organized from higher to lower level of abstraction
+
+    /// Provision infrastructure using `OpenTofu`
+    ///
+    /// This method handles the complete `OpenTofu`-based infrastructure provisioning:
+    /// - Render `OpenTofu` templates
+    /// - Initialize, validate, plan, and apply infrastructure
+    /// - Retrieve instance information
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Provisioning state
+    ///
+    /// # Returns
+    ///
+    /// Returns the IP address of the provisioned instance
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `current_step`) if any provisioning step fails
+    async fn provision_infrastructure(
+        &self,
+        environment: &Environment<Provisioning>,
+    ) -> StepResult<IpAddr, ProvisionCommandHandlerError, ProvisionStep> {
+        let (tofu_template_renderer, opentofu_client) =
+            Self::build_infrastructure_dependencies(environment);
+
+        let current_step = ProvisionStep::RenderOpenTofuTemplates;
+        self.render_opentofu_templates(&tofu_template_renderer)
+            .await
+            .map_err(|e| (e, current_step))?;
+
+        let current_step = ProvisionStep::OpenTofuInit;
+        Self::create_instance(&opentofu_client).map_err(|e| (e, current_step))?;
+
+        let current_step = ProvisionStep::GetInstanceInfo;
+        let instance_info =
+            Self::get_instance_info(&opentofu_client).map_err(|e| (e, current_step))?;
+        let instance_ip = instance_info.ip_address;
+
+        Ok(instance_ip)
+    }
+
+    /// Build dependencies for infrastructure provisioning
+    ///
+    /// Creates the template renderer and `OpenTofu` client needed for infrastructure provisioning.
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Provisioning state
+    ///
+    /// # Returns
+    ///
+    /// Returns a tuple of:
+    /// - `TofuTemplateRenderer` - For rendering `OpenTofu` templates
+    /// - `OpenTofuClient` - For executing `OpenTofu` operations
+    fn build_infrastructure_dependencies(
+        environment: &Environment<Provisioning>,
+    ) -> (Arc<TofuTemplateRenderer>, Arc<OpenTofuClient>) {
+        let opentofu_client = Arc::new(OpenTofuClient::new(environment.tofu_build_dir()));
+
+        let template_manager = Arc::new(crate::domain::TemplateManager::new(
+            environment.templates_dir(),
+        ));
+
+        let tofu_template_renderer = Arc::new(TofuTemplateRenderer::new(
+            template_manager,
+            environment.build_dir(),
+            environment.ssh_credentials().clone(),
+            environment.instance_name().clone(),
+            environment.profile_name().clone(),
+        ));
+
+        (tofu_template_renderer, opentofu_client)
+    }
+
+    /// Prepare for configuration stages
+    ///
+    /// This method handles preparation for future configuration stages:
+    /// - Render Ansible templates with runtime instance IP
+    /// - Wait for SSH connectivity
+    /// - Wait for cloud-init completion
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Provisioning state
+    /// * `instance_ip` - IP address of the provisioned instance
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `current_step`) if any preparation step fails
+    async fn prepare_for_configuration(
+        &self,
+        environment: &Environment<Provisioning>,
+        instance_ip: IpAddr,
+    ) -> StepResult<(), ProvisionCommandHandlerError, ProvisionStep> {
+        let (ansible_client, ansible_template_renderer) =
+            Self::build_configuration_dependencies(environment);
+
+        let ssh_credentials = environment.ssh_credentials();
+
+        let current_step = ProvisionStep::RenderAnsibleTemplates;
+        self.render_ansible_templates(
+            &ansible_template_renderer,
+            ssh_credentials,
+            instance_ip,
+            environment.ssh_port(),
+        )
+        .await
+        .map_err(|e| (e, current_step))?;
+
+        let current_step = ProvisionStep::WaitSshConnectivity;
+        self.wait_for_readiness(&ansible_client, ssh_credentials, instance_ip)
+            .await
+            .map_err(|e| (e, current_step))?;
+
+        Ok(())
+    }
+
+    /// Build dependencies for configuration preparation
+    ///
+    /// Creates the Ansible client and template renderer needed for configuration preparation.
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Provisioning state
+    ///
+    /// # Returns
+    ///
+    /// Returns a tuple of:
+    /// - `AnsibleClient` - For executing Ansible playbooks
+    /// - `AnsibleTemplateRenderer` - For rendering Ansible templates
+    fn build_configuration_dependencies(
+        environment: &Environment<Provisioning>,
+    ) -> (Arc<AnsibleClient>, Arc<AnsibleTemplateRenderer>) {
+        let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
+
+        let template_manager = Arc::new(crate::domain::TemplateManager::new(
+            environment.templates_dir(),
+        ));
+
+        let ansible_template_renderer = Arc::new(AnsibleTemplateRenderer::new(
+            environment.build_dir(),
+            template_manager,
+        ));
+
+        (ansible_client, ansible_template_renderer)
+    }
 
     /// Render `OpenTofu` templates
     ///
@@ -221,10 +356,14 @@ impl ProvisionCommandHandler {
     /// # Errors
     ///
     /// Returns an error if template rendering fails
-    async fn render_opentofu_templates(&self) -> Result<(), ProvisionCommandHandlerError> {
-        RenderOpenTofuTemplatesStep::new(Arc::clone(&self.tofu_template_renderer))
+    async fn render_opentofu_templates(
+        &self,
+        tofu_template_renderer: &Arc<TofuTemplateRenderer>,
+    ) -> Result<(), ProvisionCommandHandlerError> {
+        RenderOpenTofuTemplatesStep::new(tofu_template_renderer.clone())
             .execute()
             .await?;
+
         Ok(())
     }
 
@@ -239,11 +378,14 @@ impl ProvisionCommandHandler {
     /// # Errors
     ///
     /// Returns an error if any `OpenTofu` operation fails
-    fn create_instance(&self) -> Result<(), ProvisionCommandHandlerError> {
-        InitializeInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
-        ValidateInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
-        PlanInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
-        ApplyInfrastructureStep::new(Arc::clone(&self.opentofu_client)).execute()?;
+    fn create_instance(
+        opentofu_client: &Arc<OpenTofuClient>,
+    ) -> Result<(), ProvisionCommandHandlerError> {
+        InitializeInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
+        ValidateInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
+        PlanInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
+        ApplyInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
+
         Ok(())
     }
 
@@ -254,9 +396,10 @@ impl ProvisionCommandHandler {
     /// # Errors
     ///
     /// Returns an error if instance information cannot be retrieved
-    fn get_instance_info(&self) -> Result<InstanceInfo, ProvisionCommandHandlerError> {
-        let instance_info =
-            GetInstanceInfoStep::new(Arc::clone(&self.opentofu_client)).execute()?;
+    fn get_instance_info(
+        opentofu_client: &Arc<OpenTofuClient>,
+    ) -> Result<InstanceInfo, ProvisionCommandHandlerError> {
+        let instance_info = GetInstanceInfoStep::new(Arc::clone(opentofu_client)).execute()?;
         Ok(instance_info)
     }
 
@@ -274,18 +417,21 @@ impl ProvisionCommandHandler {
     /// Returns an error if template rendering fails
     async fn render_ansible_templates(
         &self,
+        ansible_template_renderer: &Arc<AnsibleTemplateRenderer>,
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
         ssh_port: u16,
     ) -> Result<(), ProvisionCommandHandlerError> {
         let socket_addr = std::net::SocketAddr::new(instance_ip, ssh_port);
+
         RenderAnsibleTemplatesStep::new(
-            Arc::clone(&self.ansible_template_renderer),
+            ansible_template_renderer.clone(),
             ssh_credentials.clone(),
             socket_addr,
         )
         .execute()
         .await?;
+
         Ok(())
     }
 
@@ -303,15 +449,17 @@ impl ProvisionCommandHandler {
     /// Returns an error if SSH connectivity fails or cloud-init does not complete
     async fn wait_for_readiness(
         &self,
+        ansible_client: &Arc<AnsibleClient>,
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
     ) -> Result<(), ProvisionCommandHandlerError> {
         let ssh_config = SshConfig::with_default_port(ssh_credentials.clone(), instance_ip);
+
         WaitForSSHConnectivityStep::new(ssh_config)
             .execute()
             .await?;
 
-        WaitForCloudInitStep::new(Arc::clone(&self.ansible_client)).execute()?;
+        WaitForCloudInitStep::new(Arc::clone(ansible_client)).execute()?;
 
         Ok(())
     }

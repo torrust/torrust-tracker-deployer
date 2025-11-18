@@ -69,8 +69,9 @@ use super::errors::CreateCommandHandlerError;
 ///     ),
 /// );
 ///
-/// // Execute command
-/// let environment = command.execute(config)?;
+/// // Execute command with working directory
+/// let working_dir = std::path::Path::new(".");
+/// let environment = command.execute(config, working_dir)?;
 /// println!("Created environment: {}", environment.name());
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -170,7 +171,8 @@ impl CreateCommandHandler {
     ///     ),
     /// );
     ///
-    /// let environment = command.execute(config)?;
+    /// let working_dir = std::path::Path::new(".");
+    /// let environment = command.execute(config, working_dir)?;
     /// println!("Created: {}", environment.name());
     /// # Ok(())
     /// # }
@@ -186,6 +188,7 @@ impl CreateCommandHandler {
     pub fn execute(
         &self,
         config: EnvironmentCreationConfig,
+        working_dir: &std::path::Path,
     ) -> Result<Environment<Created>, CreateCommandHandlerError> {
         info!(
             command = "create",
@@ -211,9 +214,9 @@ impl CreateCommandHandler {
             });
         }
 
-        // Step 3: Create environment entity using existing Environment::new()
-        // No need for create_from_config() - use existing constructor
-        let environment = Environment::new(environment_name, ssh_credentials, ssh_port);
+        // Step 3: Create environment entity with working directory for absolute paths
+        let environment =
+            Environment::with_working_dir(environment_name, ssh_credentials, ssh_port, working_dir);
 
         // Step 4: Persist environment state
         // Repository handles directory creation atomically during save

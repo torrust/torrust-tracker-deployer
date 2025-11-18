@@ -18,7 +18,7 @@ fn it_should_create_environment_with_valid_configuration() {
     let config = create_valid_test_config(&temp_dir, "test-environment");
 
     // Act
-    let result = command.execute(config);
+    let result = command.execute(config, temp_dir.path());
 
     // Assert
     assert!(result.is_ok(), "Expected successful environment creation");
@@ -36,7 +36,7 @@ fn it_should_fail_when_environment_already_exists() {
     let config = create_valid_test_config(&temp_dir, "test-environment");
 
     // Act
-    let result = command.execute(config);
+    let result = command.execute(config, temp_dir.path());
 
     // Assert
     assert!(result.is_err(), "Expected error for duplicate environment");
@@ -59,7 +59,7 @@ fn it_should_verify_repository_handles_directory_creation() {
     let config = create_valid_test_config(&builder_temp_dir, "test-environment");
 
     // Act
-    let result = command.execute(config);
+    let result = command.execute(config, temp_dir.path());
 
     // Assert
     assert!(result.is_ok(), "Expected successful environment creation");
@@ -90,7 +90,7 @@ fn it_should_persist_environment_state_to_repository() {
     let config = create_valid_test_config(&temp_dir, "persistent-env");
 
     // Act
-    let result = command.execute(config);
+    let result = command.execute(config, temp_dir.path());
 
     // Assert creation succeeded
     assert!(result.is_ok(), "Expected successful environment creation");
@@ -137,7 +137,7 @@ fn it_should_fail_with_invalid_environment_name() {
     );
 
     // Act
-    let result = command.execute(config);
+    let result = command.execute(config, temp_dir.path());
 
     // Assert
     assert!(
@@ -179,7 +179,7 @@ fn it_should_fail_when_ssh_private_key_not_found() {
     );
 
     // Act
-    let result = command.execute(config);
+    let result = command.execute(config, temp_dir.path());
 
     // Assert
     assert!(
@@ -204,7 +204,7 @@ fn it_should_provide_helpful_error_messages() {
     let config = create_valid_test_config(&temp_dir, "existing-env");
 
     // Act
-    let result = command.execute(config);
+    let result = command.execute(config, temp_dir.path());
 
     // Assert
     assert!(result.is_err());
@@ -226,12 +226,12 @@ fn it_should_create_multiple_different_environments() {
 
     // Act: Create first environment
     let config1 = create_valid_test_config(&temp_dir, "environment-1");
-    let result1 = command.execute(config1);
+    let result1 = command.execute(config1, temp_dir.path());
     assert!(result1.is_ok(), "First environment should be created");
 
     // Act: Create second environment
     let config2 = create_valid_test_config(&temp_dir, "environment-2");
-    let result2 = command.execute(config2);
+    let result2 = command.execute(config2, temp_dir.path());
     assert!(result2.is_ok(), "Second environment should be created");
 
     // Assert: Both environments exist
@@ -255,7 +255,7 @@ fn it_should_use_deterministic_timestamps_with_mock_clock() {
     let config = create_valid_test_config(&temp_dir, "test-env");
 
     // Act
-    let _result = command.execute(config);
+    let _result = command.execute(config, temp_dir.path());
 
     // Assert: Clock maintains fixed time
     assert_eq!(command.clock.now(), fixed_time);

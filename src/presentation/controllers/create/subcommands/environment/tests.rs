@@ -54,8 +54,8 @@ fn it_should_create_environment_from_valid_config() {
     );
 
     // Verify environment state file was created by repository
-    // Repository creates: <base_dir>/{env-name}/environment.json
-    let env_state_file = working_dir.join("test-create-env/environment.json");
+    // Repository creates: <base_dir>/data/{env-name}/environment.json
+    let env_state_file = working_dir.join("data/test-create-env/environment.json");
     assert!(
         env_state_file.exists(),
         "Environment state file should be created at: {}",
@@ -177,8 +177,8 @@ fn it_should_create_environment_in_custom_working_dir() {
     assert!(result.is_ok(), "Should create in custom working dir");
 
     // Verify environment was created in custom location
-    // Repository creates: <base_dir>/{env-name}/environment.json
-    let env_state_file = custom_working_dir.join("custom-location-env/environment.json");
+    // Repository creates: <base_dir>/data/{env-name}/environment.json
+    let env_state_file = custom_working_dir.join("data/custom-location-env/environment.json");
     assert!(
         env_state_file.exists(),
         "Environment state should be in custom working directory at: {}",

@@ -3,6 +3,7 @@
 use crate::adapters::ssh::SshError;
 use crate::adapters::tofu::client::OpenTofuError;
 use crate::application::steps::RenderAnsibleTemplatesError;
+use crate::domain::environment::state::StateTypeError;
 use crate::infrastructure::external_tools::tofu::ProvisionTemplateError;
 use crate::shared::command::CommandError;
 
@@ -26,6 +27,9 @@ pub enum ProvisionCommandHandlerError {
 
     #[error("Failed to persist environment state: {0}")]
     StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+
+    #[error("Invalid state transition: {0}")]
+    StateTransition(#[from] StateTypeError),
 }
 
 impl crate::shared::Traceable for ProvisionCommandHandlerError {
@@ -49,6 +53,9 @@ impl crate::shared::Traceable for ProvisionCommandHandlerError {
             Self::StatePersistence(e) => {
                 format!("ProvisionCommandHandlerError: Failed to persist environment state - {e}")
             }
+            Self::StateTransition(e) => {
+                format!("ProvisionCommandHandlerError: Invalid state transition - {e}")
+            }
         }
     }
 
@@ -59,7 +66,7 @@ impl crate::shared::Traceable for ProvisionCommandHandlerError {
             Self::OpenTofu(e) => Some(e),
             Self::Command(e) => Some(e),
             Self::SshConnectivity(e) => Some(e),
-            Self::StatePersistence(_) => None,
+            Self::StatePersistence(_) | Self::StateTransition(_) => None,
         }
     }
 
@@ -71,7 +78,9 @@ impl crate::shared::Traceable for ProvisionCommandHandlerError {
             Self::OpenTofu(_) => crate::shared::ErrorKind::InfrastructureOperation,
             Self::SshConnectivity(_) => crate::shared::ErrorKind::NetworkConnectivity,
             Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
-            Self::StatePersistence(_) => crate::shared::ErrorKind::StatePersistence,
+            Self::StatePersistence(_) | Self::StateTransition(_) => {
+                crate::shared::ErrorKind::StatePersistence
+            }
         }
     }
 }
@@ -199,6 +208,26 @@ The repository handles directory creation atomically during save.
 If partially created files exist, remove them and retry.
 
 If the problem persists, report it with full system details."
+            }
+            Self::StateTransition(_) => {
+                "Invalid State Transition - Troubleshooting:
+
+The environment is not in the expected state for this operation.
+
+Provision command requires environment in 'Created' state.
+
+1. Check current environment state:
+   View the environment.json file in data/<env-name>/
+
+2. Verify the workflow sequence:
+   - Create environment first (if not exists)
+   - Provision from 'Created' state only
+
+3. If environment is in wrong state:
+   - Destroy and recreate if needed
+   - Use appropriate command for current state
+
+For workflow details, see docs/deployment-overview.md"
             }
         }
     }
