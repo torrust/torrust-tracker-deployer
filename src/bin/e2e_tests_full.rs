@@ -55,6 +55,7 @@
 
 use anyhow::Result;
 use clap::Parser;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use torrust_dependency_installer::{verify_dependencies, Dependency};
@@ -150,8 +151,8 @@ pub async fn main() -> Result<()> {
     let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 
-    // Get working directory (current directory for E2E tests)
-    let working_dir = std::env::current_dir().expect("Failed to get current directory");
+    // Use relative path like CLI default for consistency
+    let working_dir = PathBuf::from(".");
 
     // Create environment via CreateCommandHandler
     let environment = run_create_command(

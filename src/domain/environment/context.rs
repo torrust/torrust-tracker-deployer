@@ -143,8 +143,8 @@ impl EnvironmentContext {
     ///
     /// assert_eq!(context.user_inputs.instance_name.as_str(), "torrust-tracker-vm-production");
     /// assert_eq!(context.user_inputs.profile_name.as_str(), "torrust-profile-production");
-    /// assert_eq!(context.internal_config.data_dir, PathBuf::from("data/production"));
-    /// assert_eq!(context.internal_config.build_dir, PathBuf::from("build/production"));
+    /// assert_eq!(context.internal_config.data_dir, PathBuf::from("./data/production"));
+    /// assert_eq!(context.internal_config.build_dir, PathBuf::from("./build/production"));
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```

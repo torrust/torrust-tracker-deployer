@@ -64,8 +64,8 @@ impl InternalConfig {
     /// # Returns
     ///
     /// A new `InternalConfig` with:
-    /// - `data_dir`: `data/{env_name}`
-    /// - `build_dir`: `build/{env_name}`
+    /// - `data_dir`: `./data/{env_name}`
+    /// - `build_dir`: `./build/{env_name}`
     ///
     /// # Examples
     ///
@@ -77,15 +77,19 @@ impl InternalConfig {
     /// let env_name = EnvironmentName::new("production".to_string())?;
     /// let config = InternalConfig::new(&env_name);
     ///
-    /// assert_eq!(config.data_dir, PathBuf::from("data/production"));
-    /// assert_eq!(config.build_dir, PathBuf::from("build/production"));
+    /// assert_eq!(config.data_dir, PathBuf::from("./data/production"));
+    /// assert_eq!(config.build_dir, PathBuf::from("./build/production"));
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub fn new(env_name: &EnvironmentName) -> Self {
-        // Generate environment-specific directories (relative paths)
-        let data_dir = PathBuf::from(DATA_DIR_NAME).join(env_name.as_str());
-        let build_dir = PathBuf::from(BUILD_DIR_NAME).join(env_name.as_str());
+        let data_dir = PathBuf::from(".")
+            .join(DATA_DIR_NAME)
+            .join(env_name.as_str());
+
+        let build_dir = PathBuf::from(".")
+            .join(BUILD_DIR_NAME)
+            .join(env_name.as_str());
 
         Self {
             build_dir,

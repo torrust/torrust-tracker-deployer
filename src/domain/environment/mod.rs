@@ -85,9 +85,9 @@
 //! let environment = Environment::new(env_name, ssh_credentials, 22);
 //!
 //! // Environment automatically generates paths
-//! assert_eq!(*environment.data_dir(), PathBuf::from("data/e2e-config"));
-//! assert_eq!(*environment.build_dir(), PathBuf::from("build/e2e-config"));
-//! assert_eq!(environment.templates_dir(), PathBuf::from("data/e2e-config/templates"));
+//! assert_eq!(*environment.data_dir(), PathBuf::from("./data/e2e-config"));
+//! assert_eq!(*environment.build_dir(), PathBuf::from("./build/e2e-config"));
+//! assert_eq!(environment.templates_dir(), PathBuf::from("./data/e2e-config/templates"));
 //!
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
@@ -235,8 +235,8 @@ impl Environment {
     /// let environment = Environment::new(env_name, ssh_credentials, ssh_port);
     ///
     /// assert_eq!(environment.instance_name().as_str(), "torrust-tracker-vm-production");
-    /// assert_eq!(*environment.data_dir(), PathBuf::from("data/production"));
-    /// assert_eq!(*environment.build_dir(), PathBuf::from("build/production"));
+    /// assert_eq!(*environment.data_dir(), PathBuf::from("./data/production"));
+    /// assert_eq!(*environment.build_dir(), PathBuf::from("./build/production"));
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -582,7 +582,7 @@ impl<S> Environment<S> {
     ///
     /// assert_eq!(
     ///     environment.templates_dir(),
-    ///     PathBuf::from("data/staging/templates")
+    ///     PathBuf::from("./data/staging/templates")
     /// );
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -616,7 +616,7 @@ impl<S> Environment<S> {
     ///
     /// assert_eq!(
     ///     environment.traces_dir(),
-    ///     PathBuf::from("data/production/traces")
+    ///     PathBuf::from("./data/production/traces")
     /// );
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -647,7 +647,7 @@ impl<S> Environment<S> {
     ///
     /// assert_eq!(
     ///     environment.ansible_build_dir(),
-    ///     PathBuf::from("build/dev/ansible")
+    ///     PathBuf::from("./build/dev/ansible")
     /// );
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -678,7 +678,7 @@ impl<S> Environment<S> {
     ///
     /// assert_eq!(
     ///     environment.tofu_build_dir(),
-    ///     PathBuf::from("build/test/tofu/lxd")
+    ///     PathBuf::from("./build/test/tofu/lxd")
     /// );
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -709,7 +709,7 @@ impl<S> Environment<S> {
     ///
     /// assert_eq!(
     ///     environment.ansible_templates_dir(),
-    ///     PathBuf::from("data/integration/templates/ansible")
+    ///     PathBuf::from("./data/integration/templates/ansible")
     /// );
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -740,7 +740,7 @@ impl<S> Environment<S> {
     ///
     /// assert_eq!(
     ///     environment.tofu_templates_dir(),
-    ///     PathBuf::from("data/load-test/templates/tofu")
+    ///     PathBuf::from("./data/load-test/templates/tofu")
     /// );
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
