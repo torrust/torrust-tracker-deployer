@@ -64,16 +64,16 @@ const TEMPLATE_CREATION_WORKFLOW_STEPS: usize = 2;
 /// let context = ExecutionContext::new(container);
 /// let output_path = Path::new("./environment-template.json");
 ///
-/// template::handle(output_path, &context)?;
+/// template::handle(output_path, &context).await?;
 /// # Ok(())
 /// # }
 /// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle(
+pub async fn handle(
     output_path: &Path,
     context: &crate::presentation::dispatch::context::ExecutionContext,
 ) -> Result<(), CreateEnvironmentTemplateCommandError> {
-    handle_template_creation_command(output_path, &context.user_output())
+    handle_template_creation_command(output_path, &context.user_output()).await
 }
 
 // ============================================================================
@@ -115,13 +115,16 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
+/// # #[tokio::main]
+/// # async fn main() {
 /// let container = Container::new(VerbosityLevel::Normal);
 /// let context = ExecutionContext::new(Arc::new(container));
 ///
-/// if let Err(e) = template::handle(Path::new("template.json"), &context) {
+/// if let Err(e) = template::handle(Path::new("template.json"), &context).await {
 ///     eprintln!("Template creation failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
+/// # }
 /// ```
 ///
 /// Direct usage (for testing or specialized scenarios):
@@ -135,19 +138,24 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template::handler::handle_template_creation_command;
 /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 ///
+/// # #[tokio::main]
+/// # async fn main() {
 /// let user_output = Arc::new(ReentrantMutex::<RefCell<UserOutput>>::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 ///
-/// if let Err(e) = handle_template_creation_command(Path::new("template.json"), &user_output) {
+/// if let Err(e) = handle_template_creation_command(Path::new("template.json"), &user_output).await {
 ///     eprintln!("Template creation failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
+/// # }
 /// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle_template_creation_command(
+pub async fn handle_template_creation_command(
     output_path: &Path,
     user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
 ) -> Result<(), CreateEnvironmentTemplateCommandError> {
-    CreateTemplateCommandController::new(user_output).execute(output_path)
+    CreateTemplateCommandController::new(user_output)
+        .execute(output_path)
+        .await
 }
 
 // ============================================================================
@@ -208,7 +216,8 @@ impl CreateTemplateCommandController {
     ///
     /// Returns `Ok(())` on success, or a `CreateEnvironmentTemplateCommandError` if any step fails.
     #[allow(clippy::result_large_err)]
-    pub fn execute(
+    #[allow(clippy::unused_async)] // Part of uniform async presentation layer interface
+    pub async fn execute(
         &mut self,
         output_path: &Path,
     ) -> Result<(), CreateEnvironmentTemplateCommandError> {
@@ -305,14 +314,14 @@ mod tests {
         assert!(content.contains("REPLACE_WITH_ENVIRONMENT_NAME"));
     }
 
-    #[test]
-    fn it_should_create_template_file() {
+    #[tokio::test]
+    async fn it_should_create_template_file() {
         let temp_dir = TempDir::new().unwrap();
         let output_path = temp_dir.path().join("test-template.json");
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped(); // Use Silent to avoid output issues
 
-        let result = handle_template_creation_command(&output_path, &user_output);
+        let result = handle_template_creation_command(&output_path, &user_output).await;
 
         // Should succeed in creating template
         assert!(
@@ -331,8 +340,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn it_should_execute_controller_directly() {
+    #[tokio::test]
+    async fn it_should_execute_controller_directly() {
         let temp_dir = TempDir::new().unwrap();
         let output_path = temp_dir.path().join("test-template.json");
         let (user_output, _, _) =
@@ -340,7 +349,7 @@ mod tests {
 
         // Test controller directly
         let mut controller = CreateTemplateCommandController::new(&user_output);
-        let result = controller.execute(&output_path);
+        let result = controller.execute(&output_path).await;
 
         assert!(result.is_ok(), "Controller should succeed: {result:?}");
         assert!(output_path.exists(), "File should be created");
@@ -363,14 +372,14 @@ mod tests {
         assert!(content.contains("REPLACE_WITH_ENVIRONMENT_NAME"));
     }
 
-    #[test]
-    fn it_should_handle_invalid_output_path() {
+    #[tokio::test]
+    async fn it_should_handle_invalid_output_path() {
         // Try to create template in a non-existent directory
         let invalid_path = std::path::Path::new("/non/existent/directory/template.json");
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
 
-        let result = handle_template_creation_command(invalid_path, &user_output);
+        let result = handle_template_creation_command(invalid_path, &user_output).await;
 
         assert!(result.is_err(), "Should fail for invalid path");
         match result.unwrap_err() {

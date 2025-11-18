@@ -73,11 +73,11 @@ const PROVISION_WORKFLOW_STEPS: usize = 9;
 /// let context = ExecutionContext::new(container);
 /// let working_dir = Path::new("./test");
 ///
-/// provision::handle("my-env", working_dir, &context)?;
+/// provision::handle("my-env", working_dir, &context).await?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn handle(
+pub async fn handle(
     environment_name: &str,
     working_dir: &std::path::Path,
     context: &ExecutionContext,
@@ -89,6 +89,7 @@ pub fn handle(
         context.clock(),
         &context.user_output(),
     )
+    .await
 }
 
 // ============================================================================
@@ -135,13 +136,16 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::presentation::controllers::provision;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
+/// # #[tokio::main]
+/// # async fn main() {
 /// let container = Container::new(VerbosityLevel::Normal);
 /// let context = ExecutionContext::new(Arc::new(container));
 ///
-/// if let Err(e) = provision::handle("test-env", Path::new("."), &context) {
+/// if let Err(e) = provision::handle("test-env", Path::new("."), &context).await {
 ///     eprintln!("Provision failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
+/// # }
 /// ```
 ///
 /// Direct usage (for testing or specialized scenarios):
@@ -157,17 +161,20 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 /// use torrust_tracker_deployer_lib::shared::SystemClock;
 ///
+/// # #[tokio::main]
+/// # async fn main() {
 /// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 /// let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
 /// let clock = Arc::new(SystemClock);
-/// if let Err(e) = provision::handle_provision_command("test-env", Path::new("."), repository_factory, clock, &user_output) {
+/// if let Err(e) = provision::handle_provision_command("test-env", Path::new("."), repository_factory, clock, &user_output).await {
 ///     eprintln!("Provision failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
+/// # }
 /// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
 #[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
-pub fn handle_provision_command(
+pub async fn handle_provision_command(
     environment_name: &str,
     working_dir: &std::path::Path,
     repository_factory: Arc<RepositoryFactory>,
@@ -181,6 +188,7 @@ pub fn handle_provision_command(
         user_output.clone(),
     )
     .execute(environment_name)
+    .await
 }
 
 // ============================================================================
@@ -264,7 +272,7 @@ impl ProvisionCommandController {
     ///
     /// Returns `Ok(Environment<Provisioned>)` on success, or a `ProvisionSubcommandError` if any step fails.
     #[allow(clippy::result_large_err)]
-    pub fn execute(
+    pub async fn execute(
         &mut self,
         environment_name: &str,
     ) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
@@ -272,7 +280,7 @@ impl ProvisionCommandController {
 
         let handler = self.create_command_handler()?;
 
-        let provisioned = self.provision_infrastructure(&handler, &env_name)?;
+        let provisioned = self.provision_infrastructure(&handler, &env_name).await?;
 
         self.complete_workflow(environment_name)?;
 
@@ -329,29 +337,19 @@ impl ProvisionCommandController {
     /// - Complete provisioning workflow
     /// - State transitions and persistence
     #[allow(clippy::result_large_err)]
-    fn provision_infrastructure(
+    async fn provision_infrastructure(
         &mut self,
         handler: &ProvisionCommandHandler,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
         self.progress.start_step("Provisioning infrastructure")?;
 
-        // Use tokio runtime to execute async handler
-        let runtime = tokio::runtime::Runtime::new().map_err(|e| {
-            ProvisionSubcommandError::RepositoryAccessFailed {
-                data_dir: "runtime".to_string(),
-                reason: format!("Failed to create tokio runtime: {e}"),
+        let provisioned = handler.execute(env_name).await.map_err(|source| {
+            ProvisionSubcommandError::ProvisionOperationFailed {
+                name: env_name.to_string(),
+                source: Box::new(source),
             }
         })?;
-
-        let provisioned = runtime
-            .block_on(handler.execute(env_name))
-            .map_err(
-                |source| ProvisionSubcommandError::ProvisionOperationFailed {
-                    name: env_name.to_string(),
-                    source: Box::new(source),
-                },
-            )?;
 
         self.progress
             .complete_step(Some("Infrastructure provisioned"))?;
@@ -397,8 +395,8 @@ mod tests {
         (user_output, repository_factory, clock)
     }
 
-    #[test]
-    fn it_should_return_error_for_invalid_environment_name() {
+    #[tokio::test]
+    async fn it_should_return_error_for_invalid_environment_name() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -412,7 +410,8 @@ mod tests {
             repository_factory,
             clock,
             &user_output,
-        );
+        )
+        .await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -423,8 +422,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn it_should_return_error_for_empty_environment_name() {
+    #[tokio::test]
+    async fn it_should_return_error_for_empty_environment_name() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -432,7 +431,8 @@ mod tests {
         let (user_output, repository_factory, clock) = create_test_dependencies();
 
         let result =
-            handle_provision_command("", temp_dir.path(), repository_factory, clock, &user_output);
+            handle_provision_command("", temp_dir.path(), repository_factory, clock, &user_output)
+                .await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -443,8 +443,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn it_should_return_error_for_nonexistent_environment() {
+    #[tokio::test]
+    async fn it_should_return_error_for_nonexistent_environment() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -458,7 +458,8 @@ mod tests {
             repository_factory,
             clock,
             &user_output,
-        );
+        )
+        .await;
 
         assert!(result.is_err());
         // After refactoring, repository NotFound error is wrapped in ProvisionOperationFailed
@@ -470,8 +471,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn it_should_accept_valid_environment_name() {
+    #[tokio::test]
+    async fn it_should_accept_valid_environment_name() {
         use std::fs;
         use tempfile::TempDir;
 
@@ -492,7 +493,8 @@ mod tests {
             repository_factory,
             clock,
             &user_output,
-        );
+        )
+        .await;
 
         // Should fail at operation, not at name validation
         if let Err(ProvisionSubcommandError::InvalidEnvironmentName { .. }) = result {

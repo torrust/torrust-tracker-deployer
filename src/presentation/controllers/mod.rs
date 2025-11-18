@@ -135,7 +135,12 @@
 //! use torrust_tracker_deployer_lib::presentation::controllers::create::errors::CreateCommandError;
 //! use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands;
 //!
-//! pub fn route_command(
+//! # #[tokio::main]
+//! # async fn main() {
+//! # let action = todo!();
+//! # let working_dir = todo!();
+//! # let context = todo!();
+//! pub async fn route_command(
 //!     action: CreateAction,
 //!     working_dir: &Path,
 //!     context: &ExecutionContext,
@@ -143,16 +148,19 @@
 //!     match action {
 //!         CreateAction::Environment { env_file } => {
 //!             subcommands::environment::handle(&env_file, working_dir, context)
+//!                 .await
 //!                 .map(|_| ()) // Convert Environment<Created> to ()
 //!                 .map_err(CreateCommandError::Environment)
 //!         }
 //!         CreateAction::Template { output_path } => {
 //!             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
 //!             subcommands::template::handle(&template_path, context)
+//!                 .await
 //!                 .map_err(CreateCommandError::Template)
 //!         }
 //!     }
 //! }
+//! # }
 //! ```
 //!
 //! **Target Architecture**: Move routing to dispatch layer, make each subcommand

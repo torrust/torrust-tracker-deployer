@@ -93,42 +93,42 @@ use super::ExecutionContext;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 /// // Note: Commands enum requires specific action parameters in practice
 ///
-/// fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// async fn example() -> Result<(), Box<dyn std::error::Error>> {
 ///     let container = Container::new(VerbosityLevel::Normal);
 ///     let context = ExecutionContext::new(Arc::new(container));
 ///     let working_dir = Path::new(".");
 ///
 ///     // Route command to appropriate handler - requires proper Commands construction
-///     // route_command(command, working_dir, &context)?;
+///     // route_command(command, working_dir, &context).await?;
 ///     Ok(())
 /// }
 /// ```
-pub fn route_command(
+pub async fn route_command(
     command: Commands,
     working_dir: &Path,
     context: &ExecutionContext,
 ) -> Result<(), CommandError> {
     match command {
         Commands::Create { action } => {
-            create::route_command(action, working_dir, context)?;
+            create::route_command(action, working_dir, context).await?;
             Ok(())
         }
         Commands::Destroy { environment } => {
-            destroy::handle(&environment, working_dir, context)?;
+            destroy::handle(&environment, working_dir, context).await?;
             Ok(())
         }
         Commands::Provision { environment } => {
-            provision::handle(&environment, working_dir, context)?;
+            provision::handle(&environment, working_dir, context).await?;
             Ok(())
         } // Future commands will be added here as the Controller Layer expands:
           //
           // Commands::Configure { environment } => {
-          //     configure::handle_configure_command(&environment, context)?;
+          //     configure::handle_configure_command(&environment, context).await?;
           //     Ok(())
           // }
           //
           // Commands::Release { environment, version } => {
-          //     release::handle_release_command(&environment, &version, context)?;
+          //     release::handle_release_command(&environment, &version, context).await?;
           //     Ok(())
           // }
     }

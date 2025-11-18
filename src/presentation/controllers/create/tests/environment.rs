@@ -14,7 +14,7 @@ use crate::presentation::input::cli::CreateAction;
 use crate::presentation::views::VerbosityLevel;
 
 /// Helper function to call the environment creation handler
-fn handle_environment_creation(
+async fn handle_environment_creation(
     config_path: &std::path::Path,
     working_dir: &std::path::Path,
 ) -> Result<(), create::CreateCommandError> {
@@ -23,15 +23,15 @@ fn handle_environment_creation(
     };
     let container = Container::new(VerbosityLevel::Silent);
     let context = ExecutionContext::new(std::sync::Arc::new(container));
-    create::route_command(action, working_dir, &context)
+    create::route_command(action, working_dir, &context).await
 }
 
-#[test]
-fn it_should_create_environment_from_valid_config() {
+#[tokio::test]
+async fn it_should_create_environment_from_valid_config() {
     let context = TestContext::new();
     let config_path = create_valid_config(context.working_dir(), "integration-test-env");
 
-    let result = handle_environment_creation(&config_path, context.working_dir());
+    let result = handle_environment_creation(&config_path, context.working_dir()).await;
 
     assert!(
         result.is_ok(),
@@ -51,12 +51,12 @@ fn it_should_create_environment_from_valid_config() {
     );
 }
 
-#[test]
-fn it_should_reject_nonexistent_config_file() {
+#[tokio::test]
+async fn it_should_reject_nonexistent_config_file() {
     let context = TestContext::new();
     let nonexistent_path = context.working_dir().join("nonexistent.json");
 
-    let result = handle_environment_creation(&nonexistent_path, context.working_dir());
+    let result = handle_environment_creation(&nonexistent_path, context.working_dir()).await;
 
     assert!(result.is_err(), "Should fail for nonexistent file");
     match result.unwrap_err() {
@@ -69,12 +69,12 @@ fn it_should_reject_nonexistent_config_file() {
     }
 }
 
-#[test]
-fn it_should_reject_invalid_json() {
+#[tokio::test]
+async fn it_should_reject_invalid_json() {
     let context = TestContext::new();
     let config_path = create_invalid_json_config(context.working_dir());
 
-    let result = handle_environment_creation(&config_path, context.working_dir());
+    let result = handle_environment_creation(&config_path, context.working_dir()).await;
 
     assert!(result.is_err(), "Should fail for invalid JSON");
     match result.unwrap_err() {
@@ -87,12 +87,12 @@ fn it_should_reject_invalid_json() {
     }
 }
 
-#[test]
-fn it_should_reject_invalid_environment_name() {
+#[tokio::test]
+async fn it_should_reject_invalid_environment_name() {
     let context = TestContext::new();
     let config_path = create_config_with_invalid_name(context.working_dir());
 
-    let result = handle_environment_creation(&config_path, context.working_dir());
+    let result = handle_environment_creation(&config_path, context.working_dir()).await;
 
     assert!(result.is_err(), "Should fail for invalid environment name");
     match result.unwrap_err() {
@@ -105,12 +105,12 @@ fn it_should_reject_invalid_environment_name() {
     }
 }
 
-#[test]
-fn it_should_reject_missing_ssh_keys() {
+#[tokio::test]
+async fn it_should_reject_missing_ssh_keys() {
     let context = TestContext::new();
     let config_path = create_config_with_missing_keys(context.working_dir());
 
-    let result = handle_environment_creation(&config_path, context.working_dir());
+    let result = handle_environment_creation(&config_path, context.working_dir()).await;
 
     assert!(result.is_err(), "Should fail for missing SSH keys");
     match result.unwrap_err() {
@@ -123,17 +123,17 @@ fn it_should_reject_missing_ssh_keys() {
     }
 }
 
-#[test]
-fn it_should_reject_duplicate_environment() {
+#[tokio::test]
+async fn it_should_reject_duplicate_environment() {
     let context = TestContext::new();
     let config_path = create_valid_config(context.working_dir(), "duplicate-test-env");
 
     // Create environment first time
-    let result1 = handle_environment_creation(&config_path, context.working_dir());
+    let result1 = handle_environment_creation(&config_path, context.working_dir()).await;
     assert!(result1.is_ok(), "First create should succeed");
 
     // Try to create same environment again
-    let result2 = handle_environment_creation(&config_path, context.working_dir());
+    let result2 = handle_environment_creation(&config_path, context.working_dir()).await;
     assert!(result2.is_err(), "Second create should fail");
 
     match result2.unwrap_err() {
@@ -146,15 +146,15 @@ fn it_should_reject_duplicate_environment() {
     }
 }
 
-#[test]
-fn it_should_create_environment_in_custom_working_dir() {
+#[tokio::test]
+async fn it_should_create_environment_in_custom_working_dir() {
     let context = TestContext::new();
     let custom_working_dir = context.working_dir().join("custom");
     std::fs::create_dir(&custom_working_dir).unwrap();
 
     let config_path = create_valid_config(context.working_dir(), "custom-dir-env");
 
-    let result = handle_environment_creation(&config_path, &custom_working_dir);
+    let result = handle_environment_creation(&config_path, &custom_working_dir).await;
 
     assert!(result.is_ok(), "Should create in custom working dir");
 
@@ -168,13 +168,13 @@ fn it_should_create_environment_in_custom_working_dir() {
     );
 }
 
-#[test]
-fn it_should_provide_help_for_all_error_types() {
+#[tokio::test]
+async fn it_should_provide_help_for_all_error_types() {
     let context = TestContext::new();
 
     // Test ConfigFileNotFound
     let nonexistent = context.working_dir().join("nonexistent.json");
-    if let Err(e) = handle_environment_creation(&nonexistent, context.working_dir()) {
+    if let Err(e) = handle_environment_creation(&nonexistent, context.working_dir()).await {
         let help = e.help();
         assert!(!help.is_empty());
         assert!(help.contains("File Not Found") || help.contains("Check that the file path"));
@@ -182,7 +182,7 @@ fn it_should_provide_help_for_all_error_types() {
 
     // Test ConfigParsingFailed
     let invalid_json = create_invalid_json_config(context.working_dir());
-    if let Err(e) = handle_environment_creation(&invalid_json, context.working_dir()) {
+    if let Err(e) = handle_environment_creation(&invalid_json, context.working_dir()).await {
         let help = e.help();
         assert!(!help.is_empty());
         assert!(help.contains("JSON") || help.contains("syntax"));
@@ -190,7 +190,7 @@ fn it_should_provide_help_for_all_error_types() {
 
     // Test ConfigValidationFailed
     let invalid_name = create_config_with_invalid_name(context.working_dir());
-    if let Err(e) = handle_environment_creation(&invalid_name, context.working_dir()) {
+    if let Err(e) = handle_environment_creation(&invalid_name, context.working_dir()).await {
         let help = e.help();
         assert!(!help.is_empty());
         // Should delegate to config error help

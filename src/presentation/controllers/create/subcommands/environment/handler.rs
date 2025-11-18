@@ -74,12 +74,12 @@ const ENVIRONMENT_CREATION_WORKFLOW_STEPS: usize = 3;
 /// let env_file = Path::new("./environment.json");
 /// let working_dir = Path::new("./");
 ///
-/// environment::handle(env_file, working_dir, &context)?;
+/// environment::handle(env_file, working_dir, &context).await?;
 /// # Ok(())
 /// # }
 /// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle(
+pub async fn handle(
     env_file: &Path,
     working_dir: &Path,
     context: &crate::presentation::dispatch::context::ExecutionContext,
@@ -91,6 +91,7 @@ pub fn handle(
         &context.clock(),
         &context.user_output(),
     )
+    .await
 }
 
 // ============================================================================
@@ -135,6 +136,8 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
+/// # #[tokio::main]
+/// # async fn main() {
 /// let container = Container::new(VerbosityLevel::Normal);
 /// let context = ExecutionContext::new(Arc::new(container));
 ///
@@ -142,10 +145,11 @@ pub fn handle(
 ///     Path::new("config.json"),
 ///     Path::new("./"),
 ///     &context
-/// ) {
+/// ).await {
 ///     eprintln!("Environment creation failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
+/// # }
 /// ```
 ///
 /// Direct usage (for testing or specialized scenarios):
@@ -158,6 +162,8 @@ pub fn handle(
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
+/// # #[tokio::main]
+/// # async fn main() {
 /// let container = Arc::new(Container::new(VerbosityLevel::Normal));
 /// let context = ExecutionContext::new(container);
 ///
@@ -165,13 +171,14 @@ pub fn handle(
 ///     Path::new("config.json"),
 ///     Path::new("./"),
 ///     &context
-/// ) {
+/// ).await {
 ///     eprintln!("Environment creation failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
+/// # }
 /// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn handle_environment_creation_command(
+pub async fn handle_environment_creation_command(
     env_file: &Path,
     working_dir: &Path,
     repository_factory: &Arc<RepositoryFactory>,
@@ -180,6 +187,7 @@ pub fn handle_environment_creation_command(
 ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
     CreateEnvironmentCommandController::new(repository_factory.clone(), clock.clone(), user_output)
         .execute(env_file, working_dir)
+        .await
 }
 
 // ============================================================================
@@ -255,7 +263,8 @@ impl CreateEnvironmentCommandController {
     ///
     /// Returns `Ok(Environment<Created>)` on success, or a `CreateEnvironmentCommandError` if any step fails.
     #[allow(clippy::result_large_err)]
-    pub fn execute(
+    #[allow(clippy::unused_async)] // Part of uniform async presentation layer interface
+    pub async fn execute(
         &mut self,
         env_file: &Path,
         working_dir: &Path,

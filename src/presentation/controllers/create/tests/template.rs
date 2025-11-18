@@ -10,8 +10,8 @@ use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::CreateAction;
 use crate::presentation::views::VerbosityLevel;
 
-#[test]
-fn it_should_generate_template_with_default_path() {
+#[tokio::test]
+async fn it_should_generate_template_with_default_path() {
     let test_context = TestContext::new();
 
     // Change to temp directory so template is created there
@@ -22,7 +22,7 @@ fn it_should_generate_template_with_default_path() {
     let container = Container::new(VerbosityLevel::Silent);
     let context = ExecutionContext::new(std::sync::Arc::new(container));
 
-    let result = create::route_command(action, test_context.working_dir(), &context);
+    let result = create::route_command(action, test_context.working_dir(), &context).await;
 
     // Restore original directory
     std::env::set_current_dir(original_dir).unwrap();
@@ -53,8 +53,8 @@ fn it_should_generate_template_with_default_path() {
     assert_eq!(parsed["ssh_credentials"]["port"], 22);
 }
 
-#[test]
-fn it_should_generate_template_with_custom_path() {
+#[tokio::test]
+async fn it_should_generate_template_with_custom_path() {
     let test_context = TestContext::new();
     let custom_path = test_context
         .working_dir()
@@ -67,7 +67,7 @@ fn it_should_generate_template_with_custom_path() {
     let container = Container::new(VerbosityLevel::Silent);
     let context = ExecutionContext::new(std::sync::Arc::new(container));
 
-    let result = create::route_command(action, test_context.working_dir(), &context);
+    let result = create::route_command(action, test_context.working_dir(), &context).await;
 
     assert!(result.is_ok(), "Template generation should succeed");
 
@@ -82,8 +82,8 @@ fn it_should_generate_template_with_custom_path() {
     assert!(custom_path.parent().unwrap().exists());
 }
 
-#[test]
-fn it_should_generate_valid_json_template() {
+#[tokio::test]
+async fn it_should_generate_valid_json_template() {
     let test_context = TestContext::new();
     let template_path = test_context.working_dir().join("test.json");
 
@@ -93,7 +93,9 @@ fn it_should_generate_valid_json_template() {
     let container = Container::new(VerbosityLevel::Silent);
     let context = ExecutionContext::new(std::sync::Arc::new(container));
 
-    create::route_command(action, test_context.working_dir(), &context).unwrap();
+    create::route_command(action, test_context.working_dir(), &context)
+        .await
+        .unwrap();
 
     // Read and parse the generated template
     let file_content = std::fs::read_to_string(&template_path).unwrap();
@@ -123,8 +125,8 @@ fn it_should_generate_valid_json_template() {
     assert_eq!(parsed["ssh_credentials"]["port"], 22);
 }
 
-#[test]
-fn it_should_create_parent_directories() {
+#[tokio::test]
+async fn it_should_create_parent_directories() {
     let test_context = TestContext::new();
     let deep_path = test_context
         .working_dir()
@@ -139,7 +141,7 @@ fn it_should_create_parent_directories() {
     let container = Container::new(VerbosityLevel::Silent);
     let context = ExecutionContext::new(std::sync::Arc::new(container));
 
-    let result = create::route_command(action, test_context.working_dir(), &context);
+    let result = create::route_command(action, test_context.working_dir(), &context).await;
 
     assert!(result.is_ok(), "Should create parent directories");
     assert!(

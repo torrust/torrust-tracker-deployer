@@ -109,13 +109,16 @@ impl DestroySubcommandError {
     /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     ///
+    /// # #[tokio::main]
+    /// # async fn main() {
     /// let container = Container::new(VerbosityLevel::Normal);
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
-    /// if let Err(e) = destroy::handle("test-env", Path::new("."), &context) {
+    /// if let Err(e) = destroy::handle("test-env", Path::new("."), &context).await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
+    /// # }
     /// ```
     ///
     /// Direct usage (for testing):
@@ -131,13 +134,16 @@ impl DestroySubcommandError {
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
     /// use torrust_tracker_deployer_lib::shared::clock::SystemClock;
     ///
+    /// # #[tokio::main]
+    /// # async fn main() {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let repository_factory = Arc::new(RepositoryFactory::new(Duration::from_secs(30)));
     /// let clock = Arc::new(SystemClock);
-    /// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), repository_factory, clock, &output) {
+    /// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), repository_factory, clock, &output).await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
+    /// # }
     /// ```
     #[must_use]
     #[allow(clippy::too_many_lines)] // Help text is comprehensive for user guidance
