@@ -19,8 +19,8 @@ fn create_test_context() -> ExecutionContext {
     ExecutionContext::new(Arc::new(container))
 }
 
-#[test]
-fn it_should_create_environment_from_valid_config() {
+#[tokio::test]
+async fn it_should_create_environment_from_valid_config() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("config.json");
 
@@ -45,7 +45,7 @@ fn it_should_create_environment_from_valid_config() {
 
     let working_dir = temp_dir.path();
     let context = create_test_context();
-    let result = handle(&config_path, working_dir, &context);
+    let result = handle(&config_path, working_dir, &context).await;
 
     assert!(
         result.is_ok(),
@@ -63,14 +63,14 @@ fn it_should_create_environment_from_valid_config() {
     );
 }
 
-#[test]
-fn it_should_return_error_for_missing_config_file() {
+#[tokio::test]
+async fn it_should_return_error_for_missing_config_file() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("nonexistent.json");
     let working_dir = temp_dir.path();
     let context = create_test_context();
 
-    let result = handle(&config_path, working_dir, &context);
+    let result = handle(&config_path, working_dir, &context).await;
 
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -81,8 +81,8 @@ fn it_should_return_error_for_missing_config_file() {
     }
 }
 
-#[test]
-fn it_should_return_error_for_invalid_json() {
+#[tokio::test]
+async fn it_should_return_error_for_invalid_json() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("invalid.json");
 
@@ -91,7 +91,7 @@ fn it_should_return_error_for_invalid_json() {
 
     let working_dir = temp_dir.path();
     let context = create_test_context();
-    let result = handle(&config_path, working_dir, &context);
+    let result = handle(&config_path, working_dir, &context).await;
 
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -102,8 +102,8 @@ fn it_should_return_error_for_invalid_json() {
     }
 }
 
-#[test]
-fn it_should_return_error_for_duplicate_environment() {
+#[tokio::test]
+async fn it_should_return_error_for_duplicate_environment() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("config.json");
 
@@ -129,12 +129,12 @@ fn it_should_return_error_for_duplicate_environment() {
     let context = create_test_context();
 
     // Create environment first time
-    let result1 = handle(&config_path, working_dir, &context);
+    let result1 = handle(&config_path, working_dir, &context).await;
     assert!(result1.is_ok(), "First create should succeed");
 
     // Try to create same environment again (use new context to avoid any state issues)
     let context2 = create_test_context();
-    let result2 = handle(&config_path, working_dir, &context2);
+    let result2 = handle(&config_path, working_dir, &context2).await;
     assert!(result2.is_err(), "Second create should fail");
 
     match result2.unwrap_err() {
@@ -145,8 +145,8 @@ fn it_should_return_error_for_duplicate_environment() {
     }
 }
 
-#[test]
-fn it_should_create_environment_in_custom_working_dir() {
+#[tokio::test]
+async fn it_should_create_environment_in_custom_working_dir() {
     let temp_dir = TempDir::new().unwrap();
     let custom_working_dir = temp_dir.path().join("custom");
     fs::create_dir(&custom_working_dir).unwrap();
@@ -172,7 +172,7 @@ fn it_should_create_environment_in_custom_working_dir() {
     fs::write(&config_path, config_json).unwrap();
 
     let context = create_test_context();
-    let result = handle(&config_path, &custom_working_dir, &context);
+    let result = handle(&config_path, &custom_working_dir, &context).await;
 
     assert!(result.is_ok(), "Should create in custom working dir");
 

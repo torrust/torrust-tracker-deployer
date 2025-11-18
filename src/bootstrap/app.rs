@@ -40,7 +40,7 @@ use crate::{bootstrap, presentation};
 /// - Logging initialization fails (usually means it was already initialized)
 ///
 /// Both panics are intentional as logging is critical for observability.
-pub fn run() {
+pub async fn run() {
     let cli = presentation::Cli::parse();
 
     let logging_config = cli.global.logging_config();
@@ -67,6 +67,7 @@ pub fn run() {
         Some(command) => {
             if let Err(e) =
                 presentation::dispatch::route_command(command, &cli.global.working_dir, &context)
+                    .await
             {
                 presentation::error::handle_error(&e, &context.user_output());
                 std::process::exit(1);

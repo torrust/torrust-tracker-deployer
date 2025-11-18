@@ -5,6 +5,7 @@
 
 use torrust_tracker_deployer_lib::bootstrap;
 
-fn main() {
-    bootstrap::app::run();
+#[tokio::main]
+async fn main() {
+    bootstrap::app::run().await;
 }

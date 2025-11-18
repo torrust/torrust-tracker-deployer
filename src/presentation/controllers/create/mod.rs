@@ -27,16 +27,19 @@
 //! use torrust_tracker_deployer_lib::presentation::controllers::create;
 //! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 //!
+//! # #[tokio::main]
+//! # async fn main() {
 //! let action = CreateAction::Environment {
 //!     env_file: PathBuf::from("config/environment.json")
 //! };
 //! // Note: ExecutionContext would be provided by the application bootstrap
 //! # let context = todo!(); // Mock for documentation example
 //!
-//! if let Err(e) = create::route_command(action, Path::new("."), &context) {
+//! if let Err(e) = create::route_command(action, Path::new("."), &context).await {
 //!     eprintln!("Create failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
+//! # }
 //! ```
 
 pub mod errors;

@@ -28,7 +28,7 @@ use super::{errors::CreateCommandError, subcommands};
 ///
 /// Returns an error if the subcommand execution fails.
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub fn route_command(
+pub async fn route_command(
     action: CreateAction,
     working_dir: &Path,
     context: &ExecutionContext,
@@ -36,12 +36,14 @@ pub fn route_command(
     match action {
         CreateAction::Environment { env_file } => {
             subcommands::handle(&env_file, working_dir, context)
+                .await
                 .map(|_| ()) // Convert Environment<Created> to ()
                 .map_err(CreateCommandError::Environment)
         }
         CreateAction::Template { output_path } => {
             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
             subcommands::handle_template_creation(&template_path, context)
+                .await
                 .map_err(CreateCommandError::Template)
         }
     }

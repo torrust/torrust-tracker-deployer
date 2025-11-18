@@ -14,8 +14,8 @@ use crate::presentation::views::testing::TestUserOutput;
 use crate::presentation::views::VerbosityLevel;
 use crate::shared::SystemClock;
 
-#[test]
-fn it_should_reject_invalid_environment_names() {
+#[tokio::test]
+async fn it_should_reject_invalid_environment_names() {
     let context = TestContext::new();
 
     let invalid_names = vec![
@@ -36,7 +36,8 @@ fn it_should_reject_invalid_environment_names() {
             repository_factory,
             clock,
             &user_output,
-        );
+        )
+        .await;
         assert!(
             result.is_err(),
             "Should reject invalid environment name: {name}",
@@ -61,14 +62,15 @@ fn it_should_reject_invalid_environment_names() {
         repository_factory,
         clock,
         &user_output,
-    );
+    )
+    .await;
     assert!(result.is_err(), "Should get some error for 64-char name");
     // Accept either InvalidEnvironmentName OR DestroyOperationFailed
     // The domain layer determines what length is valid
 }
 
-#[test]
-fn it_should_accept_valid_environment_names() {
+#[tokio::test]
+async fn it_should_accept_valid_environment_names() {
     let context = TestContext::new();
 
     let valid_names = vec![
@@ -90,7 +92,8 @@ fn it_should_accept_valid_environment_names() {
             repository_factory,
             clock,
             &user_output,
-        );
+        )
+        .await;
 
         // Will fail at operation since environment doesn't exist,
         // but should NOT fail at name validation
@@ -111,15 +114,16 @@ fn it_should_accept_valid_environment_names() {
         repository_factory,
         clock,
         &user_output,
-    );
+    )
+    .await;
     if let Err(DestroySubcommandError::InvalidEnvironmentName { .. }) = result {
         panic!("Should not reject valid 63-char environment name");
     }
     // Expected - valid name but operation fails or other errors acceptable in test context
 }
 
-#[test]
-fn it_should_fail_for_nonexistent_environment() {
+#[tokio::test]
+async fn it_should_fail_for_nonexistent_environment() {
     let context = TestContext::new();
     let (user_output, _, _) = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
     let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
@@ -131,7 +135,8 @@ fn it_should_fail_for_nonexistent_environment() {
         repository_factory,
         clock,
         &user_output,
-    );
+    )
+    .await;
 
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -142,8 +147,8 @@ fn it_should_fail_for_nonexistent_environment() {
     }
 }
 
-#[test]
-fn it_should_provide_help_for_errors() {
+#[tokio::test]
+async fn it_should_provide_help_for_errors() {
     let context = TestContext::new();
     let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
     let clock = Arc::new(SystemClock);
@@ -154,7 +159,8 @@ fn it_should_provide_help_for_errors() {
         repository_factory,
         clock,
         &context.user_output(),
-    );
+    )
+    .await;
 
     assert!(result.is_err());
     let error = result.unwrap_err();
@@ -167,8 +173,8 @@ fn it_should_provide_help_for_errors() {
     );
 }
 
-#[test]
-fn it_should_work_with_custom_working_directory() {
+#[tokio::test]
+async fn it_should_work_with_custom_working_directory() {
     let context = TestContext::new();
     let custom_working_dir = context.working_dir().join("custom");
     fs::create_dir(&custom_working_dir).unwrap();
@@ -183,7 +189,8 @@ fn it_should_work_with_custom_working_directory() {
         repository_factory,
         clock,
         &context.user_output(),
-    );
+    )
+    .await;
 
     // Should fail at operation (environment doesn't exist) but not at path validation
     assert!(result.is_err());
