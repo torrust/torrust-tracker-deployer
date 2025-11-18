@@ -41,7 +41,6 @@ use crate::shared::error::Traceable;
 /// State is persisted after each transition using the injected repository.
 /// Persistence failures are logged but don't fail the command (state remains valid in memory).
 pub struct ConfigureCommandHandler {
-    pub(crate) ansible_client: Arc<AnsibleClient>,
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
     pub(crate) repository: TypedEnvironmentRepository,
 }
@@ -50,12 +49,10 @@ impl ConfigureCommandHandler {
     /// Create a new `ConfigureCommandHandler`
     #[must_use]
     pub fn new(
-        ansible_client: Arc<AnsibleClient>,
         clock: Arc<dyn crate::shared::Clock>,
         repository: Arc<dyn EnvironmentRepository>,
     ) -> Self {
         Self {
-            ansible_client,
             clock,
             repository: TypedEnvironmentRepository::new(repository),
         }
@@ -122,8 +119,11 @@ impl ConfigureCommandHandler {
         // Persist intermediate state
         self.repository.save_configuring(&environment)?;
 
+        // Build configuration dependencies (AnsibleClient)
+        let ansible_client = Self::build_configuration_dependencies(&environment);
+
         // Execute configuration steps with explicit step tracking
-        match self.execute_configuration_with_tracking(&environment) {
+        match Self::execute_configuration_with_tracking(&environment, &ansible_client) {
             Ok(configured_env) => {
                 // Persist final state
                 self.repository.save_configured(&configured_env)?;
@@ -161,24 +161,24 @@ impl ConfigureCommandHandler {
     ///
     /// Returns a tuple of (error, `current_step`) if any configuration step fails
     fn execute_configuration_with_tracking(
-        &self,
         environment: &Environment<Configuring>,
+        ansible_client: &Arc<AnsibleClient>,
     ) -> StepResult<Environment<Configured>, ConfigureCommandHandlerError, ConfigureStep> {
         // Track current step and execute each step
         // If an error occurs, we return it along with the current step
 
         let current_step = ConfigureStep::InstallDocker;
-        InstallDockerStep::new(Arc::clone(&self.ansible_client))
+        InstallDockerStep::new(Arc::clone(ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
 
         let current_step = ConfigureStep::InstallDockerCompose;
-        InstallDockerComposeStep::new(Arc::clone(&self.ansible_client))
+        InstallDockerComposeStep::new(Arc::clone(ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
 
         let current_step = ConfigureStep::ConfigureSecurityUpdates;
-        ConfigureSecurityUpdatesStep::new(Arc::clone(&self.ansible_client))
+        ConfigureSecurityUpdatesStep::new(Arc::clone(ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
 
@@ -198,7 +198,7 @@ impl ConfigureCommandHandler {
                 "Skipping UFW firewall configuration due to TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER"
             );
         } else {
-            ConfigureFirewallStep::new(Arc::clone(&self.ansible_client))
+            ConfigureFirewallStep::new(Arc::clone(ansible_client))
                 .execute()
                 .map_err(|e| (e.into(), current_step))?;
         }
@@ -207,6 +207,23 @@ impl ConfigureCommandHandler {
         let configured = environment.clone().configured();
 
         Ok(configured)
+    }
+
+    /// Build configuration dependencies
+    ///
+    /// Creates the `AnsibleClient` needed for configuration operations.
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment being configured (provides build directory path)
+    ///
+    /// # Returns
+    ///
+    /// Returns `AnsibleClient` for executing Ansible playbooks
+    fn build_configuration_dependencies(
+        environment: &Environment<Configuring>,
+    ) -> Arc<AnsibleClient> {
+        Arc::new(AnsibleClient::new(environment.ansible_build_dir()))
     }
 
     /// Build failure context for a configuration error and generate trace file

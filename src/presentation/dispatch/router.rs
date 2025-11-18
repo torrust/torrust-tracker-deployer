@@ -52,7 +52,7 @@
 
 use std::path::Path;
 
-use crate::presentation::controllers::{create, destroy, provision};
+use crate::presentation::controllers::{configure, create, destroy, provision};
 use crate::presentation::errors::CommandError;
 use crate::presentation::input::Commands;
 
@@ -120,12 +120,11 @@ pub async fn route_command(
         Commands::Provision { environment } => {
             provision::handle(&environment, working_dir, context).await?;
             Ok(())
+        }
+        Commands::Configure { environment } => {
+            configure::handle(&environment, working_dir, context).await?;
+            Ok(())
         } // Future commands will be added here as the Controller Layer expands:
-          //
-          // Commands::Configure { environment } => {
-          //     configure::handle_configure_command(&environment, context).await?;
-          //     Ok(())
-          // }
           //
           // Commands::Release { environment, version } => {
           //     release::handle_release_command(&environment, &version, context).await?;

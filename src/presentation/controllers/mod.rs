@@ -236,6 +236,7 @@
 //! - Maintain comprehensive test coverage
 
 // Re-export command modules
+pub mod configure;
 pub mod constants;
 pub mod create;
 pub mod destroy;
@@ -246,5 +247,4 @@ pub mod provision;
 pub mod tests;
 
 // Future command modules will be added here:
-// pub mod configure;
 // pub mod release;
