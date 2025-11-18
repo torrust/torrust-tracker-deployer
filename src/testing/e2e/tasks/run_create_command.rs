@@ -75,8 +75,9 @@ pub fn run_create_command(
         "Creating environment via CreateCommandHandler"
     );
 
-    // Create repository using RepositoryFactory with working directory
-    let repository = repository_factory.create(working_dir.to_path_buf());
+    // Create repository using RepositoryFactory with data directory
+    let data_dir = working_dir.join("data");
+    let repository = repository_factory.create(data_dir);
 
     // Create the command handler
     let create_command = CreateCommandHandler::new(repository, clock);
