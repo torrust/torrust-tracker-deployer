@@ -26,7 +26,6 @@ use tracing::info;
 
 use crate::application::command_handlers::test::TestCommandHandlerError;
 use crate::application::command_handlers::TestCommandHandler;
-use crate::domain::environment::state::AnyEnvironmentState;
 use crate::testing::e2e::context::TestContext;
 
 /// Errors that can occur during the test/validation task
@@ -148,28 +147,16 @@ pub async fn run_test_command(test_context: &TestContext) -> Result<(), TestTask
         "Validating deployment on instance"
     );
 
-    // Use TestCommandHandler to handle all infrastructure validation steps
-    let test_command_handler = TestCommandHandler::new();
+    // Create repository for the environment
+    let repository = test_context.create_repository();
 
-    // TestCommandHandler::execute is generic over state, so we need to match on AnyEnvironmentState
-    // and pass the typed environment. Since we're just reading, any state works.
-    let result = match &test_context.environment {
-        AnyEnvironmentState::Created(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::Provisioning(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::Provisioned(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::Configuring(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::Configured(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::Releasing(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::Released(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::Running(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::Destroying(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::ProvisionFailed(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::ConfigureFailed(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::ReleaseFailed(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::RunFailed(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::DestroyFailed(env) => test_command_handler.execute(env).await,
-        AnyEnvironmentState::Destroyed(env) => test_command_handler.execute(env).await,
-    };
+    // Use TestCommandHandler to handle all infrastructure validation steps
+    let test_command_handler = TestCommandHandler::new(repository);
+
+    // TestCommandHandler now accepts EnvironmentName instead of Environment
+    let result = test_command_handler
+        .execute(test_context.environment.name())
+        .await;
 
     result.map_err(|source| TestTaskError::ValidationFailed { source })?;
 
