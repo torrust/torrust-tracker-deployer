@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                            | Summary                                                                                   |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ✅ Accepted   | 2025-11-19 | [Disable MD060 Table Formatting Rule](./md060-table-formatting-disabled.md)                         | Disable MD060 to allow flexible table formatting and emoji usage                          |
 | ✅ Accepted   | 2025-11-19 | [Test Command as Smoke Test](./test-command-as-smoke-test.md)                                       | Test command validates running services, not infrastructure components                    |
 | ✅ Accepted   | 2025-11-13 | [Migration to AGENTS.md Standard](./agents-md-migration.md)                                         | Adopt open AGENTS.md standard for multi-agent compatibility while keeping GitHub redirect |
 | ✅ Accepted   | 2025-11-11 | [Use ReentrantMutex Pattern for UserOutput Reentrancy](./reentrant-mutex-useroutput-pattern.md)     | Use Arc<ReentrantMutex<RefCell<UserOutput>>> to fix same-thread deadlock in issue #164    |
