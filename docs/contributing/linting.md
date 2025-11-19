@@ -103,6 +103,7 @@ Key rules enabled:
 - ✅ **MD009**: No trailing spaces
 - ❌ **MD013**: Line length (disabled for flexibility)
 - ❌ **MD041**: First line in file should be top-level heading (disabled)
+- ❌ **MD060**: Table column style (disabled - allows flexible table formatting and emoji usage)
 
 **Common fixes**:
 
