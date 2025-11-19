@@ -113,11 +113,11 @@ async fn it_should_generate_valid_json_template() {
     );
     assert_eq!(
         parsed["ssh_credentials"]["private_key_path"],
-        "REPLACE_WITH_SSH_PRIVATE_KEY_PATH"
+        "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH"
     );
     assert_eq!(
         parsed["ssh_credentials"]["public_key_path"],
-        "REPLACE_WITH_SSH_PUBLIC_KEY_PATH"
+        "REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH"
     );
 
     // Verify default values

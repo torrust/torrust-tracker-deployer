@@ -175,8 +175,8 @@ impl EnvironmentCreationConfig {
                 name: "REPLACE_WITH_ENVIRONMENT_NAME".to_string(),
             },
             ssh_credentials: SshCredentialsConfig {
-                private_key_path: "REPLACE_WITH_SSH_PRIVATE_KEY_PATH".to_string(),
-                public_key_path: "REPLACE_WITH_SSH_PUBLIC_KEY_PATH".to_string(),
+                private_key_path: "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH".to_string(),
+                public_key_path: "REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH".to_string(),
                 username: "torrust".to_string(), // default value
                 port: 22,                        // default value
             },
@@ -521,11 +521,11 @@ mod tests {
         assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
         assert_eq!(
             template.ssh_credentials.private_key_path,
-            "REPLACE_WITH_SSH_PRIVATE_KEY_PATH"
+            "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH"
         );
         assert_eq!(
             template.ssh_credentials.public_key_path,
-            "REPLACE_WITH_SSH_PUBLIC_KEY_PATH"
+            "REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH"
         );
         assert_eq!(template.ssh_credentials.username, "torrust");
         assert_eq!(template.ssh_credentials.port, 22);
@@ -595,7 +595,7 @@ mod tests {
         assert_eq!(parsed.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
         assert_eq!(
             parsed.ssh_credentials.private_key_path,
-            "REPLACE_WITH_SSH_PRIVATE_KEY_PATH"
+            "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH"
         );
     }
 
@@ -659,7 +659,7 @@ mod tests {
         assert_eq!(parsed.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
         assert_eq!(
             parsed.ssh_credentials.private_key_path,
-            "REPLACE_WITH_SSH_PRIVATE_KEY_PATH"
+            "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH"
         );
     }
 

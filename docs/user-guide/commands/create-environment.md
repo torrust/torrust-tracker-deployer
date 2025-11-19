@@ -105,8 +105,8 @@ torrust-tracker-deployer create template config.json
 nano config.json
 # Replace placeholder values:
 # - REPLACE_WITH_ENVIRONMENT_NAME
-# - REPLACE_WITH_SSH_PRIVATE_KEY_PATH
-# - REPLACE_WITH_SSH_PUBLIC_KEY_PATH
+# - REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH
+# - REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH
 
 # Step 3: Create the environment
 torrust-tracker-deployer create environment --env-file config.json
@@ -281,11 +281,13 @@ torrust-tracker-deployer create environment \
 The create environment command initializes:
 
 1. **Environment Directory Structure**
+
    - Creates `data/<environment-name>/` directory
    - Stores environment configuration
    - Prepares space for state files
 
 2. **Environment State**
+
    - Initializes environment state to `Created`
    - Records environment metadata
    - Prepares for provisioning workflow
@@ -576,8 +578,8 @@ torrust-tracker-deployer create template my-config.json
 The template will contain placeholder values that you need to replace:
 
 - `REPLACE_WITH_ENVIRONMENT_NAME` - Choose a unique environment name
-- `REPLACE_WITH_SSH_PRIVATE_KEY_PATH` - Path to your SSH private key
-- `REPLACE_WITH_SSH_PUBLIC_KEY_PATH` - Path to your SSH public key
+- `REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH` - Path to your SSH private key
+- `REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH` - Path to your SSH public key
 
 Edit the generated template and then use it to create your environment.
 
