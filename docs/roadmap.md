@@ -50,7 +50,12 @@ When starting work on a new feature:
   - Implementation should call the existing ConfigureCommandHandler business logic
   - Handle user input, validation, and output presentation
   - Enables transition from "provisioned" to "configured" state via CLI
-- [ ] **1.8** Add levels of verbosity as described in the UX research
+- [ ] **1.8** Create command `torrust-tracker-deployer test` to verify deployment infrastructure (UI layer only) - [Issue #188](https://github.com/torrust/torrust-tracker-deployer/issues/188)
+  - **Note:** The App layer TestCommandHandler is already implemented, this task focuses on the console subcommand interface
+  - Implementation should call the existing TestCommandHandler business logic
+  - Handle user input, validation, and output presentation
+  - Enables verification of deployment state via CLI (cloud-init, Docker, Docker Compose)
+- [ ] **1.9** Add levels of verbosity as described in the UX research
 
 **Note:** See [`docs/research/UX/`](./research/UX/) for detailed UX research that will be useful to implement the features in this section.
 
