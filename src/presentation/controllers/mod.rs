@@ -241,6 +241,7 @@ pub mod constants;
 pub mod create;
 pub mod destroy;
 pub mod provision;
+pub mod test;
 
 // Shared test utilities
 #[cfg(test)]
