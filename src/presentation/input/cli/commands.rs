@@ -70,6 +70,23 @@ pub enum Commands {
         /// previously provisioned and is in "Provisioned" state.
         environment: String,
     },
+
+    /// Verify deployment infrastructure
+    ///
+    /// This command validates that a deployed environment's infrastructure is
+    /// properly configured and ready. It will:
+    /// - Verify cloud-init completion
+    /// - Verify Docker installation
+    /// - Verify Docker Compose installation
+    ///
+    /// The environment must have an instance IP set (use 'provision' command first).
+    Test {
+        /// Name of the environment to test
+        ///
+        /// The environment name must match an existing environment that was
+        /// previously provisioned and has an instance IP assigned.
+        environment: String,
+    },
     // Future commands will be added here:
     //
     // /// Create a new release of the deployed application

@@ -1,0 +1,349 @@
+//! Test Command Handler
+//!
+//! This module handles the test command execution at the presentation layer,
+//! including environment validation, repository initialization, and user interaction.
+
+use std::cell::RefCell;
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use parking_lot::ReentrantMutex;
+
+use crate::application::command_handlers::TestCommandHandler;
+use crate::domain::environment::name::EnvironmentName;
+use crate::domain::environment::repository::EnvironmentRepository;
+use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::presentation::dispatch::context::ExecutionContext;
+use crate::presentation::views::progress::ProgressReporter;
+use crate::presentation::views::UserOutput;
+
+use super::errors::TestSubcommandError;
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/// Number of main steps in the test workflow
+const TEST_WORKFLOW_STEPS: usize = 4;
+
+// ============================================================================
+// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
+// ============================================================================
+
+/// Handle test command using `ExecutionContext` pattern
+///
+/// This function provides a clean interface for testing deployment environments,
+/// integrating with the `ExecutionContext` pattern for dependency injection.
+///
+/// # Arguments
+///
+/// * `environment_name` - Name of the environment to test
+/// * `working_dir` - Working directory path for operations
+/// * `context` - Execution context providing access to services
+///
+/// # Returns
+///
+/// * `Ok(())` - Environment tested successfully
+/// * `Err(TestSubcommandError)` - Test operation failed
+///
+/// # Errors
+///
+/// Returns `TestSubcommandError` when:
+/// * Environment name is invalid or contains special characters
+/// * Working directory is not accessible or doesn't exist
+/// * Environment is not found or doesn't have instance IP set
+/// * Infrastructure validation fails (cloud-init, Docker, Docker Compose)
+/// * SSH connectivity cannot be established
+///
+/// # Examples
+///
+/// ```rust
+/// use std::path::Path;
+/// use std::sync::Arc;
+/// use torrust_tracker_deployer_lib::presentation::controllers::test;
+/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
+/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
+/// let context = ExecutionContext::new(container);
+/// let working_dir = Path::new("./test");
+///
+/// test::handle("my-env", working_dir, &context).await?;
+/// # Ok(())
+/// # }
+/// ```
+pub async fn handle(
+    environment_name: &str,
+    working_dir: &std::path::Path,
+    context: &ExecutionContext,
+) -> Result<(), TestSubcommandError> {
+    handle_test_command(
+        environment_name,
+        working_dir,
+        context.repository_factory(),
+        &context.user_output(),
+    )
+    .await
+}
+
+// ============================================================================
+// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
+// ============================================================================
+
+/// Handle the test command
+///
+/// This is a thin wrapper over `TestCommandController` that serves as
+/// the public entry point for the test command.
+///
+/// # Arguments
+///
+/// * `environment_name` - The name of the environment to test
+/// * `working_dir` - Root directory for environment data storage
+/// * `repository_factory` - Factory for creating environment repositories
+/// * `user_output` - Shared user output service for consistent output formatting
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Environment name is invalid (format validation fails)
+/// - Environment cannot be loaded from repository
+/// - Environment doesn't have instance IP set (not provisioned)
+/// - Infrastructure validation fails
+/// - Progress reporting encounters a poisoned mutex
+///
+/// All errors include detailed context and actionable troubleshooting guidance.
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or a `TestSubcommandError` on failure.
+///
+/// # Example
+///
+/// Using with Container and `ExecutionContext` (recommended):
+///
+/// ```rust
+/// use std::path::Path;
+/// use std::sync::Arc;
+/// use torrust_tracker_deployer_lib::bootstrap::Container;
+/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+/// use torrust_tracker_deployer_lib::presentation::controllers::test;
+/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+///
+/// # #[tokio::main]
+/// # async fn main() {
+/// let container = Container::new(VerbosityLevel::Normal);
+/// let context = ExecutionContext::new(Arc::new(container));
+///
+/// if let Err(e) = test::handle("test-env", Path::new("."), &context).await {
+///     eprintln!("Test failed: {e}");
+///     eprintln!("Help: {}", e.help());
+/// }
+/// # }
+/// ```
+///
+/// Direct usage (for testing or specialized scenarios):
+///
+/// ```rust
+/// use std::path::Path;
+/// use std::sync::Arc;
+/// use parking_lot::ReentrantMutex;
+/// use std::cell::RefCell;
+/// use torrust_tracker_deployer_lib::presentation::controllers::test;
+/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
+/// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+/// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
+///
+/// # #[tokio::main]
+/// # async fn main() {
+/// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
+/// let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+/// if let Err(e) = test::handle_test_command("test-env", Path::new("."), repository_factory, &user_output).await {
+///     eprintln!("Test failed: {e}");
+///     eprintln!("Help: {}", e.help());
+/// }
+/// # }
+/// ```
+#[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
+pub async fn handle_test_command(
+    environment_name: &str,
+    working_dir: &std::path::Path,
+    repository_factory: Arc<RepositoryFactory>,
+    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
+) -> Result<(), TestSubcommandError> {
+    TestCommandController::new(
+        working_dir.to_path_buf(),
+        repository_factory,
+        user_output.clone(),
+    )
+    .execute(environment_name)
+    .await
+}
+
+// ============================================================================
+// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
+// ============================================================================
+
+/// Presentation layer controller for test command workflow
+///
+/// Coordinates user interaction, progress reporting, and input validation
+/// while delegating business logic to the application layer's `TestCommandHandler`.
+///
+/// ## Responsibilities
+///
+/// - Validate environment name format
+/// - Create and invoke the application layer `TestCommandHandler`
+/// - Report progress to the user (4 steps)
+/// - Format success/error messages with actionable guidance
+///
+/// ## Architecture
+///
+/// This controller **only orchestrates the workflow** - all validation logic
+/// is implemented in the `TestCommandHandler` at the application layer.
+///
+/// The `TestCommandHandler.execute()` method performs all infrastructure validation:
+/// - Cloud-init completion check
+/// - Docker installation verification
+/// - Docker Compose installation verification
+struct TestCommandController {
+    repository: Arc<dyn EnvironmentRepository>,
+    progress: ProgressReporter,
+}
+
+impl TestCommandController {
+    /// Create a new `TestCommandController` with dependencies
+    ///
+    /// # Arguments
+    ///
+    /// * `working_dir` - Working directory containing the data folder
+    /// * `repository_factory` - Factory for creating environment repositories
+    /// * `user_output` - Shared output service for user feedback
+    #[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
+    fn new(
+        working_dir: PathBuf,
+        repository_factory: Arc<RepositoryFactory>,
+        user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
+    ) -> Self {
+        let data_dir = working_dir.join("data");
+        let repository = repository_factory.create(data_dir);
+        let progress = ProgressReporter::new(user_output, TEST_WORKFLOW_STEPS);
+
+        Self {
+            repository,
+            progress,
+        }
+    }
+
+    /// Execute the complete test workflow
+    ///
+    /// This method orchestrates the four-step workflow:
+    /// 1. Validate environment name
+    /// 2. Create command handler
+    /// 3. Execute validation workflow via application layer
+    /// 4. Complete workflow and display success message
+    ///
+    /// # Arguments
+    ///
+    /// * `environment_name` - Name of the environment to test
+    ///
+    /// # Errors
+    ///
+    /// Returns `TestSubcommandError` if any step fails
+    async fn execute(&mut self, environment_name: &str) -> Result<(), TestSubcommandError> {
+        // 1. Validate environment name
+        let env_name = self.validate_environment_name(environment_name)?;
+
+        // 2. Create command handler
+        let handler = self.create_command_handler()?;
+
+        // 3. Execute validation workflow via application layer
+        self.test_infrastructure(&handler, &env_name).await?;
+
+        // 4. Complete workflow
+        self.complete_workflow(environment_name)?;
+
+        Ok(())
+    }
+
+    /// Step 1: Validate environment name format
+    ///
+    /// # Errors
+    ///
+    /// Returns `TestSubcommandError::InvalidEnvironmentName` if validation fails
+    fn validate_environment_name(
+        &mut self,
+        name: &str,
+    ) -> Result<EnvironmentName, TestSubcommandError> {
+        self.progress.start_step("Validating environment")?;
+
+        let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
+            TestSubcommandError::InvalidEnvironmentName {
+                name: name.to_string(),
+                source,
+            }
+        })?;
+
+        self.progress
+            .complete_step(Some(&format!("Environment name validated: {name}")))?;
+
+        Ok(env_name)
+    }
+
+    /// Step 2: Create the application layer command handler
+    ///
+    /// # Errors
+    ///
+    /// Returns `TestSubcommandError::ProgressReportingFailed` if progress reporting fails
+    fn create_command_handler(&mut self) -> Result<TestCommandHandler, TestSubcommandError> {
+        self.progress.start_step("Creating command handler")?;
+
+        let handler = TestCommandHandler::new(self.repository.clone());
+        self.progress.complete_step(None)?;
+
+        Ok(handler)
+    }
+
+    /// Step 3: Execute infrastructure validation tests
+    ///
+    /// Delegates all validation logic to the application layer `TestCommandHandler`.
+    /// The handler performs:
+    /// - Cloud-init completion check
+    /// - Docker installation verification
+    /// - Docker Compose installation verification
+    ///
+    /// # Errors
+    ///
+    /// Returns `TestSubcommandError::ValidationFailed` if any validation check fails
+    async fn test_infrastructure(
+        &mut self,
+        handler: &TestCommandHandler,
+        env_name: &EnvironmentName,
+    ) -> Result<(), TestSubcommandError> {
+        self.progress.start_step("Testing infrastructure")?;
+
+        handler.execute(env_name).await.map_err(|source| {
+            TestSubcommandError::ValidationFailed {
+                name: env_name.to_string(),
+                source: Box::new(source),
+            }
+        })?;
+
+        self.progress
+            .complete_step(Some("Infrastructure tests passed"))?;
+
+        Ok(())
+    }
+
+    /// Step 4: Complete workflow and display success message
+    ///
+    /// # Errors
+    ///
+    /// Returns `TestSubcommandError::ProgressReportingFailed` if progress reporting fails
+    fn complete_workflow(&mut self, environment_name: &str) -> Result<(), TestSubcommandError> {
+        self.progress.complete(&format!(
+            "Infrastructure validation completed successfully for '{environment_name}'"
+        ))?;
+        Ok(())
+    }
+}

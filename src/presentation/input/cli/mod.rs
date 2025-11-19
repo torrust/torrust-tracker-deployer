@@ -47,7 +47,10 @@ mod tests {
             Commands::Destroy { environment } => {
                 assert_eq!(environment, "test-env");
             }
-            Commands::Create { .. } | Commands::Provision { .. } | Commands::Configure { .. } => {
+            Commands::Create { .. }
+            | Commands::Provision { .. }
+            | Commands::Configure { .. }
+            | Commands::Test { .. } => {
                 panic!("Expected Destroy command")
             }
         }
@@ -67,7 +70,8 @@ mod tests {
                 }
                 Commands::Create { .. }
                 | Commands::Provision { .. }
-                | Commands::Configure { .. } => {
+                | Commands::Configure { .. }
+                | Commands::Test { .. } => {
                     panic!("Expected Destroy command")
                 }
             }
@@ -110,7 +114,10 @@ mod tests {
             Commands::Destroy { environment } => {
                 assert_eq!(environment, "test-env");
             }
-            Commands::Create { .. } | Commands::Provision { .. } | Commands::Configure { .. } => {
+            Commands::Create { .. }
+            | Commands::Provision { .. }
+            | Commands::Configure { .. }
+            | Commands::Test { .. } => {
                 panic!("Expected Destroy command")
             }
         }
@@ -196,7 +203,10 @@ mod tests {
                     panic!("Expected Environment action")
                 }
             },
-            Commands::Destroy { .. } | Commands::Provision { .. } | Commands::Configure { .. } => {
+            Commands::Destroy { .. }
+            | Commands::Provision { .. }
+            | Commands::Configure { .. }
+            | Commands::Test { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -222,7 +232,10 @@ mod tests {
                     panic!("Expected Environment action")
                 }
             },
-            Commands::Destroy { .. } | Commands::Provision { .. } | Commands::Configure { .. } => {
+            Commands::Destroy { .. }
+            | Commands::Provision { .. }
+            | Commands::Configure { .. }
+            | Commands::Test { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -269,7 +282,10 @@ mod tests {
                     panic!("Expected Environment action")
                 }
             },
-            Commands::Destroy { .. } | Commands::Provision { .. } | Commands::Configure { .. } => {
+            Commands::Destroy { .. }
+            | Commands::Provision { .. }
+            | Commands::Configure { .. }
+            | Commands::Test { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -319,7 +335,10 @@ mod tests {
                     panic!("Expected Template action")
                 }
             },
-            Commands::Destroy { .. } | Commands::Provision { .. } | Commands::Configure { .. } => {
+            Commands::Destroy { .. }
+            | Commands::Provision { .. }
+            | Commands::Configure { .. }
+            | Commands::Test { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -347,7 +366,10 @@ mod tests {
                     panic!("Expected Template action")
                 }
             },
-            Commands::Destroy { .. } | Commands::Provision { .. } | Commands::Configure { .. } => {
+            Commands::Destroy { .. }
+            | Commands::Provision { .. }
+            | Commands::Configure { .. }
+            | Commands::Test { .. } => {
                 panic!("Expected Create command")
             }
         }

@@ -22,6 +22,7 @@ use thiserror::Error;
 use crate::presentation::controllers::{
     configure::ConfigureSubcommandError, create::CreateCommandError,
     destroy::DestroySubcommandError, provision::ProvisionSubcommandError,
+    test::TestSubcommandError,
 };
 
 /// Errors that can occur during CLI command execution
@@ -59,6 +60,13 @@ pub enum CommandError {
     #[error("Configure command failed: {0}")]
     Configure(Box<ConfigureSubcommandError>),
 
+    /// Test command specific errors
+    ///
+    /// Encapsulates all errors that can occur during infrastructure validation.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Test command failed: {0}")]
+    Test(Box<TestSubcommandError>),
+
     /// User output lock acquisition failed
     ///
     /// Failed to acquire the mutex lock for user output. This typically indicates
@@ -88,6 +96,12 @@ impl From<ProvisionSubcommandError> for CommandError {
 impl From<ConfigureSubcommandError> for CommandError {
     fn from(error: ConfigureSubcommandError) -> Self {
         Self::Configure(Box::new(error))
+    }
+}
+
+impl From<TestSubcommandError> for CommandError {
+    fn from(error: TestSubcommandError) -> Self {
+        Self::Test(Box::new(error))
     }
 }
 
@@ -131,6 +145,7 @@ impl CommandError {
             Self::Destroy(e) => e.help(),
             Self::Provision(e) => e.help(),
             Self::Configure(e) => e.help(),
+            Self::Test(e) => e.help(),
             Self::UserOutputLockFailed => {
                 "User Output Lock Failed - Detailed Troubleshooting:
 
