@@ -1,4 +1,26 @@
 //! Test command handler implementation
+//!
+//! **Purpose**: Smoke test for running Torrust Tracker services
+//!
+//! This handler validates that a deployed Tracker application is running and accessible.
+//! The command is designed for post-deployment verification - checking that services
+//! respond correctly to requests, not validating infrastructure components.
+//!
+//! **Current Implementation Status**: Work in Progress / Temporary Scaffolding
+//!
+//! The current validation steps (cloud-init, Docker, Docker Compose) are **temporary
+//! scaffolding** that exist only because the complete deployment workflow is not yet
+//! implemented. These steps will be **removed** when the full deployment is implemented
+//! and replaced with actual smoke tests.
+//!
+//! **Target Implementation** (when `Running` state is implemented):
+//!
+//! - Make HTTP requests to publicly exposed Tracker services
+//! - Verify services respond correctly (health checks, basic API calls)
+//! - Confirm deployment is production-ready from end-user perspective
+//!
+//! For rationale and alternatives, see:
+//! - `docs/decisions/test-command-as-smoke-test.md` - Architectural decision record
 
 use std::sync::Arc;
 
@@ -15,16 +37,26 @@ use crate::domain::environment::repository::{
 };
 use crate::domain::EnvironmentName;
 
-/// `TestCommandHandler` orchestrates the complete infrastructure testing and validation workflow
+/// `TestCommandHandler` orchestrates smoke testing for running Torrust Tracker services
 ///
-/// The `TestCommandHandler` validates that an environment is properly set up with all required
-/// infrastructure components.
+/// **Purpose**: Post-deployment smoke test to verify the application is running and accessible
 ///
-/// ## Validation Steps
+/// **Current Status**: Work in Progress - Current implementation is temporary scaffolding
+///
+/// The current validation steps are **placeholders** until the complete deployment workflow
+/// is implemented with the `Running` state. See module documentation for details.
+///
+/// ## Current Validation Steps (Temporary)
 ///
 /// 1. Validate cloud-init completion
 /// 2. Validate Docker installation
 /// 3. Validate Docker Compose installation
+///
+/// ## Target Validation Steps (Future)
+///
+/// 1. HTTP health check to Tracker service
+/// 2. Basic API request verification
+/// 3. Metrics endpoint validation
 ///
 /// ## Design Rationale
 ///
