@@ -186,24 +186,52 @@ cargo run --bin e2e-tests-full -- --help
 > - `e2e-tests-full` can **only run locally** due to connectivity issues in GitHub runners
 > - To see final OpenTofu and Ansible templates, check `build/` directories after running with `--keep`
 
-### 📖 ~~Manual Deployment Steps~~ _(Not Currently Supported)_
+### 📖 Manual Deployment Steps
 
-> **⚠️ Manual deployment is not currently possible.** The application only supports E2E tests with hardcoded environments.
+> **✅ Infrastructure commands are now available!** You can create, provision, configure, test, and destroy deployment environments using the CLI.
 >
-> **Temporary Workaround:** Until the `provision` command is available as a user-facing command, you can use E2E tests to provision infrastructure for experimentation. See the reference section below for details.
+> **Current Status:**
 >
-> **To explore the deployment process:**
+> - ✅ **Environment Management**: Create and manage deployment environments
+> - ✅ **Infrastructure Provisioning**: Provision VM infrastructure with LXD
+> - ✅ **Configuration**: Configure provisioned infrastructure (Docker, Docker Compose)
+> - ✅ **Verification**: Test deployment infrastructure
+> - ⚠️ **Application Deployment**: Not yet available - tracker application deployment coming soon
 >
-> 1. Run E2E tests with `--keep` flag: `cargo run --bin e2e-tests-full -- --keep`
-> 2. Inspect generated templates in `build/` directories
-> 3. Review environment data in `data/` directories
+> **Available Commands:**
 >
-> **Manual deployment commands will be available after completing the [roadmap](docs/roadmap.md).**
+> ```bash
+> # 1. Generate configuration template
+> torrust-tracker-deployer create template my-env.json
+>
+> # 2. Edit my-env.json with your settings
+>
+> # 3. Create environment from configuration
+> torrust-tracker-deployer create environment -f my-env.json
+>
+> # 4. Provision VM infrastructure
+> torrust-tracker-deployer provision my-environment
+>
+> # 5. Configure infrastructure (install Docker, Docker Compose)
+> torrust-tracker-deployer configure my-environment
+>
+> # 6. Verify deployment infrastructure
+> torrust-tracker-deployer test my-environment
+>
+> # 7. Destroy environment when done
+> torrust-tracker-deployer destroy my-environment
+> ```
+>
+> **📖 For detailed command documentation and guides, see:**
+>
+> - **[Quick Start Guide](docs/user-guide/quick-start.md)** - Complete workflow walkthrough _(coming soon)_
+> - **[Commands Reference](docs/user-guide/commands/)** - Detailed guide for each command _(coming soon)_
+> - **[Console Commands](docs/console-commands.md)** - Technical reference
 
 <details>
-<summary>📋 <strong>Reference: Experimenting with OpenTofu and Ansible manually (Temporary Workaround)</strong></summary>
+<summary>📋 <strong>Reference: Manual OpenTofu and Ansible Commands (Advanced)</strong></summary>
 
-> **Note:** This is a **temporary workaround** for experimentation until the `provision` command is available as a user-facing CLI command. Currently, infrastructure provisioning is only implemented in E2E tests.
+> **Note:** The CLI commands above are the recommended way to manage deployments. This section is for advanced users who want to execute OpenTofu and Ansible commands directly.
 
 If you want to experiment with OpenTofu and Ansible commands directly using the generated templates:
 
