@@ -142,6 +142,7 @@ readlink
 reentrancy
 Repomix
 reprioritize
+reprovision
 reprovisioning
 reqwest
 resolv
