@@ -13,11 +13,11 @@ Update all project documentation to reflect that the complete command workflow i
 
 ## Goals
 
-- [ ] Update roadmap to mark tasks 1.7 and 1.8 as completed
-- [ ] Update existing documentation to reflect all available commands
-- [ ] Create comprehensive user guide for individual commands
-- [ ] Create quick-start guide showing complete deployment workflow
-- [ ] Ensure documentation consistency across all files
+- [x] Update roadmap to mark tasks 1.7 and 1.8 as completed ✅
+- [x] Update existing documentation to reflect all available commands ✅
+- [x] Create comprehensive user guide for individual commands ✅
+- [x] Create quick-start guide showing complete deployment workflow ✅
+- [x] Ensure documentation consistency across all files ✅
 
 ## 🏗️ Architecture Requirements
 
@@ -191,102 +191,105 @@ Both commands are fully implemented:
 
 ## Implementation Plan
 
-### Phase 1: Update Roadmap (10 minutes)
+### Phase 1: Update Roadmap ✅ Completed
 
-- [ ] Open `docs/roadmap.md`
-- [ ] Mark task 1.7 as completed (`[x]`, ✅ emoji, "Completed" text)
-- [ ] Mark task 1.8 as completed (`[x]`, ✅ emoji, "Completed" text)
-- [ ] Verify formatting matches other completed tasks (1.1, 1.2, 1.4, 1.5, 1.6)
-- [ ] Commit: `docs: [#XXX] update roadmap to mark configure and test commands as completed`
+- [x] Open `docs/roadmap.md`
+- [x] Mark task 1.7 as completed (`[x]`, ✅ emoji, "Completed" text)
+- [x] Mark task 1.8 as completed (`[x]`, ✅ emoji, "Completed" text)
+- [x] Verify formatting matches other completed tasks (1.1, 1.2, 1.4, 1.5, 1.6)
+- [x] Commit: `docs: [#192] update roadmap to mark configure and test commands as completed`
 
-### Phase 2: Update README.md (15 minutes)
+### Phase 2: Update README.md ✅ Completed
 
-- [ ] Review current "Features" or "Commands" section
-- [ ] Update to list all 6 available commands
-- [ ] Add workflow example showing command sequence
-- [ ] Update any outdated command references
-- [ ] Verify markdown linting passes
-- [ ] Commit: `docs: [#XXX] update README with complete command workflow`
+- [x] Review current "Features" or "Commands" section
+- [x] Update to list all 6 available commands
+- [x] Add workflow example showing command sequence
+- [x] Update any outdated command references
+- [x] Verify markdown linting passes
+- [x] Commit: Initial commit included README updates
 
-### Phase 3: Update docs/codebase-architecture.md (15 minutes)
+### Phase 3: Update docs/codebase-architecture.md ✅ Completed
 
-- [ ] Review for command references and examples
-- [ ] Update presentation layer examples to show complete command set
-- [ ] Update any architecture diagrams if needed
-- [ ] Ensure consistency with current implementation
-- [ ] Verify markdown linting passes
-- [ ] Commit: `docs: [#XXX] update codebase architecture with current commands`
+- [x] Review for command references and examples
+- [x] Update presentation layer examples to show complete command set
+- [x] Update any architecture diagrams if needed
+- [x] Ensure consistency with current implementation
+- [x] Verify markdown linting passes
+- [x] Commit: `docs: [#192] update codebase architecture documentation`
 
-### Phase 4: Update docs/console-commands.md (20 minutes)
+### Phase 4: Update docs/console-commands.md ✅ Completed
 
-- [ ] Review existing command documentation
-- [ ] Add comprehensive `configure` command documentation
-- [ ] Add comprehensive `test` command documentation
-- [ ] Ensure all commands have:
-  - [ ] Purpose and description
-  - [ ] Command syntax
-  - [ ] Arguments and options
-  - [ ] Usage examples
-  - [ ] State transitions
-- [ ] Verify consistency across all command docs
-- [ ] Verify markdown linting passes
-- [ ] Commit: `docs: [#XXX] add configure and test command documentation`
+- [x] Review existing command documentation
+- [x] Add comprehensive `configure` command documentation
+- [x] Add comprehensive `test` command documentation
+- [x] Ensure all commands have:
+  - [x] Purpose and description
+  - [x] Command syntax
+  - [x] Arguments and options
+  - [x] Usage examples
+  - [x] State transitions
+- [x] Verify consistency across all command docs
+- [x] Verify markdown linting passes
+- [x] Commit: `docs: [#192] update console commands reference`
 
-### Phase 5: Create docs/user-guide/commands/ (45 minutes)
+### Phase 5: Create docs/user-guide/commands/ ✅ Completed
 
-- [ ] Create directory: `docs/user-guide/commands/`
-- [ ] Create `README.md` with overview of all commands
-- [ ] Create `create-template.md` with detailed guide
-- [ ] Create `create-environment.md` with detailed guide
-- [ ] Create `provision.md` with detailed guide
-- [ ] Create `configure.md` with detailed guide
-- [ ] Create `test.md` with detailed guide
-- [ ] Create `destroy.md` with detailed guide
-- [ ] Each guide should include:
-  - [ ] Purpose and use case
-  - [ ] Prerequisites
-  - [ ] Command syntax
-  - [ ] Step-by-step instructions
-  - [ ] Examples with output
-  - [ ] Troubleshooting
-  - [ ] State transitions
-- [ ] Verify markdown linting passes for all files
-- [ ] Commit: `docs: [#XXX] add comprehensive user guide for all commands`
+> **Note**: Created one file per first-level command (not per subcommand), consolidating `create template` and `create environment` into single `create.md` file.
 
-### Phase 6: Create docs/user-guide/quick-start.md (30 minutes)
+- [x] Create directory: `docs/user-guide/commands/`
+- [x] Create `README.md` with overview of all commands
+- [x] Create `create.md` with detailed guide (covers both template and environment subcommands)
+- [x] Create `provision.md` with detailed guide
+- [x] Create `configure.md` with detailed guide
+- [x] Create `test.md` with detailed guide
+- [x] Use existing `destroy.md` (already present)
+- [x] Each guide includes:
+  - [x] Purpose and use case
+  - [x] Prerequisites
+  - [x] Command syntax
+  - [x] Step-by-step instructions
+  - [x] Examples with output
+  - [x] Troubleshooting
+  - [x] State transitions
+- [x] Verify markdown linting passes for all files
+- [x] Commit: `docs: [#192] Create user guide for provision, configure, and test commands`
 
-- [ ] Create `docs/user-guide/quick-start.md`
-- [ ] Add introduction and prerequisites
-- [ ] Document Step 1: Generate configuration template
-- [ ] Document Step 2: Customize configuration
-- [ ] Document Step 3: Create environment
-- [ ] Document Step 4: Provision infrastructure
-- [ ] Document Step 5: Configure infrastructure
-- [ ] Document Step 6: Test deployment
-- [ ] Document Step 7: Destroy environment
-- [ ] Include actual command examples
-- [ ] Add troubleshooting section
-- [ ] Add "Next Steps" section
-- [ ] Verify markdown linting passes
-- [ ] Commit: `docs: [#XXX] add quick-start guide for local deployment`
+### Phase 6: Create docs/user-guide/quick-start.md ✅ Completed
 
-### Phase 7: Update docs/user-guide/README.md (10 minutes)
+> **Important**: Fixed documentation to use config files **outside** `data/` folder (user config vs internal app data). Updated all examples to use proper JSON structure and correct CLI flags (`--env-file` not `--from-file`).
 
-- [ ] Update user guide index to link to new documents
-- [ ] Add links to `commands/` directory
-- [ ] Add link to `quick-start.md`
-- [ ] Ensure navigation is clear for end-users
-- [ ] Verify markdown linting passes
-- [ ] Commit: `docs: [#XXX] update user guide index with new documentation`
+- [x] Create `docs/user-guide/quick-start.md`
+- [x] Add introduction and prerequisites
+- [x] Document Step 1: Generate configuration template
+- [x] Document Step 2: Customize configuration
+- [x] Document Step 3: Create environment
+- [x] Document Step 4: Provision infrastructure
+- [x] Document Step 5: Configure infrastructure
+- [x] Document Step 6: Test deployment
+- [x] Document Step 7: Destroy environment
+- [x] Include actual command examples (verified end-to-end)
+- [x] Add troubleshooting section
+- [x] Add "Next Steps" section
+- [x] Verify markdown linting passes
+- [x] Commit: `docs: [#192] Create quick-start guide with correct config file paths`
 
-### Phase 8: Final Quality Checks (15 minutes)
+### Phase 7: Update docs/user-guide/README.md ✅ Completed
 
-- [ ] Run `./scripts/pre-commit.sh` to verify all linters pass
-- [ ] Check all markdown files for consistency
-- [ ] Verify all internal links work
-- [ ] Verify all command examples are accurate
-- [ ] Review all diffs to ensure only intended changes
-- [ ] Test command examples if possible
+- [x] Update user guide index to link to new documents
+- [x] Add links to `commands/` directory
+- [x] Add link to `quick-start.md`
+- [x] Ensure navigation is clear for end-users
+- [x] Verify markdown linting passes
+- [x] Commit: Will be included in final commit
+
+### Phase 8: Final Quality Checks ✅ Completed
+
+- [x] Run `./scripts/pre-commit.sh` to verify all linters pass
+- [x] Check all markdown files for consistency
+- [x] Verify all internal links work
+- [x] Verify all command examples are accurate
+- [x] Review all diffs to ensure only intended changes
+- [x] Test command examples end-to-end (workflow verified successfully)
 
 ## Acceptance Criteria
 
@@ -294,55 +297,61 @@ Both commands are fully implemented:
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
-- [ ] All markdown files pass linting (markdownlint)
-- [ ] All internal links are functional
-- [ ] All command examples are accurate
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh` ✅
+- [x] All markdown files pass linting (markdownlint) ✅
+- [x] All internal links are functional ✅
+- [x] All command examples are accurate ✅
 
 **Roadmap Updates**:
 
-- [ ] Task 1.7 marked as completed (`[x]`, ✅, "Completed")
-- [ ] Task 1.8 marked as completed (`[x]`, ✅, "Completed")
-- [ ] Formatting consistent with other completed tasks
+- [x] Task 1.7 marked as completed (`[x]`, ✅, "Completed") ✅
+- [x] Task 1.8 marked as completed (`[x]`, ✅, "Completed") ✅
+- [x] Formatting consistent with other completed tasks ✅
 
 **Existing Documentation Updates**:
 
-- [ ] `README.md` lists all 6 available commands
-- [ ] `README.md` includes workflow example
-- [ ] `docs/codebase-architecture.md` updated with current commands
-- [ ] `docs/console-commands.md` includes `configure` command
-- [ ] `docs/console-commands.md` includes `test` command
-- [ ] All command descriptions are consistent across files
+- [x] `README.md` lists all 6 available commands ✅
+- [x] `README.md` includes workflow example ✅
+- [x] `docs/codebase-architecture.md` updated with current commands ✅
+- [x] `docs/console-commands.md` includes `configure` command ✅
+- [x] `docs/console-commands.md` includes `test` command ✅
+- [x] All command descriptions are consistent across files ✅
 
 **New Documentation Created**:
 
-- [ ] `docs/user-guide/commands/README.md` exists
-- [ ] `docs/user-guide/commands/create-template.md` exists
-- [ ] `docs/user-guide/commands/create-environment.md` exists
-- [ ] `docs/user-guide/commands/provision.md` exists
-- [ ] `docs/user-guide/commands/configure.md` exists
-- [ ] `docs/user-guide/commands/test.md` exists
-- [ ] `docs/user-guide/commands/destroy.md` exists
-- [ ] Each command guide includes:
-  - [ ] Purpose and use case
-  - [ ] Prerequisites
-  - [ ] Command syntax
-  - [ ] Examples with output
-  - [ ] Troubleshooting
-  - [ ] State transitions
-- [ ] `docs/user-guide/quick-start.md` exists
-- [ ] Quick-start guide covers complete workflow (7 steps)
-- [ ] Quick-start guide includes troubleshooting
-- [ ] `docs/user-guide/README.md` links to new documentation
+- [x] `docs/user-guide/commands/README.md` exists ✅
+- [x] `docs/user-guide/commands/create.md` exists (consolidated template + environment) ✅
+- [x] `docs/user-guide/commands/provision.md` exists ✅
+- [x] `docs/user-guide/commands/configure.md` exists ✅
+- [x] `docs/user-guide/commands/test.md` exists ✅
+- [x] `docs/user-guide/commands/destroy.md` exists (was already present) ✅
+- [x] Each command guide includes:
+  - [x] Purpose and use case ✅
+  - [x] Prerequisites ✅
+  - [x] Command syntax ✅
+  - [x] Examples with output ✅
+  - [x] Troubleshooting ✅
+  - [x] State transitions ✅
+- [x] `docs/user-guide/quick-start.md` exists ✅
+- [x] Quick-start guide covers complete workflow (7 steps) ✅
+- [x] Quick-start guide includes troubleshooting ✅
+- [x] `docs/user-guide/README.md` links to new documentation ✅
 
 **Content Quality**:
 
-- [ ] All commands documented with consistent format
-- [ ] Examples are practical and realistic
-- [ ] State transitions clearly explained
-- [ ] Troubleshooting covers common issues
-- [ ] Documentation is user-friendly for end-users
-- [ ] Technical accuracy verified against implementation
+- [x] All commands documented with consistent format ✅
+- [x] Examples are practical and realistic (using test SSH keys from fixtures/) ✅
+- [x] State transitions clearly explained ✅
+- [x] Troubleshooting covers common issues ✅
+- [x] Documentation is user-friendly for end-users ✅
+- [x] Technical accuracy verified against implementation (workflow tested end-to-end) ✅
+
+**Additional Achievements**:
+
+- [x] Fixed config file path strategy (user config files outside `data/` folder) ✅
+- [x] Corrected CLI flag documentation (`--env-file` not `--from-file`) ✅
+- [x] Verified complete workflow end-to-end ✅
+- [x] Added proper JSON structure examples with correct field names ✅
 
 ## Related Documentation
 
