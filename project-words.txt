@@ -1,4 +1,6 @@
 AAAAB
+AAAAC
+AAAAI
 addgroup
 adduser
 AGENTS
@@ -142,6 +144,7 @@ readlink
 reentrancy
 Repomix
 reprioritize
+reprovision
 reprovisioning
 reqwest
 resolv

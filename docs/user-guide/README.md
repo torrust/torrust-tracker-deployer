@@ -49,6 +49,8 @@ The Torrust Tracker Deployer is currently in active development. The following f
 
 ## Quick Start
 
+> **📖 For a complete step-by-step guide**, see the [Quick Start Guide](quick-start.md) which covers the full deployment workflow from template generation to infrastructure testing.
+
 ### Prerequisites
 
 Before using the Torrust Tracker Deployer, ensure you have:
@@ -399,7 +401,8 @@ This shows real-time progress and detailed error information.
 
 ### Documentation
 
-- **[Command Reference](commands.md)** - Complete command documentation
+- **[Quick Start Guide](quick-start.md)** - Complete deployment workflow walkthrough
+- **[Command Reference](commands/README.md)** - Detailed documentation for all commands
 - **[Logging Guide](logging.md)** - Logging configuration and best practices
 - **[Template Customization](template-customization.md)** - Advanced configuration options
 
@@ -421,8 +424,8 @@ For contributors and developers:
 
 Now that you understand the basics:
 
-1. **Try the Quick Start** - Create your first environment
-2. **Explore Commands** - Read the [Command Reference](commands.md)
+1. **Follow the [Quick Start Guide](quick-start.md)** - Complete deployment workflow tutorial
+2. **Explore Commands** - Read the detailed [Command Reference](commands/README.md)
 3. **Configure Logging** - Set up logging that fits your workflow
 4. **Report Feedback** - Share your experience on GitHub
 

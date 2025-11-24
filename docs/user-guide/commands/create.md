@@ -1,101 +1,60 @@
-# Create Environment Command
+# `create` - Environment Creation Command
 
-**Status**: ✅ Fully Implemented
+Create deployment environments and generate configuration templates.
 
-Create a new deployment environment from a configuration file. This command initializes the environment with validated configuration, SSH credentials, and prepares it for provisioning.
+## Overview
 
-**Use when**:
+The `create` command provides two subcommands for environment management:
 
-- Setting up a new deployment environment
-- Initializing environment configuration from templates
-- Preparing environments for provisioning
+- **`create template`** - Generate configuration template files
+- **`create environment`** - Create deployment environments from configuration
 
-**Command**: `torrust-tracker-deployer create environment`
+## Subcommands
 
-## Syntax
+### `create template` - Generate Configuration Template
+
+Generate a JSON configuration template file with placeholder values.
+
+**Purpose**: Creates a template file that you can customize for your deployment needs. This is the first step in creating a new deployment environment.
+
+#### Syntax
 
 ```bash
-torrust-tracker-deployer create environment --env-file <FILE> [OPTIONS]
+torrust-tracker-deployer create template [OUTPUT_PATH]
 ```
 
-**Required Arguments**:
+#### Arguments
 
-- `--env-file <FILE>` (or `-f <FILE>`) - Path to environment configuration file (JSON format)
+- `OUTPUT_PATH` (optional) - Path where the template file will be created
+  - Default: `environment-template.json` in current directory
+  - Parent directories will be created automatically if they don't exist
 
-**Optional Flags**:
+#### Examples
 
-- `--working-dir <DIR>` - Working directory for environment data (default: `.`)
-- `--log-output <OUTPUT>` - Logging output mode (default: `file-only`)
-  - `file-only`: Write logs to file only (production mode)
-  - `file-and-stderr`: Write logs to both file and stderr (development/testing mode)
-- `--log-file-format <FORMAT>` - Format for file logging (default: `compact`)
-  - `pretty`: Pretty-printed output for development (no ANSI codes in files)
-  - `json`: JSON output for production environments
-  - `compact`: Compact output for minimal verbosity
-- `--log-stderr-format <FORMAT>` - Format for stderr logging (default: `pretty`)
-  - `pretty`: Pretty-printed output with colors for development
-  - `json`: JSON output for machine processing
-  - `compact`: Compact output with colors for minimal verbosity
-- `--log-dir <DIR>` - Log directory (default: `./data/logs`)
+**Generate template in current directory**:
 
-## Configuration File Format
-
-### JSON Format
-
-```json
-{
-  "environment": {
-    "name": "my-environment"
-  },
-  "ssh_credentials": {
-    "private_key_path": "~/.ssh/id_rsa",
-    "public_key_path": "~/.ssh/id_rsa.pub",
-    "username": "torrust",
-    "port": 22
-  }
-}
+```bash
+torrust-tracker-deployer create template
+# Creates: ./environment-template.json
 ```
 
-### Field Descriptions
+**Generate template with custom path**:
 
-**environment.name** (required):
+```bash
+torrust-tracker-deployer create template config/my-env.json
+# Creates: ./config/my-env.json
+```
 
-- Unique environment identifier
-- Must be lowercase alphanumeric with hyphens only
-- Used for directory names and resource identification
-- Example values: `dev-local`, `staging`, `production-01`
+**Generate template in specific directory**:
 
-**ssh_credentials.private_key_path** (required):
+```bash
+torrust-tracker-deployer create template /path/to/configs/production.json
+# Creates: /path/to/configs/production.json
+```
 
-- Path to SSH private key file
-- Supports `~` for home directory expansion
-- File must exist and be readable
-- Used for connecting to provisioned infrastructure
+#### Template Structure
 
-**ssh_credentials.public_key_path** (required):
-
-- Path to SSH public key file
-- Supports `~` for home directory expansion
-- File must exist and be readable
-- Used for configuring VM access
-
-**ssh_credentials.username** (required):
-
-- SSH username for VM access
-- Default value: `torrust`
-- Used for connecting to provisioned infrastructure
-
-**ssh_credentials.port** (optional):
-
-- SSH port number
-- Default value: `22` (standard SSH port)
-- Port number for SSH connections
-
-## Basic Usage
-
-### Generate and Use Template
-
-The recommended workflow is to generate a template first:
+The generated template includes:
 
 ```bash
 # Step 1: Generate configuration template

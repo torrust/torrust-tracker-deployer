@@ -1,25 +1,28 @@
 # Console Commands - Torrust Tracker Deployer
 
-> **Note**: This document is part of the architecture planning and specification phase.
-> This document describes the planned console commands for the Torrust Tracker Deployer tool. Most functionality is **not yet implemented** in production code.
+> **Note**: This document describes the console commands for the Torrust Tracker Deployer tool.
 
 ## Current Implementation Status
 
-### What's Currently Implemented (E2E Tests Only)
+### ✅ What's Currently Implemented (Available via CLI)
 
-- **Provision**: VM creation with OpenTofu (LXD containers)
-- **Configure**: Partial VM setup (Docker and Docker Compose installation via Ansible)
+- **Create Template**: Generate environment configuration template (JSON)
+- **Create Environment**: Create new deployment environment from configuration file
+- **Provision**: VM infrastructure provisioning with OpenTofu (LXD instances)
+- **Configure**: VM configuration with Docker and Docker Compose installation via Ansible
+- **Test**: Verification of deployment infrastructure (cloud-init, Docker, Docker Compose)
+- **Destroy**: Infrastructure cleanup and environment destruction
 - Template rendering system (OpenTofu and Ansible templates)
-- SSH connectivity and validation
-- Infrastructure cleanup/destroy
+- SSH connectivity validation
+- Environment state management and persistence
 
-### What's NOT Yet Implemented
+### ⚠️ What's NOT Yet Implemented
 
-- Multiple environment support (only one hardcoded environment)
 - Application deployment (Docker Compose stack for Torrust Tracker)
-- Environment state management
-- Production console application structure
-- Most command logic (exists only in E2E tests)
+- Release command (deploy application files and configuration)
+- Run command (start/stop Torrust Tracker services)
+- Porcelain commands (high-level `deploy` command)
+- Multiple cloud provider support (only LXD currently supported)
 
 ## Deployment States
 
@@ -34,28 +37,33 @@ The deployment follows a linear state progression:
 
 Each command transitions the deployment to the next state.
 
-## Minimum Deployment Workflow
+## Current Deployment Workflow
 
-The essential commands for a complete Torrust Tracker deployment:
+The currently available commands for infrastructure management:
 
 ```bash
-# 1. Create environment configuration
-torrust-tracker-deployer create myenv
+# 1. Generate configuration template
+torrust-tracker-deployer create template my-env.json
 
-# 2. Provision VM infrastructure
-torrust-tracker-deployer provision myenv
+# 2. Edit my-env.json with your settings
 
-# 3. Configure system (Docker, networking)
-torrust-tracker-deployer configure myenv
+# 3. Create environment from configuration
+torrust-tracker-deployer create environment -f my-env.json
 
-# 4. Deploy Torrust Tracker application
-torrust-tracker-deployer release myenv
+# 4. Provision VM infrastructure
+torrust-tracker-deployer provision my-environment
 
-# At this point, the tracker is deployed and can be started manually
-# Later: torrust-tracker-deployer run myenv (when implemented)
+# 5. Configure system (Docker, Docker Compose)
+torrust-tracker-deployer configure my-environment
+
+# 6. Verify deployment infrastructure
+torrust-tracker-deployer test my-environment
+
+# 7. Destroy environment when done
+torrust-tracker-deployer destroy my-environment
 ```
 
-This workflow takes an environment from non-existent to having a fully deployed Torrust Tracker ready to run.
+This workflow deploys VM infrastructure with Docker and Docker Compose installed, ready for application deployment (coming soon with `release` and `run` commands).
 
 ## Hybrid Command Architecture
 
@@ -100,26 +108,27 @@ torrust-tracker-deployer run myenv
 ## Quick Command Reference
 
 ```bash
-# Utility Commands
-torrust-tracker-deployer check           # Validate required tools
-torrust-tracker-deployer list            # List all environments
+# Utility Commands (Planned)
+torrust-tracker-deployer check           # Validate required tools (not yet implemented)
+torrust-tracker-deployer list            # List all environments (not yet implemented)
 
 # Environment Management
-torrust-tracker-deployer create <env>    # Create new environment configuration
-torrust-tracker-deployer status <env>    # Show environment info
-torrust-tracker-deployer destroy <env>   # Clean up infrastructure
+torrust-tracker-deployer create template [PATH]         # ✅ Generate configuration template
+torrust-tracker-deployer create environment -f <file>   # ✅ Create environment from config
+torrust-tracker-deployer status <env>                   # Show environment info (not yet implemented)
+torrust-tracker-deployer destroy <env>                  # ✅ Clean up infrastructure
 
-# Porcelain Commands (High-Level)
-torrust-tracker-deployer deploy <env>    # Smart deployment from current state (future)
+# Porcelain Commands (High-Level) - Future
+torrust-tracker-deployer deploy <env>    # Smart deployment from current state (not yet implemented)
 
 # Plumbing Commands (Low-Level)
-torrust-tracker-deployer provision <env> # Create VM infrastructure
-torrust-tracker-deployer configure <env> # Setup VM (Docker, networking)
-torrust-tracker-deployer release <env>   # Deploy application files
-torrust-tracker-deployer run <env>       # Start application stack
+torrust-tracker-deployer provision <env> # ✅ Create VM infrastructure
+torrust-tracker-deployer configure <env> # ✅ Setup VM (Docker, Docker Compose)
+torrust-tracker-deployer release <env>   # Deploy application files (not yet implemented)
+torrust-tracker-deployer run <env>       # Start application stack (not yet implemented)
 
 # Validation
-torrust-tracker-deployer test <env>      # Run smoke tests
+torrust-tracker-deployer test <env>      # ✅ Verify infrastructure (cloud-init, Docker, Docker Compose)
 ```
 
 ## Detailed Command Specifications
@@ -307,35 +316,43 @@ torrust-tracker-deployer provision <environment> [OPTIONS]
 
 ### `configure` - System Configuration
 
-**Status**: 🔄 Partially Implemented (Docker & Docker Compose only)  
+**Status**: ✅ Implemented  
 **State Transition**: `provisioned` → `configured`  
-**Purpose**: Set up the basic system environment and dependencies.
+**Purpose**: Configure the provisioned infrastructure with required software and system settings.
 
 ```bash
-torrust-tracker-deployer configure <environment> [OPTIONS]
+torrust-tracker-deployer configure <environment>
 ```
 
 **Current Implementation**:
 
 - Renders Ansible templates with runtime variables
 - Waits for cloud-init completion
-- Installs Docker via Ansible playbook
+- Installs Docker engine via Ansible playbook
 - Installs Docker Compose via Ansible playbook
+- Verifies successful installation
+- Updates environment state to `configured`
 
-**Complete Configuration Should Include**:
+**Planned Enhancements** (Future):
 
-- System updates and security patches
-- Docker and Docker Compose installation ✅
-- Firewall configuration ❌
-- User account setup ❌
-- System monitoring setup ❌
-- Log rotation configuration ❌
+- System security configuration (UFW firewall, automatic updates) - Partially implemented in app layer
+- User account setup
+- System monitoring setup
+- Log rotation configuration
 
-**Options**:
+**Example**:
 
-- `--skip-updates` - Skip system package updates
-- `--configure-firewall` - Set up firewall rules
-- `--install-monitoring` - Install monitoring agents
+```bash
+# Configure provisioned environment
+torrust-tracker-deployer configure my-environment
+
+# Output:
+# ✓ Rendering Ansible templates...
+# ✓ Waiting for cloud-init completion...
+# ✓ Installing Docker...
+# ✓ Installing Docker Compose...
+# ✓ Environment configured successfully
+```
 
 ---
 
@@ -390,28 +407,49 @@ torrust-tracker-deployer run <environment> [OPTIONS]
 
 ---
 
-### `test` - Deployment Validation
+### `test` - Infrastructure Validation
 
-**Status**: ❌ Not Implemented  
-**State Transition**: None (validation only)  
-**Purpose**: Run smoke tests against a deployed environment.
+**Status**: ✅ Implemented  
+**State Transition**: None (validation only, does not change environment state)  
+**Purpose**: Verify that the deployment infrastructure is properly configured and ready.
 
 ```bash
-torrust-tracker-deployer test <environment> [OPTIONS]
+torrust-tracker-deployer test <environment>
 ```
 
-**Should Include**:
+**Current Implementation**:
 
-- HTTP endpoint health checks
-- Torrent tracker API validation
-- Database connectivity tests
+- Verifies cloud-init completion on the provisioned instance
+- Validates Docker installation and availability
+- Validates Docker Compose installation and version
+- Returns success/failure status for the entire infrastructure stack
+
+**Use Cases**:
+
+- Verify infrastructure after provisioning
+- Confirm configuration was successful
+- Validate environment before application deployment
+- Troubleshooting infrastructure issues
+
+**Example**:
+
+```bash
+# Test infrastructure readiness
+torrust-tracker-deployer test my-environment
+
+# Output:
+# ✓ Checking cloud-init status...
+# ✓ Validating Docker installation...
+# ✓ Validating Docker Compose installation...
+# ✓ All infrastructure checks passed
+```
+
+**Planned Enhancements** (Future):
+
+- HTTP endpoint health checks (when application is deployed)
+- Torrent tracker API validation (when tracker is running)
+- Database connectivity tests (when database is deployed)
 - Performance baseline checks
-
-**Options**:
-
-- `--suite <basic|full|performance>` - Test suite selection
-- `--timeout <seconds>` - Test timeout
-- `--report <format>` - Test report format (json, xml, text)
 
 ---
 
@@ -473,36 +511,37 @@ torrust-tracker-deployer destroy <environment> [OPTIONS]
 
 ## Implementation Priority
 
-### Phase 1: Plumbing Commands (High Priority)
+### Phase 1: Plumbing Commands (High Priority) - ✅ MOSTLY COMPLETE
 
 Essential low-level commands for the complete deployment workflow:
 
-- `create` - Environment initialization (required to create environments)
-- `provision` - Move from E2E to production ✅ Partially done
-- `configure` - Complete system setup 🔄 In progress
-- `release` - Application deployment (critical for getting Torrust Tracker on VM)
-- `destroy` - Infrastructure cleanup 🔄 Being implemented
+- ✅ `create template` - Template generation (completed)
+- ✅ `create environment` - Environment initialization (completed)
+- ✅ `provision` - Infrastructure provisioning (completed)
+- ✅ `configure` - System configuration (completed)
+- ✅ `test` - Infrastructure validation (completed)
+- ✅ `destroy` - Infrastructure cleanup (completed)
+- ❌ `release` - Application deployment (not yet implemented - critical for deploying Torrust Tracker)
+- ❌ `run` - Service management (not yet implemented)
 
 ### Phase 2: Operations Commands (Medium Priority)
 
 Management and operational commands:
 
-- `run` - Service management (users can start manually after release)
-- `status` - Environment monitoring
-- `list` - Environment listing and overview
+- ❌ `status` - Environment monitoring (not yet implemented)
+- ❌ `list` - Environment listing and overview (not yet implemented)
 
 ### Phase 3: Porcelain Commands (Medium Priority)
 
 High-level commands built on top of stable plumbing commands:
 
-- `deploy` - Smart deployment orchestration (porcelain command)
+- ❌ `deploy` - Smart deployment orchestration (not yet implemented - porcelain command)
 
 ### Phase 4: Enhanced Functionality (Low Priority)
 
 Additional features and utilities:
 
-- `test` - Automated validation
-- `check` - Tool validation
+- ❌ `check` - Tool validation (not yet implemented)
 
 ## Notes
 
