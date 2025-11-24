@@ -36,25 +36,34 @@
 /// ```
 pub fn display_getting_started() {
     println!("🏗️  Torrust Tracker Deployer");
-    println!("=========================");
+    println!("===========================");
     println!();
-    println!("This repository provides automated deployment infrastructure for Torrust tracker projects.");
-    println!("The infrastructure includes VM provisioning with OpenTofu and configuration");
-    println!("management with Ansible playbooks.");
+    println!("Automated deployment tool for the Torrust Tracker application.");
+    println!("Manage complete deployment lifecycles from environment creation to verification.");
     println!();
-    println!("📋 Getting Started:");
-    println!("   Please follow the instructions in the README.md file to:");
-    println!("   1. Set up the required dependencies (OpenTofu, Ansible, LXD)");
-    println!("   2. Provision the deployment infrastructure");
-    println!("   3. Deploy and configure the services");
+    println!("📋 Quick Start:");
+    println!("   1. Check dependencies:");
+    println!(
+        "      cargo run --package torrust-dependency-installer --bin dependency-installer check"
+    );
     println!();
-    println!("🧪 Running E2E Tests:");
-    println!("   Use the e2e tests binaries to run end-to-end tests:");
-    println!("   cargo e2e-provision && cargo e2e-config");
+    println!("   2. Create and deploy an environment:");
+    println!("      torrust-tracker-deployer create template my-env.json");
+    println!("      # Edit my-env.json with your SSH keys");
+    println!("      torrust-tracker-deployer create environment --env-file my-env.json");
+    println!("      torrust-tracker-deployer provision my-environment");
+    println!("      torrust-tracker-deployer configure my-environment");
+    println!("      torrust-tracker-deployer test my-environment");
     println!();
-    println!("📖 For detailed instructions, see: README.md");
+    println!("   3. Clean up when done:");
+    println!("      torrust-tracker-deployer destroy my-environment");
     println!();
-    println!("💡 To see available commands, run: torrust-tracker-deployer --help");
+    println!("📖 Documentation:");
+    println!("   - Quick Start Guide: docs/user-guide/quick-start.md");
+    println!("   - Command Reference: docs/user-guide/commands/README.md");
+    println!("   - Main README: README.md");
+    println!();
+    println!("💡 To see all available commands: torrust-tracker-deployer --help");
 }
 
 /// Display troubleshooting information for common issues
