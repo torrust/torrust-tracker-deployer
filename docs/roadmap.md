@@ -45,12 +45,12 @@ When starting work on a new feature:
   - **Note:** The App layer ProvisionCommand is already implemented, this task focuses on the console subcommand interface
   - Implementation should call the existing ProvisionCommand business logic
   - Handle user input, validation, and output presentation
-- [ ] **1.7** Create command `torrust-tracker-deployer configure` to configure provisioned infrastructure (UI layer only) - [Issue #180](https://github.com/torrust/torrust-tracker-deployer/issues/180)
+- [x] **1.7** Create command `torrust-tracker-deployer configure` to configure provisioned infrastructure (UI layer only) ✅ Completed - [Issue #180](https://github.com/torrust/torrust-tracker-deployer/issues/180)
   - **Note:** The App layer ConfigureCommand is already implemented, this task focuses on the console subcommand interface
   - Implementation should call the existing ConfigureCommandHandler business logic
   - Handle user input, validation, and output presentation
   - Enables transition from "provisioned" to "configured" state via CLI
-- [ ] **1.8** Create command `torrust-tracker-deployer test` to verify deployment infrastructure (UI layer only) - [Issue #188](https://github.com/torrust/torrust-tracker-deployer/issues/188)
+- [x] **1.8** Create command `torrust-tracker-deployer test` to verify deployment infrastructure (UI layer only) ✅ Completed - [Issue #188](https://github.com/torrust/torrust-tracker-deployer/issues/188)
   - **Note:** The App layer TestCommandHandler is already implemented, this task focuses on the console subcommand interface
   - Implementation should call the existing TestCommandHandler business logic
   - Handle user input, validation, and output presentation
