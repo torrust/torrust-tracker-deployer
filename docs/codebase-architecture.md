@@ -50,10 +50,11 @@ The project follows **Domain-Driven Design** principles with a layered architect
 - **Rules**: Depends on application layer, handles all user-facing concerns
 - **Example**: CLI subcommands calling application command handlers with user-friendly error messages
 - **Module Structure**:
-  - `cli/` - Command-line argument parsing and validation
-  - `commands/` - Command execution handlers and dispatch logic
+  - `input/cli/` - Command-line argument parsing and validation
+  - `controllers/` - Command execution controllers and dispatch logic
+  - `dispatch/` - Command routing and execution context
+  - `views/` - User output formatting and verbosity control
   - `errors.rs` - Unified error types with tiered help system
-  - `user_output.rs` - User-facing output management and verbosity control
 
 **Domain Layer** (`src/domain/`):
 
@@ -101,7 +102,8 @@ The project implements a **three-level architecture** for deployment automation:
 
 - Orchestrates multiple steps to achieve command objectives
 - Manages command-specific error handling and reporting
-- Currently implemented: `ProvisionCommand`, `ConfigureCommand`
+- Currently implemented: `CreateCommand`, `ProvisionCommand`, `ConfigureCommand`, `TestCommand`, `DestroyCommand`
+- Available CLI commands: `create template`, `create environment`, `provision`, `configure`, `test`, `destroy`
 
 ### Level 2: Steps
 
@@ -216,15 +218,19 @@ Application initialization and lifecycle management:
 **CLI Interface and User Interaction:**
 
 - ✅ `src/presentation/mod.rs` - Presentation layer root module with exports
-- ✅ `src/presentation/cli/` - Command-line interface parsing and structure
-  - `cli/mod.rs` - Main Cli struct and global argument definitions
-  - `cli/args.rs` - Global CLI arguments (logging configuration)
-  - `cli/commands.rs` - Subcommand definitions (destroy, future commands)
-- ✅ `src/presentation/commands/` - Command execution handlers
-  - `commands/mod.rs` - Unified command dispatch and error handling
-  - `commands/destroy.rs` - Destroy command handler with error management
+- ✅ `src/presentation/input/cli/` - Command-line interface parsing and structure
+  - `input/cli/mod.rs` - Main Cli struct and global argument definitions
+  - `input/cli/args.rs` - Global CLI arguments (logging configuration)
+  - `input/cli/commands.rs` - Subcommand definitions (create, provision, configure, test, destroy)
+- ✅ `src/presentation/controllers/` - Command execution controllers
+  - `controllers/create/` - Create command with subcommands (template, environment)
+  - `controllers/provision/` - Provision command handler
+  - `controllers/configure/` - Configure command handler
+  - `controllers/test/` - Test command handler
+  - `controllers/destroy/` - Destroy command handler
+- ✅ `src/presentation/dispatch/` - Command routing and execution context
+- ✅ `src/presentation/views/` - User output formatting and message rendering
 - ✅ `src/presentation/errors.rs` - Unified error types with tiered help system
-- ✅ `src/presentation/user_output.rs` - User-facing output management and verbosity control
 
 ### Domain Layer
 
@@ -251,9 +257,12 @@ Application initialization and lifecycle management:
 **Level 1: High-Level Commands:**
 
 - ✅ `src/application/mod.rs` - Application layer root module
-- ✅ `src/application/commands/mod.rs` - Command coordination
-- ✅ `src/application/commands/provision.rs` - Infrastructure provisioning command
-- ✅ `src/application/commands/configure.rs` - Infrastructure configuration command
+- ✅ `src/application/command_handlers/mod.rs` - Command handler coordination
+- ✅ `src/application/command_handlers/create/` - Environment creation command handler
+- ✅ `src/application/command_handlers/provision/` - Infrastructure provisioning command handler
+- ✅ `src/application/command_handlers/configure/` - Infrastructure configuration command handler
+- ✅ `src/application/command_handlers/test/` - Infrastructure testing command handler
+- ✅ `src/application/command_handlers/destroy/` - Infrastructure destruction command handler
 
 **Level 2: Granular Deployment Steps:**
 
