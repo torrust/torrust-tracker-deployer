@@ -110,10 +110,10 @@ impl TestSubcommandError {
     ///
     /// # #[tokio::main]
     /// # async fn main() {
-    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
-    /// if let Err(e) = test::handle("test-env", Path::new("."), &context).await {
+    /// if let Err(e) = test::handle("test-env", &context).await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
@@ -123,7 +123,7 @@ impl TestSubcommandError {
     /// Direct usage (for testing):
     ///
     /// ```rust
-    /// use std::path::Path;
+    /// use std::path::{Path, PathBuf};
     /// use std::sync::Arc;
     /// use parking_lot::ReentrantMutex;
     /// use std::cell::RefCell;
@@ -135,8 +135,10 @@ impl TestSubcommandError {
     /// # #[tokio::main]
     /// # async fn main() {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-    /// let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
-    /// if let Err(e) = test::handle_test_command("test-env", Path::new("."), repository_factory, &output).await {
+    /// let data_dir = PathBuf::from("./data");
+    /// let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+    /// let repository = repository_factory.create(data_dir);
+    /// if let Err(e) = test::handle_test_command("test-env", repository, &output).await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }

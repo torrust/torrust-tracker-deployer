@@ -4,7 +4,6 @@
 //! including environment validation, repository initialization, and user interaction.
 
 use std::cell::RefCell;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
@@ -12,7 +11,6 @@ use parking_lot::ReentrantMutex;
 use crate::application::command_handlers::TestCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::dispatch::context::ExecutionContext;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
@@ -66,23 +64,20 @@ const TEST_WORKFLOW_STEPS: usize = 4;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
 /// let context = ExecutionContext::new(container);
-/// let working_dir = Path::new("./test");
 ///
-/// test::handle("my-env", working_dir, &context).await?;
+/// test::handle("my-env", &context).await?;
 /// # Ok(())
 /// # }
 /// ```
 pub async fn handle(
     environment_name: &str,
-    working_dir: &std::path::Path,
     context: &ExecutionContext,
 ) -> Result<(), TestSubcommandError> {
     handle_test_command(
         environment_name,
-        working_dir,
-        context.repository_factory(),
+        context.repository(),
         &context.user_output(),
     )
     .await
@@ -133,10 +128,10 @@ pub async fn handle(
 ///
 /// # #[tokio::main]
 /// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal);
+/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 /// let context = ExecutionContext::new(Arc::new(container));
 ///
-/// if let Err(e) = test::handle("test-env", Path::new("."), &context).await {
+/// if let Err(e) = test::handle("test-env", &context).await {
 ///     eprintln!("Test failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
@@ -146,7 +141,7 @@ pub async fn handle(
 /// Direct usage (for testing or specialized scenarios):
 ///
 /// ```rust
-/// use std::path::Path;
+/// use std::path::{Path, PathBuf};
 /// use std::sync::Arc;
 /// use parking_lot::ReentrantMutex;
 /// use std::cell::RefCell;
@@ -158,8 +153,10 @@ pub async fn handle(
 /// # #[tokio::main]
 /// # async fn main() {
 /// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-/// let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
-/// if let Err(e) = test::handle_test_command("test-env", Path::new("."), repository_factory, &user_output).await {
+/// let data_dir = PathBuf::from("./data");
+/// let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+/// let repository = repository_factory.create(data_dir);
+/// if let Err(e) = test::handle_test_command("test-env", repository, &user_output).await {
 ///     eprintln!("Test failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
@@ -168,17 +165,12 @@ pub async fn handle(
 #[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
 pub async fn handle_test_command(
     environment_name: &str,
-    working_dir: &std::path::Path,
-    repository_factory: Arc<RepositoryFactory>,
+    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
 ) -> Result<(), TestSubcommandError> {
-    TestCommandController::new(
-        working_dir.to_path_buf(),
-        repository_factory,
-        user_output.clone(),
-    )
-    .execute(environment_name)
-    .await
+    TestCommandController::new(repository, user_output.clone())
+        .execute(environment_name)
+        .await
 }
 
 // ============================================================================
@@ -217,16 +209,13 @@ impl TestCommandController {
     /// # Arguments
     ///
     /// * `working_dir` - Working directory containing the data folder
-    /// * `repository_factory` - Factory for creating environment repositories
+    /// * `repository` - Environment repository with Send + Sync bounds
     /// * `user_output` - Shared output service for user feedback
     #[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
     fn new(
-        working_dir: PathBuf,
-        repository_factory: Arc<RepositoryFactory>,
+        repository: Arc<dyn EnvironmentRepository + Send + Sync>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let data_dir = working_dir.join("data");
-        let repository = repository_factory.create(data_dir);
         let progress = ProgressReporter::new(user_output, TEST_WORKFLOW_STEPS);
 
         Self {

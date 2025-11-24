@@ -10,6 +10,7 @@ mod integration_tests {
 
     use parking_lot::ReentrantMutex;
 
+    use crate::domain::environment::repository::EnvironmentRepository;
     use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
     use crate::presentation::controllers::configure;
     use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
@@ -20,17 +21,21 @@ mod integration_tests {
 
     /// Create test dependencies for configure command integration tests
     #[allow(clippy::type_complexity)]
-    fn create_test_dependencies() -> (
+    fn create_test_dependencies(
+        temp_dir: &tempfile::TempDir,
+    ) -> (
         Arc<ReentrantMutex<RefCell<UserOutput>>>,
-        Arc<RepositoryFactory>,
+        Arc<dyn EnvironmentRepository + Send + Sync>,
         Arc<dyn Clock>,
     ) {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+        let data_dir = temp_dir.path().join("data");
+        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+        let repository = repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
 
-        (user_output, repository_factory, clock)
+        (user_output, repository, clock)
     }
 
     #[tokio::test]
@@ -38,12 +43,11 @@ mod integration_tests {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
-        let (user_output, repository_factory, clock) = create_test_dependencies();
+        let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = configure::handle_configure_command(
             "invalid_name_with_underscore",
-            temp_dir.path(),
-            repository_factory,
+            repository,
             clock,
             &user_output,
         )
@@ -62,16 +66,10 @@ mod integration_tests {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
-        let (user_output, repository_factory, clock) = create_test_dependencies();
+        let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result = configure::handle_configure_command(
-            "bad_name",
-            temp_dir.path(),
-            repository_factory,
-            clock,
-            &user_output,
-        )
-        .await;
+        let result =
+            configure::handle_configure_command("bad_name", repository, clock, &user_output).await;
 
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -81,16 +79,15 @@ mod integration_tests {
     }
 
     #[tokio::test]
-    async fn configure_command_handles_nonexistent_environment() {
+    async fn configure_command_propagates_repository_errors() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
-        let (user_output, repository_factory, clock) = create_test_dependencies();
+        let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = configure::handle_configure_command(
-            "nonexistent-env",
-            temp_dir.path(),
-            repository_factory,
+            "nonexistent-environment",
+            repository,
             clock,
             &user_output,
         )

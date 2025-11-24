@@ -111,10 +111,10 @@ impl DestroySubcommandError {
     ///
     /// # #[tokio::main]
     /// # async fn main() {
-    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
-    /// if let Err(e) = destroy::handle("test-env", Path::new("."), &context).await {
+    /// if let Err(e) = destroy::handle("test-env", &context).await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
@@ -124,7 +124,7 @@ impl DestroySubcommandError {
     /// Direct usage (for testing):
     ///
     /// ```rust
-    /// use std::path::Path;
+    /// use std::path::{Path, PathBuf};
     /// use std::sync::Arc;
     /// use std::time::Duration;
     /// use parking_lot::ReentrantMutex;
@@ -137,9 +137,11 @@ impl DestroySubcommandError {
     /// # #[tokio::main]
     /// # async fn main() {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-    /// let repository_factory = Arc::new(RepositoryFactory::new(Duration::from_secs(30)));
+    /// let data_dir = PathBuf::from("./data");
+    /// let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
+    /// let repository = repository_factory.create(data_dir);
     /// let clock = Arc::new(SystemClock);
-    /// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), repository_factory, clock, &output).await {
+    /// if let Err(e) = destroy::handle_destroy_command("test-env", repository, clock, &output).await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }

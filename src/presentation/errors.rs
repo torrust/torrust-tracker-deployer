@@ -145,7 +145,7 @@ impl CommandError {
             Self::Destroy(e) => e.help(),
             Self::Provision(e) => e.help(),
             Self::Configure(e) => e.help(),
-            Self::Test(e) => e.help(),
+            Self::Test(e) => e.as_ref().help(),
             Self::UserOutputLockFailed => {
                 "User Output Lock Failed - Detailed Troubleshooting:
 

@@ -60,7 +60,7 @@ const TEMPLATE_CREATION_WORKFLOW_STEPS: usize = 2;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
 /// let context = ExecutionContext::new(container);
 /// let output_path = Path::new("./environment-template.json");
 ///
@@ -117,7 +117,7 @@ pub async fn handle(
 ///
 /// # #[tokio::main]
 /// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal);
+/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 /// let context = ExecutionContext::new(Arc::new(container));
 ///
 /// if let Err(e) = template::handle(Path::new("template.json"), &context).await {

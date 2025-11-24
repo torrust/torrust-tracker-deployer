@@ -114,19 +114,19 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Destroy { environment } => {
-            destroy::handle(&environment, working_dir, context).await?;
+            destroy::handle(&environment, context).await?;
             Ok(())
         }
         Commands::Provision { environment } => {
-            provision::handle(&environment, working_dir, context).await?;
+            provision::handle(&environment, context).await?;
             Ok(())
         }
         Commands::Configure { environment } => {
-            configure::handle(&environment, working_dir, context).await?;
+            configure::handle(&environment, context).await?;
             Ok(())
         }
         Commands::Test { environment } => {
-            test::handle(&environment, working_dir, context).await?;
+            test::handle(&environment, context).await?;
             Ok(())
         } // Future commands will be added here as the Controller Layer expands:
           //

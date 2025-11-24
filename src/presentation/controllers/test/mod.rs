@@ -28,11 +28,11 @@
 //!
 //! # #[tokio::main]
 //! # async fn main() {
-//! let container = Container::new(VerbosityLevel::Normal);
+//! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 //! let context = ExecutionContext::new(Arc::new(container));
 //!
 //! // Call the test handler
-//! if let Err(e) = test::handle("my-environment", Path::new("."), &context).await {
+//! if let Err(e) = test::handle("my-environment", &context).await {
 //!     eprintln!("Test failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
@@ -42,7 +42,7 @@
 //! ## Direct Usage (For Testing)
 //!
 //! ```rust
-//! use std::path::Path;
+//! use std::path::{Path, PathBuf};
 //! use std::sync::Arc;
 //! use parking_lot::ReentrantMutex;
 //! use std::cell::RefCell;
@@ -54,8 +54,10 @@
 //! # #[tokio::main]
 //! # async fn main() {
 //! let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-//! let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
-//! if let Err(e) = test::handle_test_command("test-env", Path::new("."), repository_factory, &output).await {
+//! let data_dir = PathBuf::from("./data");
+//! let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+//! let repository = repository_factory.create(data_dir);
+//! if let Err(e) = test::handle_test_command("test-env", repository, &output).await {
 //!     eprintln!("Test failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
