@@ -184,7 +184,9 @@ impl CreateCommandHandlerTestBuilder {
     #[allow(clippy::unused_self)] // Builder pattern - self is consumed in build()
     fn create_existing_environment(
         &self,
-        repository: &Arc<dyn crate::domain::environment::repository::EnvironmentRepository>,
+        repository: &Arc<
+            dyn crate::domain::environment::repository::EnvironmentRepository + Send + Sync,
+        >,
         name: &str,
         base_dir: &Path,
     ) {

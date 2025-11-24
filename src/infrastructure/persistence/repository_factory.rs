@@ -86,7 +86,7 @@ impl RepositoryFactory {
     /// let repo = factory.create(PathBuf::from("data/production"));
     /// ```
     #[must_use]
-    pub fn create(&self, data_dir: PathBuf) -> Arc<dyn EnvironmentRepository> {
+    pub fn create(&self, data_dir: PathBuf) -> Arc<dyn EnvironmentRepository + Send + Sync> {
         let repository =
             FileEnvironmentRepository::new(data_dir).with_lock_timeout(self.lock_timeout);
         Arc::new(repository)

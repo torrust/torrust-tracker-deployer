@@ -19,7 +19,7 @@ async fn it_should_generate_template_with_default_path() {
     std::env::set_current_dir(test_context.working_dir()).unwrap();
 
     let action = CreateAction::Template { output_path: None };
-    let container = Container::new(VerbosityLevel::Silent);
+    let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
     let context = ExecutionContext::new(std::sync::Arc::new(container));
 
     let result = create::route_command(action, test_context.working_dir(), &context).await;
@@ -64,7 +64,7 @@ async fn it_should_generate_template_with_custom_path() {
     let action = CreateAction::Template {
         output_path: Some(custom_path.clone()),
     };
-    let container = Container::new(VerbosityLevel::Silent);
+    let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
     let context = ExecutionContext::new(std::sync::Arc::new(container));
 
     let result = create::route_command(action, test_context.working_dir(), &context).await;
@@ -90,7 +90,7 @@ async fn it_should_generate_valid_json_template() {
     let action = CreateAction::Template {
         output_path: Some(template_path.clone()),
     };
-    let container = Container::new(VerbosityLevel::Silent);
+    let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
     let context = ExecutionContext::new(std::sync::Arc::new(container));
 
     create::route_command(action, test_context.working_dir(), &context)
@@ -138,7 +138,7 @@ async fn it_should_create_parent_directories() {
     let action = CreateAction::Template {
         output_path: Some(deep_path.clone()),
     };
-    let container = Container::new(VerbosityLevel::Silent);
+    let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
     let context = ExecutionContext::new(std::sync::Arc::new(container));
 
     let result = create::route_command(action, test_context.working_dir(), &context).await;

@@ -21,7 +21,7 @@ async fn handle_environment_creation(
     let action = CreateAction::Environment {
         env_file: config_path.to_path_buf(),
     };
-    let container = Container::new(VerbosityLevel::Silent);
+    let container = Container::new(VerbosityLevel::Silent, working_dir);
     let context = ExecutionContext::new(std::sync::Arc::new(container));
     create::route_command(action, working_dir, &context).await
 }

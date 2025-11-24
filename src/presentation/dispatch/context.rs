@@ -30,10 +30,11 @@
 //! use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 //! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 //! use std::sync::Arc;
+//! use std::path::Path;
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create execution context from container
-//! let container = Container::new(VerbosityLevel::Normal);
+//! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 //! let context = ExecutionContext::new(Arc::new(container));
 //!
 //! // Command handlers access services through context
@@ -63,11 +64,12 @@ use crate::shared::clock::Clock;
 ///
 /// ```rust
 /// use std::sync::Arc;
+/// use std::path::Path;
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 ///
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
 /// let context = ExecutionContext::new(container);
 ///
 /// // Access user output service
@@ -93,9 +95,10 @@ impl ExecutionContext {
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
+    /// use std::path::Path;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     /// # Ok(())
     /// # }
@@ -113,13 +116,14 @@ impl ExecutionContext {
     /// # Examples
     ///
     /// ```rust,no_run
+    /// use std::path::Path;
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
     /// let container_ref = context.container();
@@ -145,9 +149,10 @@ impl ExecutionContext {
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
+    /// use std::path::Path;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
     /// let user_output = context.user_output();
@@ -172,9 +177,10 @@ impl ExecutionContext {
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
+    /// use std::path::Path;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
     /// let repository_factory = context.repository_factory();
@@ -185,6 +191,36 @@ impl ExecutionContext {
     #[must_use]
     pub fn repository_factory(&self) -> Arc<RepositoryFactory> {
         self.container.repository_factory()
+    }
+
+    /// Get shared reference to environment repository
+    ///
+    /// Returns the environment repository for persistence operations.
+    /// The repository is wrapped in `Arc<dyn EnvironmentRepository>` for shared access.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use torrust_tracker_deployer_lib::bootstrap::Container;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use std::sync::Arc;
+    /// use std::path::Path;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
+    /// let context = ExecutionContext::new(Arc::new(container));
+    ///
+    /// let repository = context.repository();
+    /// // Use repository for environment persistence
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn repository(
+        &self,
+    ) -> Arc<dyn crate::domain::environment::repository::EnvironmentRepository + Send + Sync> {
+        self.container.repository()
     }
 
     /// Get shared reference to clock service
@@ -199,9 +235,10 @@ impl ExecutionContext {
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
     /// use std::sync::Arc;
+    /// use std::path::Path;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new(VerbosityLevel::Normal);
+    /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
     /// let clock = context.clock();

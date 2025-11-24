@@ -13,7 +13,6 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Destroyed;
 use crate::domain::environment::Environment;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -67,24 +66,21 @@ const DESTROY_WORKFLOW_STEPS: usize = 3;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
 /// let context = ExecutionContext::new(container);
-/// let working_dir = Path::new("./test");
 ///
-/// destroy::handle("my-env", working_dir, &context).await?;
+/// destroy::handle("my-env", &context).await?;
 /// # Ok(())
 /// # }
 /// ```
 #[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
 pub async fn handle(
     environment_name: &str,
-    working_dir: &std::path::Path,
     context: &crate::presentation::dispatch::context::ExecutionContext,
 ) -> Result<Environment<Destroyed>, DestroySubcommandError> {
     handle_destroy_command(
         environment_name,
-        working_dir,
-        context.repository_factory(),
+        context.repository(),
         context.clock(),
         &context.user_output(),
     )
@@ -136,10 +132,10 @@ pub async fn handle(
 ///
 /// # #[tokio::main]
 /// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal);
+/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 /// let context = ExecutionContext::new(Arc::new(container));
 ///
-/// if let Err(e) = destroy::handle("test-env", Path::new("."), &context).await {
+/// if let Err(e) = destroy::handle("test-env", &context).await {
 ///     eprintln!("Destroy failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
@@ -149,7 +145,7 @@ pub async fn handle(
 /// Direct usage (for testing or specialized scenarios):
 ///
 /// ```rust
-/// use std::path::Path;
+/// use std::path::{Path, PathBuf};
 /// use std::sync::Arc;
 /// use parking_lot::ReentrantMutex;
 /// use std::cell::RefCell;
@@ -162,9 +158,11 @@ pub async fn handle(
 /// # #[tokio::main]
 /// # async fn main() {
 /// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-/// let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+/// let data_dir = PathBuf::from("./data");
+/// let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+/// let repository = repository_factory.create(data_dir);
 /// let clock = Arc::new(SystemClock);
-/// if let Err(e) = destroy::handle_destroy_command("test-env", Path::new("."), repository_factory, clock, &user_output).await {
+/// if let Err(e) = destroy::handle_destroy_command("test-env", repository, clock, &user_output).await {
 ///     eprintln!("Destroy failed: {e}");
 ///     eprintln!("Help: {}", e.help());
 /// }
@@ -174,19 +172,13 @@ pub async fn handle(
 #[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
 pub async fn handle_destroy_command(
     environment_name: &str,
-    working_dir: &std::path::Path,
-    repository_factory: Arc<RepositoryFactory>,
+    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
     user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
 ) -> Result<Environment<Destroyed>, DestroySubcommandError> {
-    DestroyCommandController::new(
-        working_dir.to_path_buf(),
-        repository_factory,
-        clock,
-        user_output.clone(),
-    )
-    .execute(environment_name)
-    .await
+    DestroyCommandController::new(repository, clock, user_output.clone())
+        .execute(environment_name)
+        .await
 }
 
 // ============================================================================
@@ -212,27 +204,23 @@ pub async fn handle_destroy_command(
 /// `DestroyCommandHandler`, maintaining clear separation of concerns.
 #[allow(unused)] // Temporary during refactoring
 pub struct DestroyCommandController {
-    repository: Arc<dyn EnvironmentRepository>,
+    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
     user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     progress: ProgressReporter,
 }
 
 impl DestroyCommandController {
-    /// Create a new destroy command controller from working directory
+    /// Create a new destroy command controller
     ///
-    /// Creates a `DestroyCommandController` with direct service injection from working directory and user output.
+    /// Creates a `DestroyCommandController` with direct repository injection.
     /// This follows the single container architecture pattern.
     #[allow(clippy::needless_pass_by_value)] // Constructor takes ownership of Arc parameters
     pub fn new(
-        working_dir: std::path::PathBuf,
-        repository_factory: Arc<RepositoryFactory>,
+        repository: Arc<dyn EnvironmentRepository + Send + Sync>,
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        // Repository expects BASE data directory, will append environment name internally
-        let data_dir = working_dir.join("data");
-        let repository = repository_factory.create(data_dir);
         let progress = ProgressReporter::new(user_output.clone(), DESTROY_WORKFLOW_STEPS);
 
         Self {
@@ -358,6 +346,7 @@ impl DestroyCommandController {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
     use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
     use crate::presentation::views::testing::TestUserOutput;
     use crate::presentation::views::VerbosityLevel;
@@ -369,37 +358,34 @@ mod tests {
     ///
     /// Returns the common dependencies needed for testing `handle_destroy_command`:
     /// - `user_output`: `ReentrantMutex`-wrapped `UserOutput` for thread-safe access
-    /// - `repository_factory`: Factory for creating environment repositories
+    /// - `repository`: Environment repository with Send + Sync bounds
     /// - `clock`: System clock for timing operations
     #[allow(clippy::type_complexity)] // Test helper with complex but clear types
-    fn create_test_dependencies() -> (
+    fn create_test_dependencies(
+        temp_dir: &TempDir,
+    ) -> (
         Arc<ReentrantMutex<RefCell<UserOutput>>>,
-        Arc<RepositoryFactory>,
+        Arc<dyn EnvironmentRepository + Send + Sync>,
         Arc<dyn Clock>,
     ) {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
-        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+        let data_dir = temp_dir.path().join("data");
+        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+        let repository = repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
 
-        (user_output, repository_factory, clock)
+        (user_output, repository, clock)
     }
 
     #[tokio::test]
     async fn it_should_return_error_for_invalid_environment_name() {
         let temp_dir = TempDir::new().unwrap();
 
-        let (user_output, repository_factory, clock) = create_test_dependencies();
+        let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Test with invalid environment name (contains underscore)
-        let result = handle_destroy_command(
-            "invalid_name",
-            temp_dir.path(),
-            repository_factory,
-            clock,
-            &user_output,
-        )
-        .await;
+        let result = handle_destroy_command("invalid_name", repository, clock, &user_output).await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -414,11 +400,9 @@ mod tests {
     async fn it_should_return_error_for_empty_environment_name() {
         let temp_dir = TempDir::new().unwrap();
 
-        let (user_output, repository_factory, clock) = create_test_dependencies();
+        let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result =
-            handle_destroy_command("", temp_dir.path(), repository_factory, clock, &user_output)
-                .await;
+        let result = handle_destroy_command("", repository, clock, &user_output).await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -433,17 +417,11 @@ mod tests {
     async fn it_should_return_error_for_nonexistent_environment() {
         let temp_dir = TempDir::new().unwrap();
 
-        let (user_output, repository_factory, clock) = create_test_dependencies();
+        let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Try to destroy an environment that doesn't exist
-        let result = handle_destroy_command(
-            "nonexistent-env",
-            temp_dir.path(),
-            repository_factory,
-            clock,
-            &user_output,
-        )
-        .await;
+        let result =
+            handle_destroy_command("nonexistent-env", repository, clock, &user_output).await;
 
         assert!(result.is_err());
         // Should get DestroyOperationFailed because environment doesn't exist
@@ -460,7 +438,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let working_dir = temp_dir.path();
 
-        let (user_output, repository_factory, clock) = create_test_dependencies();
+        let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Create a mock environment directory to test validation
         let env_dir = working_dir.join("test-env");
@@ -468,14 +446,7 @@ mod tests {
 
         // Valid environment name should pass validation, but will fail
         // at destroy operation since we don't have a real environment setup
-        let result = handle_destroy_command(
-            "test-env",
-            working_dir,
-            repository_factory,
-            clock,
-            &user_output,
-        )
-        .await;
+        let result = handle_destroy_command("test-env", repository, clock, &user_output).await;
 
         // Should fail at operation, not at name validation
         if let Err(DestroySubcommandError::InvalidEnvironmentName { .. }) = result {

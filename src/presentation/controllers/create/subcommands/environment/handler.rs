@@ -11,9 +11,9 @@ use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::application::command_handlers::CreateCommandHandler;
+use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Created;
 use crate::domain::Environment;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -69,7 +69,7 @@ const ENVIRONMENT_CREATION_WORKFLOW_STEPS: usize = 3;
 /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
 /// let context = ExecutionContext::new(container);
 /// let env_file = Path::new("./environment.json");
 /// let working_dir = Path::new("./");
@@ -87,7 +87,7 @@ pub async fn handle(
     handle_environment_creation_command(
         env_file,
         working_dir,
-        &context.repository_factory(),
+        &context.repository(),
         &context.clock(),
         &context.user_output(),
     )
@@ -138,7 +138,7 @@ pub async fn handle(
 ///
 /// # #[tokio::main]
 /// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal);
+/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 /// let context = ExecutionContext::new(Arc::new(container));
 ///
 /// if let Err(e) = environment::handle(
@@ -164,7 +164,7 @@ pub async fn handle(
 ///
 /// # #[tokio::main]
 /// # async fn main() {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal));
+/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
 /// let context = ExecutionContext::new(container);
 ///
 /// if let Err(e) = handle(
@@ -181,11 +181,11 @@ pub async fn handle(
 pub async fn handle_environment_creation_command(
     env_file: &Path,
     working_dir: &Path,
-    repository_factory: &Arc<RepositoryFactory>,
+    repository: &Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: &Arc<dyn Clock>,
     user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
 ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
-    CreateEnvironmentCommandController::new(repository_factory.clone(), clock.clone(), user_output)
+    CreateEnvironmentCommandController::new(repository.clone(), clock.clone(), user_output)
         .execute(env_file, working_dir)
         .await
 }
@@ -214,7 +214,7 @@ pub async fn handle_environment_creation_command(
 /// concerns. It delegates actual environment creation to the application layer's
 /// `CreateCommandHandler`, maintaining clear separation of concerns.
 pub struct CreateEnvironmentCommandController {
-    repository_factory: Arc<RepositoryFactory>,
+    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
     progress: ProgressReporter,
 }
@@ -225,7 +225,7 @@ impl CreateEnvironmentCommandController {
     /// Creates a `CreateEnvironmentCommandController` with dependency injection.
     /// This follows the single container architecture pattern.
     pub fn new(
-        repository_factory: Arc<RepositoryFactory>,
+        repository: Arc<dyn EnvironmentRepository + Send + Sync>,
         clock: Arc<dyn Clock>,
         user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
@@ -233,7 +233,7 @@ impl CreateEnvironmentCommandController {
             ProgressReporter::new(user_output.clone(), ENVIRONMENT_CREATION_WORKFLOW_STEPS);
 
         Self {
-            repository_factory,
+            repository,
             clock,
             progress,
         }
@@ -271,7 +271,7 @@ impl CreateEnvironmentCommandController {
     ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
         let config = self.load_configuration(env_file)?;
 
-        let command_handler = self.create_command_handler(working_dir)?;
+        let command_handler = self.create_command_handler()?;
 
         let environment = self.execute_create_command(&command_handler, config, working_dir)?;
 
@@ -336,28 +336,18 @@ impl CreateEnvironmentCommandController {
     /// Create application layer command handler
     ///
     /// This step handles:
-    /// - Creating repository using factory
     /// - Setting up command handler with dependencies
-    ///
-    /// # Arguments
-    ///
-    /// * `working_dir` - Working directory path for environment storage
     ///
     /// # Returns
     ///
     /// Returns the initialized `CreateCommandHandler`.
     fn create_command_handler(
         &mut self,
-        working_dir: &Path,
     ) -> Result<CreateCommandHandler, CreateEnvironmentCommandError> {
         self.progress.start_step("Creating command handler")?;
 
-        // Repository expects the BASE data directory, not the working directory
-        // It will append the environment name to create environment-specific paths
-        let data_dir = working_dir.join("data");
-        let repository = self.repository_factory.create(data_dir);
-
-        let command_handler = CreateCommandHandler::new(repository, self.clock.clone());
+        let command_handler =
+            CreateCommandHandler::new(self.repository.clone(), self.clock.clone());
 
         self.progress.complete_step(None)?;
 
