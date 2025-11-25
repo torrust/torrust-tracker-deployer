@@ -129,7 +129,7 @@ impl DestroySubcommandError {
     /// use std::time::Duration;
     /// use parking_lot::ReentrantMutex;
     /// use std::cell::RefCell;
-    /// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::destroy::handler::DestroyCommandController;
     /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
     /// use torrust_tracker_deployer_lib::shared::clock::SystemClock;
@@ -141,7 +141,7 @@ impl DestroySubcommandError {
     /// let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
     /// let repository = repository_factory.create(data_dir);
     /// let clock = Arc::new(SystemClock);
-    /// if let Err(e) = destroy::handle_destroy_command("test-env", repository, clock, &output).await {
+    /// if let Err(e) = DestroyCommandController::new(repository, clock, output).execute("test-env").await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }

@@ -79,107 +79,8 @@ pub async fn handle(
     environment_name: &str,
     context: &ExecutionContext,
 ) -> Result<Environment<Configured>, ConfigureSubcommandError> {
-    handle_configure_command(
-        environment_name,
-        context.repository(),
-        context.clock(),
-        &context.user_output(),
-    )
-    .await
-}
-
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
-
-/// Handle the configure command
-///
-/// This is a thin wrapper over `ConfigureCommandController` that serves as
-/// the public entry point for the configure command.
-///
-/// # Arguments
-///
-/// * `environment_name` - The name of the environment to configure
-/// * `working_dir` - Root directory for environment data storage
-/// * `repository_factory` - Factory for creating environment repositories
-/// * `clock` - Clock service for timing operations
-/// * `user_output` - Shared user output service for consistent output formatting
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Environment name is invalid (format validation fails)
-/// - Environment cannot be loaded from repository
-/// - Environment is not in "Provisioned" state
-/// - Infrastructure configuration fails
-/// - Progress reporting encounters a poisoned mutex
-///
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Returns
-///
-/// Returns `Ok(Environment<Configured>)` on success, or a `ConfigureSubcommandError` on failure.
-///
-/// # Example
-///
-/// Using with Container and `ExecutionContext` (recommended):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-/// use torrust_tracker_deployer_lib::presentation::controllers::configure;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let context = ExecutionContext::new(Arc::new(container));
-///
-/// if let Err(e) = configure::handle("test-env", &context).await {
-///     eprintln!("Configure failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-///
-/// Direct usage (for testing or specialized scenarios):
-///
-/// ```rust
-/// use std::path::{Path, PathBuf};
-/// use std::sync::Arc;
-/// use parking_lot::ReentrantMutex;
-/// use std::cell::RefCell;
-/// use torrust_tracker_deployer_lib::presentation::controllers::configure;
-/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
-/// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-/// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
-/// use torrust_tracker_deployer_lib::shared::SystemClock;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-/// let data_dir = PathBuf::from("./data");
-/// let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-/// let repository = repository_factory.create(data_dir);
-/// let clock = Arc::new(SystemClock);
-/// if let Err(e) = configure::handle_configure_command("test-env", repository, clock, &user_output).await {
-///     eprintln!("Configure failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-#[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
-pub async fn handle_configure_command(
-    environment_name: &str,
-    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    clock: Arc<dyn Clock>,
-    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
-) -> Result<Environment<Configured>, ConfigureSubcommandError> {
-    let mut controller = ConfigureCommandController::new(repository, clock, user_output.clone());
-
-    controller.execute(environment_name)
+    ConfigureCommandController::new(context.repository(), context.clock(), context.user_output())
+        .execute(environment_name)
 }
 
 // ============================================================================
@@ -396,8 +297,8 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Test with invalid environment name (contains underscore)
-        let result =
-            handle_configure_command("invalid_name", repository, clock, &user_output).await;
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("invalid_name");
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -416,7 +317,8 @@ mod tests {
 
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result = handle_configure_command("", repository, clock, &user_output).await;
+        let result =
+            ConfigureCommandController::new(repository, clock, user_output.clone()).execute("");
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -436,8 +338,8 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Try to configure an environment that doesn't exist
-        let result =
-            handle_configure_command("nonexistent-env", repository, clock, &user_output).await;
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("nonexistent-env");
 
         assert!(result.is_err());
         // After refactoring, repository NotFound error is wrapped in ConfigureOperationFailed
@@ -465,7 +367,8 @@ mod tests {
 
         // Valid environment name should pass validation, but will fail
         // at configure operation since we don't have a real environment setup
-        let result = handle_configure_command("test-env", repository, clock, &user_output).await;
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("test-env");
 
         // Should fail at operation, not at name validation
         if let Err(ConfigureSubcommandError::InvalidEnvironmentName { .. }) = result {

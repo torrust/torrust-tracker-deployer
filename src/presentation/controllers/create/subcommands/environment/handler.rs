@@ -84,111 +84,18 @@ pub async fn handle(
     working_dir: &Path,
     context: &crate::presentation::dispatch::context::ExecutionContext,
 ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
-    handle_environment_creation_command(
-        env_file,
-        working_dir,
-        &context.repository(),
-        &context.clock(),
+    CreateEnvironmentCommandController::new(
+        context.repository(),
+        context.clock(),
         &context.user_output(),
     )
+    .execute(env_file, working_dir)
     .await
 }
 
 // ============================================================================
 // INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
 // ============================================================================
-
-/// Handle the environment creation command
-///
-/// This is a thin wrapper over `CreateEnvironmentCommandController` that serves as
-/// the public entry point for the environment creation command.
-///
-/// # Arguments
-///
-/// * `env_file` - Path to the environment configuration file  
-/// * `working_dir` - Working directory path for environment storage
-/// * `repository_factory` - Factory for creating environment repositories
-/// * `clock` - System clock service for timestamps
-/// * `user_output` - Shared user output service for consistent output formatting
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Configuration loading or validation fails
-/// - Environment creation fails
-/// - Progress reporting encounters a poisoned mutex
-///
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Returns
-///
-/// Returns `Ok(Environment<Created>)` on success, or a `CreateEnvironmentCommandError` on failure.
-///
-/// # Example
-///
-/// Using with Container and `ExecutionContext` (recommended):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let context = ExecutionContext::new(Arc::new(container));
-///
-/// if let Err(e) = environment::handle(
-///     Path::new("config.json"),
-///     Path::new("./"),
-///     &context
-/// ).await {
-///     eprintln!("Environment creation failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-///
-/// Direct usage (for testing or specialized scenarios):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment::handler::handle;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-///
-/// if let Err(e) = handle(
-///     Path::new("config.json"),
-///     Path::new("./"),
-///     &context
-/// ).await {
-///     eprintln!("Environment creation failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle_environment_creation_command(
-    env_file: &Path,
-    working_dir: &Path,
-    repository: &Arc<dyn EnvironmentRepository + Send + Sync>,
-    clock: &Arc<dyn Clock>,
-    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
-) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
-    CreateEnvironmentCommandController::new(repository.clone(), clock.clone(), user_output)
-        .execute(env_file, working_dir)
-        .await
-}
 
 // ============================================================================
 // PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)

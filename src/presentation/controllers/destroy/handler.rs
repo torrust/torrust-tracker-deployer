@@ -78,105 +78,7 @@ pub async fn handle(
     environment_name: &str,
     context: &crate::presentation::dispatch::context::ExecutionContext,
 ) -> Result<Environment<Destroyed>, DestroySubcommandError> {
-    handle_destroy_command(
-        environment_name,
-        context.repository(),
-        context.clock(),
-        &context.user_output(),
-    )
-    .await
-}
-
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
-
-/// Handle the destroy command
-///
-/// This is a thin wrapper over `DestroyCommandController` that serves as
-/// the public entry point for the destroy command.
-///
-/// # Arguments
-///
-/// * `environment_name` - The name of the environment to destroy
-/// * `working_dir` - Root directory for environment data storage
-/// * `repository_factory` - Factory for creating environment repositories
-/// * `clock` - Clock service for timing operations
-/// * `user_output` - Shared user output service for consistent output formatting
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Environment name is invalid (format validation fails)
-/// - Environment cannot be loaded from repository
-/// - Infrastructure teardown fails
-/// - Progress reporting encounters a poisoned mutex
-///
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Returns
-///
-/// Returns `Ok(Environment<Destroyed>)` on success, or a `DestroySubcommandError` on failure.
-///
-/// # Example
-///
-/// Using with Container and `ExecutionContext` (recommended):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-/// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let context = ExecutionContext::new(Arc::new(container));
-///
-/// if let Err(e) = destroy::handle("test-env", &context).await {
-///     eprintln!("Destroy failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-///
-/// Direct usage (for testing or specialized scenarios):
-///
-/// ```rust
-/// use std::path::{Path, PathBuf};
-/// use std::sync::Arc;
-/// use parking_lot::ReentrantMutex;
-/// use std::cell::RefCell;
-/// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
-/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
-/// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-/// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
-/// use torrust_tracker_deployer_lib::shared::SystemClock;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-/// let data_dir = PathBuf::from("./data");
-/// let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-/// let repository = repository_factory.create(data_dir);
-/// let clock = Arc::new(SystemClock);
-/// if let Err(e) = destroy::handle_destroy_command("test-env", repository, clock, &user_output).await {
-///     eprintln!("Destroy failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-#[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
-pub async fn handle_destroy_command(
-    environment_name: &str,
-    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    clock: Arc<dyn Clock>,
-    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
-) -> Result<Environment<Destroyed>, DestroySubcommandError> {
-    DestroyCommandController::new(repository, clock, user_output.clone())
+    DestroyCommandController::new(context.repository(), context.clock(), context.user_output())
         .execute(environment_name)
         .await
 }
@@ -385,7 +287,9 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Test with invalid environment name (contains underscore)
-        let result = handle_destroy_command("invalid_name", repository, clock, &user_output).await;
+        let result = DestroyCommandController::new(repository, clock, user_output.clone())
+            .execute("invalid_name")
+            .await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -402,7 +306,9 @@ mod tests {
 
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result = handle_destroy_command("", repository, clock, &user_output).await;
+        let result = DestroyCommandController::new(repository, clock, user_output.clone())
+            .execute("")
+            .await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -420,8 +326,9 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Try to destroy an environment that doesn't exist
-        let result =
-            handle_destroy_command("nonexistent-env", repository, clock, &user_output).await;
+        let result = DestroyCommandController::new(repository, clock, user_output.clone())
+            .execute("nonexistent-env")
+            .await;
 
         assert!(result.is_err());
         // Should get DestroyOperationFailed because environment doesn't exist
@@ -446,7 +353,9 @@ mod tests {
 
         // Valid environment name should pass validation, but will fail
         // at destroy operation since we don't have a real environment setup
-        let result = handle_destroy_command("test-env", repository, clock, &user_output).await;
+        let result = DestroyCommandController::new(repository, clock, user_output.clone())
+            .execute("test-env")
+            .await;
 
         // Should fail at operation, not at name validation
         if let Err(DestroySubcommandError::InvalidEnvironmentName { .. }) = result {

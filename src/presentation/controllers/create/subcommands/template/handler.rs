@@ -73,87 +73,7 @@ pub async fn handle(
     output_path: &Path,
     context: &crate::presentation::dispatch::context::ExecutionContext,
 ) -> Result<(), CreateEnvironmentTemplateCommandError> {
-    handle_template_creation_command(output_path, &context.user_output()).await
-}
-
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
-
-/// Handle the template creation command
-///
-/// This is a thin wrapper over `CreateTemplateCommandController` that serves as
-/// the public entry point for the template creation command.
-///
-/// # Arguments
-///
-/// * `output_path` - Path where the template file should be created
-/// * `user_output` - Shared user output service for consistent output formatting
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Output path validation fails
-/// - Template generation fails  
-/// - Progress reporting encounters a poisoned mutex
-///
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Returns
-///
-/// Returns `Ok(())` on success, or a `CreateEnvironmentTemplateCommandError` on failure.
-///
-/// # Example
-///
-/// Using with Container and `ExecutionContext` (recommended):
-///
-/// ```rust,no_run
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let context = ExecutionContext::new(Arc::new(container));
-///
-/// if let Err(e) = template::handle(Path::new("template.json"), &context).await {
-///     eprintln!("Template creation failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-///
-/// Direct usage (for testing or specialized scenarios):
-///
-/// ```rust,no_run
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use parking_lot::RawMutex;
-/// use parking_lot::ReentrantMutex;
-/// use std::cell::RefCell;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template::handler::handle_template_creation_command;
-/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let user_output = Arc::new(ReentrantMutex::<RefCell<UserOutput>>::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-///
-/// if let Err(e) = handle_template_creation_command(Path::new("template.json"), &user_output).await {
-///     eprintln!("Template creation failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle_template_creation_command(
-    output_path: &Path,
-    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
-) -> Result<(), CreateEnvironmentTemplateCommandError> {
-    CreateTemplateCommandController::new(user_output)
+    CreateTemplateCommandController::new(&context.user_output())
         .execute(output_path)
         .await
 }
@@ -321,7 +241,9 @@ mod tests {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped(); // Use Silent to avoid output issues
 
-        let result = handle_template_creation_command(&output_path, &user_output).await;
+        let result = CreateTemplateCommandController::new(&user_output)
+            .execute(&output_path)
+            .await;
 
         // Should succeed in creating template
         assert!(
@@ -379,7 +301,9 @@ mod tests {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
 
-        let result = handle_template_creation_command(invalid_path, &user_output).await;
+        let result = CreateTemplateCommandController::new(&user_output)
+            .execute(invalid_path)
+            .await;
 
         assert!(result.is_err(), "Should fail for invalid path");
         match result.unwrap_err() {
