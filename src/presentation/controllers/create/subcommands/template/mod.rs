@@ -7,7 +7,7 @@ pub mod errors;
 pub mod handler;
 
 // Re-export the main handler function
-pub use handler::handle;
+pub use handler::CreateTemplateCommandController;
 
 // Re-export error types
 pub use errors::CreateEnvironmentTemplateCommandError;

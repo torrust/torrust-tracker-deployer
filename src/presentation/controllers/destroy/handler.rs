@@ -19,73 +19,8 @@ use crate::shared::clock::Clock;
 
 use super::errors::DestroySubcommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 /// Number of main steps in the destroy workflow
 const DESTROY_WORKFLOW_STEPS: usize = 3;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle destroy command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for destroying deployment environments,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `environment_name` - Name of the environment to destroy
-/// * `working_dir` - Working directory path for operations
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(Environment<Destroyed>)` - Environment destroyed successfully
-/// * `Err(DestroySubcommandError)` - Destroy operation failed
-///
-/// # Errors
-///
-/// Returns `DestroySubcommandError` when:
-/// * Environment name is invalid or contains special characters
-/// * Working directory is not accessible or doesn't exist
-/// * Environment is not found in the working directory
-/// * Infrastructure destruction fails (OpenTofu/LXD errors)
-/// * File system operations fail (permission errors, disk space)
-///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::destroy;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-///
-/// destroy::handle("my-env", &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle(
-    environment_name: &str,
-    context: &crate::presentation::dispatch::context::ExecutionContext,
-) -> Result<Environment<Destroyed>, DestroySubcommandError> {
-    DestroyCommandController::new(context.repository(), context.clock(), context.user_output())
-        .execute(environment_name)
-        .await
-}
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for destroy command workflow
 ///
@@ -104,11 +39,9 @@ pub async fn handle(
 /// This controller sits in the presentation layer and handles all user-facing
 /// concerns. It delegates actual business logic to the application layer's
 /// `DestroyCommandHandler`, maintaining clear separation of concerns.
-#[allow(unused)] // Temporary during refactoring
 pub struct DestroyCommandController {
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
-    user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     progress: ProgressReporter,
 }
 
@@ -123,12 +56,11 @@ impl DestroyCommandController {
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output.clone(), DESTROY_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, DESTROY_WORKFLOW_STEPS);
 
         Self {
             repository,
             clock,
-            user_output,
             progress,
         }
     }

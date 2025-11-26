@@ -13,84 +13,14 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Provisioned;
 use crate::domain::environment::Environment;
-use crate::presentation::dispatch::context::ExecutionContext;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
 use super::errors::ProvisionSubcommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 /// Number of main steps in the provision workflow
 const PROVISION_WORKFLOW_STEPS: usize = 9;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle provision command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for provisioning deployment environments,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `environment_name` - Name of the environment to provision
-/// * `working_dir` - Working directory path for operations
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(Environment<Provisioned>)` - Environment provisioned successfully
-/// * `Err(ProvisionSubcommandError)` - Provision operation failed
-///
-/// # Errors
-///
-/// Returns `ProvisionSubcommandError` when:
-/// * Environment name is invalid or contains special characters
-/// * Working directory is not accessible or doesn't exist
-/// * Environment is not found or not in "Created" state
-/// * Infrastructure provisioning fails (OpenTofu/LXD errors)
-/// * SSH connectivity cannot be established
-/// * Cloud-init does not complete successfully
-///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::provision;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-///
-/// provision::handle("my-env", &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn handle(
-    environment_name: &str,
-    context: &ExecutionContext,
-) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
-    ProvisionCommandController::new(context.repository(), context.clock(), context.user_output())
-        .execute(environment_name)
-        .await
-}
-
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for provision command workflow
 ///
@@ -109,11 +39,9 @@ pub async fn handle(
 /// This controller sits in the presentation layer and handles all user-facing
 /// concerns. It delegates actual business logic to the application layer's
 /// `ProvisionCommandHandler`, maintaining clear separation of concerns.
-#[allow(unused)] // Temporary during refactoring
 pub struct ProvisionCommandController {
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
-    user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     progress: ProgressReporter,
 }
 
@@ -128,12 +56,11 @@ impl ProvisionCommandController {
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output.clone(), PROVISION_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, PROVISION_WORKFLOW_STEPS);
 
         Self {
             repository,
             clock,
-            user_output,
             progress,
         }
     }

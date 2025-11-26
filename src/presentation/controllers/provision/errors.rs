@@ -124,7 +124,12 @@ impl ProvisionSubcommandError {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
-    /// if let Err(e) = provision::handle("test-env", &context).await {
+    /// if let Err(e) = context
+    ///     .container()
+    ///     .create_provision_controller()
+    ///     .execute("test-env")
+    ///     .await
+    /// {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }

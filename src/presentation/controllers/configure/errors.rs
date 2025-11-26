@@ -119,16 +119,17 @@ impl ConfigureSubcommandError {
     /// use torrust_tracker_deployer_lib::presentation::controllers::configure;
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     ///
-    /// # #[tokio::main]
-    /// # async fn main() {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
-    /// if let Err(e) = configure::handle("test-env", &context).await {
+    /// if let Err(e) = context
+    ///     .container()
+    ///     .create_configure_controller()
+    ///     .execute("test-env")
+    /// {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
-    /// # }
     /// ```
     ///
     /// Direct usage (for testing):

@@ -113,7 +113,12 @@ impl TestSubcommandError {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
-    /// if let Err(e) = test::handle("test-env", &context).await {
+    /// if let Err(e) = context
+    ///     .container()
+    ///     .create_test_controller()
+    ///     .execute("test-env")
+    ///     .await
+    /// {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }

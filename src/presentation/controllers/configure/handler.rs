@@ -13,79 +13,14 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Configured;
 use crate::domain::environment::Environment;
-use crate::presentation::dispatch::context::ExecutionContext;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
 use super::errors::ConfigureSubcommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 /// Number of main steps in the configure workflow
 const CONFIGURE_WORKFLOW_STEPS: usize = 9;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle configure command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for configuring deployment environments,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `environment_name` - Name of the environment to configure
-/// * `working_dir` - Working directory path for operations
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(Environment<Configured>)` - Environment configured successfully
-/// * `Err(ConfigureSubcommandError)` - Configure operation failed
-///
-/// # Errors
-///
-/// Returns `ConfigureSubcommandError` when:
-/// * Environment name is invalid or contains special characters
-/// * Working directory is not accessible or doesn't exist
-/// * Environment is not found or not in "Provisioned" state
-/// * Infrastructure configuration fails (Docker/Compose installation errors)
-/// * SSH connectivity cannot be established
-/// * Ansible playbook execution fails
-///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::configure;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-///
-/// configure::handle("my-env", &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn handle(
-    environment_name: &str,
-    context: &ExecutionContext,
-) -> Result<Environment<Configured>, ConfigureSubcommandError> {
-    ConfigureCommandController::new(context.repository(), context.clock(), context.user_output())
-        .execute(environment_name)
-}
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for configure command workflow
 ///
@@ -104,11 +39,9 @@ pub async fn handle(
 /// This controller sits in the presentation layer and handles all user-facing
 /// concerns. It delegates actual business logic to the application layer's
 /// `ConfigureCommandHandler`, maintaining clear separation of concerns.
-#[allow(unused)] // Temporary during refactoring
 pub struct ConfigureCommandController {
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
-    user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     progress: ProgressReporter,
 }
 
@@ -123,12 +56,11 @@ impl ConfigureCommandController {
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output.clone(), CONFIGURE_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, CONFIGURE_WORKFLOW_STEPS);
 
         Self {
             repository,
             clock,
-            user_output,
             progress,
         }
     }

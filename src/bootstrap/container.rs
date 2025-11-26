@@ -11,7 +11,13 @@ use parking_lot::ReentrantMutex;
 
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::presentation::controllers::configure::ConfigureCommandController;
 use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
+use crate::presentation::controllers::create::subcommands::environment::CreateEnvironmentCommandController;
+use crate::presentation::controllers::create::subcommands::template::CreateTemplateCommandController;
+use crate::presentation::controllers::destroy::DestroyCommandController;
+use crate::presentation::controllers::provision::ProvisionCommandController;
+use crate::presentation::controllers::test::handler::TestCommandController;
 use crate::presentation::views::{UserOutput, VerbosityLevel};
 use crate::shared::clock::Clock;
 use crate::shared::SystemClock;
@@ -175,6 +181,46 @@ impl Container {
     #[must_use]
     pub fn clock(&self) -> Arc<dyn Clock> {
         Arc::clone(&self.clock)
+    }
+
+    /// Create a new `CreateEnvironmentCommandController`
+    #[must_use]
+    pub fn create_environment_controller(&self) -> CreateEnvironmentCommandController {
+        CreateEnvironmentCommandController::new(
+            self.repository(),
+            self.clock(),
+            &self.user_output(),
+        )
+    }
+
+    /// Create a new `CreateTemplateCommandController`
+    #[must_use]
+    pub fn create_template_controller(&self) -> CreateTemplateCommandController {
+        CreateTemplateCommandController::new(&self.user_output())
+    }
+
+    /// Create a new `ProvisionCommandController`
+    #[must_use]
+    pub fn create_provision_controller(&self) -> ProvisionCommandController {
+        ProvisionCommandController::new(self.repository(), self.clock(), self.user_output())
+    }
+
+    /// Create a new `DestroyCommandController`
+    #[must_use]
+    pub fn create_destroy_controller(&self) -> DestroyCommandController {
+        DestroyCommandController::new(self.repository(), self.clock(), self.user_output())
+    }
+
+    /// Create a new `ConfigureCommandController`
+    #[must_use]
+    pub fn create_configure_controller(&self) -> ConfigureCommandController {
+        ConfigureCommandController::new(self.repository(), self.clock(), self.user_output())
+    }
+
+    /// Create a new `TestCommandController`
+    #[must_use]
+    pub fn create_test_controller(&self) -> TestCommandController {
+        TestCommandController::new(self.repository(), self.user_output())
     }
 }
 

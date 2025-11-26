@@ -26,11 +26,18 @@
 //! use torrust_tracker_deployer_lib::presentation::controllers::destroy;
 //! use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 //!
+//! # #[tokio::main]
+//! # async fn main() {
 //! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 //! let context = ExecutionContext::new(Arc::new(container));
 //!
 //! // Call the destroy handler
-//! let result = destroy::handler::handle("my-environment", &context);
+//! let result = context
+//!     .container()
+//!     .create_destroy_controller()
+//!     .execute("my-environment")
+//!     .await;
+//! # }
 //! ```
 //!
 //! ### Direct Usage (For Testing)
@@ -48,7 +55,12 @@
 //! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 //! let context = ExecutionContext::new(Arc::new(container));
 //!
-//! if let Err(e) = destroy::handle("test-env", &context).await {
+//! if let Err(e) = context
+//!     .container()
+//!     .create_destroy_controller()
+//!     .execute("test-env")
+//!     .await
+//! {
 //!     eprintln!("Destroy failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
@@ -84,10 +96,10 @@
 
 pub mod errors;
 pub mod handler;
+pub use handler::DestroyCommandController;
 
 #[cfg(test)]
 mod tests;
 
 // Re-export commonly used types for convenience
 pub use errors::DestroySubcommandError;
-pub use handler::handle;

@@ -32,7 +32,12 @@
 //! let context = ExecutionContext::new(Arc::new(container));
 //!
 //! // Call the test handler
-//! if let Err(e) = test::handle("my-environment", &context).await {
+//! if let Err(e) = context
+//!     .container()
+//!     .create_test_controller()
+//!     .execute("my-environment")
+//!     .await
+//! {
 //!     eprintln!("Test failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
@@ -42,22 +47,24 @@
 //! ## Direct Usage (For Testing)
 //!
 //! ```rust
-//! use std::path::{Path, PathBuf};
+//! use std::path::Path;
 //! use std::sync::Arc;
-//! use parking_lot::ReentrantMutex;
-//! use std::cell::RefCell;
-//! use torrust_tracker_deployer_lib::presentation::controllers::test::handler::TestCommandController;
-//! use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
-//! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-//! use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
+//! use torrust_tracker_deployer_lib::bootstrap::Container;
+//! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+//! use torrust_tracker_deployer_lib::presentation::controllers::test;
+//! use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 //!
 //! # #[tokio::main]
 //! # async fn main() {
-//! let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-//! let data_dir = PathBuf::from("./data");
-//! let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-//! let repository = repository_factory.create(data_dir);
-//! if let Err(e) = TestCommandController::new(repository, output).execute("test-env").await {
+//! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
+//! let context = ExecutionContext::new(Arc::new(container));
+//!
+//! if let Err(e) = context
+//!     .container()
+//!     .create_test_controller()
+//!     .execute("test-env")
+//!     .await
+//! {
 //!     eprintln!("Test failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
@@ -66,10 +73,10 @@
 
 pub mod errors;
 pub mod handler;
+pub use handler::TestCommandController;
 
 #[cfg(test)]
 mod tests;
 
 // Re-export commonly used types for convenience
 pub use errors::TestSubcommandError;
-pub use handler::handle;

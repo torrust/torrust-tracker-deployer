@@ -147,14 +147,20 @@
 //! ) -> Result<(), CreateCommandError> {
 //!     match action {
 //!         CreateAction::Environment { env_file } => {
-//!             subcommands::environment::handle(&env_file, working_dir, context)
+//!             context
+//!                 .container()
+//!                 .create_environment_controller()
+//!                 .execute(&env_file, working_dir)
 //!                 .await
 //!                 .map(|_| ()) // Convert Environment<Created> to ()
 //!                 .map_err(CreateCommandError::Environment)
 //!         }
 //!         CreateAction::Template { output_path } => {
 //!             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
-//!             subcommands::template::handle(&template_path, context)
+//!             context
+//!                 .container()
+//!                 .create_template_controller()
+//!                 .execute(&template_path)
 //!                 .await
 //!                 .map_err(CreateCommandError::Template)
 //!         }

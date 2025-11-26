@@ -11,79 +11,13 @@ use parking_lot::ReentrantMutex;
 use crate::application::command_handlers::TestCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::presentation::dispatch::context::ExecutionContext;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
 use super::errors::TestSubcommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 /// Number of main steps in the test workflow
 const TEST_WORKFLOW_STEPS: usize = 4;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle test command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for testing deployment environments,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `environment_name` - Name of the environment to test
-/// * `working_dir` - Working directory path for operations
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(())` - Environment tested successfully
-/// * `Err(TestSubcommandError)` - Test operation failed
-///
-/// # Errors
-///
-/// Returns `TestSubcommandError` when:
-/// * Environment name is invalid or contains special characters
-/// * Working directory is not accessible or doesn't exist
-/// * Environment is not found or doesn't have instance IP set
-/// * Infrastructure validation fails (cloud-init, Docker, Docker Compose)
-/// * SSH connectivity cannot be established
-///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::test;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-///
-/// test::handle("my-env", &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle(
-    environment_name: &str,
-    context: &ExecutionContext,
-) -> Result<(), TestSubcommandError> {
-    TestCommandController::new(context.repository(), context.user_output())
-        .execute(environment_name)
-        .await
-}
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for test command workflow
 ///

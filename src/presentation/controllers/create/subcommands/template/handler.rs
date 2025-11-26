@@ -15,72 +15,8 @@ use crate::presentation::views::UserOutput;
 
 use super::errors::CreateEnvironmentTemplateCommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 /// Number of main steps in the template creation workflow
 const TEMPLATE_CREATION_WORKFLOW_STEPS: usize = 2;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle template creation command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for generating configuration templates,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `output_path` - Path where the template file should be created
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(())` - Template generated successfully
-/// * `Err(CreateEnvironmentTemplateCommandError)` - Template generation failed
-///
-/// # Errors
-///
-/// Returns `CreateEnvironmentTemplateCommandError` when:
-/// * Output path is not accessible or parent directory doesn't exist
-/// * File system operations fail (permission errors, disk space)
-/// * Template processing encounters errors
-/// * User output system fails (mutex poisoning)
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-/// let output_path = Path::new("./environment-template.json");
-///
-/// template::handle(output_path, &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle(
-    output_path: &Path,
-    context: &crate::presentation::dispatch::context::ExecutionContext,
-) -> Result<(), CreateEnvironmentTemplateCommandError> {
-    CreateTemplateCommandController::new(&context.user_output())
-        .execute(output_path)
-        .await
-}
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for template creation command workflow
 ///

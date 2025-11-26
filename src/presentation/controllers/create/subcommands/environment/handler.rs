@@ -21,85 +21,8 @@ use crate::shared::clock::Clock;
 use super::config_loader::ConfigLoader;
 use super::errors::CreateEnvironmentCommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 /// Number of main steps in the environment creation workflow
 const ENVIRONMENT_CREATION_WORKFLOW_STEPS: usize = 3;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle environment creation command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for creating deployment environments,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `env_file` - Path to the environment configuration file (JSON format)
-/// * `working_dir` - Working directory path for environment storage
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(Environment<Created>)` - Environment created successfully
-/// * `Err(CreateEnvironmentCommandError)` - Environment creation failed
-///
-/// # Errors
-///
-/// Returns `CreateEnvironmentCommandError` when:
-/// * Configuration file cannot be loaded or is malformed
-/// * Environment name is invalid or already exists
-/// * Working directory is not accessible or doesn't exist
-/// * Infrastructure provisioning fails (OpenTofu/LXD errors)
-/// * File system operations fail (permission errors, disk space)
-/// * User output system fails (mutex poisoning)
-///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-/// let env_file = Path::new("./environment.json");
-/// let working_dir = Path::new("./");
-///
-/// environment::handle(env_file, working_dir, &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle(
-    env_file: &Path,
-    working_dir: &Path,
-    context: &crate::presentation::dispatch::context::ExecutionContext,
-) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
-    CreateEnvironmentCommandController::new(
-        context.repository(),
-        context.clock(),
-        &context.user_output(),
-    )
-    .execute(env_file, working_dir)
-    .await
-}
-
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for environment creation command workflow
 ///
