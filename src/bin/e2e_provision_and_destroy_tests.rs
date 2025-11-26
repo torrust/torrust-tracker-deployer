@@ -46,10 +46,8 @@ use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
-    create_environment, destroy_infrastructure, generate_environment_config,
-    provision_infrastructure, run_preflight_cleanup, verify_required_dependencies,
+    generate_environment_config, run_preflight_cleanup, verify_required_dependencies, E2eTestRunner,
 };
-use torrust_tracker_deployer_lib::testing::e2e::ProcessRunner;
 
 // Constants for the e2e-provision environment
 const ENVIRONMENT_NAME: &str = "e2e-provision";
@@ -158,20 +156,16 @@ fn main() -> Result<()> {
 ///
 /// Returns an error if any command fails.
 fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
-    let runner = ProcessRunner::new();
+    let test_runner = E2eTestRunner::new(environment_name).with_cleanup_on_failure(destroy);
 
-    // Generate config file with absolute paths for SSH keys
     let config_path = generate_environment_config(environment_name)?;
 
-    // Step 1: Create environment
-    create_environment(&runner, &config_path)?;
+    test_runner.create_environment(&config_path)?;
 
-    // Step 2: Provision infrastructure
-    provision_infrastructure(&runner, environment_name, destroy)?;
+    test_runner.provision_infrastructure()?;
 
-    // Step 3: Destroy infrastructure
     if destroy {
-        destroy_infrastructure(&runner, environment_name)?;
+        test_runner.destroy_infrastructure()?;
     } else {
         info!(
             step = "destroy",
