@@ -40,6 +40,10 @@ impl ProcessRunner {
     /// # Errors
     ///
     /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory or config file path contains invalid UTF-8.
     pub fn run_create_command(&self, config_file: &str) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
         // If working directory is specified, we need to:
@@ -81,6 +85,43 @@ impl ProcessRunner {
         Ok(ProcessResult::new(output))
     }
 
+    /// Run the provision command with the production binary
+    ///
+    /// This method runs `cargo run -- provision <environment_name>` with
+    /// optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path contains invalid UTF-8.
+    pub fn run_provision_command(&self, environment_name: &str) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "provision",
+                environment_name,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args(["run", "--", "provision", environment_name]);
+        }
+
+        let output = cmd
+            .output()
+            .context("Failed to execute provision command")?;
+
+        Ok(ProcessResult::new(output))
+    }
+
     /// Run the destroy command with the production binary
     ///
     /// This method runs `cargo run -- destroy <environment_name>` with
@@ -89,7 +130,10 @@ impl ProcessRunner {
     /// # Errors
     ///
     /// Returns an error if the command fails to execute.
-    #[allow(dead_code)]
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path contains invalid UTF-8.
     pub fn run_destroy_command(&self, environment_name: &str) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
 
@@ -141,7 +185,6 @@ impl ProcessResult {
 
     /// Get the process stdout as a string
     #[must_use]
-    #[allow(dead_code)]
     pub fn stdout(&self) -> String {
         String::from_utf8_lossy(&self.output.stdout).to_string()
     }

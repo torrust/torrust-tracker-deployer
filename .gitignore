@@ -64,6 +64,9 @@ build/
 # - data/*/traces/ - Execution traces
 data/
 
+# Generated environment config files for E2E tests
+envs/
+
 # Meson build directory
 builddir/
 

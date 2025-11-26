@@ -76,12 +76,13 @@ The refactored test should follow the pattern:
    - Remove `TestContext` usage
    - Remove direct `command_handlers` imports
    - Use `ProcessRunner` to execute CLI commands:
-     - `create environment --env-file fixtures/e2e-provision/environment.json`
+     - `create environment --env-file <generated-config>` (dynamically generated with absolute SSH key paths)
      - `provision e2e-provision`
      - `destroy e2e-provision`
    - Keep `verify_required_dependencies`
    - Keep preflight cleanup (from `testing` module)
    - Verify success via exit codes only
+   - Generate config file at runtime with absolute paths (required because Ansible runs from build directory)
 
 4. **Verify**: Ensure it passes pre-commit checks and manual execution.
 
@@ -89,8 +90,8 @@ The refactored test should follow the pattern:
 
 ## ✅ Acceptance Criteria
 
-- [ ] `src/bin/e2e_provision_and_destroy_tests.rs` executes `create environment`, `provision`, and `destroy` commands via CLI.
-- [ ] No direct calls to `command_handlers` for logic execution.
-- [ ] Uses static fixture file `fixtures/e2e-provision/environment.json`.
+- [x] `src/bin/e2e_provision_and_destroy_tests.rs` executes `create environment`, `provision`, and `destroy` commands via CLI.
+- [x] No direct calls to `command_handlers` for logic execution.
+- [x] Uses dynamically generated config file with absolute SSH key paths (static fixture doesn't work because relative paths fail when Ansible runs from build directory).
 - [ ] CI workflow `test-e2e-provision.yml` passes.
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
