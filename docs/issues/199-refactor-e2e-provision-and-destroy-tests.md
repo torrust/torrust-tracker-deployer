@@ -17,16 +17,19 @@ Refactor `src/bin/e2e_provision_and_destroy_tests.rs` to be a "real" E2E test th
 
 The refactored test should follow the pattern:
 
-1. **Isolation**: Create a temporary directory.
-2. **Black Box Execution**: Execute `cargo run -- provision ...` and `cargo run -- destroy ...`.
-3. **Verification**: Check process exit codes and validate infrastructure state (e.g., using `lxc list` or checking for state files).
+1. **Project-Local Directories**: Use project directories (`./data`, `./build`) with a fixed environment name (`e2e-provision`) for predictable cleanup.
+2. **Black Box Execution**: Execute CLI commands via `ProcessRunner`:
+   - `cargo run -- create environment --env-file <config-file>`
+   - `cargo run -- provision <environment-name>`
+   - `cargo run -- destroy <environment-name>`
+3. **Verification**: Check process exit codes only (success = exit code 0). Future enhancement: use `list` command to verify environment state.
 
 ### Key Changes & Requirements
 
-1. **Move Test Support Code**: Move `tests/support/process_runner.rs`, `tests/support/assertions.rs`, and `tests/support/temp_workspace.rs` to `src/testing/black_box/` so they can be used by the binaries in `src/bin/`.
+1. **Move Shared Test Support Code**: Move only `tests/support/process_runner.rs` to `src/testing/black_box/process_runner.rs` (shared between `src/bin/` and `tests/`). Keep `TempWorkspace` and `assertions` in `tests/support/` (only used by tests).
 2. **Dependencies**: Keep `verify_required_dependencies` to ensure the test fails for the right reasons if tools are missing.
-3. **Fixtures**: Use SSH key fixtures from `fixtures/` and pass their paths to the CLI arguments.
-4. **Cleanup**: Maintain "Preflight Cleanup" to handle interrupted previous runs.
+3. **Fixtures**: Use a static fixture file `fixtures/e2e-provision/environment.json` with pre-filled configuration (no runtime JSON generation).
+4. **Cleanup**: Maintain "Preflight Cleanup" using utilities from `src/testing/` module (allowed since `testing` is not a DDD layer).
 5. **Context**: Remove `TestContext` as it simulates internal bootstrapping which is no longer needed for black-box testing.
 6. **Tasks**: Replace internal tasks like `run_provision_command` and `run_destroy_command` with direct `ProcessRunner` calls to the CLI.
 
@@ -35,36 +38,60 @@ The refactored test should follow the pattern:
 - **DDD Layer**: `src/bin/`
 - **Module Path**: `src/bin/e2e_provision_and_destroy_tests.rs`
 - **Architectural Constraints**:
-  - No direct imports of `application` or `domain` layers for logic.
-  - Use `ProcessRunner` (moved to `src/testing/black_box`) to execute the CLI.
+  - No direct imports of `application` or `domain` layers for logic execution.
+  - Imports from `src/testing/` module are allowed (cross-cutting concern, not a DDD layer).
+  - Use `ProcessRunner` (in `src/testing/black_box`) to execute the CLI.
+
+### Design Decisions
+
+1. **No TempWorkspace**: Use project-local directories (`./data`, `./build`) instead of temporary directories for:
+
+   - Predictable LXD resource cleanup (fixed instance name `torrust-tracker-vm-e2e-provision`)
+   - Easier debugging (artifacts persist after test run)
+   - Simpler preflight cleanup (known paths)
+
+2. **Static Fixture Configuration**: Use `fixtures/e2e-provision/environment.json` instead of generating JSON programmatically:
+
+   - Simpler implementation
+   - If config schema changes, update fixture once (same effort as updating programmatic generation)
+   - No runtime template processing
+
+3. **Minimal Code Movement**: Only move `ProcessRunner` to `src/testing/black_box/` since it's shared. Keep `TempWorkspace` and `assertions` in `tests/support/` (local to tests).
+
+4. **Exit Code Verification Only**: Trust CLI exit codes for now. Future enhancement: use `list` command to verify environment state after provisioning.
 
 ## 📅 Implementation Plan
 
-1. **Move Test Support Code**:
+1. **Create Fixture File**: Create `fixtures/e2e-provision/environment.json` with pre-filled configuration.
+
+2. **Move ProcessRunner**:
 
    - Move `tests/support/process_runner.rs` -> `src/testing/black_box/process_runner.rs`
-   - Move `tests/support/assertions.rs` -> `src/testing/black_box/assertions.rs`
-   - Move `tests/support/temp_workspace.rs` -> `src/testing/black_box/temp_workspace.rs`
-   - Update `src/testing/mod.rs` to expose `black_box` module.
-   - Update existing tests in `tests/` to import from `src/testing/black_box` (or re-export them in `tests/support/mod.rs` to minimize churn).
+   - Add `run_provision_command` method to `ProcessRunner`
+   - Update `src/testing/mod.rs` to expose `black_box` module
+   - Update `tests/support/mod.rs` to re-export `ProcessRunner` from `src/testing/black_box` (minimize churn)
 
-2. **Generate New Version**: Create `src/bin/e2e_provision_and_destroy_tests_new.rs` by copying the existing file.
+3. **Refactor Binary**: Update `src/bin/e2e_provision_and_destroy_tests.rs`:
 
-   - **Refactor Strategy**:
-     - Replace `TestContext` initialization with `TempWorkspace` creation.
-     - Replace `run_provision_command` with `ProcessRunner::run_provision_command` (implement this method in `ProcessRunner`).
-     - Replace `run_destroy_command` with `ProcessRunner::run_destroy_command`.
-     - Ensure `verify_required_dependencies` is called.
-     - Ensure `preflight_cleanup` is called (might need adaptation to work without `TestContext` or just use `lxc` commands directly via `std::process::Command` or a helper).
+   - Remove `TestContext` usage
+   - Remove direct `command_handlers` imports
+   - Use `ProcessRunner` to execute CLI commands:
+     - `create environment --env-file <generated-config>` (dynamically generated with absolute SSH key paths)
+     - `provision e2e-provision`
+     - `destroy e2e-provision`
+   - Keep `verify_required_dependencies`
+   - Keep preflight cleanup (from `testing` module)
+   - Verify success via exit codes only
+   - Generate config file at runtime with absolute paths (required because Ansible runs from build directory)
 
-3. **Verify**: Ensure it passes pre-commit checks and manual execution.
-4. **CI Integration**: Add the new binary to `.github/workflows/test-e2e-provision.yml`.
-5. **Replace**: Delete the old binary and rename the new one to `src/bin/e2e_provision_and_destroy_tests.rs`.
-6. **Cleanup**: Update workflow to remove the temporary binary reference.
+4. **Verify**: Ensure it passes pre-commit checks and manual execution.
+
+5. **CI Integration**: Verify `.github/workflows/test-e2e-provision.yml` still works (no changes expected).
 
 ## ✅ Acceptance Criteria
 
-- [ ] `src/bin/e2e_provision_and_destroy_tests.rs` executes `provision` and `destroy` commands via CLI.
-- [ ] No direct calls to `command_handlers`.
+- [x] `src/bin/e2e_provision_and_destroy_tests.rs` executes `create environment`, `provision`, and `destroy` commands via CLI.
+- [x] No direct calls to `command_handlers` for logic execution.
+- [x] Uses dynamically generated config file with absolute SSH key paths (static fixture doesn't work because relative paths fail when Ansible runs from build directory).
 - [ ] CI workflow `test-e2e-provision.yml` passes.
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`

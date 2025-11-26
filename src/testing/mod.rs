@@ -5,12 +5,14 @@
 //!
 //! ## Module Structure
 //!
+//! - `black_box` - Black-box testing utilities (CLI process execution)
 //! - `e2e` - End-to-end testing infrastructure and scenarios
 //! - `integration` - Integration testing utilities
 //! - `fixtures` - Reusable test fixtures
 //! - `mock_clock` - Mock clock implementation for deterministic time testing
 //! - `network` - Network testing utilities (port checking, connectivity testing)
 
+pub mod black_box;
 pub mod e2e;
 pub mod fixtures;
 pub mod integration;
@@ -27,3 +29,6 @@ pub use e2e::{
     containers::{ContainerError, RunningProvisionedContainer, StoppedProvisionedContainer},
     context::{TestContext, TestContextType},
 };
+
+// Re-export black-box testing types for convenience
+pub use black_box::{ProcessResult, ProcessRunner};

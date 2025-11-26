@@ -1,9 +1,8 @@
 //! End-to-End Provisioning and Destruction Tests for Torrust Tracker Deployer
 //!
 //! This binary tests the complete infrastructure lifecycle: provisioning and destruction.
-//! It creates VMs/containers using `OpenTofu`, validates infrastructure provisioning,
-//! and then destroys the infrastructure using the `DestroyCommandHandler` (with fallback to
-//! manual cleanup on failure). This does NOT test software configuration or installation.
+//! It executes the CLI commands as a black box, testing the public interface exactly as
+//! end-users would use it. This does NOT test software configuration or installation.
 //!
 //! ## Usage
 //!
@@ -28,51 +27,38 @@
 //!
 //! ## Test Workflow
 //!
-//! 1. **Preflight cleanup** - Remove any artifacts from previous test runs that may have failed to clean up
-//! 2. **Infrastructure provisioning** - Create VMs/containers using `OpenTofu`
-//! 3. **Basic validation** - Verify VM is created and cloud-init completed
-//! 4. **Infrastructure destruction** - Destroy infrastructure using `DestroyCommandHandler` (with fallback to manual cleanup)
+//! 1. **Preflight cleanup** - Remove any artifacts from previous test runs
+//! 2. **Create environment** - Execute `create environment` CLI command
+//! 3. **Provision infrastructure** - Execute `provision` CLI command
+//! 4. **Destroy infrastructure** - Execute `destroy` CLI command
 //!
-//! ## Two-Phase Cleanup Strategy
+//! ## Black-Box Testing Approach
 //!
-//! The cleanup process happens in two distinct phases:
-//!
-//! - **Phase 1 - Preflight cleanup**: Removes artifacts from previous test runs that may have
-//!   failed to clean up properly (executed at the start in main function)
-//! - **Phase 2 - Infrastructure destruction**: Destroys resources created specifically during
-//!   the current test run using `DestroyCommandHandler`, with fallback to manual cleanup on failure
-//!   (executed at the end in main function)
-//!
-//! This approach provides comprehensive E2E testing of the full provision+destroy lifecycle
-//! while ensuring reliable cleanup in CI environments.
+//! This test executes the CLI commands as external processes, without importing
+//! application or domain layer logic. This ensures we test the public interface
+//! exactly as end-users would use it.
 
 use anyhow::Result;
 use clap::Parser;
-use std::net::IpAddr;
+use std::path::PathBuf;
 use std::time::Instant;
 use torrust_dependency_installer::{verify_dependencies, Dependency};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
-// Import E2E testing infrastructure
-use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PORT};
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
-use torrust_tracker_deployer_lib::shared::Username;
-use torrust_tracker_deployer_lib::testing::e2e::{
-    context::{TestContext, TestContextType},
-    tasks::virtual_machine::{
-        cleanup_infrastructure::cleanup_test_infrastructure,
-        preflight_cleanup::{preflight_cleanup_previous_resources, PreflightCleanupContext},
-        run_destroy_command::run_destroy_command,
-        run_provision_command::run_provision_command,
-    },
+use torrust_tracker_deployer_lib::testing::black_box::ProcessRunner;
+use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::preflight_cleanup::{
+    preflight_cleanup_previous_resources, PreflightCleanupContext,
 };
+
+// Constants for the e2e-provision environment
+const ENVIRONMENT_NAME: &str = "e2e-provision";
 
 #[derive(Parser)]
 #[command(name = "e2e-provision-and-destroy-tests")]
 #[command(about = "E2E provisioning and destruction tests for Torrust Tracker Deployer")]
 struct Cli {
-    /// Keep the test environment after completion
+    /// Keep the test environment after completion (skip destroy step)
     #[arg(long)]
     keep: bool,
 
@@ -88,10 +74,10 @@ struct Cli {
 /// Main entry point for the E2E provisioning and destruction test suite
 ///
 /// This function orchestrates the complete provision+destroy test workflow:
-/// 1. Initializes logging and test environment
-/// 2. Performs pre-flight cleanup
-/// 3. Runs provisioning tests (infrastructure creation only)
-/// 4. Destroys infrastructure using `DestroyCommandHandler` (with fallback to manual cleanup)
+/// 1. Initializes logging
+/// 2. Verifies required dependencies
+/// 3. Performs pre-flight cleanup
+/// 4. Executes CLI commands: create → provision → destroy
 /// 5. Reports results
 ///
 /// Returns `Ok(())` if all tests pass, `Err` otherwise.
@@ -99,23 +85,13 @@ struct Cli {
 /// # Errors
 ///
 /// This function may return errors in the following cases:
-/// - Invalid environment name provided via CLI
-/// - Test environment setup fails
+/// - Required dependencies are missing
 /// - Pre-flight cleanup encounters issues
-/// - Infrastructure provisioning fails
-/// - Destruction operations fail (both `DestroyCommandHandler` and manual cleanup fallback)
-///
-/// # Panics
-///
-/// This function may panic if the hardcoded username "torrust" is invalid,
-/// which should never happen in normal operation.
-#[tokio::main]
-pub async fn main() -> Result<()> {
+/// - Any CLI command fails (non-zero exit code)
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Initialize logging based on the chosen format with stderr output for test visibility
-    // E2E tests use production log location: ./data/logs using the builder pattern
-    LoggingBuilder::new(std::path::Path::new("./data/logs"))
+    LoggingBuilder::new(std::path::Path::new("./data/e2e-provision/logs"))
         .with_format(cli.log_format.clone())
         .with_output(LogOutput::FileAndStderr)
         .init();
@@ -124,58 +100,16 @@ pub async fn main() -> Result<()> {
         application = "torrust_tracker_deployer",
         test_suite = "e2e_provision_and_destroy_tests",
         log_format = ?cli.log_format,
-        "Starting E2E provisioning and destruction tests"
+        "Starting E2E provisioning and destruction tests (black-box)"
     );
 
-    // Verify required dependencies before running tests
     verify_required_dependencies()?;
 
-    // Create environment entity for e2e-provision testing
-    let environment_name = EnvironmentName::new("e2e-provision".to_string())?;
-
-    // Use absolute paths to project root for SSH keys to ensure they can be found by Ansible
-    let project_root = std::env::current_dir().expect("Failed to get current directory");
-    let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
-    let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
-    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
-    let ssh_credentials = SshCredentials::new(
-        ssh_private_key_path.clone(),
-        ssh_public_key_path.clone(),
-        ssh_user.clone(),
-    );
-
-    let ssh_port = DEFAULT_SSH_PORT;
-    let environment = Environment::new(environment_name, ssh_credentials, ssh_port);
-
-    // Cleanup any artifacts from previous test runs that may have failed to clean up
-    // This ensures a clean slate before starting new tests
-    // IMPORTANT: Must run BEFORE TestContext::init() which persists the environment
-    //
-    // We create a minimal PreflightCleanupContext with only the information needed
-    // for cleanup, rather than creating a full TestContext just to delete it.
-    let cleanup_context = PreflightCleanupContext::new(
-        environment.build_dir().clone(),
-        environment.templates_dir().clone(),
-        environment.name().clone(),
-        environment.instance_name().clone(),
-        environment.profile_name().clone(),
-    );
-
-    preflight_cleanup_previous_resources(&cleanup_context)?;
-
-    // Now initialize the test context and persist the environment after cleanup
-    let mut test_context =
-        TestContext::from_environment(cli.keep, environment, TestContextType::VirtualMachine)?
-            .init()?;
+    run_preflight_cleanup(ENVIRONMENT_NAME)?;
 
     let test_start = Instant::now();
 
-    let provision_result = run_provisioning_test(&mut test_context).await;
-
-    // Always cleanup test infrastructure created during this test run
-    // Try using DestroyCommandHandlerHandler first, fallback to manual cleanup on failure
-    // This ensures proper resource cleanup regardless of test success or failure
-    run_infrastructure_destroy(&mut test_context);
+    let test_result = run_e2e_test_workflow(ENVIRONMENT_NAME, !cli.keep);
 
     let test_duration = test_start.elapsed();
 
@@ -186,26 +120,26 @@ pub async fn main() -> Result<()> {
         "Provisioning and destruction test execution completed"
     );
 
-    // Handle provisioning test results
-    match provision_result {
-        Ok(_) => {
+    // Report final results
+    match &test_result {
+        Ok(()) => {
             info!(
                 test_suite = "e2e_provision_and_destroy_tests",
                 status = "success",
                 "All provisioning and destruction tests passed successfully"
             );
-            Ok(())
         }
-        Err(provision_err) => {
+        Err(e) => {
             error!(
                 test_suite = "e2e_provision_and_destroy_tests",
                 status = "failed",
-                error = %provision_err,
-                "Infrastructure provisioning failed"
+                error = %e,
+                "E2E test failed"
             );
-            Err(provision_err)
         }
     }
+
+    test_result
 }
 
 /// Verify that all required dependencies are installed for provision E2E tests.
@@ -231,94 +165,312 @@ fn verify_required_dependencies() -> Result<()> {
     Ok(())
 }
 
-/// Runs the provisioning test workflow
+/// Performs preflight cleanup to remove artifacts from previous test runs.
 ///
-/// This function focuses exclusively on infrastructure provisioning and validation.
-/// It does NOT attempt to configure software or install applications.
+/// This ensures a clean slate before starting new tests by removing:
+/// - Build directory
+/// - Templates directory
+/// - Data directory for this environment
+/// - LXD resources (instance and profile)
 ///
-/// # Test Phases
+/// # Arguments
 ///
-/// 1. **Provision Infrastructure**: Creates VMs/containers using `OpenTofu`
-/// 2. **Basic Validation**: Verifies infrastructure is ready (cloud-init completed)
+/// * `environment_name` - The name of the environment to clean up
 ///
-/// Returns the provisioned instance IP address on success.
-async fn run_provisioning_test(env: &mut TestContext) -> Result<IpAddr> {
+/// # Errors
+///
+/// Returns an error if cleanup fails.
+fn run_preflight_cleanup(environment_name: &str) -> Result<()> {
+    use torrust_tracker_deployer_lib::domain::EnvironmentName;
+
     info!(
-        test_type = "provision_only",
-        workflow = "infrastructure_provisioning",
-        "Starting infrastructure provisioning E2E test"
+        operation = "preflight_cleanup",
+        environment = environment_name,
+        "Running preflight cleanup"
     );
 
-    run_provision_command(env)
-        .await
-        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    // Create preflight cleanup context with paths for the environment
+    let cleanup_context = PreflightCleanupContext::new(
+        format!("./build/{environment_name}").into(),
+        format!("./templates/{environment_name}").into(),
+        EnvironmentName::new(environment_name).expect("Valid environment name"),
+        format!("torrust-tracker-vm-{environment_name}")
+            .try_into()
+            .expect("Valid instance name"),
+        format!("torrust-profile-{environment_name}")
+            .try_into()
+            .expect("Valid profile name"),
+    );
 
-    // Extract instance IP from the updated TestContext
-    let instance_ip = env
-        .environment
-        .instance_ip()
-        .expect("Instance IP must be set after successful provisioning");
+    preflight_cleanup_previous_resources(&cleanup_context)?;
 
     info!(
+        operation = "preflight_cleanup",
         status = "success",
-        instance_ip = %instance_ip,
-        "Infrastructure provisioning completed successfully"
+        "Preflight cleanup completed"
     );
 
-    info!(
-        test_type = "provision_only",
-        status = "success",
-        note = "VM/container created and cloud-init completed - ready for configuration",
-        "Provisioning E2E test completed successfully"
-    );
-
-    // Return the instance IP for potential future validation
-    Ok(instance_ip)
+    Ok(())
 }
 
-/// Runs the infrastructure destruction workflow
+/// Runs the E2E test workflow using CLI commands.
 ///
-/// This function destroys infrastructure using the `DestroyCommandHandler` with fallback
-/// to manual cleanup if the command fails. This ensures reliable cleanup in all scenarios.
+/// Executes the following commands in sequence:
+/// 1. `create environment` - Create the environment from config
+/// 2. `provision` - Provision the infrastructure
+/// 3. `destroy` - Destroy the infrastructure (if `destroy` is true)
 ///
-/// # Destruction Strategy
+/// # Arguments
 ///
-/// 1. **Try `DestroyCommandHandler`**: Use the application layer command for destruction
-/// 2. **Fallback to Manual Cleanup**: If `DestroyCommandHandler` fails, use manual cleanup functions
-fn run_infrastructure_destroy(test_context: &mut TestContext) {
-    use tracing::warn;
+/// * `environment_name` - The name of the environment to test
+/// * `destroy` - If true, destroy the infrastructure after provisioning; if false, keep it for debugging
+///
+/// # Errors
+///
+/// Returns an error if any command fails.
+fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
+    let runner = ProcessRunner::new();
+
+    // Generate config file with absolute paths for SSH keys
+    let config_path = generate_environment_config(environment_name)?;
+
+    // Step 1: Create environment
+    create_environment(&runner, &config_path)?;
+
+    // Step 2: Provision infrastructure
+    provision_infrastructure(&runner, environment_name, destroy)?;
+
+    // Step 3: Destroy infrastructure
+    if destroy {
+        destroy_infrastructure(&runner, environment_name)?;
+    } else {
+        info!(
+            step = "destroy",
+            status = "skipped",
+            reason = "keep flag is set",
+            "Skipping infrastructure destruction"
+        );
+    }
+
+    Ok(())
+}
+
+/// Generates the environment configuration file with absolute SSH key paths.
+///
+/// This function creates a temporary configuration file with absolute paths
+/// to the SSH keys, ensuring they work correctly regardless of the directory
+/// from which Ansible runs.
+///
+/// # Arguments
+///
+/// * `environment_name` - The name of the environment to create
+///
+/// # Returns
+///
+/// Returns the path to the generated configuration file.
+///
+/// # Errors
+///
+/// Returns an error if the configuration file cannot be created.
+fn generate_environment_config(environment_name: &str) -> Result<PathBuf> {
+    use std::fs;
+
+    // Get project root from current directory (cargo run runs from project root)
+    let project_root = std::env::current_dir()
+        .map_err(|e| anyhow::anyhow!("Failed to get current directory: {e}"))?;
+
+    // Build absolute paths to SSH keys
+    let private_key_path = project_root.join("fixtures/testing_rsa");
+    let public_key_path = project_root.join("fixtures/testing_rsa.pub");
+
+    // Verify SSH keys exist
+    if !private_key_path.exists() {
+        return Err(anyhow::anyhow!(
+            "SSH private key not found at: {}",
+            private_key_path.display()
+        ));
+    }
+    if !public_key_path.exists() {
+        return Err(anyhow::anyhow!(
+            "SSH public key not found at: {}",
+            public_key_path.display()
+        ));
+    }
+
+    // Create configuration JSON with absolute paths
+    let config = serde_json::json!({
+        "environment": {
+            "name": environment_name
+        },
+        "ssh_credentials": {
+            "private_key_path": private_key_path.to_string_lossy(),
+            "public_key_path": public_key_path.to_string_lossy()
+        }
+    });
+
+    // Write to envs directory
+    let config_path = project_root.join(format!("envs/{environment_name}.json"));
+
+    // Ensure parent directory exists
+    if let Some(parent) = config_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| anyhow::anyhow!("Failed to create config directory: {e}"))?;
+    }
+
+    fs::write(&config_path, serde_json::to_string_pretty(&config)?)
+        .map_err(|e| anyhow::anyhow!("Failed to write config file: {e}"))?;
 
     info!(
-        test_type = "destroy",
-        workflow = "infrastructure_destruction",
-        "Starting infrastructure destruction E2E test"
+        config_path = %config_path.display(),
+        private_key = %private_key_path.display(),
+        public_key = %public_key_path.display(),
+        "Generated environment configuration with absolute SSH key paths"
     );
 
-    // Try using the DestroyCommandHandler first
-    match run_destroy_command(test_context) {
-        Ok(()) => {
-            info!(
-                status = "success",
-                method = "destroy_command",
-                "Infrastructure destroyed successfully using DestroyCommandHandler"
-            );
-        }
-        Err(e) => {
-            warn!(
-                status = "failed",
-                method = "destroy_command",
-                error = %e,
-                "DestroyCommandHandler failed, falling back to manual cleanup"
-            );
+    Ok(config_path)
+}
 
-            // Fallback to manual cleanup
-            cleanup_test_infrastructure(test_context);
+/// Creates the environment from the configuration file.
+///
+/// # Arguments
+///
+/// * `runner` - The process runner to execute CLI commands
+/// * `config_path` - Path to the environment configuration file
+///
+/// # Errors
+///
+/// Returns an error if the create command fails.
+fn create_environment(runner: &ProcessRunner, config_path: &std::path::Path) -> Result<()> {
+    info!(
+        step = "create_environment",
+        config_path = %config_path.display(),
+        "Creating environment from config file"
+    );
 
-            info!(
-                status = "success",
-                method = "manual_cleanup",
-                "Infrastructure destroyed using manual cleanup fallback"
-            );
-        }
+    let create_result = runner
+        .run_create_command(config_path.to_str().expect("Valid UTF-8 path"))
+        .map_err(|e| anyhow::anyhow!("Failed to execute create command: {e}"))?;
+
+    if !create_result.success() {
+        error!(
+            step = "create_environment",
+            exit_code = ?create_result.exit_code(),
+            stderr = %create_result.stderr(),
+            "Create environment command failed"
+        );
+        return Err(anyhow::anyhow!(
+            "Create environment failed with exit code {:?}",
+            create_result.exit_code()
+        ));
     }
+
+    info!(
+        step = "create_environment",
+        status = "success",
+        "Environment created successfully"
+    );
+
+    Ok(())
+}
+
+/// Provisions the infrastructure for the environment.
+///
+/// # Arguments
+///
+/// * `runner` - The process runner to execute CLI commands
+/// * `environment_name` - The name of the environment to provision
+/// * `destroy_on_failure` - If true, attempt to destroy infrastructure on failure
+///
+/// # Errors
+///
+/// Returns an error if the provision command fails.
+fn provision_infrastructure(
+    runner: &ProcessRunner,
+    environment_name: &str,
+    destroy_on_failure: bool,
+) -> Result<()> {
+    info!(
+        step = "provision",
+        environment = environment_name,
+        "Provisioning infrastructure"
+    );
+
+    let provision_result = runner
+        .run_provision_command(environment_name)
+        .map_err(|e| anyhow::anyhow!("Failed to execute provision command: {e}"))?;
+
+    if !provision_result.success() {
+        error!(
+            step = "provision",
+            exit_code = ?provision_result.exit_code(),
+            stderr = %provision_result.stderr(),
+            "Provision command failed"
+        );
+
+        // Try to cleanup even if provision failed
+        if destroy_on_failure {
+            warn!(
+                step = "cleanup_after_failure",
+                "Attempting to destroy infrastructure after provision failure"
+            );
+            // Ignore destroy result - we're already in an error state
+            drop(runner.run_destroy_command(environment_name));
+        }
+
+        return Err(anyhow::anyhow!(
+            "Provision failed with exit code {:?}",
+            provision_result.exit_code()
+        ));
+    }
+
+    info!(
+        step = "provision",
+        status = "success",
+        "Infrastructure provisioned successfully"
+    );
+
+    Ok(())
+}
+
+/// Destroys the infrastructure for the environment.
+///
+/// # Arguments
+///
+/// * `runner` - The process runner to execute CLI commands
+/// * `environment_name` - The name of the environment to destroy
+///
+/// # Errors
+///
+/// Returns an error if the destroy command fails.
+fn destroy_infrastructure(runner: &ProcessRunner, environment_name: &str) -> Result<()> {
+    info!(
+        step = "destroy",
+        environment = environment_name,
+        "Destroying infrastructure"
+    );
+
+    let destroy_result = runner
+        .run_destroy_command(environment_name)
+        .map_err(|e| anyhow::anyhow!("Failed to execute destroy command: {e}"))?;
+
+    if !destroy_result.success() {
+        error!(
+            step = "destroy",
+            exit_code = ?destroy_result.exit_code(),
+            stderr = %destroy_result.stderr(),
+            "Destroy command failed"
+        );
+        return Err(anyhow::anyhow!(
+            "Destroy failed with exit code {:?}",
+            destroy_result.exit_code()
+        ));
+    }
+
+    info!(
+        step = "destroy",
+        status = "success",
+        "Infrastructure destroyed successfully"
+    );
+
+    Ok(())
 }
