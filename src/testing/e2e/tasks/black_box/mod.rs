@@ -6,12 +6,14 @@
 //! ## Module Structure
 //!
 //! - `create_environment` - Create environment from configuration file
+//! - `destroy_infrastructure` - Destroy infrastructure for environment
 //! - `generate_config` - Generate environment configuration files
 //! - `preflight_cleanup` - Remove artifacts from previous test runs
 //! - `provision_infrastructure` - Provision infrastructure for environment
 //! - `verify_dependencies` - Verify required system dependencies are installed
 
 pub mod create_environment;
+pub mod destroy_infrastructure;
 pub mod generate_config;
 pub mod preflight_cleanup;
 pub mod provision_infrastructure;
@@ -19,6 +21,7 @@ pub mod verify_dependencies;
 
 // Re-export commonly used items
 pub use create_environment::create_environment;
+pub use destroy_infrastructure::destroy_infrastructure;
 pub use generate_config::generate_environment_config;
 pub use preflight_cleanup::run_preflight_cleanup;
 pub use provision_infrastructure::provision_infrastructure;

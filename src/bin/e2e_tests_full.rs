@@ -53,8 +53,8 @@ use tracing::{error, info, warn};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
-    create_environment, generate_environment_config, provision_infrastructure,
-    run_preflight_cleanup, verify_required_dependencies,
+    create_environment, destroy_infrastructure, generate_environment_config,
+    provision_infrastructure, run_preflight_cleanup, verify_required_dependencies,
 };
 use torrust_tracker_deployer_lib::testing::e2e::ProcessRunner;
 
@@ -296,49 +296,6 @@ fn validate_deployment(runner: &ProcessRunner, environment_name: &str) -> Result
         step = "test",
         status = "success",
         "Deployment validated successfully"
-    );
-
-    Ok(())
-}
-
-/// Destroys the infrastructure for the environment.
-///
-/// # Arguments
-///
-/// * `runner` - The process runner to execute CLI commands
-/// * `environment_name` - The name of the environment to destroy
-///
-/// # Errors
-///
-/// Returns an error if the destroy command fails.
-fn destroy_infrastructure(runner: &ProcessRunner, environment_name: &str) -> Result<()> {
-    info!(
-        step = "destroy",
-        environment = environment_name,
-        "Destroying infrastructure"
-    );
-
-    let destroy_result = runner
-        .run_destroy_command(environment_name)
-        .map_err(|e| anyhow::anyhow!("Failed to execute destroy command: {e}"))?;
-
-    if !destroy_result.success() {
-        error!(
-            step = "destroy",
-            exit_code = ?destroy_result.exit_code(),
-            stderr = %destroy_result.stderr(),
-            "Destroy command failed"
-        );
-        return Err(anyhow::anyhow!(
-            "Destroy failed with exit code {:?}",
-            destroy_result.exit_code()
-        ));
-    }
-
-    info!(
-        step = "destroy",
-        status = "success",
-        "Infrastructure destroyed successfully"
     );
 
     Ok(())
