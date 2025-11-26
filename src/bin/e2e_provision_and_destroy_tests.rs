@@ -40,15 +40,13 @@
 
 use anyhow::Result;
 use clap::Parser;
-use std::path::PathBuf;
 use std::time::Instant;
-use torrust_dependency_installer::{verify_dependencies, Dependency};
-use tracing::{error, info, warn};
+use torrust_dependency_installer::Dependency;
+use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::testing::black_box::ProcessRunner;
-use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::preflight_cleanup::{
-    preflight_cleanup_previous_resources, PreflightCleanupContext,
+use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
+    generate_environment_config, run_preflight_cleanup, verify_required_dependencies, E2eTestRunner,
 };
 
 // Constants for the e2e-provision environment
@@ -103,7 +101,7 @@ fn main() -> Result<()> {
         "Starting E2E provisioning and destruction tests (black-box)"
     );
 
-    verify_required_dependencies()?;
+    verify_required_dependencies(&[Dependency::Ansible])?;
 
     run_preflight_cleanup(ENVIRONMENT_NAME)?;
 
@@ -142,77 +140,6 @@ fn main() -> Result<()> {
     test_result
 }
 
-/// Verify that all required dependencies are installed for provision E2E tests.
-///
-/// Provision E2E tests require:
-/// - `Ansible` (configuration management for basic validation)
-///
-/// # Errors
-///
-/// Returns an error if any required dependencies are missing or cannot be detected.
-fn verify_required_dependencies() -> Result<()> {
-    let required_deps = &[Dependency::Ansible];
-
-    if let Err(e) = verify_dependencies(required_deps) {
-        error!(
-            error = %e,
-            "Dependency verification failed"
-        );
-        eprintln!("\n{}\n", e.actionable_message());
-        return Err(anyhow::anyhow!("Missing required dependencies"));
-    }
-
-    Ok(())
-}
-
-/// Performs preflight cleanup to remove artifacts from previous test runs.
-///
-/// This ensures a clean slate before starting new tests by removing:
-/// - Build directory
-/// - Templates directory
-/// - Data directory for this environment
-/// - LXD resources (instance and profile)
-///
-/// # Arguments
-///
-/// * `environment_name` - The name of the environment to clean up
-///
-/// # Errors
-///
-/// Returns an error if cleanup fails.
-fn run_preflight_cleanup(environment_name: &str) -> Result<()> {
-    use torrust_tracker_deployer_lib::domain::EnvironmentName;
-
-    info!(
-        operation = "preflight_cleanup",
-        environment = environment_name,
-        "Running preflight cleanup"
-    );
-
-    // Create preflight cleanup context with paths for the environment
-    let cleanup_context = PreflightCleanupContext::new(
-        format!("./build/{environment_name}").into(),
-        format!("./templates/{environment_name}").into(),
-        EnvironmentName::new(environment_name).expect("Valid environment name"),
-        format!("torrust-tracker-vm-{environment_name}")
-            .try_into()
-            .expect("Valid instance name"),
-        format!("torrust-profile-{environment_name}")
-            .try_into()
-            .expect("Valid profile name"),
-    );
-
-    preflight_cleanup_previous_resources(&cleanup_context)?;
-
-    info!(
-        operation = "preflight_cleanup",
-        status = "success",
-        "Preflight cleanup completed"
-    );
-
-    Ok(())
-}
-
 /// Runs the E2E test workflow using CLI commands.
 ///
 /// Executes the following commands in sequence:
@@ -229,20 +156,16 @@ fn run_preflight_cleanup(environment_name: &str) -> Result<()> {
 ///
 /// Returns an error if any command fails.
 fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
-    let runner = ProcessRunner::new();
+    let test_runner = E2eTestRunner::new(environment_name).with_cleanup_on_failure(destroy);
 
-    // Generate config file with absolute paths for SSH keys
     let config_path = generate_environment_config(environment_name)?;
 
-    // Step 1: Create environment
-    create_environment(&runner, &config_path)?;
+    test_runner.create_environment(&config_path)?;
 
-    // Step 2: Provision infrastructure
-    provision_infrastructure(&runner, environment_name, destroy)?;
+    test_runner.provision_infrastructure()?;
 
-    // Step 3: Destroy infrastructure
     if destroy {
-        destroy_infrastructure(&runner, environment_name)?;
+        test_runner.destroy_infrastructure()?;
     } else {
         info!(
             step = "destroy",
@@ -251,226 +174,6 @@ fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
             "Skipping infrastructure destruction"
         );
     }
-
-    Ok(())
-}
-
-/// Generates the environment configuration file with absolute SSH key paths.
-///
-/// This function creates a temporary configuration file with absolute paths
-/// to the SSH keys, ensuring they work correctly regardless of the directory
-/// from which Ansible runs.
-///
-/// # Arguments
-///
-/// * `environment_name` - The name of the environment to create
-///
-/// # Returns
-///
-/// Returns the path to the generated configuration file.
-///
-/// # Errors
-///
-/// Returns an error if the configuration file cannot be created.
-fn generate_environment_config(environment_name: &str) -> Result<PathBuf> {
-    use std::fs;
-
-    // Get project root from current directory (cargo run runs from project root)
-    let project_root = std::env::current_dir()
-        .map_err(|e| anyhow::anyhow!("Failed to get current directory: {e}"))?;
-
-    // Build absolute paths to SSH keys
-    let private_key_path = project_root.join("fixtures/testing_rsa");
-    let public_key_path = project_root.join("fixtures/testing_rsa.pub");
-
-    // Verify SSH keys exist
-    if !private_key_path.exists() {
-        return Err(anyhow::anyhow!(
-            "SSH private key not found at: {}",
-            private_key_path.display()
-        ));
-    }
-    if !public_key_path.exists() {
-        return Err(anyhow::anyhow!(
-            "SSH public key not found at: {}",
-            public_key_path.display()
-        ));
-    }
-
-    // Create configuration JSON with absolute paths
-    let config = serde_json::json!({
-        "environment": {
-            "name": environment_name
-        },
-        "ssh_credentials": {
-            "private_key_path": private_key_path.to_string_lossy(),
-            "public_key_path": public_key_path.to_string_lossy()
-        }
-    });
-
-    // Write to envs directory
-    let config_path = project_root.join(format!("envs/{environment_name}.json"));
-
-    // Ensure parent directory exists
-    if let Some(parent) = config_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| anyhow::anyhow!("Failed to create config directory: {e}"))?;
-    }
-
-    fs::write(&config_path, serde_json::to_string_pretty(&config)?)
-        .map_err(|e| anyhow::anyhow!("Failed to write config file: {e}"))?;
-
-    info!(
-        config_path = %config_path.display(),
-        private_key = %private_key_path.display(),
-        public_key = %public_key_path.display(),
-        "Generated environment configuration with absolute SSH key paths"
-    );
-
-    Ok(config_path)
-}
-
-/// Creates the environment from the configuration file.
-///
-/// # Arguments
-///
-/// * `runner` - The process runner to execute CLI commands
-/// * `config_path` - Path to the environment configuration file
-///
-/// # Errors
-///
-/// Returns an error if the create command fails.
-fn create_environment(runner: &ProcessRunner, config_path: &std::path::Path) -> Result<()> {
-    info!(
-        step = "create_environment",
-        config_path = %config_path.display(),
-        "Creating environment from config file"
-    );
-
-    let create_result = runner
-        .run_create_command(config_path.to_str().expect("Valid UTF-8 path"))
-        .map_err(|e| anyhow::anyhow!("Failed to execute create command: {e}"))?;
-
-    if !create_result.success() {
-        error!(
-            step = "create_environment",
-            exit_code = ?create_result.exit_code(),
-            stderr = %create_result.stderr(),
-            "Create environment command failed"
-        );
-        return Err(anyhow::anyhow!(
-            "Create environment failed with exit code {:?}",
-            create_result.exit_code()
-        ));
-    }
-
-    info!(
-        step = "create_environment",
-        status = "success",
-        "Environment created successfully"
-    );
-
-    Ok(())
-}
-
-/// Provisions the infrastructure for the environment.
-///
-/// # Arguments
-///
-/// * `runner` - The process runner to execute CLI commands
-/// * `environment_name` - The name of the environment to provision
-/// * `destroy_on_failure` - If true, attempt to destroy infrastructure on failure
-///
-/// # Errors
-///
-/// Returns an error if the provision command fails.
-fn provision_infrastructure(
-    runner: &ProcessRunner,
-    environment_name: &str,
-    destroy_on_failure: bool,
-) -> Result<()> {
-    info!(
-        step = "provision",
-        environment = environment_name,
-        "Provisioning infrastructure"
-    );
-
-    let provision_result = runner
-        .run_provision_command(environment_name)
-        .map_err(|e| anyhow::anyhow!("Failed to execute provision command: {e}"))?;
-
-    if !provision_result.success() {
-        error!(
-            step = "provision",
-            exit_code = ?provision_result.exit_code(),
-            stderr = %provision_result.stderr(),
-            "Provision command failed"
-        );
-
-        // Try to cleanup even if provision failed
-        if destroy_on_failure {
-            warn!(
-                step = "cleanup_after_failure",
-                "Attempting to destroy infrastructure after provision failure"
-            );
-            // Ignore destroy result - we're already in an error state
-            drop(runner.run_destroy_command(environment_name));
-        }
-
-        return Err(anyhow::anyhow!(
-            "Provision failed with exit code {:?}",
-            provision_result.exit_code()
-        ));
-    }
-
-    info!(
-        step = "provision",
-        status = "success",
-        "Infrastructure provisioned successfully"
-    );
-
-    Ok(())
-}
-
-/// Destroys the infrastructure for the environment.
-///
-/// # Arguments
-///
-/// * `runner` - The process runner to execute CLI commands
-/// * `environment_name` - The name of the environment to destroy
-///
-/// # Errors
-///
-/// Returns an error if the destroy command fails.
-fn destroy_infrastructure(runner: &ProcessRunner, environment_name: &str) -> Result<()> {
-    info!(
-        step = "destroy",
-        environment = environment_name,
-        "Destroying infrastructure"
-    );
-
-    let destroy_result = runner
-        .run_destroy_command(environment_name)
-        .map_err(|e| anyhow::anyhow!("Failed to execute destroy command: {e}"))?;
-
-    if !destroy_result.success() {
-        error!(
-            step = "destroy",
-            exit_code = ?destroy_result.exit_code(),
-            stderr = %destroy_result.stderr(),
-            "Destroy command failed"
-        );
-        return Err(anyhow::anyhow!(
-            "Destroy failed with exit code {:?}",
-            destroy_result.exit_code()
-        ));
-    }
-
-    info!(
-        step = "destroy",
-        status = "success",
-        "Infrastructure destroyed successfully"
-    );
 
     Ok(())
 }

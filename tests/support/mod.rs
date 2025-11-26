@@ -18,4 +18,4 @@ pub use temp_workspace::TempWorkspace;
 
 // Re-export ProcessRunner from the library's testing module
 // This allows tests to continue using `support::ProcessRunner` without changes
-pub use torrust_tracker_deployer_lib::testing::black_box::ProcessRunner;
+pub use torrust_tracker_deployer_lib::testing::e2e::ProcessRunner;

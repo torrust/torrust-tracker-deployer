@@ -9,6 +9,7 @@
 //! - `container` - Service dependency injection container for E2E tests
 //! - `context` - Test context configuration and management
 //! - `containers` - Container management for E2E testing scenarios
+//! - `process_runner` - Black-box CLI process execution utilities
 //! - `tasks` - High-level testing tasks and workflows
 //!
 //! ## Testing Workflow
@@ -25,6 +26,7 @@
 pub mod container;
 pub mod containers;
 pub mod context;
+mod process_runner;
 pub mod tasks;
 
 // Re-export for convenience
@@ -32,3 +34,6 @@ pub use container::Services;
 
 // Re-export provisioned container types for backward compatibility
 pub use containers::{ContainerError, RunningProvisionedContainer, StoppedProvisionedContainer};
+
+// Re-export black-box testing types
+pub use process_runner::{ProcessResult, ProcessRunner};
