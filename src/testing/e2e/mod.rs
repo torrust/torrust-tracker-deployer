@@ -9,6 +9,7 @@
 //! - `container` - Service dependency injection container for E2E tests
 //! - `context` - Test context configuration and management
 //! - `containers` - Container management for E2E testing scenarios
+//! - `process_runner` - Black-box CLI process execution utilities
 //! - `tasks` - High-level testing tasks and workflows
 //!
 //! ## Testing Workflow
@@ -22,10 +23,10 @@
 //! E2E test binaries use the `torrust-dependency-installer` package to verify
 //! required system dependencies are installed before running tests.
 
-pub mod black_box;
 pub mod container;
 pub mod containers;
 pub mod context;
+mod process_runner;
 pub mod tasks;
 
 // Re-export for convenience
@@ -35,4 +36,4 @@ pub use container::Services;
 pub use containers::{ContainerError, RunningProvisionedContainer, StoppedProvisionedContainer};
 
 // Re-export black-box testing types
-pub use black_box::{ProcessResult, ProcessRunner};
+pub use process_runner::{ProcessResult, ProcessRunner};

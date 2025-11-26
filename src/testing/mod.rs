@@ -29,4 +29,4 @@ pub use e2e::{
 };
 
 // Re-export black-box testing types for convenience
-pub use e2e::black_box::{ProcessResult, ProcessRunner};
+pub use e2e::{ProcessResult, ProcessRunner};

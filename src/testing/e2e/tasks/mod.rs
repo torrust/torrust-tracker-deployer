@@ -27,6 +27,7 @@
 //! These tasks are orchestrated by the E2E test binaries to provide comprehensive
 //! testing coverage of the entire deployment system.
 
+pub mod black_box;
 pub mod container;
 pub mod preflight_cleanup;
 pub mod run_configuration_validation;

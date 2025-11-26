@@ -53,11 +53,11 @@ use torrust_dependency_installer::Dependency;
 use tracing::{error, info, warn};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::testing::e2e::black_box::tasks::verify_required_dependencies;
-use torrust_tracker_deployer_lib::testing::e2e::black_box::ProcessRunner;
+use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::verify_required_dependencies;
 use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::preflight_cleanup::{
     preflight_cleanup_previous_resources, PreflightCleanupContext,
 };
+use torrust_tracker_deployer_lib::testing::e2e::ProcessRunner;
 
 // Constants for the e2e-full environment
 const ENVIRONMENT_NAME: &str = "e2e-full";

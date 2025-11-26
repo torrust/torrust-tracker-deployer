@@ -6,7 +6,7 @@
 //! # Example
 //!
 //! ```rust,ignore
-//! use torrust_tracker_deployer_lib::testing::e2e::black_box::tasks::verify_required_dependencies;
+//! use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::verify_required_dependencies;
 //! use torrust_dependency_installer::Dependency;
 //!
 //! // Verify dependencies for provision tests (only Ansible needed)
