@@ -53,7 +53,8 @@ use tracing::{error, info, warn};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
-    generate_environment_config, run_preflight_cleanup, verify_required_dependencies,
+    create_environment, generate_environment_config, run_preflight_cleanup,
+    verify_required_dependencies,
 };
 use torrust_tracker_deployer_lib::testing::e2e::ProcessRunner;
 
@@ -194,49 +195,6 @@ fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
             "Skipping infrastructure destruction"
         );
     }
-
-    Ok(())
-}
-
-/// Creates the environment from the configuration file.
-///
-/// # Arguments
-///
-/// * `runner` - The process runner to execute CLI commands
-/// * `config_path` - Path to the environment configuration file
-///
-/// # Errors
-///
-/// Returns an error if the create command fails.
-fn create_environment(runner: &ProcessRunner, config_path: &std::path::Path) -> Result<()> {
-    info!(
-        step = "create_environment",
-        config_path = %config_path.display(),
-        "Creating environment from config file"
-    );
-
-    let create_result = runner
-        .run_create_command(config_path.to_str().expect("Valid UTF-8 path"))
-        .map_err(|e| anyhow::anyhow!("Failed to execute create command: {e}"))?;
-
-    if !create_result.success() {
-        error!(
-            step = "create_environment",
-            exit_code = ?create_result.exit_code(),
-            stderr = %create_result.stderr(),
-            "Create environment command failed"
-        );
-        return Err(anyhow::anyhow!(
-            "Create environment failed with exit code {:?}",
-            create_result.exit_code()
-        ));
-    }
-
-    info!(
-        step = "create_environment",
-        status = "success",
-        "Environment created successfully"
-    );
 
     Ok(())
 }
