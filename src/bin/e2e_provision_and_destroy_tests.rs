@@ -109,7 +109,7 @@ fn main() -> Result<()> {
 
     let test_start = Instant::now();
 
-    let test_result = run_e2e_test_workflow(ENVIRONMENT_NAME, cli.keep);
+    let test_result = run_e2e_test_workflow(ENVIRONMENT_NAME, !cli.keep);
 
     let test_duration = test_start.elapsed();
 
@@ -218,17 +218,17 @@ fn run_preflight_cleanup(environment_name: &str) -> Result<()> {
 /// Executes the following commands in sequence:
 /// 1. `create environment` - Create the environment from config
 /// 2. `provision` - Provision the infrastructure
-/// 3. `destroy` - Destroy the infrastructure (unless `keep` is true)
+/// 3. `destroy` - Destroy the infrastructure (if `destroy` is true)
 ///
 /// # Arguments
 ///
 /// * `environment_name` - The name of the environment to test
-/// * `keep` - If true, skip the destroy step to keep the environment for debugging
+/// * `destroy` - If true, destroy the infrastructure after provisioning; if false, keep it for debugging
 ///
 /// # Errors
 ///
 /// Returns an error if any command fails.
-fn run_e2e_test_workflow(environment_name: &str, keep: bool) -> Result<()> {
+fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
     let runner = ProcessRunner::new();
 
     // Generate config file with absolute paths for SSH keys
@@ -238,20 +238,19 @@ fn run_e2e_test_workflow(environment_name: &str, keep: bool) -> Result<()> {
     create_environment(&runner, &config_path)?;
 
     // Step 2: Provision infrastructure
-    provision_infrastructure(&runner, environment_name, keep)?;
+    provision_infrastructure(&runner, environment_name, destroy)?;
 
-    // Step 3: Destroy infrastructure (unless keep is true)
-    if keep {
+    // Step 3: Destroy infrastructure
+    if destroy {
+        destroy_infrastructure(&runner, environment_name)?;
+    } else {
         info!(
             step = "destroy",
             status = "skipped",
             reason = "keep flag is set",
             "Skipping infrastructure destruction"
         );
-        return Ok(());
     }
-
-    destroy_infrastructure(&runner, environment_name)?;
 
     Ok(())
 }
@@ -380,7 +379,7 @@ fn create_environment(runner: &ProcessRunner, config_path: &std::path::Path) -> 
 ///
 /// * `runner` - The process runner to execute CLI commands
 /// * `environment_name` - The name of the environment to provision
-/// * `keep` - If true, skip cleanup on failure
+/// * `destroy_on_failure` - If true, attempt to destroy infrastructure on failure
 ///
 /// # Errors
 ///
@@ -388,7 +387,7 @@ fn create_environment(runner: &ProcessRunner, config_path: &std::path::Path) -> 
 fn provision_infrastructure(
     runner: &ProcessRunner,
     environment_name: &str,
-    keep: bool,
+    destroy_on_failure: bool,
 ) -> Result<()> {
     info!(
         step = "provision",
@@ -409,7 +408,7 @@ fn provision_infrastructure(
         );
 
         // Try to cleanup even if provision failed
-        if !keep {
+        if destroy_on_failure {
             warn!(
                 step = "cleanup_after_failure",
                 "Attempting to destroy infrastructure after provision failure"
