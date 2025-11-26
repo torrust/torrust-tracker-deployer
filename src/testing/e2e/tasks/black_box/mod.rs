@@ -5,6 +5,7 @@
 //!
 //! ## Module Structure
 //!
+//! - `configure_services` - Configure services on provisioned infrastructure
 //! - `create_environment` - Create environment from configuration file
 //! - `destroy_infrastructure` - Destroy infrastructure for environment
 //! - `generate_config` - Generate environment configuration files
@@ -13,6 +14,7 @@
 //! - `validate_deployment` - Validate deployment by running test command
 //! - `verify_dependencies` - Verify required system dependencies are installed
 
+pub mod configure_services;
 pub mod create_environment;
 pub mod destroy_infrastructure;
 pub mod generate_config;
@@ -22,6 +24,7 @@ pub mod validate_deployment;
 pub mod verify_dependencies;
 
 // Re-export commonly used items
+pub use configure_services::configure_services;
 pub use create_environment::create_environment;
 pub use destroy_infrastructure::destroy_infrastructure;
 pub use generate_config::generate_environment_config;

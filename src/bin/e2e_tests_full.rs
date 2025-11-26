@@ -49,11 +49,11 @@ use anyhow::Result;
 use clap::Parser;
 use std::time::Instant;
 use torrust_dependency_installer::Dependency;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
-    create_environment, destroy_infrastructure, generate_environment_config,
+    configure_services, create_environment, destroy_infrastructure, generate_environment_config,
     provision_infrastructure, run_preflight_cleanup, validate_deployment,
     verify_required_dependencies,
 };
@@ -196,65 +196,6 @@ fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
             "Skipping infrastructure destruction"
         );
     }
-
-    Ok(())
-}
-
-/// Configures services on the provisioned infrastructure.
-///
-/// # Arguments
-///
-/// * `runner` - The process runner to execute CLI commands
-/// * `environment_name` - The name of the environment to configure
-/// * `destroy_on_failure` - If true, attempt to destroy infrastructure on failure
-///
-/// # Errors
-///
-/// Returns an error if the configure command fails.
-fn configure_services(
-    runner: &ProcessRunner,
-    environment_name: &str,
-    destroy_on_failure: bool,
-) -> Result<()> {
-    info!(
-        step = "configure",
-        environment = environment_name,
-        "Configuring services"
-    );
-
-    let configure_result = runner
-        .run_configure_command(environment_name)
-        .map_err(|e| anyhow::anyhow!("Failed to execute configure command: {e}"))?;
-
-    if !configure_result.success() {
-        error!(
-            step = "configure",
-            exit_code = ?configure_result.exit_code(),
-            stderr = %configure_result.stderr(),
-            "Configure command failed"
-        );
-
-        // Try to cleanup even if configure failed
-        if destroy_on_failure {
-            warn!(
-                step = "cleanup_after_failure",
-                "Attempting to destroy infrastructure after configure failure"
-            );
-            // Ignore destroy result - we're already in an error state
-            drop(runner.run_destroy_command(environment_name));
-        }
-
-        return Err(anyhow::anyhow!(
-            "Configure failed with exit code {:?}",
-            configure_result.exit_code()
-        ));
-    }
-
-    info!(
-        step = "configure",
-        status = "success",
-        "Services configured successfully"
-    );
 
     Ok(())
 }
