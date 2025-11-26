@@ -15,8 +15,30 @@ use crate::presentation::views::UserOutput;
 
 use super::errors::CreateEnvironmentTemplateCommandError;
 
-/// Number of main steps in the template creation workflow
-const TEMPLATE_CREATION_WORKFLOW_STEPS: usize = 2;
+/// Steps in the template creation workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CreateTemplateStep {
+    GenerateTemplate,
+    PrepareGuidance,
+}
+
+impl CreateTemplateStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[Self::GenerateTemplate, Self::PrepareGuidance];
+
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::GenerateTemplate => "Generating configuration template",
+            Self::PrepareGuidance => "Preparing user guidance",
+        }
+    }
+}
 
 /// Presentation layer controller for template creation command workflow
 ///
@@ -46,7 +68,7 @@ impl CreateTemplateCommandController {
     /// Creates a `CreateTemplateCommandController` with user output service injection.
     /// This follows the single container architecture pattern.
     pub fn new(user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>) -> Self {
-        let progress = ProgressReporter::new(user_output.clone(), TEMPLATE_CREATION_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output.clone(), CreateTemplateStep::count());
 
         Self { progress }
     }
@@ -92,7 +114,7 @@ impl CreateTemplateCommandController {
         output_path: &Path,
     ) -> Result<(), CreateEnvironmentTemplateCommandError> {
         self.progress
-            .start_step("Generating configuration template")?;
+            .start_step(CreateTemplateStep::GenerateTemplate.description())?;
 
         // Use synchronous version to avoid creating a tokio runtime
         // This prevents blocking and performance issues in test environments
@@ -120,7 +142,8 @@ impl CreateTemplateCommandController {
         &mut self,
         output_path: &Path,
     ) -> Result<(), CreateEnvironmentTemplateCommandError> {
-        self.progress.start_step("Preparing user guidance")?;
+        self.progress
+            .start_step(CreateTemplateStep::PrepareGuidance.description())?;
 
         // Use ProgressReporter wrapper methods to avoid dual mutex acquisition
         self.progress.blank_line()?;

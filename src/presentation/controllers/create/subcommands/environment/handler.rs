@@ -21,8 +21,36 @@ use crate::shared::clock::Clock;
 use super::config_loader::ConfigLoader;
 use super::errors::CreateEnvironmentCommandError;
 
-/// Number of main steps in the environment creation workflow
-const ENVIRONMENT_CREATION_WORKFLOW_STEPS: usize = 3;
+/// Steps in the environment creation workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CreateEnvironmentStep {
+    LoadConfiguration,
+    CreateCommandHandler,
+    CreateEnvironment,
+}
+
+impl CreateEnvironmentStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[
+        Self::LoadConfiguration,
+        Self::CreateCommandHandler,
+        Self::CreateEnvironment,
+    ];
+
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::LoadConfiguration => "Loading configuration",
+            Self::CreateCommandHandler => "Creating command handler",
+            Self::CreateEnvironment => "Creating environment",
+        }
+    }
+}
 
 /// Presentation layer controller for environment creation command workflow
 ///
@@ -59,8 +87,7 @@ impl CreateEnvironmentCommandController {
         clock: Arc<dyn Clock>,
         user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress =
-            ProgressReporter::new(user_output.clone(), ENVIRONMENT_CREATION_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output.clone(), CreateEnvironmentStep::count());
 
         Self {
             repository,
@@ -135,7 +162,8 @@ impl CreateEnvironmentCommandController {
         &mut self,
         env_file: &Path,
     ) -> Result<EnvironmentCreationConfig, CreateEnvironmentCommandError> {
-        self.progress.start_step("Loading configuration")?;
+        self.progress
+            .start_step(CreateEnvironmentStep::LoadConfiguration.description())?;
 
         self.progress.sub_step(&format!(
             "Loading configuration from '{}'...",
@@ -174,7 +202,8 @@ impl CreateEnvironmentCommandController {
     fn create_command_handler(
         &mut self,
     ) -> Result<CreateCommandHandler, CreateEnvironmentCommandError> {
-        self.progress.start_step("Creating command handler")?;
+        self.progress
+            .start_step(CreateEnvironmentStep::CreateCommandHandler.description())?;
 
         let command_handler =
             CreateCommandHandler::new(self.repository.clone(), self.clock.clone());
@@ -209,7 +238,8 @@ impl CreateEnvironmentCommandController {
         config: EnvironmentCreationConfig,
         working_dir: &Path,
     ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
-        self.progress.start_step("Creating environment")?;
+        self.progress
+            .start_step(CreateEnvironmentStep::CreateEnvironment.description())?;
 
         self.progress.sub_step(&format!(
             "Creating environment '{}'...",

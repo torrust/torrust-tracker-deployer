@@ -16,8 +16,36 @@ use crate::presentation::views::UserOutput;
 
 use super::errors::TestSubcommandError;
 
-/// Number of main steps in the test workflow
-const TEST_WORKFLOW_STEPS: usize = 3;
+/// Steps in the test workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TestStep {
+    ValidateEnvironment,
+    CreateCommandHandler,
+    TestInfrastructure,
+}
+
+impl TestStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[
+        Self::ValidateEnvironment,
+        Self::CreateCommandHandler,
+        Self::TestInfrastructure,
+    ];
+
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::ValidateEnvironment => "Validating environment",
+            Self::CreateCommandHandler => "Creating command handler",
+            Self::TestInfrastructure => "Testing infrastructure",
+        }
+    }
+}
 
 /// Presentation layer controller for test command workflow
 ///
@@ -58,7 +86,7 @@ impl TestCommandController {
         repository: Arc<dyn EnvironmentRepository + Send + Sync>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output, TEST_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, TestStep::count());
 
         Self {
             repository,
@@ -106,7 +134,8 @@ impl TestCommandController {
         &mut self,
         name: &str,
     ) -> Result<EnvironmentName, TestSubcommandError> {
-        self.progress.start_step("Validating environment")?;
+        self.progress
+            .start_step(TestStep::ValidateEnvironment.description())?;
 
         let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
             TestSubcommandError::InvalidEnvironmentName {
@@ -127,7 +156,8 @@ impl TestCommandController {
     ///
     /// Returns `TestSubcommandError::ProgressReportingFailed` if progress reporting fails
     fn create_command_handler(&mut self) -> Result<TestCommandHandler, TestSubcommandError> {
-        self.progress.start_step("Creating command handler")?;
+        self.progress
+            .start_step(TestStep::CreateCommandHandler.description())?;
 
         let handler = TestCommandHandler::new(self.repository.clone());
         self.progress.complete_step(None)?;
@@ -151,7 +181,8 @@ impl TestCommandController {
         handler: &TestCommandHandler,
         env_name: &EnvironmentName,
     ) -> Result<(), TestSubcommandError> {
-        self.progress.start_step("Testing infrastructure")?;
+        self.progress
+            .start_step(TestStep::TestInfrastructure.description())?;
 
         handler.execute(env_name).await.map_err(|source| {
             TestSubcommandError::ValidationFailed {

@@ -19,8 +19,36 @@ use crate::shared::clock::Clock;
 
 use super::errors::DestroySubcommandError;
 
-/// Number of main steps in the destroy workflow
-const DESTROY_WORKFLOW_STEPS: usize = 3;
+/// Steps in the destroy workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DestroyStep {
+    ValidateEnvironment,
+    CreateCommandHandler,
+    TearDownInfrastructure,
+}
+
+impl DestroyStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[
+        Self::ValidateEnvironment,
+        Self::CreateCommandHandler,
+        Self::TearDownInfrastructure,
+    ];
+
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::ValidateEnvironment => "Validating environment",
+            Self::CreateCommandHandler => "Creating command handler",
+            Self::TearDownInfrastructure => "Tearing down infrastructure",
+        }
+    }
+}
 
 /// Presentation layer controller for destroy command workflow
 ///
@@ -56,7 +84,7 @@ impl DestroyCommandController {
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output, DESTROY_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, DestroyStep::count());
 
         Self {
             repository,
@@ -114,7 +142,8 @@ impl DestroyCommandController {
         &mut self,
         name: &str,
     ) -> Result<EnvironmentName, DestroySubcommandError> {
-        self.progress.start_step("Validating environment")?;
+        self.progress
+            .start_step(DestroyStep::ValidateEnvironment.description())?;
 
         let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
             DestroySubcommandError::InvalidEnvironmentName {
@@ -135,7 +164,8 @@ impl DestroyCommandController {
     /// dependencies (repository, clock, etc.).
     #[allow(clippy::result_large_err)]
     fn create_command_handler(&mut self) -> Result<DestroyCommandHandler, DestroySubcommandError> {
-        self.progress.start_step("Creating command handler")?;
+        self.progress
+            .start_step(DestroyStep::CreateCommandHandler.description())?;
         let handler = DestroyCommandHandler::new(self.repository.clone(), self.clock.clone());
         self.progress.complete_step(None)?;
 
@@ -152,7 +182,8 @@ impl DestroyCommandController {
         handler: &DestroyCommandHandler,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Destroyed>, DestroySubcommandError> {
-        self.progress.start_step("Tearing down infrastructure")?;
+        self.progress
+            .start_step(DestroyStep::TearDownInfrastructure.description())?;
 
         let destroyed = handler.execute(env_name).map_err(|source| {
             DestroySubcommandError::DestroyOperationFailed {

@@ -19,8 +19,36 @@ use crate::shared::clock::Clock;
 
 use super::errors::ConfigureSubcommandError;
 
-/// Number of main steps in the configure workflow
-const CONFIGURE_WORKFLOW_STEPS: usize = 3;
+/// Steps in the configure workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ConfigureStep {
+    ValidateEnvironment,
+    CreateCommandHandler,
+    ConfigureInfrastructure,
+}
+
+impl ConfigureStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[
+        Self::ValidateEnvironment,
+        Self::CreateCommandHandler,
+        Self::ConfigureInfrastructure,
+    ];
+
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::ValidateEnvironment => "Validating environment",
+            Self::CreateCommandHandler => "Creating command handler",
+            Self::ConfigureInfrastructure => "Configuring infrastructure",
+        }
+    }
+}
 
 /// Presentation layer controller for configure command workflow
 ///
@@ -56,7 +84,7 @@ impl ConfigureCommandController {
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output, CONFIGURE_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, ConfigureStep::count());
 
         Self {
             repository,
@@ -115,7 +143,8 @@ impl ConfigureCommandController {
         &mut self,
         name: &str,
     ) -> Result<EnvironmentName, ConfigureSubcommandError> {
-        self.progress.start_step("Validating environment")?;
+        self.progress
+            .start_step(ConfigureStep::ValidateEnvironment.description())?;
 
         let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
             ConfigureSubcommandError::InvalidEnvironmentName {
@@ -138,7 +167,8 @@ impl ConfigureCommandController {
     fn create_command_handler(
         &mut self,
     ) -> Result<ConfigureCommandHandler, ConfigureSubcommandError> {
-        self.progress.start_step("Creating command handler")?;
+        self.progress
+            .start_step(ConfigureStep::CreateCommandHandler.description())?;
 
         let handler = ConfigureCommandHandler::new(self.clock.clone(), self.repository.clone());
         self.progress.complete_step(None)?;
@@ -162,7 +192,8 @@ impl ConfigureCommandController {
         handler: &ConfigureCommandHandler,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Configured>, ConfigureSubcommandError> {
-        self.progress.start_step("Configuring infrastructure")?;
+        self.progress
+            .start_step(ConfigureStep::ConfigureInfrastructure.description())?;
 
         let configured = handler.execute(env_name).map_err(|source| {
             ConfigureSubcommandError::ConfigureOperationFailed {

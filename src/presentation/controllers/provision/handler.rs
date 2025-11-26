@@ -19,8 +19,36 @@ use crate::shared::clock::Clock;
 
 use super::errors::ProvisionSubcommandError;
 
-/// Number of main steps in the provision workflow
-const PROVISION_WORKFLOW_STEPS: usize = 3;
+/// Steps in the provision workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ProvisionStep {
+    ValidateEnvironment,
+    CreateCommandHandler,
+    ProvisionInfrastructure,
+}
+
+impl ProvisionStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[
+        Self::ValidateEnvironment,
+        Self::CreateCommandHandler,
+        Self::ProvisionInfrastructure,
+    ];
+
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::ValidateEnvironment => "Validating environment",
+            Self::CreateCommandHandler => "Creating command handler",
+            Self::ProvisionInfrastructure => "Provisioning infrastructure",
+        }
+    }
+}
 
 /// Presentation layer controller for provision command workflow
 ///
@@ -56,7 +84,7 @@ impl ProvisionCommandController {
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output, PROVISION_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, ProvisionStep::count());
 
         Self {
             repository,
@@ -115,7 +143,8 @@ impl ProvisionCommandController {
         &mut self,
         name: &str,
     ) -> Result<EnvironmentName, ProvisionSubcommandError> {
-        self.progress.start_step("Validating environment")?;
+        self.progress
+            .start_step(ProvisionStep::ValidateEnvironment.description())?;
 
         let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
             ProvisionSubcommandError::InvalidEnvironmentName {
@@ -138,7 +167,8 @@ impl ProvisionCommandController {
     fn create_command_handler(
         &mut self,
     ) -> Result<ProvisionCommandHandler, ProvisionSubcommandError> {
-        self.progress.start_step("Creating command handler")?;
+        self.progress
+            .start_step(ProvisionStep::CreateCommandHandler.description())?;
         let handler = ProvisionCommandHandler::new(self.clock.clone(), self.repository.clone());
         self.progress.complete_step(None)?;
 
@@ -161,7 +191,8 @@ impl ProvisionCommandController {
         handler: &ProvisionCommandHandler,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
-        self.progress.start_step("Provisioning infrastructure")?;
+        self.progress
+            .start_step(ProvisionStep::ProvisionInfrastructure.description())?;
 
         let provisioned = handler.execute(env_name).await.map_err(|source| {
             ProvisionSubcommandError::ProvisionOperationFailed {
