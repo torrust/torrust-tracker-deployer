@@ -156,6 +156,78 @@ impl ProcessRunner {
 
         Ok(ProcessResult::new(output))
     }
+
+    /// Run the configure command with the production binary
+    ///
+    /// This method runs `cargo run -- configure <environment_name>` with
+    /// optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path contains invalid UTF-8.
+    pub fn run_configure_command(&self, environment_name: &str) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "configure",
+                environment_name,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args(["run", "--", "configure", environment_name]);
+        }
+
+        let output = cmd
+            .output()
+            .context("Failed to execute configure command")?;
+
+        Ok(ProcessResult::new(output))
+    }
+
+    /// Run the test command with the production binary
+    ///
+    /// This method runs `cargo run -- test <environment_name>` with
+    /// optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path contains invalid UTF-8.
+    pub fn run_test_command(&self, environment_name: &str) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "test",
+                environment_name,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args(["run", "--", "test", environment_name]);
+        }
+
+        let output = cmd.output().context("Failed to execute test command")?;
+
+        Ok(ProcessResult::new(output))
+    }
 }
 
 impl Default for ProcessRunner {
