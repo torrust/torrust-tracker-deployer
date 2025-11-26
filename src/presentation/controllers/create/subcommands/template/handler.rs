@@ -15,152 +15,30 @@ use crate::presentation::views::UserOutput;
 
 use super::errors::CreateEnvironmentTemplateCommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/// Number of main steps in the template creation workflow
-const TEMPLATE_CREATION_WORKFLOW_STEPS: usize = 2;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle template creation command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for generating configuration templates,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `output_path` - Path where the template file should be created
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(())` - Template generated successfully
-/// * `Err(CreateEnvironmentTemplateCommandError)` - Template generation failed
-///
-/// # Errors
-///
-/// Returns `CreateEnvironmentTemplateCommandError` when:
-/// * Output path is not accessible or parent directory doesn't exist
-/// * File system operations fail (permission errors, disk space)
-/// * Template processing encounters errors
-/// * User output system fails (mutex poisoning)
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-/// let output_path = Path::new("./environment-template.json");
-///
-/// template::handle(output_path, &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle(
-    output_path: &Path,
-    context: &crate::presentation::dispatch::context::ExecutionContext,
-) -> Result<(), CreateEnvironmentTemplateCommandError> {
-    handle_template_creation_command(output_path, &context.user_output()).await
+/// Steps in the template creation workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CreateTemplateStep {
+    GenerateTemplate,
+    PrepareGuidance,
 }
 
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
+impl CreateTemplateStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[Self::GenerateTemplate, Self::PrepareGuidance];
 
-/// Handle the template creation command
-///
-/// This is a thin wrapper over `CreateTemplateCommandController` that serves as
-/// the public entry point for the template creation command.
-///
-/// # Arguments
-///
-/// * `output_path` - Path where the template file should be created
-/// * `user_output` - Shared user output service for consistent output formatting
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Output path validation fails
-/// - Template generation fails  
-/// - Progress reporting encounters a poisoned mutex
-///
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Returns
-///
-/// Returns `Ok(())` on success, or a `CreateEnvironmentTemplateCommandError` on failure.
-///
-/// # Example
-///
-/// Using with Container and `ExecutionContext` (recommended):
-///
-/// ```rust,no_run
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let context = ExecutionContext::new(Arc::new(container));
-///
-/// if let Err(e) = template::handle(Path::new("template.json"), &context).await {
-///     eprintln!("Template creation failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-///
-/// Direct usage (for testing or specialized scenarios):
-///
-/// ```rust,no_run
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use parking_lot::RawMutex;
-/// use parking_lot::ReentrantMutex;
-/// use std::cell::RefCell;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::template::handler::handle_template_creation_command;
-/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let user_output = Arc::new(ReentrantMutex::<RefCell<UserOutput>>::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-///
-/// if let Err(e) = handle_template_creation_command(Path::new("template.json"), &user_output).await {
-///     eprintln!("Template creation failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle_template_creation_command(
-    output_path: &Path,
-    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
-) -> Result<(), CreateEnvironmentTemplateCommandError> {
-    CreateTemplateCommandController::new(user_output)
-        .execute(output_path)
-        .await
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::GenerateTemplate => "Generating configuration template",
+            Self::PrepareGuidance => "Preparing user guidance",
+        }
+    }
 }
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for template creation command workflow
 ///
@@ -190,7 +68,7 @@ impl CreateTemplateCommandController {
     /// Creates a `CreateTemplateCommandController` with user output service injection.
     /// This follows the single container architecture pattern.
     pub fn new(user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>) -> Self {
-        let progress = ProgressReporter::new(user_output.clone(), TEMPLATE_CREATION_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output.clone(), CreateTemplateStep::count());
 
         Self { progress }
     }
@@ -236,7 +114,7 @@ impl CreateTemplateCommandController {
         output_path: &Path,
     ) -> Result<(), CreateEnvironmentTemplateCommandError> {
         self.progress
-            .start_step("Generating configuration template")?;
+            .start_step(CreateTemplateStep::GenerateTemplate.description())?;
 
         // Use synchronous version to avoid creating a tokio runtime
         // This prevents blocking and performance issues in test environments
@@ -264,7 +142,8 @@ impl CreateTemplateCommandController {
         &mut self,
         output_path: &Path,
     ) -> Result<(), CreateEnvironmentTemplateCommandError> {
-        self.progress.start_step("Preparing user guidance")?;
+        self.progress
+            .start_step(CreateTemplateStep::PrepareGuidance.description())?;
 
         // Use ProgressReporter wrapper methods to avoid dual mutex acquisition
         self.progress.blank_line()?;
@@ -321,7 +200,9 @@ mod tests {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped(); // Use Silent to avoid output issues
 
-        let result = handle_template_creation_command(&output_path, &user_output).await;
+        let result = CreateTemplateCommandController::new(&user_output)
+            .execute(&output_path)
+            .await;
 
         // Should succeed in creating template
         assert!(
@@ -379,7 +260,9 @@ mod tests {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
 
-        let result = handle_template_creation_command(invalid_path, &user_output).await;
+        let result = CreateTemplateCommandController::new(&user_output)
+            .execute(invalid_path)
+            .await;
 
         assert!(result.is_err(), "Should fail for invalid path");
         match result.unwrap_err() {

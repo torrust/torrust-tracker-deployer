@@ -8,7 +8,8 @@ use std::sync::Arc;
 
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
-use crate::presentation::controllers::destroy::{handle_destroy_command, DestroySubcommandError};
+use crate::presentation::controllers::destroy::handler::DestroyCommandController;
+use crate::presentation::controllers::destroy::DestroySubcommandError;
 use crate::presentation::controllers::tests::TestContext;
 use crate::presentation::views::testing::TestUserOutput;
 use crate::presentation::views::VerbosityLevel;
@@ -32,7 +33,9 @@ async fn it_should_reject_invalid_environment_names() {
         let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
         let repository = repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
-        let result = handle_destroy_command(name, repository, clock, &user_output).await;
+        let result = DestroyCommandController::new(repository, clock, user_output.clone())
+            .execute(name)
+            .await;
         assert!(
             result.is_err(),
             "Should reject invalid environment name: {name}",
@@ -53,7 +56,9 @@ async fn it_should_reject_invalid_environment_names() {
     let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
     let repository = repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
-    let result = handle_destroy_command(&too_long_name, repository, clock, &user_output).await;
+    let result = DestroyCommandController::new(repository, clock, user_output.clone())
+        .execute(&too_long_name)
+        .await;
     assert!(result.is_err(), "Should get some error for 64-char name");
     // Accept either InvalidEnvironmentName OR DestroyOperationFailed
     // The domain layer determines what length is valid
@@ -78,7 +83,9 @@ async fn it_should_accept_valid_environment_names() {
         let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
         let repository = repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
-        let result = handle_destroy_command(name, repository, clock, &user_output).await;
+        let result = DestroyCommandController::new(repository, clock, user_output.clone())
+            .execute(name)
+            .await;
 
         // Will fail at operation since environment doesn't exist,
         // but should NOT fail at name validation
@@ -95,7 +102,9 @@ async fn it_should_accept_valid_environment_names() {
     let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
     let repository = repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
-    let result = handle_destroy_command(&max_length_name, repository, clock, &user_output).await;
+    let result = DestroyCommandController::new(repository, clock, user_output.clone())
+        .execute(&max_length_name)
+        .await;
     if let Err(DestroySubcommandError::InvalidEnvironmentName { .. }) = result {
         panic!("Should not reject valid 63-char environment name");
     }
@@ -111,7 +120,9 @@ async fn it_should_fail_for_nonexistent_environment() {
     let repository = repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
 
-    let result = handle_destroy_command("nonexistent-env", repository, clock, &user_output).await;
+    let result = DestroyCommandController::new(repository, clock, user_output.clone())
+        .execute("nonexistent-env")
+        .await;
 
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -130,8 +141,9 @@ async fn it_should_provide_help_for_errors() {
     let repository = repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
 
-    let result =
-        handle_destroy_command("invalid_name", repository, clock, &context.user_output()).await;
+    let result = DestroyCommandController::new(repository, clock, context.user_output().clone())
+        .execute("invalid_name")
+        .await;
 
     assert!(result.is_err());
     let error = result.unwrap_err();
@@ -156,8 +168,9 @@ async fn it_should_work_with_custom_working_directory() {
     let clock = Arc::new(SystemClock);
 
     // Try to destroy from custom directory
-    let result =
-        handle_destroy_command("test-env", repository, clock, &context.user_output()).await;
+    let result = DestroyCommandController::new(repository, clock, context.user_output().clone())
+        .execute("test-env")
+        .await;
 
     // Should fail at operation (environment doesn't exist) but not at path validation
     assert!(result.is_err());

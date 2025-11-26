@@ -52,7 +52,7 @@
 
 use std::path::Path;
 
-use crate::presentation::controllers::{configure, create, destroy, provision, test};
+use crate::presentation::controllers::create;
 use crate::presentation::errors::CommandError;
 use crate::presentation::input::Commands;
 
@@ -114,19 +114,34 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Destroy { environment } => {
-            destroy::handle(&environment, context).await?;
+            context
+                .container()
+                .create_destroy_controller()
+                .execute(&environment)
+                .await?;
             Ok(())
         }
         Commands::Provision { environment } => {
-            provision::handle(&environment, context).await?;
+            context
+                .container()
+                .create_provision_controller()
+                .execute(&environment)
+                .await?;
             Ok(())
         }
         Commands::Configure { environment } => {
-            configure::handle(&environment, context).await?;
+            context
+                .container()
+                .create_configure_controller()
+                .execute(&environment)?;
             Ok(())
         }
         Commands::Test { environment } => {
-            test::handle(&environment, context).await?;
+            context
+                .container()
+                .create_test_controller()
+                .execute(&environment)
+                .await?;
             Ok(())
         } // Future commands will be added here as the Controller Layer expands:
           //

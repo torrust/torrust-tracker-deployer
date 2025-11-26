@@ -113,7 +113,12 @@ impl TestSubcommandError {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container));
     ///
-    /// if let Err(e) = test::handle("test-env", &context).await {
+    /// if let Err(e) = context
+    ///     .container()
+    ///     .create_test_controller()
+    ///     .execute("test-env")
+    ///     .await
+    /// {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }
@@ -127,7 +132,7 @@ impl TestSubcommandError {
     /// use std::sync::Arc;
     /// use parking_lot::ReentrantMutex;
     /// use std::cell::RefCell;
-    /// use torrust_tracker_deployer_lib::presentation::controllers::test;
+    /// use torrust_tracker_deployer_lib::presentation::controllers::test::handler::TestCommandController;
     /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
     /// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
@@ -138,7 +143,7 @@ impl TestSubcommandError {
     /// let data_dir = PathBuf::from("./data");
     /// let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
     /// let repository = repository_factory.create(data_dir);
-    /// if let Err(e) = test::handle_test_command("test-env", repository, &output).await {
+    /// if let Err(e) = TestCommandController::new(repository, output).execute("test-env").await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }

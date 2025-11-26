@@ -13,177 +13,42 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Provisioned;
 use crate::domain::environment::Environment;
-use crate::presentation::dispatch::context::ExecutionContext;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
 use super::errors::ProvisionSubcommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/// Number of main steps in the provision workflow
-const PROVISION_WORKFLOW_STEPS: usize = 9;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle provision command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for provisioning deployment environments,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `environment_name` - Name of the environment to provision
-/// * `working_dir` - Working directory path for operations
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(Environment<Provisioned>)` - Environment provisioned successfully
-/// * `Err(ProvisionSubcommandError)` - Provision operation failed
-///
-/// # Errors
-///
-/// Returns `ProvisionSubcommandError` when:
-/// * Environment name is invalid or contains special characters
-/// * Working directory is not accessible or doesn't exist
-/// * Environment is not found or not in "Created" state
-/// * Infrastructure provisioning fails (OpenTofu/LXD errors)
-/// * SSH connectivity cannot be established
-/// * Cloud-init does not complete successfully
-///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::provision;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-///
-/// provision::handle("my-env", &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn handle(
-    environment_name: &str,
-    context: &ExecutionContext,
-) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
-    handle_provision_command(
-        environment_name,
-        context.repository(),
-        context.clock(),
-        &context.user_output(),
-    )
-    .await
+/// Steps in the provision workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ProvisionStep {
+    ValidateEnvironment,
+    CreateCommandHandler,
+    ProvisionInfrastructure,
 }
 
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
+impl ProvisionStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[
+        Self::ValidateEnvironment,
+        Self::CreateCommandHandler,
+        Self::ProvisionInfrastructure,
+    ];
 
-/// Handle the provision command
-///
-/// This is a thin wrapper over `ProvisionCommandController` that serves as
-/// the public entry point for the provision command.
-///
-/// # Arguments
-///
-/// * `environment_name` - The name of the environment to provision
-/// * `working_dir` - Root directory for environment data storage
-/// * `repository_factory` - Factory for creating environment repositories
-/// * `clock` - Clock service for timing operations
-/// * `user_output` - Shared user output service for consistent output formatting
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Environment name is invalid (format validation fails)
-/// - Environment cannot be loaded from repository
-/// - Environment is not in "Created" state
-/// - Infrastructure provisioning fails
-/// - Progress reporting encounters a poisoned mutex
-///
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Returns
-///
-/// Returns `Ok(Environment<Provisioned>)` on success, or a `ProvisionSubcommandError` on failure.
-///
-/// # Example
-///
-/// Using with Container and `ExecutionContext` (recommended):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-/// use torrust_tracker_deployer_lib::presentation::controllers::provision;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let context = ExecutionContext::new(Arc::new(container));
-///
-/// if let Err(e) = provision::handle("test-env", &context).await {
-///     eprintln!("Provision failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-///
-/// Direct usage (for testing or specialized scenarios):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use parking_lot::ReentrantMutex;
-/// use std::cell::RefCell;
-/// use torrust_tracker_deployer_lib::presentation::controllers::provision;
-/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use std::path::PathBuf;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-/// let repository = container.repository();
-/// let clock = container.clock();
-/// if let Err(e) = provision::handle_provision_command("test-env", repository, clock, &user_output).await {
-///     eprintln!("Provision failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-#[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
-pub async fn handle_provision_command(
-    environment_name: &str,
-    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    clock: Arc<dyn Clock>,
-    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
-) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
-    ProvisionCommandController::new(repository, clock, user_output.clone())
-        .execute(environment_name)
-        .await
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::ValidateEnvironment => "Validating environment",
+            Self::CreateCommandHandler => "Creating command handler",
+            Self::ProvisionInfrastructure => "Provisioning infrastructure",
+        }
+    }
 }
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for provision command workflow
 ///
@@ -202,11 +67,9 @@ pub async fn handle_provision_command(
 /// This controller sits in the presentation layer and handles all user-facing
 /// concerns. It delegates actual business logic to the application layer's
 /// `ProvisionCommandHandler`, maintaining clear separation of concerns.
-#[allow(unused)] // Temporary during refactoring
 pub struct ProvisionCommandController {
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
-    user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     progress: ProgressReporter,
 }
 
@@ -221,12 +84,11 @@ impl ProvisionCommandController {
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output.clone(), PROVISION_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, ProvisionStep::count());
 
         Self {
             repository,
             clock,
-            user_output,
             progress,
         }
     }
@@ -281,7 +143,8 @@ impl ProvisionCommandController {
         &mut self,
         name: &str,
     ) -> Result<EnvironmentName, ProvisionSubcommandError> {
-        self.progress.start_step("Validating environment")?;
+        self.progress
+            .start_step(ProvisionStep::ValidateEnvironment.description())?;
 
         let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
             ProvisionSubcommandError::InvalidEnvironmentName {
@@ -304,7 +167,8 @@ impl ProvisionCommandController {
     fn create_command_handler(
         &mut self,
     ) -> Result<ProvisionCommandHandler, ProvisionSubcommandError> {
-        self.progress.start_step("Creating command handler")?;
+        self.progress
+            .start_step(ProvisionStep::CreateCommandHandler.description())?;
         let handler = ProvisionCommandHandler::new(self.clock.clone(), self.repository.clone());
         self.progress.complete_step(None)?;
 
@@ -327,7 +191,8 @@ impl ProvisionCommandController {
         handler: &ProvisionCommandHandler,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
-        self.progress.start_step("Provisioning infrastructure")?;
+        self.progress
+            .start_step(ProvisionStep::ProvisionInfrastructure.description())?;
 
         let provisioned = handler.execute(env_name).await.map_err(|source| {
             ProvisionSubcommandError::ProvisionOperationFailed {
@@ -394,8 +259,9 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Test with invalid environment name (contains underscore)
-        let result =
-            handle_provision_command("invalid_name", repository, clock, &user_output).await;
+        let result = ProvisionCommandController::new(repository, clock, user_output.clone())
+            .execute("invalid_name")
+            .await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -414,7 +280,9 @@ mod tests {
 
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result = handle_provision_command("", repository, clock, &user_output).await;
+        let result = ProvisionCommandController::new(repository, clock, user_output.clone())
+            .execute("")
+            .await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -434,8 +302,9 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Test environment that doesn't exist yet
-        let result =
-            handle_provision_command("non-existent-env", repository, clock, &user_output).await;
+        let result = ProvisionCommandController::new(repository, clock, user_output.clone())
+            .execute("non-existent-env")
+            .await;
 
         assert!(result.is_err());
         // After refactoring, repository NotFound error is wrapped in ProvisionOperationFailed
@@ -463,7 +332,9 @@ mod tests {
 
         // Valid environment name should pass validation, but will fail
         // at provision operation since we don't have a real environment setup
-        let result = handle_provision_command("test-env", repository, clock, &user_output).await;
+        let result = ProvisionCommandController::new(repository, clock, user_output.clone())
+            .execute("test-env")
+            .await;
 
         // Should fail at operation, not at name validation
         if let Err(ProvisionSubcommandError::InvalidEnvironmentName { .. }) = result {

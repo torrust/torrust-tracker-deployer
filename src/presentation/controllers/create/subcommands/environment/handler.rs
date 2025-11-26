@@ -21,178 +21,36 @@ use crate::shared::clock::Clock;
 use super::config_loader::ConfigLoader;
 use super::errors::CreateEnvironmentCommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/// Number of main steps in the environment creation workflow
-const ENVIRONMENT_CREATION_WORKFLOW_STEPS: usize = 3;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle environment creation command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for creating deployment environments,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `env_file` - Path to the environment configuration file (JSON format)
-/// * `working_dir` - Working directory path for environment storage
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(Environment<Created>)` - Environment created successfully
-/// * `Err(CreateEnvironmentCommandError)` - Environment creation failed
-///
-/// # Errors
-///
-/// Returns `CreateEnvironmentCommandError` when:
-/// * Configuration file cannot be loaded or is malformed
-/// * Environment name is invalid or already exists
-/// * Working directory is not accessible or doesn't exist
-/// * Infrastructure provisioning fails (OpenTofu/LXD errors)
-/// * File system operations fail (permission errors, disk space)
-/// * User output system fails (mutex poisoning)
-///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-/// let env_file = Path::new("./environment.json");
-/// let working_dir = Path::new("./");
-///
-/// environment::handle(env_file, working_dir, &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle(
-    env_file: &Path,
-    working_dir: &Path,
-    context: &crate::presentation::dispatch::context::ExecutionContext,
-) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
-    handle_environment_creation_command(
-        env_file,
-        working_dir,
-        &context.repository(),
-        &context.clock(),
-        &context.user_output(),
-    )
-    .await
+/// Steps in the environment creation workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CreateEnvironmentStep {
+    LoadConfiguration,
+    CreateCommandHandler,
+    CreateEnvironment,
 }
 
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
+impl CreateEnvironmentStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[
+        Self::LoadConfiguration,
+        Self::CreateCommandHandler,
+        Self::CreateEnvironment,
+    ];
 
-/// Handle the environment creation command
-///
-/// This is a thin wrapper over `CreateEnvironmentCommandController` that serves as
-/// the public entry point for the environment creation command.
-///
-/// # Arguments
-///
-/// * `env_file` - Path to the environment configuration file  
-/// * `working_dir` - Working directory path for environment storage
-/// * `repository_factory` - Factory for creating environment repositories
-/// * `clock` - System clock service for timestamps
-/// * `user_output` - Shared user output service for consistent output formatting
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Configuration loading or validation fails
-/// - Environment creation fails
-/// - Progress reporting encounters a poisoned mutex
-///
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Returns
-///
-/// Returns `Ok(Environment<Created>)` on success, or a `CreateEnvironmentCommandError` on failure.
-///
-/// # Example
-///
-/// Using with Container and `ExecutionContext` (recommended):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let context = ExecutionContext::new(Arc::new(container));
-///
-/// if let Err(e) = environment::handle(
-///     Path::new("config.json"),
-///     Path::new("./"),
-///     &context
-/// ).await {
-///     eprintln!("Environment creation failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-///
-/// Direct usage (for testing or specialized scenarios):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment::handler::handle;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-///
-/// if let Err(e) = handle(
-///     Path::new("config.json"),
-///     Path::new("./"),
-///     &context
-/// ).await {
-///     eprintln!("Environment creation failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-#[allow(clippy::result_large_err)] // Error contains detailed context for user guidance
-pub async fn handle_environment_creation_command(
-    env_file: &Path,
-    working_dir: &Path,
-    repository: &Arc<dyn EnvironmentRepository + Send + Sync>,
-    clock: &Arc<dyn Clock>,
-    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
-) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
-    CreateEnvironmentCommandController::new(repository.clone(), clock.clone(), user_output)
-        .execute(env_file, working_dir)
-        .await
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::LoadConfiguration => "Loading configuration",
+            Self::CreateCommandHandler => "Creating command handler",
+            Self::CreateEnvironment => "Creating environment",
+        }
+    }
 }
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for environment creation command workflow
 ///
@@ -229,8 +87,7 @@ impl CreateEnvironmentCommandController {
         clock: Arc<dyn Clock>,
         user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress =
-            ProgressReporter::new(user_output.clone(), ENVIRONMENT_CREATION_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output.clone(), CreateEnvironmentStep::count());
 
         Self {
             repository,
@@ -305,7 +162,8 @@ impl CreateEnvironmentCommandController {
         &mut self,
         env_file: &Path,
     ) -> Result<EnvironmentCreationConfig, CreateEnvironmentCommandError> {
-        self.progress.start_step("Loading configuration")?;
+        self.progress
+            .start_step(CreateEnvironmentStep::LoadConfiguration.description())?;
 
         self.progress.sub_step(&format!(
             "Loading configuration from '{}'...",
@@ -344,7 +202,8 @@ impl CreateEnvironmentCommandController {
     fn create_command_handler(
         &mut self,
     ) -> Result<CreateCommandHandler, CreateEnvironmentCommandError> {
-        self.progress.start_step("Creating command handler")?;
+        self.progress
+            .start_step(CreateEnvironmentStep::CreateCommandHandler.description())?;
 
         let command_handler =
             CreateCommandHandler::new(self.repository.clone(), self.clock.clone());
@@ -379,7 +238,8 @@ impl CreateEnvironmentCommandController {
         config: EnvironmentCreationConfig,
         working_dir: &Path,
     ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
-        self.progress.start_step("Creating environment")?;
+        self.progress
+            .start_step(CreateEnvironmentStep::CreateEnvironment.description())?;
 
         self.progress.sub_step(&format!(
             "Creating environment '{}'...",

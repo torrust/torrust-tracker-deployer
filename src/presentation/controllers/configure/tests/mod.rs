@@ -13,6 +13,7 @@ mod integration_tests {
     use crate::domain::environment::repository::EnvironmentRepository;
     use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
     use crate::presentation::controllers::configure;
+    use crate::presentation::controllers::configure::handler::ConfigureCommandController;
     use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
     use crate::presentation::views::testing::TestUserOutput;
     use crate::presentation::views::{UserOutput, VerbosityLevel};
@@ -45,13 +46,8 @@ mod integration_tests {
         let temp_dir = TempDir::new().unwrap();
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result = configure::handle_configure_command(
-            "invalid_name_with_underscore",
-            repository,
-            clock,
-            &user_output,
-        )
-        .await;
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("invalid_name_with_underscore");
 
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -68,8 +64,8 @@ mod integration_tests {
         let temp_dir = TempDir::new().unwrap();
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result =
-            configure::handle_configure_command("bad_name", repository, clock, &user_output).await;
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("bad_name");
 
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -85,13 +81,8 @@ mod integration_tests {
         let temp_dir = TempDir::new().unwrap();
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result = configure::handle_configure_command(
-            "nonexistent-environment",
-            repository,
-            clock,
-            &user_output,
-        )
-        .await;
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("nonexistent-environment");
 
         assert!(result.is_err());
         // Repository will return NotFound error, wrapped in ConfigureOperationFailed

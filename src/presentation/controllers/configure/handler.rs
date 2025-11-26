@@ -13,178 +13,42 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Configured;
 use crate::domain::environment::Environment;
-use crate::presentation::dispatch::context::ExecutionContext;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
 use super::errors::ConfigureSubcommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/// Number of main steps in the configure workflow
-const CONFIGURE_WORKFLOW_STEPS: usize = 9;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle configure command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for configuring deployment environments,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `environment_name` - Name of the environment to configure
-/// * `working_dir` - Working directory path for operations
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(Environment<Configured>)` - Environment configured successfully
-/// * `Err(ConfigureSubcommandError)` - Configure operation failed
-///
-/// # Errors
-///
-/// Returns `ConfigureSubcommandError` when:
-/// * Environment name is invalid or contains special characters
-/// * Working directory is not accessible or doesn't exist
-/// * Environment is not found or not in "Provisioned" state
-/// * Infrastructure configuration fails (Docker/Compose installation errors)
-/// * SSH connectivity cannot be established
-/// * Ansible playbook execution fails
-///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::configure;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-///
-/// configure::handle("my-env", &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn handle(
-    environment_name: &str,
-    context: &ExecutionContext,
-) -> Result<Environment<Configured>, ConfigureSubcommandError> {
-    handle_configure_command(
-        environment_name,
-        context.repository(),
-        context.clock(),
-        &context.user_output(),
-    )
-    .await
+/// Steps in the configure workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ConfigureStep {
+    ValidateEnvironment,
+    CreateCommandHandler,
+    ConfigureInfrastructure,
 }
 
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
+impl ConfigureStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[
+        Self::ValidateEnvironment,
+        Self::CreateCommandHandler,
+        Self::ConfigureInfrastructure,
+    ];
 
-/// Handle the configure command
-///
-/// This is a thin wrapper over `ConfigureCommandController` that serves as
-/// the public entry point for the configure command.
-///
-/// # Arguments
-///
-/// * `environment_name` - The name of the environment to configure
-/// * `working_dir` - Root directory for environment data storage
-/// * `repository_factory` - Factory for creating environment repositories
-/// * `clock` - Clock service for timing operations
-/// * `user_output` - Shared user output service for consistent output formatting
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Environment name is invalid (format validation fails)
-/// - Environment cannot be loaded from repository
-/// - Environment is not in "Provisioned" state
-/// - Infrastructure configuration fails
-/// - Progress reporting encounters a poisoned mutex
-///
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Returns
-///
-/// Returns `Ok(Environment<Configured>)` on success, or a `ConfigureSubcommandError` on failure.
-///
-/// # Example
-///
-/// Using with Container and `ExecutionContext` (recommended):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-/// use torrust_tracker_deployer_lib::presentation::controllers::configure;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let context = ExecutionContext::new(Arc::new(container));
-///
-/// if let Err(e) = configure::handle("test-env", &context).await {
-///     eprintln!("Configure failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-///
-/// Direct usage (for testing or specialized scenarios):
-///
-/// ```rust
-/// use std::path::{Path, PathBuf};
-/// use std::sync::Arc;
-/// use parking_lot::ReentrantMutex;
-/// use std::cell::RefCell;
-/// use torrust_tracker_deployer_lib::presentation::controllers::configure;
-/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
-/// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-/// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
-/// use torrust_tracker_deployer_lib::shared::SystemClock;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-/// let data_dir = PathBuf::from("./data");
-/// let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-/// let repository = repository_factory.create(data_dir);
-/// let clock = Arc::new(SystemClock);
-/// if let Err(e) = configure::handle_configure_command("test-env", repository, clock, &user_output).await {
-///     eprintln!("Configure failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-#[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
-pub async fn handle_configure_command(
-    environment_name: &str,
-    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    clock: Arc<dyn Clock>,
-    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
-) -> Result<Environment<Configured>, ConfigureSubcommandError> {
-    let mut controller = ConfigureCommandController::new(repository, clock, user_output.clone());
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
 
-    controller.execute(environment_name)
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::ValidateEnvironment => "Validating environment",
+            Self::CreateCommandHandler => "Creating command handler",
+            Self::ConfigureInfrastructure => "Configuring infrastructure",
+        }
+    }
 }
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for configure command workflow
 ///
@@ -203,11 +67,9 @@ pub async fn handle_configure_command(
 /// This controller sits in the presentation layer and handles all user-facing
 /// concerns. It delegates actual business logic to the application layer's
 /// `ConfigureCommandHandler`, maintaining clear separation of concerns.
-#[allow(unused)] // Temporary during refactoring
 pub struct ConfigureCommandController {
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
-    user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     progress: ProgressReporter,
 }
 
@@ -222,12 +84,11 @@ impl ConfigureCommandController {
         clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output.clone(), CONFIGURE_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, ConfigureStep::count());
 
         Self {
             repository,
             clock,
-            user_output,
             progress,
         }
     }
@@ -282,7 +143,8 @@ impl ConfigureCommandController {
         &mut self,
         name: &str,
     ) -> Result<EnvironmentName, ConfigureSubcommandError> {
-        self.progress.start_step("Validating environment")?;
+        self.progress
+            .start_step(ConfigureStep::ValidateEnvironment.description())?;
 
         let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
             ConfigureSubcommandError::InvalidEnvironmentName {
@@ -305,7 +167,8 @@ impl ConfigureCommandController {
     fn create_command_handler(
         &mut self,
     ) -> Result<ConfigureCommandHandler, ConfigureSubcommandError> {
-        self.progress.start_step("Creating command handler")?;
+        self.progress
+            .start_step(ConfigureStep::CreateCommandHandler.description())?;
 
         let handler = ConfigureCommandHandler::new(self.clock.clone(), self.repository.clone());
         self.progress.complete_step(None)?;
@@ -329,7 +192,8 @@ impl ConfigureCommandController {
         handler: &ConfigureCommandHandler,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Configured>, ConfigureSubcommandError> {
-        self.progress.start_step("Configuring infrastructure")?;
+        self.progress
+            .start_step(ConfigureStep::ConfigureInfrastructure.description())?;
 
         let configured = handler.execute(env_name).map_err(|source| {
             ConfigureSubcommandError::ConfigureOperationFailed {
@@ -396,8 +260,8 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Test with invalid environment name (contains underscore)
-        let result =
-            handle_configure_command("invalid_name", repository, clock, &user_output).await;
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("invalid_name");
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -416,7 +280,8 @@ mod tests {
 
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result = handle_configure_command("", repository, clock, &user_output).await;
+        let result =
+            ConfigureCommandController::new(repository, clock, user_output.clone()).execute("");
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -436,8 +301,8 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         // Try to configure an environment that doesn't exist
-        let result =
-            handle_configure_command("nonexistent-env", repository, clock, &user_output).await;
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("nonexistent-env");
 
         assert!(result.is_err());
         // After refactoring, repository NotFound error is wrapped in ConfigureOperationFailed
@@ -465,7 +330,8 @@ mod tests {
 
         // Valid environment name should pass validation, but will fail
         // at configure operation since we don't have a real environment setup
-        let result = handle_configure_command("test-env", repository, clock, &user_output).await;
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("test-env");
 
         // Should fail at operation, not at name validation
         if let Err(ConfigureSubcommandError::InvalidEnvironmentName { .. }) = result {

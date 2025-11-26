@@ -10,7 +10,6 @@ use std::sync::Arc;
 use tempfile::TempDir;
 
 use super::errors::CreateEnvironmentCommandError;
-use super::handler::handle;
 use crate::bootstrap::Container;
 use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::views::VerbosityLevel;
@@ -46,7 +45,11 @@ async fn it_should_create_environment_from_valid_config() {
 
     let working_dir = temp_dir.path();
     let context = create_test_context(working_dir);
-    let result = handle(&config_path, working_dir, &context).await;
+    let result = context
+        .container()
+        .create_environment_controller()
+        .execute(&config_path, working_dir)
+        .await;
 
     assert!(
         result.is_ok(),
@@ -71,7 +74,11 @@ async fn it_should_return_error_for_missing_config_file() {
     let working_dir = temp_dir.path();
     let context = create_test_context(working_dir);
 
-    let result = handle(&config_path, working_dir, &context).await;
+    let result = context
+        .container()
+        .create_environment_controller()
+        .execute(&config_path, working_dir)
+        .await;
 
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -92,7 +99,11 @@ async fn it_should_return_error_for_invalid_json() {
 
     let working_dir = temp_dir.path();
     let context = create_test_context(working_dir);
-    let result = handle(&config_path, working_dir, &context).await;
+    let result = context
+        .container()
+        .create_environment_controller()
+        .execute(&config_path, working_dir)
+        .await;
 
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -130,12 +141,20 @@ async fn it_should_return_error_for_duplicate_environment() {
     let context = create_test_context(working_dir);
 
     // Create environment first time
-    let result1 = handle(&config_path, working_dir, &context).await;
+    let result1 = context
+        .container()
+        .create_environment_controller()
+        .execute(&config_path, working_dir)
+        .await;
     assert!(result1.is_ok(), "First create should succeed");
 
     // Try to create same environment again (use new context to avoid any state issues)
     let context2 = create_test_context(working_dir);
-    let result2 = handle(&config_path, working_dir, &context2).await;
+    let result2 = context2
+        .container()
+        .create_environment_controller()
+        .execute(&config_path, working_dir)
+        .await;
     assert!(result2.is_err(), "Second create should fail");
 
     match result2.unwrap_err() {
@@ -173,7 +192,11 @@ async fn it_should_create_environment_in_custom_working_dir() {
     fs::write(&config_path, config_json).unwrap();
 
     let context = create_test_context(&custom_working_dir);
-    let result = handle(&config_path, &custom_working_dir, &context).await;
+    let result = context
+        .container()
+        .create_environment_controller()
+        .execute(&config_path, &custom_working_dir)
+        .await;
 
     assert!(result.is_ok(), "Should create in custom working dir");
 

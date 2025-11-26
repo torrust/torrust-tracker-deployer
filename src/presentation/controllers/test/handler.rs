@@ -11,171 +11,41 @@ use parking_lot::ReentrantMutex;
 use crate::application::command_handlers::TestCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::presentation::dispatch::context::ExecutionContext;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
 use super::errors::TestSubcommandError;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/// Number of main steps in the test workflow
-const TEST_WORKFLOW_STEPS: usize = 4;
-
-// ============================================================================
-// HIGH-LEVEL API (EXECUTION CONTEXT PATTERN)
-// ============================================================================
-
-/// Handle test command using `ExecutionContext` pattern
-///
-/// This function provides a clean interface for testing deployment environments,
-/// integrating with the `ExecutionContext` pattern for dependency injection.
-///
-/// # Arguments
-///
-/// * `environment_name` - Name of the environment to test
-/// * `working_dir` - Working directory path for operations
-/// * `context` - Execution context providing access to services
-///
-/// # Returns
-///
-/// * `Ok(())` - Environment tested successfully
-/// * `Err(TestSubcommandError)` - Test operation failed
-///
-/// # Errors
-///
-/// Returns `TestSubcommandError` when:
-/// * Environment name is invalid or contains special characters
-/// * Working directory is not accessible or doesn't exist
-/// * Environment is not found or doesn't have instance IP set
-/// * Infrastructure validation fails (cloud-init, Docker, Docker Compose)
-/// * SSH connectivity cannot be established
-///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::presentation::controllers::test;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
-/// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
-///
-/// test::handle("my-env", &context).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn handle(
-    environment_name: &str,
-    context: &ExecutionContext,
-) -> Result<(), TestSubcommandError> {
-    handle_test_command(
-        environment_name,
-        context.repository(),
-        &context.user_output(),
-    )
-    .await
+/// Steps in the test workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TestStep {
+    ValidateEnvironment,
+    CreateCommandHandler,
+    TestInfrastructure,
 }
 
-// ============================================================================
-// INTERMEDIATE API (DIRECT DEPENDENCY INJECTION)
-// ============================================================================
+impl TestStep {
+    /// All steps in execution order
+    const ALL: &'static [Self] = &[
+        Self::ValidateEnvironment,
+        Self::CreateCommandHandler,
+        Self::TestInfrastructure,
+    ];
 
-/// Handle the test command
-///
-/// This is a thin wrapper over `TestCommandController` that serves as
-/// the public entry point for the test command.
-///
-/// # Arguments
-///
-/// * `environment_name` - The name of the environment to test
-/// * `working_dir` - Root directory for environment data storage
-/// * `repository_factory` - Factory for creating environment repositories
-/// * `user_output` - Shared user output service for consistent output formatting
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Environment name is invalid (format validation fails)
-/// - Environment cannot be loaded from repository
-/// - Environment doesn't have instance IP set (not provisioned)
-/// - Infrastructure validation fails
-/// - Progress reporting encounters a poisoned mutex
-///
-/// All errors include detailed context and actionable troubleshooting guidance.
-///
-/// # Returns
-///
-/// Returns `Ok(())` on success, or a `TestSubcommandError` on failure.
-///
-/// # Example
-///
-/// Using with Container and `ExecutionContext` (recommended):
-///
-/// ```rust
-/// use std::path::Path;
-/// use std::sync::Arc;
-/// use torrust_tracker_deployer_lib::bootstrap::Container;
-/// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
-/// use torrust_tracker_deployer_lib::presentation::controllers::test;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-/// let context = ExecutionContext::new(Arc::new(container));
-///
-/// if let Err(e) = test::handle("test-env", &context).await {
-///     eprintln!("Test failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-///
-/// Direct usage (for testing or specialized scenarios):
-///
-/// ```rust
-/// use std::path::{Path, PathBuf};
-/// use std::sync::Arc;
-/// use parking_lot::ReentrantMutex;
-/// use std::cell::RefCell;
-/// use torrust_tracker_deployer_lib::presentation::controllers::test;
-/// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
-/// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-/// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
-///
-/// # #[tokio::main]
-/// # async fn main() {
-/// let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-/// let data_dir = PathBuf::from("./data");
-/// let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-/// let repository = repository_factory.create(data_dir);
-/// if let Err(e) = test::handle_test_command("test-env", repository, &user_output).await {
-///     eprintln!("Test failed: {e}");
-///     eprintln!("Help: {}", e.help());
-/// }
-/// # }
-/// ```
-#[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
-pub async fn handle_test_command(
-    environment_name: &str,
-    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    user_output: &Arc<ReentrantMutex<RefCell<UserOutput>>>,
-) -> Result<(), TestSubcommandError> {
-    TestCommandController::new(repository, user_output.clone())
-        .execute(environment_name)
-        .await
+    /// Total number of steps
+    const fn count() -> usize {
+        Self::ALL.len()
+    }
+
+    /// User-facing description for the step
+    fn description(self) -> &'static str {
+        match self {
+            Self::ValidateEnvironment => "Validating environment",
+            Self::CreateCommandHandler => "Creating command handler",
+            Self::TestInfrastructure => "Testing infrastructure",
+        }
+    }
 }
-
-// ============================================================================
-// PRESENTATION LAYER CONTROLLER (IMPLEMENTATION DETAILS)
-// ============================================================================
 
 /// Presentation layer controller for test command workflow
 ///
@@ -198,7 +68,7 @@ pub async fn handle_test_command(
 /// - Cloud-init completion check
 /// - Docker installation verification
 /// - Docker Compose installation verification
-struct TestCommandController {
+pub struct TestCommandController {
     repository: Arc<dyn EnvironmentRepository>,
     progress: ProgressReporter,
 }
@@ -212,11 +82,11 @@ impl TestCommandController {
     /// * `repository` - Environment repository with Send + Sync bounds
     /// * `user_output` - Shared output service for user feedback
     #[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
-    fn new(
+    pub fn new(
         repository: Arc<dyn EnvironmentRepository + Send + Sync>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let progress = ProgressReporter::new(user_output, TEST_WORKFLOW_STEPS);
+        let progress = ProgressReporter::new(user_output, TestStep::count());
 
         Self {
             repository,
@@ -239,7 +109,7 @@ impl TestCommandController {
     /// # Errors
     ///
     /// Returns `TestSubcommandError` if any step fails
-    async fn execute(&mut self, environment_name: &str) -> Result<(), TestSubcommandError> {
+    pub async fn execute(&mut self, environment_name: &str) -> Result<(), TestSubcommandError> {
         // 1. Validate environment name
         let env_name = self.validate_environment_name(environment_name)?;
 
@@ -264,7 +134,8 @@ impl TestCommandController {
         &mut self,
         name: &str,
     ) -> Result<EnvironmentName, TestSubcommandError> {
-        self.progress.start_step("Validating environment")?;
+        self.progress
+            .start_step(TestStep::ValidateEnvironment.description())?;
 
         let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
             TestSubcommandError::InvalidEnvironmentName {
@@ -285,7 +156,8 @@ impl TestCommandController {
     ///
     /// Returns `TestSubcommandError::ProgressReportingFailed` if progress reporting fails
     fn create_command_handler(&mut self) -> Result<TestCommandHandler, TestSubcommandError> {
-        self.progress.start_step("Creating command handler")?;
+        self.progress
+            .start_step(TestStep::CreateCommandHandler.description())?;
 
         let handler = TestCommandHandler::new(self.repository.clone());
         self.progress.complete_step(None)?;
@@ -309,7 +181,8 @@ impl TestCommandController {
         handler: &TestCommandHandler,
         env_name: &EnvironmentName,
     ) -> Result<(), TestSubcommandError> {
-        self.progress.start_step("Testing infrastructure")?;
+        self.progress
+            .start_step(TestStep::TestInfrastructure.description())?;
 
         handler.execute(env_name).await.map_err(|source| {
             TestSubcommandError::ValidationFailed {

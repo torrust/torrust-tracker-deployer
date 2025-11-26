@@ -8,7 +8,7 @@ use std::path::Path;
 use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::commands::CreateAction;
 
-use super::{errors::CreateCommandError, subcommands};
+use super::errors::CreateCommandError;
 
 /// Route the create command to its appropriate subcommand
 ///
@@ -34,15 +34,19 @@ pub async fn route_command(
     context: &ExecutionContext,
 ) -> Result<(), CreateCommandError> {
     match action {
-        CreateAction::Environment { env_file } => {
-            subcommands::handle(&env_file, working_dir, context)
-                .await
-                .map(|_| ()) // Convert Environment<Created> to ()
-                .map_err(CreateCommandError::Environment)
-        }
+        CreateAction::Environment { env_file } => context
+            .container()
+            .create_environment_controller()
+            .execute(&env_file, working_dir)
+            .await
+            .map(|_| ()) // Convert Environment<Created> to ()
+            .map_err(CreateCommandError::Environment),
         CreateAction::Template { output_path } => {
             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
-            subcommands::handle_template_creation(&template_path, context)
+            context
+                .container()
+                .create_template_controller()
+                .execute(&template_path)
                 .await
                 .map_err(CreateCommandError::Template)
         }

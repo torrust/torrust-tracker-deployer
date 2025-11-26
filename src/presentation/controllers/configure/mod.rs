@@ -30,7 +30,10 @@
 //! let context = ExecutionContext::new(Arc::new(container));
 //!
 //! // Call the configure handler
-//! let result = configure::handler::handle("my-environment", &context);
+//! let result = context
+//!     .container()
+//!     .create_configure_controller()
+//!     .execute("my-environment");
 //! ```
 //!
 //! ### Direct Usage (For Testing)
@@ -43,16 +46,17 @@
 //! use torrust_tracker_deployer_lib::presentation::controllers::configure;
 //! use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 //!
-//! # #[tokio::main]
-//! # async fn main() {
 //! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 //! let context = ExecutionContext::new(Arc::new(container));
 //!
-//! if let Err(e) = configure::handle("test-env", &context).await {
+//! if let Err(e) = context
+//!     .container()
+//!     .create_configure_controller()
+//!     .execute("test-env")
+//! {
 //!     eprintln!("Configure failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
-//! # }
 //! ```
 //!
 //! ## Direct Usage (For Testing)
@@ -63,7 +67,7 @@
 //! use std::time::Duration;
 //! use parking_lot::ReentrantMutex;
 //! use std::cell::RefCell;
-//! use torrust_tracker_deployer_lib::presentation::controllers::configure;
+//! use torrust_tracker_deployer_lib::presentation::controllers::configure::handler::ConfigureCommandController;
 //! use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 //! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 //! use torrust_tracker_deployer_lib::shared::clock::SystemClock;
@@ -75,7 +79,7 @@
 //! let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
 //! let repository = repository_factory.create(data_dir);
 //! let clock = Arc::new(SystemClock);
-//! if let Err(e) = configure::handle_configure_command("test-env", repository, clock, &output).await {
+//! if let Err(e) = ConfigureCommandController::new(repository, clock, output).execute("test-env") {
 //!     eprintln!("Configure failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
@@ -84,10 +88,10 @@
 
 pub mod errors;
 pub mod handler;
+pub use handler::ConfigureCommandController;
 
 #[cfg(test)]
 mod tests;
 
 // Re-export commonly used types for convenience
 pub use errors::ConfigureSubcommandError;
-pub use handler::{handle, handle_configure_command};
