@@ -20,7 +20,7 @@ use crate::shared::clock::Clock;
 use super::errors::ConfigureSubcommandError;
 
 /// Number of main steps in the configure workflow
-const CONFIGURE_WORKFLOW_STEPS: usize = 9;
+const CONFIGURE_WORKFLOW_STEPS: usize = 3;
 
 /// Presentation layer controller for configure command workflow
 ///

@@ -20,7 +20,7 @@ use crate::shared::clock::Clock;
 use super::errors::ProvisionSubcommandError;
 
 /// Number of main steps in the provision workflow
-const PROVISION_WORKFLOW_STEPS: usize = 9;
+const PROVISION_WORKFLOW_STEPS: usize = 3;
 
 /// Presentation layer controller for provision command workflow
 ///

@@ -17,7 +17,7 @@ use crate::presentation::views::UserOutput;
 use super::errors::TestSubcommandError;
 
 /// Number of main steps in the test workflow
-const TEST_WORKFLOW_STEPS: usize = 4;
+const TEST_WORKFLOW_STEPS: usize = 3;
 
 /// Presentation layer controller for test command workflow
 ///
