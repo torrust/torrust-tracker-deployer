@@ -54,7 +54,8 @@ use tracing::{error, info, warn};
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
     create_environment, destroy_infrastructure, generate_environment_config,
-    provision_infrastructure, run_preflight_cleanup, verify_required_dependencies,
+    provision_infrastructure, run_preflight_cleanup, validate_deployment,
+    verify_required_dependencies,
 };
 use torrust_tracker_deployer_lib::testing::e2e::ProcessRunner;
 
@@ -253,49 +254,6 @@ fn configure_services(
         step = "configure",
         status = "success",
         "Services configured successfully"
-    );
-
-    Ok(())
-}
-
-/// Validates the deployment by running the test command.
-///
-/// # Arguments
-///
-/// * `runner` - The process runner to execute CLI commands
-/// * `environment_name` - The name of the environment to validate
-///
-/// # Errors
-///
-/// Returns an error if the test command fails.
-fn validate_deployment(runner: &ProcessRunner, environment_name: &str) -> Result<()> {
-    info!(
-        step = "test",
-        environment = environment_name,
-        "Validating deployment"
-    );
-
-    let test_result = runner
-        .run_test_command(environment_name)
-        .map_err(|e| anyhow::anyhow!("Failed to execute test command: {e}"))?;
-
-    if !test_result.success() {
-        error!(
-            step = "test",
-            exit_code = ?test_result.exit_code(),
-            stderr = %test_result.stderr(),
-            "Test command failed"
-        );
-        return Err(anyhow::anyhow!(
-            "Test failed with exit code {:?}",
-            test_result.exit_code()
-        ));
-    }
-
-    info!(
-        step = "test",
-        status = "success",
-        "Deployment validated successfully"
     );
 
     Ok(())
