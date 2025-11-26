@@ -49,10 +49,11 @@ use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
 use std::time::Instant;
-use torrust_dependency_installer::{verify_dependencies, Dependency};
+use torrust_dependency_installer::Dependency;
 use tracing::{error, info, warn};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
+use torrust_tracker_deployer_lib::testing::e2e::black_box::tasks::verify_required_dependencies;
 use torrust_tracker_deployer_lib::testing::e2e::black_box::ProcessRunner;
 use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::preflight_cleanup::{
     preflight_cleanup_previous_resources, PreflightCleanupContext,
@@ -110,7 +111,7 @@ fn main() -> Result<()> {
         "Starting full E2E tests (black-box, LOCAL ONLY)"
     );
 
-    verify_required_dependencies()?;
+    verify_required_dependencies(&[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd])?;
 
     run_preflight_cleanup(ENVIRONMENT_NAME)?;
 
@@ -147,31 +148,6 @@ fn main() -> Result<()> {
     }
 
     test_result
-}
-
-/// Verify that all required dependencies are installed for full E2E tests.
-///
-/// Full E2E tests require:
-/// - `OpenTofu` (infrastructure provisioning)
-/// - `Ansible` (configuration management)
-/// - `LXD` (virtualization)
-///
-/// # Errors
-///
-/// Returns an error if any required dependencies are missing or cannot be detected.
-fn verify_required_dependencies() -> Result<()> {
-    let required_deps = &[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];
-
-    if let Err(e) = verify_dependencies(required_deps) {
-        error!(
-            error = %e,
-            "Dependency verification failed"
-        );
-        eprintln!("\n{}\n", e.actionable_message());
-        return Err(anyhow::anyhow!("Missing required dependencies"));
-    }
-
-    Ok(())
 }
 
 /// Performs preflight cleanup to remove artifacts from previous test runs.
