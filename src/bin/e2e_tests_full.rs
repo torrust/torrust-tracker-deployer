@@ -53,9 +53,8 @@ use torrust_dependency_installer::Dependency;
 use tracing::{error, info, warn};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::verify_required_dependencies;
-use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::preflight_cleanup::{
-    preflight_cleanup_previous_resources, PreflightCleanupContext,
+use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
+    run_preflight_cleanup, verify_required_dependencies,
 };
 use torrust_tracker_deployer_lib::testing::e2e::ProcessRunner;
 
@@ -148,54 +147,6 @@ fn main() -> Result<()> {
     }
 
     test_result
-}
-
-/// Performs preflight cleanup to remove artifacts from previous test runs.
-///
-/// This ensures a clean slate before starting new tests by removing:
-/// - Build directory
-/// - Templates directory
-/// - Data directory for this environment
-/// - LXD resources (instance and profile)
-///
-/// # Arguments
-///
-/// * `environment_name` - The name of the environment to clean up
-///
-/// # Errors
-///
-/// Returns an error if cleanup fails.
-fn run_preflight_cleanup(environment_name: &str) -> Result<()> {
-    use torrust_tracker_deployer_lib::domain::EnvironmentName;
-
-    info!(
-        operation = "preflight_cleanup",
-        environment = environment_name,
-        "Running preflight cleanup"
-    );
-
-    // Create preflight cleanup context with paths for the environment
-    let cleanup_context = PreflightCleanupContext::new(
-        format!("./build/{environment_name}").into(),
-        format!("./templates/{environment_name}").into(),
-        EnvironmentName::new(environment_name).expect("Valid environment name"),
-        format!("torrust-tracker-vm-{environment_name}")
-            .try_into()
-            .expect("Valid instance name"),
-        format!("torrust-profile-{environment_name}")
-            .try_into()
-            .expect("Valid profile name"),
-    );
-
-    preflight_cleanup_previous_resources(&cleanup_context)?;
-
-    info!(
-        operation = "preflight_cleanup",
-        status = "success",
-        "Preflight cleanup completed"
-    );
-
-    Ok(())
 }
 
 /// Runs the full E2E test workflow using CLI commands.

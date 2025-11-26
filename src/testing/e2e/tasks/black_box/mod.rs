@@ -5,9 +5,12 @@
 //!
 //! ## Module Structure
 //!
+//! - `preflight_cleanup` - Remove artifacts from previous test runs
 //! - `verify_dependencies` - Verify required system dependencies are installed
 
+pub mod preflight_cleanup;
 pub mod verify_dependencies;
 
 // Re-export commonly used items
+pub use preflight_cleanup::run_preflight_cleanup;
 pub use verify_dependencies::verify_required_dependencies;
