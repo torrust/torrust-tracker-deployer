@@ -12,7 +12,7 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use torrust_tracker_deployer_lib::testing::black_box::{ProcessRunner, ProcessResult};
+//! use torrust_tracker_deployer_lib::testing::e2e::black_box::{ProcessRunner, ProcessResult};
 //!
 //! let result = ProcessRunner::new()
 //!     .run_create_command("./config.json")?;

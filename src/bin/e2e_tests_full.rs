@@ -53,7 +53,7 @@ use torrust_dependency_installer::{verify_dependencies, Dependency};
 use tracing::{error, info, warn};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::testing::black_box::ProcessRunner;
+use torrust_tracker_deployer_lib::testing::e2e::black_box::ProcessRunner;
 use torrust_tracker_deployer_lib::testing::e2e::tasks::virtual_machine::preflight_cleanup::{
     preflight_cleanup_previous_resources, PreflightCleanupContext,
 };

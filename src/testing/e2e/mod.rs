@@ -22,6 +22,7 @@
 //! E2E test binaries use the `torrust-dependency-installer` package to verify
 //! required system dependencies are installed before running tests.
 
+pub mod black_box;
 pub mod container;
 pub mod containers;
 pub mod context;
@@ -32,3 +33,6 @@ pub use container::Services;
 
 // Re-export provisioned container types for backward compatibility
 pub use containers::{ContainerError, RunningProvisionedContainer, StoppedProvisionedContainer};
+
+// Re-export black-box testing types
+pub use black_box::{ProcessResult, ProcessRunner};
