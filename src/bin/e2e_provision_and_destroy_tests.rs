@@ -42,12 +42,12 @@ use anyhow::Result;
 use clap::Parser;
 use std::time::Instant;
 use torrust_dependency_installer::Dependency;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
-    create_environment, generate_environment_config, run_preflight_cleanup,
-    verify_required_dependencies,
+    create_environment, generate_environment_config, provision_infrastructure,
+    run_preflight_cleanup, verify_required_dependencies,
 };
 use torrust_tracker_deployer_lib::testing::e2e::ProcessRunner;
 
@@ -180,65 +180,6 @@ fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
             "Skipping infrastructure destruction"
         );
     }
-
-    Ok(())
-}
-
-/// Provisions the infrastructure for the environment.
-///
-/// # Arguments
-///
-/// * `runner` - The process runner to execute CLI commands
-/// * `environment_name` - The name of the environment to provision
-/// * `destroy_on_failure` - If true, attempt to destroy infrastructure on failure
-///
-/// # Errors
-///
-/// Returns an error if the provision command fails.
-fn provision_infrastructure(
-    runner: &ProcessRunner,
-    environment_name: &str,
-    destroy_on_failure: bool,
-) -> Result<()> {
-    info!(
-        step = "provision",
-        environment = environment_name,
-        "Provisioning infrastructure"
-    );
-
-    let provision_result = runner
-        .run_provision_command(environment_name)
-        .map_err(|e| anyhow::anyhow!("Failed to execute provision command: {e}"))?;
-
-    if !provision_result.success() {
-        error!(
-            step = "provision",
-            exit_code = ?provision_result.exit_code(),
-            stderr = %provision_result.stderr(),
-            "Provision command failed"
-        );
-
-        // Try to cleanup even if provision failed
-        if destroy_on_failure {
-            warn!(
-                step = "cleanup_after_failure",
-                "Attempting to destroy infrastructure after provision failure"
-            );
-            // Ignore destroy result - we're already in an error state
-            drop(runner.run_destroy_command(environment_name));
-        }
-
-        return Err(anyhow::anyhow!(
-            "Provision failed with exit code {:?}",
-            provision_result.exit_code()
-        ));
-    }
-
-    info!(
-        step = "provision",
-        status = "success",
-        "Infrastructure provisioned successfully"
-    );
 
     Ok(())
 }
