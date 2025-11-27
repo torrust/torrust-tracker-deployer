@@ -80,3 +80,164 @@ pub fn run_preflight_cleanup(environment_name: &str) -> Result<()> {
 
     Ok(())
 }
+
+/// Performs preflight cleanup for container-based E2E tests.
+///
+/// This is a specialized cleanup function for Docker container-based tests.
+/// It cleans up:
+/// - Build directory
+/// - Templates directory
+/// - Data directory for this environment
+/// - Hanging Docker containers with the environment name
+///
+/// Unlike `run_preflight_cleanup`, this does NOT clean up LXD resources since
+/// container tests don't use LXD.
+///
+/// # Arguments
+///
+/// * `environment_name` - The name of the environment to clean up
+///
+/// # Errors
+///
+/// Returns an error if directory cleanup fails.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::run_container_preflight_cleanup;
+///
+/// run_container_preflight_cleanup("e2e-config-new")?;
+/// ```
+pub fn run_container_preflight_cleanup(environment_name: &str) -> Result<()> {
+    use std::fs;
+    use std::path::Path;
+
+    info!(
+        operation = "container_preflight_cleanup",
+        environment = environment_name,
+        "Running container-based preflight cleanup"
+    );
+
+    // Clean build directory
+    let build_dir = format!("./build/{environment_name}");
+    if Path::new(&build_dir).exists() {
+        fs::remove_dir_all(&build_dir)
+            .map_err(|e| anyhow::anyhow!("Failed to remove build directory: {e}"))?;
+        info!(
+            operation = "container_preflight_cleanup",
+            path = build_dir,
+            "Removed build directory"
+        );
+    }
+
+    // Clean templates directory
+    let templates_dir = format!("./templates/{environment_name}");
+    if Path::new(&templates_dir).exists() {
+        fs::remove_dir_all(&templates_dir)
+            .map_err(|e| anyhow::anyhow!("Failed to remove templates directory: {e}"))?;
+        info!(
+            operation = "container_preflight_cleanup",
+            path = templates_dir,
+            "Removed templates directory"
+        );
+    }
+
+    // Clean data directory
+    let data_dir = format!("data/{environment_name}");
+    if Path::new(&data_dir).exists() {
+        fs::remove_dir_all(&data_dir)
+            .map_err(|e| anyhow::anyhow!("Failed to remove data directory: {e}"))?;
+        info!(
+            operation = "container_preflight_cleanup",
+            path = data_dir,
+            "Removed data directory"
+        );
+    }
+
+    // Clean up hanging Docker containers
+    cleanup_hanging_docker_container(environment_name);
+
+    info!(
+        operation = "container_preflight_cleanup",
+        status = "success",
+        "Container-based preflight cleanup completed"
+    );
+
+    Ok(())
+}
+
+/// Clean up a hanging Docker container by name
+///
+/// This handles containers that weren't properly cleaned up from previous
+/// test runs (e.g., due to test crashes or interruptions).
+fn cleanup_hanging_docker_container(container_name: &str) {
+    use crate::shared::command::CommandExecutor;
+
+    let command_executor = CommandExecutor::new();
+
+    info!(
+        operation = "hanging_container_cleanup",
+        container_name = container_name,
+        "Checking for hanging Docker containers"
+    );
+
+    // Check if container exists (running or stopped)
+    let check_result = command_executor.run_command(
+        "docker",
+        &["ps", "-aq", "--filter", &format!("name=^{container_name}$")],
+        None,
+    );
+
+    match check_result {
+        Ok(output) => {
+            if output.stdout_trimmed().is_empty() {
+                info!(
+                    operation = "hanging_container_cleanup",
+                    container_name = container_name,
+                    status = "clean",
+                    "No hanging containers found"
+                );
+                return;
+            }
+
+            info!(
+                operation = "hanging_container_cleanup",
+                container_name = container_name,
+                "Found hanging container, attempting cleanup"
+            );
+
+            // Try to stop the container (in case it's running)
+            drop(command_executor.run_command("docker", &["stop", container_name], None));
+
+            // Remove the container
+            match command_executor.run_command("docker", &["rm", "-f", container_name], None) {
+                Ok(_) => {
+                    info!(
+                        operation = "hanging_container_cleanup",
+                        container_name = container_name,
+                        status = "success",
+                        "Hanging container removed"
+                    );
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        operation = "hanging_container_cleanup",
+                        container_name = container_name,
+                        status = "failed",
+                        error = %e,
+                        "Failed to remove hanging container"
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!(
+                operation = "hanging_container_cleanup",
+                container_name = container_name,
+                status = "check_failed",
+                error = %e,
+                "Could not check for hanging containers"
+            );
+        }
+    }
+}

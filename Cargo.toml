@@ -29,6 +29,10 @@ name = "e2e-config-tests"
 path = "src/bin/e2e_config_tests.rs"
 
 [[bin]]
+name = "e2e-config-tests-new"
+path = "src/bin/e2e_config_tests_new.rs"
+
+[[bin]]
 name = "e2e-provision-and-destroy-tests"
 path = "src/bin/e2e_provision_and_destroy_tests.rs"
 

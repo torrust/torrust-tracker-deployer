@@ -203,40 +203,40 @@ pub enum RegisterError {
 
 ### Phase 1: Domain Layer (0.5 day)
 
-- [ ] Add state transition method `Environment<Created>::register(instance_ip)` returning `Environment<Provisioned>`
-- [ ] Set `runtime_outputs.instance_ip` during transition
-- [ ] Support metadata parameter for "registered" flag
-- [ ] Add unit tests for state transition
+- [x] Add state transition method `Environment<Created>::register(instance_ip)` returning `Environment<Provisioned>`
+- [x] Set `runtime_outputs.instance_ip` during transition
+- [x] Support metadata parameter for "registered" flag
+- [x] Add unit tests for state transition
 
 ### Phase 2: Application Layer - Command Handler (1 day)
 
-- [ ] Create `src/application/commands/register/mod.rs` module structure
-- [ ] Create `src/application/commands/register/handler.rs` with `RegisterCommandHandler`
-- [ ] Create `src/application/commands/register/error.rs` with `RegisterError` enum
-- [ ] Load existing environment and verify `Created` state
-- [ ] Implement SSH connectivity validation using environment's SSH credentials
-- [ ] Handle validation failures gracefully (transition anyway, warn user)
-- [ ] Add metadata tracking for registered instances
-- [ ] Add unit tests for command handler logic
+- [x] Create `src/application/commands/register/mod.rs` module structure
+- [x] Create `src/application/commands/register/handler.rs` with `RegisterCommandHandler`
+- [x] Create `src/application/commands/register/error.rs` with `RegisterError` enum
+- [x] Load existing environment and verify `Created` state
+- [x] Implement SSH connectivity validation using environment's SSH credentials
+- [x] Handle validation failures gracefully (transition anyway, warn user)
+- [x] Add metadata tracking for registered instances
+- [x] Add unit tests for command handler logic
 
 ### Phase 3: Presentation Layer - CLI (0.5 day)
 
-- [ ] Add `Register` variant to CLI commands enum in `src/presentation/input/cli/commands.rs`
-- [ ] Add argument parsing (environment name, instance-ip)
-- [ ] Add detailed help text documenting prerequisites and instance requirements
-- [ ] Wire up command handler execution in `src/presentation/input/cli/mod.rs`
-- [ ] Add user output formatting for success/warning/error cases
-- [ ] Add CLI integration tests
+- [x] Add `Register` variant to CLI commands enum in `src/presentation/input/cli/commands.rs`
+- [x] Add argument parsing (environment name, instance-ip)
+- [x] Add detailed help text documenting prerequisites and instance requirements
+- [x] Wire up command handler execution in `src/presentation/input/cli/mod.rs`
+- [x] Add user output formatting for success/warning/error cases
+- [x] Add CLI integration tests
 
 ### Phase 4: E2E Test Migration (2 days)
 
-- [ ] Refactor `src/bin/e2e_config_tests.rs` to be a true black-box test (like `e2e_provision_and_destroy_tests.rs`)
-- [ ] Use `register` command instead of `run_provision_simulation` in the refactored E2E test
-- [ ] Update `src/testing/e2e/tasks/container/mod.rs` to support register workflow
+- [x] Refactor `src/bin/e2e_config_tests.rs` to be a true black-box test (like `e2e_provision_and_destroy_tests.rs`)
+- [x] Use `register` command instead of `run_provision_simulation` in the refactored E2E test
+- [x] Update `src/testing/e2e/tasks/container/mod.rs` to support register workflow
 - [ ] Remove `run_provision_simulation.rs` after migration complete
 - [ ] Verify all E2E tests pass on GitHub Actions
 - [ ] Manual test: Register LXD VM successfully
-- [ ] Manual test: Register Docker container successfully
+- [x] Manual test: Register Docker container successfully
 
 **Note**: `tests/e2e_create_command.rs` and `tests/e2e_destroy_command.rs` do NOT need updates - they test create/destroy commands without provisioning. Only `src/bin/e2e_config_tests.rs` uses `run_provision_simulation` and needs migration.
 
