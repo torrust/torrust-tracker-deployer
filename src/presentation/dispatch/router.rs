@@ -151,7 +151,8 @@ pub async fn route_command(
             context
                 .container()
                 .create_register_controller()
-                .execute(&environment, &instance_ip)?;
+                .execute(&environment, &instance_ip)
+                .await?;
             Ok(())
         } // Future commands will be added here as the Controller Layer expands:
           //

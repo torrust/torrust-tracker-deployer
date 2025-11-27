@@ -109,7 +109,7 @@ impl RegisterCommandController {
     /// - Environment is not found or not in Created state
     /// - SSH connectivity validation fails
     #[allow(clippy::result_large_err)]
-    pub fn execute(
+    pub async fn execute(
         &mut self,
         environment_name: &str,
         instance_ip_str: &str,
@@ -118,7 +118,9 @@ impl RegisterCommandController {
 
         let handler = self.create_command_handler()?;
 
-        let provisioned = self.register_instance(&handler, &env_name, instance_ip)?;
+        let provisioned = self
+            .register_instance(&handler, &env_name, instance_ip)
+            .await?;
 
         self.complete_workflow(environment_name)?;
 
@@ -173,7 +175,7 @@ impl RegisterCommandController {
 
     /// Register the instance using the command handler
     #[allow(clippy::result_large_err)]
-    fn register_instance(
+    async fn register_instance(
         &mut self,
         handler: &RegisterCommandHandler,
         env_name: &EnvironmentName,
@@ -182,12 +184,13 @@ impl RegisterCommandController {
         self.progress
             .start_step(RegisterStep::RegisterInstance.description())?;
 
-        let provisioned = handler.execute(env_name, instance_ip).map_err(|source| {
-            RegisterSubcommandError::RegisterOperationFailed {
+        let provisioned = handler
+            .execute(env_name, instance_ip)
+            .await
+            .map_err(|source| RegisterSubcommandError::RegisterOperationFailed {
                 name: env_name.to_string(),
                 source: Box::new(source),
-            }
-        })?;
+            })?;
 
         self.progress.complete_step(None)?;
 

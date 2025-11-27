@@ -11,6 +11,7 @@ use std::net::IpAddr;
 
 use serde::{Deserialize, Serialize};
 
+use crate::domain::environment::runtime_outputs::ProvisionMethod;
 use crate::domain::environment::state::{
     AnyEnvironmentState, Provisioned, Provisioning, StateTypeError,
 };
@@ -40,6 +41,8 @@ impl Environment<Created> {
     ///
     /// This is an alternative to `start_provisioning()` for environments that will
     /// use existing infrastructure instead of provisioning new infrastructure.
+    /// The provision method is set to `Registered` to distinguish from infrastructure
+    /// created via `OpenTofu`.
     ///
     /// # Arguments
     ///
@@ -47,10 +50,14 @@ impl Environment<Created> {
     ///
     /// # Returns
     ///
-    /// Returns the environment in `Provisioned` state with the instance IP set.
+    /// Returns the environment in `Provisioned` state with:
+    /// - Instance IP set to the provided address
+    /// - Provision method set to `Registered`
     #[must_use]
     pub fn register(self, instance_ip: IpAddr) -> Environment<Provisioned> {
-        self.with_instance_ip(instance_ip).with_state(Provisioned)
+        self.with_instance_ip(instance_ip)
+            .with_provision_method(ProvisionMethod::Registered)
+            .with_state(Provisioned)
     }
 }
 

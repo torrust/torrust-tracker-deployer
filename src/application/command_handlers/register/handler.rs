@@ -7,10 +7,12 @@ use tracing::{info, instrument};
 
 use super::errors::RegisterCommandHandlerError;
 use crate::adapters::ssh::{SshClient, SshConfig};
+use crate::application::steps::RenderAnsibleTemplatesStep;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
-use crate::domain::environment::state::Provisioned;
+use crate::domain::environment::state::{Created, Provisioned};
 use crate::domain::environment::Environment;
-use crate::domain::EnvironmentName;
+use crate::domain::{EnvironmentName, TemplateManager};
+use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 
 /// `RegisterCommandHandler` registers existing instances with environments
 ///
@@ -31,9 +33,10 @@ use crate::domain::EnvironmentName;
 ///
 /// 1. Load environment from repository (must be in Created state)
 /// 2. Validate SSH connectivity to the provided IP address
-/// 3. Update runtime outputs with the instance IP
-/// 4. Transition to Provisioned state
-/// 5. Persist the updated environment
+/// 3. Render Ansible templates with the instance IP
+/// 4. Update runtime outputs with the instance IP and provision method
+/// 5. Transition to Provisioned state
+/// 6. Persist the updated environment
 pub struct RegisterCommandHandler {
     repository: TypedEnvironmentRepository,
 }
@@ -63,6 +66,7 @@ impl RegisterCommandHandler {
     /// Returns an error if:
     /// * Environment not found or not in `Created` state
     /// * SSH connectivity validation fails
+    /// * Ansible template rendering fails
     /// * Unable to persist the environment state
     #[instrument(
         name = "register_command",
@@ -73,7 +77,7 @@ impl RegisterCommandHandler {
             instance_ip = %instance_ip
         )
     )]
-    pub fn execute(
+    pub async fn execute(
         &self,
         env_name: &EnvironmentName,
         instance_ip: IpAddr,
@@ -109,10 +113,14 @@ impl RegisterCommandHandler {
         // 4. Validate SSH connectivity (minimal validation for v1)
         self.validate_ssh_connectivity(&environment, instance_ip)?;
 
-        // 5. Register the instance by setting the IP and transitioning to Provisioned
+        // 5. Render Ansible templates (so configure command will work)
+        self.render_ansible_templates(&environment, instance_ip)
+            .await?;
+
+        // 6. Register the instance by setting the IP and transitioning to Provisioned
         let provisioned = environment.register(instance_ip);
 
-        // 6. Persist the updated state
+        // 7. Persist the updated state
         self.repository.save_provisioned(&provisioned)?;
 
         info!(
@@ -136,7 +144,7 @@ impl RegisterCommandHandler {
     #[allow(clippy::unused_self)] // Method may use self in future for configuration
     fn validate_ssh_connectivity(
         &self,
-        environment: &Environment<crate::domain::environment::state::Created>,
+        environment: &Environment<Created>,
         instance_ip: IpAddr,
     ) -> Result<(), RegisterCommandHandlerError> {
         info!(
@@ -168,6 +176,55 @@ impl RegisterCommandHandler {
         info!(
             instance_ip = %instance_ip,
             "SSH connectivity validated successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Render Ansible templates with the instance IP
+    ///
+    /// This renders the Ansible inventory and configuration templates so that
+    /// the `configure` command can run Ansible playbooks against the registered instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TemplateRenderingFailed` if Ansible template rendering fails.
+    async fn render_ansible_templates(
+        &self,
+        environment: &Environment<Created>,
+        instance_ip: IpAddr,
+    ) -> Result<(), RegisterCommandHandlerError> {
+        info!(
+            instance_ip = %instance_ip,
+            "Rendering Ansible templates for registered instance"
+        );
+
+        let ssh_credentials = environment.ssh_credentials();
+        let ssh_port = environment.ssh_port();
+        let ssh_socket_addr = SocketAddr::new(instance_ip, ssh_port);
+
+        // Create template manager and renderer
+        let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+        let ansible_template_renderer = Arc::new(AnsibleTemplateRenderer::new(
+            environment.build_dir(),
+            template_manager,
+        ));
+
+        // Render Ansible templates
+        RenderAnsibleTemplatesStep::new(
+            ansible_template_renderer,
+            ssh_credentials.clone(),
+            ssh_socket_addr,
+        )
+        .execute()
+        .await
+        .map_err(|e| RegisterCommandHandlerError::TemplateRenderingFailed {
+            reason: e.to_string(),
+        })?;
+
+        info!(
+            instance_ip = %instance_ip,
+            "Ansible templates rendered successfully"
         );
 
         Ok(())

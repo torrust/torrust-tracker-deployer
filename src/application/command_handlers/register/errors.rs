@@ -49,6 +49,13 @@ pub enum RegisterCommandHandlerError {
     /// Invalid state transition
     #[error("Invalid state transition: {0}")]
     StateTransition(#[from] StateTypeError),
+
+    /// Failed to render Ansible templates
+    #[error("Failed to render Ansible templates: {reason}")]
+    TemplateRenderingFailed {
+        /// Description of why template rendering failed
+        reason: String,
+    },
 }
 
 impl Traceable for RegisterCommandHandlerError {
@@ -79,6 +86,11 @@ impl Traceable for RegisterCommandHandlerError {
             Self::StateTransition(e) => {
                 format!("RegisterCommandHandlerError: Invalid state transition - {e}")
             }
+            Self::TemplateRenderingFailed { reason } => {
+                format!(
+                    "RegisterCommandHandlerError: Failed to render Ansible templates - {reason}"
+                )
+            }
         }
     }
 
@@ -89,7 +101,8 @@ impl Traceable for RegisterCommandHandlerError {
             | Self::InvalidState { .. }
             | Self::InvalidIpAddress { .. }
             | Self::RepositorySave(_)
-            | Self::StateTransition(_) => None,
+            | Self::StateTransition(_)
+            | Self::TemplateRenderingFailed { .. } => None,
         }
     }
 
@@ -101,6 +114,7 @@ impl Traceable for RegisterCommandHandlerError {
             Self::ConnectivityFailed { .. } => ErrorKind::NetworkConnectivity,
             Self::InvalidIpAddress { .. } => ErrorKind::Configuration,
             Self::RepositorySave(_) | Self::StateTransition(_) => ErrorKind::StatePersistence,
+            Self::TemplateRenderingFailed { .. } => ErrorKind::TemplateRendering,
         }
     }
 }
@@ -215,6 +229,23 @@ This is an internal error indicating an invalid state machine transition.
 2. Try destroying and recreating the environment
 
 If this error persists, please report it as a bug."
+            }
+            Self::TemplateRenderingFailed { .. } => {
+                "Template Rendering Failed - Troubleshooting:
+
+The Ansible template rendering step failed during instance registration.
+
+1. Check the template files exist in the templates/ansible directory
+2. Verify the environment configuration is complete and valid
+3. Check disk space and permissions in the build directory
+4. Review the error message for specific template or variable issues
+
+Common causes:
+- Missing template files
+- Invalid template variable references
+- Disk full or permission denied
+
+If the problem persists, please report it as a bug."
             }
         }
     }

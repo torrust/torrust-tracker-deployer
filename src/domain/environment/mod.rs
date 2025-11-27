@@ -112,7 +112,7 @@ pub use trace_id::TraceId;
 pub use context::EnvironmentContext;
 pub use internal_config::InternalConfig;
 pub use name::{EnvironmentName, EnvironmentNameError};
-pub use runtime_outputs::RuntimeOutputs;
+pub use runtime_outputs::{ProvisionMethod, RuntimeOutputs};
 pub use state::{
     AnyEnvironmentState, ConfigureFailed, Configured, Configuring, Created, DestroyFailed,
     Destroyed, Destroying, ProvisionFailed, Provisioned, Provisioning, ReleaseFailed, Released,
@@ -558,6 +558,25 @@ impl<S> Environment<S> {
         self
     }
 
+    /// Sets the provision method and returns a new environment with the method set
+    ///
+    /// This method is used to track how the infrastructure was provisioned:
+    /// - `Provisioned`: Created via `provision` command using `OpenTofu`
+    /// - `Registered`: Connected to existing infrastructure via `register` command
+    ///
+    /// # Arguments
+    ///
+    /// * `method` - The provision method to set
+    ///
+    /// # Returns
+    ///
+    /// Returns the environment with the provision method set.
+    #[must_use]
+    pub fn with_provision_method(mut self, method: runtime_outputs::ProvisionMethod) -> Self {
+        self.context_mut().runtime_outputs.provision_method = Some(method);
+        self
+    }
+
     /// Returns the templates directory for this environment
     ///
     /// The templates directory is located at `data/{env_name}/templates/`
@@ -897,7 +916,10 @@ mod tests {
                     data_dir: data_dir.clone(),
                     build_dir: build_dir.clone(),
                 },
-                runtime_outputs: RuntimeOutputs { instance_ip: None },
+                runtime_outputs: RuntimeOutputs {
+                    instance_ip: None,
+                    provision_method: None,
+                },
             };
 
             let environment = Environment {

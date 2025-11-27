@@ -41,7 +41,7 @@
 #
 # 3. Ansible Connection (this file):
 #    - Uses Docker host IP (127.0.0.1) as ansible_host
-#    - Connects as pre-configured user "torrust" (ansible_user)  
+#    - Connects as pre-configured user "torrust" (ansible_user)
 #    - Authenticates with matching private key (ansible_ssh_private_key_file)
 #    - Uses dynamic mapped port from testcontainers (ansible_port)
 
@@ -62,7 +62,7 @@ all:
       ansible_host: {{ansible_host}}
 
       # SSH port to connect to (varies by infrastructure type)
-      # 🔗 LXD VM: Standard SSH port 22 
+      # 🔗 LXD VM: Standard SSH port 22
       # 🔗 CONTAINER: Dynamic mapped port from testcontainers (e.g., 32768, 32769, etc.)
       # 🔗 TESTCONTAINERS: Retrieved via container.get_host_port_ipv4(22)
       ansible_port: {{ansible_port}}
@@ -78,7 +78,7 @@ all:
 
       # Path to the private SSH key file
       # 🔗 LXD VM: This private key corresponds to the PUBLIC key in cloud-init
-      # 🔗 CONTAINER: This private key corresponds to the PUBLIC key in container image  
+      # 🔗 CONTAINER: This private key corresponds to the PUBLIC key in container image
       # 🔗 EXACT MATCH (LXD): config/tofu/lxd/cloud-init.yml -> users[0].ssh_authorized_keys[0]
       # 🔗 EXACT MATCH (CONTAINER): docker/provisioned-instance/ -> pre-installed public key
       # 🔗 KEY PAIR: ~/.ssh/testing_rsa (private) <-> public key in infrastructure
