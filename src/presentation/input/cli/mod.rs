@@ -50,7 +50,8 @@ mod tests {
             Commands::Create { .. }
             | Commands::Provision { .. }
             | Commands::Configure { .. }
-            | Commands::Test { .. } => {
+            | Commands::Test { .. }
+            | Commands::Register { .. } => {
                 panic!("Expected Destroy command")
             }
         }
@@ -71,7 +72,8 @@ mod tests {
                 Commands::Create { .. }
                 | Commands::Provision { .. }
                 | Commands::Configure { .. }
-                | Commands::Test { .. } => {
+                | Commands::Test { .. }
+                | Commands::Register { .. } => {
                     panic!("Expected Destroy command")
                 }
             }
@@ -117,7 +119,8 @@ mod tests {
             Commands::Create { .. }
             | Commands::Provision { .. }
             | Commands::Configure { .. }
-            | Commands::Test { .. } => {
+            | Commands::Test { .. }
+            | Commands::Register { .. } => {
                 panic!("Expected Destroy command")
             }
         }
@@ -206,7 +209,8 @@ mod tests {
             Commands::Destroy { .. }
             | Commands::Provision { .. }
             | Commands::Configure { .. }
-            | Commands::Test { .. } => {
+            | Commands::Test { .. }
+            | Commands::Register { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -235,7 +239,8 @@ mod tests {
             Commands::Destroy { .. }
             | Commands::Provision { .. }
             | Commands::Configure { .. }
-            | Commands::Test { .. } => {
+            | Commands::Test { .. }
+            | Commands::Register { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -285,7 +290,8 @@ mod tests {
             Commands::Destroy { .. }
             | Commands::Provision { .. }
             | Commands::Configure { .. }
-            | Commands::Test { .. } => {
+            | Commands::Test { .. }
+            | Commands::Register { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -338,7 +344,8 @@ mod tests {
             Commands::Destroy { .. }
             | Commands::Provision { .. }
             | Commands::Configure { .. }
-            | Commands::Test { .. } => {
+            | Commands::Test { .. }
+            | Commands::Register { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -369,7 +376,8 @@ mod tests {
             Commands::Destroy { .. }
             | Commands::Provision { .. }
             | Commands::Configure { .. }
-            | Commands::Test { .. } => {
+            | Commands::Test { .. }
+            | Commands::Register { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -409,6 +417,66 @@ mod tests {
         assert!(
             help_text.contains("template") || help_text.contains("placeholder"),
             "Help text should mention template generation"
+        );
+    }
+
+    #[test]
+    fn it_should_parse_register_subcommand() {
+        let args = vec![
+            "torrust-tracker-deployer",
+            "register",
+            "my-env",
+            "--instance-ip",
+            "192.168.1.100",
+        ];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        assert!(cli.command.is_some());
+        match cli.command.unwrap() {
+            Commands::Register {
+                environment,
+                instance_ip,
+            } => {
+                assert_eq!(environment, "my-env");
+                assert_eq!(instance_ip, "192.168.1.100");
+            }
+            Commands::Create { .. }
+            | Commands::Destroy { .. }
+            | Commands::Provision { .. }
+            | Commands::Configure { .. }
+            | Commands::Test { .. } => {
+                panic!("Expected Register command")
+            }
+        }
+    }
+
+    #[test]
+    fn it_should_require_instance_ip_for_register() {
+        let args = vec!["torrust-tracker-deployer", "register", "my-env"];
+        let result = Cli::try_parse_from(args);
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        let error_message = error.to_string();
+        assert!(
+            error_message.contains("required") || error_message.contains("--instance-ip"),
+            "Error message should indicate missing required --instance-ip: {error_message}"
+        );
+    }
+
+    #[test]
+    fn it_should_show_register_help() {
+        let args = vec!["torrust-tracker-deployer", "register", "--help"];
+        let result = Cli::try_parse_from(args);
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert_eq!(error.kind(), clap::error::ErrorKind::DisplayHelp);
+
+        let help_text = error.to_string();
+        assert!(
+            help_text.contains("instance-ip") || help_text.contains("existing"),
+            "Help text should mention instance-ip parameter"
         );
     }
 }

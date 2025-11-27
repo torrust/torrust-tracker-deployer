@@ -3,17 +3,25 @@
 //! Initial state - Environment has been created but no operations performed
 //!
 //! This is the entry state for all new environments. From this state, the
-//! environment can transition to `Provisioning` when infrastructure setup begins.
+//! environment can transition to:
+//! - `Provisioning` when infrastructure provisioning begins (standard path)
+//! - `Provisioned` directly via `register()` (alternative path for existing infrastructure)
+
+use std::net::IpAddr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::environment::state::{AnyEnvironmentState, Provisioning, StateTypeError};
+use crate::domain::environment::state::{
+    AnyEnvironmentState, Provisioned, Provisioning, StateTypeError,
+};
 use crate::domain::environment::Environment;
 
 /// Initial state - Environment has been created but no operations performed
 ///
 /// This is the entry state for all new environments. From this state, the
-/// environment can transition to `Provisioning` when infrastructure setup begins.
+/// environment can transition to:
+/// - `Provisioning` when infrastructure provisioning begins (standard path)
+/// - `Provisioned` directly via `register()` (alternative path for existing infrastructure)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Created;
 
@@ -26,6 +34,23 @@ impl Environment<Created> {
     #[must_use]
     pub fn start_provisioning(self) -> Environment<Provisioning> {
         self.with_state(Provisioning)
+    }
+
+    /// Registers an existing instance and transitions directly to Provisioned state
+    ///
+    /// This is an alternative to `start_provisioning()` for environments that will
+    /// use existing infrastructure instead of provisioning new infrastructure.
+    ///
+    /// # Arguments
+    ///
+    /// * `instance_ip` - The IP address of the existing instance
+    ///
+    /// # Returns
+    ///
+    /// Returns the environment in `Provisioned` state with the instance IP set.
+    #[must_use]
+    pub fn register(self, instance_ip: IpAddr) -> Environment<Provisioned> {
+        self.with_instance_ip(instance_ip).with_state(Provisioned)
     }
 }
 
@@ -188,6 +213,40 @@ mod tests {
             assert_eq!(*env.state(), Provisioning);
             // Verify other fields are preserved
             assert_eq!(env.name().as_str(), "test-env");
+        }
+
+        #[test]
+        fn it_should_register_existing_instance_and_transition_to_provisioned() {
+            use std::net::{IpAddr, Ipv4Addr};
+
+            use crate::domain::environment::state::Provisioned;
+
+            let env = create_test_environment_created();
+            let instance_ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
+            let env = env.register(instance_ip);
+
+            // Verify state transition
+            assert_eq!(*env.state(), Provisioned);
+            // Verify instance IP is set
+            assert_eq!(env.instance_ip(), Some(instance_ip));
+            // Verify other fields are preserved
+            assert_eq!(env.name().as_str(), "test-env");
+        }
+
+        #[test]
+        fn it_should_register_with_ipv6_address() {
+            use std::net::{IpAddr, Ipv6Addr};
+
+            use crate::domain::environment::state::Provisioned;
+
+            let env = create_test_environment_created();
+            let instance_ip = IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1));
+            let env = env.register(instance_ip);
+
+            // Verify state transition
+            assert_eq!(*env.state(), Provisioned);
+            // Verify instance IP is set
+            assert_eq!(env.instance_ip(), Some(instance_ip));
         }
     }
 }
