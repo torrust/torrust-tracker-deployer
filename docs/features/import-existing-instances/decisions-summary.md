@@ -1,6 +1,7 @@
 # Register Existing Instances - Key Decisions Summary
 
 **Created**: November 19, 2025  
+**Last Updated**: November 27, 2025  
 **Status**: ✅ All Questions Answered
 
 This document summarizes the key decisions made during the Q&A process for the "Register Existing Instances" feature.
@@ -9,11 +10,11 @@ This document summarizes the key decisions made during the Q&A process for the "
 
 ### ✅ In Scope for v1
 
-- **Basic SSH connectivity validation** - Minimal validation only
-- **Non-interactive CLI** - All parameters via flags or config file
+- **Register as alternative to provision** - Transitions existing `Created` environment to `Provisioned`
+- **Basic SSH connectivity validation** - Minimal validation only, using credentials from environment
+- **Simple CLI** - Only requires `--instance-ip` parameter (SSH credentials already in environment)
 - **Metadata tracking** - Mark registered instances differently
-- **Duplicate name prevention** - Fail if environment name exists
-- **Graceful validation handling** - Create environment even if validation fails, warn user
+- **Graceful validation handling** - Transition environment even if validation fails, warn user
 - **Destroy protection** - Prevent accidental destruction of registered instances (requires confirmation)
 
 ### ❌ Out of Scope
@@ -25,8 +26,20 @@ This document summarizes the key decisions made during the Q&A process for the "
 - **Advanced validation** - OS version, architecture, disk space, memory checks (deferred to v2)
 - **Automated SSH setup** - Key generation or installation
 - **Dependency detection** - Automatic detection and installation of missing dependencies
+- **Duplicating create environment** - SSH credentials provided via `create environment` first
 
 ## 🔧 Technical Decisions
+
+### Register as Alternative to Provision (NEW)
+
+**Key Insight**: The `create environment` command creates the environment _concept_ (SSH credentials, name, configuration) - not the actual infrastructure. The `register` command is simply an alternative to `provision` for getting to the `Provisioned` state.
+
+**Rationale**:
+
+- No duplication of SSH credential handling
+- Only needs instance IP (the only runtime output from provisioning)
+- Consistent with domain model (`RuntimeOutputs` only stores `instance_ip`)
+- Clean separation: "creating the concept" vs "materializing infrastructure"
 
 ### Command Name: `register`
 
@@ -40,15 +53,16 @@ This document summarizes the key decisions made during the Q&A process for the "
 
 ### State Management
 
-- **Direct to `Provisioned` state** - No intermediate states
-- **Metadata flag** - Add "registered" metadata to environment
+- **State transition**: `Created` → `Provisioned` (same as `provision` command)
+- **Sets runtime output**: `runtime_outputs.instance_ip` populated with provided IP
+- **Metadata flag** - Add `"registered": "true"` metadata to environment
 - **Future state** - Use `ProvisionFailed` for validation failures in v2
 
 ### Validation Strategy
 
-- **v1**: SSH connectivity only
+- **v1**: SSH connectivity only (using credentials already in environment)
 - **v2**: OS version, architecture, disk space, memory, dependencies
-- **Error Handling**: Create environment even if validation fails, inform user
+- **Error Handling**: Transition environment even if validation fails, inform user
 
 ### Destroy Command Behavior
 
@@ -67,16 +81,17 @@ This document summarizes the key decisions made during the Q&A process for the "
 
 ### Functional Requirements
 
-1. Command successfully registers instances with valid SSH credentials
-2. Environment created in `Provisioned` state with "registered" metadata
-3. Registered environments work identically to provisioned ones
-4. SSH connectivity validated (minimal)
-5. Duplicate environment names rejected
+1. Command requires environment to exist in `Created` state
+2. Command only requires `--instance-ip` parameter
+3. Environment transitions to `Provisioned` state with `runtime_outputs.instance_ip` set
+4. Registered environments marked with `"registered": "true"` metadata
+5. SSH connectivity validated using environment's SSH credentials
 6. Manual tests: Successfully register LXD VM and Docker container
 
 ### Testing Requirements
 
 - Unit tests for `RegisterCommandHandler`
+- Unit tests for state transition `Created` → `Provisioned`
 - Integration tests for SSH validation and repository integration
 - NO dedicated E2E tests (indirectly tested through existing E2E tests)
 - Replace `run_provision_simulation.rs` with register command
@@ -86,6 +101,7 @@ This document summarizes the key decisions made during the Q&A process for the "
 - `docs/user-guide/commands/register.md` - User-facing documentation
 - `docs/console-commands.md` - Update with register command
 - Update all command lists throughout documentation
+- Prerequisites documented (create environment first)
 - Instance requirements documented (Ubuntu 24.04, SSH, cloud-init, etc.)
 
 ## 🔄 E2E Testing Architecture
@@ -98,16 +114,17 @@ This document summarizes the key decisions made during the Q&A process for the "
 
 ### Future Approach (with register command)
 
-1. Create container (same as before)
-2. Use register command to create environment state
-3. Eliminates `run_provision_simulation.rs` entirely
+1. Create environment first (provides SSH credentials)
+2. Create container (same as before)
+3. Use register command to transition environment to `Provisioned` state
+4. Eliminates `run_provision_simulation.rs` entirely
 
 ## 📋 Instance Requirements
 
 ### REQUIRED
 
 - Ubuntu 24.04 LTS (exact version)
-- SSH connectivity with provided credentials
+- SSH connectivity with credentials from environment
 - Public SSH key installed for access
 - Public IP address reachable from deployer
 - Username with sudo access

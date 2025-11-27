@@ -2,7 +2,9 @@
 
 ## 📋 Overview
 
-This feature adds a new `torrust-tracker-deployer register` command that enables users to bring their own pre-existing infrastructure into the deployer workflow. This solves two critical needs: allowing end users to deploy on their own servers, and providing a proper solution for container-based E2E testing.
+This feature adds a new `torrust-tracker-deployer register` command that serves as an **alternative to the `provision` command** for environments with existing infrastructure. Instead of provisioning new infrastructure, `register` allows users to provide the IP address of an existing instance, transitioning the environment from `Created` to `Provisioned` state.
+
+This solves two critical needs: allowing end users to deploy on their own servers, and providing a proper solution for container-based E2E testing.
 
 ### Context
 
@@ -17,6 +19,15 @@ Users must go through the `provision` phase, which creates new infrastructure us
 1. **For End Users**: No way to register existing infrastructure (spare servers, unsupported cloud providers, custom setups)
 2. **For E2E Testing**: Container-based tests require a hacky workaround (`run_provision_simulation.rs`) that manually sets up state to bypass provisioning
 
+### Key Insight
+
+The `create environment` command creates the environment _concept_ (SSH credentials, name, configuration) - not the actual infrastructure. The infrastructure is either:
+
+- **Provisioned** via the `provision` command (creates new VMs)
+- **Registered** via the `register` command (uses existing infrastructure)
+
+Both paths lead to the same `Provisioned` state, and the only runtime output from provisioning stored is the instance IP (see `src/domain/environment/runtime_outputs.rs`). Therefore, `register` only needs the instance IP as input - all other configuration (SSH credentials, etc.) comes from the existing environment.
+
 ### Problem Statement
 
 **Primary Problem**: Users cannot leverage the deployer's configuration and deployment capabilities on already-provisioned infrastructure.
@@ -27,10 +38,10 @@ Users must go through the `provision` phase, which creates new infrastructure us
 
 ### Primary Goals
 
-- **Enable infrastructure reuse**: Allow users to register existing VMs, physical servers, or containers
-- **Maintain state machine integrity**: Create environments directly in `Provisioned` state without breaking existing workflows
+- **Enable infrastructure reuse**: Allow users to register existing VMs, physical servers, or containers as an alternative to provisioning
+- **Maintain state machine integrity**: Transition environments from `Created` to `Provisioned` state using the same state machine
 - **Replace test simulation**: Provide proper solution for container-based E2E tests, removing `run_provision_simulation` hack
-- **Validate connectivity**: Ensure registered instances are reachable and meet minimum requirements
+- **Validate connectivity**: Ensure registered instances are reachable using environment's SSH credentials
 
 ### Secondary Goals (Nice-to-Have)
 
@@ -53,74 +64,82 @@ What this feature explicitly does NOT aim to do:
 
 ### Approach
 
-Add a new `register` command that creates environments directly in the `Provisioned` state, bypassing the `provision` phase. This approach:
+Add a new `register` command that transitions environments from `Created` to `Provisioned` state by providing the instance IP address. This approach:
 
-- **Maintains state machine integrity**: Uses existing states, just enters at a different point
+- **Maintains state machine integrity**: Uses existing states and transitions, `register` is simply an alternative path to `Provisioned`
+- **Avoids duplication**: SSH credentials and other configuration are provided once via `create environment`
+- **Simple input**: Only the instance IP is needed (the only runtime output from provisioning)
 - **Solves both problems**: Works for end users AND testing scenarios
 - **Clear semantics**: "Register" clearly communicates bringing external infrastructure under management
 - **Industry precedent**: Parallels GitHub/GitLab runner registration workflows
-- **Future-proof**: Can be extended for cloud provider registration, cluster registration, etc.
+- **Future-proof**: If `RuntimeOutputs` grows, `register` parameters grow accordingly
 
 ### Design Overview
 
 ```text
 Standard Workflow:
-  create → provision → configure → release → run
-  |         |          |
-  Created   Provisioning → Provisioned
+  create environment → provision → configure → release → run
+       |                  |
+    [Created]        [Provisioned]
                           ↓
-                        (continues...)
+                     (continues...)
 
-Register Workflow:
-  register → configure → release → run
-    |          |
-  (No state)   Provisioned
-    ↑          ↓
-  Directly creates      (continues...)
-  environment in
-  Provisioned state
+Register Workflow (Alternative to provision):
+  create environment → register → configure → release → run
+       |                  |
+    [Created]        [Provisioned]
+                          ↓
+                     (continues...)
 ```
+
+Both `provision` and `register` result in the same `Provisioned` state with `runtime_outputs.instance_ip` set.
 
 ### Key Design Decisions
 
-1. **Command Name: `register`**
+1. **Register as Alternative to Provision**
+
+   - **Rationale**: The `create environment` command creates the environment concept, not infrastructure. `register` and `provision` are two ways to materialize infrastructure.
+   - **Benefit**: No duplication of SSH credentials, environment name, etc.
+   - **Benefit**: Simple command - only needs instance IP
+   - **Benefit**: Consistent with existing domain model (`RuntimeOutputs` only stores instance IP)
+
+2. **Command Name: `register`**
 
    - **Rationale**: Strong industry precedent (GitHub/GitLab runners, Consul services, Vault backends)
    - **Parallel**: Just like CI runners "register" with GitHub/GitLab, instances "register" with deployer
    - **Alternatives considered**: `import`, `adopt`, `add`, `attach`, `connect` (see Naming Analysis section)
    - **Decision**: Best balance of familiarity, clarity, and professional tone
 
-2. **Direct `Provisioned` State Creation**
+3. **State Transition `Created` → `Provisioned`**
 
-   - **Rationale**: Simplest approach, reuses existing state machine
-   - **Alternatives considered**: New `Registered` state, metadata flag
-   - **Decision**: Less code, simpler to understand, works with all existing commands
+   - **Rationale**: Uses existing state machine, same target state as `provision`
+   - **Implementation**: Load environment in `Created` state, set `runtime_outputs.instance_ip`, transition to `Provisioned`
+   - **Decision**: Reuses existing code, simpler to understand, works with all existing commands
 
-3. **Minimal SSH Validation (v1 Scope)** ✅
+4. **Minimal SSH Validation (v1 Scope)** ✅
 
    - **Rationale**: Start simple - only validate SSH connectivity for v1, defer advanced validation to v2
    - **Decision from Q&A**: "Only basic connectivity validation (minimal)" - defer OS, architecture, disk space checks
-   - **Error Handling**: Create environment even if validation fails, inform user, use `ProvisionFailed` state for future validations
-   - **User Experience**: Non-interactive command - all parameters via CLI flags or config file
+   - **Error Handling**: Transition to `Provisioned` even if validation fails, inform user, use `ProvisionFailed` state for future validations
+   - **SSH Credentials**: Uses credentials already stored in environment from `create environment`
 
-4. **Metadata Tracking for Safety** ✅
+5. **Metadata Tracking for Safety** ✅
 
    - **Rationale**: Prevent accidental destruction of user-owned infrastructure
    - **Decision from Q&A**: "They should be marked differently. And we should prevent destroying registered instances unless explicitly confirmed"
-   - **Implementation**: Add optional "registered" metadata flag to environment
+   - **Implementation**: Add `"registered": "true"` metadata flag to environment
    - **Destroy Command**: Will require confirmation or explicit flag to destroy registered instances (prevents data loss)
 
-5. **No Duplicate Environment Names** ✅
-   - **Rationale**: Maintain environment name uniqueness
-   - **Decision from Q&A**: "Fail if environment name exists"
-   - **Error Handling**: Return clear error message if environment name already taken
+6. **Environment Must Exist in Created State** ✅
+   - **Rationale**: Enforces proper workflow - user must first create environment with SSH credentials
+   - **Error Handling**: Return clear error message if environment doesn't exist or is in wrong state
 
 ### Alternatives Considered
 
 #### Option 1: Extend `create` command with `--host` flag
 
 - **Pros**: Fewer commands, simpler CLI
-- **Cons**: Conflates two different workflows, confusing semantics
+- **Cons**: Conflates environment creation with infrastructure registration, confusing semantics
 - **Decision**: Rejected - violates Single Responsibility Principle
 
 #### Option 2: OpenTofu Container Provider
@@ -134,6 +153,12 @@ Register Workflow:
 - **Pros**: Separation of concerns
 - **Cons**: Two different solutions for same problem, more code to maintain
 - **Decision**: Rejected - one solution should solve both needs
+
+#### Option 4: Register creates new environment with all parameters (original approach)
+
+- **Pros**: Single command for everything
+- **Cons**: Duplicates SSH credential handling from `create environment`, different config model
+- **Decision**: Rejected - better to reuse existing environment creation and only add instance IP
 
 ### Command Naming Analysis
 
@@ -160,11 +185,14 @@ The command name underwent careful analysis to find the best fit for the feature
 **Example**:
 
 ```bash
-# Parallel to GitHub Actions runner registration
-torrust-tracker-deployer register production-tracker \
-  --host 192.168.1.100 \
-  --ssh-user torrust \
-  --ssh-key ~/.ssh/prod-key
+# Step 1: Create environment with SSH credentials
+torrust-tracker-deployer create environment --env-file prod-config.json
+
+# Step 2: Register existing instance (only needs IP)
+torrust-tracker-deployer register production-tracker --instance-ip 192.168.1.100
+
+# Step 3: Continue with normal workflow
+torrust-tracker-deployer configure production-tracker
 ```
 
 #### Alternatives Considered
@@ -186,32 +214,30 @@ torrust-tracker-deployer register production-tracker \
 
 #### Domain Layer
 
-Add constructor to create `Environment<Provisioned>` directly with metadata support:
+Add state transition method to `Environment<Created>`:
 
 ```rust
-impl Environment<Provisioned> {
-    /// Create environment from existing instance (bypass provision phase)
+impl Environment<Created> {
+    /// Register an existing instance, transitioning to Provisioned state
     ///
     /// # Parameters
-    /// - `context`: Environment context with instance details
-    /// - `registered`: Optional flag to mark environment as registered (for safety)
+    /// - `instance_ip`: IP address of the existing instance
     ///
     /// # Returns
-    /// Environment in Provisioned state, ready for configuration
-    pub fn from_existing_instance(
-        context: EnvironmentContext,
-        registered: bool,
-    ) -> Result<Self, DomainError> {
-        let mut env = Self {
+    /// Environment in Provisioned state with instance_ip set and "registered" metadata
+    pub fn register(self, instance_ip: IpAddr) -> Environment<Provisioned> {
+        let mut context = self.context;
+
+        // Set the runtime output (same as provision would do)
+        context.runtime_outputs.instance_ip = Some(instance_ip);
+
+        // Mark as registered for safety (destroy protection)
+        context.metadata.insert("registered".to_string(), "true".to_string());
+
+        Environment {
             context,
             state: PhantomData,
-        };
-
-        if registered {
-            env.context.metadata.insert("registered".to_string(), "true".to_string());
         }
-
-        Ok(env)
     }
 }
 ```
@@ -220,7 +246,7 @@ impl Environment<Provisioned> {
 
 #### Application Layer
 
-Create new command handler with minimal validation:
+Create new command handler that loads existing environment and transitions it:
 
 ```rust
 pub struct RegisterCommandHandler {
@@ -232,62 +258,66 @@ impl RegisterCommandHandler {
     pub async fn execute(
         &self,
         environment_name: EnvironmentName,
-        instance_address: SocketAddr,
-        ssh_credentials: SshCredentials,
+        instance_ip: IpAddr,
     ) -> Result<Environment<Provisioned>, RegisterError> {
-        // 1. Check for duplicate environment name
-        if self.environment_repository.exists(&environment_name)? {
-            return Err(RegisterError::EnvironmentExists {
-                name: environment_name,
-            });
-        }
+        // 1. Load existing environment
+        let environment = self
+            .environment_repository
+            .load(&environment_name)?
+            .ok_or_else(|| RegisterError::EnvironmentNotFound {
+                name: environment_name.clone(),
+            })?;
 
-        // 2. Validate SSH connectivity (minimal validation for v1)
-        // Note: Even if validation fails, we create the environment but inform the user
+        // 2. Verify environment is in Created state
+        let created_env = environment
+            .try_into_created()
+            .map_err(|current_state| RegisterError::InvalidState {
+                name: environment_name.clone(),
+                current_state: current_state.to_string(),
+            })?;
+
+        // 3. Get SSH credentials from environment
+        let ssh_credentials = created_env.context().ssh_credentials.clone();
+
+        // 4. Validate SSH connectivity (minimal validation for v1)
+        // Note: Even if validation fails, we transition the environment but inform the user
         let connectivity_result = self
-            .validate_connectivity(instance_address, &ssh_credentials)
+            .validate_connectivity(instance_ip, &ssh_credentials)
             .await;
 
         if let Err(e) = &connectivity_result {
             // Log warning but continue (as per Q&A decision)
             tracing::warn!(
-                "SSH connectivity validation failed, creating environment anyway: {:?}",
+                "SSH connectivity validation failed, registering environment anyway: {:?}",
                 e
             );
         }
 
-        // 3. Create environment context
-        let context = EnvironmentContext::new(
-            environment_name,
-            ssh_credentials,
-            instance_address,
-        );
+        // 5. Transition to Provisioned state with instance IP and "registered" metadata
+        let provisioned_env = created_env.register(instance_ip);
 
-        // 4. Create environment in Provisioned state with "registered" metadata
-        let environment = Environment::from_existing_instance(context, true)?;
+        // 6. Save to repository
+        self.environment_repository.save(&provisioned_env)?;
 
-        // 5. Save to repository
-        self.environment_repository.save(&environment)?;
-
-        // 6. Return environment with connectivity result as warning
+        // 7. Return environment with connectivity result as warning
         if connectivity_result.is_err() {
-            // In future, we could use ProvisionFailed state here
-            tracing::warn!("Environment created but SSH validation failed - subsequent commands may fail");
+            tracing::warn!("Environment registered but SSH validation failed - subsequent commands may fail");
         }
 
-        Ok(environment)
+        Ok(provisioned_env)
     }
 
     async fn validate_connectivity(
         &self,
-        address: SocketAddr,
+        ip: IpAddr,
         credentials: &SshCredentials,
     ) -> Result<(), RegisterError> {
+        let address = SocketAddr::new(ip, credentials.port);
         self.ssh_client
             .test_connection(address, credentials)
             .await
             .map_err(|e| RegisterError::ConnectivityFailed {
-                address,
+                address: ip,
                 source: e
             })
     }
@@ -298,22 +328,26 @@ impl RegisterCommandHandler {
 
 #### Presentation Layer (CLI)
 
-Add new subcommand with non-interactive parameters:
+Add new subcommand:
 
 ```rust
 #[derive(Parser)]
 pub enum Command {
     // ... existing commands ...
 
-    /// Register an existing instance into a new environment
+    /// Register an existing instance for a created environment
     ///
-    /// This command allows you to use pre-existing infrastructure (VMs, physical
-    /// servers, or containers) with the Torrust Tracker Deployer. The registered
-    /// instance must meet these requirements:
+    /// This command is an alternative to 'provision' that uses existing infrastructure
+    /// instead of creating new VMs. The environment must already exist (created via
+    /// 'create environment') and be in the Created state.
     ///
-    /// REQUIRED:
+    /// PREREQUISITES:
+    /// - Environment must exist (run 'create environment' first)
+    /// - Environment must be in Created state
+    ///
+    /// INSTANCE REQUIREMENTS:
     /// - Ubuntu 24.04 LTS
-    /// - SSH connectivity with provided credentials
+    /// - SSH connectivity with credentials from environment
     /// - Public SSH key installed for access
     /// - Public IP address reachable from deployer
     /// - Username with sudo access
@@ -323,29 +357,16 @@ pub enum Command {
     /// - Incompatible dependencies (old Docker, old systemd, etc.)
     /// - Custom configurations preventing deployer operation
     ///
-    /// After registering, you can use the normal deployment workflow:
-    /// configure → release → run
+    /// After registering, continue with: configure → release → run
     ///
     /// NOTE: Registered environments are marked to prevent accidental destruction.
     Register {
-        /// Name for the new environment
+        /// Name of the existing environment to register instance for
         environment: String,
 
-        /// IP address or hostname of the existing instance
+        /// IP address of the existing instance
         #[arg(long, value_name = "IP", required = true)]
-        host: String,
-
-        /// SSH username for accessing the instance
-        #[arg(long, value_name = "USERNAME", required = true)]
-        ssh_user: String,
-
-        /// Path to SSH private key
-        #[arg(long, value_name = "PATH", required = true)]
-        ssh_key: PathBuf,
-
-        /// SSH port (default: 22)
-        #[arg(long, value_name = "PORT", default_value = "22")]
-        ssh_port: u16,
+        instance_ip: IpAddr,
     },
 }
 ```
@@ -356,10 +377,11 @@ pub enum Command {
 
 No new data structures required. Reuses existing:
 
-- `Environment<Provisioned>`
-- `EnvironmentContext`
-- `SshCredentials`
-- `SocketAddr` for instance address
+- `Environment<Created>` - input environment
+- `Environment<Provisioned>` - output environment
+- `RuntimeOutputs` - stores instance_ip
+- `SshCredentials` - already in environment context
+- `IpAddr` for instance address
 
 ### API Changes
 
@@ -370,8 +392,7 @@ pub trait RegisterCommandHandler {
     async fn execute(
         &self,
         environment_name: EnvironmentName,
-        instance_address: SocketAddr,
-        ssh_credentials: SshCredentials,
+        instance_ip: IpAddr,
     ) -> Result<Environment<Provisioned>, RegisterError>;
 }
 ```
@@ -381,21 +402,27 @@ pub trait RegisterCommandHandler {
 ```rust
 #[derive(Debug, Error)]
 pub enum RegisterError {
+    #[error("Environment '{name}' not found")]
+    EnvironmentNotFound {
+        name: EnvironmentName,
+    },
+
+    #[error("Environment '{name}' is not in Created state (current: {current_state})")]
+    InvalidState {
+        name: EnvironmentName,
+        current_state: String,
+    },
+
     #[error("Failed to connect to instance at {address}")]
     ConnectivityFailed {
-        address: SocketAddr,
+        address: IpAddr,
         #[source]
         source: SshError,
     },
 
-    #[error("Instance validation failed: {reason}")]
-    ValidationFailed {
-        reason: String,
-    },
-
-    #[error("Environment '{name}' already exists")]
-    EnvironmentExists {
-        name: EnvironmentName,
+    #[error("Invalid IP address: {value}")]
+    InvalidIpAddress {
+        value: String,
     },
 
     #[error("Failed to save environment")]
@@ -411,19 +438,11 @@ pub enum RegisterError {
 #### Command-Line Arguments
 
 ```bash
-torrust-tracker-deployer register my-tracker \
-  --host 192.168.1.100 \
-  --ssh-user torrust \
-  --ssh-key ~/.ssh/my-server-key \
-  --ssh-port 22
-```
+# Step 1: Create environment with SSH credentials (already exists)
+torrust-tracker-deployer create environment --env-file my-config.json
 
-#### Environment Variables (Optional Enhancement)
-
-```bash
-export TORRUST_TD_REGISTER_HOST=192.168.1.100
-export TORRUST_TD_REGISTER_SSH_USER=torrust
-export TORRUST_TD_REGISTER_SSH_KEY=~/.ssh/my-server-key
+# Step 2: Register existing instance (only needs IP)
+torrust-tracker-deployer register my-tracker --instance-ip 192.168.1.100
 ```
 
 ## 📊 Impact Analysis
@@ -438,20 +457,20 @@ export TORRUST_TD_REGISTER_SSH_KEY=~/.ssh/my-server-key
 | `docs/user-guide/commands/register.md`          | User documentation             | Medium |
 | `docs/decisions/register-existing-instances.md` | ADR for this feature           | Low    |
 | `tests/integration/register_command.rs`         | Integration tests              | Medium |
-| `tests/e2e_register_command.rs`                 | E2E tests                      | Medium |
 
 ### Files to Modify
 
-| File Path                                | Changes Required                      | Effort |
-| ---------------------------------------- | ------------------------------------- | ------ |
-| `src/domain/environment/mod.rs`          | Add `from_existing_instance()`        | Low    |
-| `src/presentation/input/cli/commands.rs` | Add `Register` variant                | Low    |
-| `src/presentation/input/cli/mod.rs`      | Handle `Register` command             | Medium |
-| `src/testing/e2e/tasks/container/mod.rs` | Replace simulation with register      | Medium |
-| `tests/e2e_create_command.rs`            | Update to use register for containers | Low    |
-| `tests/e2e_destroy_command.rs`           | Update to use register for containers | Low    |
-| `docs/console-commands.md`               | Document register command             | Medium |
-| `docs/features/README.md`                | Add feature to active list            | Low    |
+| File Path                                | Changes Required                          | Effort |
+| ---------------------------------------- | ----------------------------------------- | ------ |
+| `src/domain/environment/mod.rs`          | Add `register()` method to Created state  | Low    |
+| `src/presentation/input/cli/commands.rs` | Add `Register` variant                    | Low    |
+| `src/presentation/input/cli/mod.rs`      | Handle `Register` command                 | Medium |
+| `src/testing/e2e/tasks/container/mod.rs` | Replace simulation with register          | Medium |
+| `src/bin/e2e_config_tests.rs`            | Refactor to black-box test using register | Medium |
+| `docs/console-commands.md`               | Document register command                 | Medium |
+| `docs/features/README.md`                | Add feature to active list                | Low    |
+
+**Note**: `tests/e2e_create_command.rs` and `tests/e2e_destroy_command.rs` are black-box tests that only test environment creation/destruction without provisioning - they do not need updates.
 
 ### Breaking Changes
 
@@ -459,15 +478,14 @@ None. This is a purely additive feature.
 
 ### Performance Impact
 
-Neutral. The import command is faster than provisioning (no OpenTofu/LXD setup), but individual command performance is unchanged.
+Neutral. The register command is faster than provisioning (no OpenTofu/LXD setup), but individual command performance is unchanged.
 
 ### Security Considerations
 
-1. **SSH Key Handling**: Keys must be stored securely and permissions validated
-2. **Credential Validation**: SSH connectivity checked (minimal validation for v1)
+1. **SSH Key Handling**: Keys already stored in environment from `create environment`
+2. **Credential Validation**: SSH connectivity checked using environment's credentials (minimal validation for v1)
 3. **Instance Trust**: Users responsible for security and compatibility of their own infrastructure
 4. **Destroy Protection**: Registered instances marked with metadata, destroy command will require confirmation (future enhancement)
-5. **No Auto-Installation**: Users must provide valid SSH keys - no automated key generation or installation
 
 ### Instance Requirements
 
@@ -504,37 +522,31 @@ Per Q&A decision, registered instances must meet these requirements:
 **Timeline**: No fixed deadline
 **Dependencies**: Must be implemented BEFORE Hetzner provider
 
-### Phase 1: Foundation
+### Phase 1: Foundation (0.5 day)
 
 - [ ] Create ADR documenting architectural decision
 - [ ] Define `RegisterError` enum with clear, actionable messages
-- [ ] Add `Environment::from_existing_instance()` constructor with metadata support
-- [ ] Add integration tests for domain layer
+- [ ] Add `Environment<Created>::register(instance_ip)` method for state transition
+- [ ] Add unit tests for domain layer state transition
 
-**Estimated Duration**: 1 day
-
-### Phase 2: Core Implementation
+### Phase 2: Core Implementation (1 day)
 
 - [ ] Implement `RegisterCommandHandler` with minimal SSH validation
-- [ ] Add duplicate environment name check
+- [ ] Load existing environment and verify Created state
 - [ ] Add metadata tracking for registered instances
 - [ ] Add repository integration
-- [ ] Handle validation failures gracefully (create env, warn user)
+- [ ] Handle validation failures gracefully (transition anyway, warn user)
 - [ ] Add unit tests for command handler
 
-**Estimated Duration**: 2 days
+### Phase 3: CLI Integration (0.5 day)
 
-### Phase 3: CLI Integration
-
-- [ ] Add `Register` command variant with required parameters
+- [ ] Add `Register` command variant with environment name and `--instance-ip` parameter
 - [ ] Add argument parsing and validation
 - [ ] Add user output formatting
 - [ ] Handle errors with actionable messages
 - [ ] Add CLI integration tests
 
-**Estimated Duration**: 1 day
-
-### Phase 4: Testing & E2E Migration (No E2E Tests for Register)
+### Phase 4: Testing & E2E Migration (2 days)
 
 - [ ] Write integration tests with Docker containers
 - [ ] Replace `run_provision_simulation` with register in existing E2E tests
@@ -545,34 +557,32 @@ Per Q&A decision, registered instances must meet these requirements:
 
 **Note**: Per Q&A decision - "we do not need E2E tests since the feature will be indirectly tested when we replace the `run_provision_simulation.rs` with the register command in existing E2E tests"
 
-**Estimated Duration**: 2 days
-
-### Phase 5: Documentation
+### Phase 5: Documentation (1 day)
 
 - [ ] Create `docs/user-guide/commands/register.md`
 - [ ] Update `docs/console-commands.md` with register command
 - [ ] Add examples for common scenarios
-- [ ] Update README with register workflow
+- [ ] Document prerequisites (create environment first)
 - [ ] Update all command lists throughout documentation
 
 **Note**: Per Q&A decision - "New command docs in docs/user-guide/commands. Update other parts of the documentation where there is a list of commands."
 
-**Estimated Duration**: 1 day
-
-**Total Estimated Duration**: 7 days
+**Total Estimated Duration**: 5 days
 
 ## ✅ Definition of Done
 
 ### Functional Requirements
 
-- [ ] Command successfully registers instances with valid SSH credentials
-- [ ] Environment created in `Provisioned` state with "registered" metadata
+- [ ] Command requires environment to exist in `Created` state
+- [ ] Command only requires `--instance-ip` parameter (SSH credentials come from environment)
+- [ ] Environment transitions to `Provisioned` state with `runtime_outputs.instance_ip` set
+- [ ] Registered environments marked with `"registered": "true"` metadata
 - [ ] Registered environments work identically to provisioned ones for all subsequent commands (`configure`, `release`, `run`)
-- [ ] SSH connectivity validated (minimal validation only - defer advanced checks)
-- [ ] Environment created even if validation fails (with warning to user)
+- [ ] SSH connectivity validated using environment's SSH credentials (minimal validation only)
+- [ ] Environment transitions even if validation fails (with warning to user)
+- [ ] Clear error messages for environment not found
+- [ ] Clear error messages for wrong environment state
 - [ ] Clear error messages for connectivity failures
-- [ ] Clear error messages for invalid credentials
-- [ ] Duplicate environment names rejected with helpful error
 - [ ] Destroy command prevents destruction of registered instances (requires confirmation)
 - [ ] Manual test: Successfully register LXD VM
 - [ ] Manual test: Successfully register Docker container
@@ -589,15 +599,15 @@ Per Q&A decision, registered instances must meet these requirements:
 ### Testing Requirements
 
 - [ ] Unit tests cover `RegisterCommandHandler` logic
-- [ ] Unit tests verify duplicate name detection
+- [ ] Unit tests verify state transition from `Created` to `Provisioned`
 - [ ] Unit tests verify metadata tracking
 - [ ] Integration tests verify SSH connectivity validation
 - [ ] Integration tests verify environment repository integration
 - [ ] Integration tests verify graceful handling of validation failures
-- [ ] E2E container tests use register instead of simulation
+- [ ] `src/bin/e2e_config_tests.rs` refactored to black-box test using register command
 - [ ] All E2E tests pass on GitHub Actions
 
-**Note**: No dedicated E2E tests for register command - indirectly tested through existing E2E tests after replacing `run_provision_simulation.rs`
+**Note**: No dedicated E2E tests for register command - indirectly tested through `e2e_config_tests.rs` after replacing `run_provision_simulation.rs`. The black-box tests (`e2e_create_command.rs`, `e2e_destroy_command.rs`) only test create/destroy without provisioning and don't need updates.
 
 ### Documentation Requirements
 
@@ -631,29 +641,48 @@ mod tests {
     use crate::testing::mocks::{MockSshClient, MockRepository};
 
     #[tokio::test]
-    async fn it_should_create_environment_in_provisioned_state() {
+    async fn it_should_transition_environment_to_provisioned_state() {
         let ssh_client = Arc::new(MockSshClient::new());
-        let repo = Arc::new(MockRepository::new());
+        let repo = Arc::new(MockRepository::with_created_environment("test-env"));
         let handler = RegisterCommandHandler::new(ssh_client, repo.clone());
 
         let result = handler.execute(
             EnvironmentName::new("test-env".to_string())?,
-            "192.168.1.100:22".parse()?,
-            SshCredentials::new(/* ... */),
+            "192.168.1.100".parse()?,
         ).await;
 
         assert!(result.is_ok());
-        assert_eq!(repo.saved_environments().len(), 1);
+        let env = result.unwrap();
+        assert_eq!(env.context().runtime_outputs.instance_ip, Some("192.168.1.100".parse().unwrap()));
+        assert_eq!(env.context().metadata.get("registered"), Some(&"true".to_string()));
     }
 
     #[tokio::test]
-    async fn it_should_fail_with_connectivity_error() {
-        let ssh_client = Arc::new(MockSshClient::failing());
-        let handler = RegisterCommandHandler::new(ssh_client, /* ... */);
+    async fn it_should_fail_if_environment_not_found() {
+        let ssh_client = Arc::new(MockSshClient::new());
+        let repo = Arc::new(MockRepository::empty());
+        let handler = RegisterCommandHandler::new(ssh_client, repo);
 
-        let result = handler.execute(/* ... */).await;
+        let result = handler.execute(
+            EnvironmentName::new("nonexistent".to_string())?,
+            "192.168.1.100".parse()?,
+        ).await;
 
-        assert!(matches!(result, Err(RegisterError::ConnectivityFailed { .. })));
+        assert!(matches!(result, Err(RegisterError::EnvironmentNotFound { .. })));
+    }
+
+    #[tokio::test]
+    async fn it_should_fail_if_environment_not_in_created_state() {
+        let ssh_client = Arc::new(MockSshClient::new());
+        let repo = Arc::new(MockRepository::with_provisioned_environment("test-env"));
+        let handler = RegisterCommandHandler::new(ssh_client, repo);
+
+        let result = handler.execute(
+            EnvironmentName::new("test-env".to_string())?,
+            "192.168.1.100".parse()?,
+        ).await;
+
+        assert!(matches!(result, Err(RegisterError::InvalidState { .. })));
     }
 }
 ```
@@ -667,24 +696,25 @@ Test with real Docker containers:
 ```rust
 #[tokio::test]
 async fn it_should_register_docker_container() {
+    // Create environment first
+    let test_context = TestContext::new()?;
+    create_environment(&test_context, "test-register").await?;
+
     // Start container with SSH
     let container = TestContainer::start().await?;
 
-    // Create services
-    let services = TestServices::new()?;
-
-    // Execute register command
-    let env = services
+    // Execute register command with container IP
+    let env = test_context
         .register_handler
         .execute(
             EnvironmentName::new("test-register".to_string())?,
-            container.ssh_socket_addr(),
-            container.ssh_credentials(),
+            container.ip_address(),
         )
         .await?;
 
     // Verify environment state
     assert!(matches!(env.state_type(), StateType::Provisioned));
+    assert_eq!(env.context().runtime_outputs.instance_ip, Some(container.ip_address()));
 
     // Cleanup
     container.stop().await?;
@@ -695,14 +725,17 @@ async fn it_should_register_docker_container() {
 
 ### End-to-End Tests
 
-Test full import → configure → release workflow:
+Test full create → register → configure → release workflow:
 
 ```rust
 #[tokio::test]
 async fn it_should_register_and_deploy_on_container() {
     let test_context = TestContext::new_container()?;
 
-    // Register container
+    // Create environment first
+    create_environment(&test_context).await?;
+
+    // Register container (instead of provision)
     let env = register_container(&test_context).await?;
     assert_eq!(env.state_type(), StateType::Provisioned);
 
@@ -719,24 +752,26 @@ async fn it_should_register_and_deploy_on_container() {
 }
 ```
 
-**File**: `tests/e2e_register_command.rs`
+**File**: Existing E2E tests will be updated to use register instead of simulation
 
 ### Manual Testing
 
 Steps for manual verification:
 
-1. Start a Docker container with SSH enabled
-2. Run register command: `torrust-tracker-deployer register test --host 127.0.0.1 --ssh-user torrust --ssh-key ./fixtures/testing_rsa --ssh-port 2222`
-3. Verify environment created: Check `data/test-env/environment.json` shows `Provisioned` state
-4. Run configure command: `torrust-tracker-deployer configure test`
-5. Verify configuration succeeded
-6. Check that all subsequent commands work normally
+1. Create environment: `torrust-tracker-deployer create environment --env-file config.json`
+2. Start a Docker container with SSH enabled
+3. Run register command: `torrust-tracker-deployer register test-env --instance-ip 127.0.0.1`
+4. Verify environment updated: Check `data/test-env/environment.json` shows `Provisioned` state with instance_ip set
+5. Run configure command: `torrust-tracker-deployer configure test-env`
+6. Verify configuration succeeded
+7. Check that all subsequent commands work normally
 
 ## 📚 Related Documentation
 
 - [Development Principles](../../development-principles.md) - Observability, testability, user friendliness
 - [Error Handling Guide](../../contributing/error-handling.md) - Clear, actionable errors
-- [DDD Layer Placement](../../contributing/ddd-layer-placement.md) - Correct layer for import handler
+- [DDD Layer Placement](../../contributing/ddd-layer-placement.md) - Correct layer for register handler
+- [Runtime Outputs](../../../src/domain/environment/runtime_outputs.rs) - Shows instance_ip is the only provisioning output
 - [State Machine](../../../src/domain/environment/state/mod.rs) - Environment states and transitions
 - [Roadmap](../../roadmap.md) - Feature fits with Hetzner provider future work
 - [VM Providers](../../vm-providers.md) - Context on LXD vs containers
@@ -778,7 +813,7 @@ Steps for manual verification:
 **Rationale**: Better state machine representation of registration issues  
 **Decision from Q&A**: "Use ProvisionFailed state for future validations"
 
-## �🔗 References
+## 🔗 References
 
 ### E2E Testing Architecture
 
@@ -792,9 +827,10 @@ Per Q&A answer about testing infrastructure replacement:
 
 **Future Approach** (with register command):
 
-1. Create container (same as before)
-2. Use register command to create environment state (replaces manual state setup)
-3. Eliminates `run_provision_simulation.rs` entirely
+1. Create environment first (provides SSH credentials)
+2. Create container (same as before)
+3. Use register command to transition environment to Provisioned state (replaces manual state setup)
+4. Eliminates `run_provision_simulation.rs` entirely
 
 **Code Reference**:
 
@@ -807,8 +843,11 @@ let created_env = test_context
     .context("Environment must be in Created state for config tests")?;
 let provisioned_env = created_env.start_provisioning().provisioned();
 
-// NEW: Use register command
-let provisioned_env = register_container(&test_context).await?;
+// NEW: Use register command (environment already created)
+let provisioned_env = register_handler.execute(
+    environment_name,
+    container.ip_address(),
+).await?;
 ```
 
 ### Instance Requirements
@@ -818,7 +857,7 @@ Per Q&A decision, registered instances must meet these requirements:
 **REQUIRED**:
 
 - Ubuntu 24.04 LTS (exact version)
-- SSH connectivity with provided credentials
+- SSH connectivity with credentials from environment
 - Public SSH key installed for deployer access
 - Public IP address reachable from deployer machine
 - User account with sudo privileges
@@ -842,13 +881,14 @@ Per Q&A answers on risk assessment:
 → No special handling needed, just inform the user of connectivity issues
 
 **State management complexity**:  
-→ Flow should be the same as normal environments after initial registration
+→ Flow should be the same as normal environments after initial registration (same `Provisioned` state)
 
 **Destroy command accidentally destroying user infrastructure**:  
 → Prevent destroying registered instances (require confirmation or explicit flag)
 
 ### Additional References
 
+- Runtime Outputs: `src/domain/environment/runtime_outputs.rs` - Shows instance_ip is the only provisioning output
 - Current simulation hack: `src/testing/e2e/tasks/container/run_provision_simulation.rs`
 - GitHub Actions E2E issues: `docs/github-actions-issues/`
 - State management ADR: `docs/decisions/command-state-return-pattern.md`
@@ -857,5 +897,5 @@ Per Q&A answers on risk assessment:
 ---
 
 **Created**: November 19, 2025  
-**Last Updated**: November 19, 2025  
+**Last Updated**: November 27, 2025  
 **Status**: ✅ Questions Answered - Ready for Implementation
