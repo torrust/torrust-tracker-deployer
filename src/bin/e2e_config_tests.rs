@@ -1,9 +1,8 @@
-//! End-to-End Configuration Testing Binary for Torrust Tracker Deployer
+//! End-to-End Configuration Testing Binary for Torrust Tracker Deployer (Black-box)
 //!
-//! This binary orchestrates configuration, release, and run phase testing of the deployment
-//! infrastructure using Docker containers instead of VMs. It replaces infrastructure
-//! provisioning with Docker container setup to test Ansible configuration in a controlled
-//! environment.
+//! This binary orchestrates configuration testing of the deployment infrastructure using
+//! Docker containers instead of VMs. It uses a black-box approach, executing CLI commands
+//! as external processes rather than importing internal application logic.
 //!
 //! ## Usage
 //!
@@ -16,7 +15,7 @@
 //! Run with custom options:
 //!
 //! ```bash
-//! # Change logging format  
+//! # Change logging format
 //! cargo run --bin e2e-config-tests -- --log-format json
 //!
 //! # Show help
@@ -25,65 +24,64 @@
 //!
 //! ## Test Workflow
 //!
-//! 1. **Preflight cleanup** - Remove any artifacts from previous test runs that may have failed to clean up
+//! This test uses the register command (instead of provision) since infrastructure
+//! (Docker container) is created externally:
+//!
+//! 1. **Preflight cleanup** - Remove any artifacts from previous test runs
 //! 2. **Container setup** - Build and start Docker container using `docker/provisioned-instance`
-//! 3. **SSH verification** - Ensure container is ready for Ansible connectivity
-//! 4. **Configuration** - Apply Ansible playbooks to configure services
-//! 5. **Validation** - Verify deployments are working correctly  
-//! 6. **Stop container** - Stop the test container (deletion handled automatically by testcontainers)
-//! 7. **Test infrastructure cleanup** - No-op for containers (automatic), called for symmetry with VMs
+//! 3. **SSH verification** - Ensure container is ready for SSH connectivity
+//! 4. **Create environment** - Create environment from config file (CLI: `create environment`)
+//! 5. **Register instance** - Register the container's IP (CLI: `register --instance-ip`)
+//! 6. **Configure** - Apply Ansible playbooks to configure services (CLI: `configure`)
+//! 7. **Validation** - Verify deployments are working correctly
+//! 8. **Stop container** - Stop the test container (deletion handled automatically by testcontainers)
 //!
-//! ## Two-Phase Cleanup Strategy
+//! ## Black-box Testing Approach
 //!
-//! The cleanup process happens in two distinct phases:
-//!
-//! - **Phase 1 - Preflight cleanup**: Removes artifacts from previous test runs that may have
-//!   failed to clean up properly (executed at the start in main function)
-//! - **Phase 2 - Test infrastructure cleanup**: For containers, this is automatic via testcontainers
-//!   (called as no-op in main function for symmetry with VM workflows)
+//! This test executes CLI commands as external processes, testing the full user-facing
+//! interface. This is ideal for integration and acceptance testing.
 //!
 //! ## Container vs VM Management
 //!
-//! - **Container stopping**: Happens immediately after tests (in test function) for resource management
-//! - **Container cleanup**: Automatic via testcontainers library (no explicit action needed)
-//! - **Symmetry**: Both workflows have stop+cleanup phases, but container cleanup is automatic
+//! The container is managed outside the deployer workflow:
+//! - **Container starting**: Happens before deployer commands (in test setup)
+//! - **Register command**: Registers the container's IP as an existing instance
+//! - **Container stopping**: Happens after tests (cleanup phase)
 //!
-//! This approach addresses network connectivity issues with LXD VMs on GitHub Actions
-//! while maintaining comprehensive testing of the configuration and deployment phases.
-//!
-//! ## State Machine Pattern
-//!
-//! The container follows a state machine pattern similar to the Torrust Tracker `MySQL` driver:
-//! - `StoppedProvisionedContainer` - Initial state, can only be started
-//! - `RunningProvisionedContainer` - Running state, can be queried, configured, and stopped
-//! - State transitions are enforced at compile time through different types
+//! This approach tests the `register` command path, which is designed for existing
+//! infrastructure (VMs, physical servers, containers).
+
+use std::net::SocketAddr;
+use std::time::Instant;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::time::Instant;
-use torrust_dependency_installer::{verify_dependencies, Dependency};
-use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configure_command::run_configure_command;
+use torrust_dependency_installer::Dependency;
 use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PORT};
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
 use torrust_tracker_deployer_lib::shared::Username;
-use torrust_tracker_deployer_lib::testing::e2e::{
-    context::{TestContext, TestContextType},
-    tasks::{
-        container::{
-            cleanup_infrastructure::{cleanup_test_infrastructure, stop_test_infrastructure},
-            run_provision_simulation::run_provision_simulation,
-        },
-        preflight_cleanup,
-        run_configuration_validation::run_configuration_validation,
-    },
+use torrust_tracker_deployer_lib::testing::e2e::containers::actions::{
+    SshKeySetupAction, SshWaitAction,
 };
+use torrust_tracker_deployer_lib::testing::e2e::containers::timeout::ContainerTimeouts;
+use torrust_tracker_deployer_lib::testing::e2e::containers::{
+    RunningProvisionedContainer, StoppedProvisionedContainer,
+};
+use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
+    generate_environment_config_with_port, run_container_preflight_cleanup,
+    verify_required_dependencies, E2eTestRunner,
+};
+use torrust_tracker_deployer_lib::testing::e2e::tasks::container::cleanup_infrastructure::stop_test_infrastructure;
+use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configuration_validation::run_configuration_validation;
+
+/// Environment name for this E2E test
+const ENVIRONMENT_NAME: &str = "e2e-config";
 
 #[derive(Parser)]
 #[command(name = "e2e-config-tests")]
-#[command(about = "E2E configuration tests for Torrust Tracker Deployer using Docker containers")]
+#[command(about = "E2E configuration tests using black-box approach with Docker containers")]
 struct CliArgs {
     /// Logging format to use
     #[arg(
@@ -94,18 +92,18 @@ struct CliArgs {
     log_format: LogFormat,
 }
 
-/// Main entry point for E2E configuration tests.
+/// Main entry point for E2E configuration tests (black-box approach).
 ///
-/// Tests the configuration, release, and run phases using Docker containers
+/// Tests the register → configure workflow using Docker containers
 /// instead of VMs to avoid network connectivity issues on GitHub Actions.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 /// - Docker container setup fails
-/// - SSH connectivity cannot be established  
-/// - Configuration tests fail
-/// - Container cleanup fails (when enabled)
+/// - SSH connectivity cannot be established
+/// - Any CLI command fails (create, register, configure)
+/// - Configuration validation fails
 ///
 /// # Panics
 ///
@@ -129,45 +127,18 @@ pub async fn main() -> Result<()> {
         application = "torrust_tracker_deployer",
         test_suite = "e2e_config_tests",
         log_format = ?cli.log_format,
-        "Starting E2E configuration tests with Docker containers"
+        "Starting E2E configuration tests (black-box) with Docker containers"
     );
 
     // Verify required dependencies before running tests
-    verify_required_dependencies()?;
+    verify_required_dependencies(&[Dependency::Ansible])?;
 
     let test_start = Instant::now();
 
-    // Create Environment entity with hardcoded name for this binary
-    let env_name =
-        EnvironmentName::new("e2e-config").expect("Hardcoded environment name should be valid");
+    // Cleanup any artifacts from previous test runs (including Docker containers)
+    run_container_preflight_cleanup(ENVIRONMENT_NAME)?;
 
-    // Use absolute paths to project root for SSH keys to ensure they can be found by Ansible
-    let project_root = std::env::current_dir().expect("Failed to get current directory");
-    let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
-    let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
-    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
-    let ssh_credentials = SshCredentials::new(
-        ssh_private_key_path.clone(),
-        ssh_public_key_path.clone(),
-        ssh_user.clone(),
-    );
-
-    let ssh_port = DEFAULT_SSH_PORT;
-    let environment = Environment::new(env_name, ssh_credentials, ssh_port);
-
-    // Create and initialize TestContext
-    let mut test_context =
-        TestContext::from_environment(false, environment, TestContextType::Container)?.init()?;
-
-    // Cleanup any artifacts from previous test runs that may have failed to clean up
-    // This ensures a clean slate before starting new tests
-    preflight_cleanup::preflight_cleanup_previous_resources(&test_context)?;
-
-    let test_result = run_configuration_tests(&mut test_context).await;
-
-    // Cleanup test infrastructure created during this test run
-    // For containers, this is automatic via testcontainers (no-op), but called for symmetry with VMs
-    cleanup_test_infrastructure();
+    let test_result = run_configuration_tests().await;
 
     let test_duration = test_start.elapsed();
 
@@ -200,72 +171,142 @@ pub async fn main() -> Result<()> {
     }
 }
 
-/// Verify that all required dependencies are installed for config E2E tests.
-///
-/// Config E2E tests require:
-/// - `Ansible` (configuration management)
-///
-/// # Errors
-///
-/// Returns an error if any required dependencies are missing or cannot be detected.
-fn verify_required_dependencies() -> Result<()> {
-    let required_deps = &[Dependency::Ansible];
+/// Run the complete configuration tests using black-box CLI commands
+async fn run_configuration_tests() -> Result<()> {
+    info!("Starting configuration tests with Docker container (black-box approach)");
 
-    if let Err(e) = verify_dependencies(required_deps) {
-        error!(
-            error = %e,
-            "Dependency verification failed"
-        );
-        eprintln!("\n{}\n", e.actionable_message());
-        return Err(anyhow::anyhow!("Missing required dependencies"));
-    }
+    // Build SSH credentials (same as used in e2e_config_tests)
+    let project_root = std::env::current_dir().expect("Failed to get current directory");
+    let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
+    let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
+    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
+    let ssh_credentials = SshCredentials::new(ssh_private_key_path, ssh_public_key_path, ssh_user);
+
+    // Step 1: Start Docker container (infrastructure managed externally)
+    let running_container =
+        create_and_start_container(ENVIRONMENT_NAME.to_string(), DEFAULT_SSH_PORT).await?;
+
+    let socket_addr = running_container.ssh_socket_addr();
+
+    // Step 2: Establish SSH connectivity
+    establish_ssh_connectivity(socket_addr, &ssh_credentials, Some(&running_container)).await?;
+
+    // Step 3: Run deployer commands (black-box via CLI)
+    let test_result =
+        run_deployer_workflow(socket_addr, &ssh_credentials, &running_container).await;
+
+    // Step 4: Stop container regardless of test result
+    stop_test_infrastructure(running_container);
+
+    test_result
+}
+
+/// Run the deployer workflow using CLI commands (black-box approach)
+///
+/// This executes the create → register → configure workflow via CLI commands,
+/// followed by validation.
+async fn run_deployer_workflow(
+    socket_addr: SocketAddr,
+    ssh_credentials: &SshCredentials,
+    _running_container: &RunningProvisionedContainer,
+) -> Result<()> {
+    let test_runner = E2eTestRunner::new(ENVIRONMENT_NAME);
+
+    // Generate environment configuration file with the container's mapped SSH port
+    // The port must be specified because the container exposes SSH on a dynamic port
+    let config_path =
+        generate_environment_config_with_port(ENVIRONMENT_NAME, Some(socket_addr.port()))?;
+
+    // Create environment (CLI: cargo run -- create environment --env-file <file>)
+    test_runner.create_environment(&config_path)?;
+
+    // Register the container's IP as an existing instance
+    // (CLI: cargo run -- register <env> --instance-ip <ip>)
+    let instance_ip = socket_addr.ip().to_string();
+    test_runner.register_instance(&instance_ip)?;
+
+    // Configure services via Ansible
+    // (CLI: cargo run -- configure <env>)
+    test_runner.configure_services()?;
+
+    // Validate the configuration
+    run_configuration_validation(socket_addr, ssh_credentials)
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    info!("Configuration tests completed successfully");
 
     Ok(())
 }
 
-/// Run the complete configuration tests using extracted tasks
-async fn run_configuration_tests(test_context: &mut TestContext) -> Result<()> {
-    info!("Starting configuration tests with Docker container");
+/// Create and start a Docker container for E2E testing
+///
+/// This function creates a new Docker container from the provisioned instance image
+/// and starts it, making it ready for SSH connectivity and configuration testing.
+async fn create_and_start_container(
+    container_name: String,
+    ssh_port: u16,
+) -> Result<RunningProvisionedContainer> {
+    info!(
+        container_name = %container_name,
+        ssh_port = %ssh_port,
+        "Creating and starting Docker container for E2E testing"
+    );
 
-    // Step 1: Run provision simulation (includes container setup and SSH connectivity)
-    let running_container = run_provision_simulation(test_context).await?;
+    let stopped_container = StoppedProvisionedContainer::default();
 
-    // Step 2: Create a simulated provisioned environment for type-safe configuration
-    // In config-only tests, we simulate the provisioned state since we use Docker containers
-    // instead of actual VM provisioning
-    let created_env = test_context
-        .environment
-        .clone()
-        .try_into_created()
-        .context("Environment must be in Created state for config tests")?;
-    let provisioned_env = created_env.start_provisioning().provisioned();
+    let running_container = stopped_container
+        .start(Some(container_name.clone()), ssh_port)
+        .await
+        .context("Failed to start provisioned instance container")?;
 
-    // Update TestContext with the simulated provisioned environment
-    test_context.update_from_provisioned(provisioned_env.clone());
+    info!(
+        container_name = %container_name,
+        container_id = %running_container.container_id(),
+        ssh_socket_addr = %running_container.ssh_socket_addr(),
+        "Docker container setup completed successfully"
+    );
 
-    // Persist the provisioned environment to the repository so the ConfigureCommandHandler can load it
-    let repository = test_context.create_repository();
-    repository
-        .save(&provisioned_env.into_any())
-        .context("Failed to persist provisioned environment for configure command")?;
+    Ok(running_container)
+}
 
-    // Step 3: Run Ansible configuration with typed environment
-    // The TestContext is updated internally with the new environment state
-    run_configure_command(test_context).map_err(|e| anyhow::anyhow!("{e}"))?;
+/// Establish SSH connectivity for a running Docker container
+///
+/// This function handles the complete SSH connectivity establishment process:
+/// 1. Waits for SSH server to become available on the container
+/// 2. Sets up SSH key authentication for container access
+async fn establish_ssh_connectivity(
+    socket_addr: SocketAddr,
+    ssh_credentials: &SshCredentials,
+    container: Option<&RunningProvisionedContainer>,
+) -> Result<()> {
+    info!(
+        socket_addr = %socket_addr,
+        ssh_user = %ssh_credentials.ssh_username,
+        "Establishing SSH connectivity"
+    );
 
-    // Step 4: Run configuration validation
-    run_configuration_validation(
-        running_container.ssh_socket_addr(),
-        test_context.environment.ssh_credentials(),
-    )
-    .await
-    .map_err(|e| anyhow::anyhow!("{e}"))?;
+    // Wait for SSH server to become available
+    let timeouts = ContainerTimeouts::default();
+    let ssh_wait_action = SshWaitAction::new(timeouts.ssh_ready, 10);
+    ssh_wait_action
+        .execute(socket_addr)
+        .context("SSH server failed to start")?;
 
-    // Stop test infrastructure (container) created during this test run
-    // This stops the container immediately after tests - deletion is automatic via testcontainers
-    stop_test_infrastructure(running_container);
+    // Setup SSH key authentication
+    if let Some(running_container) = container {
+        let ssh_key_setup_action = SshKeySetupAction::new();
+        ssh_key_setup_action
+            .execute(running_container, ssh_credentials)
+            .await
+            .context("Failed to setup SSH authentication")?;
+    }
 
-    info!("Configuration tests completed successfully");
+    info!(
+        socket_addr = %socket_addr,
+        ssh_user = %ssh_credentials.ssh_username,
+        "SSH connectivity established successfully"
+    );
 
     Ok(())
 }

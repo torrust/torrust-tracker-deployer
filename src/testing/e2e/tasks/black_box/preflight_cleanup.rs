@@ -106,7 +106,7 @@ pub fn run_preflight_cleanup(environment_name: &str) -> Result<()> {
 /// ```rust,ignore
 /// use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::run_container_preflight_cleanup;
 ///
-/// run_container_preflight_cleanup("e2e-config-new")?;
+/// run_container_preflight_cleanup("e2e-config")?;
 /// ```
 pub fn run_container_preflight_cleanup(environment_name: &str) -> Result<()> {
     use std::fs;

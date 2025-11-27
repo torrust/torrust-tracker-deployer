@@ -74,7 +74,7 @@ pub fn generate_environment_config(environment_name: &str) -> Result<PathBuf> {
 /// let config_path = generate_environment_config_with_port("e2e-provision", None)?;
 ///
 /// // Use custom port for container testing
-/// let config_path = generate_environment_config_with_port("e2e-config-new", Some(32808))?;
+/// let config_path = generate_environment_config_with_port("e2e-config", Some(32808))?;
 /// ```
 pub fn generate_environment_config_with_port(
     environment_name: &str,
