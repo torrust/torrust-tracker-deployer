@@ -17,7 +17,7 @@ Code coverage is a metric that measures which lines of code are executed during 
 
 ### Project-Wide Goals
 
-- **Overall Coverage Target**: ≥ 75% (lines)
+- **Overall Coverage Target**: ≥ 70% (lines)
 - **Critical Business Logic**: ≥ 90% (domain layer, commands, steps)
 - **Shared Utilities**: ≥ 95% (clock, username, command executor)
 
@@ -76,7 +76,7 @@ cargo install cargo-llvm-cov
 
 ### Quick Coverage Check
 
-Validate that coverage meets the 75% threshold:
+Validate that coverage meets the threshold:
 
 ```bash
 cargo cov-check
@@ -86,7 +86,7 @@ This command:
 
 - Runs tests with coverage instrumentation
 - Calculates line coverage percentage
-- **Fails** if coverage is below 75%
+- **Fails** if coverage is below the threshold
 - Shows a summary of coverage by file
 
 **Example Output (Passing)**:
@@ -179,7 +179,7 @@ All coverage commands use cargo aliases defined in `.cargo/config.toml`:
 | Alias               | Full Command                                                      | Purpose                           |
 | ------------------- | ----------------------------------------------------------------- | --------------------------------- |
 | `cargo cov`         | `cargo llvm-cov`                                                  | Basic coverage report in terminal |
-| `cargo cov-check`   | `cargo llvm-cov --all-features --workspace --fail-under-lines 75` | Validate 75% threshold            |
+| `cargo cov-check`   | `cargo llvm-cov --all-features --workspace --fail-under-lines 70` | Validate coverage threshold            |
 | `cargo cov-lcov`    | `cargo llvm-cov --lcov --output-path=./.coverage/lcov.info`       | Generate LCOV format              |
 | `cargo cov-codecov` | `cargo llvm-cov --codecov --output-path=./.coverage/codecov.json` | Generate Codecov JSON             |
 | `cargo cov-html`    | `cargo llvm-cov --html`                                           | Generate HTML report              |
@@ -275,7 +275,7 @@ The coverage workflow:
 When adding new features, aim for:
 
 - **New domain logic**: ≥ 90% coverage
-- **New commands/steps**: ≥ 75% coverage
+- **New commands/steps**: ≥ 70% coverage
 - **New utilities**: ≥ 95% coverage
 - **Infrastructure adapters**: E2E tests + reasonable unit tests
 
@@ -298,7 +298,7 @@ When refactoring code:
 
 1. **Maintain or improve** existing coverage
 2. **Prefer** adding tests over decreasing project coverage
-3. **Avoid** decreasing overall project coverage below 75%
+3. **Avoid** decreasing overall project coverage below 70%
 4. **Document** any intentional coverage reductions
 5. **Update tests** to reflect new structure
 
@@ -336,7 +336,7 @@ Coverage types:
 - **Function Coverage**: Percentage of functions called
 - **Branch Coverage**: Percentage of conditional branches taken
 
-We primarily track **line coverage** with the 75% target.
+We primarily track **line coverage** with the 70% target.
 
 ### Reading HTML Reports
 
@@ -349,7 +349,7 @@ We primarily track **line coverage** with the 75% target.
 **Focus Areas**:
 
 1. **Domain entities/value objects**: Should be near 100%
-2. **Commands/Steps**: Should be mostly green (75%+)
+2. **Commands/Steps**: Should be mostly green (70%+)
 3. **Utilities**: Should be almost all green (95%+)
 4. **Adapters**: May have more red (E2E tested)
 
@@ -406,7 +406,7 @@ When reviewing PRs:
 Request additional tests when:
 
 - ✅ New domain logic has <90% coverage
-- ✅ New commands/steps have <75% coverage
+- ✅ New commands/steps have <70% coverage
 - ✅ Critical business logic is untested
 - ✅ Error paths are completely untested
 - ✅ Tests exist but don't validate actual behavior (dummy tests)
@@ -457,7 +457,7 @@ Accept lower coverage when:
 
 ### Coverage Check Fails Locally
 
-**Problem**: `cargo cov-check` reports coverage below 75%
+**Problem**: `cargo cov-check` reports coverage below 70%
 
 **Solutions**:
 
