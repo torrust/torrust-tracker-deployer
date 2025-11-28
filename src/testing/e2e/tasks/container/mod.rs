@@ -9,8 +9,6 @@
 //!
 //! - `cleanup_infrastructure` - Stops and cleans up Docker containers after testing
 //! - `preflight_cleanup` - Container-specific preflight cleanup operations
-//! - `run_provision_simulation` - Simulates provision phase for container-based testing
 
 pub mod cleanup_infrastructure;
 pub mod preflight_cleanup;
-pub mod run_provision_simulation;
