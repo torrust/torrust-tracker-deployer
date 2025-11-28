@@ -528,6 +528,60 @@ impl<S> Environment<S> {
         self.context.runtime_outputs.provision_method
     }
 
+    /// Returns whether this environment's infrastructure is managed by this tool
+    ///
+    /// Infrastructure is considered "managed" if it was created via the `provision` command
+    /// using `OpenTofu`. Managed infrastructure can be destroyed using `tofu destroy`.
+    ///
+    /// Infrastructure is NOT managed if:
+    /// - It was registered from existing infrastructure via the `register` command
+    /// - The provision method is unknown (legacy state)
+    ///
+    /// # Returns
+    ///
+    /// `true` if the infrastructure was provisioned by this tool and can be destroyed,
+    /// `false` if the infrastructure is external and should not be touched.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::environment::runtime_outputs::ProvisionMethod;
+    /// use torrust_tracker_deployer_lib::shared::Username;
+    /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
+    /// use std::path::PathBuf;
+    ///
+    /// let env_name = EnvironmentName::new("production".to_string())?;
+    /// let ssh_username = Username::new("torrust".to_string())?;
+    /// let ssh_credentials = SshCredentials::new(
+    ///     PathBuf::from("keys/prod_rsa"),
+    ///     PathBuf::from("keys/prod_rsa.pub"),
+    ///     ssh_username,
+    /// );
+    ///
+    /// // Provisioned environment - infrastructure is managed
+    /// let provisioned_env = Environment::new(env_name.clone(), ssh_credentials.clone(), 22)
+    ///     .with_provision_method(ProvisionMethod::Provisioned);
+    /// assert!(provisioned_env.is_infrastructure_managed());
+    ///
+    /// // Registered environment - infrastructure is NOT managed
+    /// let registered_env = Environment::new(env_name, ssh_credentials, 22)
+    ///     .with_provision_method(ProvisionMethod::Registered);
+    /// assert!(!registered_env.is_infrastructure_managed());
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub fn is_infrastructure_managed(&self) -> bool {
+        // Only infrastructure provisioned by this tool can be managed/destroyed
+        // Registered environments have external infrastructure we don't control
+        match self.provision_method() {
+            Some(ProvisionMethod::Registered) => false,
+            // Provisioned or legacy (None) environments are assumed managed
+            Some(ProvisionMethod::Provisioned) | None => true,
+        }
+    }
+
     /// Sets the instance IP address for this environment
     ///
     /// This method is typically called by the `ProvisionCommandHandler` after successfully

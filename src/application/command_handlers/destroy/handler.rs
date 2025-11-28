@@ -10,7 +10,7 @@ use crate::application::steps::DestroyInfrastructureStep;
 use crate::domain::environment::repository::{
     EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
 };
-use crate::domain::environment::{Destroyed, Destroying, Environment, ProvisionMethod};
+use crate::domain::environment::{Destroyed, Destroying, Environment};
 use crate::domain::{AnyEnvironmentState, EnvironmentName};
 use crate::shared::error::Traceable;
 
@@ -189,12 +189,8 @@ impl DestroyCommandHandler {
     /// Check if infrastructure should be destroyed
     ///
     /// Determines whether to attempt infrastructure destruction based on:
-    /// 1. Whether the `OpenTofu` build directory exists (no dir = no infrastructure)
-    /// 2. Whether the environment was registered from existing infrastructure
-    ///
-    /// Registered environments have infrastructure that was created externally
-    /// and cannot be destroyed by this tool. The destroy command will only
-    /// clean up local state for registered environments.
+    /// 1. Whether the infrastructure is managed by this tool (domain logic)
+    /// 2. Whether the `OpenTofu` build directory exists (infrastructure check)
     ///
     /// # Arguments
     ///
@@ -205,12 +201,12 @@ impl DestroyCommandHandler {
     /// Returns `true` if infrastructure destruction should be attempted, `false` otherwise.
     /// Returns `false` for registered environments even if the build directory exists.
     pub(crate) fn should_destroy_infrastructure(environment: &Environment<Destroying>) -> bool {
-        // Never destroy infrastructure for registered environments
-        if environment.provision_method() == Some(ProvisionMethod::Registered) {
+        // Domain logic: check if we manage this infrastructure
+        if !environment.is_infrastructure_managed() {
             return false;
         }
 
-        // Only destroy if OpenTofu build directory exists (means infrastructure was provisioned)
+        // Infrastructure check: only destroy if OpenTofu build directory exists
         let tofu_build_dir = environment.tofu_build_dir();
         tofu_build_dir.exists()
     }
@@ -225,7 +221,7 @@ impl DestroyCommandHandler {
     ///
     /// Returns `true` if the environment was registered (not provisioned), `false` otherwise.
     pub(crate) fn is_registered(environment: &Environment<Destroying>) -> bool {
-        environment.provision_method() == Some(ProvisionMethod::Registered)
+        !environment.is_infrastructure_managed()
     }
 
     /// Clean up state files during environment destruction

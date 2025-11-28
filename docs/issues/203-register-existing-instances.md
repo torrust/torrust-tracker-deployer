@@ -233,7 +233,7 @@ pub enum RegisterError {
 - [x] Refactor `src/bin/e2e_config_tests.rs` to be a true black-box test (like `e2e_provision_and_destroy_tests.rs`)
 - [x] Use `register` command instead of `run_provision_simulation` in the refactored E2E test
 - [x] Update `src/testing/e2e/tasks/container/mod.rs` to support register workflow
-- [ ] Remove `run_provision_simulation.rs` after migration complete
+- [x] Remove `run_provision_simulation.rs` after migration complete
 - [ ] Verify all E2E tests pass on GitHub Actions
 - [ ] Manual test: Register LXD VM successfully
 - [x] Manual test: Register Docker container successfully
