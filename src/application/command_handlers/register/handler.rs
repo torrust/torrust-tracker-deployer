@@ -113,8 +113,8 @@ impl RegisterCommandHandler {
         // 4. Validate SSH connectivity (minimal validation for v1)
         self.validate_ssh_connectivity(&environment, instance_ip)?;
 
-        // 5. Render Ansible templates (so configure command will work)
-        self.render_ansible_templates(&environment, instance_ip)
+        // 5. Prepare for configuration (render Ansible templates so configure command will work)
+        self.prepare_for_configuration(&environment, instance_ip)
             .await?;
 
         // 6. Register the instance by setting the IP and transitioning to Provisioned
@@ -181,16 +181,71 @@ impl RegisterCommandHandler {
         Ok(())
     }
 
+    /// Prepare for configuration stages
+    ///
+    /// This method handles preparation for future configuration stages:
+    /// - Render Ansible templates with instance IP
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Created state
+    /// * `instance_ip` - IP address of the instance to register
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if Ansible template rendering fails
+    async fn prepare_for_configuration(
+        &self,
+        environment: &Environment<Created>,
+        instance_ip: IpAddr,
+    ) -> Result<(), RegisterCommandHandlerError> {
+        let ansible_template_renderer = Self::build_ansible_dependencies(environment);
+
+        self.render_ansible_templates(&ansible_template_renderer, environment, instance_ip)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Build dependencies for Ansible template rendering
+    ///
+    /// Creates the template renderer needed for Ansible configuration preparation.
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Created state
+    ///
+    /// # Returns
+    ///
+    /// Returns `AnsibleTemplateRenderer` for rendering Ansible templates
+    fn build_ansible_dependencies(
+        environment: &Environment<Created>,
+    ) -> Arc<AnsibleTemplateRenderer> {
+        let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+
+        Arc::new(AnsibleTemplateRenderer::new(
+            environment.build_dir(),
+            template_manager,
+        ))
+    }
+
     /// Render Ansible templates with the instance IP
     ///
     /// This renders the Ansible inventory and configuration templates so that
     /// the `configure` command can run Ansible playbooks against the registered instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `ansible_template_renderer` - The renderer for Ansible templates
+    /// * `environment` - The environment in Created state
+    /// * `instance_ip` - IP address of the instance to register
     ///
     /// # Errors
     ///
     /// Returns `TemplateRenderingFailed` if Ansible template rendering fails.
     async fn render_ansible_templates(
         &self,
+        ansible_template_renderer: &Arc<AnsibleTemplateRenderer>,
         environment: &Environment<Created>,
         instance_ip: IpAddr,
     ) -> Result<(), RegisterCommandHandlerError> {
@@ -203,16 +258,8 @@ impl RegisterCommandHandler {
         let ssh_port = environment.ssh_port();
         let ssh_socket_addr = SocketAddr::new(instance_ip, ssh_port);
 
-        // Create template manager and renderer
-        let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
-        let ansible_template_renderer = Arc::new(AnsibleTemplateRenderer::new(
-            environment.build_dir(),
-            template_manager,
-        ));
-
-        // Render Ansible templates
         RenderAnsibleTemplatesStep::new(
-            ansible_template_renderer,
+            ansible_template_renderer.clone(),
             ssh_credentials.clone(),
             ssh_socket_addr,
         )
