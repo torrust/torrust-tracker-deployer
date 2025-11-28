@@ -13,13 +13,11 @@
 //! run_preflight_cleanup("e2e-provision")?;
 //! ```
 
-use std::path::Path;
-
 use anyhow::Result;
 use tracing::info;
 
 use crate::domain::EnvironmentName;
-use crate::testing::e2e::tasks::preflight_cleanup::cleanup_directory;
+use crate::testing::e2e::tasks::preflight_cleanup::{cleanup_directories, DirectoryCleanupSpec};
 use crate::testing::e2e::tasks::virtual_machine::preflight_cleanup::{
     preflight_cleanup_previous_resources, PreflightCleanupContext,
 };
@@ -118,32 +116,27 @@ pub fn run_container_preflight_cleanup(environment_name: &str) -> Result<()> {
         "Running container-based preflight cleanup"
     );
 
-    // Clean build directory
-    let build_dir = format!("./build/{environment_name}");
-    cleanup_directory(
-        Path::new(&build_dir),
-        "container_preflight_cleanup",
-        "build directory",
-    )
-    .map_err(|e| anyhow::anyhow!("{e}"))?;
+    // Define directories to clean
+    let directories_to_clean = [
+        DirectoryCleanupSpec::new(
+            format!("./build/{environment_name}"),
+            "container_preflight_cleanup",
+            "build directory",
+        ),
+        DirectoryCleanupSpec::new(
+            format!("./templates/{environment_name}"),
+            "container_preflight_cleanup",
+            "templates directory",
+        ),
+        DirectoryCleanupSpec::new(
+            format!("data/{environment_name}"),
+            "container_preflight_cleanup",
+            "data directory",
+        ),
+    ];
 
-    // Clean templates directory
-    let templates_dir = format!("./templates/{environment_name}");
-    cleanup_directory(
-        Path::new(&templates_dir),
-        "container_preflight_cleanup",
-        "templates directory",
-    )
-    .map_err(|e| anyhow::anyhow!("{e}"))?;
-
-    // Clean data directory
-    let data_dir = format!("data/{environment_name}");
-    cleanup_directory(
-        Path::new(&data_dir),
-        "container_preflight_cleanup",
-        "data directory",
-    )
-    .map_err(|e| anyhow::anyhow!("{e}"))?;
+    // Clean all directories
+    cleanup_directories(&directories_to_clean).map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // Clean up hanging Docker containers
     cleanup_hanging_docker_container(environment_name);

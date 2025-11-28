@@ -217,6 +217,71 @@ pub fn cleanup_directory(
     }
 }
 
+/// Specification for a directory cleanup operation
+///
+/// This DTO holds all the information needed to clean up a single directory
+/// during preflight cleanup operations.
+#[derive(Debug, Clone)]
+pub struct DirectoryCleanupSpec {
+    /// The path to the directory to clean
+    pub path: std::path::PathBuf,
+    /// A descriptive name for the operation (used in logs)
+    pub operation_name: String,
+    /// A human-readable description of what's being cleaned (used in logs)
+    pub description: String,
+}
+
+impl DirectoryCleanupSpec {
+    /// Creates a new directory cleanup specification
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the directory to clean
+    /// * `operation_name` - A descriptive name for the operation (used in logs)
+    /// * `description` - A human-readable description of what's being cleaned (used in logs)
+    #[must_use]
+    pub fn new(
+        path: impl Into<std::path::PathBuf>,
+        operation_name: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Self {
+        Self {
+            path: path.into(),
+            operation_name: operation_name.into(),
+            description: description.into(),
+        }
+    }
+}
+
+/// Cleans multiple directories in sequence
+///
+/// This function iterates over a list of directory cleanup specifications
+/// and cleans each directory. If any cleanup fails, the function returns
+/// immediately with the error.
+///
+/// # Safety
+///
+/// This function is only intended for E2E test environments and should never
+/// be called in production code paths.
+///
+/// # Arguments
+///
+/// * `specs` - A slice of directory cleanup specifications
+///
+/// # Returns
+///
+/// Returns `Ok(())` if all cleanups succeed.
+///
+/// # Errors
+///
+/// Returns the first `PreflightCleanupError` encountered during cleanup.
+pub fn cleanup_directories(specs: &[DirectoryCleanupSpec]) -> Result<(), PreflightCleanupError> {
+    for spec in specs {
+        cleanup_directory(&spec.path, &spec.operation_name, &spec.description)?;
+    }
+    Ok(())
+}
+
 /// Cleans the build directory to ensure fresh template state for E2E tests
 ///
 /// This function removes the build directory if it exists, ensuring that
