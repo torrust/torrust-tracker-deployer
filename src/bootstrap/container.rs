@@ -17,6 +17,7 @@ use crate::presentation::controllers::create::subcommands::environment::CreateEn
 use crate::presentation::controllers::create::subcommands::template::CreateTemplateCommandController;
 use crate::presentation::controllers::destroy::DestroyCommandController;
 use crate::presentation::controllers::provision::ProvisionCommandController;
+use crate::presentation::controllers::register::RegisterCommandController;
 use crate::presentation::controllers::test::handler::TestCommandController;
 use crate::presentation::views::{UserOutput, VerbosityLevel};
 use crate::shared::clock::Clock;
@@ -221,6 +222,12 @@ impl Container {
     #[must_use]
     pub fn create_test_controller(&self) -> TestCommandController {
         TestCommandController::new(self.repository(), self.user_output())
+    }
+
+    /// Create a new `RegisterCommandController`
+    #[must_use]
+    pub fn create_register_controller(&self) -> RegisterCommandController {
+        RegisterCommandController::new(self.repository(), self.user_output())
     }
 }
 

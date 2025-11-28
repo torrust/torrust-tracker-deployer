@@ -158,7 +158,10 @@ impl EnvironmentContext {
         Self {
             user_inputs: UserInputs::new(name, ssh_credentials, ssh_port),
             internal_config: InternalConfig::new(name),
-            runtime_outputs: RuntimeOutputs { instance_ip: None },
+            runtime_outputs: RuntimeOutputs {
+                instance_ip: None,
+                provision_method: None,
+            },
         }
     }
 
@@ -209,7 +212,10 @@ impl EnvironmentContext {
         Self {
             user_inputs: UserInputs::new(name, ssh_credentials, ssh_port),
             internal_config: InternalConfig::with_working_dir(name, working_dir),
-            runtime_outputs: RuntimeOutputs { instance_ip: None },
+            runtime_outputs: RuntimeOutputs {
+                instance_ip: None,
+                provision_method: None,
+            },
         }
     }
 

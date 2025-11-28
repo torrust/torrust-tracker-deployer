@@ -13,6 +13,7 @@
 //! - `create` - Environment creation and initialization
 //! - `destroy` - Infrastructure destruction and teardown
 //! - `provision` - Infrastructure provisioning using `OpenTofu`
+//! - `register` - Register existing instances as alternative to provisioning
 //! - `test` - Deployment testing and validation
 //!
 //! Each command handler encapsulates a complete business workflow, handling orchestration,
@@ -23,10 +24,12 @@ pub mod configure;
 pub mod create;
 pub mod destroy;
 pub mod provision;
+pub mod register;
 pub mod test;
 
 pub use configure::ConfigureCommandHandler;
 pub use create::CreateCommandHandler;
 pub use destroy::DestroyCommandHandler;
 pub use provision::ProvisionCommandHandler;
+pub use register::RegisterCommandHandler;
 pub use test::TestCommandHandler;

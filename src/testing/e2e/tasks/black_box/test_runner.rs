@@ -183,6 +183,57 @@ impl E2eTestRunner {
         Ok(())
     }
 
+    /// Registers an existing instance with the environment.
+    ///
+    /// This is an alternative to `provision_infrastructure` for use with
+    /// existing VMs, physical servers, or containers.
+    ///
+    /// # Arguments
+    ///
+    /// * `instance_ip` - IP address of the existing instance to register
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the register command fails.
+    pub fn register_instance(&self, instance_ip: &str) -> Result<()> {
+        info!(
+            step = "register",
+            environment = %self.environment_name,
+            instance_ip = %instance_ip,
+            "Registering existing instance"
+        );
+
+        let register_result = self
+            .runner
+            .run_register_command(&self.environment_name, instance_ip)
+            .map_err(|e| anyhow::anyhow!("Failed to execute register command: {e}"))?;
+
+        if !register_result.success() {
+            error!(
+                step = "register",
+                environment = %self.environment_name,
+                exit_code = ?register_result.exit_code(),
+                stderr = %register_result.stderr(),
+                "Register command failed"
+            );
+
+            return Err(anyhow::anyhow!(
+                "Register failed with exit code {:?}",
+                register_result.exit_code()
+            ));
+        }
+
+        info!(
+            step = "register",
+            environment = %self.environment_name,
+            instance_ip = %instance_ip,
+            status = "success",
+            "Instance registered successfully"
+        );
+
+        Ok(())
+    }
+
     /// Configures services on the provisioned infrastructure.
     ///
     /// # Errors

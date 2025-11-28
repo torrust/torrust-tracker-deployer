@@ -49,7 +49,7 @@ jobs:
         run: cargo cov-html
 
       - id: coverage-check
-        name: Verify Coverage Threshold (75%)
+        name: Verify Coverage Threshold
         run: cargo cov-check
 
       - id: upload-coverage

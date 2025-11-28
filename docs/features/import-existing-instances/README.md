@@ -28,7 +28,7 @@ Clarifying questions that need to be answered before implementation:
 
 ## 📋 Status
 
-**Current Phase**: ✅ Questions Answered - Ready for Implementation
+**Current Phase**: ✅ COMPLETED
 
 **Completed**:
 
@@ -36,14 +36,16 @@ Clarifying questions that need to be answered before implementation:
 2. ✅ Create questions document
 3. ✅ Answer clarifying questions (all 22 questions answered)
 4. ✅ Update specification based on answers
-5. ⏳ Create GitHub issue
-6. ⏳ Begin implementation
+5. ✅ Create GitHub issue ([#203](https://github.com/torrust/torrust-tracker-deployer/issues/203))
+6. ✅ Implementation complete ([PR #204](https://github.com/torrust/torrust-tracker-deployer/pull/204))
 
-**Next Steps**:
+**Implementation Summary**:
 
-1. Create GitHub issue linking to this feature
-2. Add to roadmap as child issue under appropriate EPIC
-3. Begin implementation after issue creation
+- Domain layer: State transition `Environment<Created>::register(instance_ip)` → `Environment<Provisioned>`
+- Application layer: `RegisterCommandHandler` with SSH connectivity validation
+- Presentation layer: CLI command with `--instance-ip` argument
+- E2E tests: Migrated from `run_provision_simulation` hack to proper `register` command
+- Documentation: User guide, ADR, and updated console commands
 
 ## 🎯 Quick Summary
 
@@ -52,12 +54,12 @@ This feature adds a new `torrust-tracker-deployer register` command that allows 
 **Key Points**:
 
 - **Problem**: Users cannot use the deployer with their own already-provisioned infrastructure, and E2E testing requires hacky workarounds for container-based tests
-- **Solution**: New `register` command that creates environments directly in the `Provisioned` state, validates SSH connectivity (minimal v1), and enables continuing with `configure`, `release`, etc.
+- **Solution**: New `register` command that transitions environments from `Created` to `Provisioned` state, validates SSH connectivity (minimal v1), and enables continuing with `configure`, `release`, etc.
 - **Command Name**: Chosen `register` based on industry precedent (GitHub/GitLab runners, Consul services, etc.)
-- **Priority**: HIGH - Must be implemented before Hetzner provider to simplify E2E tests
-- **Validation**: Minimal for v1 (SSH connectivity only), defer advanced validation to v2
-- **Safety**: Registered instances marked with metadata, future destroy command will require confirmation
-- **Status**: ✅ Questions Answered - Ready for GitHub issue creation and implementation
+- **Priority**: HIGH - Implemented before Hetzner provider to simplify E2E tests
+- **Validation**: Minimal for v1 (SSH connectivity only), advanced validation deferred to v2
+- **Safety**: Registered instances marked with metadata, destroy command preserves registered infrastructure
+- **Status**: ✅ COMPLETED
 
 ## 🔄 Dual Purpose
 
@@ -74,18 +76,20 @@ This feature serves both **production users** and **development/testing** needs:
 
 - Faster E2E tests with Docker containers (5-10s vs 30-60s)
 - GitHub Actions compatibility (workaround for nested VM issues)
-- Replace `run_provision_simulation` hack with proper `register` command
+- Replaced `run_provision_simulation` hack with proper `register` command
 - Better test isolation
 
 ## 🔗 Related Documentation
 
+- [User Guide: Register Command](../../user-guide/commands/register.md) - How to use the command
+- [ADR: Register Existing Instances](../../decisions/register-existing-instances.md) - Design decisions
+- [Console Commands](../../console-commands.md) - Command reference
 - [Development Principles](../../development-principles.md)
 - [Roadmap](../../roadmap.md) - Section 2: Hetzner provider support
 - [VM Providers](../../vm-providers.md) - LXD vs container comparison
 - [State Machine](../../../src/domain/environment/state/mod.rs) - Environment states
-- Current workaround: [run_provision_simulation.rs](../../../src/testing/e2e/tasks/container/run_provision_simulation.rs)
 
 ---
 
 **Created**: November 19, 2025  
-**Last Updated**: November 19, 2025 (Questions Answered)
+**Last Updated**: November 28, 2025 (Implementation Complete)

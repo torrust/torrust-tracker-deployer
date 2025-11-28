@@ -142,6 +142,146 @@ pub fn cleanup_previous_test_data(environment_name: &str) -> Result<(), Prefligh
     }
 }
 
+/// Generic directory cleanup function for E2E test preflight operations
+///
+/// This is the core cleanup function used by all directory cleanup operations.
+/// It removes the specified directory if it exists, with proper logging.
+///
+/// # Safety
+///
+/// This function is only intended for E2E test environments and should never
+/// be called in production code paths.
+///
+/// # Arguments
+///
+/// * `dir_path` - The path to the directory to clean
+/// * `operation_name` - A descriptive name for the operation (used in logs)
+/// * `description` - A human-readable description of what's being cleaned (used in logs)
+///
+/// # Returns
+///
+/// Returns `Ok(())` if cleanup succeeds or if the directory doesn't exist.
+///
+/// # Errors
+///
+/// Returns a `PreflightCleanupError::ResourceConflicts` error if the directory
+/// cannot be removed due to permission issues or file locks.
+pub fn cleanup_directory(
+    dir_path: &std::path::Path,
+    operation_name: &str,
+    description: &str,
+) -> Result<(), PreflightCleanupError> {
+    if !dir_path.exists() {
+        info!(
+            operation = operation_name,
+            status = "clean",
+            path = %dir_path.display(),
+            "{} doesn't exist, skipping cleanup", description
+        );
+        return Ok(());
+    }
+
+    info!(
+        operation = operation_name,
+        path = %dir_path.display(),
+        "Cleaning {} to ensure fresh state", description
+    );
+
+    match std::fs::remove_dir_all(dir_path) {
+        Ok(()) => {
+            info!(
+                operation = operation_name,
+                status = "success",
+                path = %dir_path.display(),
+                "{} cleaned successfully", description
+            );
+            Ok(())
+        }
+        Err(e) => {
+            warn!(
+                operation = operation_name,
+                status = "failed",
+                path = %dir_path.display(),
+                error = %e,
+                "Failed to clean {}", description
+            );
+            Err(PreflightCleanupError::ResourceConflicts {
+                details: format!(
+                    "Failed to clean {} '{}': {}",
+                    description,
+                    dir_path.display(),
+                    e
+                ),
+            })
+        }
+    }
+}
+
+/// Specification for a directory cleanup operation
+///
+/// This DTO holds all the information needed to clean up a single directory
+/// during preflight cleanup operations.
+#[derive(Debug, Clone)]
+pub struct DirectoryCleanupSpec {
+    /// The path to the directory to clean
+    pub path: std::path::PathBuf,
+    /// A descriptive name for the operation (used in logs)
+    pub operation_name: String,
+    /// A human-readable description of what's being cleaned (used in logs)
+    pub description: String,
+}
+
+impl DirectoryCleanupSpec {
+    /// Creates a new directory cleanup specification
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the directory to clean
+    /// * `operation_name` - A descriptive name for the operation (used in logs)
+    /// * `description` - A human-readable description of what's being cleaned (used in logs)
+    #[must_use]
+    pub fn new(
+        path: impl Into<std::path::PathBuf>,
+        operation_name: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Self {
+        Self {
+            path: path.into(),
+            operation_name: operation_name.into(),
+            description: description.into(),
+        }
+    }
+}
+
+/// Cleans multiple directories in sequence
+///
+/// This function iterates over a list of directory cleanup specifications
+/// and cleans each directory. If any cleanup fails, the function returns
+/// immediately with the error.
+///
+/// # Safety
+///
+/// This function is only intended for E2E test environments and should never
+/// be called in production code paths.
+///
+/// # Arguments
+///
+/// * `specs` - A slice of directory cleanup specifications
+///
+/// # Returns
+///
+/// Returns `Ok(())` if all cleanups succeed.
+///
+/// # Errors
+///
+/// Returns the first `PreflightCleanupError` encountered during cleanup.
+pub fn cleanup_directories(specs: &[DirectoryCleanupSpec]) -> Result<(), PreflightCleanupError> {
+    for spec in specs {
+        cleanup_directory(&spec.path, &spec.operation_name, &spec.description)?;
+    }
+    Ok(())
+}
+
 /// Cleans the build directory to ensure fresh template state for E2E tests
 ///
 /// This function removes the build directory if it exists, ensuring that
@@ -166,51 +306,11 @@ pub fn cleanup_previous_test_data(environment_name: &str) -> Result<(), Prefligh
 /// Returns a `PreflightCleanupError::ResourceConflicts` error if the build directory
 /// cannot be removed due to permission issues or file locks.
 pub fn cleanup_build_directory(test_context: &TestContext) -> Result<(), PreflightCleanupError> {
-    let build_dir = &test_context.config.build_dir;
-
-    if !build_dir.exists() {
-        info!(
-            operation = "build_directory_cleanup",
-            status = "clean",
-            path = %build_dir.display(),
-            "Build directory doesn't exist, skipping cleanup"
-        );
-        return Ok(());
-    }
-
-    info!(
-        operation = "build_directory_cleanup",
-        path = %build_dir.display(),
-        "Cleaning build directory to ensure fresh template state"
-    );
-
-    match std::fs::remove_dir_all(build_dir) {
-        Ok(()) => {
-            info!(
-                operation = "build_directory_cleanup",
-                status = "success",
-                path = %build_dir.display(),
-                "Build directory cleaned successfully"
-            );
-            Ok(())
-        }
-        Err(e) => {
-            warn!(
-                operation = "build_directory_cleanup",
-                status = "failed",
-                path = %build_dir.display(),
-                error = %e,
-                "Failed to clean build directory"
-            );
-            Err(PreflightCleanupError::ResourceConflicts {
-                details: format!(
-                    "Failed to clean build directory '{}': {}",
-                    build_dir.display(),
-                    e
-                ),
-            })
-        }
-    }
+    cleanup_directory(
+        &test_context.config.build_dir,
+        "build_directory_cleanup",
+        "build directory",
+    )
 }
 
 /// Cleans the templates directory to ensure fresh embedded template extraction for E2E tests
@@ -241,50 +341,11 @@ pub fn cleanup_templates_directory(
     test_context: &TestContext,
 ) -> Result<(), PreflightCleanupError> {
     let templates_dir = std::path::Path::new(&test_context.config.templates_dir);
-
-    if !templates_dir.exists() {
-        info!(
-            operation = "templates_directory_cleanup",
-            status = "clean",
-            path = %templates_dir.display(),
-            "Templates directory doesn't exist, skipping cleanup"
-        );
-        return Ok(());
-    }
-
-    info!(
-        operation = "templates_directory_cleanup",
-        path = %templates_dir.display(),
-        "Cleaning templates directory to ensure fresh embedded template extraction"
-    );
-
-    match std::fs::remove_dir_all(templates_dir) {
-        Ok(()) => {
-            info!(
-                operation = "templates_directory_cleanup",
-                status = "success",
-                path = %templates_dir.display(),
-                "Templates directory cleaned successfully"
-            );
-            Ok(())
-        }
-        Err(e) => {
-            warn!(
-                operation = "templates_directory_cleanup",
-                status = "failed",
-                path = %templates_dir.display(),
-                error = %e,
-                "Failed to clean templates directory"
-            );
-            Err(PreflightCleanupError::ResourceConflicts {
-                details: format!(
-                    "Failed to clean templates directory '{}': {}",
-                    templates_dir.display(),
-                    e
-                ),
-            })
-        }
-    }
+    cleanup_directory(
+        templates_dir,
+        "templates_directory_cleanup",
+        "templates directory",
+    )
 }
 
 /// Cleans the data directory for the test environment to ensure fresh state for E2E tests
@@ -317,48 +378,5 @@ pub fn cleanup_data_environment(test_context: &TestContext) -> Result<(), Prefli
 
     // Construct the data directory path: data/{environment_name}
     let data_dir = Path::new("data").join(test_context.environment.name().as_str());
-
-    if !data_dir.exists() {
-        info!(
-            operation = "data_directory_cleanup",
-            status = "clean",
-            path = %data_dir.display(),
-            "Data directory doesn't exist, skipping cleanup"
-        );
-        return Ok(());
-    }
-
-    info!(
-        operation = "data_directory_cleanup",
-        path = %data_dir.display(),
-        "Cleaning data directory for previous test environment"
-    );
-
-    match std::fs::remove_dir_all(&data_dir) {
-        Ok(()) => {
-            info!(
-                operation = "data_directory_cleanup",
-                status = "success",
-                path = %data_dir.display(),
-                "Data directory cleaned successfully"
-            );
-            Ok(())
-        }
-        Err(e) => {
-            warn!(
-                operation = "data_directory_cleanup",
-                status = "failed",
-                path = %data_dir.display(),
-                error = %e,
-                "Failed to clean data directory"
-            );
-            Err(PreflightCleanupError::ResourceConflicts {
-                details: format!(
-                    "Failed to clean data directory '{}': {}",
-                    data_dir.display(),
-                    e
-                ),
-            })
-        }
-    }
+    cleanup_directory(&data_dir, "data_directory_cleanup", "data directory")
 }

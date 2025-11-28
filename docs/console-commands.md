@@ -9,6 +9,7 @@
 - **Create Template**: Generate environment configuration template (JSON)
 - **Create Environment**: Create new deployment environment from configuration file
 - **Provision**: VM infrastructure provisioning with OpenTofu (LXD instances)
+- **Register**: Register existing instances as an alternative to provisioning (for pre-existing VMs, servers, or containers)
 - **Configure**: VM configuration with Docker and Docker Compose installation via Ansible
 - **Test**: Verification of deployment infrastructure (cloud-init, Docker, Docker Compose)
 - **Destroy**: Infrastructure cleanup and environment destruction
@@ -50,8 +51,11 @@ torrust-tracker-deployer create template my-env.json
 # 3. Create environment from configuration
 torrust-tracker-deployer create environment -f my-env.json
 
-# 4. Provision VM infrastructure
+# 4a. Provision NEW VM infrastructure
 torrust-tracker-deployer provision my-environment
+
+# 4b. OR Register EXISTING infrastructure (alternative to provision)
+torrust-tracker-deployer register my-environment --instance-ip 192.168.1.100
 
 # 5. Configure system (Docker, Docker Compose)
 torrust-tracker-deployer configure my-environment
@@ -123,6 +127,7 @@ torrust-tracker-deployer deploy <env>    # Smart deployment from current state (
 
 # Plumbing Commands (Low-Level)
 torrust-tracker-deployer provision <env> # ✅ Create VM infrastructure
+torrust-tracker-deployer register <env> --instance-ip <IP>  # ✅ Register existing infrastructure
 torrust-tracker-deployer configure <env> # ✅ Setup VM (Docker, Docker Compose)
 torrust-tracker-deployer release <env>   # Deploy application files (not yet implemented)
 torrust-tracker-deployer run <env>       # Start application stack (not yet implemented)
@@ -311,6 +316,69 @@ torrust-tracker-deployer provision <environment> [OPTIONS]
 **Environment Variables**:
 
 - `RUST_LOG=debug` - Detailed provisioning logs via tracing
+
+---
+
+### `register` - Register Existing Infrastructure
+
+**Status**: ✅ Implemented  
+**State Transition**: `created` → `provisioned`  
+**Purpose**: Register existing infrastructure as an alternative to provisioning new resources.
+
+```bash
+torrust-tracker-deployer register <environment> --instance-ip <IP_ADDRESS>
+```
+
+**Current Implementation**:
+
+- Loads existing environment in `Created` state
+- Validates SSH connectivity using environment's SSH credentials
+- Sets `runtime_outputs.instance_ip` to the provided IP address
+- Marks environment with `provision_method: Registered` metadata
+- Renders Ansible templates with runtime variables
+- Transitions to `Provisioned` state
+
+**Use Cases**:
+
+- Deploy to spare/existing servers
+- Use infrastructure from unsupported cloud providers
+- E2E testing with Docker containers (faster than VMs)
+- Custom infrastructure configurations
+
+**Arguments**:
+
+- `<environment>` - Name of environment in `Created` state
+- `--instance-ip <IP_ADDRESS>` - IP address of existing instance (IPv4 or IPv6)
+
+**Instance Requirements**:
+
+- Ubuntu 24.04 LTS
+- SSH connectivity with credentials from `create environment`
+- Public SSH key installed for access
+- Username with sudo access
+
+**Example**:
+
+```bash
+# First, create the environment with SSH credentials
+torrust-tracker-deployer create environment -f config.json
+
+# Register existing server instead of provisioning
+torrust-tracker-deployer register my-environment --instance-ip 192.168.1.100
+
+# Output:
+# ✓ Loading environment...
+# ✓ Validating SSH connectivity...
+# ✓ Registering instance IP: 192.168.1.100
+# ✓ Rendering Ansible templates...
+# ✓ Environment registered successfully
+```
+
+**Important**: When you destroy a registered environment, the underlying infrastructure is **preserved**. Only the deployer's environment data is removed. This is a key safety feature for registered instances.
+
+**Environment Variables**:
+
+- `RUST_LOG=debug` - Detailed registration logs via tracing
 
 ---
 
@@ -518,6 +586,7 @@ Essential low-level commands for the complete deployment workflow:
 - ✅ `create template` - Template generation (completed)
 - ✅ `create environment` - Environment initialization (completed)
 - ✅ `provision` - Infrastructure provisioning (completed)
+- ✅ `register` - Register existing infrastructure (completed)
 - ✅ `configure` - System configuration (completed)
 - ✅ `test` - Infrastructure validation (completed)
 - ✅ `destroy` - Infrastructure cleanup (completed)

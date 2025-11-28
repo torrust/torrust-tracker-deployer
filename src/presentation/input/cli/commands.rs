@@ -87,6 +87,38 @@ pub enum Commands {
         /// previously provisioned and has an instance IP assigned.
         environment: String,
     },
+
+    /// Register an existing instance as an alternative to provisioning
+    ///
+    /// This command registers an existing VM, physical server, or container
+    /// with an environment that was previously created. Instead of provisioning
+    /// new infrastructure, it uses the provided IP address to connect to
+    /// existing infrastructure.
+    ///
+    /// The environment must be in "Created" state (use 'create environment' first).
+    /// After registration, the environment transitions to "Provisioned" state
+    /// and can continue with 'configure', 'release', and 'run' commands.
+    ///
+    /// Instance Requirements:
+    /// - Ubuntu 24.04 LTS
+    /// - SSH connectivity with credentials from 'create environment'
+    /// - Public SSH key installed for access
+    /// - Username with sudo access
+    Register {
+        /// Name of the environment to register the instance with
+        ///
+        /// The environment name must match an existing environment that was
+        /// previously created and is in "Created" state.
+        environment: String,
+
+        /// IP address of the existing instance
+        ///
+        /// The IP address (IPv4 or IPv6) of the instance to register.
+        /// The instance must be reachable via SSH using the credentials
+        /// configured in the environment.
+        #[arg(long, value_name = "IP_ADDRESS")]
+        instance_ip: String,
+    },
     // Future commands will be added here:
     //
     // /// Create a new release of the deployed application

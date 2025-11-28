@@ -11,10 +11,11 @@ use crate::adapters::ssh::{SshConfig, SshCredentials};
 use crate::adapters::tofu::client::InstanceInfo;
 use crate::adapters::OpenTofuClient;
 use crate::application::command_handlers::common::StepResult;
+use crate::application::services::AnsibleTemplateService;
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
-    PlanInfrastructureStep, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
-    ValidateInfrastructureStep, WaitForCloudInitStep, WaitForSSHConnectivityStep,
+    PlanInfrastructureStep, RenderOpenTofuTemplatesStep, ValidateInfrastructureStep,
+    WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
 use crate::domain::environment::repository::{
     EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
@@ -22,7 +23,6 @@ use crate::domain::environment::repository::{
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
 use crate::domain::EnvironmentName;
-use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
 use crate::shared::error::Traceable;
 
@@ -195,6 +195,9 @@ impl ProvisionCommandHandler {
         self.prepare_for_configuration(environment, instance_ip)
             .await?;
 
+        self.wait_for_system_readiness(environment, instance_ip)
+            .await?;
+
         let provisioned = environment.clone().provisioned();
 
         Ok((provisioned, instance_ip))
@@ -280,8 +283,6 @@ impl ProvisionCommandHandler {
     ///
     /// This method handles preparation for future configuration stages:
     /// - Render Ansible templates with runtime instance IP
-    /// - Wait for SSH connectivity
-    /// - Wait for cloud-init completion
     ///
     /// # Arguments
     ///
@@ -296,20 +297,51 @@ impl ProvisionCommandHandler {
         environment: &Environment<Provisioning>,
         instance_ip: IpAddr,
     ) -> StepResult<(), ProvisionCommandHandlerError, ProvisionStep> {
-        let (ansible_client, ansible_template_renderer) =
-            Self::build_configuration_dependencies(environment);
-
-        let ssh_credentials = environment.ssh_credentials();
-
         let current_step = ProvisionStep::RenderAnsibleTemplates;
-        self.render_ansible_templates(
-            &ansible_template_renderer,
-            ssh_credentials,
-            instance_ip,
-            environment.ssh_port(),
-        )
-        .await
-        .map_err(|e| (e, current_step))?;
+
+        let ansible_template_service = AnsibleTemplateService::from_paths(
+            environment.templates_dir(),
+            environment.build_dir().clone(),
+        );
+
+        ansible_template_service
+            .render_templates(
+                environment.ssh_credentials(),
+                instance_ip,
+                environment.ssh_port(),
+            )
+            .await
+            .map_err(|e| {
+                (
+                    ProvisionCommandHandlerError::TemplateRendering(e.to_string()),
+                    current_step,
+                )
+            })?;
+
+        Ok(())
+    }
+
+    /// Wait for system readiness
+    ///
+    /// This method waits for the provisioned instance to be ready:
+    /// - Wait for SSH connectivity
+    /// - Wait for cloud-init completion
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Provisioning state
+    /// * `instance_ip` - IP address of the provisioned instance
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `current_step`) if any readiness check fails
+    async fn wait_for_system_readiness(
+        &self,
+        environment: &Environment<Provisioning>,
+        instance_ip: IpAddr,
+    ) -> StepResult<(), ProvisionCommandHandlerError, ProvisionStep> {
+        let ansible_client = Self::build_ansible_client(environment);
+        let ssh_credentials = environment.ssh_credentials();
 
         let current_step = ProvisionStep::WaitSshConnectivity;
         self.wait_for_readiness(&ansible_client, ssh_credentials, instance_ip)
@@ -319,9 +351,9 @@ impl ProvisionCommandHandler {
         Ok(())
     }
 
-    /// Build dependencies for configuration preparation
+    /// Build Ansible client for playbook execution
     ///
-    /// Creates the Ansible client and template renderer needed for configuration preparation.
+    /// Creates the Ansible client needed for waiting on cloud-init completion.
     ///
     /// # Arguments
     ///
@@ -329,24 +361,9 @@ impl ProvisionCommandHandler {
     ///
     /// # Returns
     ///
-    /// Returns a tuple of:
-    /// - `AnsibleClient` - For executing Ansible playbooks
-    /// - `AnsibleTemplateRenderer` - For rendering Ansible templates
-    fn build_configuration_dependencies(
-        environment: &Environment<Provisioning>,
-    ) -> (Arc<AnsibleClient>, Arc<AnsibleTemplateRenderer>) {
-        let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
-
-        let template_manager = Arc::new(crate::domain::TemplateManager::new(
-            environment.templates_dir(),
-        ));
-
-        let ansible_template_renderer = Arc::new(AnsibleTemplateRenderer::new(
-            environment.build_dir(),
-            template_manager,
-        ));
-
-        (ansible_client, ansible_template_renderer)
+    /// Returns `AnsibleClient` for executing Ansible playbooks
+    fn build_ansible_client(environment: &Environment<Provisioning>) -> Arc<AnsibleClient> {
+        Arc::new(AnsibleClient::new(environment.ansible_build_dir()))
     }
 
     /// Render `OpenTofu` templates
@@ -401,38 +418,6 @@ impl ProvisionCommandHandler {
     ) -> Result<InstanceInfo, ProvisionCommandHandlerError> {
         let instance_info = GetInstanceInfoStep::new(Arc::clone(opentofu_client)).execute()?;
         Ok(instance_info)
-    }
-
-    /// Render Ansible templates with runtime IP
-    ///
-    /// Generates Ansible inventory and configuration files with the actual instance IP.
-    ///
-    /// # Arguments
-    ///
-    /// * `ssh_credentials` - SSH credentials for connecting to the instance
-    /// * `instance_ip` - IP address of the provisioned instance
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if template rendering fails
-    async fn render_ansible_templates(
-        &self,
-        ansible_template_renderer: &Arc<AnsibleTemplateRenderer>,
-        ssh_credentials: &SshCredentials,
-        instance_ip: IpAddr,
-        ssh_port: u16,
-    ) -> Result<(), ProvisionCommandHandlerError> {
-        let socket_addr = std::net::SocketAddr::new(instance_ip, ssh_port);
-
-        RenderAnsibleTemplatesStep::new(
-            ansible_template_renderer.clone(),
-            ssh_credentials.clone(),
-            socket_addr,
-        )
-        .execute()
-        .await?;
-
-        Ok(())
     }
 
     /// Wait for system readiness

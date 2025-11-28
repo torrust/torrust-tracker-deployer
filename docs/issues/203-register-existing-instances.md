@@ -42,11 +42,11 @@ Register Workflow (Alternative to provision):
 
 ## Goals
 
-- [ ] Enable users to register existing VMs, physical servers, or containers as an alternative to provisioning
-- [ ] Transition environments from `Created` to `Provisioned` state by providing instance IP
-- [ ] Replace `run_provision_simulation.rs` hack in E2E tests with proper `register` command
-- [ ] Validate SSH connectivity (minimal validation for v1)
-- [ ] Mark registered environments with metadata for safety (prevent accidental destroy)
+- [x] Enable users to register existing VMs, physical servers, or containers as an alternative to provisioning
+- [x] Transition environments from `Created` to `Provisioned` state by providing instance IP
+- [x] Replace `run_provision_simulation.rs` hack in E2E tests with proper `register` command
+- [x] Validate SSH connectivity (minimal validation for v1)
+- [x] Mark registered environments with metadata for safety (prevent accidental destroy)
 
 ## 🏗️ Architecture Requirements
 
@@ -56,18 +56,18 @@ Register Workflow (Alternative to provision):
 
 ### Module Structure Requirements
 
-- [ ] Follow DDD layer separation (see [docs/codebase-architecture.md](../codebase-architecture.md))
-- [ ] Respect dependency flow rules (dependencies flow toward domain)
-- [ ] Use appropriate module organization (see [docs/contributing/module-organization.md](../contributing/module-organization.md))
-- [ ] Follow Three-Level Pattern: Commands → Steps → Actions
+- [x] Follow DDD layer separation (see [docs/codebase-architecture.md](../codebase-architecture.md))
+- [x] Respect dependency flow rules (dependencies flow toward domain)
+- [x] Use appropriate module organization (see [docs/contributing/module-organization.md](../contributing/module-organization.md))
+- [x] Follow Three-Level Pattern: Commands → Steps → Actions
 
 ### Architectural Constraints
 
-- [ ] No business logic in presentation layer (CLI only parses arguments and delegates to application layer)
-- [ ] Error handling follows project conventions (see [docs/contributing/error-handling.md](../contributing/error-handling.md))
-- [ ] Errors must be clear, actionable, and include fix instructions
-- [ ] Testing strategy aligns with layer responsibilities
-- [ ] `register` operates on environments in `Created` state (requires prior `create environment`)
+- [x] No business logic in presentation layer (CLI only parses arguments and delegates to application layer)
+- [x] Error handling follows project conventions (see [docs/contributing/error-handling.md](../contributing/error-handling.md))
+- [x] Errors must be clear, actionable, and include fix instructions
+- [x] Testing strategy aligns with layer responsibilities
+- [x] `register` operates on environments in `Created` state (requires prior `create environment`)
 
 ### Anti-Patterns to Avoid
 
@@ -203,50 +203,50 @@ pub enum RegisterError {
 
 ### Phase 1: Domain Layer (0.5 day)
 
-- [ ] Add state transition method `Environment<Created>::register(instance_ip)` returning `Environment<Provisioned>`
-- [ ] Set `runtime_outputs.instance_ip` during transition
-- [ ] Support metadata parameter for "registered" flag
-- [ ] Add unit tests for state transition
+- [x] Add state transition method `Environment<Created>::register(instance_ip)` returning `Environment<Provisioned>`
+- [x] Set `runtime_outputs.instance_ip` during transition
+- [x] Support metadata parameter for "registered" flag
+- [x] Add unit tests for state transition
 
 ### Phase 2: Application Layer - Command Handler (1 day)
 
-- [ ] Create `src/application/commands/register/mod.rs` module structure
-- [ ] Create `src/application/commands/register/handler.rs` with `RegisterCommandHandler`
-- [ ] Create `src/application/commands/register/error.rs` with `RegisterError` enum
-- [ ] Load existing environment and verify `Created` state
-- [ ] Implement SSH connectivity validation using environment's SSH credentials
-- [ ] Handle validation failures gracefully (transition anyway, warn user)
-- [ ] Add metadata tracking for registered instances
-- [ ] Add unit tests for command handler logic
+- [x] Create `src/application/commands/register/mod.rs` module structure
+- [x] Create `src/application/commands/register/handler.rs` with `RegisterCommandHandler`
+- [x] Create `src/application/commands/register/error.rs` with `RegisterError` enum
+- [x] Load existing environment and verify `Created` state
+- [x] Implement SSH connectivity validation using environment's SSH credentials
+- [x] Handle validation failures gracefully (transition anyway, warn user)
+- [x] Add metadata tracking for registered instances
+- [x] Add unit tests for command handler logic
 
 ### Phase 3: Presentation Layer - CLI (0.5 day)
 
-- [ ] Add `Register` variant to CLI commands enum in `src/presentation/input/cli/commands.rs`
-- [ ] Add argument parsing (environment name, instance-ip)
-- [ ] Add detailed help text documenting prerequisites and instance requirements
-- [ ] Wire up command handler execution in `src/presentation/input/cli/mod.rs`
-- [ ] Add user output formatting for success/warning/error cases
-- [ ] Add CLI integration tests
+- [x] Add `Register` variant to CLI commands enum in `src/presentation/input/cli/commands.rs`
+- [x] Add argument parsing (environment name, instance-ip)
+- [x] Add detailed help text documenting prerequisites and instance requirements
+- [x] Wire up command handler execution in `src/presentation/input/cli/mod.rs`
+- [x] Add user output formatting for success/warning/error cases
+- [x] Add CLI integration tests
 
 ### Phase 4: E2E Test Migration (2 days)
 
-- [ ] Refactor `src/bin/e2e_config_tests.rs` to be a true black-box test (like `e2e_provision_and_destroy_tests.rs`)
-- [ ] Use `register` command instead of `run_provision_simulation` in the refactored E2E test
-- [ ] Update `src/testing/e2e/tasks/container/mod.rs` to support register workflow
-- [ ] Remove `run_provision_simulation.rs` after migration complete
-- [ ] Verify all E2E tests pass on GitHub Actions
-- [ ] Manual test: Register LXD VM successfully
-- [ ] Manual test: Register Docker container successfully
+- [x] Refactor `src/bin/e2e_config_tests.rs` to be a true black-box test (like `e2e_provision_and_destroy_tests.rs`)
+- [x] Use `register` command instead of `run_provision_simulation` in the refactored E2E test
+- [x] Update `src/testing/e2e/tasks/container/mod.rs` to support register workflow
+- [x] Remove `run_provision_simulation.rs` after migration complete
+- [x] Verify all E2E tests pass on GitHub Actions
+- [x] Manual test: Register LXD VM successfully (cross-environment technique, see `docs/e2e-testing.md`)
+- [x] Manual test: Register Docker container successfully
 
 **Note**: `tests/e2e_create_command.rs` and `tests/e2e_destroy_command.rs` do NOT need updates - they test create/destroy commands without provisioning. Only `src/bin/e2e_config_tests.rs` uses `run_provision_simulation` and needs migration.
 
 ### Phase 5: Documentation (1 day)
 
-- [ ] Create `docs/user-guide/commands/register.md` with examples and troubleshooting
-- [ ] Update `docs/console-commands.md` with register command
-- [ ] Update any other documentation listing available commands
-- [ ] Create ADR `docs/decisions/register-existing-instances.md`
-- [ ] Update `docs/features/import-existing-instances/README.md` status to complete
+- [x] Create `docs/user-guide/commands/register.md` with examples and troubleshooting
+- [x] Update `docs/console-commands.md` with register command
+- [x] Update any other documentation listing available commands
+- [x] Create ADR `docs/decisions/register-existing-instances.md`
+- [x] Update `docs/features/import-existing-instances/README.md` status to complete
 
 **Total Estimated Duration**: 5 days
 
@@ -256,41 +256,41 @@ pub enum RegisterError {
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
 
 **Functional Criteria**:
 
-- [ ] Command requires environment to exist in `Created` state
-- [ ] Command only requires `--instance-ip` parameter (SSH credentials come from environment)
-- [ ] Environment transitions to `Provisioned` state with `runtime_outputs.instance_ip` set
-- [ ] Registered environments marked with `"registered": "true"` metadata
-- [ ] SSH connectivity validated using environment's SSH credentials
-- [ ] Environment transitions even if validation fails (with warning to user)
-- [ ] Clear error messages for environment not found
-- [ ] Clear error messages for wrong environment state
-- [ ] Clear error messages for connectivity failures
-- [ ] Manual test: Successfully register LXD VM
-- [ ] Manual test: Successfully register Docker container
+- [x] Command requires environment to exist in `Created` state
+- [x] Command only requires `--instance-ip` parameter (SSH credentials come from environment)
+- [x] Environment transitions to `Provisioned` state with `runtime_outputs.instance_ip` set
+- [x] Registered environments marked with `provision_method: Registered` metadata
+- [x] SSH connectivity validated using environment's SSH credentials
+- [x] Environment transitions even if validation fails (with warning to user)
+- [x] Clear error messages for environment not found
+- [x] Clear error messages for wrong environment state
+- [x] Clear error messages for connectivity failures
+- [x] Manual test: Successfully register LXD VM (cross-environment technique)
+- [x] Manual test: Successfully register Docker container
 
 **Testing Criteria**:
 
-- [ ] Unit tests cover `RegisterCommandHandler` logic
-- [ ] Unit tests verify state transition from `Created` to `Provisioned`
-- [ ] Unit tests verify metadata tracking
-- [ ] Integration tests verify SSH connectivity validation
-- [ ] Integration tests verify environment repository integration
-- [ ] `src/bin/e2e_config_tests.rs` refactored to black-box test using register command
-- [ ] All E2E tests pass on GitHub Actions
-- [ ] `run_provision_simulation.rs` removed from codebase
+- [x] Unit tests cover `RegisterCommandHandler` logic
+- [x] Unit tests verify state transition from `Created` to `Provisioned`
+- [x] Unit tests verify metadata tracking
+- [x] Integration tests verify SSH connectivity validation
+- [x] Integration tests verify environment repository integration
+- [x] `src/bin/e2e_config_tests.rs` refactored to black-box test using register command
+- [x] All E2E tests pass on GitHub Actions
+- [x] `run_provision_simulation.rs` removed from codebase
 
 **Documentation Criteria**:
 
-- [ ] User-facing documentation in `docs/user-guide/commands/register.md`
-- [ ] ADR in `docs/decisions/register-existing-instances.md`
-- [ ] `docs/console-commands.md` updated
-- [ ] Prerequisites (create environment first) documented clearly
-- [ ] Instance requirements documented in command help text
-- [ ] Feature marked as complete in `docs/features/import-existing-instances/README.md`
+- [x] User-facing documentation in `docs/user-guide/commands/register.md`
+- [x] ADR in `docs/decisions/register-existing-instances.md`
+- [x] `docs/console-commands.md` updated
+- [x] Prerequisites (create environment first) documented clearly
+- [x] Instance requirements documented in command help text
+- [x] Feature marked as complete in `docs/features/import-existing-instances/README.md`
 
 ## Related Documentation
 
@@ -302,7 +302,8 @@ pub enum RegisterError {
 - [Error Handling](../contributing/error-handling.md) - Error handling conventions
 - [Codebase Architecture](../codebase-architecture.md) - Three-level pattern documentation
 - [Development Principles](../development-principles.md) - Observability, testability, user friendliness
-- Current workaround: `src/testing/e2e/tasks/container/run_provision_simulation.rs`
+- [User Guide: Register Command](../user-guide/commands/register.md) - User documentation
+- [ADR: Register Existing Instances](../decisions/register-existing-instances.md) - Design decisions
 
 ## Notes
 

@@ -143,6 +143,17 @@ pub async fn route_command(
                 .execute(&environment)
                 .await?;
             Ok(())
+        }
+        Commands::Register {
+            environment,
+            instance_ip,
+        } => {
+            context
+                .container()
+                .create_register_controller()
+                .execute(&environment, &instance_ip)
+                .await?;
+            Ok(())
         } // Future commands will be added here as the Controller Layer expands:
           //
           // Commands::Release { environment, version } => {

@@ -247,6 +247,7 @@ pub mod constants;
 pub mod create;
 pub mod destroy;
 pub mod provision;
+pub mod register;
 pub mod test;
 
 // Shared test utilities

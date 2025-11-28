@@ -157,6 +157,54 @@ impl ProcessRunner {
         Ok(ProcessResult::new(output))
     }
 
+    /// Run the register command with the production binary
+    ///
+    /// This method runs `cargo run -- register <environment_name> --instance-ip <ip>` with
+    /// optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path contains invalid UTF-8.
+    pub fn run_register_command(
+        &self,
+        environment_name: &str,
+        instance_ip: &str,
+    ) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "register",
+                environment_name,
+                "--instance-ip",
+                instance_ip,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args([
+                "run",
+                "--",
+                "register",
+                environment_name,
+                "--instance-ip",
+                instance_ip,
+            ]);
+        }
+
+        let output = cmd.output().context("Failed to execute register command")?;
+
+        Ok(ProcessResult::new(output))
+    }
+
     /// Run the configure command with the production binary
     ///
     /// This method runs `cargo run -- configure <environment_name>` with
