@@ -2,6 +2,7 @@
 
 use crate::adapters::ssh::SshError;
 use crate::adapters::tofu::client::OpenTofuError;
+use crate::application::services::AnsibleTemplateServiceError;
 use crate::application::steps::RenderAnsibleTemplatesError;
 use crate::domain::environment::state::StateTypeError;
 use crate::infrastructure::external_tools::tofu::ProvisionTemplateError;
@@ -15,6 +16,9 @@ pub enum ProvisionCommandHandlerError {
 
     #[error("Ansible template rendering failed: {0}")]
     AnsibleTemplateRendering(#[from] RenderAnsibleTemplatesError),
+
+    #[error("Template rendering service failed: {0}")]
+    TemplateRendering(String),
 
     #[error("OpenTofu command failed: {0}")]
     OpenTofu(#[from] OpenTofuError),
@@ -32,6 +36,12 @@ pub enum ProvisionCommandHandlerError {
     StateTransition(#[from] StateTypeError),
 }
 
+impl From<AnsibleTemplateServiceError> for ProvisionCommandHandlerError {
+    fn from(error: AnsibleTemplateServiceError) -> Self {
+        Self::TemplateRendering(error.to_string())
+    }
+}
+
 impl crate::shared::Traceable for ProvisionCommandHandlerError {
     fn trace_format(&self) -> String {
         match self {
@@ -40,6 +50,9 @@ impl crate::shared::Traceable for ProvisionCommandHandlerError {
             }
             Self::AnsibleTemplateRendering(e) => {
                 format!("ProvisionCommandHandlerError: Ansible template rendering failed - {e}")
+            }
+            Self::TemplateRendering(e) => {
+                format!("ProvisionCommandHandlerError: Template rendering service failed - {e}")
             }
             Self::OpenTofu(e) => {
                 format!("ProvisionCommandHandlerError: OpenTofu command failed - {e}")
@@ -66,15 +79,17 @@ impl crate::shared::Traceable for ProvisionCommandHandlerError {
             Self::OpenTofu(e) => Some(e),
             Self::Command(e) => Some(e),
             Self::SshConnectivity(e) => Some(e),
-            Self::StatePersistence(_) | Self::StateTransition(_) => None,
+            Self::TemplateRendering(_) | Self::StatePersistence(_) | Self::StateTransition(_) => {
+                None
+            }
         }
     }
 
     fn error_kind(&self) -> crate::shared::ErrorKind {
         match self {
-            Self::OpenTofuTemplateRendering(_) | Self::AnsibleTemplateRendering(_) => {
-                crate::shared::ErrorKind::TemplateRendering
-            }
+            Self::OpenTofuTemplateRendering(_)
+            | Self::AnsibleTemplateRendering(_)
+            | Self::TemplateRendering(_) => crate::shared::ErrorKind::TemplateRendering,
             Self::OpenTofu(_) => crate::shared::ErrorKind::InfrastructureOperation,
             Self::SshConnectivity(_) => crate::shared::ErrorKind::NetworkConnectivity,
             Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
@@ -128,7 +143,7 @@ Template files should be in: templates/tofu/
 
 For template syntax issues, see the Tera template documentation."
             }
-            Self::AnsibleTemplateRendering(_) => {
+            Self::AnsibleTemplateRendering(_) | Self::TemplateRendering(_) => {
                 "Ansible Template Rendering Failed - Troubleshooting:
 
 1. Check that Ansible template files exist in the templates directory

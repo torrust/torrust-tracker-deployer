@@ -7,9 +7,11 @@
 //! ## Components
 //!
 //! - `command_handlers` - High-level deployment command handlers implementing the Command Handler pattern
+//! - `services` - Shared application services used by multiple command handlers
 //! - `steps` - Workflow orchestration and business process coordination
 
 pub mod command_handlers;
+pub mod services;
 pub mod steps;
 
 // Re-export command handler types for convenience
