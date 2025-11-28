@@ -234,8 +234,8 @@ pub enum RegisterError {
 - [x] Use `register` command instead of `run_provision_simulation` in the refactored E2E test
 - [x] Update `src/testing/e2e/tasks/container/mod.rs` to support register workflow
 - [x] Remove `run_provision_simulation.rs` after migration complete
-- [ ] Verify all E2E tests pass on GitHub Actions
-- [ ] Manual test: Register LXD VM successfully
+- [x] Verify all E2E tests pass on GitHub Actions
+- [x] Manual test: Register LXD VM successfully (cross-environment technique, see `docs/e2e-testing.md`)
 - [x] Manual test: Register Docker container successfully
 
 **Note**: `tests/e2e_create_command.rs` and `tests/e2e_destroy_command.rs` do NOT need updates - they test create/destroy commands without provisioning. Only `src/bin/e2e_config_tests.rs` uses `run_provision_simulation` and needs migration.
@@ -269,8 +269,8 @@ pub enum RegisterError {
 - [ ] Clear error messages for environment not found
 - [ ] Clear error messages for wrong environment state
 - [ ] Clear error messages for connectivity failures
-- [ ] Manual test: Successfully register LXD VM
-- [ ] Manual test: Successfully register Docker container
+- [x] Manual test: Successfully register LXD VM (cross-environment technique)
+- [x] Manual test: Successfully register Docker container
 
 **Testing Criteria**:
 

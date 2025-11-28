@@ -596,3 +596,44 @@ For comprehensive changes affecting multiple components:
 - **Independence**: Each suite should be runnable independently without conflicts
 
 The split E2E testing approach ensures reliable CI while maintaining comprehensive coverage of the entire deployment pipeline.
+
+## 🧪 Manual E2E Testing with Cross-Environment Registration
+
+When manually testing the `register` command or the deployment pipeline, you can use a cross-environment technique that avoids manually provisioning VMs.
+
+### The Technique
+
+Use the deployer to provision one environment, then register that VM with a second environment:
+
+```bash
+# 1. Create and provision the first environment (owns the VM)
+torrust-tracker-deployer --working-dir envs create environment --env-file envs/env-01.json
+torrust-tracker-deployer --working-dir envs provision env-01
+
+# 2. Get the instance IP from env-01
+cat envs/data/env-01/environment.json | grep instance_ip
+# Example output: "instance_ip": "10.140.190.186"
+
+# 3. Create the second environment and register it with env-01's VM
+torrust-tracker-deployer --working-dir envs create environment --env-file envs/env-02.json
+torrust-tracker-deployer --working-dir envs register env-02 --instance-ip 10.140.190.186
+
+# 4. Test the register workflow (configure, test, destroy)
+torrust-tracker-deployer --working-dir envs configure env-02
+torrust-tracker-deployer --working-dir envs test env-02
+torrust-tracker-deployer --working-dir envs destroy env-02  # VM preserved!
+
+# 5. Clean up the actual VM
+torrust-tracker-deployer --working-dir envs destroy env-01  # VM destroyed
+```
+
+### Why This Works
+
+- **env-01** has `provision_method: null` (or `Provisioned`) → destroy removes the VM
+- **env-02** has `provision_method: Registered` → destroy preserves the VM
+
+This technique is useful for:
+
+- Testing the `register` command without external infrastructure
+- Verifying that `destroy` correctly preserves registered infrastructure
+- Testing the full deployment pipeline on registered environments

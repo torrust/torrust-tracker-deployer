@@ -26,6 +26,7 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 - `data/` - Environment-specific data and source templates
 - `templates/` - Generated template examples and test fixtures
 - `build/` - Generated runtime configurations (git-ignored)
+- `envs/` - User environment configurations (git-ignored) - recommended directory for storing environment JSON files passed to `create environment --env-file`. Contains user-specific deployment configurations that should not be committed to version control
 - `docs/` - Project documentation
 - `docs/user-guide/` - User-facing documentation (getting started, commands, configuration)
 - `docs/decisions/` - Architectural Decision Records (ADRs)
