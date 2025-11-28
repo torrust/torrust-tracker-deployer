@@ -13,10 +13,13 @@
 //! run_preflight_cleanup("e2e-provision")?;
 //! ```
 
+use std::path::Path;
+
 use anyhow::Result;
 use tracing::info;
 
 use crate::domain::EnvironmentName;
+use crate::testing::e2e::tasks::preflight_cleanup::cleanup_directory;
 use crate::testing::e2e::tasks::virtual_machine::preflight_cleanup::{
     preflight_cleanup_previous_resources, PreflightCleanupContext,
 };
@@ -109,9 +112,6 @@ pub fn run_preflight_cleanup(environment_name: &str) -> Result<()> {
 /// run_container_preflight_cleanup("e2e-config")?;
 /// ```
 pub fn run_container_preflight_cleanup(environment_name: &str) -> Result<()> {
-    use std::fs;
-    use std::path::Path;
-
     info!(
         operation = "container_preflight_cleanup",
         environment = environment_name,
@@ -120,39 +120,30 @@ pub fn run_container_preflight_cleanup(environment_name: &str) -> Result<()> {
 
     // Clean build directory
     let build_dir = format!("./build/{environment_name}");
-    if Path::new(&build_dir).exists() {
-        fs::remove_dir_all(&build_dir)
-            .map_err(|e| anyhow::anyhow!("Failed to remove build directory: {e}"))?;
-        info!(
-            operation = "container_preflight_cleanup",
-            path = build_dir,
-            "Removed build directory"
-        );
-    }
+    cleanup_directory(
+        Path::new(&build_dir),
+        "container_preflight_cleanup",
+        "build directory",
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // Clean templates directory
     let templates_dir = format!("./templates/{environment_name}");
-    if Path::new(&templates_dir).exists() {
-        fs::remove_dir_all(&templates_dir)
-            .map_err(|e| anyhow::anyhow!("Failed to remove templates directory: {e}"))?;
-        info!(
-            operation = "container_preflight_cleanup",
-            path = templates_dir,
-            "Removed templates directory"
-        );
-    }
+    cleanup_directory(
+        Path::new(&templates_dir),
+        "container_preflight_cleanup",
+        "templates directory",
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // Clean data directory
     let data_dir = format!("data/{environment_name}");
-    if Path::new(&data_dir).exists() {
-        fs::remove_dir_all(&data_dir)
-            .map_err(|e| anyhow::anyhow!("Failed to remove data directory: {e}"))?;
-        info!(
-            operation = "container_preflight_cleanup",
-            path = data_dir,
-            "Removed data directory"
-        );
-    }
+    cleanup_directory(
+        Path::new(&data_dir),
+        "container_preflight_cleanup",
+        "data directory",
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // Clean up hanging Docker containers
     cleanup_hanging_docker_container(environment_name);
