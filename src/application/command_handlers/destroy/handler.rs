@@ -10,7 +10,7 @@ use crate::application::steps::DestroyInfrastructureStep;
 use crate::domain::environment::repository::{
     EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
 };
-use crate::domain::environment::{Destroyed, Environment};
+use crate::domain::environment::{Destroyed, Destroying, Environment, ProvisionMethod};
 use crate::domain::{AnyEnvironmentState, EnvironmentName};
 use crate::shared::error::Traceable;
 
@@ -188,9 +188,13 @@ impl DestroyCommandHandler {
 
     /// Check if infrastructure should be destroyed
     ///
-    /// Determines whether to attempt infrastructure destruction based on whether
-    /// the `OpenTofu` build directory exists. If the directory doesn't exist, it means
-    /// no infrastructure was ever provisioned (e.g., environment in Created state).
+    /// Determines whether to attempt infrastructure destruction based on:
+    /// 1. Whether the `OpenTofu` build directory exists (no dir = no infrastructure)
+    /// 2. Whether the environment was registered from existing infrastructure
+    ///
+    /// Registered environments have infrastructure that was created externally
+    /// and cannot be destroyed by this tool. The destroy command will only
+    /// clean up local state for registered environments.
     ///
     /// # Arguments
     ///
@@ -198,12 +202,30 @@ impl DestroyCommandHandler {
     ///
     /// # Returns
     ///
-    /// Returns `true` if infrastructure destruction should be attempted, `false` otherwise
-    pub(crate) fn should_destroy_infrastructure(
-        environment: &Environment<crate::domain::environment::Destroying>,
-    ) -> bool {
+    /// Returns `true` if infrastructure destruction should be attempted, `false` otherwise.
+    /// Returns `false` for registered environments even if the build directory exists.
+    pub(crate) fn should_destroy_infrastructure(environment: &Environment<Destroying>) -> bool {
+        // Never destroy infrastructure for registered environments
+        if environment.provision_method() == Some(ProvisionMethod::Registered) {
+            return false;
+        }
+
+        // Only destroy if OpenTofu build directory exists (means infrastructure was provisioned)
         let tofu_build_dir = environment.tofu_build_dir();
         tofu_build_dir.exists()
+    }
+
+    /// Check if the environment was registered from existing infrastructure
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment being destroyed
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the environment was registered (not provisioned), `false` otherwise.
+    pub(crate) fn is_registered(environment: &Environment<Destroying>) -> bool {
+        environment.provision_method() == Some(ProvisionMethod::Registered)
     }
 
     /// Clean up state files during environment destruction
@@ -278,7 +300,7 @@ impl DestroyCommandHandler {
         use crate::domain::environment::state::DestroyStep;
 
         // Step 1: Conditionally destroy infrastructure via OpenTofu
-        // Only attempt infrastructure destruction if infrastructure was provisioned
+        // Only attempt infrastructure destruction if infrastructure was provisioned (not registered)
         if Self::should_destroy_infrastructure(environment) {
             info!(
                 environment = %environment.name(),
@@ -286,6 +308,19 @@ impl DestroyCommandHandler {
             );
             Self::destroy_infrastructure(opentofu_client)
                 .map_err(|e| (e, DestroyStep::DestroyInfrastructure))?;
+        } else if Self::is_registered(environment) {
+            // Registered environments have external infrastructure that we don't manage
+            tracing::warn!(
+                environment = %environment.name(),
+                instance_ip = ?environment.instance_ip(),
+                "This environment was registered from existing infrastructure. \
+                 The infrastructure will NOT be destroyed. \
+                 You are responsible for destroying the actual instance (VM, container, or server) manually."
+            );
+            info!(
+                environment = %environment.name(),
+                "Skipping infrastructure destruction (registered environment - external infrastructure)"
+            );
         } else {
             info!(
                 environment = %environment.name(),

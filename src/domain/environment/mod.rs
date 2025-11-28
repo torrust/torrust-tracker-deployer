@@ -513,6 +513,21 @@ impl<S> Environment<S> {
         self.context.runtime_outputs.instance_ip
     }
 
+    /// Returns the provision method for this environment
+    ///
+    /// This method indicates how the infrastructure was provisioned:
+    /// - `Some(Provisioned)`: Created via `provision` command using `OpenTofu`
+    /// - `Some(Registered)`: Connected to existing infrastructure via `register` command
+    /// - `None`: Unknown or legacy state (before this field was added)
+    ///
+    /// # Returns
+    ///
+    /// The provision method, if set.
+    #[must_use]
+    pub fn provision_method(&self) -> Option<ProvisionMethod> {
+        self.context.runtime_outputs.provision_method
+    }
+
     /// Sets the instance IP address for this environment
     ///
     /// This method is typically called by the `ProvisionCommandHandler` after successfully

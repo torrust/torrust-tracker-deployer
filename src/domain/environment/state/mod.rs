@@ -43,6 +43,8 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::domain::environment::runtime_outputs::ProvisionMethod;
+
 // State modules
 mod common;
 mod configure_failed;
@@ -427,6 +429,35 @@ impl AnyEnvironmentState {
     #[must_use]
     pub fn instance_ip(&self) -> Option<std::net::IpAddr> {
         self.context().runtime_outputs.instance_ip
+    }
+
+    /// Get the provision method if available, regardless of current state
+    ///
+    /// This method provides access to the provision method without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(ProvisionMethod::Provisioned)` if the instance was provisioned via `OpenTofu`
+    /// - `Some(ProvisionMethod::Registered)` if the instance was registered from existing infrastructure
+    /// - `None` if the provision method hasn't been set yet (legacy or pre-provisioned state)
+    #[must_use]
+    pub fn provision_method(&self) -> Option<ProvisionMethod> {
+        self.context().runtime_outputs.provision_method
+    }
+
+    /// Check if this environment was registered from existing infrastructure
+    ///
+    /// Registered environments have infrastructure that was created externally
+    /// and cannot be destroyed by this tool. The destroy command will only
+    /// clean up local state for registered environments.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the environment was registered (not provisioned), `false` otherwise.
+    #[must_use]
+    pub fn is_registered(&self) -> bool {
+        matches!(self.provision_method(), Some(ProvisionMethod::Registered))
     }
 
     /// Destroy the environment, transitioning it to the Destroyed state
