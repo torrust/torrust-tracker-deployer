@@ -92,6 +92,7 @@ frontends
 getent
 getopt
 handleable
+hashset
 hetznercloud
 hexdigit
 hexdump
