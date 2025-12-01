@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use crate::domain::EnvironmentNameError;
+use crate::domain::ProfileNameError;
 use crate::shared::UsernameError;
 
 /// Errors that can occur during configuration validation
@@ -23,6 +24,10 @@ pub enum CreateConfigError {
     /// Invalid SSH username format
     #[error("Invalid SSH username: {0}")]
     InvalidUsername(#[from] UsernameError),
+
+    /// Invalid profile name format
+    #[error("Invalid profile name: {0}")]
+    InvalidProfileName(#[from] ProfileNameError),
 
     /// SSH private key file not found
     #[error("SSH private key file not found: {path}")]
@@ -109,6 +114,19 @@ impl CreateConfigError {
                  Common usernames: 'ubuntu', 'torrust', 'deploy', 'admin'\n\
                  \n\
                  Fix: Update the SSH username in your configuration to follow Linux username requirements."
+            }
+            Self::InvalidProfileName(_) => {
+                "LXD profile name validation failed.\n\
+                 \n\
+                 Valid profile names must:\n\
+                 - Be 1-63 characters long\n\
+                 - Contain only ASCII letters, numbers, and dashes\n\
+                 - Not start with a digit or dash\n\
+                 - Not end with a dash\n\
+                 \n\
+                 Examples: 'torrust-profile', 'default', 'dev-profile'\n\
+                 \n\
+                 Fix: Update the profile_name in your provider configuration to follow these rules."
             }
             Self::PrivateKeyNotFound { .. } => {
                 "SSH private key file not found.\n\

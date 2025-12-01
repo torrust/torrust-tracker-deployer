@@ -23,6 +23,13 @@
 //! - `SshCredentialsConfig` - SSH credentials configuration (config layer)
 //! - `EnvironmentSection` - Environment-specific settings
 //!
+//! ### Provider Configuration
+//!
+//! Provider configuration is organized in the `provider` submodule:
+//! - `ProviderSection` - Tagged enum for provider-specific settings
+//! - `LxdProviderSection` - LXD provider configuration
+//! - `HetznerProviderSection` - Hetzner provider configuration
+//!
 //! Note: `SshCredentialsConfig` (config layer) is distinct from
 //! `adapters::ssh::SshCredentials` (adapter layer). The config version uses
 //! strings for paths and usernames, while the adapter version uses domain types.
@@ -95,9 +102,11 @@
 
 pub mod environment_config;
 pub mod errors;
+pub mod provider;
 pub mod ssh_credentials_config;
 
 // Re-export commonly used types for convenience
 pub use environment_config::{EnvironmentCreationConfig, EnvironmentSection};
 pub use errors::CreateConfigError;
+pub use provider::{HetznerProviderSection, LxdProviderSection, ProviderSection};
 pub use ssh_credentials_config::SshCredentialsConfig;

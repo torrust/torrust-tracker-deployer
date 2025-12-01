@@ -10,11 +10,13 @@
 //!   - `environment::state` - State marker types and type erasure for environment state machine
 //! - `instance_name` - LXD instance name validation and management
 //! - `profile_name` - LXD profile name validation and management
+//! - `provider` - Infrastructure provider types (LXD, Hetzner) and configuration
 //! - `template` - Core template domain models and business logic
 
 pub mod environment;
 pub mod instance_name;
 pub mod profile_name;
+pub mod provider;
 pub mod template;
 
 // Re-export commonly used domain types for convenience
@@ -25,4 +27,5 @@ pub use environment::{
 };
 pub use instance_name::{InstanceName, InstanceNameError};
 pub use profile_name::{ProfileName, ProfileNameError};
+pub use provider::{HetznerConfig, LxdConfig, Provider, ProviderConfig};
 pub use template::{TemplateEngine, TemplateEngineError, TemplateManager, TemplateManagerError};
