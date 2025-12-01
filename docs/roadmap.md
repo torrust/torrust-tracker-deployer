@@ -63,7 +63,9 @@ When starting work on a new feature:
 
 ### 2. Add new infrastructure provider: Hetzner
 
-- [ ] **2.1** Add Hetzner provider support
+**Epic Issue**: [#205 - Add Hetzner Provider Support](https://github.com/torrust/torrust-tracker-deployer/issues/205)
+
+- [ ] **2.1** Add Hetzner provider support - [Issue #206](https://github.com/torrust/torrust-tracker-deployer/issues/206) (first task)
 
 ### 3. Continue adding more application commands
 
