@@ -159,6 +159,10 @@ pub fn create_valid_config(path: &Path, env_name: &str) -> PathBuf {
     "ssh_credentials": {{
         "private_key_path": "{private_key_path}",
         "public_key_path": "{public_key_path}"
+    }},
+    "provider": {{
+        "provider": "lxd",
+        "profile_name": "lxd-{env_name}"
     }}
 }}"#
     );
@@ -248,6 +252,10 @@ pub fn create_config_with_invalid_name(path: &Path) -> PathBuf {
     "ssh_credentials": {{
         "private_key_path": "{private_key_path}",
         "public_key_path": "{public_key_path}"
+    }},
+    "provider": {{
+        "provider": "lxd",
+        "profile_name": "lxd-test"
     }}
 }}"#
     );
@@ -294,6 +302,10 @@ pub fn create_config_with_missing_keys(path: &Path) -> PathBuf {
     "ssh_credentials": {
         "private_key_path": "/nonexistent/private_key",
         "public_key_path": "/nonexistent/public_key.pub"
+    },
+    "provider": {
+        "provider": "lxd",
+        "profile_name": "lxd-test-env"
     }
 }"#;
 

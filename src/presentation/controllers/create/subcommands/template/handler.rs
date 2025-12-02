@@ -10,6 +10,7 @@ use std::sync::Arc;
 use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
+use crate::domain::provider::Provider;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
@@ -83,6 +84,7 @@ impl CreateTemplateCommandController {
     /// # Arguments
     ///
     /// * `output_path` - Path where the template file should be created
+    /// * `provider` - Provider to generate template for (lxd or hetzner)
     ///
     /// # Errors
     ///
@@ -98,8 +100,9 @@ impl CreateTemplateCommandController {
     pub async fn execute(
         &mut self,
         output_path: &Path,
+        provider: Provider,
     ) -> Result<(), CreateEnvironmentTemplateCommandError> {
-        self.generate_template_file(output_path)?;
+        self.generate_template_file(output_path, provider)?;
         self.display_success_and_guidance(output_path)?;
         Ok(())
     }
@@ -112,18 +115,19 @@ impl CreateTemplateCommandController {
     fn generate_template_file(
         &mut self,
         output_path: &Path,
+        provider: Provider,
     ) -> Result<(), CreateEnvironmentTemplateCommandError> {
         self.progress
             .start_step(CreateTemplateStep::GenerateTemplate.description())?;
 
         // Use synchronous version to avoid creating a tokio runtime
         // This prevents blocking and performance issues in test environments
-        EnvironmentCreationConfig::generate_template_file(output_path).map_err(|source| {
-            CreateEnvironmentTemplateCommandError::TemplateGenerationFailed {
+        EnvironmentCreationConfig::generate_template_file(output_path, provider).map_err(
+            |source| CreateEnvironmentTemplateCommandError::TemplateGenerationFailed {
                 path: output_path.to_path_buf(),
                 source: Box::new(source),
-            }
-        })?;
+            },
+        )?;
 
         self.progress.complete_step(Some(&format!(
             "Template generated: {}",
@@ -171,6 +175,7 @@ impl CreateTemplateCommandController {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::provider::Provider;
     use crate::presentation::views::testing::TestUserOutput;
     use crate::presentation::views::VerbosityLevel;
     use std::fs;
@@ -184,7 +189,7 @@ mod tests {
         let output_path = temp_dir.path().join("test-template.json");
 
         // Test just the template generation without progress reporter
-        let result = EnvironmentCreationConfig::generate_template_file(&output_path);
+        let result = EnvironmentCreationConfig::generate_template_file(&output_path, Provider::Lxd);
 
         assert!(result.is_ok(), "Template generation should work");
         assert!(output_path.exists(), "File should be created");
@@ -201,7 +206,7 @@ mod tests {
             TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped(); // Use Silent to avoid output issues
 
         let result = CreateTemplateCommandController::new(&user_output)
-            .execute(&output_path)
+            .execute(&output_path, Provider::Lxd)
             .await;
 
         // Should succeed in creating template
@@ -230,7 +235,7 @@ mod tests {
 
         // Test controller directly
         let mut controller = CreateTemplateCommandController::new(&user_output);
-        let result = controller.execute(&output_path).await;
+        let result = controller.execute(&output_path, Provider::Lxd).await;
 
         assert!(result.is_ok(), "Controller should succeed: {result:?}");
         assert!(output_path.exists(), "File should be created");
@@ -244,7 +249,7 @@ mod tests {
         let output_path = temp_dir.path().join("test-template.json");
 
         // Test the synchronous method directly
-        let result = EnvironmentCreationConfig::generate_template_file(&output_path);
+        let result = EnvironmentCreationConfig::generate_template_file(&output_path, Provider::Lxd);
 
         assert!(result.is_ok(), "Sync method should work: {result:?}");
         assert!(output_path.exists(), "File should be created");
@@ -261,7 +266,7 @@ mod tests {
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
 
         let result = CreateTemplateCommandController::new(&user_output)
-            .execute(invalid_path)
+            .execute(invalid_path, Provider::Lxd)
             .await;
 
         assert!(result.is_err(), "Should fail for invalid path");

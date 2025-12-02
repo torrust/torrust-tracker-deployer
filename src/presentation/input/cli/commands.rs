@@ -7,6 +7,8 @@ use clap::Subcommand;
 
 use std::path::PathBuf;
 
+use crate::domain::provider::Provider;
+
 /// Available CLI commands
 ///
 /// This enum defines all the subcommands available in the CLI application.
@@ -161,6 +163,14 @@ pub enum CreateAction {
         /// automatically if they don't exist.
         #[arg(value_name = "PATH")]
         output_path: Option<PathBuf>,
+
+        /// Provider to generate template for (required)
+        ///
+        /// Available providers:
+        /// - lxd: Local LXD provider for development and testing
+        /// - hetzner: Hetzner Cloud provider for production deployments
+        #[arg(long, short = 'p', value_enum)]
+        provider: Provider,
     },
 }
 

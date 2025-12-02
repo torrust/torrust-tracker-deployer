@@ -10,7 +10,8 @@ use chrono::{DateTime, Utc};
 use tempfile::TempDir;
 
 use crate::application::command_handlers::create::config::{
-    EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
+    EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
+    SshCredentialsConfig,
 };
 use crate::application::command_handlers::create::CreateCommandHandler;
 use crate::domain::environment::{Environment, EnvironmentName};
@@ -257,6 +258,7 @@ pub fn create_valid_test_config(temp_dir: &TempDir, env_name: &str) -> Environme
     EnvironmentCreationConfig::new(
         EnvironmentSection {
             name: env_name.to_string(),
+            instance_name: None, // Auto-generate from environment name
         },
         SshCredentialsConfig::new(
             private_key.to_string_lossy().to_string(),
@@ -264,6 +266,9 @@ pub fn create_valid_test_config(temp_dir: &TempDir, env_name: &str) -> Environme
             "torrust".to_string(),
             22,
         ),
+        ProviderSection::Lxd(LxdProviderSection {
+            profile_name: format!("lxd-{env_name}"),
+        }),
     )
 }
 

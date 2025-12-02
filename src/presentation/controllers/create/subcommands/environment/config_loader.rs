@@ -124,6 +124,10 @@ mod tests {
             "ssh_credentials": {{
                 "private_key_path": "{private_key_path}",
                 "public_key_path": "{public_key_path}"
+            }},
+            "provider": {{
+                "provider": "lxd",
+                "profile_name": "lxd-test-env"
             }}
         }}"#
         );
@@ -209,6 +213,10 @@ mod tests {
             "ssh_credentials": {{
                 "private_key_path": "{private_key_path}",
                 "public_key_path": "{public_key_path}"
+            }},
+            "provider": {{
+                "provider": "lxd",
+                "profile_name": "lxd-test"
             }}
         }}"#
         );
@@ -239,6 +247,10 @@ mod tests {
             "ssh_credentials": {
                 "private_key_path": "/nonexistent/key",
                 "public_key_path": "/nonexistent/key.pub"
+            },
+            "provider": {
+                "provider": "lxd",
+                "profile_name": "lxd-test-env"
             }
         }"#;
         fs::write(&config_path, config_json).unwrap();
@@ -274,6 +286,10 @@ mod tests {
             "ssh_credentials": {{
                 "private_key_path": "{private_key_path}",
                 "public_key_path": "{public_key_path}"
+            }},
+            "provider": {{
+                "provider": "lxd",
+                "profile_name": "lxd-test-env"
             }}
         }}"#
         );

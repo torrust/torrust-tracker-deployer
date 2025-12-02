@@ -328,14 +328,40 @@ mod tests {
     }
 
     #[test]
-    fn it_should_parse_create_template_without_path() {
+    fn it_should_require_provider_for_create_template() {
         let args = vec!["torrust-tracker-deployer", "create", "template"];
+        let result = Cli::try_parse_from(args);
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        let error_message = error.to_string();
+        assert!(
+            error_message.contains("required") || error_message.contains("--provider"),
+            "Error message should indicate missing required --provider: {error_message}"
+        );
+    }
+
+    #[test]
+    fn it_should_parse_create_template_with_provider() {
+        use crate::domain::provider::Provider;
+
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "template",
+            "--provider",
+            "lxd",
+        ];
         let cli = Cli::try_parse_from(args).unwrap();
 
         match cli.command.unwrap() {
             Commands::Create { action } => match action {
-                crate::presentation::input::cli::CreateAction::Template { output_path } => {
+                crate::presentation::input::cli::CreateAction::Template {
+                    output_path,
+                    provider,
+                } => {
                     assert!(output_path.is_none());
+                    assert_eq!(provider, Provider::Lxd);
                 }
                 crate::presentation::input::cli::CreateAction::Environment { .. } => {
                     panic!("Expected Template action")
@@ -358,12 +384,14 @@ mod tests {
             "create",
             "template",
             "./config/my-env.json",
+            "--provider",
+            "lxd",
         ];
         let cli = Cli::try_parse_from(args).unwrap();
 
         match cli.command.unwrap() {
             Commands::Create { action } => match action {
-                crate::presentation::input::cli::CreateAction::Template { output_path } => {
+                crate::presentation::input::cli::CreateAction::Template { output_path, .. } => {
                     assert_eq!(
                         output_path,
                         Some(std::path::PathBuf::from("./config/my-env.json"))
@@ -380,6 +408,118 @@ mod tests {
             | Commands::Register { .. } => {
                 panic!("Expected Create command")
             }
+        }
+    }
+
+    #[test]
+    fn it_should_parse_create_template_with_provider_lxd() {
+        use crate::domain::provider::Provider;
+
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "template",
+            "--provider",
+            "lxd",
+        ];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        match cli.command.unwrap() {
+            Commands::Create { action } => match action {
+                crate::presentation::input::cli::CreateAction::Template { provider, .. } => {
+                    assert_eq!(provider, Provider::Lxd);
+                }
+                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                    panic!("Expected Template action")
+                }
+            },
+            _ => panic!("Expected Create command"),
+        }
+    }
+
+    #[test]
+    fn it_should_parse_create_template_with_provider_hetzner() {
+        use crate::domain::provider::Provider;
+
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "template",
+            "--provider",
+            "hetzner",
+        ];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        match cli.command.unwrap() {
+            Commands::Create { action } => match action {
+                crate::presentation::input::cli::CreateAction::Template { provider, .. } => {
+                    assert_eq!(provider, Provider::Hetzner);
+                }
+                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                    panic!("Expected Template action")
+                }
+            },
+            _ => panic!("Expected Create command"),
+        }
+    }
+
+    #[test]
+    fn it_should_parse_create_template_with_short_provider_flag() {
+        use crate::domain::provider::Provider;
+
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "template",
+            "-p",
+            "hetzner",
+        ];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        match cli.command.unwrap() {
+            Commands::Create { action } => match action {
+                crate::presentation::input::cli::CreateAction::Template { provider, .. } => {
+                    assert_eq!(provider, Provider::Hetzner);
+                }
+                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                    panic!("Expected Template action")
+                }
+            },
+            _ => panic!("Expected Create command"),
+        }
+    }
+
+    #[test]
+    fn it_should_parse_create_template_with_path_and_provider() {
+        use crate::domain::provider::Provider;
+
+        let args = vec![
+            "torrust-tracker-deployer",
+            "create",
+            "template",
+            "my-config.json",
+            "--provider",
+            "hetzner",
+        ];
+        let cli = Cli::try_parse_from(args).unwrap();
+
+        match cli.command.unwrap() {
+            Commands::Create { action } => match action {
+                crate::presentation::input::cli::CreateAction::Template {
+                    output_path,
+                    provider,
+                } => {
+                    assert_eq!(
+                        output_path,
+                        Some(std::path::PathBuf::from("my-config.json"))
+                    );
+                    assert_eq!(provider, Provider::Hetzner);
+                }
+                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                    panic!("Expected Template action")
+                }
+            },
+            _ => panic!("Expected Create command"),
         }
     }
 

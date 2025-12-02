@@ -195,22 +195,23 @@ For more information about configuration format, see the documentation."
    - environment.name
    - ssh_credentials.private_key_path
    - ssh_credentials.public_key_path
+   - provider.provider (\"lxd\" or \"hetzner\")
+   - provider.profile_name (for LXD)
+   - provider.api_token (for Hetzner)
 
 4. Check field types match expectations:
    - Strings must be in quotes
    - Numbers should not have quotes
    - Booleans are true/false (lowercase)
 
-Example valid configuration:
-{
-  \"environment\": {
-    \"name\": \"dev\"
-  },
-  \"ssh_credentials\": {
-    \"private_key_path\": \"fixtures/testing_rsa\",
-    \"public_key_path\": \"fixtures/testing_rsa.pub\"
-  }
-}
+5. Generate a valid configuration template:
+   # For LXD:
+   torrust-tracker-deployer create template --provider lxd ./environment.json
+
+   # For Hetzner:
+   torrust-tracker-deployer create template --provider hetzner ./environment.json
+
+   Then edit the generated file to replace placeholder values with your actual configuration.
 
 For more information, see the configuration documentation."
                 }

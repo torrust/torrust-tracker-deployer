@@ -66,6 +66,10 @@ fn create_test_environment_config(env_name: &str) -> String {
             "public_key_path": public_key_path,
             "username": "torrust",
             "port": 22
+        },
+        "provider": {
+            "provider": "lxd",
+            "profile_name": format!("lxd-{}", env_name)
         }
     })
     .to_string()

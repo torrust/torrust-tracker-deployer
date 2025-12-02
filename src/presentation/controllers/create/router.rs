@@ -41,12 +41,15 @@ pub async fn route_command(
             .await
             .map(|_| ()) // Convert Environment<Created> to ()
             .map_err(CreateCommandError::Environment),
-        CreateAction::Template { output_path } => {
+        CreateAction::Template {
+            output_path,
+            provider,
+        } => {
             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
             context
                 .container()
                 .create_template_controller()
-                .execute(&template_path)
+                .execute(&template_path, provider)
                 .await
                 .map_err(CreateCommandError::Template)
         }

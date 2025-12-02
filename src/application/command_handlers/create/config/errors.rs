@@ -29,6 +29,15 @@ pub enum CreateConfigError {
     #[error("Invalid profile name: {0}")]
     InvalidProfileName(#[from] ProfileNameError),
 
+    /// Invalid instance name format
+    #[error("Invalid instance name '{name}': {reason}")]
+    InvalidInstanceName {
+        /// The invalid instance name that was provided
+        name: String,
+        /// The reason why the name is invalid
+        reason: String,
+    },
+
     /// SSH private key file not found
     #[error("SSH private key file not found: {path}")]
     PrivateKeyNotFound { path: PathBuf },
@@ -127,6 +136,21 @@ impl CreateConfigError {
                  Examples: 'torrust-profile', 'default', 'dev-profile'\n\
                  \n\
                  Fix: Update the profile_name in your provider configuration to follow these rules."
+            }
+            Self::InvalidInstanceName { .. } => {
+                "Instance name validation failed.\n\
+                 \n\
+                 Valid instance names must:\n\
+                 - Be 1-63 characters long\n\
+                 - Contain only ASCII letters, numbers, and dashes\n\
+                 - Not start with a digit or dash\n\
+                 - Not end with a dash\n\
+                 \n\
+                 Examples: 'torrust-tracker-vm-dev', 'my-instance', 'prod-server-01'\n\
+                 \n\
+                 Note: If you omit instance_name, it will be auto-generated as 'torrust-tracker-vm-{env_name}'.\n\
+                 \n\
+                 Fix: Update the instance_name in your environment configuration to follow these rules, or remove it to use auto-generation."
             }
             Self::PrivateKeyNotFound { .. } => {
                 "SSH private key file not found.\n\
@@ -290,6 +314,10 @@ mod tests {
                 path: PathBuf::from("/test"),
             },
             CreateConfigError::InvalidPort { port: 0 },
+            CreateConfigError::InvalidInstanceName {
+                name: "invalid-".to_string(),
+                reason: "ends with dash".to_string(),
+            },
         ];
 
         for error in errors {
@@ -300,6 +328,20 @@ mod tests {
                 "Help should contain actionable guidance"
             );
         }
+    }
+
+    #[test]
+    fn test_invalid_instance_name_error() {
+        let error = CreateConfigError::InvalidInstanceName {
+            name: "invalid-".to_string(),
+            reason: "Instance name must not end with a dash".to_string(),
+        };
+
+        assert!(error.to_string().contains("Invalid instance name"));
+        assert!(error.to_string().contains("invalid-"));
+        assert!(error.help().contains("1-63 characters"));
+        assert!(error.help().contains("ASCII letters"));
+        assert!(error.help().contains("auto-generation"));
     }
 
     #[test]

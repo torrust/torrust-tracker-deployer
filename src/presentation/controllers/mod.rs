@@ -130,6 +130,7 @@
 //! **Current Implementation Example** (from `create/router.rs`):
 //! ```rust,no_run
 //! use std::path::Path;
+//! use torrust_tracker_deployer_lib::domain::provider::Provider;
 //! use torrust_tracker_deployer_lib::presentation::input::cli::commands::CreateAction;
 //! use torrust_tracker_deployer_lib::presentation::dispatch::context::ExecutionContext;
 //! use torrust_tracker_deployer_lib::presentation::controllers::create::errors::CreateCommandError;
@@ -155,12 +156,12 @@
 //!                 .map(|_| ()) // Convert Environment<Created> to ()
 //!                 .map_err(CreateCommandError::Environment)
 //!         }
-//!         CreateAction::Template { output_path } => {
+//!         CreateAction::Template { output_path, provider } => {
 //!             let template_path = output_path.unwrap_or_else(CreateAction::default_template_path);
 //!             context
 //!                 .container()
 //!                 .create_template_controller()
-//!                 .execute(&template_path)
+//!                 .execute(&template_path, provider)
 //!                 .await
 //!                 .map_err(CreateCommandError::Template)
 //!         }

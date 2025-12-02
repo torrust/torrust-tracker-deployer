@@ -38,6 +38,10 @@ async fn it_should_create_environment_from_valid_config() {
         "ssh_credentials": {{
             "private_key_path": "{private_key_path}",
             "public_key_path": "{public_key_path}"
+        }},
+        "provider": {{
+            "provider": "lxd",
+            "profile_name": "lxd-test-create-env"
         }}
     }}"#
     );
@@ -132,6 +136,10 @@ async fn it_should_return_error_for_duplicate_environment() {
         "ssh_credentials": {{
             "private_key_path": "{private_key_path}",
             "public_key_path": "{public_key_path}"
+        }},
+        "provider": {{
+            "provider": "lxd",
+            "profile_name": "lxd-duplicate-env"
         }}
     }}"#
     );
@@ -186,6 +194,10 @@ async fn it_should_create_environment_in_custom_working_dir() {
         "ssh_credentials": {{
             "private_key_path": "{private_key_path}",
             "public_key_path": "{public_key_path}"
+        }},
+        "provider": {{
+            "provider": "lxd",
+            "profile_name": "lxd-custom-location-env"
         }}
     }}"#
     );

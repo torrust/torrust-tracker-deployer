@@ -3,6 +3,7 @@
 //! This module defines the `Provider` enum which represents the available
 //! infrastructure providers for deploying Torrust Tracker environments.
 
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 /// Supported infrastructure providers
@@ -27,7 +28,7 @@ use serde::{Deserialize, Serialize};
 /// assert_eq!(provider.as_str(), "lxd");
 /// assert_eq!(provider.to_string(), "lxd");
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ValueEnum)]
 #[serde(rename_all = "lowercase")]
 pub enum Provider {
     /// LXD - Local development and testing

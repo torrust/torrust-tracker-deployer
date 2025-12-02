@@ -52,11 +52,10 @@
 //!
 //! ```rust
 //! use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
-//!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
+//!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
+//!     ProviderSection, LxdProviderSection
 //! };
 //! use torrust_tracker_deployer_lib::domain::Environment;
-//! use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
-//! use torrust_tracker_deployer_lib::domain::ProfileName;
 //!
 //! // Deserialize configuration from JSON
 //! let json = r#"{
@@ -66,18 +65,19 @@
 //!     "ssh_credentials": {
 //!         "private_key_path": "fixtures/testing_rsa",
 //!         "public_key_path": "fixtures/testing_rsa.pub"
+//!     },
+//!     "provider": {
+//!         "provider": "lxd",
+//!         "profile_name": "torrust-profile-dev"
 //!     }
 //! }"#;
 //!
 //! let config: EnvironmentCreationConfig = serde_json::from_str(json)?;
 //!
 //! // Convert to domain parameters
-//! let (name, credentials, port) = config.to_environment_params()?;
+//! let (name, instance_name, provider_config, credentials, port) = config.to_environment_params()?;
 //!
-//! // Create domain entity
-//! let provider_config = ProviderConfig::Lxd(LxdConfig {
-//!     profile_name: ProfileName::new(format!("lxd-{}", name.as_str())).unwrap(),
-//! });
+//! // Create domain entity - Environment::new() will use the provider_config
 //! let environment = Environment::new(name, provider_config, credentials, port);
 //!
 //! # Ok::<(), Box<dyn std::error::Error>>(())
