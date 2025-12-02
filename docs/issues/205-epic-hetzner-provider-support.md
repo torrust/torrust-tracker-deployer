@@ -99,7 +99,7 @@ Update the application layer DTO to include provider configuration:
 
 #### Task 4: Parameterize TofuTemplateRenderer by provider
 
-**Issue**: TBD
+**Issue**: [#212](https://github.com/torrust/torrust-tracker-deployer/issues/212)
 **Dependencies**: Task 2
 
 Make the template renderer provider-aware:
@@ -107,6 +107,8 @@ Make the template renderer provider-aware:
 - Add `provider` field to `TofuTemplateRenderer`
 - Change hardcoded `tofu/lxd` path to dynamic `tofu/{provider}`
 - Update `EnvironmentContext::tofu_build_dir()` to use provider
+- Create and validate Hetzner OpenTofu templates manually before Rust integration
+- Add Hetzner-specific template wrappers
 
 #### Task 5: Update environment JSON files and E2E tests
 

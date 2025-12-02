@@ -65,7 +65,13 @@ When starting work on a new feature:
 
 **Epic Issue**: [#205 - Add Hetzner Provider Support](https://github.com/torrust/torrust-tracker-deployer/issues/205)
 
-- [ ] **2.1** Add Hetzner provider support - [Issue #206](https://github.com/torrust/torrust-tracker-deployer/issues/206) (first task)
+- [ ] **2.1** Add Hetzner provider support (Phase 1: Make LXD Explicit)
+  - [x] **2.1.1** Add Provider enum and ProviderConfig types - [Issue #206](https://github.com/torrust/torrust-tracker-deployer/issues/206) ✅ Completed
+  - [x] **2.1.2** Update UserInputs to use ProviderConfig - [Issue #207](https://github.com/torrust/torrust-tracker-deployer/issues/207) ✅ Completed
+  - [x] **2.1.3** Update EnvironmentCreationConfig DTO - [Issue #208](https://github.com/torrust/torrust-tracker-deployer/issues/208) ✅ Completed
+  - [ ] **2.1.4** Parameterize TofuTemplateRenderer by provider - [Issue #212](https://github.com/torrust/torrust-tracker-deployer/issues/212)
+  - [ ] **2.1.5** Update environment JSON files and E2E tests
+  - [ ] **2.1.6** Update user documentation
 
 ### 3. Continue adding more application commands
 
