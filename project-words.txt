@@ -103,6 +103,7 @@ impls
 journalctl
 jsonlint
 keepalive
+keypair
 keygen
 keyrings
 larstobi

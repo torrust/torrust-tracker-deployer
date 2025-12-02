@@ -1,7 +1,12 @@
 //! `OpenTofu` template wrappers
 //!
-//! Organized by provider (e.g., lxd/)
+//! Organized by provider (e.g., lxd/, hetzner/)
 //!
-//! Currently empty - all `OpenTofu` config files are static and copied directly.
-//! Wrappers will be created when config templates need variable substitution.
+//! Each provider has its own independent template wrappers for:
+//! - `cloud_init` - Cloud-init configuration templates
+//! - `variables` - `OpenTofu` variables templates
+//!
+//! Templates are not shared between providers to allow provider-specific customization.
+
+pub mod hetzner;
 pub mod lxd;

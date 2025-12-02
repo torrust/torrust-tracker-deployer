@@ -274,6 +274,7 @@ impl ProvisionCommandHandler {
             environment.ssh_credentials().clone(),
             environment.instance_name().clone(),
             environment.profile_name().clone(),
+            environment.provider_config().clone(),
         ));
 
         (tofu_template_renderer, opentofu_client)

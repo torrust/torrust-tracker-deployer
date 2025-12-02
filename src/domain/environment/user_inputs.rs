@@ -270,6 +270,7 @@ mod tests {
             api_token: "test-token".to_string(),
             server_type: "cx22".to_string(),
             location: "nbg1".to_string(),
+            image: "ubuntu-24.04".to_string(),
         });
         let ssh_credentials = create_test_ssh_credentials();
 
@@ -282,6 +283,7 @@ mod tests {
         assert_eq!(hetzner_config.api_token, "test-token");
         assert_eq!(hetzner_config.server_type, "cx22");
         assert_eq!(hetzner_config.location, "nbg1");
+        assert_eq!(hetzner_config.image, "ubuntu-24.04");
     }
 
     #[test]

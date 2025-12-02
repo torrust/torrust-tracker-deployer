@@ -24,6 +24,7 @@ use crate::adapters::lxd::LxdClient;
 use crate::adapters::ssh::SshCredentials;
 use crate::adapters::tofu::OpenTofuClient;
 use crate::config::Config;
+use crate::domain::provider::ProviderConfig;
 use crate::domain::template::TemplateManager;
 use crate::domain::{InstanceName, ProfileName};
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
@@ -71,6 +72,7 @@ impl Services {
         ssh_credentials: SshCredentials,
         instance_name: InstanceName,
         profile_name: ProfileName,
+        provider_config: ProviderConfig,
     ) -> Self {
         // Create template manager
         let template_manager = TemplateManager::new(config.templates_dir.clone());
@@ -92,6 +94,7 @@ impl Services {
             ssh_credentials,
             instance_name,
             profile_name,
+            provider_config,
         );
 
         // Create configuration template renderer
