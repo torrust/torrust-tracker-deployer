@@ -5,14 +5,14 @@ use crate::adapters::tofu::client::OpenTofuError;
 use crate::application::services::AnsibleTemplateServiceError;
 use crate::application::steps::RenderAnsibleTemplatesError;
 use crate::domain::environment::state::StateTypeError;
-use crate::infrastructure::external_tools::tofu::ProvisionTemplateError;
+use crate::infrastructure::external_tools::tofu::TofuTemplateRendererError;
 use crate::shared::command::CommandError;
 
 /// Comprehensive error type for the `ProvisionCommandHandler`
 #[derive(Debug, thiserror::Error)]
 pub enum ProvisionCommandHandlerError {
     #[error("OpenTofu template rendering failed: {0}")]
-    OpenTofuTemplateRendering(#[from] ProvisionTemplateError),
+    OpenTofuTemplateRendering(#[from] TofuTemplateRendererError),
 
     #[error("Ansible template rendering failed: {0}")]
     AnsibleTemplateRendering(#[from] RenderAnsibleTemplatesError),
@@ -256,10 +256,10 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_opentofu_template_rendering() {
-        use crate::infrastructure::external_tools::tofu::ProvisionTemplateError;
+        use crate::infrastructure::external_tools::tofu::TofuTemplateRendererError;
 
         let error = ProvisionCommandHandlerError::OpenTofuTemplateRendering(
-            ProvisionTemplateError::DirectoryCreationFailed {
+            TofuTemplateRendererError::DirectoryCreationFailed {
                 directory: "test".to_string(),
                 source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
             },
@@ -357,12 +357,12 @@ mod tests {
         use crate::adapters::ssh::SshError;
         use crate::application::steps::RenderAnsibleTemplatesError;
         use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContextError;
-        use crate::infrastructure::external_tools::tofu::ProvisionTemplateError;
+        use crate::infrastructure::external_tools::tofu::TofuTemplateRendererError;
         use crate::shared::command::CommandError;
 
         let errors = vec![
             ProvisionCommandHandlerError::OpenTofuTemplateRendering(
-                ProvisionTemplateError::DirectoryCreationFailed {
+                TofuTemplateRendererError::DirectoryCreationFailed {
                     directory: "test".to_string(),
                     source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
                 },

@@ -8,4 +8,8 @@ pub mod common;
 pub mod providers;
 
 pub use common::renderer::cloud_init::{CloudInitTemplateError, CloudInitTemplateRenderer};
-pub use common::renderer::{ProvisionTemplateError, TofuTemplateRenderer};
+pub use common::renderer::{TofuTemplateRenderer, TofuTemplateRendererError};
+
+/// Type alias for backward compatibility.
+#[allow(deprecated)]
+pub use common::renderer::ProvisionTemplateError;

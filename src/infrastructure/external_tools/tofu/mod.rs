@@ -13,7 +13,11 @@
 
 pub mod template;
 
-pub use template::{CloudInitTemplateRenderer, ProvisionTemplateError, TofuTemplateRenderer};
+pub use template::{CloudInitTemplateRenderer, TofuTemplateRenderer, TofuTemplateRendererError};
+
+/// Type alias for backward compatibility.
+#[allow(deprecated)]
+pub use template::ProvisionTemplateError;
 
 /// Subdirectory name for OpenTofu-related files within the build directory.
 ///
