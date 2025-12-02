@@ -37,6 +37,7 @@
 
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::{EnvironmentName, InternalConfig, RuntimeOutputs, UserInputs};
+use crate::domain::provider::ProviderConfig;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -73,6 +74,8 @@ use std::path::PathBuf;
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::domain::environment::{Environment, EnvironmentName};
+/// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+/// use torrust_tracker_deployer_lib::domain::ProfileName;
 /// use torrust_tracker_deployer_lib::shared::Username;
 /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 /// use std::path::PathBuf;
@@ -84,9 +87,12 @@ use std::path::PathBuf;
 ///     PathBuf::from("keys/prod_rsa.pub"),
 ///     ssh_username,
 /// );
+/// let provider_config = ProviderConfig::Lxd(LxdConfig {
+///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+/// });
 ///
 /// // Environment::new() creates the EnvironmentContext internally
-/// let environment = Environment::new(env_name, ssh_credentials, 22);
+/// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
 ///
 /// // Access the context through the environment
 /// let context = environment.context();
@@ -112,6 +118,7 @@ impl EnvironmentContext {
     /// # Arguments
     ///
     /// * `name` - The validated environment name
+    /// * `provider_config` - Provider-specific configuration (LXD, Hetzner, etc.)
     /// * `ssh_credentials` - SSH credentials for connecting to instances
     /// * `ssh_port` - SSH port for connecting to instances
     ///
@@ -119,7 +126,7 @@ impl EnvironmentContext {
     ///
     /// A new `EnvironmentContext` with:
     /// - Auto-generated instance name: `torrust-tracker-vm-{env_name}`
-    /// - Auto-generated profile name: `torrust-profile-{env_name}`
+    /// - Provider configuration with validated settings
     /// - Auto-generated data and build directories
     /// - Empty runtime outputs
     ///
@@ -127,6 +134,8 @@ impl EnvironmentContext {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::environment::{EnvironmentContext, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{ProviderConfig, LxdConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -138,11 +147,15 @@ impl EnvironmentContext {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     ssh_username,
     /// );
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new("torrust-profile-production".to_string())?,
+    /// });
     ///
-    /// let context = EnvironmentContext::new(&env_name, ssh_credentials, 22);
+    /// let context = EnvironmentContext::new(&env_name, provider_config, ssh_credentials, 22);
     ///
     /// assert_eq!(context.user_inputs.instance_name.as_str(), "torrust-tracker-vm-production");
-    /// assert_eq!(context.user_inputs.profile_name.as_str(), "torrust-profile-production");
+    /// let lxd_config = context.user_inputs.provider_config().as_lxd().unwrap();
+    /// assert_eq!(lxd_config.profile_name.as_str(), "torrust-profile-production");
     /// assert_eq!(context.internal_config.data_dir, PathBuf::from("./data/production"));
     /// assert_eq!(context.internal_config.build_dir, PathBuf::from("./build/production"));
     ///
@@ -154,9 +167,14 @@ impl EnvironmentContext {
     /// This function does not panic. All name generation is guaranteed to succeed
     /// for valid environment names.
     #[must_use]
-    pub fn new(name: &EnvironmentName, ssh_credentials: SshCredentials, ssh_port: u16) -> Self {
+    pub fn new(
+        name: &EnvironmentName,
+        provider_config: ProviderConfig,
+        ssh_credentials: SshCredentials,
+        ssh_port: u16,
+    ) -> Self {
         Self {
-            user_inputs: UserInputs::new(name, ssh_credentials, ssh_port),
+            user_inputs: UserInputs::new(name, provider_config, ssh_credentials, ssh_port),
             internal_config: InternalConfig::new(name),
             runtime_outputs: RuntimeOutputs {
                 instance_ip: None,
@@ -173,6 +191,7 @@ impl EnvironmentContext {
     /// # Arguments
     ///
     /// * `name` - The environment name
+    /// * `provider_config` - Provider-specific configuration (LXD, Hetzner, etc.)
     /// * `ssh_credentials` - SSH credentials for accessing the instance
     /// * `ssh_port` - SSH port (typically 22)
     /// * `working_dir` - The base working directory for operations
@@ -181,6 +200,8 @@ impl EnvironmentContext {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::environment::{EnvironmentContext, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{ProviderConfig, LxdConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::adapters::SshCredentials;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use std::path::PathBuf;
@@ -192,9 +213,12 @@ impl EnvironmentContext {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     username,
     /// );
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new("torrust-profile-production".to_string())?,
+    /// });
     /// let working_dir = PathBuf::from("/opt/deployments");
     ///
-    /// let context = EnvironmentContext::with_working_dir(&env_name, ssh_credentials, 22, &working_dir);
+    /// let context = EnvironmentContext::with_working_dir(&env_name, provider_config, ssh_credentials, 22, &working_dir);
     ///
     /// assert_eq!(context.user_inputs.instance_name.as_str(), "torrust-tracker-vm-production");
     /// assert_eq!(context.internal_config.data_dir, PathBuf::from("/opt/deployments/data/production"));
@@ -205,12 +229,13 @@ impl EnvironmentContext {
     #[must_use]
     pub fn with_working_dir(
         name: &EnvironmentName,
+        provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
         working_dir: &std::path::Path,
     ) -> Self {
         Self {
-            user_inputs: UserInputs::new(name, ssh_credentials, ssh_port),
+            user_inputs: UserInputs::new(name, provider_config, ssh_credentials, ssh_port),
             internal_config: InternalConfig::with_working_dir(name, working_dir),
             runtime_outputs: RuntimeOutputs {
                 instance_ip: None,

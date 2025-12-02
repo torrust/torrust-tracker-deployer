@@ -177,6 +177,8 @@ impl TestContext {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
@@ -194,7 +196,10 @@ impl TestContext {
     ///     temp_path.join("testing_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials, 22);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
     ///
     /// let test_context = TestContext::from_environment(
     ///     false,

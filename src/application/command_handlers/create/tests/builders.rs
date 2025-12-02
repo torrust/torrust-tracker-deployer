@@ -14,6 +14,8 @@ use crate::application::command_handlers::create::config::{
 };
 use crate::application::command_handlers::create::CreateCommandHandler;
 use crate::domain::environment::{Environment, EnvironmentName};
+use crate::domain::provider::{LxdConfig, ProviderConfig};
+use crate::domain::ProfileName;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
 use crate::testing::MockClock;
@@ -204,8 +206,11 @@ impl CreateCommandHandlerTestBuilder {
         let env_name = EnvironmentName::new(name).expect("Invalid environment name in test");
         let username = Username::new("torrust".to_string()).expect("Invalid username in test");
         let ssh_credentials = SshCredentials::new(private_key, public_key, username);
+        let provider_config = ProviderConfig::Lxd(LxdConfig {
+            profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+        });
 
-        let environment = Environment::new(env_name, ssh_credentials, 22);
+        let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
 
         // Save to repository
         repository

@@ -10,6 +10,8 @@ use tracing::{info, instrument};
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Created, Environment};
+use crate::domain::provider::{LxdConfig, ProviderConfig};
+use crate::domain::ProfileName;
 use crate::shared::Clock;
 
 use super::errors::CreateCommandHandlerError;
@@ -150,6 +152,12 @@ impl CreateCommandHandler {
     ///
     /// All errors implement `.help()` with detailed troubleshooting guidance.
     ///
+    /// # Panics
+    ///
+    /// This function does not panic in practice. The internal `.expect()` call
+    /// when generating the profile name is theoretically unreachable because
+    /// valid environment names always produce valid profile names.
+    ///
     /// # Examples
     ///
     /// ```rust,no_run
@@ -214,11 +222,22 @@ impl CreateCommandHandler {
             });
         }
 
-        // Step 3: Create environment entity with working directory for absolute paths
-        let environment =
-            Environment::with_working_dir(environment_name, ssh_credentials, ssh_port, working_dir);
+        // Step 3: Generate default LXD provider config
+        // TODO: Issue #208 will update to_environment_params() to return ProviderConfig from JSON
+        let profile_name = ProfileName::new(format!("lxd-{}", environment_name.as_str()))
+            .expect("Profile name generation should always succeed for valid environment names");
+        let provider_config = ProviderConfig::Lxd(LxdConfig { profile_name });
 
-        // Step 4: Persist environment state
+        // Step 4: Create environment entity with working directory for absolute paths
+        let environment = Environment::with_working_dir(
+            environment_name,
+            provider_config,
+            ssh_credentials,
+            ssh_port,
+            working_dir,
+        );
+
+        // Step 5: Persist environment state
         // Repository handles directory creation atomically during save
         self.environment_repository
             .save(&environment.clone().into_any())

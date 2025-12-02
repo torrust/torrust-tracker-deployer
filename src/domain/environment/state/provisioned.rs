@@ -76,8 +76,16 @@ mod tests {
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
         use crate::domain::environment::state::ProvisionFailureContext;
+        use crate::domain::provider::{LxdConfig, ProviderConfig};
+        use crate::domain::ProfileName;
         use crate::shared::Username;
         use std::path::PathBuf;
+
+        fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
+            ProviderConfig::Lxd(LxdConfig {
+                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+            })
+        }
 
         fn create_test_ssh_credentials() -> SshCredentials {
             let username = Username::new("test-user".to_string()).unwrap();
@@ -91,9 +99,14 @@ mod tests {
         fn create_test_environment_provisioned() -> Environment<Provisioned> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds, 22)
-                .start_provisioning()
-                .provisioned()
+            Environment::new(
+                name.clone(),
+                default_lxd_provider_config(&name),
+                ssh_creds,
+                22,
+            )
+            .start_provisioning()
+            .provisioned()
         }
 
         fn create_test_provision_context() -> ProvisionFailureContext {
@@ -136,9 +149,14 @@ mod tests {
         fn it_should_fail_converting_provision_failed_to_provisioned() {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            let env = Environment::new(name, ssh_creds, 22)
-                .start_provisioning()
-                .provision_failed(create_test_provision_context());
+            let env = Environment::new(
+                name.clone(),
+                default_lxd_provider_config(&name),
+                ssh_creds,
+                22,
+            )
+            .start_provisioning()
+            .provision_failed(create_test_provision_context());
             let any_env = env.into_any();
             let result = any_env.try_into_provisioned();
             assert!(result.is_err());
@@ -153,8 +171,16 @@ mod tests {
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
         use crate::domain::environment::state::{Configuring, Destroyed};
+        use crate::domain::provider::{LxdConfig, ProviderConfig};
+        use crate::domain::ProfileName;
         use crate::shared::Username;
         use std::path::PathBuf;
+
+        fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
+            ProviderConfig::Lxd(LxdConfig {
+                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+            })
+        }
 
         fn create_test_environment() -> Environment<Provisioned> {
             let env_name = EnvironmentName::new("test-state".to_string()).unwrap();
@@ -164,9 +190,14 @@ mod tests {
                 PathBuf::from("test_key.pub"),
                 ssh_username,
             );
-            Environment::new(env_name, ssh_credentials, 22)
-                .start_provisioning()
-                .provisioned()
+            Environment::new(
+                env_name.clone(),
+                default_lxd_provider_config(&env_name),
+                ssh_credentials,
+                22,
+            )
+            .start_provisioning()
+            .provisioned()
         }
 
         #[test]

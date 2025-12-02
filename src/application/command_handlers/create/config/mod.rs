@@ -55,6 +55,8 @@
 //!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
 //! };
 //! use torrust_tracker_deployer_lib::domain::Environment;
+//! use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+//! use torrust_tracker_deployer_lib::domain::ProfileName;
 //!
 //! // Deserialize configuration from JSON
 //! let json = r#"{
@@ -73,7 +75,10 @@
 //! let (name, credentials, port) = config.to_environment_params()?;
 //!
 //! // Create domain entity
-//! let environment = Environment::new(name, credentials, port);
+//! let provider_config = ProviderConfig::Lxd(LxdConfig {
+//!     profile_name: ProfileName::new(format!("lxd-{}", name.as_str())).unwrap(),
+//! });
+//! let environment = Environment::new(name, provider_config, credentials, port);
 //!
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```

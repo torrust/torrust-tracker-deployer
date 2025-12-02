@@ -92,8 +92,16 @@ mod tests {
         use super::*;
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
+        use crate::domain::provider::{LxdConfig, ProviderConfig};
+        use crate::domain::ProfileName;
         use crate::shared::Username;
         use std::path::PathBuf;
+
+        fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
+            ProviderConfig::Lxd(LxdConfig {
+                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+            })
+        }
 
         fn create_test_ssh_credentials() -> SshCredentials {
             let username = Username::new("test-user".to_string()).unwrap();
@@ -107,10 +115,15 @@ mod tests {
         fn create_test_environment_destroying() -> Environment<Destroying> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds, 22)
-                .start_provisioning()
-                .provisioned()
-                .start_destroying()
+            Environment::new(
+                name.clone(),
+                default_lxd_provider_config(&name),
+                ssh_creds,
+                22,
+            )
+            .start_provisioning()
+            .provisioned()
+            .start_destroying()
         }
 
         #[test]
@@ -132,7 +145,12 @@ mod tests {
         fn it_should_fail_converting_created_to_destroying() {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            let env = Environment::new(name, ssh_creds, 22);
+            let env = Environment::new(
+                name.clone(),
+                default_lxd_provider_config(&name),
+                ssh_creds,
+                22,
+            );
             let any_env = env.into_any();
             let result = any_env.try_into_destroying();
             assert!(result.is_err());
@@ -147,8 +165,16 @@ mod tests {
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
         use crate::domain::environment::state::Destroyed;
+        use crate::domain::provider::{LxdConfig, ProviderConfig};
+        use crate::domain::ProfileName;
         use crate::shared::Username;
         use std::path::PathBuf;
+
+        fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
+            ProviderConfig::Lxd(LxdConfig {
+                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+            })
+        }
 
         fn create_test_ssh_credentials() -> SshCredentials {
             let username = Username::new("test-user".to_string()).unwrap();
@@ -162,10 +188,15 @@ mod tests {
         fn create_test_environment_destroying() -> Environment<Destroying> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds, 22)
-                .start_provisioning()
-                .provisioned()
-                .start_destroying()
+            Environment::new(
+                name.clone(),
+                default_lxd_provider_config(&name),
+                ssh_creds,
+                22,
+            )
+            .start_provisioning()
+            .provisioned()
+            .start_destroying()
         }
 
         #[test]

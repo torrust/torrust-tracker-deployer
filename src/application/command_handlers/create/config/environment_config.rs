@@ -121,6 +121,8 @@ impl EnvironmentCreationConfig {
     ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
     /// };
     /// use torrust_tracker_deployer_lib::domain::Environment;
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     ///
     /// let config = EnvironmentCreationConfig::new(
     ///     EnvironmentSection {
@@ -135,7 +137,10 @@ impl EnvironmentCreationConfig {
     /// );
     ///
     /// let (name, credentials, port) = config.to_environment_params()?;
-    /// let environment = Environment::new(name, credentials, port);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(name, provider_config, credentials, port);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn to_environment_params(
@@ -472,7 +477,17 @@ mod tests {
     #[test]
     fn test_integration_with_environment_new() {
         // This test verifies that the converted parameters work with Environment::new()
+        use crate::domain::provider::{LxdConfig, ProviderConfig};
         use crate::domain::Environment;
+        use crate::domain::ProfileName;
+
+        fn default_lxd_provider_config(
+            env_name: &crate::domain::environment::name::EnvironmentName,
+        ) -> ProviderConfig {
+            ProviderConfig::Lxd(LxdConfig {
+                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+            })
+        }
 
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
@@ -487,7 +502,12 @@ mod tests {
         );
 
         let (name, credentials, port) = config.to_environment_params().unwrap();
-        let environment = Environment::new(name, credentials, port);
+        let environment = Environment::new(
+            name.clone(),
+            default_lxd_provider_config(&name),
+            credentials,
+            port,
+        );
 
         assert_eq!(environment.name().as_str(), "test-env");
         assert_eq!(environment.ssh_username().as_str(), "torrust");

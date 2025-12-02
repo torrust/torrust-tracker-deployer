@@ -92,8 +92,16 @@ mod tests {
         use super::*;
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
+        use crate::domain::provider::{LxdConfig, ProviderConfig};
+        use crate::domain::ProfileName;
         use crate::shared::Username;
         use std::path::PathBuf;
+
+        fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
+            ProviderConfig::Lxd(LxdConfig {
+                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+            })
+        }
 
         fn create_test_ssh_credentials() -> SshCredentials {
             let username = Username::new("test-user".to_string()).unwrap();
@@ -107,10 +115,15 @@ mod tests {
         fn create_test_environment_configuring() -> Environment<Configuring> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
-            Environment::new(name, ssh_creds, 22)
-                .start_provisioning()
-                .provisioned()
-                .start_configuring()
+            Environment::new(
+                name.clone(),
+                default_lxd_provider_config(&name),
+                ssh_creds,
+                22,
+            )
+            .start_provisioning()
+            .provisioned()
+            .start_configuring()
         }
 
         #[test]
@@ -134,8 +147,16 @@ mod tests {
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
         use crate::domain::environment::state::Configured;
+        use crate::domain::provider::{LxdConfig, ProviderConfig};
+        use crate::domain::ProfileName;
         use crate::shared::Username;
         use std::path::PathBuf;
+
+        fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
+            ProviderConfig::Lxd(LxdConfig {
+                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+            })
+        }
 
         fn create_test_environment() -> Environment<Configuring> {
             let env_name = EnvironmentName::new("test-state".to_string()).unwrap();
@@ -145,10 +166,15 @@ mod tests {
                 PathBuf::from("test_key.pub"),
                 ssh_username,
             );
-            Environment::new(env_name, ssh_credentials, 22)
-                .start_provisioning()
-                .provisioned()
-                .start_configuring()
+            Environment::new(
+                env_name.clone(),
+                default_lxd_provider_config(&env_name),
+                ssh_credentials,
+                22,
+            )
+            .start_provisioning()
+            .provisioned()
+            .start_configuring()
         }
 
         #[test]
