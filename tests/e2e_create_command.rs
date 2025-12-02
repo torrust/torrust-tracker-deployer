@@ -208,6 +208,10 @@ fn create_test_environment_config(env_name: &str) -> String {
         "ssh_credentials": {
             "private_key_path": private_key_path,
             "public_key_path": public_key_path
+        },
+        "provider": {
+            "provider": "lxd",
+            "profile_name": format!("lxd-{}", env_name)
         }
     })
     .to_string()

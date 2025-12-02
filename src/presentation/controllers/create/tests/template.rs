@@ -4,6 +4,7 @@
 //! configuration file templates with placeholder values.
 
 use crate::bootstrap::Container;
+use crate::domain::provider::Provider;
 use crate::presentation::controllers::create;
 use crate::presentation::controllers::tests::TestContext;
 use crate::presentation::dispatch::ExecutionContext;
@@ -18,7 +19,10 @@ async fn it_should_generate_template_with_default_path() {
     let original_dir = std::env::current_dir().unwrap();
     std::env::set_current_dir(test_context.working_dir()).unwrap();
 
-    let action = CreateAction::Template { output_path: None };
+    let action = CreateAction::Template {
+        output_path: None,
+        provider: Provider::Lxd,
+    };
     let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
     let context = ExecutionContext::new(std::sync::Arc::new(container));
 
@@ -63,6 +67,7 @@ async fn it_should_generate_template_with_custom_path() {
 
     let action = CreateAction::Template {
         output_path: Some(custom_path.clone()),
+        provider: Provider::Lxd,
     };
     let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
     let context = ExecutionContext::new(std::sync::Arc::new(container));
@@ -89,6 +94,7 @@ async fn it_should_generate_valid_json_template() {
 
     let action = CreateAction::Template {
         output_path: Some(template_path.clone()),
+        provider: Provider::Lxd,
     };
     let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
     let context = ExecutionContext::new(std::sync::Arc::new(container));
@@ -137,6 +143,7 @@ async fn it_should_create_parent_directories() {
 
     let action = CreateAction::Template {
         output_path: Some(deep_path.clone()),
+        provider: Provider::Lxd,
     };
     let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
     let context = ExecutionContext::new(std::sync::Arc::new(container));

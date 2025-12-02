@@ -10,8 +10,6 @@ use tracing::{info, instrument};
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Created, Environment};
-use crate::domain::provider::{LxdConfig, ProviderConfig};
-use crate::domain::ProfileName;
 use crate::shared::Clock;
 
 use super::errors::CreateCommandHandlerError;
@@ -45,7 +43,8 @@ use super::errors::CreateCommandHandlerError;
 /// use std::sync::Arc;
 /// use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
 /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
-///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
+///     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
+///     SshCredentialsConfig,
 /// };
 /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 /// use torrust_tracker_deployer_lib::shared::{SystemClock, Clock};
@@ -62,6 +61,7 @@ use super::errors::CreateCommandHandlerError;
 /// let config = EnvironmentCreationConfig::new(
 ///     EnvironmentSection {
 ///         name: "dev".to_string(),
+///         instance_name: None, // Auto-generate from environment name
 ///     },
 ///     SshCredentialsConfig::new(
 ///         "fixtures/testing_rsa".to_string(),
@@ -69,6 +69,9 @@ use super::errors::CreateCommandHandlerError;
 ///         "torrust".to_string(),
 ///         22,
 ///     ),
+///     ProviderSection::Lxd(LxdProviderSection {
+///         profile_name: "lxd-dev".to_string(),
+///     }),
 /// );
 ///
 /// // Execute command with working directory
@@ -163,13 +166,15 @@ impl CreateCommandHandler {
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
-    ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
+    ///     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
+    ///     SshCredentialsConfig,
     /// };
     ///
     /// # fn example(command: CreateCommandHandler) -> Result<(), Box<dyn std::error::Error>> {
     /// let config = EnvironmentCreationConfig::new(
     ///     EnvironmentSection {
     ///         name: "staging".to_string(),
+    ///         instance_name: None, // Auto-generate from environment name
     ///     },
     ///     SshCredentialsConfig::new(
     ///         "keys/stage_key".to_string(),
@@ -177,6 +182,9 @@ impl CreateCommandHandler {
     ///         "torrust".to_string(),
     ///         22,
     ///     ),
+    ///     ProviderSection::Lxd(LxdProviderSection {
+    ///         profile_name: "lxd-staging".to_string(),
+    ///     }),
     /// );
     ///
     /// let working_dir = std::path::Path::new(".");
@@ -205,8 +213,9 @@ impl CreateCommandHandler {
         );
 
         // Step 1: Convert configuration to domain objects
-        // This validates environment name, SSH username, and file existence
-        let (environment_name, ssh_credentials, ssh_port) = config
+        // This validates environment name, instance name, provider config,
+        // SSH username, and file existence
+        let (environment_name, _instance_name, provider_config, ssh_credentials, ssh_port) = config
             .to_environment_params()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
 
@@ -222,13 +231,9 @@ impl CreateCommandHandler {
             });
         }
 
-        // Step 3: Generate default LXD provider config
-        // TODO: Issue #208 will update to_environment_params() to return ProviderConfig from JSON
-        let profile_name = ProfileName::new(format!("lxd-{}", environment_name.as_str()))
-            .expect("Profile name generation should always succeed for valid environment names");
-        let provider_config = ProviderConfig::Lxd(LxdConfig { profile_name });
-
-        // Step 4: Create environment entity with working directory for absolute paths
+        // Step 3: Create environment entity with working directory for absolute paths
+        // Note: Environment::with_working_dir auto-generates instance_name from environment_name
+        // The _instance_name from config is currently unused but available for future use
         let environment = Environment::with_working_dir(
             environment_name,
             provider_config,

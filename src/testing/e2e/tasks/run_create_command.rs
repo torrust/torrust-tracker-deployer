@@ -22,7 +22,8 @@ use thiserror::Error;
 use tracing::info;
 
 use crate::application::command_handlers::create::config::{
-    EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
+    EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
+    SshCredentialsConfig,
 };
 use crate::application::command_handlers::create::{
     CreateCommandHandler, CreateCommandHandlerError,
@@ -82,10 +83,11 @@ pub fn run_create_command(
     // Create the command handler
     let create_command = CreateCommandHandler::new(repository, clock);
 
-    // Build the configuration
+    // Build the configuration with LXD provider
     let config = EnvironmentCreationConfig::new(
         EnvironmentSection {
             name: environment_name.to_string(),
+            instance_name: None, // Auto-generate from environment name
         },
         SshCredentialsConfig::new(
             ssh_private_key_path,
@@ -93,6 +95,9 @@ pub fn run_create_command(
             ssh_username.to_string(),
             ssh_port,
         ),
+        ProviderSection::Lxd(LxdProviderSection {
+            profile_name: format!("lxd-{environment_name}"),
+        }),
     );
 
     // Execute the command

@@ -115,11 +115,18 @@ pub fn generate_environment_config_with_port(
         ssh_credentials["port"] = serde_json::json!(port);
     }
 
+    // Create provider configuration with profile name based on environment name
+    let provider = serde_json::json!({
+        "provider": "lxd",
+        "profile_name": format!("torrust-profile-{}", environment_name)
+    });
+
     let config = serde_json::json!({
         "environment": {
             "name": environment_name
         },
-        "ssh_credentials": ssh_credentials
+        "ssh_credentials": ssh_credentials,
+        "provider": provider
     });
 
     // Write to envs directory

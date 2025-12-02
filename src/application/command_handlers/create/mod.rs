@@ -26,7 +26,8 @@
 //! use std::sync::Arc;
 //! use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
 //! use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
-//!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
+//!     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
+//!     SshCredentialsConfig,
 //! };
 //! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 //! use torrust_tracker_deployer_lib::shared::{SystemClock, Clock};
@@ -43,6 +44,7 @@
 //! let config = EnvironmentCreationConfig::new(
 //!     EnvironmentSection {
 //!         name: "production".to_string(),
+//!         instance_name: None, // Auto-generate from environment name
 //!     },
 //!     SshCredentialsConfig::new(
 //!         "keys/prod_key".to_string(),
@@ -50,6 +52,9 @@
 //!         "torrust".to_string(),
 //!         22,
 //!     ),
+//!     ProviderSection::Lxd(LxdProviderSection {
+//!         profile_name: "lxd-production".to_string(),
+//!     }),
 //! );
 //!
 //! // Execute command with working directory

@@ -111,7 +111,8 @@ fn it_should_persist_environment_state_to_repository() {
 #[test]
 fn it_should_fail_with_invalid_environment_name() {
     use crate::application::command_handlers::create::config::{
-        EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
+        EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
+        SshCredentialsConfig,
     };
     use std::fs;
 
@@ -127,6 +128,7 @@ fn it_should_fail_with_invalid_environment_name() {
     let config = EnvironmentCreationConfig::new(
         EnvironmentSection {
             name: "Invalid_Name".to_string(), // Invalid: contains uppercase
+            instance_name: None,
         },
         SshCredentialsConfig::new(
             private_key.to_string_lossy().to_string(),
@@ -134,6 +136,9 @@ fn it_should_fail_with_invalid_environment_name() {
             "torrust".to_string(),
             22,
         ),
+        ProviderSection::Lxd(LxdProviderSection {
+            profile_name: "test-profile".to_string(),
+        }),
     );
 
     // Act
@@ -155,7 +160,8 @@ fn it_should_fail_with_invalid_environment_name() {
 #[test]
 fn it_should_fail_when_ssh_private_key_not_found() {
     use crate::application::command_handlers::create::config::{
-        EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
+        EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
+        SshCredentialsConfig,
     };
 
     // Arrange
@@ -165,6 +171,7 @@ fn it_should_fail_when_ssh_private_key_not_found() {
     let config = EnvironmentCreationConfig::new(
         EnvironmentSection {
             name: "test-env".to_string(),
+            instance_name: None,
         },
         SshCredentialsConfig::new(
             "/nonexistent/private_key".to_string(),
@@ -176,6 +183,9 @@ fn it_should_fail_when_ssh_private_key_not_found() {
             "torrust".to_string(),
             22,
         ),
+        ProviderSection::Lxd(LxdProviderSection {
+            profile_name: "test-profile".to_string(),
+        }),
     );
 
     // Act

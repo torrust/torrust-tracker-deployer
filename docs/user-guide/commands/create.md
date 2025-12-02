@@ -20,7 +20,7 @@ Generate a JSON configuration template file with placeholder values.
 #### Syntax
 
 ```bash
-torrust-tracker-deployer create template [OUTPUT_PATH]
+torrust-tracker-deployer create template --provider <PROVIDER> [OUTPUT_PATH]
 ```
 
 #### Arguments
@@ -29,36 +29,108 @@ torrust-tracker-deployer create template [OUTPUT_PATH]
   - Default: `environment-template.json` in current directory
   - Parent directories will be created automatically if they don't exist
 
+#### Options
+
+- `--provider`, `-p` (**required**) - Provider to generate template for
+  - Values: `lxd`, `hetzner`
+
 #### Examples
 
-**Generate template in current directory**:
+**Generate LXD template**:
 
 ```bash
-torrust-tracker-deployer create template
-# Creates: ./environment-template.json
+torrust-tracker-deployer create template --provider lxd
+# Creates: ./environment-template.json (LXD template)
+```
+
+**Generate Hetzner template**:
+
+```bash
+torrust-tracker-deployer create template --provider hetzner
+# Creates: ./environment-template.json (Hetzner template)
 ```
 
 **Generate template with custom path**:
 
 ```bash
-torrust-tracker-deployer create template config/my-env.json
+torrust-tracker-deployer create template --provider lxd config/my-env.json
 # Creates: ./config/my-env.json
+```
+
+**Generate Hetzner template with custom path**:
+
+```bash
+torrust-tracker-deployer create template --provider hetzner config/hetzner-env.json
+# Creates: ./config/hetzner-env.json (Hetzner template)
 ```
 
 **Generate template in specific directory**:
 
 ```bash
-torrust-tracker-deployer create template /path/to/configs/production.json
+torrust-tracker-deployer create template --provider lxd /path/to/configs/production.json
 # Creates: /path/to/configs/production.json
+```
+
+**Using short flag for provider**:
+
+```bash
+torrust-tracker-deployer create template -p hetzner my-config.json
+# Creates: ./my-config.json (Hetzner template)
 ```
 
 #### Template Structure
 
-The generated template includes:
+The generated template includes provider-specific placeholders:
+
+**LXD Template**:
+
+```json
+{
+  "environment": {
+    "name": "REPLACE_WITH_ENVIRONMENT_NAME"
+  },
+  "ssh_credentials": {
+    "private_key_path": "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH",
+    "public_key_path": "REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH",
+    "username": "torrust",
+    "port": 22
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "REPLACE_WITH_LXD_PROFILE_NAME"
+  }
+}
+```
+
+**Hetzner Template**:
+
+```json
+{
+  "environment": {
+    "name": "REPLACE_WITH_ENVIRONMENT_NAME"
+  },
+  "ssh_credentials": {
+    "private_key_path": "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH",
+    "public_key_path": "REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH",
+    "username": "torrust",
+    "port": 22
+  },
+  "provider": {
+    "provider": "hetzner",
+    "api_token": "REPLACE_WITH_HETZNER_API_TOKEN",
+    "server_type": "cx22",
+    "location": "nbg1"
+  }
+}
+```
+
+#### Workflow Example
 
 ```bash
-# Step 1: Generate configuration template
-torrust-tracker-deployer create template config.json
+# Step 1: Generate configuration template (choose your provider)
+torrust-tracker-deployer create template --provider lxd config.json
+# Or for Hetzner:
+# torrust-tracker-deployer create template --provider hetzner config.json
 
 # Step 2: Edit the configuration file
 nano config.json
@@ -527,18 +599,34 @@ After creating an environment, the typical workflow is:
 For convenience, use the `create template` command to generate a configuration template:
 
 ```bash
-# Generate template with default name
-torrust-tracker-deployer create template
+# Generate LXD template
+torrust-tracker-deployer create template --provider lxd
 
-# Generate template with custom name
-torrust-tracker-deployer create template my-config.json
+# Generate Hetzner template
+torrust-tracker-deployer create template --provider hetzner
+
+# Generate LXD template with custom name
+torrust-tracker-deployer create template --provider lxd my-config.json
+
+# Generate Hetzner template with custom name
+torrust-tracker-deployer create template --provider hetzner my-config.json
 ```
 
 The template will contain placeholder values that you need to replace:
 
+**Common placeholders (all providers)**:
+
 - `REPLACE_WITH_ENVIRONMENT_NAME` - Choose a unique environment name
 - `REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH` - Path to your SSH private key
 - `REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH` - Path to your SSH public key
+
+**LXD-specific placeholders**:
+
+- `REPLACE_WITH_LXD_PROFILE_NAME` - Your LXD profile name
+
+**Hetzner-specific placeholders**:
+
+- `REPLACE_WITH_HETZNER_API_TOKEN` - Your Hetzner API token
 
 Edit the generated template and then use it to create your environment.
 

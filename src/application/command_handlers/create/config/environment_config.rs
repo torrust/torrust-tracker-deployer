@@ -7,9 +7,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::ssh::SshCredentials;
-use crate::domain::EnvironmentName;
+use crate::domain::provider::{Provider, ProviderConfig};
+use crate::domain::{EnvironmentName, InstanceName};
 
 use super::errors::CreateConfigError;
+use super::provider::{HetznerProviderSection, LxdProviderSection, ProviderSection};
 use super::ssh_credentials_config::SshCredentialsConfig;
 
 /// Configuration for creating a deployment environment
@@ -21,7 +23,9 @@ use super::ssh_credentials_config::SshCredentialsConfig;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{EnvironmentCreationConfig, EnvironmentSection};
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
+///     EnvironmentCreationConfig, EnvironmentSection, ProviderSection, LxdProviderSection
+/// };
 ///
 /// let json = r#"{
 ///     "environment": {
@@ -30,6 +34,10 @@ use super::ssh_credentials_config::SshCredentialsConfig;
 ///     "ssh_credentials": {
 ///         "private_key_path": "fixtures/testing_rsa",
 ///         "public_key_path": "fixtures/testing_rsa.pub"
+///     },
+///     "provider": {
+///         "provider": "lxd",
+///         "profile_name": "torrust-profile-dev"
 ///     }
 /// }"#;
 ///
@@ -43,6 +51,12 @@ pub struct EnvironmentCreationConfig {
 
     /// SSH credentials configuration
     pub ssh_credentials: SshCredentialsConfig,
+
+    /// Provider-specific configuration (LXD, Hetzner, etc.)
+    ///
+    /// Uses `ProviderSection` for JSON parsing with raw primitives.
+    /// Converted to domain `ProviderConfig` via `to_environment_params()`.
+    pub provider: ProviderSection,
 }
 
 /// Environment-specific configuration section
@@ -58,6 +72,17 @@ pub struct EnvironmentSection {
     /// - Cannot start or end with separators
     /// - Cannot start with numbers
     pub name: String,
+
+    /// Optional custom instance name for the VM/container
+    ///
+    /// If not provided, auto-generated as `torrust-tracker-vm-{env_name}`.
+    /// When provided, must follow instance naming rules:
+    /// - 1-63 characters
+    /// - ASCII letters, numbers, and dashes only
+    /// - Cannot start with digit or dash
+    /// - Cannot end with dash
+    #[serde(default)]
+    pub instance_name: Option<String>,
 }
 
 impl EnvironmentCreationConfig {
@@ -67,12 +92,14 @@ impl EnvironmentCreationConfig {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
-    ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
+    ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
+    ///     ProviderSection, LxdProviderSection
     /// };
     ///
     /// let config = EnvironmentCreationConfig::new(
     ///     EnvironmentSection {
     ///         name: "dev".to_string(),
+    ///         instance_name: None,
     ///     },
     ///     SshCredentialsConfig::new(
     ///         "fixtures/testing_rsa".to_string(),
@@ -80,13 +107,21 @@ impl EnvironmentCreationConfig {
     ///         "torrust".to_string(),
     ///         22,
     ///     ),
+    ///     ProviderSection::Lxd(LxdProviderSection {
+    ///         profile_name: "torrust-profile-dev".to_string(),
+    ///     }),
     /// );
     /// ```
     #[must_use]
-    pub fn new(environment: EnvironmentSection, ssh_credentials: SshCredentialsConfig) -> Self {
+    pub fn new(
+        environment: EnvironmentSection,
+        ssh_credentials: SshCredentialsConfig,
+        provider: ProviderSection,
+    ) -> Self {
         Self {
             environment,
             ssh_credentials,
+            provider,
         }
     }
 
@@ -97,19 +132,28 @@ impl EnvironmentCreationConfig {
     ///
     /// # Returns
     ///
-    /// Returns a tuple of `(EnvironmentName, SshCredentials, u16)` that matches
-    /// the signature of `Environment::new()`.
+    /// Returns a tuple of `(EnvironmentName, InstanceName, ProviderConfig, SshCredentials, u16)`
+    /// that matches the signature of `Environment::new()`.
     ///
     /// # Validation
     ///
     /// - Environment name must follow naming rules (see `EnvironmentName`)
+    /// - Instance name (if provided) must follow instance naming rules (see `InstanceName`)
+    /// - Provider config must be valid (e.g., valid profile name for LXD)
     /// - SSH username must follow Linux username requirements (see `Username`)
     /// - SSH key files must exist and be accessible
+    ///
+    /// # Instance Name Auto-Generation
+    ///
+    /// If `instance_name` is not provided in the configuration, it will be
+    /// auto-generated using the format: `torrust-tracker-vm-{env_name}`
     ///
     /// # Errors
     ///
     /// Returns `CreateConfigError` if:
     /// - Environment name is invalid
+    /// - Instance name is invalid (when provided)
+    /// - Provider configuration is invalid (e.g., invalid profile name)
     /// - SSH username is invalid
     /// - SSH private key file does not exist
     /// - SSH public key file does not exist
@@ -118,15 +162,15 @@ impl EnvironmentCreationConfig {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
-    ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig
+    ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
+    ///     ProviderSection, LxdProviderSection
     /// };
     /// use torrust_tracker_deployer_lib::domain::Environment;
-    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
-    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     ///
     /// let config = EnvironmentCreationConfig::new(
     ///     EnvironmentSection {
     ///         name: "dev".to_string(),
+    ///         instance_name: None,
     ///     },
     ///     SshCredentialsConfig::new(
     ///         "fixtures/testing_rsa".to_string(),
@@ -134,20 +178,45 @@ impl EnvironmentCreationConfig {
     ///         "torrust".to_string(),
     ///         22,
     ///     ),
+    ///     ProviderSection::Lxd(LxdProviderSection {
+    ///         profile_name: "torrust-profile-dev".to_string(),
+    ///     }),
     /// );
     ///
-    /// let (name, credentials, port) = config.to_environment_params()?;
-    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
-    ///     profile_name: ProfileName::new(format!("lxd-{}", name.as_str())).unwrap(),
-    /// });
-    /// let environment = Environment::new(name, provider_config, credentials, port);
+    /// let (name, instance_name, provider_config, credentials, port) = config.to_environment_params()?;
+    ///
+    /// // Instance name auto-generated from environment name
+    /// assert_eq!(instance_name.as_str(), "torrust-tracker-vm-dev");
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn to_environment_params(
         self,
-    ) -> Result<(EnvironmentName, SshCredentials, u16), CreateConfigError> {
+    ) -> Result<
+        (
+            EnvironmentName,
+            InstanceName,
+            ProviderConfig,
+            SshCredentials,
+            u16,
+        ),
+        CreateConfigError,
+    > {
         // Convert environment name string to domain type
         let environment_name = EnvironmentName::new(&self.environment.name)?;
+
+        // Instance name: use provided or auto-generate from environment name
+        let instance_name = match &self.environment.instance_name {
+            Some(name_str) => InstanceName::new(name_str.clone()).map_err(|e| {
+                CreateConfigError::InvalidInstanceName {
+                    name: name_str.clone(),
+                    reason: e.to_string(),
+                }
+            })?,
+            None => Self::generate_instance_name(&environment_name),
+        };
+
+        // Convert ProviderSection (DTO) to domain ProviderConfig (validates profile_name, etc.)
+        let provider_config = self.provider.to_provider_config()?;
 
         // Get SSH port before consuming ssh_credentials
         let ssh_port = self.ssh_credentials.port;
@@ -155,29 +224,66 @@ impl EnvironmentCreationConfig {
         // Convert SSH credentials config to domain type
         let ssh_credentials = self.ssh_credentials.to_ssh_credentials()?;
 
-        Ok((environment_name, ssh_credentials, ssh_port))
+        Ok((
+            environment_name,
+            instance_name,
+            provider_config,
+            ssh_credentials,
+            ssh_port,
+        ))
     }
 
-    /// Creates a template instance with placeholder values
+    /// Generates an instance name from the environment name
+    ///
+    /// Format: `torrust-tracker-vm-{env_name}`
+    ///
+    /// # Panics
+    ///
+    /// This function does not panic. The generated instance name is guaranteed
+    /// to be valid for any valid environment name.
+    fn generate_instance_name(env_name: &EnvironmentName) -> InstanceName {
+        let instance_name_str = format!("torrust-tracker-vm-{}", env_name.as_str());
+        InstanceName::new(instance_name_str)
+            .expect("Generated instance name should always be valid for valid environment names")
+    }
+
+    /// Creates a template instance with placeholder values for a specific provider
     ///
     /// This method generates a configuration template with placeholder values
     /// that users can replace with their actual configuration. The template
     /// structure matches the `EnvironmentCreationConfig` exactly, ensuring
     /// type safety and automatic synchronization with struct changes.
     ///
+    /// # Arguments
+    ///
+    /// * `provider` - The provider to generate template for (lxd or hetzner)
+    ///
     /// # Examples
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
+    /// use torrust_tracker_deployer_lib::domain::provider::Provider;
     ///
-    /// let template = EnvironmentCreationConfig::template();
+    /// let template = EnvironmentCreationConfig::template(Provider::Lxd);
     /// assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
     /// ```
     #[must_use]
-    pub fn template() -> Self {
+    pub fn template(provider: Provider) -> Self {
+        let provider_section = match provider {
+            Provider::Lxd => ProviderSection::Lxd(LxdProviderSection {
+                profile_name: "REPLACE_WITH_LXD_PROFILE_NAME".to_string(),
+            }),
+            Provider::Hetzner => ProviderSection::Hetzner(HetznerProviderSection {
+                api_token: "REPLACE_WITH_HETZNER_API_TOKEN".to_string(),
+                server_type: "cx22".to_string(), // default value - small instance
+                location: "nbg1".to_string(),    // default value - Nuremberg
+            }),
+        };
+
         Self {
             environment: EnvironmentSection {
                 name: "REPLACE_WITH_ENVIRONMENT_NAME".to_string(),
+                instance_name: None, // Auto-generated if not provided
             },
             ssh_credentials: SshCredentialsConfig {
                 private_key_path: "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH".to_string(),
@@ -185,6 +291,7 @@ impl EnvironmentCreationConfig {
                 username: "torrust".to_string(), // default value
                 port: 22,                        // default value
             },
+            provider: provider_section,
         }
     }
 
@@ -197,6 +304,7 @@ impl EnvironmentCreationConfig {
     /// # Arguments
     ///
     /// * `path` - Path where the template file should be created
+    /// * `provider` - Provider to generate template for (lxd or hetzner)
     ///
     /// # Returns
     ///
@@ -214,18 +322,23 @@ impl EnvironmentCreationConfig {
     ///
     /// ```rust,no_run
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
+    /// use torrust_tracker_deployer_lib::domain::provider::Provider;
     /// use std::path::Path;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// EnvironmentCreationConfig::generate_template_file(
-    ///     Path::new("./environment-config.json")
+    ///     Path::new("./environment-config.json"),
+    ///     Provider::Lxd
     /// )?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn generate_template_file(path: &std::path::Path) -> Result<(), CreateConfigError> {
+    pub fn generate_template_file(
+        path: &std::path::Path,
+        provider: Provider,
+    ) -> Result<(), CreateConfigError> {
         // Create template instance with placeholders
-        let template = Self::template();
+        let template = Self::template(provider);
 
         // Serialize to pretty-printed JSON
         let json = serde_json::to_string_pretty(&template)
@@ -256,12 +369,22 @@ impl EnvironmentCreationConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::application::command_handlers::create::config::provider::LxdProviderSection;
+    use crate::domain::provider::Provider;
+
+    /// Helper to create a default LXD provider section for tests
+    fn default_lxd_provider(profile_name: &str) -> ProviderSection {
+        ProviderSection::Lxd(LxdProviderSection {
+            profile_name: profile_name.to_string(),
+        })
+    }
 
     #[test]
     fn test_create_environment_creation_config() {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                instance_name: None,
             },
             SshCredentialsConfig::new(
                 "fixtures/testing_rsa".to_string(),
@@ -269,6 +392,7 @@ mod tests {
                 "torrust".to_string(),
                 22,
             ),
+            default_lxd_provider("torrust-profile-dev"),
         );
 
         assert_eq!(config.environment.name, "dev");
@@ -278,10 +402,11 @@ mod tests {
         );
         assert_eq!(config.ssh_credentials.username, "torrust");
         assert_eq!(config.ssh_credentials.port, 22);
+        assert_eq!(config.provider.provider(), Provider::Lxd);
     }
 
     #[test]
-    fn test_deserialize_from_json() {
+    fn test_deserialize_from_json_with_lxd_provider() {
         let json = r#"{
             "environment": {
                 "name": "e2e-config"
@@ -289,6 +414,10 @@ mod tests {
             "ssh_credentials": {
                 "private_key_path": "fixtures/testing_rsa",
                 "public_key_path": "fixtures/testing_rsa.pub"
+            },
+            "provider": {
+                "provider": "lxd",
+                "profile_name": "torrust-profile-e2e-config"
             }
         }"#;
 
@@ -305,29 +434,42 @@ mod tests {
         );
         assert_eq!(config.ssh_credentials.username, "torrust"); // default
         assert_eq!(config.ssh_credentials.port, 22); // default
+        assert_eq!(config.provider.provider(), Provider::Lxd);
     }
 
     #[test]
-    fn test_deserialize_from_json_with_custom_values() {
+    fn test_deserialize_from_json_with_hetzner_provider() {
         let json = r#"{
             "environment": {
-                "name": "production"
+                "name": "production",
+                "instance_name": "torrust-tracker-demo"
             },
             "ssh_credentials": {
                 "private_key_path": "keys/prod_key",
                 "public_key_path": "keys/prod_key.pub",
                 "username": "ubuntu",
                 "port": 2222
+            },
+            "provider": {
+                "provider": "hetzner",
+                "api_token": "test-token",
+                "server_type": "cx22",
+                "location": "nbg1"
             }
         }"#;
 
         let config: EnvironmentCreationConfig = serde_json::from_str(json).unwrap();
 
         assert_eq!(config.environment.name, "production");
+        assert_eq!(
+            config.environment.instance_name,
+            Some("torrust-tracker-demo".to_string())
+        );
         assert_eq!(config.ssh_credentials.private_key_path, "keys/prod_key");
         assert_eq!(config.ssh_credentials.public_key_path, "keys/prod_key.pub");
         assert_eq!(config.ssh_credentials.username, "ubuntu");
         assert_eq!(config.ssh_credentials.port, 2222);
+        assert_eq!(config.provider.provider(), Provider::Hetzner);
     }
 
     #[test]
@@ -335,6 +477,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "staging".to_string(),
+                instance_name: None,
             },
             SshCredentialsConfig::new(
                 "keys/stage_key".to_string(),
@@ -342,6 +485,7 @@ mod tests {
                 "deploy".to_string(),
                 22,
             ),
+            default_lxd_provider("torrust-profile-staging"),
         );
 
         let json = serde_json::to_string(&config).unwrap();
@@ -351,10 +495,11 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_environment_params_success() {
+    fn test_convert_to_environment_params_success_auto_generated_instance_name() {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                instance_name: None, // Auto-generate
             },
             SshCredentialsConfig::new(
                 "fixtures/testing_rsa".to_string(),
@@ -362,16 +507,44 @@ mod tests {
                 "torrust".to_string(),
                 22,
             ),
+            default_lxd_provider("torrust-profile-dev"),
         );
 
         let result = config.to_environment_params();
         assert!(result.is_ok(), "Expected successful conversion");
 
-        let (name, credentials, port) = result.unwrap();
+        let (name, instance_name, provider_config, credentials, port) = result.unwrap();
 
         assert_eq!(name.as_str(), "dev");
+        assert_eq!(instance_name.as_str(), "torrust-tracker-vm-dev"); // Auto-generated
+        assert_eq!(provider_config.provider(), Provider::Lxd);
         assert_eq!(credentials.ssh_username.as_str(), "torrust");
         assert_eq!(port, 22);
+    }
+
+    #[test]
+    fn test_convert_to_environment_params_success_custom_instance_name() {
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "prod".to_string(),
+                instance_name: Some("my-custom-instance".to_string()),
+            },
+            SshCredentialsConfig::new(
+                "fixtures/testing_rsa".to_string(),
+                "fixtures/testing_rsa.pub".to_string(),
+                "torrust".to_string(),
+                22,
+            ),
+            default_lxd_provider("torrust-profile-prod"),
+        );
+
+        let result = config.to_environment_params();
+        assert!(result.is_ok(), "Expected successful conversion");
+
+        let (name, instance_name, _provider_config, _credentials, _port) = result.unwrap();
+
+        assert_eq!(name.as_str(), "prod");
+        assert_eq!(instance_name.as_str(), "my-custom-instance"); // Custom provided
     }
 
     #[test]
@@ -379,6 +552,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "Invalid_Name".to_string(), // uppercase - invalid
+                instance_name: None,
             },
             SshCredentialsConfig::new(
                 "fixtures/testing_rsa".to_string(),
@@ -386,6 +560,7 @@ mod tests {
                 "torrust".to_string(),
                 22,
             ),
+            default_lxd_provider("torrust-profile"),
         );
 
         let result = config.to_environment_params();
@@ -400,10 +575,68 @@ mod tests {
     }
 
     #[test]
+    fn test_convert_to_environment_params_invalid_instance_name() {
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "dev".to_string(),
+                instance_name: Some("invalid-".to_string()), // ends with dash - invalid
+            },
+            SshCredentialsConfig::new(
+                "fixtures/testing_rsa".to_string(),
+                "fixtures/testing_rsa.pub".to_string(),
+                "torrust".to_string(),
+                22,
+            ),
+            default_lxd_provider("torrust-profile"),
+        );
+
+        let result = config.to_environment_params();
+        assert!(result.is_err());
+
+        match result.unwrap_err() {
+            CreateConfigError::InvalidInstanceName { name, reason } => {
+                assert_eq!(name, "invalid-");
+                assert!(reason.contains("dash"));
+            }
+            other => panic!("Expected InvalidInstanceName error, got: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_convert_to_environment_params_invalid_profile_name() {
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "dev".to_string(),
+                instance_name: None,
+            },
+            SshCredentialsConfig::new(
+                "fixtures/testing_rsa".to_string(),
+                "fixtures/testing_rsa.pub".to_string(),
+                "torrust".to_string(),
+                22,
+            ),
+            ProviderSection::Lxd(LxdProviderSection {
+                profile_name: "invalid-".to_string(), // ends with dash - invalid
+            }),
+        );
+
+        let result = config.to_environment_params();
+        assert!(result.is_err());
+
+        match result.unwrap_err() {
+            CreateConfigError::InvalidProfileName(_) => {
+                // Expected error
+            }
+            other => panic!("Expected InvalidProfileName error, got: {other:?}"),
+        }
+    }
+
+    #[test]
     fn test_convert_to_environment_params_invalid_username() {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                instance_name: None,
             },
             SshCredentialsConfig::new(
                 "fixtures/testing_rsa".to_string(),
@@ -411,6 +644,7 @@ mod tests {
                 "123invalid".to_string(), // starts with number - invalid
                 22,
             ),
+            default_lxd_provider("torrust-profile-dev"),
         );
 
         let result = config.to_environment_params();
@@ -429,6 +663,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                instance_name: None,
             },
             SshCredentialsConfig::new(
                 "/nonexistent/key".to_string(),
@@ -436,6 +671,7 @@ mod tests {
                 "torrust".to_string(),
                 22,
             ),
+            default_lxd_provider("torrust-profile-dev"),
         );
 
         let result = config.to_environment_params();
@@ -454,6 +690,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                instance_name: None,
             },
             SshCredentialsConfig::new(
                 "fixtures/testing_rsa".to_string(),
@@ -461,6 +698,7 @@ mod tests {
                 "torrust".to_string(),
                 22,
             ),
+            default_lxd_provider("torrust-profile-dev"),
         );
 
         let result = config.to_environment_params();
@@ -477,21 +715,12 @@ mod tests {
     #[test]
     fn test_integration_with_environment_new() {
         // This test verifies that the converted parameters work with Environment::new()
-        use crate::domain::provider::{LxdConfig, ProviderConfig};
         use crate::domain::Environment;
-        use crate::domain::ProfileName;
-
-        fn default_lxd_provider_config(
-            env_name: &crate::domain::environment::name::EnvironmentName,
-        ) -> ProviderConfig {
-            ProviderConfig::Lxd(LxdConfig {
-                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
-            })
-        }
 
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "test-env".to_string(),
+                instance_name: None,
             },
             SshCredentialsConfig::new(
                 "fixtures/testing_rsa".to_string(),
@@ -499,19 +728,18 @@ mod tests {
                 "torrust".to_string(),
                 22,
             ),
+            default_lxd_provider("torrust-profile-test-env"),
         );
 
-        let (name, credentials, port) = config.to_environment_params().unwrap();
-        let environment = Environment::new(
-            name.clone(),
-            default_lxd_provider_config(&name),
-            credentials,
-            port,
-        );
+        let (name, _instance_name, provider_config, credentials, port) =
+            config.to_environment_params().unwrap();
+        let environment = Environment::new(name.clone(), provider_config, credentials, port);
 
         assert_eq!(environment.name().as_str(), "test-env");
         assert_eq!(environment.ssh_username().as_str(), "torrust");
         assert_eq!(environment.ssh_port(), 22);
+        // The environment auto-generates its own instance name in Environment::new()
+        // which may differ from what we pass (it's derived from name internally)
     }
 
     #[test]
@@ -519,6 +747,7 @@ mod tests {
         let original = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                instance_name: Some("my-vm".to_string()),
             },
             SshCredentialsConfig::new(
                 "fixtures/testing_rsa".to_string(),
@@ -526,6 +755,7 @@ mod tests {
                 "torrust".to_string(),
                 22,
             ),
+            default_lxd_provider("torrust-profile-dev"),
         );
 
         let json = serde_json::to_string_pretty(&original).unwrap();
@@ -536,9 +766,10 @@ mod tests {
 
     #[test]
     fn test_template_has_placeholder_values() {
-        let template = EnvironmentCreationConfig::template();
+        let template = EnvironmentCreationConfig::template(Provider::Lxd);
 
         assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
+        assert_eq!(template.environment.instance_name, None);
         assert_eq!(
             template.ssh_credentials.private_key_path,
             "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH"
@@ -549,26 +780,61 @@ mod tests {
         );
         assert_eq!(template.ssh_credentials.username, "torrust");
         assert_eq!(template.ssh_credentials.port, 22);
+        assert_eq!(template.provider.provider(), Provider::Lxd);
+    }
+
+    #[test]
+    fn test_template_for_hetzner_has_placeholder_values() {
+        let template = EnvironmentCreationConfig::template(Provider::Hetzner);
+
+        assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
+        assert_eq!(template.environment.instance_name, None);
+        assert_eq!(
+            template.ssh_credentials.private_key_path,
+            "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH"
+        );
+        assert_eq!(
+            template.ssh_credentials.public_key_path,
+            "REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH"
+        );
+        assert_eq!(template.ssh_credentials.username, "torrust");
+        assert_eq!(template.ssh_credentials.port, 22);
+        assert_eq!(template.provider.provider(), Provider::Hetzner);
+
+        // Verify Hetzner-specific fields
+        if let ProviderSection::Hetzner(hetzner) = template.provider {
+            assert_eq!(hetzner.api_token, "REPLACE_WITH_HETZNER_API_TOKEN");
+            assert_eq!(hetzner.server_type, "cx22");
+            assert_eq!(hetzner.location, "nbg1");
+        } else {
+            panic!("Expected Hetzner provider section");
+        }
     }
 
     #[test]
     fn test_template_serializes_to_valid_json() {
-        let template = EnvironmentCreationConfig::template();
+        let template = EnvironmentCreationConfig::template(Provider::Lxd);
         let json = serde_json::to_string_pretty(&template).unwrap();
 
         // Verify it can be deserialized back
         let deserialized: EnvironmentCreationConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(template, deserialized);
+
+        // Verify JSON contains provider section
+        assert!(json.contains("\"provider\""));
+        assert!(json.contains("\"lxd\""));
+        assert!(json.contains("REPLACE_WITH_LXD_PROFILE_NAME"));
     }
 
     #[test]
     fn test_template_structure_matches_config() {
-        let template = EnvironmentCreationConfig::template();
+        let template = EnvironmentCreationConfig::template(Provider::Lxd);
 
         // Verify template has same structure as regular config
         let regular_config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "test".to_string(),
+                instance_name: None,
             },
             SshCredentialsConfig::new(
                 "path1".to_string(),
@@ -576,6 +842,7 @@ mod tests {
                 "user".to_string(),
                 22,
             ),
+            default_lxd_provider("test-profile"),
         );
 
         // Both should serialize to same structure (different values)
@@ -592,6 +859,7 @@ mod tests {
         assert_eq!(template_obj.keys().len(), config_obj.keys().len());
         assert!(template_obj.contains_key("environment"));
         assert!(template_obj.contains_key("ssh_credentials"));
+        assert!(template_obj.contains_key("provider"));
     }
 
     #[test]
@@ -601,7 +869,8 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_path = temp_dir.path().join("config.json");
 
-        let result = EnvironmentCreationConfig::generate_template_file(&template_path);
+        let result =
+            EnvironmentCreationConfig::generate_template_file(&template_path, Provider::Lxd);
         assert!(result.is_ok());
 
         // Verify file exists
@@ -617,6 +886,8 @@ mod tests {
             parsed.ssh_credentials.private_key_path,
             "REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH"
         );
+        // Verify provider section is present
+        assert_eq!(parsed.provider.provider(), Provider::Lxd);
     }
 
     #[test]
@@ -630,7 +901,7 @@ mod tests {
             .join("env")
             .join("test.json");
 
-        let result = EnvironmentCreationConfig::generate_template_file(&nested_path);
+        let result = EnvironmentCreationConfig::generate_template_file(&nested_path, Provider::Lxd);
         assert!(result.is_ok());
 
         // Verify nested directories were created
@@ -649,7 +920,8 @@ mod tests {
         std::fs::write(&template_path, "old content").unwrap();
 
         // Generate template should overwrite
-        let result = EnvironmentCreationConfig::generate_template_file(&template_path);
+        let result =
+            EnvironmentCreationConfig::generate_template_file(&template_path, Provider::Lxd);
         assert!(result.is_ok());
 
         // Verify content was replaced
@@ -665,7 +937,8 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_path = temp_dir.path().join("config.json");
 
-        let result = EnvironmentCreationConfig::generate_template_file(&template_path);
+        let result =
+            EnvironmentCreationConfig::generate_template_file(&template_path, Provider::Lxd);
         assert!(result.is_ok());
 
         // Verify file exists
@@ -694,7 +967,7 @@ mod tests {
             .join("env")
             .join("test.json");
 
-        let result = EnvironmentCreationConfig::generate_template_file(&nested_path);
+        let result = EnvironmentCreationConfig::generate_template_file(&nested_path, Provider::Lxd);
         assert!(result.is_ok());
 
         // Verify nested directories were created
