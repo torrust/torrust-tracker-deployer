@@ -9,32 +9,11 @@
 pub mod context;
 
 use std::path::Path;
-use thiserror::Error;
 
 use crate::domain::template::file::File;
-use crate::domain::template::{
-    write_file_with_dir_creation, FileOperationError, TemplateEngine, TemplateEngineError,
-};
-
+use crate::domain::template::{write_file_with_dir_creation, TemplateEngine};
+pub use crate::infrastructure::external_tools::tofu::template::common::wrappers::VariablesTemplateError;
 pub use context::{VariablesContext, VariablesContextBuilder, VariablesContextError};
-
-/// Errors that can occur during variables template operations
-#[derive(Error, Debug)]
-pub enum VariablesTemplateError {
-    /// Template engine error
-    #[error("Template engine error: {source}")]
-    TemplateEngineError {
-        #[from]
-        source: TemplateEngineError,
-    },
-
-    /// File I/O operation failed
-    #[error("File operation failed: {source}")]
-    FileOperationError {
-        #[from]
-        source: FileOperationError,
-    },
-}
 
 /// Template wrapper for `OpenTofu` variables rendering
 ///
