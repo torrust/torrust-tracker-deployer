@@ -71,6 +71,8 @@
 //!
 //! ```rust
 //! use torrust_tracker_deployer_lib::domain::environment::{Environment, name::EnvironmentName};
+//! use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+//! use torrust_tracker_deployer_lib::domain::ProfileName;
 //! use torrust_tracker_deployer_lib::shared::Username;
 //! use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 //! use std::path::PathBuf;
@@ -82,7 +84,10 @@
 //!     PathBuf::from("fixtures/testing_rsa.pub"),
 //!     ssh_username,
 //! );
-//! let environment = Environment::new(env_name, ssh_credentials, 22);
+//! let provider_config = ProviderConfig::Lxd(LxdConfig {
+//!     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+//! });
+//! let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
 //!
 //! // Environment automatically generates paths
 //! assert_eq!(*environment.data_dir(), PathBuf::from("./data/e2e-config"));
@@ -121,6 +126,7 @@ pub use state::{
 pub use user_inputs::UserInputs;
 
 use crate::adapters::ssh::SshCredentials;
+use crate::domain::provider::ProviderConfig;
 use crate::domain::{InstanceName, ProfileName};
 use crate::shared::Username;
 use serde::{Deserialize, Serialize};
@@ -208,6 +214,7 @@ impl Environment {
     /// # Arguments
     ///
     /// * `name` - The validated environment name
+    /// * `provider_config` - Provider-specific configuration (LXD, Hetzner, etc.)
     /// * `ssh_credentials` - SSH credentials for connecting to instances
     /// * `ssh_port` - SSH port for connecting to instances
     ///
@@ -219,7 +226,8 @@ impl Environment {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName, ProfileName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{ProviderConfig, LxdConfig};
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -231,8 +239,11 @@ impl Environment {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     ssh_username,
     /// );
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new("torrust-profile-production".to_string())?,
+    /// });
     /// let ssh_port = 22;
-    /// let environment = Environment::new(env_name, ssh_credentials, ssh_port);
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, ssh_port);
     ///
     /// assert_eq!(environment.instance_name().as_str(), "torrust-tracker-vm-production");
     /// assert_eq!(*environment.data_dir(), PathBuf::from("./data/production"));
@@ -249,10 +260,11 @@ impl Environment {
     #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
     pub fn new(
         name: EnvironmentName,
+        provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
     ) -> Environment<Created> {
-        let context = EnvironmentContext::new(&name, ssh_credentials, ssh_port);
+        let context = EnvironmentContext::new(&name, provider_config, ssh_credentials, ssh_port);
 
         Environment {
             context,
@@ -269,6 +281,7 @@ impl Environment {
     /// # Arguments
     ///
     /// * `name` - The unique environment name
+    /// * `provider_config` - Provider-specific configuration (LXD, Hetzner, etc.)
     /// * `ssh_credentials` - SSH credentials for accessing the provisioned instance
     /// * `ssh_port` - SSH port for connections (typically 22)
     /// * `working_dir` - The base working directory for all operations
@@ -281,6 +294,8 @@ impl Environment {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::environment::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{ProviderConfig, LxdConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::adapters::SshCredentials;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use std::path::PathBuf;
@@ -292,9 +307,12 @@ impl Environment {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     username,
     /// );
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new("torrust-profile-production".to_string())?,
+    /// });
     /// let ssh_port = 22;
     /// let working_dir = PathBuf::from("/opt/deployments");
-    /// let environment = Environment::with_working_dir(env_name, ssh_credentials, ssh_port, &working_dir);
+    /// let environment = Environment::with_working_dir(env_name, provider_config, ssh_credentials, ssh_port, &working_dir);
     ///
     /// assert_eq!(environment.instance_name().as_str(), "torrust-tracker-vm-production");
     /// assert_eq!(*environment.data_dir(), PathBuf::from("/opt/deployments/data/production"));
@@ -311,12 +329,18 @@ impl Environment {
     #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
     pub fn with_working_dir(
         name: EnvironmentName,
+        provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
         working_dir: &std::path::Path,
     ) -> Environment<Created> {
-        let context =
-            EnvironmentContext::with_working_dir(&name, ssh_credentials, ssh_port, working_dir);
+        let context = EnvironmentContext::with_working_dir(
+            &name,
+            provider_config,
+            ssh_credentials,
+            ssh_port,
+            working_dir,
+        );
 
         Environment {
             context,
@@ -419,13 +443,29 @@ impl<S> Environment<S> {
         &self.context.user_inputs.instance_name
     }
 
-    /// Returns the profile name for this environment
+    /// Returns the LXD profile name for this environment
     ///
-    /// Returns the unique LXD profile name based on the environment name
-    /// to ensure profile isolation between different test environments.
+    /// Returns the unique LXD profile name to ensure profile isolation
+    /// between different test environments.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called on a non-LXD environment.
     #[must_use]
     pub fn profile_name(&self) -> &ProfileName {
-        &self.context.user_inputs.profile_name
+        &self
+            .context
+            .user_inputs
+            .provider_config()
+            .as_lxd()
+            .expect("profile_name() called on non-LXD environment")
+            .profile_name
+    }
+
+    /// Returns the provider configuration for this environment
+    #[must_use]
+    pub fn provider_config(&self) -> &ProviderConfig {
+        &self.context.user_inputs.provider_config
     }
 
     /// Returns the SSH credentials for this environment
@@ -484,6 +524,8 @@ impl<S> Environment<S> {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -496,7 +538,10 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/test_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials, 22);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
     ///
     /// // Before provisioning
     /// assert_eq!(environment.instance_ip(), None);
@@ -547,6 +592,8 @@ impl<S> Environment<S> {
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
     /// use torrust_tracker_deployer_lib::domain::environment::runtime_outputs::ProvisionMethod;
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -558,14 +605,17 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     ssh_username,
     /// );
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
     ///
     /// // Provisioned environment - infrastructure is managed
-    /// let provisioned_env = Environment::new(env_name.clone(), ssh_credentials.clone(), 22)
+    /// let provisioned_env = Environment::new(env_name.clone(), provider_config.clone(), ssh_credentials.clone(), 22)
     ///     .with_provision_method(ProvisionMethod::Provisioned);
     /// assert!(provisioned_env.is_infrastructure_managed());
     ///
     /// // Registered environment - infrastructure is NOT managed
-    /// let registered_env = Environment::new(env_name, ssh_credentials, 22)
+    /// let registered_env = Environment::new(env_name, provider_config, ssh_credentials, 22)
     ///     .with_provision_method(ProvisionMethod::Registered);
     /// assert!(!registered_env.is_infrastructure_managed());
     ///
@@ -599,6 +649,8 @@ impl<S> Environment<S> {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -611,7 +663,10 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials, 22);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
     ///
     /// // Set IP after provisioning
     /// let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 42));
@@ -655,6 +710,8 @@ impl<S> Environment<S> {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -666,7 +723,10 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/staging_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials, 22);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.templates_dir(),
@@ -689,6 +749,8 @@ impl<S> Environment<S> {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -700,7 +762,10 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/prod_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials, 22);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.traces_dir(),
@@ -720,6 +785,8 @@ impl<S> Environment<S> {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -731,7 +798,10 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/dev_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials, 22);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.ansible_build_dir(),
@@ -751,6 +821,8 @@ impl<S> Environment<S> {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -762,7 +834,10 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/test_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials, 22);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.tofu_build_dir(),
@@ -782,6 +857,8 @@ impl<S> Environment<S> {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -793,7 +870,10 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/integration_rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials, 22);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.ansible_templates_dir(),
@@ -813,6 +893,8 @@ impl<S> Environment<S> {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::{Environment, EnvironmentName};
+    /// use torrust_tracker_deployer_lib::domain::provider::{LxdConfig, ProviderConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
@@ -824,7 +906,10 @@ impl<S> Environment<S> {
     ///     PathBuf::from("keys/load-test-rsa.pub"),
     ///     ssh_username,
     /// );
-    /// let environment = Environment::new(env_name, ssh_credentials, 22);
+    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+    /// });
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
     ///
     /// assert_eq!(
     ///     environment.tofu_templates_dir(),
@@ -843,6 +928,7 @@ impl<S> Environment<S> {
 mod tests {
     use super::*;
     use crate::adapters::ssh::SshCredentials;
+    use crate::domain::provider::{LxdConfig, ProviderConfig};
     use crate::domain::EnvironmentName;
     use std::path::Path;
     use tempfile::TempDir;
@@ -927,8 +1013,11 @@ mod tests {
             );
 
             let ssh_port = 22;
+            let provider_config = ProviderConfig::Lxd(LxdConfig {
+                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+            });
 
-            Environment::new(env_name, ssh_credentials, ssh_port)
+            Environment::new(env_name, provider_config, ssh_credentials, ssh_port)
         }
 
         /// Builds an Environment and returns the `TempDir`
@@ -948,7 +1037,11 @@ mod tests {
             );
 
             let ssh_port = 22;
-            let environment = Environment::new(env_name, ssh_credentials, ssh_port);
+            let provider_config = ProviderConfig::Lxd(LxdConfig {
+                profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+            });
+            let environment =
+                Environment::new(env_name, provider_config, ssh_credentials, ssh_port);
             (environment, self.temp_dir)
         }
 
@@ -972,12 +1065,13 @@ mod tests {
             let instance_name =
                 InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
             let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
+            let provider_config = ProviderConfig::Lxd(LxdConfig { profile_name });
 
             let context = EnvironmentContext {
                 user_inputs: UserInputs {
                     name: env_name,
                     instance_name,
-                    profile_name,
+                    provider_config,
                     ssh_credentials,
                     ssh_port: 22,
                 },

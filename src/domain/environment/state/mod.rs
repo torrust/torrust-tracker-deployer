@@ -378,7 +378,7 @@ impl AnyEnvironmentState {
         &self.context().user_inputs.instance_name
     }
 
-    /// Get the profile name regardless of current state
+    /// Get the LXD profile name regardless of current state
     ///
     /// This method provides access to the profile name without needing to
     /// pattern match on the specific state variant.
@@ -386,9 +386,19 @@ impl AnyEnvironmentState {
     /// # Returns
     ///
     /// A reference to the `ProfileName` contained within the environment.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called on a non-LXD environment.
     #[must_use]
     pub fn profile_name(&self) -> &crate::domain::environment::ProfileName {
-        &self.context().user_inputs.profile_name
+        &self
+            .context()
+            .user_inputs
+            .provider_config()
+            .as_lxd()
+            .expect("profile_name() called on non-LXD environment")
+            .profile_name
     }
 
     /// Get the SSH credentials regardless of current state
@@ -550,8 +560,16 @@ mod tests {
     use super::*;
     use crate::adapters::ssh::SshCredentials;
     use crate::domain::environment::name::EnvironmentName;
+    use crate::domain::provider::{LxdConfig, ProviderConfig};
+    use crate::domain::ProfileName;
     use crate::shared::Username;
     use std::path::PathBuf;
+
+    fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
+        ProviderConfig::Lxd(LxdConfig {
+            profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+        })
+    }
 
     /// Helper to create test SSH credentials
     fn create_test_ssh_credentials() -> SshCredentials {
@@ -567,7 +585,12 @@ mod tests {
     fn create_test_environment_created() -> Environment<Created> {
         let name = EnvironmentName::new("test-env".to_string()).unwrap();
         let ssh_creds = create_test_ssh_credentials();
-        Environment::new(name, ssh_creds, 22)
+        Environment::new(
+            name.clone(),
+            default_lxd_provider_config(&name),
+            ssh_creds,
+            22,
+        )
     }
 
     /// Helper to create a test `ProvisionFailureContext` with custom error message

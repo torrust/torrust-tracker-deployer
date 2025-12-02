@@ -172,11 +172,19 @@ mod tests {
     use super::*;
     use crate::adapters::ssh::credentials::SshCredentials;
     use crate::domain::environment::Environment;
+    use crate::domain::provider::{LxdConfig, ProviderConfig};
+    use crate::domain::ProfileName;
     use crate::shared::Username;
     use rstest::rstest;
     use std::error::Error as StdError;
     use std::path::PathBuf;
     use tempfile::TempDir;
+
+    fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
+        ProviderConfig::Lxd(LxdConfig {
+            profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+        })
+    }
 
     fn create_test_ssh_credentials() -> SshCredentials {
         let username = Username::new("test-user".to_string()).unwrap();
@@ -190,7 +198,12 @@ mod tests {
     fn create_test_environment(name: &str) -> Environment {
         let env_name = EnvironmentName::new(name.to_string()).unwrap();
         let ssh_credentials = create_test_ssh_credentials();
-        Environment::new(env_name, ssh_credentials, 22)
+        Environment::new(
+            env_name.clone(),
+            default_lxd_provider_config(&env_name),
+            ssh_credentials,
+            22,
+        )
     }
 
     #[test]

@@ -5,6 +5,7 @@
 
 use super::*;
 use crate::adapters::ssh::SshCredentials;
+use crate::domain::provider::{LxdConfig, ProviderConfig};
 use crate::domain::EnvironmentName;
 use crate::shared::Username;
 use std::path::{Path, PathBuf};
@@ -128,12 +129,13 @@ impl EnvironmentTestBuilder {
         let instance_name =
             InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
         let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
+        let provider_config = ProviderConfig::Lxd(LxdConfig { profile_name });
 
         let context = EnvironmentContext {
             user_inputs: crate::domain::environment::UserInputs {
                 name: env_name,
                 instance_name,
-                profile_name,
+                provider_config,
                 ssh_credentials,
                 ssh_port: 22,
             },

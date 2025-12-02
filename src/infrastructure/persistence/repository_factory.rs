@@ -146,6 +146,8 @@ mod tests {
         #[allow(unused_imports)] // Needed for trait methods on Arc<dyn EnvironmentRepository>
         use crate::domain::environment::repository::EnvironmentRepository;
         use crate::domain::environment::{Environment, EnvironmentName};
+        use crate::domain::provider::{LxdConfig, ProviderConfig};
+        use crate::domain::ProfileName;
         use crate::shared::Username;
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -159,7 +161,10 @@ mod tests {
             temp_dir.path().join("test_key.pub"),
             Username::new("test_user").expect("Valid username"),
         );
-        let environment = Environment::new(env_name.clone(), ssh_credentials, 22);
+        let provider_config = ProviderConfig::Lxd(LxdConfig {
+            profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
+        });
+        let environment = Environment::new(env_name.clone(), provider_config, ssh_credentials, 22);
 
         // Create repository with temp directory as base (not environment-specific directory)
         // The repository will automatically create the environment subdirectory
