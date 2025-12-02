@@ -1,6 +1,7 @@
-//! `OpenTofu` template wrappers
+//! Provider-specific `OpenTofu` template functionality.
 //!
-//! Organized by provider (e.g., lxd/, hetzner/)
+//! This module contains template implementations that are specific to
+//! individual infrastructure providers (LXD, Hetzner, etc.).
 //!
 //! Each provider has its own independent template wrappers for:
 //! - `cloud_init` - Cloud-init configuration templates

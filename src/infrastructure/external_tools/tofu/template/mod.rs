@@ -4,8 +4,8 @@
 //! including specialized renderers for different types of configuration files
 //! and template wrappers for type-safe context management.
 
-pub mod renderer;
-pub mod wrappers;
+pub mod common;
+pub mod providers;
 
-pub use renderer::cloud_init::{CloudInitTemplateError, CloudInitTemplateRenderer};
-pub use renderer::{ProvisionTemplateError, TofuTemplateRenderer};
+pub use common::renderer::cloud_init::{CloudInitTemplateError, CloudInitTemplateRenderer};
+pub use common::renderer::{ProvisionTemplateError, TofuTemplateRenderer};

@@ -51,11 +51,11 @@ use crate::adapters::ssh::credentials::SshCredentials;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::template::{TemplateManager, TemplateManagerError};
 use crate::domain::InstanceName;
-use crate::infrastructure::external_tools::tofu::template::renderer::cloud_init::{
+use crate::infrastructure::external_tools::tofu::template::common::renderer::cloud_init::{
     CloudInitTemplateError, CloudInitTemplateRenderer,
 };
-use crate::infrastructure::external_tools::tofu::template::wrappers::hetzner::variables::VariablesTemplateError as HetznerVariablesTemplateError;
-use crate::infrastructure::external_tools::tofu::template::wrappers::lxd::variables::{
+use crate::infrastructure::external_tools::tofu::template::providers::hetzner::wrappers::variables::VariablesTemplateError as HetznerVariablesTemplateError;
+use crate::infrastructure::external_tools::tofu::template::providers::lxd::wrappers::variables::{
     VariablesContextBuilder as LxdVariablesContextBuilder,
     VariablesTemplate as LxdVariablesTemplate, VariablesTemplateError as LxdVariablesTemplateError,
 };
@@ -533,7 +533,7 @@ impl TofuTemplateRenderer {
         template_file: &crate::domain::template::file::File,
         destination_dir: &Path,
     ) -> Result<(), ProvisionTemplateError> {
-        use crate::infrastructure::external_tools::tofu::template::wrappers::hetzner::variables::{
+        use crate::infrastructure::external_tools::tofu::template::providers::hetzner::wrappers::variables::{
             VariablesContextBuilder as HetznerVariablesContextBuilder,
             VariablesTemplate as HetznerVariablesTemplate,
         };

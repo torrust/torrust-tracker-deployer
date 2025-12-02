@@ -18,7 +18,7 @@
 //! ## Example Usage
 //!
 //! ```rust
-//! use torrust_tracker_deployer_lib::infrastructure::external_tools::tofu::template::wrappers::hetzner::variables::VariablesContext;
+//! use torrust_tracker_deployer_lib::infrastructure::external_tools::tofu::template::providers::hetzner::wrappers::variables::VariablesContext;
 //! use torrust_tracker_deployer_lib::adapters::lxd::instance::InstanceName;
 //!
 //! let context = VariablesContext::builder()
