@@ -4,6 +4,10 @@
 //! specific to any particular infrastructure provider.
 
 pub mod renderer;
+pub mod wrappers;
 
 pub use renderer::cloud_init::{CloudInitTemplateError, CloudInitTemplateRenderer};
 pub use renderer::{ProvisionTemplateError, TofuTemplateRenderer};
+pub use wrappers::{
+    CloudInitContext, CloudInitContextBuilder, CloudInitContextError, CloudInitTemplate,
+};

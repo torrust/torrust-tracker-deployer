@@ -198,7 +198,7 @@ impl CloudInitTemplateRenderer {
         ssh_credentials: &SshCredentials,
         output_dir: &Path,
     ) -> Result<(), CloudInitTemplateError> {
-        use crate::infrastructure::external_tools::tofu::template::providers::lxd::wrappers::cloud_init::{
+        use crate::infrastructure::external_tools::tofu::template::common::wrappers::cloud_init::{
             CloudInitContext, CloudInitTemplate,
         };
 

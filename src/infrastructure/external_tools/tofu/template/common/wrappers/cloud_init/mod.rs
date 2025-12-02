@@ -1,7 +1,7 @@
-//! Template wrapper for templates/tofu/hetzner/cloud-init.yml.tera
+//! Template wrapper for templates/tofu/common/cloud-init.yml.tera
 //!
 //! This template has mandatory variables that must be provided at construction time.
-//! Hetzner cloud-init is independent from LXD cloud-init, allowing provider-specific customization.
+//! This wrapper is shared by all providers since the cloud-init template is the same.
 
 pub mod context;
 

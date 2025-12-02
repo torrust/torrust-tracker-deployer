@@ -1,7 +1,8 @@
-//! Context for Hetzner Cloud Init template rendering
+//! Context for Cloud Init template rendering
 //!
 //! This module provides the `CloudInitContext` and builder pattern for creating
-//! template contexts with SSH public key information for Hetzner cloud-init configuration.
+//! template contexts with SSH public key information for cloud-init configuration.
+//! This context is shared by all providers since the cloud-init template is the same.
 
 use serde::Serialize;
 use std::fs;
@@ -27,7 +28,7 @@ pub enum CloudInitContextError {
     SshPublicKeyReadError(String),
 }
 
-/// Template context for Hetzner Cloud Init configuration with SSH public key and username
+/// Template context for Cloud Init configuration with SSH public key and username
 #[derive(Debug, Clone, Serialize)]
 pub struct CloudInitContext {
     /// SSH public key content to be injected into cloud-init configuration
