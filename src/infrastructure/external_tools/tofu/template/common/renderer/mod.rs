@@ -45,13 +45,3 @@ pub mod cloud_init;
 mod tofu_template_renderer;
 
 pub use tofu_template_renderer::{TofuTemplateRenderer, TofuTemplateRendererError};
-
-/// Type alias for backward compatibility.
-///
-/// This alias allows existing code using `ProvisionTemplateError` to continue working
-/// without modification. New code should use `TofuTemplateRendererError` directly.
-#[deprecated(
-    since = "0.1.0",
-    note = "Use `TofuTemplateRendererError` instead. This alias exists for backward compatibility."
-)]
-pub type ProvisionTemplateError = TofuTemplateRendererError;

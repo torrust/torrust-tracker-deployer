@@ -170,7 +170,7 @@ impl ProvisionCommand {
     }
 
     // Each method delegates to corresponding Step structs
-    async fn render_opentofu_templates(&self) -> Result<(), ProvisionTemplateError> {
+    async fn render_opentofu_templates(&self) -> Result<(), TofuTemplateRendererError> {
         RenderOpenTofuTemplatesStep::new(&self.tofu_renderer, &self.config)
             .execute().await
     }

@@ -8,10 +8,6 @@ pub mod wrappers;
 
 pub use renderer::cloud_init::{CloudInitTemplateError, CloudInitTemplateRenderer};
 pub use renderer::{TofuTemplateRenderer, TofuTemplateRendererError};
-
-/// Type alias for backward compatibility.
-#[allow(deprecated)]
-pub use renderer::ProvisionTemplateError;
 pub use wrappers::{
     CloudInitContext, CloudInitContextBuilder, CloudInitContextError, CloudInitTemplate,
 };
