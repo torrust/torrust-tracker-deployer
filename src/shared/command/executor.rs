@@ -40,6 +40,7 @@ impl CommandExecutor {
     ///
     /// # Errors
     /// This function will return an error if:
+    /// * The working directory does not exist - `CommandError::WorkingDirectoryNotFound`
     /// * The command cannot be started (e.g., command not found) - `CommandError::StartupFailed`
     /// * The command execution fails with a non-zero exit code - `CommandError::ExecutionFailed`
     pub fn run_command(
@@ -48,6 +49,16 @@ impl CommandExecutor {
         args: &[&str],
         working_dir: Option<&Path>,
     ) -> Result<CommandResult, CommandError> {
+        // Check if working directory exists before attempting to run the command
+        // This provides a clearer error message than the generic "No such file or directory"
+        if let Some(dir) = working_dir {
+            if !dir.exists() {
+                return Err(CommandError::WorkingDirectoryNotFound {
+                    working_dir: dir.to_path_buf(),
+                });
+            }
+        }
+
         let mut command = Command::new(cmd);
         let command_display = format!("{} {}", cmd, args.join(" "));
 
@@ -178,5 +189,21 @@ mod tests {
         let output = result.unwrap();
         assert_eq!(output.stdout_trimmed(), "tracing_test");
         assert!(output.is_success());
+    }
+
+    #[test]
+    fn it_should_return_clear_error_when_working_directory_does_not_exist() {
+        let executor = CommandExecutor::new();
+        let nonexistent_dir = Path::new("/nonexistent/path/that/does/not/exist");
+        let result = executor.run_command("echo", &["hello"], Some(nonexistent_dir));
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            CommandError::WorkingDirectoryNotFound { working_dir } => {
+                assert_eq!(working_dir, nonexistent_dir);
+            }
+            other => panic!("Expected WorkingDirectoryNotFound, got: {other:?}"),
+        }
     }
 }
