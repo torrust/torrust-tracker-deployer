@@ -286,12 +286,16 @@ impl EnvironmentContext {
         self.internal_config.ansible_build_dir()
     }
 
-    /// Returns the tofu build directory
+    /// Returns the tofu build directory for the environment's provider
     ///
-    /// Path: `build/{env_name}/tofu`
+    /// Path: `build/{env_name}/tofu/{provider_name}`
+    ///
+    /// The provider is determined from the environment's provider
+    /// configuration (e.g., LXD, Hetzner).
     #[must_use]
     pub fn tofu_build_dir(&self) -> PathBuf {
-        self.internal_config.tofu_build_dir()
+        let provider = self.user_inputs.provider_config.provider();
+        self.internal_config.tofu_build_dir_for_provider(provider)
     }
 
     /// Returns the ansible templates directory

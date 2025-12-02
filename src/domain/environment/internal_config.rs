@@ -19,6 +19,7 @@
 //! Add new fields here when: Need internal paths or derived configuration.
 
 use crate::domain::environment::EnvironmentName;
+use crate::domain::provider::Provider;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -165,14 +166,18 @@ impl InternalConfig {
         self.build_dir.join(super::ANSIBLE_DIR_NAME)
     }
 
-    /// Returns the `OpenTofu` build directory for the LXD provider
+    /// Returns the `OpenTofu` build directory for a specific provider
     ///
-    /// Path: `build/{env_name}/tofu/lxd`
+    /// Path: `build/{env_name}/tofu/{provider_name}`
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - The provider type (LXD, Hetzner, etc.)
     #[must_use]
-    pub fn tofu_build_dir(&self) -> PathBuf {
+    pub fn tofu_build_dir_for_provider(&self, provider: Provider) -> PathBuf {
         self.build_dir
             .join(super::TOFU_DIR_NAME)
-            .join(super::LXD_PROVIDER_NAME)
+            .join(provider.as_str())
     }
 
     /// Returns the ansible templates directory
