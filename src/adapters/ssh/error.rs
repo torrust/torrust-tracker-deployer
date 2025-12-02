@@ -66,12 +66,12 @@ impl SshError {
                 "SSH Connectivity Timeout - Detailed Troubleshooting:
 
 1. Verify the instance is running:
-   - Check VM/container status in your provider
+   - Check VM/server status using your provider tools
    - Ensure instance has finished booting (may take 30-60s)
 
 2. Check SSH service status:
-   Unix/Linux/macOS: lxc exec <instance> -- systemctl status ssh
-   Or check console logs for cloud instances
+   - SSH into the server and run: systemctl status ssh
+   - Or check console logs for cloud instances
 
 3. Verify network connectivity:
    - Ping the IP address: ping <host_ip>

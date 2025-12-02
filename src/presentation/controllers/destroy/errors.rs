@@ -218,13 +218,13 @@ If the environment should exist, check the logs for more details."
    - Look for specific error details
 
 3. Check infrastructure state:
-   - Verify LXD/OpenTofu are accessible
-   - Check if VMs/containers are running
+   - Verify OpenTofu and provider tools are accessible
+   - Check if VMs/servers are running using provider tools
    - Ensure cleanup tools are available
 
 4. Manual intervention may be needed:
    - Some resources might need manual cleanup
-   - Check provider-specific tools (lxc list, tofu state list)
+   - Check provider-specific tools (tofu state list)
    - Remove stale infrastructure manually if needed
 
 5. Recovery options:
