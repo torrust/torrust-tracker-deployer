@@ -27,7 +27,7 @@ use super::container::Services;
 use crate::config::Config;
 use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::Environment;
-use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
+use crate::testing::e2e::LXD_OPENTOFU_SUBFOLDER;
 
 /// Errors that can occur during test context creation and initialization
 #[derive(Debug, thiserror::Error)]
@@ -483,7 +483,7 @@ impl Drop for TestContext {
 
                     // Try basic cleanup in case async cleanup failed
                     // Using emergency_destroy for consistent OpenTofu handling
-                    let tofu_dir = self.config.build_dir.join(OPENTOFU_SUBFOLDER);
+                    let tofu_dir = self.config.build_dir.join(LXD_OPENTOFU_SUBFOLDER);
 
                     if let Err(e) = crate::adapters::tofu::emergency_destroy(&tofu_dir) {
                         eprintln!("Warning: Failed to cleanup OpenTofu resources during TestContext drop: {e}");

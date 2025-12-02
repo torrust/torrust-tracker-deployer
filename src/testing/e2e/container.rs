@@ -30,9 +30,9 @@ use crate::domain::InstanceName;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::ansible::ANSIBLE_SUBFOLDER;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
-use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
+use crate::testing::e2e::LXD_OPENTOFU_SUBFOLDER;
 
 /// Default lock timeout for repository operations
 ///
@@ -78,7 +78,7 @@ impl Services {
         let template_manager = Arc::new(template_manager);
 
         // Create OpenTofu client pointing to build/opentofu_subfolder directory
-        let opentofu_client = OpenTofuClient::new(config.build_dir.join(OPENTOFU_SUBFOLDER));
+        let opentofu_client = OpenTofuClient::new(config.build_dir.join(LXD_OPENTOFU_SUBFOLDER));
 
         // Create LXD client for instance management
         let lxd_client = LxdClient::new();

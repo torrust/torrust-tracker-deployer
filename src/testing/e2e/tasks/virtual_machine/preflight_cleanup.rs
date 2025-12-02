@@ -9,8 +9,8 @@ use std::path::PathBuf;
 use crate::adapters::lxd::client::LxdClient;
 use crate::adapters::tofu;
 use crate::domain::{EnvironmentName, InstanceName, ProfileName};
-use crate::infrastructure::external_tools::tofu::OPENTOFU_SUBFOLDER;
 use crate::testing::e2e::tasks::preflight_cleanup::PreflightCleanupError;
+use crate::testing::e2e::LXD_OPENTOFU_SUBFOLDER;
 use tracing::{info, warn};
 
 /// Minimal context required for preflight cleanup operations
@@ -343,7 +343,7 @@ fn cleanup_data_environment(
 fn cleanup_opentofu_infrastructure(
     context: &PreflightCleanupContext,
 ) -> Result<(), PreflightCleanupError> {
-    let tofu_dir = context.build_dir.join(OPENTOFU_SUBFOLDER);
+    let tofu_dir = context.build_dir.join(LXD_OPENTOFU_SUBFOLDER);
 
     if !tofu_dir.exists() {
         info!(

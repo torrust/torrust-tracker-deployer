@@ -14,9 +14,3 @@
 pub mod template;
 
 pub use template::{CloudInitTemplateRenderer, TofuTemplateRenderer, TofuTemplateRendererError};
-
-/// Subdirectory name for OpenTofu-related files within the build directory.
-///
-/// OpenTofu/Terraform configuration files and state will be managed
-/// in `build_dir/{OPENTOFU_SUBFOLDER}/`. Example: "tofu/lxd".
-pub const OPENTOFU_SUBFOLDER: &str = "tofu/lxd";
