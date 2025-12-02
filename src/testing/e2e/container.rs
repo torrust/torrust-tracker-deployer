@@ -26,7 +26,7 @@ use crate::adapters::tofu::OpenTofuClient;
 use crate::config::Config;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::template::TemplateManager;
-use crate::domain::{InstanceName, ProfileName};
+use crate::domain::InstanceName;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::ansible::ANSIBLE_SUBFOLDER;
 use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
@@ -71,7 +71,6 @@ impl Services {
         config: &Config,
         ssh_credentials: SshCredentials,
         instance_name: InstanceName,
-        profile_name: ProfileName,
         provider_config: ProviderConfig,
     ) -> Self {
         // Create template manager
@@ -93,7 +92,6 @@ impl Services {
             config.build_dir.clone(),
             ssh_credentials,
             instance_name,
-            profile_name,
             provider_config,
         );
 

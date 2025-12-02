@@ -50,10 +50,11 @@ use thiserror::Error;
 use crate::adapters::ssh::credentials::SshCredentials;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::template::{TemplateManager, TemplateManagerError};
-use crate::domain::{InstanceName, ProfileName};
+use crate::domain::InstanceName;
 use crate::infrastructure::external_tools::tofu::template::renderer::cloud_init::{
     CloudInitTemplateError, CloudInitTemplateRenderer,
 };
+use crate::infrastructure::external_tools::tofu::template::wrappers::hetzner::variables::VariablesTemplateError as HetznerVariablesTemplateError;
 use crate::infrastructure::external_tools::tofu::template::wrappers::lxd::variables::{
     VariablesContextBuilder as LxdVariablesContextBuilder,
     VariablesTemplate as LxdVariablesTemplate, VariablesTemplateError as LxdVariablesTemplateError,
@@ -93,12 +94,27 @@ pub enum ProvisionTemplateError {
         source: CloudInitTemplateError,
     },
 
-    /// Failed to render variables template using collaborator
-    #[error("Failed to render variables template: {source}")]
-    VariablesRenderingFailed {
+    /// Failed to render LXD variables template
+    #[error("Failed to render LXD variables template: {source}")]
+    LxdVariablesRenderingFailed {
         #[source]
         source: LxdVariablesTemplateError,
     },
+
+    /// Failed to render Hetzner variables template
+    #[error("Failed to render Hetzner variables template: {source}")]
+    HetznerVariablesRenderingFailed {
+        #[source]
+        source: HetznerVariablesTemplateError,
+    },
+
+    /// Failed to build Hetzner template context
+    #[error("Failed to build Hetzner template context: {message}")]
+    HetznerContextBuildFailed { message: String },
+
+    /// Provider configuration mismatch
+    #[error("Provider configuration mismatch: expected {expected} provider but got different configuration")]
+    ProviderConfigMismatch { expected: String },
 
     /// Provider not supported for this operation
     #[error("Provider '{provider}' is not yet supported for template rendering")]
@@ -120,8 +136,17 @@ impl crate::shared::Traceable for ProvisionTemplateError {
             Self::CloudInitRenderingFailed { .. } => {
                 "ProvisionTemplateError: Cloud-init template rendering failed".to_string()
             }
-            Self::VariablesRenderingFailed { .. } => {
-                "ProvisionTemplateError: Variables template rendering failed".to_string()
+            Self::LxdVariablesRenderingFailed { .. } => {
+                "ProvisionTemplateError: LXD variables template rendering failed".to_string()
+            }
+            Self::HetznerVariablesRenderingFailed { .. } => {
+                "ProvisionTemplateError: Hetzner variables template rendering failed".to_string()
+            }
+            Self::HetznerContextBuildFailed { message } => {
+                format!("ProvisionTemplateError: Hetzner context build failed: {message}")
+            }
+            Self::ProviderConfigMismatch { expected } => {
+                format!("ProvisionTemplateError: Expected {expected} provider configuration")
             }
             Self::UnsupportedProvider { provider } => {
                 format!("ProvisionTemplateError: Provider '{provider}' is not yet supported")
@@ -153,7 +178,6 @@ pub struct TofuTemplateRenderer {
     ssh_credentials: SshCredentials,
     cloud_init_renderer: CloudInitTemplateRenderer,
     instance_name: InstanceName,
-    profile_name: ProfileName,
     provider: Provider,
     provider_config: ProviderConfig,
 }
@@ -167,14 +191,14 @@ impl TofuTemplateRenderer {
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `ssh_credentials` - The SSH credentials for injecting public key into cloud-init
     /// * `instance_name` - The name of the instance to be created (for template rendering)
-    /// * `profile_name` - The name of the LXD profile to be created (for template rendering)
     /// * `provider_config` - The provider configuration containing provider type and settings
+    ///
+    /// Note: For LXD provider, the profile name is extracted from `provider_config`.
     pub fn new<P: AsRef<Path>>(
         template_manager: Arc<TemplateManager>,
         build_dir: P,
         ssh_credentials: SshCredentials,
         instance_name: InstanceName,
-        profile_name: ProfileName,
         provider_config: ProviderConfig,
     ) -> Self {
         let provider = provider_config.provider();
@@ -187,7 +211,6 @@ impl TofuTemplateRenderer {
             ssh_credentials,
             cloud_init_renderer,
             instance_name,
-            profile_name,
             provider,
             provider_config,
         }
@@ -470,12 +493,19 @@ impl TofuTemplateRenderer {
         template_file: &crate::domain::template::file::File,
         destination_dir: &Path,
     ) -> Result<(), ProvisionTemplateError> {
+        // Get LXD config (profile_name is LXD-specific)
+        let lxd_config = self.provider_config.as_lxd().ok_or_else(|| {
+            ProvisionTemplateError::ProviderConfigMismatch {
+                expected: "LXD".to_string(),
+            }
+        })?;
+
         // Build LXD context for template rendering
         let context = LxdVariablesContextBuilder::new()
             .with_instance_name(self.instance_name.clone())
-            .with_profile_name(self.profile_name.clone())
+            .with_profile_name(lxd_config.profile_name.clone())
             .build()
-            .map_err(|err| ProvisionTemplateError::VariablesRenderingFailed {
+            .map_err(|err| ProvisionTemplateError::LxdVariablesRenderingFailed {
                 source: LxdVariablesTemplateError::TemplateEngineError {
                     source: crate::domain::template::TemplateEngineError::ContextSerialization {
                         source: tera::Error::msg(err.to_string()),
@@ -485,13 +515,13 @@ impl TofuTemplateRenderer {
 
         // Create and render the variables template
         let variables_template = LxdVariablesTemplate::new(template_file, context)
-            .map_err(|source| ProvisionTemplateError::VariablesRenderingFailed { source })?;
+            .map_err(|source| ProvisionTemplateError::LxdVariablesRenderingFailed { source })?;
 
         // Write the rendered template to the destination directory
         let output_path = destination_dir.join("variables.tfvars");
         variables_template
             .render(&output_path)
-            .map_err(|source| ProvisionTemplateError::VariablesRenderingFailed { source })?;
+            .map_err(|source| ProvisionTemplateError::LxdVariablesRenderingFailed { source })?;
 
         tracing::debug!("LXD variables template rendered successfully");
         Ok(())
@@ -510,8 +540,8 @@ impl TofuTemplateRenderer {
 
         // Get Hetzner config
         let hetzner_config = self.provider_config.as_hetzner().ok_or_else(|| {
-            ProvisionTemplateError::UnsupportedProvider {
-                provider: self.provider.to_string(),
+            ProvisionTemplateError::ProviderConfigMismatch {
+                expected: "Hetzner".to_string(),
             }
         })?;
 
@@ -533,25 +563,19 @@ impl TofuTemplateRenderer {
             .with_server_image(hetzner_config.image.clone())
             .with_ssh_public_key_content(ssh_public_key_content.trim().to_string())
             .build()
-            .map_err(|err| ProvisionTemplateError::UnsupportedProvider {
-                provider: format!("Hetzner context build failed: {err}"),
+            .map_err(|err| ProvisionTemplateError::HetznerContextBuildFailed {
+                message: err.to_string(),
             })?;
 
         // Create and render the variables template
-        let variables_template =
-            HetznerVariablesTemplate::new(template_file, context).map_err(|err| {
-                ProvisionTemplateError::UnsupportedProvider {
-                    provider: format!("Hetzner template creation failed: {err}"),
-                }
-            })?;
+        let variables_template = HetznerVariablesTemplate::new(template_file, context)
+            .map_err(|source| ProvisionTemplateError::HetznerVariablesRenderingFailed { source })?;
 
         // Write the rendered template to the destination directory
         let output_path = destination_dir.join("variables.tfvars");
-        variables_template.render(&output_path).map_err(|err| {
-            ProvisionTemplateError::UnsupportedProvider {
-                provider: format!("Hetzner template render failed: {err}"),
-            }
-        })?;
+        variables_template
+            .render(&output_path)
+            .map_err(|source| ProvisionTemplateError::HetznerVariablesRenderingFailed { source })?;
 
         tracing::debug!("Hetzner variables template rendered successfully");
         Ok(())
@@ -563,6 +587,7 @@ mod tests {
     use super::*;
     use std::fs;
 
+    use crate::domain::ProfileName;
     use crate::shared::Username;
 
     /// Test instance name for unit tests
@@ -615,7 +640,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -635,7 +659,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
         let actual_path = renderer.build_opentofu_directory();
@@ -655,7 +678,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
         let template_path = renderer.build_template_path("main.tf");
@@ -675,7 +697,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -706,7 +727,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
         let created_path = renderer
@@ -748,7 +768,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -786,7 +805,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -848,7 +866,6 @@ mod tests {
             temp_dir.path(),
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -879,7 +896,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
         let template_path = renderer.build_template_path("");
@@ -898,7 +914,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -927,7 +942,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -956,7 +970,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -986,7 +999,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
         let created_path = renderer
@@ -1011,7 +1023,6 @@ mod tests {
             &build_path,
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -1049,7 +1060,6 @@ mod tests {
             temp_dir.path(),
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -1098,7 +1108,6 @@ mod tests {
             &build_path1,
             ssh_credentials1,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
         let ssh_credentials2 = create_dummy_ssh_credentials(temp_dir.path());
@@ -1107,7 +1116,6 @@ mod tests {
             &build_path2,
             ssh_credentials2,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -1167,7 +1175,6 @@ mod tests {
             temp_dir.path(),
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 
@@ -1227,7 +1234,6 @@ mod tests {
             temp_dir.path(),
             ssh_credentials,
             test_instance_name(),
-            test_profile_name(),
             test_lxd_provider_config(),
         );
 

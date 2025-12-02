@@ -132,7 +132,6 @@ impl TestContext {
             &config,
             environment.ssh_credentials().clone(),
             environment.instance_name().clone(),
-            environment.profile_name().clone(),
             environment.provider_config().clone(),
         );
 

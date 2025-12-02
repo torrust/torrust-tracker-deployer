@@ -2,7 +2,7 @@
 #
 # This Tera template generates the variables.tfvars file for Hetzner Cloud
 # deployments. The template uses double curly braces for Tera variable
-# substitution: {{ variable_name }}
+# substitution.
 #
 # Required template variables:
 # - hcloud_api_token: Hetzner Cloud API token (sensitive)

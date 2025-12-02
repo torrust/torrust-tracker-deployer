@@ -71,6 +71,7 @@ dearmor
 debootstrap
 debuginfo
 derefs
+distro
 distutils
 doctest
 doctests
@@ -103,8 +104,8 @@ impls
 journalctl
 jsonlint
 keepalive
-keypair
 keygen
+keypair
 keyrings
 larstobi
 lifecycles
@@ -236,6 +237,7 @@ vbqajnc
 viewmodel
 webservers
 writeln
+youruser
 Émojis
 значение
 ключ
