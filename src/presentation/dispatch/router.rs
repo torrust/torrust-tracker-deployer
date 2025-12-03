@@ -154,11 +154,16 @@ pub async fn route_command(
                 .execute(&environment, &instance_ip)
                 .await?;
             Ok(())
-        } // Future commands will be added here as the Controller Layer expands:
-          //
-          // Commands::Release { environment, version } => {
-          //     release::handle_release_command(&environment, &version, context).await?;
-          //     Ok(())
-          // }
+        }
+        Commands::Release { environment } => {
+            // TODO: Implement release command handler
+            println!("Release command not implemented yet for environment: {environment}");
+            Ok(())
+        }
+        Commands::Run { environment } => {
+            // TODO: Implement run command handler
+            println!("Run command not implemented yet for environment: {environment}");
+            Ok(())
+        }
     }
 }

@@ -121,15 +121,55 @@ pub enum Commands {
         #[arg(long, value_name = "IP_ADDRESS")]
         instance_ip: String,
     },
-    // Future commands will be added here:
-    //
-    // /// Create a new release of the deployed application
-    // Release {
-    //     /// Name of the environment for the release
-    //     environment: String,
-    //     /// Version tag for the release
-    //     version: String,
-    // },
+
+    /// Release application files to a configured environment
+    ///
+    /// This command prepares and transfers application files (docker-compose.yml,
+    /// configuration files, etc.) to a configured VM. The environment must be
+    /// in the "Configured" state.
+    ///
+    /// After successful release:
+    /// - Docker compose files are copied to /opt/torrust/ on the VM
+    /// - Environment transitions to "Released" state
+    /// - You can then run `run <environment>` to start the services
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// torrust-tracker-deployer release my-env
+    /// torrust-tracker-deployer release production
+    /// ```
+    Release {
+        /// Name of the environment to release to
+        ///
+        /// The environment name must match an existing environment that was
+        /// previously configured and is in "Configured" state.
+        environment: String,
+    },
+
+    /// Run the application stack on a released environment
+    ///
+    /// This command starts the docker compose services on a released VM.
+    /// The environment must be in the "Released" state.
+    ///
+    /// After successful run:
+    /// - Docker containers are started via 'docker compose up -d'
+    /// - Environment transitions to "Running" state
+    /// - Services are accessible on the VM
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// torrust-tracker-deployer run my-env
+    /// torrust-tracker-deployer run production
+    /// ```
+    Run {
+        /// Name of the environment to run
+        ///
+        /// The environment name must match an existing environment that was
+        /// previously released and is in "Released" state.
+        environment: String,
+    },
 }
 
 /// Actions available for the create command

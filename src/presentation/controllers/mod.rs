@@ -255,5 +255,6 @@ pub mod test;
 #[cfg(test)]
 pub mod tests;
 
-// Future command modules will be added here:
+// Future command modules (scaffolding in progress - Issue #217):
 // pub mod release;
+// pub mod run;
