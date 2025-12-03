@@ -49,15 +49,7 @@ impl CommandExecutor {
         args: &[&str],
         working_dir: Option<&Path>,
     ) -> Result<CommandResult, CommandError> {
-        // Check if working directory exists before attempting to run the command
-        // This provides a clearer error message than the generic "No such file or directory"
-        if let Some(dir) = working_dir {
-            if !dir.exists() {
-                return Err(CommandError::WorkingDirectoryNotFound {
-                    working_dir: dir.to_path_buf(),
-                });
-            }
-        }
+        Self::validate_working_directory(working_dir)?;
 
         let mut command = Command::new(cmd);
         let command_display = format!("{} {}", cmd, args.join(" "));
@@ -127,6 +119,21 @@ impl CommandExecutor {
         }
 
         Ok(CommandResult::new(output.status, stdout, stderr))
+    }
+
+    /// Validates that the working directory exists if provided.
+    ///
+    /// This provides a clearer error message than the generic "No such file or directory"
+    /// that would be returned by the OS.
+    fn validate_working_directory(working_dir: Option<&Path>) -> Result<(), CommandError> {
+        if let Some(dir) = working_dir {
+            if !dir.exists() {
+                return Err(CommandError::WorkingDirectoryNotFound {
+                    working_dir: dir.to_path_buf(),
+                });
+            }
+        }
+        Ok(())
     }
 }
 
