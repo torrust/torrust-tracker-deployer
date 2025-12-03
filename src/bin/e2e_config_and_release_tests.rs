@@ -231,6 +231,14 @@ async fn run_deployer_workflow(
     // (CLI: cargo run -- configure <env>)
     test_runner.configure_services()?;
 
+    // Release software to the configured infrastructure
+    // (CLI: cargo run -- release <env>)
+    test_runner.release_software()?;
+
+    // Run services on the released infrastructure
+    // (CLI: cargo run -- run <env>)
+    test_runner.run_services()?;
+
     // Validate the configuration
     run_configuration_validation(socket_addr, ssh_credentials)
         .await

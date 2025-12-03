@@ -175,6 +175,10 @@ fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
 
     test_runner.configure_services()?;
 
+    test_runner.release_software()?;
+
+    test_runner.run_services()?;
+
     test_runner.validate_deployment()?;
 
     if destroy {

@@ -279,6 +279,96 @@ impl E2eTestRunner {
         Ok(())
     }
 
+    /// Releases software to the provisioned and configured infrastructure.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the release command fails.
+    /// If `cleanup_on_failure` is enabled, attempts to destroy infrastructure before returning.
+    pub fn release_software(&self) -> Result<()> {
+        info!(
+            step = "release",
+            environment = %self.environment_name,
+            "Releasing software"
+        );
+
+        let release_result = self
+            .runner
+            .run_release_command(&self.environment_name)
+            .map_err(|e| anyhow::anyhow!("Failed to execute release command: {e}"))?;
+
+        if !release_result.success() {
+            error!(
+                step = "release",
+                environment = %self.environment_name,
+                exit_code = ?release_result.exit_code(),
+                stderr = %release_result.stderr(),
+                "Release command failed"
+            );
+
+            self.attempt_cleanup_on_failure();
+
+            return Err(anyhow::anyhow!(
+                "Release failed with exit code {:?}",
+                release_result.exit_code()
+            ));
+        }
+
+        info!(
+            step = "release",
+            environment = %self.environment_name,
+            status = "success",
+            "Software released successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Runs services on the released infrastructure.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the run command fails.
+    /// If `cleanup_on_failure` is enabled, attempts to destroy infrastructure before returning.
+    pub fn run_services(&self) -> Result<()> {
+        info!(
+            step = "run",
+            environment = %self.environment_name,
+            "Running services"
+        );
+
+        let run_result = self
+            .runner
+            .run_run_command(&self.environment_name)
+            .map_err(|e| anyhow::anyhow!("Failed to execute run command: {e}"))?;
+
+        if !run_result.success() {
+            error!(
+                step = "run",
+                environment = %self.environment_name,
+                exit_code = ?run_result.exit_code(),
+                stderr = %run_result.stderr(),
+                "Run command failed"
+            );
+
+            self.attempt_cleanup_on_failure();
+
+            return Err(anyhow::anyhow!(
+                "Run failed with exit code {:?}",
+                run_result.exit_code()
+            ));
+        }
+
+        info!(
+            step = "run",
+            environment = %self.environment_name,
+            status = "success",
+            "Services started successfully"
+        );
+
+        Ok(())
+    }
+
     /// Validates the deployment by running the test command.
     ///
     /// # Errors
