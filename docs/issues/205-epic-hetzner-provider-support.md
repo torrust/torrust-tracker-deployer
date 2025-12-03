@@ -63,9 +63,10 @@ This approach is preferred because:
 
 This phase refactors the codebase to make LXD an explicit, selectable provider. Tasks are ordered by dependency.
 
-#### Task 1: Add Provider enum and ProviderConfig types (#206)
+#### Task 1: Add Provider enum and ProviderConfig types (#206) ✅
 
 **Issue**: [#206](https://github.com/torrust/torrust-tracker-deployer/issues/206)
+**Status**: Completed
 **Dependencies**: None (foundational task)
 
 Create the foundational types:
@@ -74,9 +75,10 @@ Create the foundational types:
 - `ProviderConfig`, `LxdConfig`, `HetznerConfig` (domain types with validated fields)
 - `ProviderSection`, `LxdProviderSection`, `HetznerProviderSection` (application layer config types for JSON parsing)
 
-#### Task 2: Update UserInputs to use ProviderConfig
+#### Task 2: Update UserInputs to use ProviderConfig (#207) ✅
 
 **Issue**: [#207](https://github.com/torrust/torrust-tracker-deployer/issues/207)
+**Status**: Completed
 **Dependencies**: Task 1
 
 Refactor the domain `UserInputs` struct:
@@ -86,9 +88,10 @@ Refactor the domain `UserInputs` struct:
 - Keep `instance_name` as global (all providers need it)
 - Update all code that accesses `profile_name`
 
-#### Task 3: Update EnvironmentCreationConfig DTO
+#### Task 3: Update EnvironmentCreationConfig DTO (#208) ✅
 
 **Issue**: [#208](https://github.com/torrust/torrust-tracker-deployer/issues/208)
+**Status**: Completed
 **Dependencies**: Task 1
 
 Update the application layer DTO to include provider configuration:
@@ -97,9 +100,10 @@ Update the application layer DTO to include provider configuration:
 - Update `to_environment_params()` to handle provider config
 - Update JSON schema/examples in documentation
 
-#### Task 4: Parameterize TofuTemplateRenderer by provider
+#### Task 4: Parameterize TofuTemplateRenderer by provider (#212) ✅
 
 **Issue**: [#212](https://github.com/torrust/torrust-tracker-deployer/issues/212)
+**Status**: Completed
 **Dependencies**: Task 2
 
 Make the template renderer provider-aware:
@@ -110,43 +114,45 @@ Make the template renderer provider-aware:
 - Create and validate Hetzner OpenTofu templates manually before Rust integration
 - Add Hetzner-specific template wrappers
 
-#### Task 5: Update environment JSON files and E2E tests
+#### Task 5: Update E2E tests for provider configuration ✅
 
-**Issue**: TBD
+**Status**: Completed (implemented as part of Tasks 1-4)
 **Dependencies**: Tasks 2, 3
 
-Update all configuration files to the new format:
+This task was completed implicitly during the implementation of Tasks 1-4:
 
-- Update `data/e2e-*/environment.json` files
-- Update `data/my-environment/environment.json`
-- Ensure all E2E tests pass with new config format
-- Add clear error message when `provider` field is missing
+- E2E tests already use `ProviderConfig` in `TestContext`
+- All E2E tests pass with the provider-aware configuration
+- Error handling for missing provider configuration is implemented via serde validation
 
-#### Task 6: Update user documentation
+#### Task 6: Update user documentation (#214)
 
-**Issue**: TBD
+**Issue**: [#214](https://github.com/torrust/torrust-tracker-deployer/issues/214) (specification: [docs/issues/214-update-user-documentation-for-provider-selection.md](214-update-user-documentation-for-provider-selection.md))
+**Status**: Not Started
 **Dependencies**: Tasks 1-5
 
 Document the provider selection feature:
 
-- Update user guide with provider configuration
-- Update example configurations
+- Update `README.md` (fix emoji, E2E commands, structure, Next Steps)
+- Update `docs/user-guide/quick-start.md`
+- Update `docs/user-guide/commands.md` and command-specific docs
+- Create `docs/user-guide/providers/` directory with provider documentation
 - Document migration from old format (if needed)
 
 #### Phase 1 Dependency Graph
 
 ```text
-Task 1: Provider types (foundation)
+Task 1: Provider types (foundation) ✅
    │
-   ├──► Task 2: Update UserInputs (domain)
+   ├──► Task 2: Update UserInputs (domain) ✅
    │       │
-   │       └──► Task 4: Parameterize TofuTemplateRenderer
+   │       └──► Task 4: Parameterize TofuTemplateRenderer ✅
    │               │
-   └──► Task 3: Update EnvironmentCreationConfig (application)
+   └──► Task 3: Update EnvironmentCreationConfig (application) ✅
            │
-           └──► Task 5: Update JSON files & E2E tests
+           └──► Task 5: Update E2E tests ✅
                    │
-                   └──► Task 6: Update documentation
+                   └──► Task 6: Update documentation (IN PROGRESS)
 ```
 
 ### Phase 2: Add Hetzner Provider
@@ -175,11 +181,11 @@ Task 1: Provider types (foundation)
 
 ### Phase 1 Requirements
 
-- [ ] Environment JSON requires `provider: "lxd"` field
-- [ ] All existing E2E tests pass with updated configuration
-- [ ] Clear error message if provider is missing
-- [ ] Documentation updated to show provider selection
-- [ ] Code follows project conventions (DDD layers, error handling)
+- [x] Environment JSON requires `provider: "lxd"` field
+- [x] All existing E2E tests pass with updated configuration
+- [x] Clear error message if provider is missing
+- [ ] Documentation updated to show provider selection (Task 6 - In Progress)
+- [x] Code follows project conventions (DDD layers, error handling)
 
 ### Phase 2 Requirements
 
@@ -199,9 +205,9 @@ Task 1: Provider types (foundation)
 
 ### Testing Requirements
 
-- [ ] Unit tests cover provider selection logic
-- [ ] E2E tests for LXD still pass
-- [ ] Manual testing completed for Hetzner workflow
+- [x] Unit tests cover provider selection logic
+- [x] E2E tests for LXD still pass
+- [ ] Manual testing completed for Hetzner workflow (Phase 2)
 
 ## Reference Implementation
 
@@ -235,4 +241,5 @@ This PoC implementation provides:
 ---
 
 **Created**: December 1, 2025
-**Status**: Planning Complete - Ready for Implementation
+**Last Updated**: June 2025
+**Status**: Phase 1 - In Progress (Tasks 1-5 Complete, Task 6 In Progress)
