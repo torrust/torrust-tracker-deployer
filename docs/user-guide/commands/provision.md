@@ -4,7 +4,12 @@ Provision virtual machine infrastructure for a deployment environment.
 
 ## Purpose
 
-Creates and configures VM infrastructure using OpenTofu (Terraform) and LXD. This command takes an environment from the "Created" state to the "Provisioned" state with running VM instances.
+Creates and configures VM infrastructure using OpenTofu (Terraform). This command takes an environment from the "Created" state to the "Provisioned" state with running VM instances.
+
+The provision command works with all supported providers:
+
+- **LXD** - Creates local VMs for development and testing
+- **Hetzner Cloud** - Creates cloud servers for production deployments
 
 ## Command Syntax
 
@@ -19,9 +24,13 @@ torrust-tracker-deployer provision <ENVIRONMENT>
 ## Prerequisites
 
 1. **Environment created** - Must run `create environment` first
-2. **LXD installed** - Local LXD installation configured
+2. **Provider-specific requirements**:
+   - **LXD**: Local LXD installation configured
+   - **Hetzner**: Valid API token in environment configuration
 3. **OpenTofu installed** - OpenTofu CLI available in PATH
 4. **SSH keys** - SSH key pair referenced in environment configuration
+
+📖 **See [Provider Guides](../providers/README.md)** for provider-specific setup.
 
 ## State Transition
 
@@ -33,7 +42,7 @@ torrust-tracker-deployer provision <ENVIRONMENT>
 
 When you provision an environment:
 
-1. **Renders OpenTofu templates** - Generates infrastructure-as-code files
+1. **Renders OpenTofu templates** - Generates provider-specific infrastructure-as-code files
 2. **Initializes OpenTofu** - Sets up backend and providers (`tofu init`)
 3. **Creates execution plan** - Validates configuration (`tofu plan`)
 4. **Applies infrastructure** - Creates VM resources (`tofu apply`)
@@ -73,18 +82,30 @@ torrust-tracker-deployer provision dev-local
 # Staging
 torrust-tracker-deployer provision staging
 
-# Production
+# Production (Hetzner)
 torrust-tracker-deployer provision production
 ```
 
 ## Output
 
-The provision command creates:
+The provision command creates provider-specific resources:
 
-- **VM instance** - LXD virtual machine
+### LXD Provider
+
+- **VM instance** - LXD virtual machine (`torrust-tracker-vm-<env-name>`)
 - **LXD profile** - Custom profile with cloud-init configuration
 - **Network configuration** - Bridged network with IP assignment
 - **OpenTofu state** - Infrastructure state in `build/<env>/tofu/lxd/`
+
+### Hetzner Provider
+
+- **Cloud server** - Hetzner Cloud server instance
+- **Firewall** - Hetzner firewall with SSH access
+- **SSH key** - Uploaded SSH public key
+- **OpenTofu state** - Infrastructure state in `build/<env>/tofu/hetzner/`
+
+### Common Outputs (All Providers)
+
 - **Ansible inventory** - Generated inventory in `build/<env>/ansible/`
 - **Environment state update** - State file updated to "Provisioned"
 
@@ -116,7 +137,7 @@ ls -la data/my-environment/
 torrust-tracker-deployer create environment -f config.json
 ```
 
-### LXD not initialized
+### LXD not initialized (LXD provider only)
 
 **Problem**: LXD is not properly initialized
 

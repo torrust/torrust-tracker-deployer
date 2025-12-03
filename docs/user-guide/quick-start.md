@@ -4,12 +4,24 @@ Get up and running with Torrust Tracker Deployer in minutes.
 
 ## Prerequisites
 
-- **LXD** - Local LXD installation configured
+- **LXD** - Local LXD installation configured (for local development)
+- **Hetzner Account** - Hetzner Cloud account with API token (for production)
 - **OpenTofu** - OpenTofu CLI installed
 - **Ansible** - Ansible for configuration management
 - **SSH keys** - SSH key pair for VM access
 
 > **Tip**: Run `cargo run --bin dependency-installer check` to verify all prerequisites are met.
+
+## Choose Your Provider
+
+Before starting, decide which provider to use:
+
+| Provider          | Best For                          | Requirements                |
+| ----------------- | --------------------------------- | --------------------------- |
+| **LXD**           | Local development, CI/CD, testing | Linux with LXD installed    |
+| **Hetzner Cloud** | Production deployments            | Hetzner account + API token |
+
+📖 **See [Provider Guides](providers/README.md)** for detailed setup instructions.
 
 ## Installation
 
@@ -29,10 +41,18 @@ This example walks through the complete deployment lifecycle from template gener
 
 ### Step 1: Generate Environment Template
 
-Create a template configuration file:
+Create a template configuration file for your chosen provider:
+
+**For LXD (local development)**:
 
 ```bash
-torrust-tracker-deployer create template my-environment.json
+torrust-tracker-deployer create template --provider lxd my-environment.json
+```
+
+**For Hetzner Cloud (production)**:
+
+```bash
+torrust-tracker-deployer create template --provider hetzner my-environment.json
 ```
 
 **Output**:
@@ -41,7 +61,7 @@ torrust-tracker-deployer create template my-environment.json
 ✓ Template generated: my-environment.json
 ```
 
-This creates a pre-filled template with default values that you can customize.
+This creates a pre-filled template with provider-specific values that you can customize.
 
 ### Step 2: Customize Configuration
 
@@ -51,7 +71,7 @@ Edit the generated template:
 nano my-environment.json
 ```
 
-**Example configuration**:
+**Example LXD configuration**:
 
 ```json
 {
@@ -63,11 +83,37 @@ nano my-environment.json
     "public_key_path": "fixtures/testing_rsa.pub",
     "username": "torrust",
     "port": 22
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-local"
   }
 }
 ```
 
-> **Note**: This example uses the test SSH keys from `fixtures/` directory. For production, use your own SSH keys (e.g., `~/.ssh/id_ed25519`).
+**Example Hetzner configuration**:
+
+```json
+{
+  "environment": {
+    "name": "my-production-env"
+  },
+  "ssh_credentials": {
+    "private_key_path": "~/.ssh/id_ed25519",
+    "public_key_path": "~/.ssh/id_ed25519.pub",
+    "username": "torrust",
+    "port": 22
+  },
+  "provider": {
+    "provider": "hetzner",
+    "api_token": "your-hetzner-api-token-here",
+    "server_type": "cx22",
+    "location": "nbg1"
+  }
+}
+```
+
+> **Note**: For LXD testing, use the test SSH keys from `fixtures/` directory. For production, use your own SSH keys (e.g., `~/.ssh/id_ed25519`).
 
 **Key fields to customize**:
 
@@ -76,6 +122,7 @@ nano my-environment.json
 - `ssh_credentials.public_key_path` - Path to your SSH public key file
 - `ssh_credentials.username` - SSH username for VM access (default: torrust)
 - `ssh_credentials.port` - SSH port (default: 22)
+- `provider` - Provider-specific configuration (see [Provider Guides](providers/README.md))
 
 ### Step 3: Create Environment
 

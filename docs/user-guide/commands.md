@@ -4,35 +4,47 @@ This guide provides an overview of the available commands for the Torrust Tracke
 
 ## ⚠️ Implementation Status
 
-**Current State**: The `create` and `destroy` commands are fully implemented with CLI interface.
+**Current State**: Core deployment commands are fully implemented with CLI interface.
 
-- ✅ **Implemented**: `create environment`, `create template`, `destroy` commands
-- ❌ **CLI Interface**: Other commands not yet implemented
+- ✅ **Implemented**: `create`, `provision`, `configure`, `test`, `destroy` commands
+- ✅ **Multi-Provider Support**: LXD (local) and Hetzner Cloud (production)
+- ❌ **CLI Interface**: `deploy`, `run`, `status` commands not yet implemented
 
-The CLI commands documented here represent the planned MVP implementation.
+## Provider Selection
 
-## Planned Commands (MVP)
+All commands work with both supported providers. The provider is specified in your environment configuration file:
+
+| Provider    | Configuration           | Use Case                 |
+| ----------- | ----------------------- | ------------------------ |
+| **LXD**     | `"provider": "lxd"`     | Local development, CI/CD |
+| **Hetzner** | `"provider": "hetzner"` | Production deployments   |
+
+📖 **See [Provider Guides](providers/README.md)** for detailed provider configuration.
+
+## Available Commands
 
 ```bash
 # Available commands
-torrust-tracker-deployer create environment --env-file <file>  # Create new deployment environment
-torrust-tracker-deployer create template [path]                # Generate configuration template
-torrust-tracker-deployer destroy <env>                         # Destroy infrastructure and clean up resources
+torrust-tracker-deployer create template --provider <lxd|hetzner> [path]  # Generate configuration template
+torrust-tracker-deployer create environment --env-file <file>             # Create new deployment environment
+torrust-tracker-deployer provision <env>                                   # Provision VM infrastructure
+torrust-tracker-deployer configure <env>                                   # Configure infrastructure (Docker, etc.)
+torrust-tracker-deployer test <env>                                        # Verify deployment
+torrust-tracker-deployer destroy <env>                                     # Destroy infrastructure and clean up
 
 # Future commands
 torrust-tracker-deployer deploy <env>      # Future - Full deployment (provision → configure → release)
 torrust-tracker-deployer run <env>         # Future - Start application services
 torrust-tracker-deployer status <env>      # Future - Check environment status
-torrust-tracker-deployer test <env>        # Future - Run validation tests
 ```
 
 **Note**: The `deploy` command will internally orchestrate the complete deployment workflow: provision → configure → release. Individual commands for these phases may be added later for advanced users.
 
-## Available Commands
+## Command Details
 
 ### Environment Management
 
-#### [`create environment`](commands/create-environment.md)
+#### [`create environment`](commands/create.md)
 
 Create a new deployment environment from a configuration file.
 

@@ -2,20 +2,21 @@
 
 # Torrust Tracker Deployer
 
-> ⚠️ **DEVELOPMENT STATUS: Not Production-Ready**
+> ⚠️ **DEVELOPMENT STATUS: Early Production Phase**
 >
-> This project is currently in **active development** and is **not production-ready**. It currently only supports **local deployment** using LXD virtualization for development and testing purposes.
+> This project is in **active development** with initial cloud provider support now available.
 >
 > **Current Scope:**
 >
 > - ✅ Local LXD virtual machine provisioning
+> - ✅ **Hetzner Cloud support** for production deployments
 > - ✅ Development and testing workflows
-> - ❌ **No real cloud provider support** (AWS, GCP, Azure, Hetzner, etc.)
-> - ❌ **No production deployment capabilities**
+> - ✅ Multi-provider architecture (provider selection via configuration)
+> - ❌ Application deployment (Torrust Tracker stack) - coming soon
 >
-> 📋 **MVP Goal:** After completing the [roadmap](docs/roadmap.md), we will have a Minimum Viable Product (MVP) that supports real cloud providers and production deployments.
+> 📋 **MVP Goal:** After completing the [roadmap](docs/roadmap.md), we will have a fully automated deployment solution for Torrust Tracker with complete application stack management.
 
-This Rust application provides automated deployment infrastructure for Torrust tracker projects. Currently focused on **local development and testing**, it manages VM provisioning and cloud-init execution using LXD virtual machines. The goal is to establish the foundational deployment patterns that will later support real cloud providers.
+This Rust application provides automated deployment infrastructure for Torrust tracker projects. It supports **local development** with LXD and **production deployments** with Hetzner Cloud. The multi-provider architecture allows easy extension to additional cloud providers.
 
 ## 🎯 Project Goals
 
@@ -26,11 +27,12 @@ This Rust application provides automated deployment infrastructure for Torrust t
 - ✅ **Support Docker Compose** inside VMs for application stacks
 - ✅ **Fast, easy to install and use** local development solution
 - ✅ **No nested virtualization dependency** (CI compatibility)
+- ✅ **Multi-provider support** (LXD for local, Hetzner Cloud for production)
 
 **Future MVP Goals:** (See [roadmap](docs/roadmap.md))
 
-- 🔄 **Real cloud provider support** (Hetzner, AWS, GCP, Azure)
-- 🔄 **Production deployment capabilities**
+- 🔄 **Additional cloud providers** (AWS, GCP, Azure)
+- 🔄 **Application stack deployment** (Torrust Tracker with Docker Compose)
 - 🔄 **Multi-environment management**
 
 ## 🔧 Local Development Approach
@@ -166,11 +168,11 @@ cargo run --bin e2e-tests-full
 
 # Run individual E2E test suites
 cargo run --bin e2e-config-tests      # Configuration generation and validation tests
-cargo run --bin e2e-provision-tests   # Infrastructure provisioning tests
+cargo run --bin e2e-provision-and-destroy-tests   # Infrastructure provisioning tests
 
 # Keep the test environment after completion for inspection
 cargo run --bin e2e-tests-full -- --keep
-cargo run --bin e2e-provision-tests -- --keep
+cargo run --bin e2e-provision-and-destroy-tests -- --keep
 
 # Use custom templates directory
 cargo run --bin e2e-tests-full -- --templates-dir ./custom/templates
@@ -334,7 +336,7 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 
 > **Note:** The full E2E tests (`e2e-tests-full`) can only be executed locally due to connectivity issues documented in [`docs/github-actions-issues/`](docs/github-actions-issues/).
 
-## � Roadmap
+## 🗺️ Roadmap
 
 This project follows a structured development roadmap to evolve from the current local development focus to a production-ready deployment solution.
 
@@ -373,6 +375,9 @@ This project follows a structured development roadmap to evolve from the current
 │   │   ├── opentofu.md      # OpenTofu installation and usage
 │   │   ├── ansible.md       # Ansible installation and usage
 │   │   └── lxd.md          # LXD virtual machines
+│   ├── user-guide/          # User documentation
+│   │   ├── commands/        # Command reference documentation
+│   │   └── providers/       # Provider-specific guides (LXD, Hetzner)
 │   ├── decisions/           # Architecture Decision Records (ADRs)
 │   ├── contributing/        # Contributing guidelines and conventions
 │   │   ├── README.md        # Main contributing guide
@@ -404,6 +409,7 @@ This project follows a structured development roadmap to evolve from the current
 │   │   └── e2e*.rs         # End-to-end testing binaries
 │   ├── application/        # Application layer (use cases, commands)
 │   ├── domain/             # Domain layer (business logic, entities)
+│   │   └── provider/       # Provider types (LXD, Hetzner)
 │   ├── infrastructure/     # Infrastructure layer (external systems)
 │   ├── presentation/       # Presentation layer (CLI interface)
 │   ├── adapters/           # External tool adapters (OpenTofu, Ansible, SSH, LXD)
@@ -414,7 +420,8 @@ This project follows a structured development roadmap to evolve from the current
 │   └── e2e/                # End-to-end testing infrastructure
 ├── templates/               # 📁 Template configurations (git-tracked)
 │   ├── tofu/               # 🏗️ OpenTofu/Terraform templates
-│   │   └── lxd/            # LXD VM template configuration
+│   │   ├── lxd/            # LXD VM template configuration
+│   │   └── hetzner/        # Hetzner Cloud template configuration
 │   └── ansible/            # 🤖 Ansible playbook templates
 ├── tests/                  # Integration and system tests
 ├── target/                 # 🦀 Rust build artifacts (git-ignored)
@@ -434,6 +441,7 @@ This project follows a structured development roadmap to evolve from the current
 ## 📚 Documentation
 
 - **[👤 User Guide](docs/user-guide/README.md)** - Getting started, command reference, and usage examples
+- **[☁️ Provider Guides](docs/user-guide/providers/README.md)** - LXD and Hetzner Cloud provider configuration
 - **[🤝 Contributing Guide](docs/contributing/README.md)** - Git workflow, commit process, and linting conventions
 - **[🗺️ Roadmap](docs/roadmap.md)** - Development roadmap and MVP goals
 - **[📖 Documentation Organization Guide](docs/documentation.md)** - How documentation is organized and where to contribute
@@ -443,14 +451,19 @@ This project follows a structured development roadmap to evolve from the current
 
 ## 🔮 Next Steps
 
-This project is currently focused on local development. The path to production-ready deployment is outlined in our [📋 **Roadmap**](docs/roadmap.md).
+This project now supports multiple infrastructure providers. The path to production-ready deployment is outlined in our [📋 **Roadmap**](docs/roadmap.md).
+
+**Recent achievements:**
+
+- ✅ **Multi-Provider Support**: LXD for local development, Hetzner Cloud for production deployments
+- ✅ **Provider Selection**: Choose your provider via `provider_config` in environment configuration
+- ✅ **Complete CLI Commands**: `create`, `provision`, `configure`, `test`, and `destroy` commands
 
 **Key upcoming milestones:**
 
-- **Real Cloud Provider Support**: Starting with Hetzner, then expanding to AWS, GCP, and Azure
-- **Production Commands**: `create`, `deploy`, `destroy`, and `status` commands for production environments
 - **Application Stack Management**: Complete Docker Compose stacks with Torrust Tracker, MySQL, Prometheus, and Grafana
 - **HTTPS Support**: SSL/TLS configuration for all services
 - **Backup & Recovery**: Database backups and disaster recovery procedures
+- **Additional Cloud Providers**: AWS, GCP, and Azure support
 
 **[📖 See full roadmap →](docs/roadmap.md)**
