@@ -29,7 +29,6 @@ docs/refactors/
 ├── active-refactorings.md       # Index of ongoing refactoring work
 ├── completed-refactorings.md    # Historical record of completed refactorings
 └── plans/                       # Directory containing detailed refactoring plan documents
-    └── command-code-quality-improvements.md
 ```
 
 **Meta-Documentation (at root):**
@@ -41,7 +40,7 @@ docs/refactors/
 
 **Refactoring Plan Documents (`plans/` subdirectory):**
 
-- Each active refactoring has a detailed plan document in `plans/` (e.g., `plans/command-code-quality-improvements.md`)
+- Each active refactoring has a detailed plan document in `plans/`
 - These contain the full implementation details, progress tracking, and technical specifications
 - When refactoring is complete, the plan document is typically deleted or archived
 
