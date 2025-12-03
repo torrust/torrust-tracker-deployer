@@ -6,7 +6,7 @@ use tracing::{info, instrument};
 
 use super::errors::RunCommandHandlerError;
 use crate::domain::environment::repository::{EnvironmentRepository, RepositoryError};
-use crate::domain::environment::Released;
+use crate::domain::environment::{Released, Running};
 use crate::domain::Environment;
 use crate::domain::EnvironmentName;
 
@@ -53,7 +53,7 @@ impl RunCommandHandler {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` on success (placeholder implementation)
+    /// Returns `Ok(Environment<Running>)` on success
     ///
     /// # Errors
     ///
@@ -69,7 +69,10 @@ impl RunCommandHandler {
             environment = %env_name
         )
     )]
-    pub fn execute(&self, env_name: &EnvironmentName) -> Result<(), RunCommandHandlerError> {
+    pub fn execute(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<Environment<Running>, RunCommandHandlerError> {
         info!(
             command = "run",
             environment = %env_name,
@@ -94,16 +97,27 @@ impl RunCommandHandler {
             environment = %env_name,
             current_state = "released",
             target_state = "running",
-            "Environment loaded and validated. Would transition to Running state."
+            "Environment loaded and validated. Executing run steps (placeholder)."
         );
 
-        // Log intent about state transition (skeleton behavior)
+        // 4. Execute run steps (placeholder - actual implementation in Phase 6)
+        // TODO: Phase 6 will add actual run steps here
+
+        // 5. Transition to Running state
+        let running_env = environment.start_running();
+
+        // 6. Persist final state
+        self.repository
+            .save(&running_env.clone().into_any())
+            .map_err(RunCommandHandlerError::StatePersistence)?;
+
         info!(
             command = "run",
-            environment = %environment.name(),
-            "Run command handler validated state successfully (skeleton - no actual run performed)"
+            environment = %running_env.name(),
+            final_state = "running",
+            "Stack execution completed successfully"
         );
 
-        Ok(())
+        Ok(running_env)
     }
 }

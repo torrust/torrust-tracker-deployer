@@ -6,7 +6,7 @@ use tracing::{info, instrument};
 
 use super::errors::ReleaseCommandHandlerError;
 use crate::domain::environment::repository::{EnvironmentRepository, RepositoryError};
-use crate::domain::environment::Configured;
+use crate::domain::environment::{Configured, Released};
 use crate::domain::Environment;
 use crate::domain::EnvironmentName;
 
@@ -54,7 +54,7 @@ impl ReleaseCommandHandler {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` on success (placeholder implementation)
+    /// Returns `Ok(Environment<Released>)` on success
     ///
     /// # Errors
     ///
@@ -70,7 +70,10 @@ impl ReleaseCommandHandler {
             environment = %env_name
         )
     )]
-    pub fn execute(&self, env_name: &EnvironmentName) -> Result<(), ReleaseCommandHandlerError> {
+    pub fn execute(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<Environment<Released>, ReleaseCommandHandlerError> {
         info!(
             command = "release",
             environment = %env_name,
@@ -96,16 +99,42 @@ impl ReleaseCommandHandler {
             environment = %env_name,
             current_state = "configured",
             target_state = "releasing",
-            "Environment loaded and validated. Would transition to Releasing state."
+            "Environment loaded and validated. Transitioning to Releasing state."
         );
 
-        // Log intent about state transition (skeleton behavior)
+        // 4. Transition to Releasing state
+        let releasing_env = environment.start_releasing();
+
+        // 5. Persist intermediate state
+        self.repository
+            .save(&releasing_env.clone().into_any())
+            .map_err(ReleaseCommandHandlerError::StatePersistence)?;
+
         info!(
             command = "release",
-            environment = %environment.name(),
-            "Release command handler validated state successfully (skeleton - no actual release performed)"
+            environment = %env_name,
+            current_state = "releasing",
+            "Releasing state persisted. Executing release steps (placeholder)."
         );
 
-        Ok(())
+        // 6. Execute release steps (placeholder - actual implementation in Phase 6)
+        // TODO: Phase 6 will add actual release steps here
+
+        // 7. Transition to Released state
+        let released_env = releasing_env.released();
+
+        // 8. Persist final state
+        self.repository
+            .save(&released_env.clone().into_any())
+            .map_err(ReleaseCommandHandlerError::StatePersistence)?;
+
+        info!(
+            command = "release",
+            environment = %released_env.name(),
+            final_state = "released",
+            "Software release completed successfully"
+        );
+
+        Ok(released_env)
     }
 }
