@@ -51,8 +51,40 @@ impl CommandExecutor {
     ) -> Result<CommandResult, CommandError> {
         Self::validate_working_directory(working_dir)?;
 
+        let mut command = Self::build_command(cmd, args, working_dir);
+
+        let command_display = Self::format_command_display(cmd, args);
+
+        Self::log_command_start(&command_display, working_dir);
+
+        let (status, stdout, stderr) = Self::execute_command(&mut command, &command_display)?;
+
+        Self::check_command_success(status, &command_display, &stdout, &stderr)?;
+
+        Self::log_command_output(&command_display, &stdout, &stderr);
+
+        Ok(CommandResult::new(status, stdout, stderr))
+    }
+
+    /// Validates that the working directory exists if provided.
+    ///
+    /// This provides a clearer error message than the generic "No such file or directory"
+    /// that would be returned by the OS.
+    fn validate_working_directory(working_dir: Option<&Path>) -> Result<(), CommandError> {
+        if let Some(dir) = working_dir {
+            if !dir.exists() {
+                return Err(CommandError::WorkingDirectoryNotFound {
+                    working_dir: dir.to_path_buf(),
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Builds a Command with the given arguments and optional working directory.
+    fn build_command(cmd: &str, args: &[&str], working_dir: Option<&Path>) -> Command {
         let mut command = Command::new(cmd);
-        let command_display = format!("{} {}", cmd, args.join(" "));
 
         command.args(args);
 
@@ -60,11 +92,22 @@ impl CommandExecutor {
             command.current_dir(dir);
         }
 
+        command
+    }
+
+    /// Formats a command and its arguments for display in logs and error messages.
+    fn format_command_display(cmd: &str, args: &[&str]) -> String {
+        format!("{} {}", cmd, args.join(" "))
+    }
+
+    /// Logs the command execution start with optional working directory.
+    fn log_command_start(command_display: &str, working_dir: Option<&Path>) {
         info!(
             operation = "command_execution",
             command = %command_display,
             "Running command"
         );
+
         if let Some(dir) = working_dir {
             info!(
                 operation = "command_execution",
@@ -72,34 +115,60 @@ impl CommandExecutor {
                 "Working directory set"
             );
         }
+    }
 
+    /// Executes the command and captures its output.
+    ///
+    /// Returns a tuple of (`exit_status`, `stdout`, `stderr`).
+    fn execute_command(
+        command: &mut Command,
+        command_display: &str,
+    ) -> Result<(std::process::ExitStatus, String, String), CommandError> {
         let output = command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
             .map_err(|source| CommandError::StartupFailed {
-                command: command_display.clone(),
+                command: command_display.to_string(),
                 source,
             })?;
 
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let (stdout, stderr) = Self::extract_output(&output);
 
-        if !output.status.success() {
-            let exit_code = output
-                .status
+        Ok((output.status, stdout, stderr))
+    }
+
+    /// Extracts stdout and stderr from command output as strings.
+    fn extract_output(output: &std::process::Output) -> (String, String) {
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        (stdout, stderr)
+    }
+
+    /// Checks if the command executed successfully and returns an error if it failed.
+    fn check_command_success(
+        status: std::process::ExitStatus,
+        command_display: &str,
+        stdout: &str,
+        stderr: &str,
+    ) -> Result<(), CommandError> {
+        if !status.success() {
+            let exit_code = status
                 .code()
                 .map_or_else(|| "unknown".to_string(), |code| code.to_string());
 
             return Err(CommandError::ExecutionFailed {
-                command: command_display,
+                command: command_display.to_string(),
                 exit_code,
-                stdout,
-                stderr,
+                stdout: stdout.to_string(),
+                stderr: stderr.to_string(),
             });
         }
+        Ok(())
+    }
 
-        // Log stdout and stderr at debug level when command succeeds
+    /// Logs the command output (stdout/stderr) at debug level.
+    fn log_command_output(command_display: &str, stdout: &str, stderr: &str) {
         if !stdout.trim().is_empty() {
             tracing::debug!(
                 operation = "command_execution",
@@ -117,23 +186,6 @@ impl CommandExecutor {
                 stderr.trim()
             );
         }
-
-        Ok(CommandResult::new(output.status, stdout, stderr))
-    }
-
-    /// Validates that the working directory exists if provided.
-    ///
-    /// This provides a clearer error message than the generic "No such file or directory"
-    /// that would be returned by the OS.
-    fn validate_working_directory(working_dir: Option<&Path>) -> Result<(), CommandError> {
-        if let Some(dir) = working_dir {
-            if !dir.exists() {
-                return Err(CommandError::WorkingDirectoryNotFound {
-                    working_dir: dir.to_path_buf(),
-                });
-            }
-        }
-        Ok(())
     }
 }
 
