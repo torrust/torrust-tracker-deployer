@@ -84,20 +84,29 @@ When starting work on a new feature:
   - System security configuration added (automatic updates, UFW firewall)
   - Ansible templates refactored to centralized variables pattern
   - Tasks completed: [#17](https://github.com/torrust/torrust-tracker-deployer/issues/17), [#18](https://github.com/torrust/torrust-tracker-deployer/issues/18), [#19](https://github.com/torrust/torrust-tracker-deployer/issues/19)
-- [ ] **3.2** Implement ReleaseCommand (App layer business logic)
-  - Core business logic for deploying Torrust Tracker application files and configuration
-  - Template generation and file deployment to provisioned infrastructure
-- [ ] **3.3** Add ReleaseCommand and RunCommand with slices
+- [ ] **3.2** Implement ReleaseCommand and RunCommand with vertical slices
 
-  - [ ] **3.3.1** Run only a docker compose configuration with hello-world docker image
-  - [ ] **3.3.2** Add MySQL to docker compose stack
-  - [ ] **3.3.3** Add Torrust Tracker to docker compose stack
-  - [ ] **3.3.4** Add Prometheus to docker compose stack
-  - [ ] **3.3.5** Add Grafana to docker compose stack
+  **Strategy:** Build incrementally with working deployments at each step. Each slice adds a new service to the docker-compose stack.
+
+  - [ ] **3.2.1** Hello World slice (scaffolding)
+    - Create `release` and `run` commands with minimal docker-compose template
+    - Deploy and run a simple hello-world container to validate the full pipeline
+  - [ ] **3.2.2** Torrust Tracker slice
+    - Replace hello-world with Torrust Tracker service
+    - Add tracker configuration template (start with hardcoded defaults, then progressively expose configuration options)
+  - [ ] **3.2.3** MySQL slice
+    - Add MySQL service to docker-compose stack
+    - Allow user to choose between SQLite and MySQL in environment config
+  - [ ] **3.2.4** Prometheus slice
+    - Add Prometheus service for metrics collection
+  - [ ] **3.2.5** Grafana slice
+    - Add Grafana service for metrics visualization
 
   **Notes:**
 
-  - Each service will require new templates, template Rust wrappers, environment options, etc.
+  - Each slice delivers a working deployment
+  - Configuration complexity grows incrementally (hardcoded → environment config → full flexibility)
+  - Detailed implementation tasks will be defined in EPIC issues
 
 ### 4. Create a docker image for the deployer
 
