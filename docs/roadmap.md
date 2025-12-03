@@ -33,7 +33,7 @@ When starting work on a new feature:
   - Split into two child EPICs for incremental delivery:
     - [x] **Child EPIC #9**: [App Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/9) - Core business logic
     - [x] **Child EPIC #10**: [UI Layer Destroy Command](https://github.com/torrust/torrust-tracker-deployer/issues/10) - CLI interface
-- [ ] **1.3** Refactor extract shared code between testing and production for app bootstrapping
+- [x] **1.3** Refactor extract shared code between testing and production for app bootstrapping ✅ Completed
 - [x] **1.4** Improve command to use better abstraction to handle presentation layer ✅ Completed
   - User output architecture improvements implemented
   - Epic [#102](https://github.com/torrust/torrust-tracker-deployer/issues/102) completed
@@ -63,15 +63,18 @@ When starting work on a new feature:
 
 ### 2. Add new infrastructure provider: Hetzner
 
-**Epic Issue**: [#205 - Add Hetzner Provider Support](https://github.com/torrust/torrust-tracker-deployer/issues/205)
+**Epic Issue**: [#205 - Add Hetzner Provider Support](https://github.com/torrust/torrust-tracker-deployer/issues/205) ✅ Completed
 
-- [ ] **2.1** Add Hetzner provider support (Phase 1: Make LXD Explicit)
+- [x] **2.1** Add Hetzner provider support (Phase 1: Make LXD Explicit) ✅ Completed
   - [x] **2.1.1** Add Provider enum and ProviderConfig types - [Issue #206](https://github.com/torrust/torrust-tracker-deployer/issues/206) ✅ Completed
   - [x] **2.1.2** Update UserInputs to use ProviderConfig - [Issue #207](https://github.com/torrust/torrust-tracker-deployer/issues/207) ✅ Completed
   - [x] **2.1.3** Update EnvironmentCreationConfig DTO - [Issue #208](https://github.com/torrust/torrust-tracker-deployer/issues/208) ✅ Completed
-  - [ ] **2.1.4** Parameterize TofuTemplateRenderer by provider - [Issue #212](https://github.com/torrust/torrust-tracker-deployer/issues/212)
-  - [ ] **2.1.5** Update environment JSON files and E2E tests
-  - [ ] **2.1.6** Update user documentation
+  - [x] **2.1.4** Parameterize TofuTemplateRenderer by provider - [Issue #212](https://github.com/torrust/torrust-tracker-deployer/issues/212) ✅ Completed
+  - [x] **2.1.5** Update environment JSON files and E2E tests ✅ Completed (part of #212)
+  - [x] **2.1.6** Update user documentation - [Issue #214](https://github.com/torrust/torrust-tracker-deployer/issues/214) ✅ Completed
+- [x] **2.2** Add Hetzner provider support (Phase 2: Add Hetzner) ✅ Completed
+  - Hetzner OpenTofu templates implemented
+  - Full deployment workflow tested with Hetzner Cloud
 
 ### 3. Continue adding more application commands
 
@@ -105,6 +108,7 @@ When starting work on a new feature:
 
 - [ ] **5.1** `torrust-tracker-deployer status` - Check environment and service status
 - [ ] **5.2** `torrust-tracker-deployer test` - Run application tests
+- [ ] **5.3** `torrust-tracker-deployer list` - List environments or deployments
 
 **Note:** The test console subcommand is already partially implemented.
 
