@@ -1,8 +1,4 @@
-//! Template wrapper for templates/tofu/lxd/cloud-init.yml.tera
-//!
-//! This template has mandatory variables that must be provided at construction time.
-
-pub mod context;
+//! `CloudInitTemplate` type and implementation.
 
 use crate::domain::template::file::File;
 use crate::domain::template::{
@@ -11,7 +7,7 @@ use crate::domain::template::{
 use anyhow::Result;
 use std::path::Path;
 
-pub use context::{CloudInitContext, CloudInitContextBuilder, CloudInitContextError};
+use super::CloudInitContext;
 
 #[derive(Debug)]
 pub struct CloudInitTemplate {
@@ -70,6 +66,7 @@ impl CloudInitTemplate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::infrastructure::external_tools::tofu::template::common::wrappers::cloud_init::CloudInitContext;
 
     /// Helper function to create a `CloudInitContext` with given SSH key
     fn create_cloud_init_context(ssh_key: &str) -> CloudInitContext {

@@ -1,6 +1,15 @@
 #cloud-config
-# cloud-init template for LXD containers with dynamic SSH key injection
-# This template uses Tera templating to inject the SSH public key from SshConfig.ssh_pub_key_path
+# Common cloud-init template for VM provisioning
+#
+# This template is shared by all providers (LXD, Hetzner) to ensure consistent
+# VM initialization. It creates a user with SSH access and sudo privileges.
+#
+# Template Variables (Tera syntax):
+# - username: The SSH user to create
+# - ssh_public_key: The public SSH key content for authentication
+#
+# Note: Package updates are commented out for faster VM creation during
+# development. Uncomment for production deployments.
 
 # Commented out for faster VM creation during development
 # package_update: true

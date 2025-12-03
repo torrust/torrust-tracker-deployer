@@ -1,0 +1,35 @@
+# Hetzner Cloud Variables Template
+#
+# This Tera template generates the variables.tfvars file for Hetzner Cloud
+# deployments. The template uses double curly braces for Tera variable
+# substitution.
+#
+# Required template variables:
+# - hcloud_api_token: Hetzner Cloud API token (sensitive)
+# - ssh_public_key_content: Content of the SSH public key
+# - instance_name: Name for the server and SSH key resources
+# - server_type: Hetzner server type (e.g., cx22)
+# - server_location: Datacenter location (e.g., nbg1)
+#
+# Optional template variables:
+# - server_image: OS image (defaults to ubuntu-24.04)
+
+# Hetzner Cloud API authentication
+hcloud_api_token = "{{ hcloud_api_token }}"
+
+# SSH key configuration
+ssh_public_key = "{{ ssh_public_key_content }}"
+ssh_key_name   = "{{ instance_name }}-ssh-key"
+
+# Server configuration
+server_name     = "{{ instance_name }}"
+server_type     = "{{ server_type }}"
+server_image    = "{{ server_image }}"
+server_location = "{{ server_location }}"
+
+# Server labels for organization and filtering
+server_labels = {
+  environment = "torrust"
+  managed_by  = "opentofu"
+  instance    = "{{ instance_name }}"
+}

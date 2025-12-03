@@ -3,26 +3,50 @@
 //! Provides the `TemplateEngine` struct that handles template validation and rendering with Tera.
 
 use serde::Serialize;
+use std::error::Error as StdError;
 use tera::Tera;
 use thiserror::Error;
+
+/// Extracts the full error chain from a `tera::Error` as a single string.
+///
+/// Tera errors have nested sources that are important for debugging (e.g., "Variable 'x' not found").
+/// The standard Display trait only shows the outer message. This function traverses
+/// the entire error chain and concatenates all messages.
+fn tera_error_chain(err: &tera::Error) -> String {
+    let mut messages = vec![err.to_string()];
+    let mut current: Option<&(dyn StdError + 'static)> = err.source();
+
+    while let Some(source) = current {
+        messages.push(source.to_string());
+        current = source.source();
+    }
+
+    messages.join(" -> ")
+}
 
 /// Errors that can occur during template engine operations
 #[derive(Debug, Error)]
 pub enum TemplateEngineError {
-    #[error("Failed to parse template: {template_name}")]
+    #[error(
+        "Failed to parse template '{template_name}': {}",
+        tera_error_chain(source)
+    )]
     TemplateParse {
         template_name: String,
         #[source]
         source: tera::Error,
     },
 
-    #[error("Failed to serialize template context")]
+    #[error("Failed to serialize template context: {}", tera_error_chain(source))]
     ContextSerialization {
         #[source]
         source: tera::Error,
     },
 
-    #[error("Failed to render template: {template_name}")]
+    #[error(
+        "Failed to render template '{template_name}': {}",
+        tera_error_chain(source)
+    )]
     TemplateRender {
         template_name: String,
         #[source]

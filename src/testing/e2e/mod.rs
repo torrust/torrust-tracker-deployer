@@ -37,3 +37,12 @@ pub use containers::{ContainerError, RunningProvisionedContainer, StoppedProvisi
 
 // Re-export black-box testing types
 pub use process_runner::{ProcessResult, ProcessRunner};
+
+/// Subdirectory name for LXD `OpenTofu` configuration files within the build directory.
+///
+/// This constant defines the path where `OpenTofu`/Terraform configuration files
+/// and state for the LXD provider will be managed: `build_dir/tofu/lxd/`.
+///
+/// Note: This is specific to LXD provider testing. Other providers (e.g., Hetzner)
+/// would use their own paths like `tofu/hetzner`.
+pub const LXD_OPENTOFU_SUBFOLDER: &str = "tofu/lxd";

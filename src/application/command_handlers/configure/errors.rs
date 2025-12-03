@@ -81,7 +81,7 @@ impl ConfigureCommandHandlerError {
 
 1. Verify Ansible is installed: ansible --version
 2. Check instance connectivity:
-   - Verify instance is running: lxc list
+   - Verify instance is running using your provider tools
    - Test SSH access: ssh -i <key> <user>@<ip>
    - Check Ansible inventory file exists and is correct
 

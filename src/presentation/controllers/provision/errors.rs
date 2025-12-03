@@ -278,25 +278,24 @@ For persistent issues, check system logs and file system health."
 
 2. Common failure points:
    - OpenTofu initialization or apply failures
-   - LXD/VM provisioning issues
+   - VM/server provisioning issues
    - SSH connectivity problems
    - Cloud-init timeout or failures
 
 3. Infrastructure-specific troubleshooting:
    
-   OpenTofu/LXD issues:
-   - Check LXD status: lxc list
-   - Verify LXD daemon: systemctl status lxd
-   - Review OpenTofu state: cd build/tofu/lxd && tofu state list
+   OpenTofu issues:
+   - Review OpenTofu state: cd build/<env>/tofu/<provider> && tofu state list
+   - Check OpenTofu logs in the build directory
    
    SSH connectivity:
    - Verify SSH keys exist: ls -la ~/.ssh/
-   - Check VM is running: lxc list
+   - Check VM/server is running using provider tools
    - Test SSH manually: ssh -i <key> <user>@<ip>
    
    Cloud-init:
-   - Check cloud-init status: lxc exec <vm> -- cloud-init status
-   - View cloud-init logs: lxc exec <vm> -- cat /var/log/cloud-init.log
+   - SSH into the server and check: cloud-init status
+   - View cloud-init logs: cat /var/log/cloud-init.log
 
 4. Recovery steps:
    - Review error messages and logs

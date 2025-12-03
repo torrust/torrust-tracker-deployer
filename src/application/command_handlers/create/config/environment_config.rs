@@ -277,6 +277,7 @@ impl EnvironmentCreationConfig {
                 api_token: "REPLACE_WITH_HETZNER_API_TOKEN".to_string(),
                 server_type: "cx22".to_string(), // default value - small instance
                 location: "nbg1".to_string(),    // default value - Nuremberg
+                image: "ubuntu-24.04".to_string(), // default value - Ubuntu 24.04 LTS
             }),
         };
 
@@ -454,7 +455,8 @@ mod tests {
                 "provider": "hetzner",
                 "api_token": "test-token",
                 "server_type": "cx22",
-                "location": "nbg1"
+                "location": "nbg1",
+                "image": "ubuntu-24.04"
             }
         }"#;
 

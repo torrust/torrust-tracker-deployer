@@ -149,6 +149,7 @@ impl ProviderSection {
                     api_token: hetzner.api_token,
                     server_type: hetzner.server_type,
                     location: hetzner.location,
+                    image: hetzner.image,
                 }))
             }
         }
@@ -170,6 +171,7 @@ mod tests {
             api_token: "test-token".to_string(),
             server_type: "cx22".to_string(),
             location: "nbg1".to_string(),
+            image: "ubuntu-24.04".to_string(),
         })
     }
 
@@ -204,7 +206,8 @@ mod tests {
             "provider": "hetzner",
             "api_token": "token123",
             "server_type": "cx32",
-            "location": "fsn1"
+            "location": "fsn1",
+            "image": "ubuntu-24.04"
         }"#;
         let section: ProviderSection = serde_json::from_str(json).unwrap();
 
@@ -213,6 +216,7 @@ mod tests {
             assert_eq!(hetzner.api_token, "token123");
             assert_eq!(hetzner.server_type, "cx32");
             assert_eq!(hetzner.location, "fsn1");
+            assert_eq!(hetzner.image, "ubuntu-24.04");
         } else {
             panic!("Expected Hetzner section");
         }
@@ -236,6 +240,7 @@ mod tests {
         assert!(json.contains("\"api_token\":\"test-token\""));
         assert!(json.contains("\"server_type\":\"cx22\""));
         assert!(json.contains("\"location\":\"nbg1\""));
+        assert!(json.contains("\"image\":\"ubuntu-24.04\""));
     }
 
     #[test]
@@ -263,6 +268,7 @@ mod tests {
         assert_eq!(hetzner.api_token, "test-token");
         assert_eq!(hetzner.server_type, "cx22");
         assert_eq!(hetzner.location, "nbg1");
+        assert_eq!(hetzner.image, "ubuntu-24.04");
     }
 
     #[test]

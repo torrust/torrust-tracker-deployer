@@ -109,22 +109,22 @@ impl DestroyCommandHandlerError {
                 "OpenTofu Destroy Failed - Troubleshooting:
 
 1. Check OpenTofu is installed: tofu version
-2. Verify LXD is running: lxc version
-3. Check if instance still exists: lxc list
+2. Verify your infrastructure provider is accessible
+3. Check if instance/server still exists using provider tools
 4. Review OpenTofu error output above for specific issues
 5. Try manually running:
-   cd build/<env-name> && tofu destroy
+   cd build/<env-name>/tofu/<provider> && tofu destroy
 
 6. Common issues:
    - Instance already deleted: Normal, destroy succeeds
-   - LXD not running: Start LXD service
-   - Permission denied: Check LXD group membership
+   - Provider not running: Start the provider service
+   - Permission denied: Check provider permissions
    - State file locked: Wait or remove .terraform.lock.hcl
 
 7. Force removal if needed:
-   lxc delete <instance-name> --force
+   Use provider-specific commands to delete the instance
 
-For LXD troubleshooting, see docs/vm-providers.md"
+For provider troubleshooting, see docs/vm-providers.md"
             }
             Self::Command(_) => {
                 "Command Execution Failed - Troubleshooting:
@@ -233,7 +233,7 @@ mod tests {
         assert!(help.contains("OpenTofu Destroy"));
         assert!(help.contains("Troubleshooting"));
         assert!(help.contains("tofu version"));
-        assert!(help.contains("lxc list"));
+        assert!(help.contains("provider"));
     }
 
     #[test]

@@ -2,6 +2,7 @@
 //!
 //! This module provides the `CloudInitContext` and builder pattern for creating
 //! template contexts with SSH public key information for cloud-init configuration.
+//! This context is shared by all providers since the cloud-init template is the same.
 
 use serde::Serialize;
 use std::fs;

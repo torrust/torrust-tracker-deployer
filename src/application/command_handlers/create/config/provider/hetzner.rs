@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 ///     api_token: "your-api-token".to_string(),
 ///     server_type: "cx22".to_string(),
 ///     location: "nbg1".to_string(),
+///     image: "ubuntu-24.04".to_string(),
 /// };
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -32,6 +33,9 @@ pub struct HetznerProviderSection {
 
     /// Hetzner datacenter location (e.g., "fsn1", "nbg1", "hel1").
     pub location: String,
+
+    /// Hetzner server image (e.g., "ubuntu-24.04", "ubuntu-22.04", "debian-12").
+    pub image: String,
 }
 
 #[cfg(test)]
@@ -43,6 +47,7 @@ mod tests {
             api_token: "token".to_string(),
             server_type: "cx22".to_string(),
             location: "nbg1".to_string(),
+            image: "ubuntu-24.04".to_string(),
         }
     }
 
@@ -53,15 +58,17 @@ mod tests {
         assert!(json.contains("\"api_token\":\"token\""));
         assert!(json.contains("\"server_type\":\"cx22\""));
         assert!(json.contains("\"location\":\"nbg1\""));
+        assert!(json.contains("\"image\":\"ubuntu-24.04\""));
     }
 
     #[test]
     fn it_should_deserialize_from_json() {
-        let json = r#"{"api_token":"token","server_type":"cx22","location":"nbg1"}"#;
+        let json = r#"{"api_token":"token","server_type":"cx22","location":"nbg1","image":"ubuntu-24.04"}"#;
         let section: HetznerProviderSection = serde_json::from_str(json).unwrap();
         assert_eq!(section.api_token, "token");
         assert_eq!(section.server_type, "cx22");
         assert_eq!(section.location, "nbg1");
+        assert_eq!(section.image, "ubuntu-24.04");
     }
 
     #[test]
@@ -79,5 +86,6 @@ mod tests {
         assert!(debug.contains("api_token"));
         assert!(debug.contains("server_type"));
         assert!(debug.contains("location"));
+        assert!(debug.contains("image"));
     }
 }

@@ -1,58 +1,30 @@
-//! # `OpenTofu` Variables Templates
-//!
-//! Template wrappers for rendering `variables.tfvars.tera` with dynamic instance naming.
-//!
-//! This module provides the `VariablesTemplate` and `VariablesContext` for validating and rendering `OpenTofu`
-//! variable files with runtime context injection, specifically for parameterizing
-//! instance names in LXD infrastructure provisioning.
-
-pub mod context;
+//! `VariablesTemplate` type and implementation for Hetzner Cloud.
 
 use std::path::Path;
-use thiserror::Error;
 
 use crate::domain::template::file::File;
-use crate::domain::template::{
-    write_file_with_dir_creation, FileOperationError, TemplateEngine, TemplateEngineError,
-};
+use crate::domain::template::{write_file_with_dir_creation, TemplateEngine};
+use crate::infrastructure::external_tools::tofu::template::common::wrappers::VariablesTemplateError;
 
-pub use context::{VariablesContext, VariablesContextBuilder, VariablesContextError};
+use super::context::VariablesContext;
 
-/// Errors that can occur during variables template operations
-#[derive(Error, Debug)]
-pub enum VariablesTemplateError {
-    /// Template engine error
-    #[error("Template engine error: {source}")]
-    TemplateEngineError {
-        #[from]
-        source: TemplateEngineError,
-    },
-
-    /// File I/O operation failed
-    #[error("File operation failed: {source}")]
-    FileOperationError {
-        #[from]
-        source: FileOperationError,
-    },
-}
-
-/// Template wrapper for `OpenTofu` variables rendering
+/// Template wrapper for Hetzner Cloud `OpenTofu` variables rendering
 ///
 /// Validates and renders `variables.tfvars.tera` templates with `VariablesContext`
-/// to produce dynamic infrastructure variable files.
+/// to produce dynamic infrastructure variable files for Hetzner Cloud.
 #[derive(Debug)]
 pub struct VariablesTemplate {
-    context: context::VariablesContext,
+    context: VariablesContext,
     content: String,
 }
 
 impl VariablesTemplate {
-    /// Creates a new variables template with validation
+    /// Creates a new Hetzner variables template with validation
     ///
     /// # Arguments
     ///
     /// * `template_file` - The template file containing variables.tfvars.tera content
-    /// * `context` - The context containing `instance_name` and other runtime values
+    /// * `context` - The context containing Hetzner-specific runtime values
     ///
     /// # Returns
     ///
@@ -115,15 +87,19 @@ mod tests {
     fn create_test_context() -> VariablesContext {
         VariablesContext::builder()
             .with_instance_name(InstanceName::new("test-instance".to_string()).unwrap())
-            .with_profile_name(crate::domain::ProfileName::new("test-profile".to_string()).unwrap())
+            .with_hcloud_api_token("test-api-token".to_string())
+            .with_server_type("cx22".to_string())
+            .with_server_location("nbg1".to_string())
+            .with_server_image("ubuntu-24.04".to_string())
+            .with_ssh_public_key_content("ssh-rsa AAAA... test@example.com".to_string())
             .build()
             .unwrap()
     }
 
     #[test]
     fn it_should_create_variables_template_successfully() {
-        let template_content = r#"instance_name = "{{ instance_name }}"
-image = "ubuntu:24.04""#;
+        let template_content = r#"hcloud_api_token = "{{ hcloud_api_token }}"
+server_name = "{{ instance_name }}""#;
 
         let template_file =
             File::new("variables.tfvars.tera", template_content.to_string()).unwrap();
@@ -135,8 +111,8 @@ image = "ubuntu:24.04""#;
 
     #[test]
     fn it_should_fail_when_template_has_malformed_syntax() {
-        let template_content = r#"instance_name = "{{ instance_name
-image = "ubuntu:24.04""#; // Missing closing }}
+        let template_content = r#"hcloud_api_token = "{{ hcloud_api_token
+server_name = "{{ instance_name }}""#; // Missing closing }}
 
         let template_file =
             File::new("variables.tfvars.tera", template_content.to_string()).unwrap();
@@ -151,8 +127,8 @@ image = "ubuntu:24.04""#; // Missing closing }}
 
     #[test]
     fn it_should_accept_static_template_with_no_variables() {
-        let template_content = r#"instance_name = "hardcoded-name"
-image = "ubuntu:24.04""#;
+        let template_content = r#"hcloud_api_token = "hardcoded-token"
+server_type = "cx22""#;
 
         let template_file =
             File::new("variables.tfvars.tera", template_content.to_string()).unwrap();
@@ -176,9 +152,10 @@ image = "ubuntu:24.04""#;
 
     #[test]
     fn it_should_render_variables_template_successfully() {
-        let template_content = r#"# OpenTofu Variables
-instance_name = "{{ instance_name }}"
-image = "ubuntu:24.04""#;
+        let template_content = r#"# OpenTofu Variables for Hetzner Cloud
+hcloud_api_token = "{{ hcloud_api_token }}"
+server_name = "{{ instance_name }}"
+server_type = "{{ server_type }}""#;
 
         let template_file =
             File::new("variables.tfvars.tera", template_content.to_string()).unwrap();
@@ -192,8 +169,9 @@ image = "ubuntu:24.04""#;
 
         // Verify rendered content
         let rendered_content = std::fs::read_to_string(temp_file.path()).unwrap();
-        assert!(rendered_content.contains("instance_name = \"test-instance\""));
-        assert!(rendered_content.contains("image = \"ubuntu:24.04\""));
+        assert!(rendered_content.contains(r#"hcloud_api_token = "test-api-token""#));
+        assert!(rendered_content.contains(r#"server_name = "test-instance""#));
+        assert!(rendered_content.contains(r#"server_type = "cx22""#));
     }
 
     #[test]
@@ -210,7 +188,7 @@ image = "ubuntu:24.04""#;
 
     #[test]
     fn it_should_provide_access_to_rendered_content() {
-        let template_content = "instance_name = \"{{ instance_name }}\"";
+        let template_content = r#"server_name = "{{ instance_name }}""#;
         let template_file =
             File::new("variables.tfvars.tera", template_content.to_string()).unwrap();
         let context = create_test_context();
@@ -222,8 +200,8 @@ image = "ubuntu:24.04""#;
     #[test]
     fn it_should_work_with_missing_placeholder_variables() {
         // Template has no placeholders but context has values - should work fine
-        let template_content = r#"instance_name = "hardcoded"
-image = "ubuntu:24.04""#;
+        let template_content = r#"hcloud_api_token = "hardcoded"
+server_type = "cx22""#;
 
         let template_file =
             File::new("variables.tfvars.tera", template_content.to_string()).unwrap();
@@ -236,13 +214,13 @@ image = "ubuntu:24.04""#;
         assert!(result.is_ok());
 
         let rendered_content = std::fs::read_to_string(temp_file.path()).unwrap();
-        assert!(rendered_content.contains("instance_name = \"hardcoded\""));
+        assert!(rendered_content.contains(r#"hcloud_api_token = "hardcoded""#));
     }
 
     #[test]
     fn it_should_validate_template_at_construction_time() {
-        let template_content = r#"instance_name = "{{ undefined_variable }}"
-image = "ubuntu:24.04""#;
+        let template_content = r#"hcloud_api_token = "{{ undefined_variable }}"
+server_type = "cx22""#;
 
         let template_file =
             File::new("variables.tfvars.tera", template_content.to_string()).unwrap();
@@ -262,9 +240,11 @@ image = "ubuntu:24.04""#;
             File::new("variables.tfvars.tera", "{{ instance_name }}".to_string()).unwrap();
         let context = VariablesContext::builder()
             .with_instance_name(InstanceName::new("dynamic-vm".to_string()).unwrap())
-            .with_profile_name(
-                crate::domain::ProfileName::new("dynamic-profile".to_string()).unwrap(),
-            )
+            .with_hcloud_api_token("dynamic-token".to_string())
+            .with_server_type("cx32".to_string())
+            .with_server_location("fsn1".to_string())
+            .with_server_image("ubuntu-24.04".to_string())
+            .with_ssh_public_key_content("ssh-rsa AAAA...".to_string())
             .build()
             .unwrap();
 

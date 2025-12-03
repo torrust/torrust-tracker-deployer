@@ -5,14 +5,14 @@ use crate::adapters::tofu::client::OpenTofuError;
 use crate::application::services::AnsibleTemplateServiceError;
 use crate::application::steps::RenderAnsibleTemplatesError;
 use crate::domain::environment::state::StateTypeError;
-use crate::infrastructure::external_tools::tofu::ProvisionTemplateError;
+use crate::infrastructure::external_tools::tofu::TofuTemplateRendererError;
 use crate::shared::command::CommandError;
 
 /// Comprehensive error type for the `ProvisionCommandHandler`
 #[derive(Debug, thiserror::Error)]
 pub enum ProvisionCommandHandlerError {
     #[error("OpenTofu template rendering failed: {0}")]
-    OpenTofuTemplateRendering(#[from] ProvisionTemplateError),
+    OpenTofuTemplateRendering(#[from] TofuTemplateRendererError),
 
     #[error("Ansible template rendering failed: {0}")]
     AnsibleTemplateRendering(#[from] RenderAnsibleTemplatesError),
@@ -160,18 +160,18 @@ For template syntax issues, see the Tera template documentation."
                 "OpenTofu Command Failed - Troubleshooting:
 
 1. Check OpenTofu is installed: tofu version
-2. Verify LXD is running: lxc version
-3. Check LXD permissions: lxc list
+2. Verify your infrastructure provider is running and accessible
+3. Check provider permissions and credentials
 4. Review OpenTofu error output above for specific issues
 5. Try manually running:
-   cd build/<env-name> && tofu init && tofu plan
+   cd build/<env-name>/tofu/<provider> && tofu init && tofu plan
 
-6. Common LXD issues:
-   - LXD not initialized: lxd init
-   - User not in lxd group: sudo usermod -aG lxd $USER (requires logout)
-   - LXD network not configured: lxc network list
+6. Common issues:
+   - Provider not initialized or configured
+   - User permissions not configured correctly
+   - Network not configured properly
 
-For LXD setup issues, see docs/vm-providers.md"
+For provider-specific setup issues, see docs/vm-providers.md"
             }
             Self::Command(_) => {
                 "Command Execution Failed - Troubleshooting:
@@ -192,19 +192,19 @@ For tool installation, see the setup documentation."
             Self::SshConnectivity(_) => {
                 "SSH Connectivity Failed - Troubleshooting:
 
-1. Verify the instance is running: lxc list
-2. Check instance IP address: lxc list
+1. Verify the instance/server is running using your provider tools
+2. Check instance IP address is accessible
 3. Test SSH connectivity manually:
    ssh -i <key-path> <user>@<ip-address>
 
 4. Common SSH issues:
    - SSH key permissions: chmod 600 <key-path>
    - SSH service not running: Check cloud-init status on instance
-   - Firewall blocking SSH: Check UFW or iptables rules
+   - Firewall blocking SSH: Check firewall rules
    - Wrong SSH user: Verify username in configuration
 
 5. Check cloud-init completion:
-   lxc exec <instance-name> -- cloud-init status --wait
+   SSH into the server and run: cloud-init status --wait
 
 For SSH troubleshooting, see docs/debugging.md"
             }
@@ -256,10 +256,10 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_opentofu_template_rendering() {
-        use crate::infrastructure::external_tools::tofu::ProvisionTemplateError;
+        use crate::infrastructure::external_tools::tofu::TofuTemplateRendererError;
 
         let error = ProvisionCommandHandlerError::OpenTofuTemplateRendering(
-            ProvisionTemplateError::DirectoryCreationFailed {
+            TofuTemplateRendererError::DirectoryCreationFailed {
                 directory: "test".to_string(),
                 source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
             },
@@ -305,7 +305,7 @@ mod tests {
         assert!(help.contains("OpenTofu Command"));
         assert!(help.contains("Troubleshooting"));
         assert!(help.contains("tofu version"));
-        assert!(help.contains("lxc list"));
+        assert!(help.contains("provider"));
     }
 
     #[test]
@@ -338,7 +338,7 @@ mod tests {
         let help = error.help();
         assert!(help.contains("SSH Connectivity"));
         assert!(help.contains("Troubleshooting"));
-        assert!(help.contains("lxc list"));
+        assert!(help.contains("provider"));
         assert!(help.contains("cloud-init"));
     }
 
@@ -357,12 +357,12 @@ mod tests {
         use crate::adapters::ssh::SshError;
         use crate::application::steps::RenderAnsibleTemplatesError;
         use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContextError;
-        use crate::infrastructure::external_tools::tofu::ProvisionTemplateError;
+        use crate::infrastructure::external_tools::tofu::TofuTemplateRendererError;
         use crate::shared::command::CommandError;
 
         let errors = vec![
             ProvisionCommandHandlerError::OpenTofuTemplateRendering(
-                ProvisionTemplateError::DirectoryCreationFailed {
+                TofuTemplateRendererError::DirectoryCreationFailed {
                     directory: "test".to_string(),
                     source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
                 },

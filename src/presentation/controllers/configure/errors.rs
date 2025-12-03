@@ -285,13 +285,13 @@ For persistent issues, check system logs and file system health."
    
    SSH connectivity:
    - Verify SSH keys exist: ls -la ~/.ssh/
-   - Check VM is running: lxc list
+   - Check VM/server is running using provider tools
    - Test SSH manually: ssh -i <key> <user>@<ip>
    
    Docker installation:
-   - Check if Docker is already installed: lxc exec <vm> -- docker --version
-   - Verify package manager: lxc exec <vm> -- apt-get update
-   - Check internet connectivity: lxc exec <vm> -- ping -c 3 google.com
+   - SSH into server and check: docker --version
+   - Verify package manager: apt-get update (or equivalent)
+   - Check internet connectivity: ping -c 3 google.com
    
    Ansible issues:
    - Check Ansible is installed: ansible --version

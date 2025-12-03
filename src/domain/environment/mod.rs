@@ -443,25 +443,6 @@ impl<S> Environment<S> {
         &self.context.user_inputs.instance_name
     }
 
-    /// Returns the LXD profile name for this environment
-    ///
-    /// Returns the unique LXD profile name to ensure profile isolation
-    /// between different test environments.
-    ///
-    /// # Panics
-    ///
-    /// Panics if called on a non-LXD environment.
-    #[must_use]
-    pub fn profile_name(&self) -> &ProfileName {
-        &self
-            .context
-            .user_inputs
-            .provider_config()
-            .as_lxd()
-            .expect("profile_name() called on non-LXD environment")
-            .profile_name
-    }
-
     /// Returns the provider configuration for this environment
     #[must_use]
     pub fn provider_config(&self) -> &ProviderConfig {

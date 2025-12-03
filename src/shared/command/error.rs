@@ -3,6 +3,8 @@
 //! This module provides error types for command execution failures,
 //! including startup errors and execution errors with detailed context.
 
+use std::path::PathBuf;
+
 use thiserror::Error;
 
 /// Errors that can occur during command execution
@@ -15,6 +17,10 @@ pub enum CommandError {
         #[source]
         source: std::io::Error,
     },
+
+    /// The working directory does not exist
+    #[error("Working directory does not exist: '{working_dir}'")]
+    WorkingDirectoryNotFound { working_dir: PathBuf },
 
     /// The command was started but exited with a non-zero status code
     #[error(
@@ -33,6 +39,12 @@ impl crate::shared::Traceable for CommandError {
         match self {
             Self::StartupFailed { command, source } => {
                 format!("CommandError: Failed to start '{command}' - {source}")
+            }
+            Self::WorkingDirectoryNotFound { working_dir } => {
+                format!(
+                    "CommandError: Working directory does not exist - '{}'",
+                    working_dir.display()
+                )
             }
             Self::ExecutionFailed {
                 command,
@@ -99,5 +111,16 @@ mod tests {
         // Test that the source error is preserved
         assert!(error.source().is_some());
         assert_eq!(error.source().unwrap().to_string(), "permission denied");
+    }
+
+    #[test]
+    fn it_should_format_working_directory_not_found_error_correctly() {
+        let error = CommandError::WorkingDirectoryNotFound {
+            working_dir: PathBuf::from("/nonexistent/path/to/dir"),
+        };
+
+        let error_message = error.to_string();
+        assert!(error_message.contains("Working directory does not exist"));
+        assert!(error_message.contains("/nonexistent/path/to/dir"));
     }
 }

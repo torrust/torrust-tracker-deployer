@@ -128,6 +128,7 @@ impl ProviderConfig {
     ///     api_token: "token".to_string(),
     ///     server_type: "cx22".to_string(),
     ///     location: "nbg1".to_string(),
+    ///     image: "ubuntu-24.04".to_string(),
     /// });
     /// assert!(hetzner_config.as_lxd().is_none());
     /// ```
@@ -170,6 +171,7 @@ mod tests {
             api_token: "test-token".to_string(),
             server_type: "cx22".to_string(),
             location: "nbg1".to_string(),
+            image: "ubuntu-24.04".to_string(),
         })
     }
 
@@ -235,8 +237,7 @@ mod tests {
 
     #[test]
     fn it_should_deserialize_hetzner_config_from_json_with_provider_tag() {
-        let json =
-            r#"{"provider":"hetzner","api_token":"token","server_type":"cx22","location":"nbg1"}"#;
+        let json = r#"{"provider":"hetzner","api_token":"token","server_type":"cx22","location":"nbg1","image":"ubuntu-24.04"}"#;
         let config: ProviderConfig = serde_json::from_str(json).unwrap();
 
         assert_eq!(config.provider(), Provider::Hetzner);
@@ -244,6 +245,7 @@ mod tests {
         assert_eq!(hetzner.api_token, "token");
         assert_eq!(hetzner.server_type, "cx22");
         assert_eq!(hetzner.location, "nbg1");
+        assert_eq!(hetzner.image, "ubuntu-24.04");
     }
 
     #[test]

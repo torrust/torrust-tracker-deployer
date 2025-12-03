@@ -13,7 +13,7 @@
 //! ## Example Usage
 //!
 //! ```rust
-//! use torrust_tracker_deployer_lib::infrastructure::external_tools::tofu::template::wrappers::lxd::variables::VariablesContext;
+//! use torrust_tracker_deployer_lib::infrastructure::external_tools::tofu::template::providers::lxd::wrappers::variables::VariablesContext;
 //! use torrust_tracker_deployer_lib::adapters::lxd::instance::InstanceName;
 //! use torrust_tracker_deployer_lib::domain::ProfileName;
 //!
