@@ -84,7 +84,7 @@ When starting work on a new feature:
   - System security configuration added (automatic updates, UFW firewall)
   - Ansible templates refactored to centralized variables pattern
   - Tasks completed: [#17](https://github.com/torrust/torrust-tracker-deployer/issues/17), [#18](https://github.com/torrust/torrust-tracker-deployer/issues/18), [#19](https://github.com/torrust/torrust-tracker-deployer/issues/19)
-- [ ] **3.2** Implement ReleaseCommand and RunCommand with vertical slices
+- [ ] **3.2** Implement ReleaseCommand and RunCommand with vertical slices - [Epic #216](https://github.com/torrust/torrust-tracker-deployer/issues/216)
 
   **Strategy:** Build incrementally with working deployments at each step. Each slice adds a new service to the docker-compose stack.
 
