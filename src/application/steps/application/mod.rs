@@ -4,24 +4,26 @@
 //! operations. These steps handle application-specific operations like deployment,
 //! service management, configuration, and application health monitoring.
 //!
+//! ## Available Steps
+//!
+//! - `release` - Deploys configuration and Docker Compose files to remote host
+//! - `run` - Starts the Docker Compose application stack
+//!
 //! ## Future Steps
 //!
 //! This module is prepared for future application deployment steps such as:
-//! - Application container deployment
-//! - Service configuration and startup
 //! - Application health checks and validation
-//! - Application lifecycle management
+//! - Service stop and restart operations
+//! - Status monitoring and reporting
 //!
 //! ## Integration
 //!
-//! Application steps will integrate with the existing infrastructure and
+//! Application steps integrate with the existing infrastructure and
 //! software installation steps to provide complete deployment workflows
 //! from infrastructure provisioning to application operation.
 
-// Future modules to be added:
-// pub mod compose_config;
-// pub mod transfer_files;
-// pub mod deploy;
-// pub mod start_services;
-// pub mod stop_services;
-// pub mod get_status;
+pub mod release;
+pub mod run;
+
+pub use release::{ReleaseStep, ReleaseStepError};
+pub use run::{RunStep, RunStepError};

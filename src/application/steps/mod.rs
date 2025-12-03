@@ -27,6 +27,7 @@ pub mod system;
 pub mod validation;
 
 // Re-export all steps for easy access
+pub use application::{ReleaseStep, ReleaseStepError, RunStep, RunStepError};
 pub use connectivity::WaitForSSHConnectivityStep;
 pub use infrastructure::{
     ApplyInfrastructureStep, DestroyInfrastructureStep, GetInstanceInfoStep,
