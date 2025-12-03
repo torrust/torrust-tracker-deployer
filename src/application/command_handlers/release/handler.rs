@@ -5,7 +5,9 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use super::errors::ReleaseCommandHandlerError;
-use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::repository::{EnvironmentRepository, RepositoryError};
+use crate::domain::environment::Configured;
+use crate::domain::Environment;
 use crate::domain::EnvironmentName;
 
 /// `ReleaseCommandHandler` orchestrates the software release workflow
@@ -29,7 +31,6 @@ use crate::domain::EnvironmentName;
 ///
 /// State is persisted after each transition using the injected repository.
 pub struct ReleaseCommandHandler {
-    #[allow(dead_code)]
     pub(crate) repository: Arc<dyn EnvironmentRepository>,
     #[allow(dead_code)]
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
@@ -57,7 +58,10 @@ impl ReleaseCommandHandler {
     ///
     /// # Errors
     ///
-    /// Returns an error if any step in the release workflow fails
+    /// Returns an error if:
+    /// * Environment not found
+    /// * Environment is not in `Configured` state
+    /// * State persistence fails
     #[instrument(
         name = "release_command",
         skip_all,
@@ -70,14 +74,36 @@ impl ReleaseCommandHandler {
         info!(
             command = "release",
             environment = %env_name,
-            "Starting software release workflow (placeholder)"
+            "Starting software release workflow"
         );
 
-        // Placeholder implementation - will be wired to steps in later phases
+        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
+        let any_env = self
+            .repository
+            .load(env_name)
+            .map_err(ReleaseCommandHandlerError::StatePersistence)?;
+
+        // 2. Check if environment exists
+        let any_env = any_env.ok_or_else(|| {
+            ReleaseCommandHandlerError::StatePersistence(RepositoryError::NotFound)
+        })?;
+
+        // 3. Validate environment is in Configured state and restore type safety
+        let environment: Environment<Configured> = any_env.try_into_configured()?;
+
         info!(
             command = "release",
             environment = %env_name,
-            "Release command handler executed (no-op placeholder)"
+            current_state = "configured",
+            target_state = "releasing",
+            "Environment loaded and validated. Would transition to Releasing state."
+        );
+
+        // Log intent about state transition (skeleton behavior)
+        info!(
+            command = "release",
+            environment = %environment.name(),
+            "Release command handler validated state successfully (skeleton - no actual release performed)"
         );
 
         Ok(())

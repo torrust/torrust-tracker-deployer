@@ -1,5 +1,6 @@
 //! Error types for the Run command handler
 
+use crate::domain::environment::state::StateTypeError;
 use crate::shared::error::{ErrorKind, Traceable};
 
 /// Comprehensive error type for the `RunCommandHandler`
@@ -17,13 +18,8 @@ pub enum RunCommandHandlerError {
     },
 
     /// Environment is in an invalid state for running
-    #[error("Environment '{name}' is in an invalid state for running: expected Released, got {actual_state}")]
-    InvalidState {
-        /// The name of the environment
-        name: String,
-        /// The actual state of the environment
-        actual_state: String,
-    },
+    #[error("Environment is in an invalid state for running: {0}")]
+    InvalidState(#[from] StateTypeError),
 
     /// Failed to persist environment state
     #[error("Failed to persist environment state: {0}")]
@@ -45,10 +41,8 @@ impl Traceable for RunCommandHandlerError {
             Self::EnvironmentNotFound { name } => {
                 format!("RunCommandHandlerError: Environment not found - {name}")
             }
-            Self::InvalidState { name, actual_state } => {
-                format!(
-                    "RunCommandHandlerError: Invalid state for environment '{name}' - expected Released, got {actual_state}"
-                )
+            Self::InvalidState(e) => {
+                format!("RunCommandHandlerError: Invalid state for run - {e}")
             }
             Self::StatePersistence(e) => {
                 format!("RunCommandHandlerError: Failed to persist environment state - {e}")
@@ -63,16 +57,14 @@ impl Traceable for RunCommandHandlerError {
         match self {
             Self::StatePersistence(_)
             | Self::EnvironmentNotFound { .. }
-            | Self::InvalidState { .. }
+            | Self::InvalidState(_)
             | Self::RunOperationFailed { .. } => None,
         }
     }
 
     fn error_kind(&self) -> ErrorKind {
         match self {
-            Self::EnvironmentNotFound { .. } | Self::InvalidState { .. } => {
-                ErrorKind::Configuration
-            }
+            Self::EnvironmentNotFound { .. } | Self::InvalidState(_) => ErrorKind::Configuration,
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
             Self::RunOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
@@ -182,6 +174,7 @@ For more information, see docs/user-guide/commands.md"
 mod tests {
     use super::*;
     use crate::domain::environment::repository::RepositoryError;
+    use crate::domain::environment::state::StateTypeError;
 
     #[test]
     fn it_should_provide_help_for_environment_not_found() {
@@ -196,10 +189,10 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_invalid_state() {
-        let error = RunCommandHandlerError::InvalidState {
-            name: "test-env".to_string(),
-            actual_state: "Configured".to_string(),
-        };
+        let error = RunCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
+            expected: "Released",
+            actual: "Configured".to_string(),
+        });
 
         let help = error.help();
         assert!(help.contains("Invalid Environment State"));
@@ -233,10 +226,10 @@ mod tests {
             RunCommandHandlerError::EnvironmentNotFound {
                 name: "test".to_string(),
             },
-            RunCommandHandlerError::InvalidState {
-                name: "test".to_string(),
-                actual_state: "Configured".to_string(),
-            },
+            RunCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
+                expected: "Released",
+                actual: "Configured".to_string(),
+            }),
             RunCommandHandlerError::StatePersistence(RepositoryError::NotFound),
             RunCommandHandlerError::RunOperationFailed {
                 name: "test".to_string(),

@@ -5,7 +5,9 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use super::errors::RunCommandHandlerError;
-use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::repository::{EnvironmentRepository, RepositoryError};
+use crate::domain::environment::Released;
+use crate::domain::Environment;
 use crate::domain::EnvironmentName;
 
 /// `RunCommandHandler` orchestrates the stack execution workflow
@@ -28,7 +30,6 @@ use crate::domain::EnvironmentName;
 ///
 /// State is persisted after each transition using the injected repository.
 pub struct RunCommandHandler {
-    #[allow(dead_code)]
     pub(crate) repository: Arc<dyn EnvironmentRepository>,
     #[allow(dead_code)]
     pub(crate) clock: Arc<dyn crate::shared::Clock>,
@@ -56,7 +57,10 @@ impl RunCommandHandler {
     ///
     /// # Errors
     ///
-    /// Returns an error if any step in the run workflow fails
+    /// Returns an error if:
+    /// * Environment not found
+    /// * Environment is not in `Released` state
+    /// * State persistence fails
     #[instrument(
         name = "run_command",
         skip_all,
@@ -69,14 +73,35 @@ impl RunCommandHandler {
         info!(
             command = "run",
             environment = %env_name,
-            "Starting stack execution workflow (placeholder)"
+            "Starting stack execution workflow"
         );
 
-        // Placeholder implementation - will be wired to steps in later phases
+        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
+        let any_env = self
+            .repository
+            .load(env_name)
+            .map_err(RunCommandHandlerError::StatePersistence)?;
+
+        // 2. Check if environment exists
+        let any_env = any_env
+            .ok_or_else(|| RunCommandHandlerError::StatePersistence(RepositoryError::NotFound))?;
+
+        // 3. Validate environment is in Released state and restore type safety
+        let environment: Environment<Released> = any_env.try_into_released()?;
+
         info!(
             command = "run",
             environment = %env_name,
-            "Run command handler executed (no-op placeholder)"
+            current_state = "released",
+            target_state = "running",
+            "Environment loaded and validated. Would transition to Running state."
+        );
+
+        // Log intent about state transition (skeleton behavior)
+        info!(
+            command = "run",
+            environment = %environment.name(),
+            "Run command handler validated state successfully (skeleton - no actual run performed)"
         );
 
         Ok(())

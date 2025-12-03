@@ -1,5 +1,6 @@
 //! Error types for the Release command handler
 
+use crate::domain::environment::state::StateTypeError;
 use crate::shared::error::{ErrorKind, Traceable};
 
 /// Comprehensive error type for the `ReleaseCommandHandler`
@@ -17,13 +18,8 @@ pub enum ReleaseCommandHandlerError {
     },
 
     /// Environment is in an invalid state for release
-    #[error("Environment '{name}' is in an invalid state for release: expected Configured, got {actual_state}")]
-    InvalidState {
-        /// The name of the environment
-        name: String,
-        /// The actual state of the environment
-        actual_state: String,
-    },
+    #[error("Environment is in an invalid state for release: {0}")]
+    InvalidState(#[from] StateTypeError),
 
     /// Failed to persist environment state
     #[error("Failed to persist environment state: {0}")]
@@ -45,10 +41,8 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::EnvironmentNotFound { name } => {
                 format!("ReleaseCommandHandlerError: Environment not found - {name}")
             }
-            Self::InvalidState { name, actual_state } => {
-                format!(
-                    "ReleaseCommandHandlerError: Invalid state for environment '{name}' - expected Configured, got {actual_state}"
-                )
+            Self::InvalidState(e) => {
+                format!("ReleaseCommandHandlerError: Invalid state for release - {e}")
             }
             Self::StatePersistence(e) => {
                 format!("ReleaseCommandHandlerError: Failed to persist environment state - {e}")
@@ -65,16 +59,14 @@ impl Traceable for ReleaseCommandHandlerError {
         match self {
             Self::StatePersistence(_)
             | Self::EnvironmentNotFound { .. }
-            | Self::InvalidState { .. }
+            | Self::InvalidState(_)
             | Self::ReleaseOperationFailed { .. } => None,
         }
     }
 
     fn error_kind(&self) -> ErrorKind {
         match self {
-            Self::EnvironmentNotFound { .. } | Self::InvalidState { .. } => {
-                ErrorKind::Configuration
-            }
+            Self::EnvironmentNotFound { .. } | Self::InvalidState(_) => ErrorKind::Configuration,
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
             Self::ReleaseOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
@@ -183,6 +175,7 @@ For more information, see docs/user-guide/commands.md"
 mod tests {
     use super::*;
     use crate::domain::environment::repository::RepositoryError;
+    use crate::domain::environment::state::StateTypeError;
 
     #[test]
     fn it_should_provide_help_for_environment_not_found() {
@@ -197,10 +190,10 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_invalid_state() {
-        let error = ReleaseCommandHandlerError::InvalidState {
-            name: "test-env".to_string(),
-            actual_state: "Created".to_string(),
-        };
+        let error = ReleaseCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
+            expected: "configured",
+            actual: "created".to_string(),
+        });
 
         let help = error.help();
         assert!(help.contains("Invalid Environment State"));
@@ -230,14 +223,14 @@ mod tests {
 
     #[test]
     fn it_should_have_help_for_all_error_variants() {
-        let errors = vec![
+        let errors: Vec<ReleaseCommandHandlerError> = vec![
             ReleaseCommandHandlerError::EnvironmentNotFound {
                 name: "test".to_string(),
             },
-            ReleaseCommandHandlerError::InvalidState {
-                name: "test".to_string(),
-                actual_state: "Created".to_string(),
-            },
+            ReleaseCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
+                expected: "configured",
+                actual: "created".to_string(),
+            }),
             ReleaseCommandHandlerError::StatePersistence(RepositoryError::NotFound),
             ReleaseCommandHandlerError::ReleaseOperationFailed {
                 name: "test".to_string(),
