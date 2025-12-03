@@ -94,6 +94,7 @@ getent
 getopt
 handleable
 hashset
+healthcheck
 hetznercloud
 hexdigit
 hexdump
