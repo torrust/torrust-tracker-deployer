@@ -226,7 +226,7 @@ cargo run --bin e2e-tests-full -- --help
 >
 > **📖 For detailed command documentation and guides, see:**
 >
-> - **[Quick Start Guide](docs/user-guide/quick-start.md)** - Complete workflow walkthrough _(coming soon)_
+> - **[Quick Start Guide](docs/user-guide/quick-start.md)** - Complete workflow walkthrough
 > - **[Commands Reference](docs/user-guide/commands/)** - Detailed guide for each command _(coming soon)_
 > - **[Console Commands](docs/console-commands.md)** - Technical reference
 
