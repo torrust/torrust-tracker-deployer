@@ -167,7 +167,7 @@ Use the E2E test binaries to run automated infrastructure tests with hardcoded e
 cargo run --bin e2e-tests-full
 
 # Run individual E2E test suites
-cargo run --bin e2e-config-tests      # Configuration generation and validation tests
+cargo run --bin e2e-config-and-release-tests      # Configuration, release, and run workflow tests
 cargo run --bin e2e-provision-and-destroy-tests   # Infrastructure provisioning tests
 
 # Keep the test environment after completion for inspection

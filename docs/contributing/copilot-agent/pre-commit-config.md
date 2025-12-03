@@ -157,8 +157,8 @@ The pre-commit script will inform you about skipped tests and provide commands t
 # Run E2E provision tests (~44s)
 cargo run --bin e2e-provision-and-destroy-tests
 
-# Run E2E config tests (~48s)
-cargo run --bin e2e-config-tests
+# Run E2E config and release tests (~48s)
+cargo run --bin e2e-config-and-release-tests
 
 # Check coverage manually (if needed)
 cargo cov-check

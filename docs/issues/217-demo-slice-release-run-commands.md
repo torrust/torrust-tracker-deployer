@@ -179,7 +179,7 @@ path = "src/bin/e2e_config_and_release_tests.rs"
 
 ```bash
 # Change from:
-cargo run --bin e2e-config-tests
+cargo run --bin e2e-config-and-release-tests
 
 # To:
 cargo run --bin e2e-config-and-release-tests
@@ -720,7 +720,7 @@ Update `scripts/pre-commit.sh` to run the renamed test:
 
 ```bash
 # Change from:
-cargo run --bin e2e-config-tests
+cargo run --bin e2e-config-and-release-tests
 
 # To:
 cargo run --bin e2e-config-and-release-tests

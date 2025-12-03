@@ -30,7 +30,7 @@ if [ "${TORRUST_TD_SKIP_SLOW_TESTS:-false}" = "true" ]; then
     echo ""
     echo "If you want to run them manually before committing, use these commands:"
     echo "  cargo run --bin e2e-provision-and-destroy-tests  # ~44s"
-    echo "  cargo run --bin e2e-config-tests                 # ~48s"
+    echo "  cargo run --bin e2e-config-and-release-tests     # ~48s"
     echo "  cargo cov-check                                  # For coverage check"
     echo ""
     echo "Fast mode execution time: ~2 minutes 30 seconds"
@@ -49,7 +49,7 @@ else
         "Running tests|All tests passed|||cargo test"
         "Testing cargo documentation|Documentation builds successfully|||cargo doc --no-deps --bins --examples --workspace --all-features"
         "Running E2E provision and destroy tests|Provision and destroy tests passed|(Testing infrastructure lifecycle - this may take a few minutes)|RUST_LOG=warn|cargo run --bin e2e-provision-and-destroy-tests"
-        "Running E2E configuration tests|Configuration tests passed|(Testing software installation and configuration)|RUST_LOG=warn|cargo run --bin e2e-config-tests"
+        "Running E2E configuration and release tests|Configuration and release tests passed|(Testing software installation, configuration, and release)|RUST_LOG=warn|cargo run --bin e2e-config-and-release-tests"
     )
 fi
 

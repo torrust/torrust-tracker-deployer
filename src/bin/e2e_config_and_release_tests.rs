@@ -1,25 +1,25 @@
-//! End-to-End Configuration Testing Binary for Torrust Tracker Deployer (Black-box)
+//! End-to-End Configuration and Release Testing Binary for Torrust Tracker Deployer (Black-box)
 //!
-//! This binary orchestrates configuration testing of the deployment infrastructure using
+//! This binary orchestrates configuration and release testing of the deployment infrastructure using
 //! Docker containers instead of VMs. It uses a black-box approach, executing CLI commands
 //! as external processes rather than importing internal application logic.
 //!
 //! ## Usage
 //!
-//! Run the E2E configuration tests:
+//! Run the E2E configuration and release tests:
 //!
 //! ```bash
-//! cargo run --bin e2e-config-tests
+//! cargo run --bin e2e-config-and-release-tests
 //! ```
 //!
 //! Run with custom options:
 //!
 //! ```bash
 //! # Change logging format
-//! cargo run --bin e2e-config-tests -- --log-format json
+//! cargo run --bin e2e-config-and-release-tests -- --log-format json
 //!
 //! # Show help
-//! cargo run --bin e2e-config-tests -- --help
+//! cargo run --bin e2e-config-and-release-tests -- --help
 //! ```
 //!
 //! ## Test Workflow
@@ -80,8 +80,10 @@ use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configuration_validat
 const ENVIRONMENT_NAME: &str = "e2e-config";
 
 #[derive(Parser)]
-#[command(name = "e2e-config-tests")]
-#[command(about = "E2E configuration tests using black-box approach with Docker containers")]
+#[command(name = "e2e-config-and-release-tests")]
+#[command(
+    about = "E2E configuration and release tests using black-box approach with Docker containers"
+)]
 struct CliArgs {
     /// Logging format to use
     #[arg(
@@ -125,9 +127,9 @@ pub async fn main() -> Result<()> {
 
     info!(
         application = "torrust_tracker_deployer",
-        test_suite = "e2e_config_tests",
+        test_suite = "e2e_config_and_release_tests",
         log_format = ?cli.log_format,
-        "Starting E2E configuration tests (black-box) with Docker containers"
+        "Starting E2E configuration and release tests (black-box) with Docker containers"
     );
 
     // Verify required dependencies before running tests
@@ -153,18 +155,18 @@ pub async fn main() -> Result<()> {
     match test_result {
         Ok(()) => {
             info!(
-                test_suite = "e2e_config_tests",
+                test_suite = "e2e_config_and_release_tests",
                 status = "success",
-                "All configuration tests passed successfully"
+                "All configuration and release tests passed successfully"
             );
             Ok(())
         }
         Err(error) => {
             error!(
-                test_suite = "e2e_config_tests",
+                test_suite = "e2e_config_and_release_tests",
                 status = "failed",
                 error = %error,
-                "Configuration tests failed"
+                "Configuration and release tests failed"
             );
             Err(error)
         }

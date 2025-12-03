@@ -205,8 +205,8 @@ tracing::debug!(
 Run E2E tests to verify the playbook is copied correctly:
 
 ```bash
-# Run E2E config tests (faster, tests configuration only)
-cargo run --bin e2e-config-tests
+# Run E2E config and release tests (faster, tests configuration only)
+cargo run --bin e2e-config-and-release-tests
 
 # Or run full E2E tests
 cargo run --bin e2e-tests-full
@@ -284,8 +284,8 @@ When creating new Ansible playbooks that need dynamic variables (ports, paths, e
 
 ```yaml
 # System Configuration
-ssh_port: {{ ssh_port }}
-my_service_port: {{ my_service_port }}  # ← Add your new variable
+ssh_port: { { ssh_port } }
+my_service_port: { { my_service_port } } # ← Add your new variable
 ```
 
 **Reference variables in static playbook using `vars_files`:**
@@ -296,8 +296,8 @@ my_service_port: {{ my_service_port }}  # ← Add your new variable
 - name: Configure My Service
   hosts: all
   vars_files:
-    - variables.yml  # Load centralized variables
-  
+    - variables.yml # Load centralized variables
+
   tasks:
     - name: Configure service port
       ansible.builtin.lineinfile:

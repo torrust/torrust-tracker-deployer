@@ -135,7 +135,7 @@ Since cloud-init is VM-specific, containers need alternative initialization:
 ### Next Steps (B.2+)
 
 1. **Docker Implementation**: Build and test Docker configuration
-2. **Binary Creation**: Implement `e2e-config-tests` binary
+2. **Binary Creation**: Implement `e2e-config-and-release-tests` binary
 3. **Container Management**: Integrate container lifecycle with tests
 4. **Local Testing**: Validate complete workflow locally
 5. **CI Integration**: Create GitHub Actions workflow
@@ -146,7 +146,7 @@ Since cloud-init is VM-specific, containers need alternative initialization:
 ┌─────────────────────────────────────────────────────────┐
 │                GitHub Actions Runner                    │
 │  ┌─────────────────────────────────────────────────────┐│
-│  │              e2e-config-tests binary                 ││
+│  │              e2e-config-and-release-tests binary       ││
 │  │  ┌─────────────────────────────────────────────────┐ ││
 │  │  │            Docker Container                     │ ││
 │  │  │  ┌─────────────────────────────────────────────┐ │ ││

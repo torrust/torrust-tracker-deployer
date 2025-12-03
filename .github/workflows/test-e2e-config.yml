@@ -22,7 +22,7 @@ on:
   workflow_dispatch: # Allow manual triggering
 
 jobs:
-  e2e-config-tests:
+  e2e-config-and-release-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 45 # Timeout for complete configuration testing with software installation
 
@@ -62,16 +62,16 @@ jobs:
           chmod 600 fixtures/testing_rsa
           ls -la fixtures/testing_rsa
 
-      - name: Build E2E configuration tests binary
+      - name: Build E2E configuration and release tests binary
         run: |
-          cargo build --bin e2e-config-tests --release
+          cargo build --bin e2e-config-and-release-tests --release
 
-      - name: Run E2E configuration test
+      - name: Run E2E configuration and release test
         run: |
-          # Run the E2E configuration test with debug logging for better debugging
-          echo "🚀 Starting E2E configuration test at $(date)"
-          cargo run --bin e2e-config-tests
-          echo "✅ E2E configuration test completed at $(date)"
+          # Run the E2E configuration and release test with debug logging for better debugging
+          echo "🚀 Starting E2E configuration and release test at $(date)"
+          cargo run --bin e2e-config-and-release-tests
+          echo "✅ E2E configuration and release test completed at $(date)"
         env:
           # Preserve environment variables for the E2E test
           RUST_LOG: debug
