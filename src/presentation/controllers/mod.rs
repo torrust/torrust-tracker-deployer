@@ -249,12 +249,10 @@ pub mod create;
 pub mod destroy;
 pub mod provision;
 pub mod register;
+pub mod release;
+pub mod run;
 pub mod test;
 
 // Shared test utilities
 #[cfg(test)]
 pub mod tests;
-
-// Future command modules (scaffolding in progress - Issue #217):
-// pub mod release;
-// pub mod run;

@@ -156,13 +156,19 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Release { environment } => {
-            // TODO: Implement release command handler
-            println!("Release command not implemented yet for environment: {environment}");
+            context
+                .container()
+                .create_release_controller()
+                .execute(&environment)
+                .await?;
             Ok(())
         }
         Commands::Run { environment } => {
-            // TODO: Implement run command handler
-            println!("Run command not implemented yet for environment: {environment}");
+            context
+                .container()
+                .create_run_controller()
+                .execute(&environment)
+                .await?;
             Ok(())
         }
     }
