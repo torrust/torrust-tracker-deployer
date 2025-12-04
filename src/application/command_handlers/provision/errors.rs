@@ -11,6 +11,9 @@ use crate::shared::command::CommandError;
 /// Comprehensive error type for the `ProvisionCommandHandler`
 #[derive(Debug, thiserror::Error)]
 pub enum ProvisionCommandHandlerError {
+    #[error("Environment not found: '{name}'")]
+    EnvironmentNotFound { name: String },
+
     #[error("OpenTofu template rendering failed: {0}")]
     OpenTofuTemplateRendering(#[from] TofuTemplateRendererError),
 
@@ -45,6 +48,9 @@ impl From<AnsibleTemplateServiceError> for ProvisionCommandHandlerError {
 impl crate::shared::Traceable for ProvisionCommandHandlerError {
     fn trace_format(&self) -> String {
         match self {
+            Self::EnvironmentNotFound { name } => {
+                format!("ProvisionCommandHandlerError: Environment not found - '{name}'")
+            }
             Self::OpenTofuTemplateRendering(e) => {
                 format!("ProvisionCommandHandlerError: OpenTofu template rendering failed - {e}")
             }
@@ -79,14 +85,16 @@ impl crate::shared::Traceable for ProvisionCommandHandlerError {
             Self::OpenTofu(e) => Some(e),
             Self::Command(e) => Some(e),
             Self::SshConnectivity(e) => Some(e),
-            Self::TemplateRendering(_) | Self::StatePersistence(_) | Self::StateTransition(_) => {
-                None
-            }
+            Self::EnvironmentNotFound { .. }
+            | Self::TemplateRendering(_)
+            | Self::StatePersistence(_)
+            | Self::StateTransition(_) => None,
         }
     }
 
     fn error_kind(&self) -> crate::shared::ErrorKind {
         match self {
+            Self::EnvironmentNotFound { .. } => crate::shared::ErrorKind::Configuration,
             Self::OpenTofuTemplateRendering(_)
             | Self::AnsibleTemplateRendering(_)
             | Self::TemplateRendering(_) => crate::shared::ErrorKind::TemplateRendering,
@@ -128,8 +136,28 @@ impl ProvisionCommandHandlerError {
     /// assert!(help.contains("Troubleshooting"));
     /// ```
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn help(&self) -> &'static str {
         match self {
+            Self::EnvironmentNotFound { .. } => {
+                "Environment Not Found - Troubleshooting:
+
+1. Verify the environment name is correct
+2. Check if the environment was created:
+   ls data/
+
+3. If the environment doesn't exist, create it first:
+   cargo run -- create environment --env-file <config.json>
+
+4. If the environment was previously destroyed, recreate it
+
+Common causes:
+- Typo in environment name
+- Environment was destroyed
+- Working in the wrong directory
+
+For more information, see docs/user-guide/commands.md"
+            }
             Self::OpenTofuTemplateRendering(_) => {
                 "OpenTofu Template Rendering Failed - Troubleshooting:
 
@@ -353,6 +381,18 @@ mod tests {
     }
 
     #[test]
+    fn it_should_provide_help_for_environment_not_found() {
+        let error = ProvisionCommandHandlerError::EnvironmentNotFound {
+            name: "test-env".to_string(),
+        };
+
+        let help = error.help();
+        assert!(help.contains("Environment Not Found"));
+        assert!(help.contains("Troubleshooting"));
+        assert!(help.contains("environment name"));
+    }
+
+    #[test]
     fn it_should_have_help_for_all_error_variants() {
         use crate::adapters::ssh::SshError;
         use crate::application::steps::RenderAnsibleTemplatesError;
@@ -361,6 +401,9 @@ mod tests {
         use crate::shared::command::CommandError;
 
         let errors = vec![
+            ProvisionCommandHandlerError::EnvironmentNotFound {
+                name: "test-env".to_string(),
+            },
             ProvisionCommandHandlerError::OpenTofuTemplateRendering(
                 TofuTemplateRendererError::DirectoryCreationFailed {
                     directory: "test".to_string(),

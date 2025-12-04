@@ -279,6 +279,116 @@ impl E2eTestRunner {
         Ok(())
     }
 
+    /// Releases software to the provisioned and configured infrastructure.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the release command fails.
+    /// If `cleanup_on_failure` is enabled, attempts to destroy infrastructure before returning.
+    pub fn release_software(&self) -> Result<()> {
+        info!(
+            step = "release",
+            environment = %self.environment_name,
+            "Releasing software"
+        );
+
+        let release_result = self
+            .runner
+            .run_release_command(&self.environment_name)
+            .map_err(|e| anyhow::anyhow!("Failed to execute release command: {e}"))?;
+
+        if !release_result.success() {
+            error!(
+                step = "release",
+                environment = %self.environment_name,
+                exit_code = ?release_result.exit_code(),
+                stderr = %release_result.stderr(),
+                "Release command failed"
+            );
+
+            self.attempt_cleanup_on_failure();
+
+            return Err(anyhow::anyhow!(
+                "Release failed with exit code {:?}",
+                release_result.exit_code()
+            ));
+        }
+
+        info!(
+            step = "release",
+            environment = %self.environment_name,
+            status = "success",
+            "Software released successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Runs services on the released infrastructure.
+    ///
+    /// # Skip Condition
+    ///
+    /// When `TORRUST_TD_SKIP_RUN_IN_CONTAINER` environment variable is set to `"true"`,
+    /// this step is skipped because Docker daemon is not available in the test container
+    /// (no Docker-in-Docker configuration).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the run command fails.
+    /// If `cleanup_on_failure` is enabled, attempts to destroy infrastructure before returning.
+    pub fn run_services(&self) -> Result<()> {
+        // Check if run should be skipped (Docker not available in test container)
+        let skip_run = std::env::var("TORRUST_TD_SKIP_RUN_IN_CONTAINER")
+            .map(|v| v.to_lowercase() == "true")
+            .unwrap_or(false);
+
+        if skip_run {
+            info!(
+                step = "run",
+                environment = %self.environment_name,
+                "Skipping run command due to TORRUST_TD_SKIP_RUN_IN_CONTAINER (Docker not available in test container)"
+            );
+            return Ok(());
+        }
+
+        info!(
+            step = "run",
+            environment = %self.environment_name,
+            "Running services"
+        );
+
+        let run_result = self
+            .runner
+            .run_run_command(&self.environment_name)
+            .map_err(|e| anyhow::anyhow!("Failed to execute run command: {e}"))?;
+
+        if !run_result.success() {
+            error!(
+                step = "run",
+                environment = %self.environment_name,
+                exit_code = ?run_result.exit_code(),
+                stderr = %run_result.stderr(),
+                "Run command failed"
+            );
+
+            self.attempt_cleanup_on_failure();
+
+            return Err(anyhow::anyhow!(
+                "Run failed with exit code {:?}",
+                run_result.exit_code()
+            ));
+        }
+
+        info!(
+            step = "run",
+            environment = %self.environment_name,
+            status = "success",
+            "Services started successfully"
+        );
+
+        Ok(())
+    }
+
     /// Validates the deployment by running the test command.
     ///
     /// # Errors

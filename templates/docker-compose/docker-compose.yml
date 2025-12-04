@@ -1,0 +1,25 @@
+# Docker Compose configuration for Torrust Tracker deployment
+#
+# This is a demo/MVP configuration using nginx as a simple web service
+# to validate the deployment workflow. In production, this will be replaced
+# with actual Torrust Tracker services.
+#
+# Usage:
+#   docker compose up -d
+#   docker compose ps
+#   docker compose logs
+#   docker compose down
+
+services:
+  demo-app:
+    image: nginx:alpine
+    container_name: torrust-demo-app
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

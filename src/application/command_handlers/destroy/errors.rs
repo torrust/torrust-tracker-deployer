@@ -9,6 +9,13 @@ use crate::shared::command::CommandError;
 /// Comprehensive error type for the `DestroyCommandHandler`
 #[derive(Debug, thiserror::Error)]
 pub enum DestroyCommandHandlerError {
+    /// Environment was not found in the repository
+    #[error("Environment not found: {name}")]
+    EnvironmentNotFound {
+        /// The name of the environment that was not found
+        name: String,
+    },
+
     #[error("OpenTofu command failed: {0}")]
     OpenTofu(#[from] OpenTofuError),
 
@@ -32,6 +39,9 @@ pub enum DestroyCommandHandlerError {
 impl crate::shared::Traceable for DestroyCommandHandlerError {
     fn trace_format(&self) -> String {
         match self {
+            Self::EnvironmentNotFound { name } => {
+                format!("DestroyCommandHandlerError: Environment not found - {name}")
+            }
             Self::OpenTofu(e) => {
                 format!("DestroyCommandHandlerError: OpenTofu command failed - {e}")
             }
@@ -57,7 +67,8 @@ impl crate::shared::Traceable for DestroyCommandHandlerError {
         match self {
             Self::OpenTofu(e) => Some(e),
             Self::Command(e) => Some(e),
-            Self::StatePersistence(_)
+            Self::EnvironmentNotFound { .. }
+            | Self::StatePersistence(_)
             | Self::StateTransition(_)
             | Self::StateCleanupFailed { .. } => None,
         }
@@ -65,9 +76,11 @@ impl crate::shared::Traceable for DestroyCommandHandlerError {
 
     fn error_kind(&self) -> crate::shared::ErrorKind {
         match self {
+            Self::EnvironmentNotFound { .. } | Self::StateTransition(_) => {
+                crate::shared::ErrorKind::Configuration
+            }
             Self::OpenTofu(_) => crate::shared::ErrorKind::InfrastructureOperation,
             Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
-            Self::StateTransition(_) => crate::shared::ErrorKind::Configuration,
             Self::StatePersistence(_) | Self::StateCleanupFailed { .. } => {
                 crate::shared::ErrorKind::StatePersistence
             }
@@ -105,6 +118,24 @@ impl DestroyCommandHandlerError {
     #[must_use]
     pub fn help(&self) -> &'static str {
         match self {
+            Self::EnvironmentNotFound { .. } => {
+                "Environment Not Found - Troubleshooting:
+
+1. Verify the environment name is correct
+2. Check if the environment was created:
+   ls data/
+
+3. If the environment doesn't exist, there's nothing to destroy
+
+4. If the environment was previously destroyed, it has already been removed
+
+Common causes:
+- Typo in environment name
+- Environment was already destroyed
+- Working in the wrong directory
+
+For more information, see docs/user-guide/commands.md"
+            }
             Self::OpenTofu(_) => {
                 "OpenTofu Destroy Failed - Troubleshooting:
 
@@ -288,8 +319,23 @@ mod tests {
     }
 
     #[test]
+    fn it_should_provide_help_for_environment_not_found() {
+        let error = DestroyCommandHandlerError::EnvironmentNotFound {
+            name: "test-env".to_string(),
+        };
+
+        let help = error.help();
+        assert!(help.contains("Environment Not Found"));
+        assert!(help.contains("Troubleshooting"));
+        assert!(help.contains("environment name"));
+    }
+
+    #[test]
     fn it_should_have_help_for_all_error_variants() {
         let errors = vec![
+            DestroyCommandHandlerError::EnvironmentNotFound {
+                name: "test-env".to_string(),
+            },
             DestroyCommandHandlerError::OpenTofu(OpenTofuError::CommandError(
                 CommandError::ExecutionFailed {
                     command: "tofu".to_string(),

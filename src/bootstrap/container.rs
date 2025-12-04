@@ -18,6 +18,8 @@ use crate::presentation::controllers::create::subcommands::template::CreateTempl
 use crate::presentation::controllers::destroy::DestroyCommandController;
 use crate::presentation::controllers::provision::ProvisionCommandController;
 use crate::presentation::controllers::register::RegisterCommandController;
+use crate::presentation::controllers::release::ReleaseCommandController;
+use crate::presentation::controllers::run::RunCommandController;
 use crate::presentation::controllers::test::handler::TestCommandController;
 use crate::presentation::views::{UserOutput, VerbosityLevel};
 use crate::shared::clock::Clock;
@@ -228,6 +230,18 @@ impl Container {
     #[must_use]
     pub fn create_register_controller(&self) -> RegisterCommandController {
         RegisterCommandController::new(self.repository(), self.user_output())
+    }
+
+    /// Create a new `ReleaseCommandController`
+    #[must_use]
+    pub fn create_release_controller(&self) -> ReleaseCommandController {
+        ReleaseCommandController::new(self.repository(), self.clock(), self.user_output())
+    }
+
+    /// Create a new `RunCommandController`
+    #[must_use]
+    pub fn create_run_controller(&self) -> RunCommandController {
+        RunCommandController::new(self.repository(), self.clock(), self.user_output())
     }
 }
 

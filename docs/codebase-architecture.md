@@ -209,7 +209,7 @@ Application initialization and lifecycle management:
 **Binary Files:**
 
 - ✅ `src/bin/linter.rs` - Code quality linting binary
-- ✅ `src/bin/e2e-config-tests.rs` - E2E configuration tests
+- ✅ `src/bin/e2e-config-and-release-tests.rs` - E2E configuration and release tests
 - ✅ `src/bin/e2e-provision-and-destroy-tests.rs` - E2E provisioning and destruction tests
 - ✅ `src/bin/e2e-tests-full.rs` - Full E2E test suite
 

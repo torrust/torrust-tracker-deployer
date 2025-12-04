@@ -51,7 +51,9 @@ mod tests {
             | Commands::Provision { .. }
             | Commands::Configure { .. }
             | Commands::Test { .. }
-            | Commands::Register { .. } => {
+            | Commands::Register { .. }
+            | Commands::Release { .. }
+            | Commands::Run { .. } => {
                 panic!("Expected Destroy command")
             }
         }
@@ -73,7 +75,9 @@ mod tests {
                 | Commands::Provision { .. }
                 | Commands::Configure { .. }
                 | Commands::Test { .. }
-                | Commands::Register { .. } => {
+                | Commands::Register { .. }
+                | Commands::Release { .. }
+                | Commands::Run { .. } => {
                     panic!("Expected Destroy command")
                 }
             }
@@ -120,7 +124,9 @@ mod tests {
             | Commands::Provision { .. }
             | Commands::Configure { .. }
             | Commands::Test { .. }
-            | Commands::Register { .. } => {
+            | Commands::Register { .. }
+            | Commands::Release { .. }
+            | Commands::Run { .. } => {
                 panic!("Expected Destroy command")
             }
         }
@@ -210,7 +216,9 @@ mod tests {
             | Commands::Provision { .. }
             | Commands::Configure { .. }
             | Commands::Test { .. }
-            | Commands::Register { .. } => {
+            | Commands::Register { .. }
+            | Commands::Release { .. }
+            | Commands::Run { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -240,7 +248,9 @@ mod tests {
             | Commands::Provision { .. }
             | Commands::Configure { .. }
             | Commands::Test { .. }
-            | Commands::Register { .. } => {
+            | Commands::Register { .. }
+            | Commands::Release { .. }
+            | Commands::Run { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -291,7 +301,9 @@ mod tests {
             | Commands::Provision { .. }
             | Commands::Configure { .. }
             | Commands::Test { .. }
-            | Commands::Register { .. } => {
+            | Commands::Register { .. }
+            | Commands::Release { .. }
+            | Commands::Run { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -371,7 +383,9 @@ mod tests {
             | Commands::Provision { .. }
             | Commands::Configure { .. }
             | Commands::Test { .. }
-            | Commands::Register { .. } => {
+            | Commands::Register { .. }
+            | Commands::Release { .. }
+            | Commands::Run { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -405,7 +419,9 @@ mod tests {
             | Commands::Provision { .. }
             | Commands::Configure { .. }
             | Commands::Test { .. }
-            | Commands::Register { .. } => {
+            | Commands::Register { .. }
+            | Commands::Release { .. }
+            | Commands::Run { .. } => {
                 panic!("Expected Create command")
             }
         }
@@ -584,7 +600,9 @@ mod tests {
             | Commands::Destroy { .. }
             | Commands::Provision { .. }
             | Commands::Configure { .. }
-            | Commands::Test { .. } => {
+            | Commands::Test { .. }
+            | Commands::Release { .. }
+            | Commands::Run { .. } => {
                 panic!("Expected Register command")
             }
         }

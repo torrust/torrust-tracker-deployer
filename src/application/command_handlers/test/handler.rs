@@ -32,9 +32,7 @@ use crate::application::steps::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,
 };
-use crate::domain::environment::repository::{
-    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
-};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::EnvironmentName;
 
 /// `TestCommandHandler` orchestrates smoke testing for running Torrust Tracker services
@@ -104,25 +102,8 @@ impl TestCommandHandler {
         )
     )]
     pub async fn execute(&self, env_name: &EnvironmentName) -> Result<(), TestCommandHandlerError> {
-        info!(
-            command = "test",
-            environment = %env_name,
-            "Starting complete infrastructure testing workflow"
-        );
+        let any_env = self.load_environment(env_name)?;
 
-        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
-        let any_env = self
-            .repository
-            .inner()
-            .load(env_name)
-            .map_err(TestCommandHandlerError::StatePersistence)?;
-
-        // 2. Check if environment exists
-        let any_env = any_env.ok_or(TestCommandHandlerError::StatePersistence(
-            RepositoryError::NotFound,
-        ))?;
-
-        // 3. Extract instance IP (runtime check - works with any state)
         let instance_ip =
             any_env
                 .instance_ip()
@@ -153,5 +134,28 @@ impl TestCommandHandler {
         );
 
         Ok(())
+    }
+
+    /// Load environment from storage
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * Persistence error occurs during load
+    /// * Environment does not exist
+    fn load_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<crate::domain::environment::state::AnyEnvironmentState, TestCommandHandlerError>
+    {
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(TestCommandHandlerError::StatePersistence)?;
+
+        any_env.ok_or_else(|| TestCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })
     }
 }

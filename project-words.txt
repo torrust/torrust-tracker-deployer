@@ -84,6 +84,7 @@ elif
 endfor
 endraw
 epel
+equalto
 eprint
 eprintln
 executability
@@ -180,6 +181,7 @@ rustls
 rustup
 schemars
 secureboot
+selectattr
 serde
 serverurl
 shellcheck

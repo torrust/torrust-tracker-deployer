@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
@@ -11,9 +11,7 @@ use crate::application::steps::{
     ConfigureFirewallStep, ConfigureSecurityUpdatesStep, InstallDockerComposeStep,
     InstallDockerStep,
 };
-use crate::domain::environment::repository::{
-    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
-};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
 use crate::domain::environment::{Configured, Configuring, Environment};
 use crate::domain::EnvironmentName;
@@ -89,61 +87,40 @@ impl ConfigureCommandHandler {
         &self,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Configured>, ConfigureCommandHandlerError> {
-        info!(
-            command = "configure",
-            environment = %env_name,
-            "Starting complete infrastructure configuration workflow"
-        );
+        let environment = self.load_provisioned_environment(env_name)?;
 
-        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
-        let any_env = self
-            .repository
-            .inner()
-            .load(env_name)
-            .map_err(ConfigureCommandHandlerError::StatePersistence)?;
-
-        // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| {
-            ConfigureCommandHandlerError::StatePersistence(RepositoryError::NotFound)
-        })?;
-
-        // 3. Validate environment is in Provisioned state and restore type safety
-        let environment = any_env.try_into_provisioned()?;
-
-        // Capture start time before transitioning to Configuring state
         let started_at = self.clock.now();
 
-        // Transition to Configuring state
         let environment = environment.start_configuring();
 
-        // Persist intermediate state
         self.repository.save_configuring(&environment)?;
 
-        // Build configuration dependencies (AnsibleClient)
-        let ansible_client = Self::build_configuration_dependencies(&environment);
-
-        // Execute configuration steps with explicit step tracking
-        match Self::execute_configuration_with_tracking(&environment, &ansible_client) {
+        match Self::execute_configuration_with_tracking(&environment) {
             Ok(configured_env) => {
-                // Persist final state
-                self.repository.save_configured(&configured_env)?;
-
                 info!(
                     command = "configure",
                     environment = %configured_env.name(),
                     "Infrastructure configuration completed successfully"
                 );
 
+                self.repository.save_configured(&configured_env)?;
+
                 Ok(configured_env)
             }
             Err((e, current_step)) => {
-                // Transition to error state with structured context
-                // current_step contains the step that was executing when the error occurred
+                error!(
+                    command = "configure",
+                    environment = %environment.name(),
+                    failed_step = ?current_step,
+                    error = %e,
+                    "Infrastructure configuration failed"
+                );
+
                 let context =
                     self.build_failure_context(&environment, &e, current_step, started_at);
+
                 let failed = environment.configure_failed(context);
 
-                // Persist error state
                 self.repository.save_configure_failed(&failed)?;
 
                 Err(e)
@@ -162,23 +139,45 @@ impl ConfigureCommandHandler {
     /// Returns a tuple of (error, `current_step`) if any configuration step fails
     fn execute_configuration_with_tracking(
         environment: &Environment<Configuring>,
-        ansible_client: &Arc<AnsibleClient>,
     ) -> StepResult<Environment<Configured>, ConfigureCommandHandlerError, ConfigureStep> {
-        // Track current step and execute each step
-        // If an error occurs, we return it along with the current step
+        let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
+
+        // Allow tests or CI to skip Docker installation
+        // (useful for container-based tests where Docker is already installed via Dockerfile)
+        let skip_docker = std::env::var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER")
+            .map(|v| v == "true")
+            .unwrap_or(false);
 
         let current_step = ConfigureStep::InstallDocker;
-        InstallDockerStep::new(Arc::clone(ansible_client))
-            .execute()
-            .map_err(|e| (e.into(), current_step))?;
+        if skip_docker {
+            info!(
+                command = "configure",
+                step = "install_docker",
+                status = "skipped",
+                "Skipping Docker installation due to TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER (Docker pre-installed)"
+            );
+        } else {
+            InstallDockerStep::new(Arc::clone(&ansible_client))
+                .execute()
+                .map_err(|e| (e.into(), current_step))?;
+        }
 
         let current_step = ConfigureStep::InstallDockerCompose;
-        InstallDockerComposeStep::new(Arc::clone(ansible_client))
-            .execute()
-            .map_err(|e| (e.into(), current_step))?;
+        if skip_docker {
+            info!(
+                command = "configure",
+                step = "install_docker_compose",
+                status = "skipped",
+                "Skipping Docker Compose installation due to TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER (Docker Compose pre-installed)"
+            );
+        } else {
+            InstallDockerComposeStep::new(Arc::clone(&ansible_client))
+                .execute()
+                .map_err(|e| (e.into(), current_step))?;
+        }
 
         let current_step = ConfigureStep::ConfigureSecurityUpdates;
-        ConfigureSecurityUpdatesStep::new(Arc::clone(ansible_client))
+        ConfigureSecurityUpdatesStep::new(Arc::clone(&ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
 
@@ -198,7 +197,7 @@ impl ConfigureCommandHandler {
                 "Skipping UFW firewall configuration due to TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER"
             );
         } else {
-            ConfigureFirewallStep::new(Arc::clone(ansible_client))
+            ConfigureFirewallStep::new(Arc::clone(&ansible_client))
                 .execute()
                 .map_err(|e| (e.into(), current_step))?;
         }
@@ -207,23 +206,6 @@ impl ConfigureCommandHandler {
         let configured = environment.clone().configured();
 
         Ok(configured)
-    }
-
-    /// Build configuration dependencies
-    ///
-    /// Creates the `AnsibleClient` needed for configuration operations.
-    ///
-    /// # Arguments
-    ///
-    /// * `environment` - The environment being configured (provides build directory path)
-    ///
-    /// # Returns
-    ///
-    /// Returns `AnsibleClient` for executing Ansible playbooks
-    fn build_configuration_dependencies(
-        environment: &Environment<Configuring>,
-    ) -> Arc<AnsibleClient> {
-        Arc::new(AnsibleClient::new(environment.ansible_build_dir()))
     }
 
     /// Build failure context for a configuration error and generate trace file
@@ -279,5 +261,33 @@ impl ConfigureCommandHandler {
         }
 
         context
+    }
+
+    /// Load environment from storage and validate it is in `Provisioned` state
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * Persistence error occurs during load
+    /// * Environment does not exist
+    /// * Environment is not in `Provisioned` state
+    fn load_provisioned_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<
+        crate::domain::environment::Environment<crate::domain::environment::Provisioned>,
+        ConfigureCommandHandlerError,
+    > {
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(ConfigureCommandHandlerError::StatePersistence)?;
+
+        let any_env = any_env.ok_or_else(|| ConfigureCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })?;
+
+        Ok(any_env.try_into_provisioned()?)
     }
 }

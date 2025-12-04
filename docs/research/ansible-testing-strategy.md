@@ -93,11 +93,11 @@ cargo run --bin e2e-provision-and-destroy-tests
 # Time: ~20-30 seconds
 ```
 
-#### 2. Configuration Phase Testing (e2e-config-tests)
+#### 2. Configuration Phase Testing (e2e-config-and-release-tests)
 
 ```bash
 # Test software installation with Docker containers
-cargo run --bin e2e-config-tests
+cargo run --bin e2e-config-and-release-tests
 
 # What this tests:
 # - Container creation (provisioned-instance state)
@@ -116,7 +116,7 @@ Both test suites can run independently and in parallel:
 ```bash
 # Run both test phases simultaneously
 cargo run --bin e2e-provision-and-destroy-tests &
-cargo run --bin e2e-config-tests &
+cargo run --bin e2e-config-and-release-tests &
 wait
 ```
 
@@ -295,7 +295,7 @@ cargo run --bin e2e-provision-and-destroy-tests
 # - Cleanup and resource management
 
 # Configuration phase (runs independently)
-cargo run --bin e2e-config-tests
+cargo run --bin e2e-config-and-release-tests
 # - Container creation ~2-3s
 # - SSH key setup via password auth
 # - Ansible playbook execution
@@ -360,14 +360,14 @@ This strategy addresses our specific needs by leveraging the best aspects of bot
 
 ### In Progress 🔄
 
-- 🔄 **Configuration Phase Testing**: `e2e-config-tests` binary implementation (Phase B.3)
+- 🔄 **Configuration Phase Testing**: `e2e-config-and-release-tests` binary implementation (Phase B.3)
 - 🔄 **Container Lifecycle Management**: Integration with test binary
 - 🔄 **Ansible Playbook Integration**: Testing install-docker.yml, install-docker-compose.yml
 - 🔄 **GitHub Actions Workflow**: CI/CD pipeline for configuration testing
 
 ### Next Steps 📋
 
-1. **Complete Phase B.3**: Implement `e2e-config-tests` binary with Docker container integration
+1. **Complete Phase B.3**: Implement `e2e-config-and-release-tests` binary with Docker container integration
 2. **Playbook Validation**: Add comprehensive pre/post-condition checking to all playbooks
 3. **CI/CD Integration**: Implement parallel test execution in GitHub Actions
 4. **Future Container Phases**: Design `configured-instance`, `released-instance` containers

@@ -25,10 +25,10 @@ cargo run --bin e2e-provision-and-destroy-tests
 
 #### Configuration Tests
 
-Test software installation and configuration (Ansible playbooks):
+Test software installation, configuration, release, and run workflows (Ansible playbooks):
 
 ```bash
-cargo run --bin e2e-config-tests
+cargo run --bin e2e-config-and-release-tests
 ```
 
 #### Full Local Testing
@@ -59,7 +59,7 @@ cargo run --bin e2e-provision-and-destroy-tests
 cargo run --bin e2e-provision-and-destroy-tests -- --keep
 
 # Run configuration tests with debugging
-cargo run --bin e2e-config-tests -- --keep
+cargo run --bin e2e-config-and-release-tests -- --keep
 
 # Run full local tests with custom templates
 cargo run --bin e2e-tests-full -- --templates-dir ./custom/templates
@@ -147,7 +147,7 @@ For detailed destroy command documentation, see:
 - [Destroy Command User Guide](user-guide/commands/destroy.md)
 - [Destroy Command Developer Guide](contributing/commands.md#destroycommand)
 
-### E2E Configuration Tests (`e2e-config-tests`)
+### E2E Configuration and Release Tests (`e2e-config-and-release-tests`)
 
 Tests software installation and configuration using Docker containers:
 
@@ -321,7 +321,7 @@ docker rmi torrust-provisioned-instance
 - Validating VM creation and cloud-init setup
 - Working on provisioning-related features
 
-**Use Configuration Tests (`e2e-config-tests`) when**:
+**Use Configuration and Release Tests (`e2e-config-and-release-tests`) when**:
 
 - Testing Ansible playbooks and software installation
 - Validating configuration management changes
@@ -372,10 +372,10 @@ cargo run --bin e2e-provision-tests -- --keep
 lxc exec torrust-tracker-vm -- /bin/bash
 ```
 
-#### Configuration Tests Debugging
+#### Configuration and Release Tests Debugging
 
 ```bash
-cargo run --bin e2e-config-tests -- --keep
+cargo run --bin e2e-config-and-release-tests -- --keep
 
 # After test completion, find and connect to the Docker container:
 docker ps
@@ -576,7 +576,7 @@ For Ansible playbooks or software installation modifications:
 1. **Update configuration tests** in `src/bin/e2e_config_tests.rs`
 2. **Add validation methods** for new software components
 3. **Update Docker image** in `docker/provisioned-instance/` if needed
-4. **Test locally**: `cargo run --bin e2e-config-tests`
+4. **Test locally**: `cargo run --bin e2e-config-and-release-tests`
 5. **Verify CI passes** on `.github/workflows/test-e2e-config.yml`
 
 ### End-to-End Integration

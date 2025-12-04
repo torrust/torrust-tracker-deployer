@@ -14,6 +14,8 @@
 //! - `destroy` - Infrastructure destruction and teardown
 //! - `provision` - Infrastructure provisioning using `OpenTofu`
 //! - `register` - Register existing instances as alternative to provisioning
+//! - `release` - Software release to target instances
+//! - `run` - Stack execution on target instances
 //! - `test` - Deployment testing and validation
 //!
 //! Each command handler encapsulates a complete business workflow, handling orchestration,
@@ -25,6 +27,8 @@ pub mod create;
 pub mod destroy;
 pub mod provision;
 pub mod register;
+pub mod release;
+pub mod run;
 pub mod test;
 
 pub use configure::ConfigureCommandHandler;
@@ -32,4 +36,6 @@ pub use create::CreateCommandHandler;
 pub use destroy::DestroyCommandHandler;
 pub use provision::ProvisionCommandHandler;
 pub use register::RegisterCommandHandler;
+pub use release::ReleaseCommandHandler;
+pub use run::RunCommandHandler;
 pub use test::TestCommandHandler;

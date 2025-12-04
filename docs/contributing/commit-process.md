@@ -135,7 +135,7 @@ This script runs all mandatory checks:
 3. **Run tests**: `cargo test`
 4. **Test documentation builds**: `cargo doc --no-deps --bins --examples --workspace --all-features`
 5. **Run E2E provision and destroy tests**: `cargo run --bin e2e-provision-and-destroy-tests`
-6. **Run E2E configuration tests**: `cargo run --bin e2e-config-tests`
+6. **Run E2E configuration and release tests**: `cargo run --bin e2e-config-and-release-tests`
 
 **Note**: Code coverage is checked automatically in CI via GitHub Actions, not in the pre-commit script, to keep local commits fast and efficient.
 

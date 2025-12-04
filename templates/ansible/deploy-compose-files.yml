@@ -1,0 +1,61 @@
+---
+# Deploy Docker Compose Files Playbook
+# Copies the local docker-compose build folder to the remote host
+
+- name: Deploy Docker Compose Files
+  hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    remote_deploy_dir: /opt/torrust
+    local_compose_dir: "{{ compose_files_source_dir }}"
+
+  tasks:
+    - name: 📦 Starting Docker Compose files deployment
+      ansible.builtin.debug:
+        msg: "🚀 Deploying Docker Compose files to {{ inventory_hostname }}:{{ remote_deploy_dir }}"
+
+    - name: Ensure remote deployment directory exists
+      ansible.builtin.file:
+        path: "{{ remote_deploy_dir }}"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+
+    - name: Copy Docker Compose files to remote host
+      ansible.builtin.copy:
+        src: "{{ local_compose_dir }}/"
+        dest: "{{ remote_deploy_dir }}/"
+        mode: "0644"
+        directory_mode: "0755"
+        owner: root
+        group: root
+
+    - name: Verify docker-compose.yml exists on remote
+      ansible.builtin.stat:
+        path: "{{ remote_deploy_dir }}/docker-compose.yml"
+      register: compose_file_check
+
+    - name: Fail if docker-compose.yml was not deployed
+      ansible.builtin.fail:
+        msg: "docker-compose.yml was not found at {{ remote_deploy_dir }}/docker-compose.yml after deployment"
+      when: not compose_file_check.stat.exists
+
+    - name: List deployed files
+      ansible.builtin.find:
+        paths: "{{ remote_deploy_dir }}"
+        file_type: file
+        recurse: true
+      register: deployed_files
+
+    - name: Display deployment summary
+      ansible.builtin.debug:
+        msg: |
+          ✅ Docker Compose files deployed successfully!
+          📁 Destination: {{ remote_deploy_dir }}
+          📄 Files deployed: {{ deployed_files.files | length }}
+          {% for file in deployed_files.files %}
+          - {{ file.path | regex_replace(remote_deploy_dir ~ '/', '') }}
+          {% endfor %}

@@ -1,8 +1,8 @@
 //! Configuration validation task for E2E testing
 //!
-//! This module provides the E2E testing task for validating that configurations
-//! are working correctly after deployment. It performs comprehensive checks
-//! to ensure all required services and components are properly installed and running.
+//! This module provides the E2E testing task for validating that the `configure`
+//! command executed correctly. It performs comprehensive checks to ensure all
+//! required services and components are properly installed.
 //!
 //! ## Key Operations
 //!
@@ -13,11 +13,9 @@
 //!
 //! ## Integration
 //!
-//! This is a generic task that can be used with any infrastructure type:
-//! - Container-based testing environments
-//! - VM-based testing environments
-//! - Physical server deployments
-//! - Cloud instance deployments
+//! This validation runs after the `configure` command to verify that Docker
+//! and Docker Compose were installed correctly. For validating running services
+//! after the `run` command, use `run_run_validation` instead.
 
 use std::net::SocketAddr;
 use thiserror::Error;

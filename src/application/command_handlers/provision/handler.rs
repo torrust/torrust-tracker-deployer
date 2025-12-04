@@ -3,7 +3,7 @@
 use std::net::IpAddr;
 use std::sync::Arc;
 
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use super::errors::ProvisionCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
@@ -17,9 +17,7 @@ use crate::application::steps::{
     PlanInfrastructureStep, RenderOpenTofuTemplatesStep, ValidateInfrastructureStep,
     WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
-use crate::domain::environment::repository::{
-    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
-};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
 use crate::domain::EnvironmentName;
@@ -102,34 +100,12 @@ impl ProvisionCommandHandler {
         &self,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
-        info!(
-            command = "provision",
-            environment = %env_name,
-            "Starting complete infrastructure provisioning workflow"
-        );
+        let environment = self.load_created_environment(env_name)?;
 
-        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
-        let any_env = self
-            .repository
-            .inner()
-            .load(env_name)
-            .map_err(ProvisionCommandHandlerError::StatePersistence)?;
-
-        // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| {
-            ProvisionCommandHandlerError::StatePersistence(RepositoryError::NotFound)
-        })?;
-
-        // 3. Validate environment is in Created state and restore type safety
-        let environment = any_env.try_into_created()?;
-
-        // 4. Capture start time before transitioning to Provisioning state
         let started_at = self.clock.now();
 
-        // Transition to Provisioning state
         let environment = environment.start_provisioning();
 
-        // Persist intermediate state
         self.repository.save_provisioning(&environment)?;
 
         // Execute provisioning workflow with explicit step tracking
@@ -139,9 +115,6 @@ impl ProvisionCommandHandler {
                 // Store instance IP in the environment context
                 let provisioned = provisioned.with_instance_ip(instance_ip);
 
-                // Persist final state
-                self.repository.save_provisioned(&provisioned)?;
-
                 info!(
                     command = "provision",
                     environment = %provisioned.name(),
@@ -149,16 +122,23 @@ impl ProvisionCommandHandler {
                     "Infrastructure provisioning completed successfully"
                 );
 
+                self.repository.save_provisioned(&provisioned)?;
+
                 Ok(provisioned)
             }
             Err((e, current_step)) => {
-                // Transition to error state with structured context
-                // current_step contains the step that was executing when the error occurred
+                error!(
+                    command = "provision",
+                    environment = %environment.name(),
+                    error = %e,
+                    step = ?current_step,
+                    "Infrastructure provisioning failed"
+                );
+
                 let context =
                     self.build_failure_context(&environment, &e, current_step, started_at);
                 let failed = environment.provision_failed(context);
 
-                // Persist error state
                 self.repository.save_provision_failed(&failed)?;
 
                 Err(e)
@@ -500,5 +480,31 @@ impl ProvisionCommandHandler {
         }
 
         context
+    }
+
+    /// Load environment from storage and validate it is in `Created` state
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * Persistence error occurs during load
+    /// * Environment does not exist
+    /// * Environment is not in `Created` state
+    fn load_created_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<Environment<crate::domain::environment::Created>, ProvisionCommandHandlerError>
+    {
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(ProvisionCommandHandlerError::StatePersistence)?;
+
+        let any_env = any_env.ok_or_else(|| ProvisionCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })?;
+
+        Ok(any_env.try_into_created()?)
     }
 }

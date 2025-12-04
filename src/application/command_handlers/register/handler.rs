@@ -81,45 +81,15 @@ impl RegisterCommandHandler {
         env_name: &EnvironmentName,
         instance_ip: IpAddr,
     ) -> Result<Environment<Provisioned>, RegisterCommandHandlerError> {
-        info!(
-            command = "register",
-            environment = %env_name,
-            instance_ip = %instance_ip,
-            "Registering existing instance with environment"
-        );
+        let environment = self.load_created_environment(env_name)?;
 
-        // 1. Load the environment from storage
-        let any_env = self
-            .repository
-            .inner()
-            .load(env_name)
-            .map_err(RegisterCommandHandlerError::RepositorySave)?;
-
-        // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| RegisterCommandHandlerError::EnvironmentNotFound {
-            name: env_name.clone(),
-        })?;
-
-        // 3. Validate environment is in Created state
-        let environment =
-            any_env
-                .try_into_created()
-                .map_err(|e| RegisterCommandHandlerError::InvalidState {
-                    name: env_name.clone(),
-                    current_state: e.to_string(),
-                })?;
-
-        // 4. Validate SSH connectivity (minimal validation for v1)
         self.validate_ssh_connectivity(&environment, instance_ip)?;
 
-        // 5. Prepare for configuration (render Ansible templates so configure command will work)
         self.prepare_for_configuration(&environment, instance_ip)
             .await?;
 
-        // 6. Register the instance by setting the IP and transitioning to Provisioned
         let provisioned = environment.register(instance_ip);
 
-        // 7. Persist the updated state
         self.repository.save_provisioned(&provisioned)?;
 
         info!(
@@ -215,6 +185,36 @@ impl RegisterCommandHandler {
             })?;
 
         Ok(())
+    }
+
+    /// Load environment from storage and validate it is in `Created` state
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * Persistence error occurs during load
+    /// * Environment does not exist
+    /// * Environment is not in `Created` state
+    fn load_created_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<Environment<Created>, RegisterCommandHandlerError> {
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(RegisterCommandHandlerError::RepositorySave)?;
+
+        let any_env = any_env.ok_or_else(|| RegisterCommandHandlerError::EnvironmentNotFound {
+            name: env_name.clone(),
+        })?;
+
+        any_env
+            .try_into_created()
+            .map_err(|e| RegisterCommandHandlerError::InvalidState {
+                name: env_name.clone(),
+                current_state: e.to_string(),
+            })
     }
 }
 

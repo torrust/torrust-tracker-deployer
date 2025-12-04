@@ -22,7 +22,8 @@ use thiserror::Error;
 use crate::presentation::controllers::{
     configure::ConfigureSubcommandError, create::CreateCommandError,
     destroy::DestroySubcommandError, provision::ProvisionSubcommandError,
-    register::errors::RegisterSubcommandError, test::TestSubcommandError,
+    register::errors::RegisterSubcommandError, release::ReleaseSubcommandError,
+    run::RunSubcommandError, test::TestSubcommandError,
 };
 
 /// Errors that can occur during CLI command execution
@@ -74,6 +75,20 @@ pub enum CommandError {
     #[error("Register command failed: {0}")]
     Register(Box<RegisterSubcommandError>),
 
+    /// Release command specific errors
+    ///
+    /// Encapsulates all errors that can occur during software release operations.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Release command failed: {0}")]
+    Release(Box<ReleaseSubcommandError>),
+
+    /// Run command specific errors
+    ///
+    /// Encapsulates all errors that can occur during stack execution.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Run command failed: {0}")]
+    Run(Box<RunSubcommandError>),
+
     /// User output lock acquisition failed
     ///
     /// Failed to acquire the mutex lock for user output. This typically indicates
@@ -115,6 +130,18 @@ impl From<RegisterSubcommandError> for CommandError {
 impl From<TestSubcommandError> for CommandError {
     fn from(error: TestSubcommandError) -> Self {
         Self::Test(Box::new(error))
+    }
+}
+
+impl From<ReleaseSubcommandError> for CommandError {
+    fn from(error: ReleaseSubcommandError) -> Self {
+        Self::Release(Box::new(error))
+    }
+}
+
+impl From<RunSubcommandError> for CommandError {
+    fn from(error: RunSubcommandError) -> Self {
+        Self::Run(Box::new(error))
     }
 }
 
@@ -160,6 +187,8 @@ impl CommandError {
             Self::Configure(e) => e.help(),
             Self::Register(e) => e.help(),
             Self::Test(e) => e.as_ref().help(),
+            Self::Release(e) => e.help(),
+            Self::Run(e) => e.help(),
             Self::UserOutputLockFailed => {
                 "User Output Lock Failed - Detailed Troubleshooting:
 

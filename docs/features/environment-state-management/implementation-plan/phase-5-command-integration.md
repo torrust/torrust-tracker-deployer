@@ -695,7 +695,7 @@ impl ConfigureCommand {
    }
    ```
 
-2. **Update E2E Config Test binary** (`src/bin/e2e-config-tests.rs`):
+2. **Update E2E Config and Release Test binary** (`src/bin/e2e-config-and-release-tests.rs`):
 
    ```rust
    fn run_configure_test() -> Result<(), Box<dyn std::error::Error>> {

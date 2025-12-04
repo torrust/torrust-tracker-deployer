@@ -8,6 +8,7 @@
 //!
 //! - `ansible_templates` - Ansible template rendering with runtime variables
 //! - `opentofu_templates` - `OpenTofu` template rendering for infrastructure
+//! - `docker_compose_templates` - Docker Compose template rendering for deployment
 //!
 //! ## Key Features
 //!
@@ -20,7 +21,9 @@
 //! runtime information like IP addresses, SSH keys, and deployment settings.
 
 pub mod ansible_templates;
+pub mod docker_compose_templates;
 pub mod opentofu_templates;
 
 pub use ansible_templates::{RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep};
+pub use docker_compose_templates::RenderDockerComposeTemplatesStep;
 pub use opentofu_templates::RenderOpenTofuTemplatesStep;

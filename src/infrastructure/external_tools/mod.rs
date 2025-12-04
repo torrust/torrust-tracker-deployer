@@ -16,6 +16,8 @@
 //!
 //! - `ansible` - Ansible configuration management integration
 //!   - `template` - Template renderers for Ansible inventory and playbooks
+//! - `docker_compose` - Docker Compose file management
+//!   - `file_manager` - File manager for Docker Compose configuration files
 //! - `tofu` - `OpenTofu` infrastructure provisioning integration
 //!   - `template` - Template renderers for `OpenTofu` configuration files
 //!
@@ -27,4 +29,5 @@
 //! - Handle template validation and error reporting
 
 pub mod ansible;
+pub mod docker_compose;
 pub mod tofu;

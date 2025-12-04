@@ -7,7 +7,7 @@
 //! ⚠️ **IMPORTANT**: This binary cannot run on GitHub Actions due to network connectivity
 //! issues within LXD VMs on GitHub runners. For CI environments, use the split test suites:
 //! - `cargo run --bin e2e-provision-and-destroy-tests` - Infrastructure provisioning only
-//! - `cargo run --bin e2e-config-tests` - Configuration and software installation
+//! - `cargo run --bin e2e-config-and-release-tests` - Configuration, release, and run workflows
 //!
 //! ## Usage
 //!
@@ -174,6 +174,10 @@ fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
     test_runner.provision_infrastructure()?;
 
     test_runner.configure_services()?;
+
+    test_runner.release_software()?;
+
+    test_runner.run_services()?;
 
     test_runner.validate_deployment()?;
 

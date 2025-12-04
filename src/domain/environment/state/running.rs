@@ -11,7 +11,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::environment::state::{AnyEnvironmentState, RunFailed, StateTypeError};
+use crate::domain::environment::state::{
+    AnyEnvironmentState, RunFailed, RunFailureContext, StateTypeError,
+};
 use crate::domain::environment::Environment;
 
 /// Final state - Application is running
@@ -30,9 +32,13 @@ impl Environment<Running> {
     /// Transitions from Running to `RunFailed` state
     ///
     /// This method indicates that the application encountered a runtime failure.
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - Structured failure context with step info and error details
     #[must_use]
-    pub fn run_failed(self, failed_step: String) -> Environment<RunFailed> {
-        self.with_state(RunFailed { failed_step })
+    pub fn run_failed(self, context: RunFailureContext) -> Environment<RunFailed> {
+        self.with_state(RunFailed { context })
     }
 }
 
@@ -151,12 +157,18 @@ mod tests {
     }
 
     mod transition_tests {
+        use std::time::Duration;
+
+        use chrono::Utc;
+
         use super::*;
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
-        use crate::domain::environment::state::Destroyed;
+        use crate::domain::environment::state::{BaseFailureContext, Destroyed, RunStep};
+        use crate::domain::environment::TraceId;
         use crate::domain::provider::{LxdConfig, ProviderConfig};
         use crate::domain::ProfileName;
+        use crate::shared::error::ErrorKind;
         use crate::shared::Username;
         use std::path::PathBuf;
 
@@ -189,12 +201,29 @@ mod tests {
             .start_running()
         }
 
+        fn create_test_failure_context() -> RunFailureContext {
+            let now = Utc::now();
+            RunFailureContext {
+                failed_step: RunStep::StartServices,
+                error_kind: ErrorKind::InfrastructureOperation,
+                base: BaseFailureContext {
+                    error_summary: "application_crash".to_string(),
+                    failed_at: now,
+                    execution_started_at: now,
+                    execution_duration: Duration::from_secs(5),
+                    trace_id: TraceId::new(),
+                    trace_file_path: None,
+                },
+            }
+        }
+
         #[test]
         fn it_should_transition_from_running_to_run_failed() {
             let env = create_test_environment();
-            let env = env.run_failed("application_crash".to_string());
+            let context = create_test_failure_context();
+            let env = env.run_failed(context);
 
-            assert_eq!(env.state().failed_step, "application_crash");
+            assert_eq!(env.state().context.failed_step, RunStep::StartServices);
             assert_eq!(env.name().as_str(), "test-state");
         }
 

@@ -154,11 +154,22 @@ pub async fn route_command(
                 .execute(&environment, &instance_ip)
                 .await?;
             Ok(())
-        } // Future commands will be added here as the Controller Layer expands:
-          //
-          // Commands::Release { environment, version } => {
-          //     release::handle_release_command(&environment, &version, context).await?;
-          //     Ok(())
-          // }
+        }
+        Commands::Release { environment } => {
+            context
+                .container()
+                .create_release_controller()
+                .execute(&environment)
+                .await?;
+            Ok(())
+        }
+        Commands::Run { environment } => {
+            context
+                .container()
+                .create_run_controller()
+                .execute(&environment)
+                .await?;
+            Ok(())
+        }
     }
 }

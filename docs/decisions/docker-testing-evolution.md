@@ -343,7 +343,7 @@ The **fundamental assumptions** in the original decision no longer applied:
 This hybrid approach has been **successfully implemented**:
 
 - ✅ `e2e-provision-and-destroy-tests` binary - Tests infrastructure provisioning and destruction lifecycle with LXD VMs
-- ✅ `e2e-config-tests` binary - Tests configuration with Docker containers
+- ✅ `e2e-config-and-release-tests` binary - Tests configuration and release with Docker containers
 - ✅ `e2e-tests-full` binary - Complete local testing (LXD + Docker) for development
 
 ## Monitoring and Review
