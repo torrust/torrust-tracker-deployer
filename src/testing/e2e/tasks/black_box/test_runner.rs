@@ -326,11 +326,31 @@ impl E2eTestRunner {
 
     /// Runs services on the released infrastructure.
     ///
+    /// # Skip Condition
+    ///
+    /// When `TORRUST_TD_SKIP_RUN_IN_CONTAINER` environment variable is set to `"true"`,
+    /// this step is skipped because Docker daemon is not available in the test container
+    /// (no Docker-in-Docker configuration).
+    ///
     /// # Errors
     ///
     /// Returns an error if the run command fails.
     /// If `cleanup_on_failure` is enabled, attempts to destroy infrastructure before returning.
     pub fn run_services(&self) -> Result<()> {
+        // Check if run should be skipped (Docker not available in test container)
+        let skip_run = std::env::var("TORRUST_TD_SKIP_RUN_IN_CONTAINER")
+            .map(|v| v.to_lowercase() == "true")
+            .unwrap_or(false);
+
+        if skip_run {
+            info!(
+                step = "run",
+                environment = %self.environment_name,
+                "Skipping run command due to TORRUST_TD_SKIP_RUN_IN_CONTAINER (Docker not available in test container)"
+            );
+            return Ok(());
+        }
+
         info!(
             step = "run",
             environment = %self.environment_name,

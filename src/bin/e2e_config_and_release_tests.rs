@@ -119,6 +119,10 @@ pub async fn main() -> Result<()> {
     // UFW/iptables requires kernel capabilities not available in unprivileged containers
     std::env::set_var("TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER", "true");
 
+    // Set environment variable to skip run command in container-based tests
+    // Docker daemon is not available inside the test container (no Docker-in-Docker)
+    std::env::set_var("TORRUST_TD_SKIP_RUN_IN_CONTAINER", "true");
+
     // Initialize logging with production log location for E2E tests using the builder pattern
     LoggingBuilder::new(std::path::Path::new("./data/logs"))
         .with_format(cli.log_format.clone())

@@ -86,27 +86,31 @@ mod environment_name_validation {
     }
 }
 
-mod scaffolding_workflow {
+mod real_workflow {
     use super::*;
+    use crate::presentation::controllers::run::errors::RunSubcommandError;
 
     #[tokio::test]
-    async fn it_should_complete_successfully_for_valid_environment_name() {
+    async fn it_should_return_not_accessible_when_environment_does_not_exist() {
         let temp_dir = TempDir::new().unwrap();
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        // In scaffolding mode, valid names should succeed without actual run
+        // Valid environment name but environment doesn't exist
         let result = RunCommandController::new(repository, clock, user_output)
             .execute("production")
             .await;
 
         assert!(
-            result.is_ok(),
-            "Scaffolding should succeed for valid environment names"
+            matches!(
+                result,
+                Err(RunSubcommandError::EnvironmentNotAccessible { .. })
+            ),
+            "Should fail with EnvironmentNotAccessible for non-existent environment"
         );
     }
 
     #[tokio::test]
-    async fn it_should_accept_hyphenated_environment_names() {
+    async fn it_should_return_not_accessible_for_hyphenated_names_when_env_does_not_exist() {
         let temp_dir = TempDir::new().unwrap();
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
@@ -114,6 +118,12 @@ mod scaffolding_workflow {
             .execute("my-test-env")
             .await;
 
-        assert!(result.is_ok(), "Scaffolding should accept hyphenated names");
+        assert!(
+            matches!(
+                result,
+                Err(RunSubcommandError::EnvironmentNotAccessible { .. })
+            ),
+            "Should fail with EnvironmentNotAccessible for non-existent environment"
+        );
     }
 }

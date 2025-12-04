@@ -6,6 +6,7 @@
 
 use thiserror::Error;
 
+use crate::application::command_handlers::run::RunCommandHandlerError;
 use crate::domain::environment::name::EnvironmentNameError;
 use crate::presentation::views::progress::ProgressReporterError;
 
@@ -93,6 +94,44 @@ Tip: This is a critical bug - please report it with full logs using --log-output
 impl From<ProgressReporterError> for RunSubcommandError {
     fn from(source: ProgressReporterError) -> Self {
         Self::ProgressReportingFailed { source }
+    }
+}
+
+impl From<RunCommandHandlerError> for RunSubcommandError {
+    fn from(error: RunCommandHandlerError) -> Self {
+        match error {
+            RunCommandHandlerError::EnvironmentNotFound { name } => {
+                Self::EnvironmentNotAccessible {
+                    name,
+                    data_dir: "data".to_string(),
+                }
+            }
+            RunCommandHandlerError::InvalidState(state_err) => Self::InvalidEnvironmentState {
+                name: "environment".to_string(),
+                current_state: state_err.to_string(),
+            },
+            RunCommandHandlerError::MissingInstanceIp { name } => Self::RunOperationFailed {
+                name,
+                reason: "Instance IP not available - environment may not be fully provisioned"
+                    .to_string(),
+            },
+            RunCommandHandlerError::StartServicesFailed { message, .. } => {
+                Self::ServiceStartFailed {
+                    name: "environment".to_string(),
+                    reason: message,
+                }
+            }
+            RunCommandHandlerError::StatePersistence(err) => Self::RunOperationFailed {
+                name: "environment".to_string(),
+                reason: format!("Failed to persist state: {err}"),
+            },
+            RunCommandHandlerError::RunOperationFailed { name, message } => {
+                Self::RunOperationFailed {
+                    name,
+                    reason: message,
+                }
+            }
+        }
     }
 }
 

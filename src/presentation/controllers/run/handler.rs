@@ -2,19 +2,13 @@
 //!
 //! This module handles the run command execution at the presentation layer,
 //! including environment validation, state validation, and user interaction.
-//!
-//! ## Current Status: Scaffolding (No-op)
-//!
-//! This handler is part of Issue #217 (Demo Slice - Release and Run Commands Scaffolding).
-//! It validates the environment name and logs intent, but does not execute actual
-//! run operations yet. The application layer handler will be implemented in Phase 4.
 
 use std::cell::RefCell;
 use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
-use tracing::info;
 
+use crate::application::command_handlers::run::RunCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::presentation::views::progress::ProgressReporter;
@@ -27,17 +21,12 @@ use super::errors::RunSubcommandError;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RunStep {
     ValidateEnvironment,
-    ValidateState,
-    StartServices,
+    RunServices,
 }
 
 impl RunStep {
     /// All steps in execution order
-    const ALL: &'static [Self] = &[
-        Self::ValidateEnvironment,
-        Self::ValidateState,
-        Self::StartServices,
-    ];
+    const ALL: &'static [Self] = &[Self::ValidateEnvironment, Self::RunServices];
 
     /// Total number of steps
     const fn count() -> usize {
@@ -48,8 +37,7 @@ impl RunStep {
     fn description(self) -> &'static str {
         match self {
             Self::ValidateEnvironment => "Validating environment",
-            Self::ValidateState => "Validating environment state",
-            Self::StartServices => "Starting application services",
+            Self::RunServices => "Running application services",
         }
     }
 }
@@ -59,28 +47,21 @@ impl RunStep {
 /// Coordinates user interaction, progress reporting, and input validation
 /// before delegating to the application layer `RunCommandHandler`.
 ///
-/// # Current Status
-///
-/// This controller is scaffolding for Issue #217. It validates the environment
-/// name and logs intent, but does not execute actual run operations yet.
-///
 /// # Responsibilities
 ///
 /// - Validate user input (environment name format)
 /// - Validate environment state (must be Released)
 /// - Show progress updates to the user
 /// - Format success/error messages for display
-/// - Delegate business logic to application layer (future)
+/// - Delegate business logic to application layer
 ///
 /// # Architecture
 ///
 /// This controller sits in the presentation layer and handles all user-facing
-/// concerns. It will delegate actual business logic to the application layer's
-/// `RunCommandHandler` once implemented.
+/// concerns. It delegates actual business logic to the application layer's
+/// `RunCommandHandler`.
 pub struct RunCommandController {
-    #[allow(dead_code)] // Will be used in Phase 4
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    #[allow(dead_code)] // Will be used in Phase 4
     clock: Arc<dyn Clock>,
     progress: ProgressReporter,
 }
@@ -109,14 +90,8 @@ impl RunCommandController {
     ///
     /// Orchestrates all steps of the run command:
     /// 1. Validate environment name
-    /// 2. Validate environment state (must be Released)
-    /// 3. Start application services (currently no-op)
-    /// 4. Complete with success message
-    ///
-    /// # Current Status
-    ///
-    /// This is scaffolding for Issue #217. Steps 1-2 validate inputs,
-    /// step 3 logs intent but does not execute actual run operations.
+    /// 2. Run application services via `RunCommandHandler`
+    /// 3. Complete with success message
     ///
     /// # Arguments
     ///
@@ -126,8 +101,8 @@ impl RunCommandController {
     ///
     /// Returns an error if:
     /// - Environment name is invalid (format validation fails)
-    /// - Environment is not in the Released state (future)
-    /// - Service start fails (future)
+    /// - Environment is not in the Released state
+    /// - Service start fails
     ///
     /// # Returns
     ///
@@ -137,9 +112,7 @@ impl RunCommandController {
     pub async fn execute(&mut self, environment_name: &str) -> Result<(), RunSubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
 
-        self.validate_state(&env_name)?;
-
-        self.start_services(&env_name)?;
+        self.run_services(&env_name)?;
 
         self.complete_workflow(environment_name)?;
 
@@ -171,58 +144,28 @@ impl RunCommandController {
         Ok(env_name)
     }
 
-    /// Validate environment state
+    /// Run services via the application layer handler
     ///
-    /// The environment must be in the Released state before running services.
-    /// Currently this is a no-op that logs intent (scaffolding for Issue #217).
+    /// Delegates to `RunCommandHandler` to execute the run workflow:
+    /// 1. Load environment from repository
+    /// 2. Validate environment is in Released state
+    /// 3. Start Docker Compose services via Ansible
+    /// 4. Update environment state to Running
     #[allow(clippy::result_large_err)]
-    fn validate_state(&mut self, env_name: &EnvironmentName) -> Result<(), RunSubcommandError> {
+    fn run_services(&mut self, env_name: &EnvironmentName) -> Result<(), RunSubcommandError> {
         self.progress
-            .start_step(RunStep::ValidateState.description())?;
+            .start_step(RunStep::RunServices.description())?;
 
-        // TODO: Phase 4 - Actually validate state from repository
-        // let environment = self.repository.load(env_name)?;
-        // if environment.state() != State::Released {
-        //     return Err(RunSubcommandError::InvalidEnvironmentState { ... });
-        // }
+        // Cast the repository to the base trait type that RunCommandHandler expects
+        let repository: Arc<dyn crate::domain::environment::repository::EnvironmentRepository> =
+            Arc::clone(&self.repository)
+                as Arc<dyn crate::domain::environment::repository::EnvironmentRepository>;
 
-        info!(
-            environment = %env_name,
-            action = "validate_state",
-            status = "scaffolding",
-            "Would validate environment is in Released state"
-        );
+        let handler = RunCommandHandler::new(repository, Arc::clone(&self.clock));
 
-        self.progress
-            .complete_step(Some("State validation passed (scaffolding)"))?;
+        handler.execute(env_name)?;
 
-        Ok(())
-    }
-
-    /// Start application services in the environment
-    ///
-    /// Currently this is a no-op that logs intent (scaffolding for Issue #217).
-    /// The actual service start logic will be implemented in Phase 4+.
-    #[allow(clippy::result_large_err)]
-    fn start_services(&mut self, env_name: &EnvironmentName) -> Result<(), RunSubcommandError> {
-        self.progress
-            .start_step(RunStep::StartServices.description())?;
-
-        // TODO: Phase 4+ - Implement actual service start logic
-        // 1. Load environment from repository
-        // 2. Create RunCommandHandler with dependencies
-        // 3. Execute run workflow (docker compose up)
-        // 4. Update environment state to Running
-
-        info!(
-            environment = %env_name,
-            action = "start_services",
-            status = "scaffolding",
-            "Would start application services (not implemented yet)"
-        );
-
-        self.progress
-            .complete_step(Some("Services started (scaffolding - no-op)"))?;
+        self.progress.complete_step(Some("Services started"))?;
 
         Ok(())
     }
@@ -232,9 +175,8 @@ impl RunCommandController {
     /// Shows final success message to the user with workflow summary.
     #[allow(clippy::result_large_err)]
     fn complete_workflow(&mut self, name: &str) -> Result<(), RunSubcommandError> {
-        self.progress.complete(&format!(
-            "Run command completed for '{name}' (scaffolding - no actual services started)"
-        ))?;
+        self.progress
+            .complete(&format!("Run command completed for '{name}'"))?;
         Ok(())
     }
 }
@@ -308,20 +250,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn it_should_accept_valid_environment_name_and_complete_scaffolding() {
+    async fn it_should_return_error_when_environment_not_found() {
         let temp_dir = TempDir::new().unwrap();
 
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        // Valid environment name should pass validation and complete (scaffolding)
+        // Valid environment name but doesn't exist
         let result = RunCommandController::new(repository, clock, user_output.clone())
             .execute("test-env")
             .await;
 
-        // Should succeed since this is scaffolding (no actual run)
-        assert!(
-            result.is_ok(),
-            "Expected success for valid environment name in scaffolding mode"
-        );
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            RunSubcommandError::EnvironmentNotAccessible { name, .. } => {
+                assert_eq!(name, "test-env");
+            }
+            other => panic!("Expected EnvironmentNotAccessible, got: {other:?}"),
+        }
     }
 }
