@@ -7,9 +7,7 @@ use tracing::{info, instrument};
 use super::errors::DestroyCommandHandlerError;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::DestroyInfrastructureStep;
-use crate::domain::environment::repository::{
-    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
-};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::{Destroyed, Destroying, Environment};
 use crate::domain::{AnyEnvironmentState, EnvironmentName};
 use crate::shared::error::Traceable;
@@ -103,8 +101,8 @@ impl DestroyCommandHandler {
             .map_err(DestroyCommandHandlerError::StatePersistence)?;
 
         // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| {
-            DestroyCommandHandlerError::StatePersistence(RepositoryError::NotFound)
+        let any_env = any_env.ok_or_else(|| DestroyCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
         })?;
 
         // 3. Check if environment is already destroyed

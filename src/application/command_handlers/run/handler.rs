@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use super::errors::RunCommandHandlerError;
-use crate::domain::environment::repository::{EnvironmentRepository, RepositoryError};
+use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Released, Running};
 use crate::domain::Environment;
 use crate::domain::EnvironmentName;
@@ -86,8 +86,9 @@ impl RunCommandHandler {
             .map_err(RunCommandHandlerError::StatePersistence)?;
 
         // 2. Check if environment exists
-        let any_env = any_env
-            .ok_or_else(|| RunCommandHandlerError::StatePersistence(RepositoryError::NotFound))?;
+        let any_env = any_env.ok_or_else(|| RunCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })?;
 
         // 3. Validate environment is in Released state and restore type safety
         let environment: Environment<Released> = any_env.try_into_released()?;

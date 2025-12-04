@@ -10,9 +10,7 @@ use super::errors::ReleaseCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{DeployComposeFilesStep, RenderDockerComposeTemplatesStep};
-use crate::domain::environment::repository::{
-    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
-};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ReleaseFailureContext, ReleaseStep};
 use crate::domain::environment::{Configured, Environment, Released, Releasing};
 use crate::domain::template::TemplateManager;
@@ -109,8 +107,8 @@ impl ReleaseCommandHandler {
             .map_err(ReleaseCommandHandlerError::StatePersistence)?;
 
         // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| {
-            ReleaseCommandHandlerError::StatePersistence(RepositoryError::NotFound)
+        let any_env = any_env.ok_or_else(|| ReleaseCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
         })?;
 
         // 3. Validate environment is in Configured state and restore type safety
@@ -209,7 +207,7 @@ impl ReleaseCommandHandler {
         self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
-        
+
         Ok(released)
     }
 

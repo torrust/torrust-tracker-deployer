@@ -17,9 +17,7 @@ use crate::application::steps::{
     PlanInfrastructureStep, RenderOpenTofuTemplatesStep, ValidateInfrastructureStep,
     WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
-use crate::domain::environment::repository::{
-    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
-};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
 use crate::domain::EnvironmentName;
@@ -116,8 +114,8 @@ impl ProvisionCommandHandler {
             .map_err(ProvisionCommandHandlerError::StatePersistence)?;
 
         // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| {
-            ProvisionCommandHandlerError::StatePersistence(RepositoryError::NotFound)
+        let any_env = any_env.ok_or_else(|| ProvisionCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
         })?;
 
         // 3. Validate environment is in Created state and restore type safety

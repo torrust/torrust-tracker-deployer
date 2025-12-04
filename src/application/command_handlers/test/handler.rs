@@ -32,9 +32,7 @@ use crate::application::steps::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,
 };
-use crate::domain::environment::repository::{
-    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
-};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::EnvironmentName;
 
 /// `TestCommandHandler` orchestrates smoke testing for running Torrust Tracker services
@@ -118,9 +116,9 @@ impl TestCommandHandler {
             .map_err(TestCommandHandlerError::StatePersistence)?;
 
         // 2. Check if environment exists
-        let any_env = any_env.ok_or(TestCommandHandlerError::StatePersistence(
-            RepositoryError::NotFound,
-        ))?;
+        let any_env = any_env.ok_or_else(|| TestCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })?;
 
         // 3. Extract instance IP (runtime check - works with any state)
         let instance_ip =

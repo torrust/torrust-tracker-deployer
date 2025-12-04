@@ -11,9 +11,7 @@ use crate::application::steps::{
     ConfigureFirewallStep, ConfigureSecurityUpdatesStep, InstallDockerComposeStep,
     InstallDockerStep,
 };
-use crate::domain::environment::repository::{
-    EnvironmentRepository, RepositoryError, TypedEnvironmentRepository,
-};
+use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
 use crate::domain::environment::{Configured, Configuring, Environment};
 use crate::domain::EnvironmentName;
@@ -103,8 +101,8 @@ impl ConfigureCommandHandler {
             .map_err(ConfigureCommandHandlerError::StatePersistence)?;
 
         // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| {
-            ConfigureCommandHandlerError::StatePersistence(RepositoryError::NotFound)
+        let any_env = any_env.ok_or_else(|| ConfigureCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
         })?;
 
         // 3. Validate environment is in Provisioned state and restore type safety

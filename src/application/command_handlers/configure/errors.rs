@@ -6,6 +6,13 @@ use crate::shared::command::CommandError;
 /// Comprehensive error type for the `ConfigureCommandHandler`
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigureCommandHandlerError {
+    /// Environment was not found in the repository
+    #[error("Environment not found: {name}")]
+    EnvironmentNotFound {
+        /// The name of the environment that was not found
+        name: String,
+    },
+
     #[error("Command execution failed: {0}")]
     Command(#[from] CommandError),
 
@@ -19,6 +26,9 @@ pub enum ConfigureCommandHandlerError {
 impl crate::shared::Traceable for ConfigureCommandHandlerError {
     fn trace_format(&self) -> String {
         match self {
+            Self::EnvironmentNotFound { name } => {
+                format!("ConfigureCommandHandlerError: Environment not found - {name}")
+            }
             Self::Command(e) => {
                 format!("ConfigureCommandHandlerError: Command execution failed - {e}")
             }
@@ -34,15 +44,19 @@ impl crate::shared::Traceable for ConfigureCommandHandlerError {
     fn trace_source(&self) -> Option<&dyn crate::shared::Traceable> {
         match self {
             Self::Command(e) => Some(e),
-            Self::StatePersistence(_) | Self::InvalidState(_) => None,
+            Self::EnvironmentNotFound { .. }
+            | Self::StatePersistence(_)
+            | Self::InvalidState(_) => None,
         }
     }
 
     fn error_kind(&self) -> crate::shared::ErrorKind {
         match self {
+            Self::EnvironmentNotFound { .. } | Self::InvalidState(_) => {
+                crate::shared::ErrorKind::Configuration
+            }
             Self::Command(_) => crate::shared::ErrorKind::CommandExecution,
             Self::StatePersistence(_) => crate::shared::ErrorKind::StatePersistence,
-            Self::InvalidState(_) => crate::shared::ErrorKind::Configuration,
         }
     }
 }
@@ -76,6 +90,25 @@ impl ConfigureCommandHandlerError {
     #[must_use]
     pub fn help(&self) -> &'static str {
         match self {
+            Self::EnvironmentNotFound { .. } => {
+                "Environment Not Found - Troubleshooting:
+
+1. Verify the environment name is correct
+2. Check if the environment was created:
+   ls data/
+
+3. If the environment doesn't exist, create it first:
+   cargo run -- create environment --env-file <config.json>
+
+4. If the environment was previously destroyed, recreate it
+
+Common causes:
+- Typo in environment name
+- Environment was destroyed
+- Working in the wrong directory
+
+For more information, see docs/user-guide/commands.md"
+            }
             Self::Command(_) => {
                 "Command Execution Failed - Troubleshooting:
 
@@ -149,6 +182,17 @@ mod tests {
     use crate::shared::command::CommandError;
 
     #[test]
+    fn it_should_provide_help_for_environment_not_found() {
+        let error = ConfigureCommandHandlerError::EnvironmentNotFound {
+            name: "test-env".to_string(),
+        };
+
+        let help = error.help();
+        assert!(help.contains("Environment Not Found"));
+        assert!(help.contains("Troubleshooting"));
+    }
+
+    #[test]
     fn it_should_provide_help_for_command_execution() {
         let error = ConfigureCommandHandlerError::Command(CommandError::ExecutionFailed {
             command: "ansible-playbook".to_string(),
@@ -189,6 +233,9 @@ mod tests {
     #[test]
     fn it_should_have_help_for_all_error_variants() {
         let errors = vec![
+            ConfigureCommandHandlerError::EnvironmentNotFound {
+                name: "test".to_string(),
+            },
             ConfigureCommandHandlerError::Command(CommandError::ExecutionFailed {
                 command: "test".to_string(),
                 exit_code: "1".to_string(),
