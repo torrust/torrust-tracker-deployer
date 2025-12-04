@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
@@ -95,23 +95,30 @@ impl ConfigureCommandHandler {
 
         self.repository.save_configuring(&environment)?;
 
-        let ansible_client = Self::build_configuration_dependencies(&environment);
-
-        match Self::execute_configuration_with_tracking(&environment, &ansible_client) {
+        match Self::execute_configuration_with_tracking(&environment) {
             Ok(configured_env) => {
-                self.repository.save_configured(&configured_env)?;
-
                 info!(
                     command = "configure",
                     environment = %configured_env.name(),
                     "Infrastructure configuration completed successfully"
                 );
 
+                self.repository.save_configured(&configured_env)?;
+
                 Ok(configured_env)
             }
             Err((e, current_step)) => {
+                error!(
+                    command = "configure",
+                    environment = %environment.name(),
+                    failed_step = ?current_step,
+                    error = %e,
+                    "Infrastructure configuration failed"
+                );
+
                 let context =
                     self.build_failure_context(&environment, &e, current_step, started_at);
+
                 let failed = environment.configure_failed(context);
 
                 self.repository.save_configure_failed(&failed)?;
@@ -132,23 +139,21 @@ impl ConfigureCommandHandler {
     /// Returns a tuple of (error, `current_step`) if any configuration step fails
     fn execute_configuration_with_tracking(
         environment: &Environment<Configuring>,
-        ansible_client: &Arc<AnsibleClient>,
     ) -> StepResult<Environment<Configured>, ConfigureCommandHandlerError, ConfigureStep> {
-        // Track current step and execute each step
-        // If an error occurs, we return it along with the current step
+        let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
 
         let current_step = ConfigureStep::InstallDocker;
-        InstallDockerStep::new(Arc::clone(ansible_client))
+        InstallDockerStep::new(Arc::clone(&ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
 
         let current_step = ConfigureStep::InstallDockerCompose;
-        InstallDockerComposeStep::new(Arc::clone(ansible_client))
+        InstallDockerComposeStep::new(Arc::clone(&ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
 
         let current_step = ConfigureStep::ConfigureSecurityUpdates;
-        ConfigureSecurityUpdatesStep::new(Arc::clone(ansible_client))
+        ConfigureSecurityUpdatesStep::new(Arc::clone(&ansible_client))
             .execute()
             .map_err(|e| (e.into(), current_step))?;
 
@@ -168,7 +173,7 @@ impl ConfigureCommandHandler {
                 "Skipping UFW firewall configuration due to TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER"
             );
         } else {
-            ConfigureFirewallStep::new(Arc::clone(ansible_client))
+            ConfigureFirewallStep::new(Arc::clone(&ansible_client))
                 .execute()
                 .map_err(|e| (e.into(), current_step))?;
         }
@@ -177,23 +182,6 @@ impl ConfigureCommandHandler {
         let configured = environment.clone().configured();
 
         Ok(configured)
-    }
-
-    /// Build configuration dependencies
-    ///
-    /// Creates the `AnsibleClient` needed for configuration operations.
-    ///
-    /// # Arguments
-    ///
-    /// * `environment` - The environment being configured (provides build directory path)
-    ///
-    /// # Returns
-    ///
-    /// Returns `AnsibleClient` for executing Ansible playbooks
-    fn build_configuration_dependencies(
-        environment: &Environment<Configuring>,
-    ) -> Arc<AnsibleClient> {
-        Arc::new(AnsibleClient::new(environment.ansible_build_dir()))
     }
 
     /// Build failure context for a configuration error and generate trace file
