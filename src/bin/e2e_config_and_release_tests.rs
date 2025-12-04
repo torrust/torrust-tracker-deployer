@@ -115,14 +115,20 @@ struct CliArgs {
 pub async fn main() -> Result<()> {
     let cli = CliArgs::parse();
 
-    // Set environment variable to skip firewall configuration in container-based tests
-    // UFW/iptables requires kernel capabilities not available in unprivileged containers
-    std::env::set_var("TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER", "true");
+    // SAFETY: These environment variables are set before any async runtime or
+    // spawned threads are created, so no concurrent access to the environment
+    // is possible at this point. This is the earliest point in main() after
+    // argument parsing.
+    unsafe {
+        // Set environment variable to skip firewall configuration in container-based tests
+        // UFW/iptables requires kernel capabilities not available in unprivileged containers
+        std::env::set_var("TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER", "true");
 
-    // Skip Docker installation in container-based tests since Docker is already
-    // installed via the Dockerfile (Docker CE from get.docker.com script).
-    // This avoids package conflicts between docker.io and containerd.io.
-    std::env::set_var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER", "true");
+        // Skip Docker installation in container-based tests since Docker is already
+        // installed via the Dockerfile (Docker CE from get.docker.com script).
+        // This avoids package conflicts between docker.io and containerd.io.
+        std::env::set_var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER", "true");
+    }
 
     // Note: Docker-in-Docker is now enabled via privileged mode in the container,
     // so we can test the run command that starts Docker Compose services.
