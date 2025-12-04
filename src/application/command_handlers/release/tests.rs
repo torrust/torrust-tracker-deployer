@@ -30,12 +30,12 @@ fn it_should_create_handler_with_dependencies() {
     assert!(Arc::strong_count(&handler.repository) >= 1);
 }
 
-#[test]
-fn it_should_return_environment_not_found_error_when_environment_does_not_exist() {
+#[tokio::test]
+async fn it_should_return_environment_not_found_error_when_environment_does_not_exist() {
     let (handler, _temp_dir) = create_test_handler();
     let env_name = EnvironmentName::new("nonexistent-env").unwrap();
 
-    let result = handler.execute(&env_name);
+    let result = handler.execute(&env_name).await;
 
     assert!(result.is_err());
     let error = result.unwrap_err();

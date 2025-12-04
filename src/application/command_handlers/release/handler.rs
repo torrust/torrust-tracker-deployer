@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use super::errors::ReleaseCommandHandlerError;
+use crate::application::steps::application::ReleaseStep;
 use crate::domain::environment::repository::{EnvironmentRepository, RepositoryError};
 use crate::domain::environment::{Configured, Released};
 use crate::domain::Environment;
@@ -18,7 +19,7 @@ use crate::domain::EnvironmentName;
 /// This command handler handles all steps required to release software:
 /// 1. Load the environment from storage
 /// 2. Validate the environment is in the correct state
-/// 3. Execute the release steps (currently a placeholder)
+/// 3. Execute the release steps (prepare Docker Compose files)
 /// 4. Transition environment to `Released` state
 ///
 /// # State Management
@@ -61,6 +62,7 @@ impl ReleaseCommandHandler {
     /// Returns an error if:
     /// * Environment not found
     /// * Environment is not in `Configured` state
+    /// * Docker Compose file preparation fails
     /// * State persistence fails
     #[instrument(
         name = "release_command",
@@ -70,7 +72,7 @@ impl ReleaseCommandHandler {
             environment = %env_name
         )
     )]
-    pub fn execute(
+    pub async fn execute(
         &self,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Released>, ReleaseCommandHandlerError> {
@@ -114,11 +116,20 @@ impl ReleaseCommandHandler {
             command = "release",
             environment = %env_name,
             current_state = "releasing",
-            "Releasing state persisted. Executing release steps (placeholder)."
+            "Releasing state persisted. Executing release steps."
         );
 
-        // 6. Execute release steps (placeholder - actual implementation in Phase 6)
-        // TODO: Phase 6 will add actual release steps here
+        // 6. Execute release steps - prepare Docker Compose files
+        let templates_dir = releasing_env.templates_dir();
+        let build_dir = releasing_env.build_dir().clone();
+
+        let release_step = ReleaseStep::new(templates_dir, build_dir);
+        release_step.execute().await.map_err(|e| {
+            ReleaseCommandHandlerError::ReleaseStepFailed {
+                message: e.to_string(),
+                source: e,
+            }
+        })?;
 
         // 7. Transition to Released state
         let released_env = releasing_env.released();

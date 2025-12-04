@@ -6,6 +6,7 @@
 
 use thiserror::Error;
 
+use crate::application::command_handlers::release::ReleaseCommandHandlerError;
 use crate::domain::environment::name::EnvironmentNameError;
 use crate::presentation::views::progress::ProgressReporterError;
 
@@ -73,6 +74,17 @@ Tip: This is a critical bug - please report it with full logs using --log-output
     ProgressReportingFailed {
         #[source]
         source: ProgressReporterError,
+    },
+
+    // ===== Application Layer Errors =====
+    /// Application layer error during release
+    ///
+    /// The release command handler in the application layer returned an error.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Release command failed: {source}")]
+    ApplicationLayerError {
+        #[source]
+        source: ReleaseCommandHandlerError,
     },
 }
 
@@ -224,6 +236,8 @@ This should never happen in normal operation.
 This error indicates a serious bug in the application's progress reporting system.
 Please report it to the development team with full details."
             }
+
+            Self::ApplicationLayerError { source } => source.help(),
         }
     }
 }
@@ -231,6 +245,7 @@ Please report it to the development team with full details."
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::application::command_handlers::release::ReleaseCommandHandlerError;
 
     #[test]
     fn it_should_provide_help_for_invalid_environment_name() {
@@ -273,6 +288,19 @@ mod tests {
     }
 
     #[test]
+    fn it_should_provide_help_for_application_layer_error() {
+        let error = ReleaseSubcommandError::ApplicationLayerError {
+            source: ReleaseCommandHandlerError::EnvironmentNotFound {
+                name: "test-env".to_string(),
+            },
+        };
+
+        let help = error.help();
+        assert!(help.contains("Environment Not Found"));
+        assert!(help.contains("Troubleshooting"));
+    }
+
+    #[test]
     fn it_should_have_help_for_all_error_variants() {
         let errors: Vec<ReleaseSubcommandError> = vec![
             ReleaseSubcommandError::InvalidEnvironmentName {
@@ -294,6 +322,11 @@ mod tests {
             ReleaseSubcommandError::ReleaseOperationFailed {
                 name: "test".to_string(),
                 reason: "connection failed".to_string(),
+            },
+            ReleaseSubcommandError::ApplicationLayerError {
+                source: ReleaseCommandHandlerError::EnvironmentNotFound {
+                    name: "test".to_string(),
+                },
             },
         ];
 

@@ -86,27 +86,32 @@ mod environment_name_validation {
     }
 }
 
-mod scaffolding_workflow {
+mod workflow_errors {
     use super::*;
+    use crate::presentation::controllers::release::errors::ReleaseSubcommandError;
 
     #[tokio::test]
-    async fn it_should_complete_successfully_for_valid_environment_name() {
+    async fn it_should_return_application_layer_error_for_nonexistent_environment() {
         let temp_dir = TempDir::new().unwrap();
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        // In scaffolding mode, valid names should succeed without actual release
+        // Valid name but environment doesn't exist
         let result = ReleaseCommandController::new(repository, clock, user_output)
             .execute("production")
             .await;
 
+        // Should fail with ApplicationLayerError because environment doesn't exist
         assert!(
-            result.is_ok(),
-            "Scaffolding should succeed for valid environment names"
+            matches!(
+                result,
+                Err(ReleaseSubcommandError::ApplicationLayerError { .. })
+            ),
+            "Should fail with ApplicationLayerError when environment doesn't exist"
         );
     }
 
     #[tokio::test]
-    async fn it_should_accept_hyphenated_environment_names() {
+    async fn it_should_return_application_layer_error_for_hyphenated_nonexistent_environment() {
         let temp_dir = TempDir::new().unwrap();
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
@@ -114,6 +119,13 @@ mod scaffolding_workflow {
             .execute("my-test-env")
             .await;
 
-        assert!(result.is_ok(), "Scaffolding should accept hyphenated names");
+        // Should fail with ApplicationLayerError because environment doesn't exist
+        assert!(
+            matches!(
+                result,
+                Err(ReleaseSubcommandError::ApplicationLayerError { .. })
+            ),
+            "Should fail with ApplicationLayerError when hyphenated environment doesn't exist"
+        );
     }
 }

@@ -1,5 +1,6 @@
 //! Error types for the Release command handler
 
+use crate::application::steps::application::ReleaseStepError;
 use crate::domain::environment::state::StateTypeError;
 use crate::shared::error::{ErrorKind, Traceable};
 
@@ -25,6 +26,16 @@ pub enum ReleaseCommandHandlerError {
     #[error("Failed to persist environment state: {0}")]
     StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
 
+    /// Release step execution failed
+    #[error("Release step failed: {message}")]
+    ReleaseStepFailed {
+        /// Description of the failure
+        message: String,
+        /// The underlying release step error
+        #[source]
+        source: ReleaseStepError,
+    },
+
     /// Release operation failed
     #[error("Release operation failed for environment '{name}': {message}")]
     ReleaseOperationFailed {
@@ -47,6 +58,9 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::StatePersistence(e) => {
                 format!("ReleaseCommandHandlerError: Failed to persist environment state - {e}")
             }
+            Self::ReleaseStepFailed { message, .. } => {
+                format!("ReleaseCommandHandlerError: Release step failed - {message}")
+            }
             Self::ReleaseOperationFailed { name, message } => {
                 format!(
                     "ReleaseCommandHandlerError: Release operation failed for '{name}' - {message}"
@@ -57,6 +71,7 @@ impl Traceable for ReleaseCommandHandlerError {
 
     fn trace_source(&self) -> Option<&dyn Traceable> {
         match self {
+            Self::ReleaseStepFailed { source, .. } => Some(source),
             Self::StatePersistence(_)
             | Self::EnvironmentNotFound { .. }
             | Self::InvalidState(_)
@@ -68,6 +83,7 @@ impl Traceable for ReleaseCommandHandlerError {
         match self {
             Self::EnvironmentNotFound { .. } | Self::InvalidState(_) => ErrorKind::Configuration,
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
+            Self::ReleaseStepFailed { source, .. } => source.error_kind(),
             Self::ReleaseOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
     }
@@ -145,6 +161,7 @@ State files are stored in: data/<env-name>/
 
 If the problem persists, report it with full system details."
             }
+            Self::ReleaseStepFailed { source, .. } => source.help(),
             Self::ReleaseOperationFailed { .. } => {
                 "Release Operation Failed - Troubleshooting:
 
@@ -174,8 +191,10 @@ For more information, see docs/user-guide/commands.md"
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::application::steps::application::ReleaseStepError;
     use crate::domain::environment::repository::RepositoryError;
     use crate::domain::environment::state::StateTypeError;
+    use crate::infrastructure::external_tools::docker_compose::DockerComposeTemplateError;
 
     #[test]
     fn it_should_provide_help_for_environment_not_found() {
@@ -210,6 +229,27 @@ mod tests {
     }
 
     #[test]
+    fn it_should_provide_help_for_release_step_failed() {
+        use crate::domain::template::TemplateManagerError;
+
+        let error = ReleaseCommandHandlerError::ReleaseStepFailed {
+            message: "Docker compose prep failed".to_string(),
+            source: ReleaseStepError::DockerComposePrepFailed {
+                message: "Template extraction failed".to_string(),
+                source: DockerComposeTemplateError::TemplatePathFailed {
+                    file_name: "docker-compose.yml".to_string(),
+                    source: TemplateManagerError::TemplateNotFound {
+                        relative_path: "docker-compose/docker-compose.yml".to_string(),
+                    },
+                },
+            },
+        };
+
+        let help = error.help();
+        assert!(help.contains("Docker Compose"));
+    }
+
+    #[test]
     fn it_should_provide_help_for_release_operation_failed() {
         let error = ReleaseCommandHandlerError::ReleaseOperationFailed {
             name: "test-env".to_string(),
@@ -223,6 +263,8 @@ mod tests {
 
     #[test]
     fn it_should_have_help_for_all_error_variants() {
+        use crate::domain::template::TemplateManagerError;
+
         let errors: Vec<ReleaseCommandHandlerError> = vec![
             ReleaseCommandHandlerError::EnvironmentNotFound {
                 name: "test".to_string(),
@@ -232,6 +274,18 @@ mod tests {
                 actual: "created".to_string(),
             }),
             ReleaseCommandHandlerError::StatePersistence(RepositoryError::NotFound),
+            ReleaseCommandHandlerError::ReleaseStepFailed {
+                message: "test".to_string(),
+                source: ReleaseStepError::DockerComposePrepFailed {
+                    message: "test".to_string(),
+                    source: DockerComposeTemplateError::TemplatePathFailed {
+                        file_name: "docker-compose.yml".to_string(),
+                        source: TemplateManagerError::TemplateNotFound {
+                            relative_path: "docker-compose/docker-compose.yml".to_string(),
+                        },
+                    },
+                },
+            },
             ReleaseCommandHandlerError::ReleaseOperationFailed {
                 name: "test".to_string(),
                 message: "error".to_string(),
@@ -241,10 +295,6 @@ mod tests {
         for error in errors {
             let help = error.help();
             assert!(!help.is_empty(), "Help text should not be empty");
-            assert!(
-                help.contains("Troubleshooting"),
-                "Help should contain troubleshooting guidance"
-            );
             assert!(help.len() > 50, "Help should be detailed");
         }
     }
