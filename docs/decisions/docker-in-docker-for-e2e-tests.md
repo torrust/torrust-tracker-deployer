@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted (Implemented)
 
 ## Context
 
@@ -10,10 +10,10 @@ The `run` command starts Docker Compose services on the target VM. To test this 
 E2E configuration tests (`e2e_config_and_release_tests.rs`), we need Docker to be
 available inside the test container that simulates a provisioned VM.
 
-Currently, the `provisioned-instance` Docker container does not have Docker installed
-or available, so the `run` command cannot be tested. We added a workaround
+Previously, the `provisioned-instance` Docker container did not have Docker installed
+or available, so the `run` command could not be tested. We had a workaround
 (`TORRUST_TD_SKIP_RUN_IN_CONTAINER`) to skip the `run` command in container-based tests,
-but this means we cannot verify the complete deployment workflow in E2E tests.
+but this meant we could not verify the complete deployment workflow in E2E tests.
 
 ### Requirements
 
@@ -118,39 +118,92 @@ The `--privileged` flag is acceptable for test containers because:
 
 ## Implementation Plan
 
-### Phase 1: Update Dockerfile
+### Phase 1: Update Dockerfile (Completed)
 
 Add Docker installation to `docker/provisioned-instance/Dockerfile`:
 
 ```dockerfile
-# Install Docker
+# Install iptables for Docker networking
+RUN apt-get update && apt-get install -y iptables
+
+# Install Docker using official installation script
+# This installs both Docker daemon and Docker Compose plugin
 RUN curl -fsSL https://get.docker.com | sh \
-    && usermod -aG docker torrust
+    && rm -rf /var/lib/apt/lists/*
+
+# Create torrust user with docker group membership
+RUN useradd -m -s /bin/bash -G sudo,docker torrust
 ```
 
-### Phase 2: Update Supervisor Configuration
+### Phase 2: Update Supervisor Configuration (Completed)
 
-Add Docker daemon to `supervisord.conf`:
+Add Docker daemon to `supervisord.conf` with `vfs` storage driver:
 
 ```ini
 [program:dockerd]
-command=/usr/bin/dockerd
-priority=10
-autostart=true
+command=/usr/bin/dockerd --host=unix:///var/run/docker.sock --storage-driver=vfs
+stdout_logfile=/var/log/supervisor/dockerd.log
+stderr_logfile=/var/log/supervisor/dockerd.log
 autorestart=true
+startretries=3
+priority=5
 ```
 
-### Phase 3: Update Container Startup
+**Important**: The `vfs` storage driver is required because the default `overlay2` driver
+does not work in nested Docker environments (fails with "invalid argument" error).
+The `vfs` driver is slower but compatible with Docker-in-Docker scenarios.
 
-Modify testcontainers configuration to:
+### Phase 3: Update Container Startup (Completed)
 
-1. Use `--privileged` flag
-2. Wait for Docker daemon to be ready (check `docker info`)
+Modify testcontainers configuration in `src/testing/e2e/containers/provisioned.rs`:
 
-### Phase 4: Remove Skip Flag
+1. Use `with_privileged(true)` from `testcontainers::ImageExt` trait
+2. Wait for Docker daemon to be ready by checking for `dockerd entered RUNNING state`
+   in supervisor logs (instead of waiting for sshd)
 
-Remove `TORRUST_TD_SKIP_RUN_IN_CONTAINER` environment variable and enable `run` command
-testing in `e2e_config_and_release_tests.rs`.
+```rust
+// Wait for Docker daemon to be ready (not just SSH)
+.with_wait_condition(WaitFor::message_on_stdout("dockerd entered RUNNING state"))
+
+// Start with privileged mode for Docker-in-Docker
+image.with_privileged(true).start().await
+```
+
+### Phase 4: Handle Docker Package Conflicts (Completed)
+
+A challenge discovered during implementation: Ansible's Docker installation playbook
+installs `docker.io` package, which conflicts with Docker CE (`containerd.io`) installed
+via `get.docker.com` script in the Dockerfile.
+
+**Solution**: Add environment variable `TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER`
+to skip Docker/Docker Compose installation via Ansible when Docker is already
+pre-installed in the container.
+
+In `src/bin/e2e_config_and_release_tests.rs`:
+
+```rust
+// SAFETY: Set before async runtime starts
+unsafe {
+    std::env::set_var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER", "true");
+}
+```
+
+In `src/application/command_handlers/configure/handler.rs`:
+
+```rust
+let skip_docker = std::env::var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER")
+    .map(|v| v == "true")
+    .unwrap_or(false);
+
+if skip_docker {
+    // Skip Docker and Docker Compose installation steps
+}
+```
+
+### Phase 5: Remove Skip Flag (Completed)
+
+Removed `TORRUST_TD_SKIP_RUN_IN_CONTAINER` environment variable since the `run` command
+now works in container-based E2E tests.
 
 ## Consequences
 
@@ -163,16 +216,36 @@ testing in `e2e_config_and_release_tests.rs`.
 ### Negative
 
 - Test containers require `--privileged` mode
-- Slightly longer test startup time (~5-10 seconds)
+- Slightly longer test startup time (~2-3 seconds for Docker daemon)
 - More complex container configuration
+- Must use `vfs` storage driver (slower than `overlay2`)
 
 ### Neutral
 
 - Need to document privileged mode requirement
-- May need to handle Docker daemon startup failures gracefully
+- Docker installation skipped via environment variable to avoid package conflicts
+
+## Lessons Learned
+
+1. **Storage Driver Compatibility**: The `overlay2` storage driver does not work in
+   nested Docker environments. The `vfs` driver must be used, which is slower but
+   compatible.
+
+2. **Package Conflicts**: Docker CE (`containerd.io` from `get.docker.com`) conflicts
+   with `docker.io` package. When Docker is pre-installed in the container, Ansible's
+   Docker installation must be skipped.
+
+3. **Rust 1.81+ Safety**: `std::env::set_var` is now `unsafe` in Rust 1.81+. Environment
+   variables must be set in an `unsafe` block with a safety comment explaining why
+   concurrent access is not possible.
+
+4. **Wait Conditions**: Waiting for `dockerd entered RUNNING state` in supervisor logs
+   is more reliable than waiting for SSH, as it ensures Docker is ready before tests run.
 
 ## References
 
 - [Docker-in-Docker Documentation](https://hub.docker.com/_/docker)
 - [GitHub Actions Container Support](https://docs.github.com/en/actions/using-containerized-services/about-service-containers)
 - [testcontainers-rs Privileged Mode](https://docs.rs/testcontainers/latest/testcontainers/)
+- [Docker Storage Drivers](https://docs.docker.com/storage/storagedriver/select-storage-driver/)
+- [Rust 1.81 set_var Safety](https://doc.rust-lang.org/stable/std/env/fn.set_var.html)
