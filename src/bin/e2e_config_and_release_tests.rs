@@ -156,7 +156,7 @@ pub async fn main() -> Result<()> {
     // Cleanup any artifacts from previous test runs (including Docker containers)
     run_container_preflight_cleanup(ENVIRONMENT_NAME)?;
 
-    let test_result = run_configuration_tests().await;
+    let test_result = run_configure_release_run_tests().await;
 
     let test_duration = test_start.elapsed();
 
@@ -189,9 +189,18 @@ pub async fn main() -> Result<()> {
     }
 }
 
-/// Run the complete configuration tests using black-box CLI commands
-async fn run_configuration_tests() -> Result<()> {
-    info!("Starting configuration tests with Docker container (black-box approach)");
+/// Run the complete configure → release → run workflow tests using black-box CLI commands
+///
+/// This function orchestrates the full software deployment workflow:
+/// 1. Create environment from config file
+/// 2. Register the container's IP as an existing instance
+/// 3. Configure services via Ansible (install Docker, etc.)
+/// 4. Release software (deploy Docker Compose files)
+/// 5. Run services (start Docker Compose)
+///
+/// Each step is followed by validation to ensure correctness.
+async fn run_configure_release_run_tests() -> Result<()> {
+    info!("Starting configure → release → run tests with Docker container (black-box approach)");
 
     // Build SSH credentials (same as used in e2e_config_tests)
     let project_root = std::env::current_dir().expect("Failed to get current directory");
@@ -221,8 +230,8 @@ async fn run_configuration_tests() -> Result<()> {
 
 /// Run the deployer workflow using CLI commands (black-box approach)
 ///
-/// This executes the create → register → configure workflow via CLI commands,
-/// followed by validation.
+/// This executes the create → register → configure → release → run workflow
+/// via CLI commands, with validation after each major step.
 async fn run_deployer_workflow(
     socket_addr: SocketAddr,
     ssh_credentials: &SshCredentials,
@@ -270,7 +279,7 @@ async fn run_deployer_workflow(
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-    info!("Configuration tests completed successfully");
+    info!("Configure → release → run workflow tests completed successfully");
 
     Ok(())
 }
