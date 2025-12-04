@@ -337,53 +337,72 @@ cat build/e2e-config/state.json
 cargo run -- destroy e2e-config
 ```
 
-### Phase 6: Steps Layer - First Step (Prepare Compose Files)
+### Phase 6: Steps Layer - First Step (Prepare Compose Files) ✅ COMPLETE
 
-**Location**: `src/application/steps/application/`
+**Location**: `src/application/steps/application/release.rs`
 
-Create first step:
+Implemented as part of the `ReleaseStep`:
 
-- `prepare_compose_files.rs` - Copy static docker-compose.yml to build directory
+- `ReleaseStep::execute()` - Uses `DockerComposeTemplateRenderer` to copy docker-compose.yml to build directory
 
-**Deliverable**: `release` command generates files in build dir (E2E verifiable).
+**Deliverable**: `release` command generates files in build dir (E2E verifiable). ✅
 
-**Manual E2E Test**:
+**Manual E2E Test**: ✅ Verified
 
 ```bash
 # Setup: Create and configure environment
-cargo run -- create environment --env-file envs/e2e-config.json
-cargo run -- provision e2e-config
-cargo run -- configure e2e-config
+cargo run -- create environment --env-file envs/e2e-full.json
+cargo run -- provision e2e-full
+cargo run -- configure e2e-full
 
 # Release should now generate docker-compose files
-cargo run -- release e2e-config
+cargo run -- release e2e-full
 
 # Verify docker-compose.yml was created in build directory
-cat build/e2e-config/docker-compose/docker-compose.yml
-# Expected: Valid docker-compose.yml with demo-app service
-
-# Verify file contents match source
-diff data/e2e-config/templates/docker-compose/docker-compose.yml build/e2e-config/docker-compose/docker-compose.yml
-# Expected: No differences (or expected differences)
+cat build/e2e-full/docker-compose/docker-compose.yml
+# Expected: Valid docker-compose.yml with demo-app service (nginx:alpine)
 
 # Cleanup
-cargo run -- destroy e2e-config
+cargo run -- destroy e2e-full
 ```
 
-### Phase 7: Infrastructure Layer - Docker Compose File Manager
+### Phase 7: Infrastructure Layer - Docker Compose Template Renderer ✅ COMPLETE
 
-**Location**: `src/infrastructure/external_tools/docker_compose/`
+> **Status**: Implemented during Phase 6 as part of the release step integration.
+> The `DockerComposeTemplateRenderer` was created following the same pattern as
+> `AnsibleTemplateRenderer` and `TofuTemplateRenderer`.
 
-Create `DockerComposeFileManager`:
+**Location**: `src/infrastructure/external_tools/docker_compose/template/renderer/mod.rs`
 
-- Copy static `docker-compose.yml` to build directory
+Following the established pattern from Ansible and Tofu external tools, we created:
+
+```text
+src/infrastructure/external_tools/docker_compose/
+├── mod.rs                      # Module exports and DOCKER_COMPOSE_SUBFOLDER constant
+└── template/
+    ├── mod.rs                  # Template module exports
+    └── renderer/
+        └── mod.rs              # DockerComposeTemplateRenderer implementation
+```
+
+**Created `DockerComposeTemplateRenderer`**:
+
+- Follows the `template/renderer/` folder structure pattern
+- Uses `TemplateManager` for on-demand extraction from embedded templates
+- Copies static `docker-compose.yml` to build directory
 - (Future: generate `.env` file)
 
-**Deliverable**: Build directory contains correct docker-compose.yml.
+**Deliverable**: Build directory contains correct docker-compose.yml. ✅
 
-#### Docker Compose Source Files
+#### Docker Compose Source Template
 
-**Location**: `data/{environment}/templates/docker-compose/` (following existing pattern for environment-specific templates)
+**Location**: `templates/docker-compose/docker-compose.yml` (embedded in binary at compile time)
+
+Templates are embedded using rust-embed and extracted on-demand via `TemplateManager`:
+
+1. **Source**: `templates/docker-compose/docker-compose.yml` (embedded at compile time)
+2. **Extracted to**: `{env_templates_dir}/docker-compose/docker-compose.yml` (on first use)
+3. **Copied to**: `build/{env_name}/docker-compose/docker-compose.yml` (during release)
 
 For this demo slice, we use a **simple long-running service** that better emulates real application behavior (unlike `hello-world` which exits immediately):
 
@@ -432,26 +451,27 @@ This means we likely don't need Tera templates for compose files. Instead:
 
 **Future Consideration**: For enhanced security, we could switch to runtime variable injection via `docker compose up --env-file` or shell environment variables, avoiding secrets stored in files on the VM.
 
-**Naming Convention**: Following the existing patterns (`AnsibleTemplateRenderer`, `TofuTemplateRenderer`), we'll start with `DockerComposeFileManager` for now. These renderer classes manage **all templates** for their respective tools, not single files. If we later need Tera template resolution for docker-compose files (e.g., dynamic service definitions), we can rename to `DockerComposeTemplateRenderer`.
+**Naming Convention**: Following the existing patterns (`AnsibleTemplateRenderer`, `TofuTemplateRenderer`), we named it `DockerComposeTemplateRenderer` to maintain consistency. The class handles all template management for Docker Compose files using the embedded template system.
 
-**Manual E2E Test**:
+**Manual E2E Test**: ✅ Verified
 
 ```bash
-# Same as Phase 5 - verify file manager correctly copies files
-cargo run -- create environment --env-file envs/e2e-config.json
-cargo run -- provision e2e-config
-cargo run -- configure e2e-config
-cargo run -- release e2e-config
+# Same as Phase 6 - verify renderer correctly copies files
+cargo run -- create environment --env-file envs/e2e-full.json
+cargo run -- provision e2e-full
+cargo run -- configure e2e-full
+cargo run -- release e2e-full
 
-# Verify docker-compose.yml structure and content
-cat build/e2e-config/docker-compose/docker-compose.yml
+# Verify docker-compose.yml was created in build directory
+cat build/e2e-full/docker-compose/docker-compose.yml
+# Expected: Valid docker-compose.yml with demo-app service (nginx:alpine)
 
 # Verify it's valid YAML
-python3 -c "import yaml; yaml.safe_load(open('build/e2e-config/docker-compose/docker-compose.yml'))"
+python3 -c "import yaml; yaml.safe_load(open('build/e2e-full/docker-compose/docker-compose.yml'))"
 # Expected: No errors
 
 # Cleanup
-cargo run -- destroy e2e-config
+cargo run -- destroy e2e-full
 ```
 
 ### Phase 8: Steps Layer - Transfer Files to VM
@@ -801,15 +821,17 @@ All errors must:
 
 ### Steps Layer
 
-- `src/application/steps/application/prepare_compose_files.rs`
-- `src/application/steps/application/transfer_files.rs`
-- `src/application/steps/application/start_services.rs`
-- `src/application/steps/application/verify_services.rs`
+- `src/application/steps/application/release.rs` ✅ (`ReleaseStep` with `DockerComposeTemplateRenderer` integration)
+- `src/application/steps/application/transfer_files.rs` (future - transfer files to VM)
+- `src/application/steps/application/start_services.rs` (future - start docker compose services)
+- `src/application/steps/application/verify_services.rs` (future - verify services are running)
 
 ### Infrastructure Layer
 
-- `src/infrastructure/external_tools/docker_compose/` (file manager, not template renderer)
-- Static docker compose files in `data/{environment}/templates/docker-compose/`
+- `src/infrastructure/external_tools/docker_compose/mod.rs` ✅ (module exports and `DOCKER_COMPOSE_SUBFOLDER` constant)
+- `src/infrastructure/external_tools/docker_compose/template/mod.rs` ✅ (template module exports)
+- `src/infrastructure/external_tools/docker_compose/template/renderer/mod.rs` ✅ (`DockerComposeTemplateRenderer` implementation)
+- `templates/docker-compose/docker-compose.yml` ✅ (embedded source template with nginx:alpine demo service)
 - (Future: `.env` generation if needed)
 
 ### Presentation Layer
