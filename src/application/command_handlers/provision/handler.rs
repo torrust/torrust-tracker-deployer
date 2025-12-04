@@ -3,7 +3,7 @@
 use std::net::IpAddr;
 use std::sync::Arc;
 
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use super::errors::ProvisionCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
@@ -115,9 +115,6 @@ impl ProvisionCommandHandler {
                 // Store instance IP in the environment context
                 let provisioned = provisioned.with_instance_ip(instance_ip);
 
-                // Persist final state
-                self.repository.save_provisioned(&provisioned)?;
-
                 info!(
                     command = "provision",
                     environment = %provisioned.name(),
@@ -125,16 +122,23 @@ impl ProvisionCommandHandler {
                     "Infrastructure provisioning completed successfully"
                 );
 
+                self.repository.save_provisioned(&provisioned)?;
+
                 Ok(provisioned)
             }
             Err((e, current_step)) => {
-                // Transition to error state with structured context
-                // current_step contains the step that was executing when the error occurred
+                error!(
+                    command = "provision",
+                    environment = %environment.name(),
+                    error = %e,
+                    step = ?current_step,
+                    "Infrastructure provisioning failed"
+                );
+
                 let context =
                     self.build_failure_context(&environment, &e, current_step, started_at);
                 let failed = environment.provision_failed(context);
 
-                // Persist error state
                 self.repository.save_provision_failed(&failed)?;
 
                 Err(e)

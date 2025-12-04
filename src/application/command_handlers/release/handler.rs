@@ -4,7 +4,7 @@ use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use super::errors::ReleaseCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
@@ -128,8 +128,6 @@ impl ReleaseCommandHandler {
             .await
         {
             Ok(released) => {
-                self.repository.save_released(&released)?;
-
                 info!(
                     command = "release",
                     environment = %released.name(),
@@ -137,9 +135,19 @@ impl ReleaseCommandHandler {
                     "Software release completed successfully"
                 );
 
+                self.repository.save_released(&released)?;
+
                 Ok(released)
             }
             Err((e, current_step)) => {
+                error!(
+                    command = "release",
+                    environment = %releasing_env.name(),
+                    error = %e,
+                    step = ?current_step,
+                    "Software release failed"
+                );
+
                 let context =
                     self.build_failure_context(&releasing_env, &e, current_step, started_at);
                 let failed = releasing_env.release_failed(context);
