@@ -66,9 +66,10 @@ impl crate::shared::Traceable for TestCommandHandlerError {
 
     fn error_kind(&self) -> crate::shared::ErrorKind {
         match self {
-            Self::EnvironmentNotFound { .. } => crate::shared::ErrorKind::Configuration,
+            Self::EnvironmentNotFound { .. } | Self::MissingInstanceIp { .. } => {
+                crate::shared::ErrorKind::Configuration
+            }
             Self::Command(_) | Self::RemoteAction(_) => crate::shared::ErrorKind::CommandExecution,
-            Self::MissingInstanceIp { .. } => crate::shared::ErrorKind::Configuration,
             Self::StateTransition(_) | Self::StatePersistence(_) => {
                 crate::shared::ErrorKind::StatePersistence
             }

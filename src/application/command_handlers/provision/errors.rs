@@ -136,6 +136,7 @@ impl ProvisionCommandHandlerError {
     /// assert!(help.contains("Troubleshooting"));
     /// ```
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn help(&self) -> &'static str {
         match self {
             Self::EnvironmentNotFound { .. } => {
