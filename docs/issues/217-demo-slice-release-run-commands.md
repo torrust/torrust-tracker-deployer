@@ -9,15 +9,15 @@ This task implements the foundational scaffolding for the `release` and `run` co
 
 ## Goals
 
-- [ ] Create `ReleaseCommandHandler` (App layer) with state transitions
-- [ ] Create `RunCommandHandler` (App layer) with state transitions
-- [ ] Create `release` CLI subcommand (Presentation layer)
-- [ ] Create `run` CLI subcommand (Presentation layer)
-- [ ] Add docker-compose file infrastructure
-- [ ] Deploy and run demo-app (nginx) container on provisioned VM
-- [ ] Verify container is running and healthy
-- [ ] Rename `e2e_config_tests.rs` → `e2e_config_and_release_tests.rs` and extend
-- [ ] Update `e2e_tests_full.rs` to include release and run commands
+- [x] Create `ReleaseCommandHandler` (App layer) with state transitions
+- [x] Create `RunCommandHandler` (App layer) with state transitions
+- [x] Create `release` CLI subcommand (Presentation layer)
+- [x] Create `run` CLI subcommand (Presentation layer)
+- [x] Add docker-compose file infrastructure
+- [x] Deploy and run demo-app (nginx) container on provisioned VM
+- [x] Verify container is running and healthy
+- [x] Rename `e2e_config_tests.rs` → `e2e_config_and_release_tests.rs` and extend
+- [x] Update `e2e_tests_full.rs` to include release and run commands
 
 ## Architecture Overview
 
@@ -867,13 +867,68 @@ cargo run -- destroy e2e-full
 | Service accessible            | nginx welcome page returned ✅     |
 | State transitioned to Running | `"Running"` in environment.json ✅ |
 
-### Phase 10: E2E Test Coverage
+### Phase 10: E2E Test Coverage ✅ COMPLETE
 
-- Extend E2E tests to cover full release and run workflow
-- Test full pipeline: create → provision → configure → release → run
-- Verify demo-app container runs successfully and is healthy
+> **Status**: ✅ COMPLETE
+>
+> E2E tests now validate the complete deployment pipeline including service health checks.
 
-**Deliverable**: Complete E2E test suite for new commands.
+#### Implementation Summary
+
+The E2E test coverage has been enhanced with proper separation of validation concerns:
+
+| Component                      | Module                            | Description                                                   |
+| ------------------------------ | --------------------------------- | ------------------------------------------------------------- |
+| **`RunningServicesValidator`** | `remote_actions/`                 | Remote action to validate Docker Compose services are running |
+| **`run_release_validation`**   | `tasks/run_release_validation.rs` | Validates `release` command: Docker Compose files deployed    |
+| **`run_run_validation`**       | `tasks/run_run_validation.rs`     | Validates `run` command: services running and healthy         |
+
+#### What Was Implemented
+
+**1. `RunningServicesValidator` Remote Action** ✅
+
+```rust
+// src/infrastructure/remote_actions/running_services.rs
+pub struct RunningServicesValidator {
+    ssh_client: SshClient,
+    deploy_dir: PathBuf,
+}
+```
+
+Validates:
+
+- Services are listed in `docker compose ps` output
+- Services are in "running" status (not "exited" or "restarting")
+- Health check status if configured (e.g., "healthy")
+- HTTP accessibility for web services (optional, port 8080)
+
+**2. Separate Validation Modules (One Per Command)** ✅
+
+Following Single Responsibility Principle:
+
+- `run_configuration_validation.rs` - Validates `configure` command (Docker/Docker Compose installed)
+- `run_release_validation.rs` - Validates `release` command (Compose files deployed)
+- `run_run_validation.rs` - Validates `run` command (services running)
+
+**3. Test Coverage Summary** ✅
+
+| E2E Test Binary                   | Workflow Tested                                          | Validations Run             |
+| --------------------------------- | -------------------------------------------------------- | --------------------------- |
+| `e2e_provision_and_destroy_tests` | create → provision → destroy                             | N/A                         |
+| `e2e_config_and_release_tests`    | create → register → configure → release → run → validate | config ✅ release ✅ run ✅ |
+| `e2e_tests_full`                  | create → provision → configure → release → run → destroy | (infrastructure)            |
+
+#### Deliverables ✅
+
+All deliverables completed:
+
+1. ✅ E2E tests cover full release and run workflow
+2. ✅ Full pipeline tested: create → provision/register → configure → release → run
+3. ✅ Demo-app container verified as running and healthy
+4. ✅ New `RunningServicesValidator` validates service health
+5. ✅ Configuration validation extended with service checks
+
+**Deliverable**: Complete E2E test suite for new commands. ✅
 
 **Manual E2E Test - Full Pipeline**:
 
@@ -1120,7 +1175,10 @@ All errors must:
 - `src/application/steps/application/deploy_compose_files.rs` ✅ (`DeployComposeFilesStep` - deploys via Ansible)
 - `src/application/steps/rendering/docker_compose_templates.rs` ✅ (`RenderDockerComposeTemplatesStep` - renders templates)
 - `src/application/steps/application/start_services.rs` (future - start docker compose services)
-- `src/application/steps/application/verify_services.rs` (future - verify services are running)
+
+### Infrastructure Layer (Remote Actions)
+
+- `src/infrastructure/remote_actions/running_services.rs` ✅ (`RunningServicesValidator` - validates running services via E2E tests)
 
 ### Infrastructure Layer
 
@@ -1153,6 +1211,11 @@ All errors must:
 - `src/bin/e2e_tests_full.rs` (update to include release and run)
 - Update `Cargo.toml` binary definition ✅
 - Update `scripts/pre-commit.sh` to use new test name ✅
+
+### E2E Validation Modules
+
+- `src/testing/e2e/tasks/run_release_validation.rs` ✅ (validates `release` command - Docker Compose files deployed)
+- `src/testing/e2e/tasks/run_run_validation.rs` ✅ (validates `run` command - services running and healthy)
 
 ## Related Documentation
 

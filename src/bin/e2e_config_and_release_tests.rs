@@ -75,6 +75,8 @@ use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
 };
 use torrust_tracker_deployer_lib::testing::e2e::tasks::container::cleanup_infrastructure::stop_test_infrastructure;
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configuration_validation::run_configuration_validation;
+use torrust_tracker_deployer_lib::testing::e2e::tasks::run_release_validation::run_release_validation;
+use torrust_tracker_deployer_lib::testing::e2e::tasks::run_run_validation::run_run_validation;
 
 /// Environment name for this E2E test
 const ENVIRONMENT_NAME: &str = "e2e-config";
@@ -245,16 +247,26 @@ async fn run_deployer_workflow(
     // (CLI: cargo run -- configure <env>)
     test_runner.configure_services()?;
 
+    // Validate the configuration (Docker and Docker Compose installed correctly)
+    run_configuration_validation(socket_addr, ssh_credentials)
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
     // Release software to the configured infrastructure
     // (CLI: cargo run -- release <env>)
     test_runner.release_software()?;
+
+    // Validate the release (Docker Compose files deployed correctly)
+    run_release_validation(socket_addr, ssh_credentials)
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // Run services on the released infrastructure
     // (CLI: cargo run -- run <env>)
     test_runner.run_services()?;
 
-    // Validate the configuration
-    run_configuration_validation(socket_addr, ssh_credentials)
+    // Validate services are running (Docker Compose services started and healthy)
+    run_run_validation(socket_addr, ssh_credentials)
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?;
 

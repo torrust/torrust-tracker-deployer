@@ -33,5 +33,7 @@ pub mod preflight_cleanup;
 pub mod run_configuration_validation;
 pub mod run_configure_command;
 pub mod run_create_command;
+pub mod run_release_validation;
+pub mod run_run_validation;
 pub mod run_test_command;
 pub mod virtual_machine;
