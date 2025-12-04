@@ -190,13 +190,14 @@ impl StoppedProvisionedContainer {
         // First build the Docker image if needed
         Self::build_image(self.timeouts.docker_build)?;
 
-        info!(ssh_port = %ssh_port, "Starting provisioned instance container");
+        info!(ssh_port = %ssh_port, "Starting provisioned instance container with Docker-in-Docker support");
 
         // Create and start the container using the configuration builder
+        // Wait for both SSH and Docker daemon to be ready
         let image =
             ContainerConfigBuilder::new(format!("{DEFAULT_IMAGE_NAME}:{DEFAULT_IMAGE_TAG}"))
                 .with_exposed_port(ssh_port)
-                .with_wait_condition(WaitFor::message_on_stdout("sshd entered RUNNING state"))
+                .with_wait_condition(WaitFor::message_on_stdout("dockerd entered RUNNING state"))
                 .build()
                 .map_err(|source| {
                     Box::new(ContainerError::ContainerRuntime {
@@ -209,12 +210,17 @@ impl StoppedProvisionedContainer {
                     })
                 })?;
 
-        // Start the container with optional container name
+        // Start the container with privileged mode for Docker-in-Docker support
+        // and optional container name
         let container = if let Some(name) = container_name {
-            info!(container_name = %name, "Starting container with custom name");
-            image.with_container_name(name).start().await
+            info!(container_name = %name, "Starting container with custom name and privileged mode");
+            image
+                .with_privileged(true)
+                .with_container_name(name)
+                .start()
+                .await
         } else {
-            image.start().await
+            image.with_privileged(true).start().await
         }
         .map_err(|source| {
             Box::new(ContainerError::ContainerRuntime {

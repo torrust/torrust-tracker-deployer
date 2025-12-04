@@ -142,15 +142,39 @@ impl ConfigureCommandHandler {
     ) -> StepResult<Environment<Configured>, ConfigureCommandHandlerError, ConfigureStep> {
         let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
 
+        // Allow tests or CI to skip Docker installation
+        // (useful for container-based tests where Docker is already installed via Dockerfile)
+        let skip_docker = std::env::var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER")
+            .map(|v| v == "true")
+            .unwrap_or(false);
+
         let current_step = ConfigureStep::InstallDocker;
-        InstallDockerStep::new(Arc::clone(&ansible_client))
-            .execute()
-            .map_err(|e| (e.into(), current_step))?;
+        if skip_docker {
+            info!(
+                command = "configure",
+                step = "install_docker",
+                status = "skipped",
+                "Skipping Docker installation due to TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER (Docker pre-installed)"
+            );
+        } else {
+            InstallDockerStep::new(Arc::clone(&ansible_client))
+                .execute()
+                .map_err(|e| (e.into(), current_step))?;
+        }
 
         let current_step = ConfigureStep::InstallDockerCompose;
-        InstallDockerComposeStep::new(Arc::clone(&ansible_client))
-            .execute()
-            .map_err(|e| (e.into(), current_step))?;
+        if skip_docker {
+            info!(
+                command = "configure",
+                step = "install_docker_compose",
+                status = "skipped",
+                "Skipping Docker Compose installation due to TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER (Docker Compose pre-installed)"
+            );
+        } else {
+            InstallDockerComposeStep::new(Arc::clone(&ansible_client))
+                .execute()
+                .map_err(|e| (e.into(), current_step))?;
+        }
 
         let current_step = ConfigureStep::ConfigureSecurityUpdates;
         ConfigureSecurityUpdatesStep::new(Arc::clone(&ansible_client))

@@ -119,9 +119,13 @@ pub async fn main() -> Result<()> {
     // UFW/iptables requires kernel capabilities not available in unprivileged containers
     std::env::set_var("TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER", "true");
 
-    // Set environment variable to skip run command in container-based tests
-    // Docker daemon is not available inside the test container (no Docker-in-Docker)
-    std::env::set_var("TORRUST_TD_SKIP_RUN_IN_CONTAINER", "true");
+    // Skip Docker installation in container-based tests since Docker is already
+    // installed via the Dockerfile (Docker CE from get.docker.com script).
+    // This avoids package conflicts between docker.io and containerd.io.
+    std::env::set_var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER", "true");
+
+    // Note: Docker-in-Docker is now enabled via privileged mode in the container,
+    // so we can test the run command that starts Docker Compose services.
 
     // Initialize logging with production log location for E2E tests using the builder pattern
     LoggingBuilder::new(std::path::Path::new("./data/logs"))

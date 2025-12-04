@@ -33,8 +33,15 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     # APT transport for HTTPS repositories
     apt-transport-https \
+    # iptables for Docker networking
+    iptables \
     # Clean up package cache
     && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Docker using official installation script
+# This installs both Docker daemon and Docker Compose plugin
+RUN curl -fsSL https://get.docker.com | sh \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure SSH server
@@ -45,7 +52,7 @@ RUN mkdir -p /var/run/sshd \
     && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 # Create torrust user matching LXD VM configuration
-RUN useradd -m -s /bin/bash -G sudo torrust \
+RUN useradd -m -s /bin/bash -G sudo,docker torrust \
     # Set a simple password for initial SSH access (tests will set up keys later)
     && echo "torrust:torrust123" | chpasswd \
     # Configure passwordless sudo
