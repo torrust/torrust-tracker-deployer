@@ -7,7 +7,8 @@
 //! ## Available Steps
 //!
 //! - `deploy_compose_files` - Deploys Docker Compose files to remote host via Ansible
-//! - `run` - Starts the Docker Compose application stack
+//! - `start_services` - Starts Docker Compose services via Ansible
+//! - `run` - Legacy run step (placeholder)
 //!
 //! ## Future Steps
 //!
@@ -24,6 +25,8 @@
 
 pub mod deploy_compose_files;
 pub mod run;
+pub mod start_services;
 
 pub use deploy_compose_files::{DeployComposeFilesStep, DeployComposeFilesStepError};
 pub use run::{RunStep, RunStepError};
+pub use start_services::{StartServicesStep, StartServicesStepError};

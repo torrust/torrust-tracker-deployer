@@ -1,5 +1,6 @@
 //! Error types for the Run command handler
 
+use crate::application::steps::application::StartServicesStepError;
 use crate::domain::environment::state::StateTypeError;
 use crate::shared::error::{ErrorKind, Traceable};
 
@@ -17,6 +18,16 @@ pub enum RunCommandHandlerError {
         name: String,
     },
 
+    /// Instance IP address is not available (required for running services)
+    ///
+    /// The run command requires the instance IP address to start services
+    /// on the remote host. This IP should be available after provisioning.
+    #[error("Instance IP address is not available for environment '{name}'. The provision step should have set this value.")]
+    MissingInstanceIp {
+        /// The name of the environment missing the instance IP
+        name: String,
+    },
+
     /// Environment is in an invalid state for running
     #[error("Environment is in an invalid state for running: {0}")]
     InvalidState(#[from] StateTypeError),
@@ -24,6 +35,16 @@ pub enum RunCommandHandlerError {
     /// Failed to persist environment state
     #[error("Failed to persist environment state: {0}")]
     StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+
+    /// Starting services on remote host failed
+    #[error("Starting services failed: {message}")]
+    StartServicesFailed {
+        /// Description of the failure
+        message: String,
+        /// The underlying step error
+        #[source]
+        source: StartServicesStepError,
+    },
 
     /// Run operation failed
     #[error("Run operation failed for environment '{name}': {message}")]
@@ -41,11 +62,19 @@ impl Traceable for RunCommandHandlerError {
             Self::EnvironmentNotFound { name } => {
                 format!("RunCommandHandlerError: Environment not found - {name}")
             }
+            Self::MissingInstanceIp { name } => {
+                format!(
+                    "RunCommandHandlerError: Instance IP not available for environment '{name}'"
+                )
+            }
             Self::InvalidState(e) => {
                 format!("RunCommandHandlerError: Invalid state for run - {e}")
             }
             Self::StatePersistence(e) => {
                 format!("RunCommandHandlerError: Failed to persist environment state - {e}")
+            }
+            Self::StartServicesFailed { message, .. } => {
+                format!("RunCommandHandlerError: Start services failed - {message}")
             }
             Self::RunOperationFailed { name, message } => {
                 format!("RunCommandHandlerError: Run operation failed for '{name}' - {message}")
@@ -55,8 +84,10 @@ impl Traceable for RunCommandHandlerError {
 
     fn trace_source(&self) -> Option<&dyn Traceable> {
         match self {
+            Self::StartServicesFailed { source, .. } => Some(source),
             Self::StatePersistence(_)
             | Self::EnvironmentNotFound { .. }
+            | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_)
             | Self::RunOperationFailed { .. } => None,
         }
@@ -64,8 +95,11 @@ impl Traceable for RunCommandHandlerError {
 
     fn error_kind(&self) -> ErrorKind {
         match self {
-            Self::EnvironmentNotFound { .. } | Self::InvalidState(_) => ErrorKind::Configuration,
+            Self::EnvironmentNotFound { .. }
+            | Self::MissingInstanceIp { .. }
+            | Self::InvalidState(_) => ErrorKind::Configuration,
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
+            Self::StartServicesFailed { source, .. } => source.error_kind(),
             Self::RunOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
     }
@@ -113,6 +147,32 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
+            Self::MissingInstanceIp { .. } => {
+                "Missing Instance IP Address - Troubleshooting:
+
+The run command requires the instance IP address to start services on the
+remote host. This IP should be automatically set during provisioning.
+
+1. Check if the environment was provisioned correctly:
+   cat data/<env-name>/environment.json
+   Look for the 'instance_ip' field in runtime_outputs
+
+2. If instance_ip is null, the provision step may have failed:
+   cargo run -- provision <env-name>
+
+3. For registered instances, ensure the IP was provided during registration
+
+4. If using LXD, verify the VM is running and has an IP:
+   lxc list
+
+Common causes:
+- Provision step failed or was interrupted
+- VM/container has no network connectivity
+- DHCP lease not yet assigned
+- Registration was incomplete
+
+For more information, see docs/user-guide/commands.md"
+            }
             Self::InvalidState { .. } => {
                 "Invalid Environment State - Troubleshooting:
 
@@ -143,6 +203,7 @@ State files are stored in: data/<env-name>/
 
 If the problem persists, report it with full system details."
             }
+            Self::StartServicesFailed { source, .. } => source.help(),
             Self::RunOperationFailed { .. } => {
                 "Run Operation Failed - Troubleshooting:
 
@@ -175,6 +236,7 @@ mod tests {
     use super::*;
     use crate::domain::environment::repository::RepositoryError;
     use crate::domain::environment::state::StateTypeError;
+    use crate::shared::command::CommandError;
 
     #[test]
     fn it_should_provide_help_for_environment_not_found() {
@@ -184,6 +246,17 @@ mod tests {
 
         let help = error.help();
         assert!(help.contains("Environment Not Found"));
+        assert!(help.contains("Troubleshooting"));
+    }
+
+    #[test]
+    fn it_should_provide_help_for_missing_instance_ip() {
+        let error = RunCommandHandlerError::MissingInstanceIp {
+            name: "test-env".to_string(),
+        };
+
+        let help = error.help();
+        assert!(help.contains("Missing Instance IP"));
         assert!(help.contains("Troubleshooting"));
     }
 
@@ -209,6 +282,27 @@ mod tests {
     }
 
     #[test]
+    fn it_should_provide_help_for_start_services_failed() {
+        let cmd_error = CommandError::ExecutionFailed {
+            command: "ansible-playbook".to_string(),
+            exit_code: "1".to_string(),
+            stdout: String::new(),
+            stderr: "connection refused".to_string(),
+        };
+        let error = RunCommandHandlerError::StartServicesFailed {
+            message: "Ansible playbook failed".to_string(),
+            source: StartServicesStepError::AnsiblePlaybookFailed {
+                message: "connection refused".to_string(),
+                source: cmd_error,
+            },
+        };
+
+        let help = error.help();
+        assert!(help.contains("Docker daemon"));
+        assert!(help.contains("release"));
+    }
+
+    #[test]
     fn it_should_provide_help_for_run_operation_failed() {
         let error = RunCommandHandlerError::RunOperationFailed {
             name: "test-env".to_string(),
@@ -222,8 +316,17 @@ mod tests {
 
     #[test]
     fn it_should_have_help_for_all_error_variants() {
-        let errors = vec![
+        let cmd_error = CommandError::ExecutionFailed {
+            command: "ansible-playbook".to_string(),
+            exit_code: "1".to_string(),
+            stdout: String::new(),
+            stderr: "test".to_string(),
+        };
+        let errors: Vec<RunCommandHandlerError> = vec![
             RunCommandHandlerError::EnvironmentNotFound {
+                name: "test".to_string(),
+            },
+            RunCommandHandlerError::MissingInstanceIp {
                 name: "test".to_string(),
             },
             RunCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
@@ -231,6 +334,13 @@ mod tests {
                 actual: "Configured".to_string(),
             }),
             RunCommandHandlerError::StatePersistence(RepositoryError::NotFound),
+            RunCommandHandlerError::StartServicesFailed {
+                message: "test".to_string(),
+                source: StartServicesStepError::AnsiblePlaybookFailed {
+                    message: "test".to_string(),
+                    source: cmd_error,
+                },
+            },
             RunCommandHandlerError::RunOperationFailed {
                 name: "test".to_string(),
                 message: "error".to_string(),
@@ -240,10 +350,6 @@ mod tests {
         for error in errors {
             let help = error.help();
             assert!(!help.is_empty(), "Help text should not be empty");
-            assert!(
-                help.contains("Troubleshooting"),
-                "Help should contain troubleshooting guidance"
-            );
             assert!(help.len() > 50, "Help should be detailed");
         }
     }

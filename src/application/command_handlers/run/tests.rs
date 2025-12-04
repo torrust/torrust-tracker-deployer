@@ -27,7 +27,7 @@ fn create_test_handler() -> (RunCommandHandler, TempDir) {
 fn it_should_create_handler_with_dependencies() {
     let (handler, _temp_dir) = create_test_handler();
     // Handler was created successfully - verify basic construction
-    assert!(Arc::strong_count(&handler.repository) >= 1);
+    assert!(Arc::strong_count(handler.repository.inner()) >= 1);
 }
 
 #[test]

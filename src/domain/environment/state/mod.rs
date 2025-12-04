@@ -78,7 +78,7 @@ pub use provisioning::Provisioning;
 pub use release_failed::{ReleaseFailed, ReleaseFailureContext, ReleaseStep};
 pub use released::Released;
 pub use releasing::Releasing;
-pub use run_failed::RunFailed;
+pub use run_failed::{RunFailed, RunFailureContext, RunStep};
 pub use running::Running;
 
 /// Error type for invalid type conversions when working with type-erased environments
@@ -359,7 +359,7 @@ impl AnyEnvironmentState {
             Self::ProvisionFailed(env) => Some(&env.state().context.base.error_summary),
             Self::ConfigureFailed(env) => Some(&env.state().context.base.error_summary),
             Self::ReleaseFailed(env) => Some(&env.state().context.base.error_summary),
-            Self::RunFailed(env) => Some(&env.state().failed_step),
+            Self::RunFailed(env) => Some(&env.state().context.base.error_summary),
             Self::DestroyFailed(env) => Some(&env.state().context.base.error_summary),
             _ => None,
         }
@@ -656,6 +656,27 @@ mod tests {
         }
     }
 
+    /// Helper to create a test `RunFailureContext` with custom error message
+    fn create_test_run_context(error_message: &str) -> RunFailureContext {
+        use crate::domain::environment::TraceId;
+        use crate::shared::ErrorKind;
+        use chrono::Utc;
+        use std::time::Duration;
+
+        RunFailureContext {
+            failed_step: RunStep::StartServices,
+            error_kind: ErrorKind::InfrastructureOperation,
+            base: BaseFailureContext {
+                error_summary: error_message.to_string(),
+                failed_at: Utc::now(),
+                execution_started_at: Utc::now(),
+                execution_duration: Duration::from_secs(0),
+                trace_id: TraceId::default(),
+                trace_file_path: None,
+            },
+        }
+    }
+
     /// Test module for state marker types
     ///
     /// These tests verify that state types can be created, cloned, and serialized
@@ -740,10 +761,9 @@ mod tests {
 
     #[test]
     fn it_should_create_run_failed_state_with_context() {
-        let state = RunFailed {
-            failed_step: "application_startup".to_string(),
-        };
-        assert_eq!(state.failed_step, "application_startup");
+        let context = create_test_run_context("application_startup");
+        let state = RunFailed { context };
+        assert_eq!(state.context.base.error_summary, "application_startup");
     }
 
     #[test]
@@ -963,7 +983,7 @@ mod tests {
                 .start_releasing()
                 .released()
                 .start_running()
-                .run_failed("runtime error".to_string());
+                .run_failed(super::create_test_run_context("runtime error"));
             let any_env = env.into_any();
             assert!(matches!(any_env, AnyEnvironmentState::RunFailed(_)));
         }
@@ -1106,7 +1126,7 @@ mod tests {
                 .start_releasing()
                 .released()
                 .start_running()
-                .run_failed("test error".to_string());
+                .run_failed(super::create_test_run_context("test error"));
             let any_env = env.into_any();
             let result = any_env.try_into_run_failed();
             assert!(result.is_ok());
@@ -1393,7 +1413,7 @@ mod tests {
                     .start_releasing()
                     .released()
                     .start_running()
-                    .run_failed("error".to_string())
+                    .run_failed(super::super::create_test_run_context("error"))
                     .into_any();
                 assert_eq!(any_env.state_name(), "run_failed");
             }
@@ -1543,7 +1563,7 @@ mod tests {
                     .start_releasing()
                     .released()
                     .start_running()
-                    .run_failed("error".to_string())
+                    .run_failed(super::super::create_test_run_context("error"))
                     .into_any();
                 assert!(!any_env.is_success_state());
             }
@@ -1650,7 +1670,7 @@ mod tests {
                     .start_releasing()
                     .released()
                     .start_running()
-                    .run_failed("error".to_string())
+                    .run_failed(super::super::create_test_run_context("error"))
                     .into_any();
                 assert!(any_env.is_error_state());
             }
@@ -1767,7 +1787,7 @@ mod tests {
                     .start_releasing()
                     .released()
                     .start_running()
-                    .run_failed("error".to_string())
+                    .run_failed(super::super::create_test_run_context("error"))
                     .into_any();
                 assert!(any_env.is_terminal_state());
             }
@@ -1881,7 +1901,7 @@ mod tests {
                     .start_releasing()
                     .released()
                     .start_running()
-                    .run_failed(error_message.to_string())
+                    .run_failed(super::super::create_test_run_context(error_message))
                     .into_any();
 
                 assert_eq!(any_env.error_details(), Some(error_message));

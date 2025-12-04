@@ -11,5 +11,7 @@ mod common;
 mod error;
 mod sections;
 
-pub use commands::{ConfigureTraceWriter, ProvisionTraceWriter, ReleaseTraceWriter};
+pub use commands::{
+    ConfigureTraceWriter, ProvisionTraceWriter, ReleaseTraceWriter, RunTraceWriter,
+};
 pub use error::TraceWriterError;

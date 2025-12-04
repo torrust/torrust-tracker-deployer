@@ -2,30 +2,82 @@
 //!
 //! Error state - Application runtime failed
 //!
-//! The application encountered a runtime error. The `failed_step` field
-//! contains the name of the operation that caused the failure.
+//! The run command failed during execution. The `context` field
+//! contains detailed information about the failure, including which step
+//! failed, error classification, and trace file location.
 //!
 //! **Recovery Options:**
-//! - Restart the application
+//! - Retry the run command
 //! - Destroy and recreate the environment
+
+use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::environment::state::{AnyEnvironmentState, StateTypeError};
+use crate::domain::environment::state::{AnyEnvironmentState, BaseFailureContext, StateTypeError};
 use crate::domain::environment::Environment;
+use crate::shared::error::ErrorKind;
+
+/// Steps in the run workflow
+///
+/// Each variant represents a distinct phase in the run process.
+/// This allows precise tracking of which step failed during run.
+///
+/// The run workflow follows the three-level architecture:
+/// - **Command** (Level 1): `RunCommandHandler` orchestrates the workflow
+/// - **Step** (Level 2): Individual steps like `StartServicesStep`
+/// - **Remote Action** (Level 3): Ansible playbooks execute on remote hosts
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunStep {
+    /// Starting Docker Compose services on the remote host
+    StartServices,
+}
+
+impl fmt::Display for RunStep {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Self::StartServices => "Start Services",
+        };
+        write!(f, "{name}")
+    }
+}
+
+/// Structured failure context for run command errors
+///
+/// Contains comprehensive information about a run failure:
+/// - Which step failed
+/// - Error classification for recovery guidance
+/// - Base failure metadata (timing, trace ID, error summary)
+///
+/// This enables:
+/// - Accurate error reporting
+/// - Recovery suggestions based on the specific failure
+/// - Post-mortem analysis via trace files
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RunFailureContext {
+    /// The step that was executing when the failure occurred
+    pub failed_step: RunStep,
+
+    /// Classification of the error for recovery guidance
+    pub error_kind: ErrorKind,
+
+    /// Common failure metadata (timing, trace, error summary)
+    pub base: BaseFailureContext,
+}
 
 /// Error state - Application runtime failed
 ///
-/// The application encountered a runtime error. The `failed_step` field
-/// contains the name of the operation that caused the failure.
+/// The run command failed during execution. The `context` field
+/// contains detailed information about the failure.
 ///
 /// **Recovery Options:**
-/// - Restart the application
+/// - Retry the run command
 /// - Destroy and recreate the environment
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RunFailed {
-    /// The name of the operation that failed during runtime
-    pub failed_step: String,
+    /// Structured failure context with step info, error classification, and trace
+    pub context: RunFailureContext,
 }
 
 // Type Erasure: Typed → Runtime conversion (into_any)
@@ -57,14 +109,55 @@ impl AnyEnvironmentState {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use chrono::Utc;
+
     use super::*;
+    use crate::domain::environment::TraceId;
+
+    fn create_test_failure_context() -> RunFailureContext {
+        let now = Utc::now();
+        RunFailureContext {
+            failed_step: RunStep::StartServices,
+            error_kind: ErrorKind::InfrastructureOperation,
+            base: BaseFailureContext {
+                error_summary: "Test error".to_string(),
+                failed_at: now,
+                execution_started_at: now,
+                execution_duration: Duration::from_secs(10),
+                trace_id: TraceId::new(),
+                trace_file_path: None,
+            },
+        }
+    }
 
     #[test]
     fn it_should_create_run_failed_state_with_context() {
+        let context = create_test_failure_context();
         let state = RunFailed {
-            failed_step: "application_startup".to_string(),
+            context: context.clone(),
         };
-        assert_eq!(state.failed_step, "application_startup");
+        assert_eq!(state.context.failed_step, RunStep::StartServices);
+        assert_eq!(state.context.error_kind, ErrorKind::InfrastructureOperation);
+    }
+
+    #[test]
+    fn it_should_display_run_step() {
+        assert_eq!(format!("{}", RunStep::StartServices), "Start Services");
+    }
+
+    #[test]
+    fn it_should_serialize_run_step_to_snake_case() {
+        let step = RunStep::StartServices;
+        let json = serde_json::to_string(&step).unwrap();
+        assert_eq!(json, r#""start_services""#);
+    }
+
+    #[test]
+    fn it_should_deserialize_run_step_from_snake_case() {
+        let step: RunStep = serde_json::from_str(r#""start_services""#).unwrap();
+        assert_eq!(step, RunStep::StartServices);
     }
 
     mod conversion_tests {
@@ -94,6 +187,19 @@ mod tests {
         fn create_test_environment_run_failed() -> Environment<RunFailed> {
             let name = EnvironmentName::new("test-env".to_string()).unwrap();
             let ssh_creds = create_test_ssh_credentials();
+            let now = Utc::now();
+            let context = RunFailureContext {
+                failed_step: RunStep::StartServices,
+                error_kind: ErrorKind::InfrastructureOperation,
+                base: BaseFailureContext {
+                    error_summary: "Docker compose failed".to_string(),
+                    failed_at: now,
+                    execution_started_at: now,
+                    execution_duration: Duration::from_secs(5),
+                    trace_id: TraceId::new(),
+                    trace_file_path: None,
+                },
+            };
             Environment::new(
                 name.clone(),
                 default_lxd_provider_config(&name),
@@ -107,7 +213,7 @@ mod tests {
             .start_releasing()
             .released()
             .start_running()
-            .run_failed("test error".to_string())
+            .run_failed(context)
         }
 
         #[test]
