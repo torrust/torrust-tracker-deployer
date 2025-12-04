@@ -87,43 +87,18 @@ impl ConfigureCommandHandler {
         &self,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Configured>, ConfigureCommandHandlerError> {
-        info!(
-            command = "configure",
-            environment = %env_name,
-            "Starting complete infrastructure configuration workflow"
-        );
+        let environment = self.load_provisioned_environment(env_name)?;
 
-        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
-        let any_env = self
-            .repository
-            .inner()
-            .load(env_name)
-            .map_err(ConfigureCommandHandlerError::StatePersistence)?;
-
-        // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| ConfigureCommandHandlerError::EnvironmentNotFound {
-            name: env_name.to_string(),
-        })?;
-
-        // 3. Validate environment is in Provisioned state and restore type safety
-        let environment = any_env.try_into_provisioned()?;
-
-        // Capture start time before transitioning to Configuring state
         let started_at = self.clock.now();
 
-        // Transition to Configuring state
         let environment = environment.start_configuring();
 
-        // Persist intermediate state
         self.repository.save_configuring(&environment)?;
 
-        // Build configuration dependencies (AnsibleClient)
         let ansible_client = Self::build_configuration_dependencies(&environment);
 
-        // Execute configuration steps with explicit step tracking
         match Self::execute_configuration_with_tracking(&environment, &ansible_client) {
             Ok(configured_env) => {
-                // Persist final state
                 self.repository.save_configured(&configured_env)?;
 
                 info!(
@@ -135,13 +110,10 @@ impl ConfigureCommandHandler {
                 Ok(configured_env)
             }
             Err((e, current_step)) => {
-                // Transition to error state with structured context
-                // current_step contains the step that was executing when the error occurred
                 let context =
                     self.build_failure_context(&environment, &e, current_step, started_at);
                 let failed = environment.configure_failed(context);
 
-                // Persist error state
                 self.repository.save_configure_failed(&failed)?;
 
                 Err(e)
@@ -277,5 +249,33 @@ impl ConfigureCommandHandler {
         }
 
         context
+    }
+
+    /// Load environment from storage and validate it is in `Provisioned` state
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * Persistence error occurs during load
+    /// * Environment does not exist
+    /// * Environment is not in `Provisioned` state
+    fn load_provisioned_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<
+        crate::domain::environment::Environment<crate::domain::environment::Provisioned>,
+        ConfigureCommandHandlerError,
+    > {
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(ConfigureCommandHandlerError::StatePersistence)?;
+
+        let any_env = any_env.ok_or_else(|| ConfigureCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })?;
+
+        Ok(any_env.try_into_provisioned()?)
     }
 }

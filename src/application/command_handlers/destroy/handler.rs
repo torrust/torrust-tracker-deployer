@@ -87,25 +87,8 @@ impl DestroyCommandHandler {
         &self,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Destroyed>, DestroyCommandHandlerError> {
-        info!(
-            command = "destroy",
-            environment = %env_name,
-            "Starting complete infrastructure destruction workflow"
-        );
+        let any_env = self.load_environment(env_name)?;
 
-        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
-        let any_env = self
-            .repository
-            .inner()
-            .load(env_name)
-            .map_err(DestroyCommandHandlerError::StatePersistence)?;
-
-        // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| DestroyCommandHandlerError::EnvironmentNotFound {
-            name: env_name.to_string(),
-        })?;
-
-        // 3. Check if environment is already destroyed
         if let AnyEnvironmentState::Destroyed(env) = any_env {
             info!(
                 command = "destroy",
@@ -115,14 +98,10 @@ impl DestroyCommandHandler {
             return Ok(env);
         }
 
-        // 4. Capture start time before transitioning to Destroying state
         let started_at = self.clock.now();
 
-        // 5. Get the build directory from the environment context (before consuming any_env)
         let opentofu_build_dir = any_env.tofu_build_dir();
 
-        // 6. Transition to Destroying state
-        // Match on AnyEnvironmentState and call start_destroying on each typed environment
         let destroying_env = match any_env {
             AnyEnvironmentState::Created(env) => env.start_destroying(),
             AnyEnvironmentState::Provisioning(env) => env.start_destroying(),
@@ -143,21 +122,16 @@ impl DestroyCommandHandler {
             }
         };
 
-        // 7. Persist intermediate state
         self.repository.save_destroying(&destroying_env)?;
 
-        // 8. Create OpenTofu client with correct build directory
         let opentofu_client = Arc::new(crate::adapters::tofu::client::OpenTofuClient::new(
             opentofu_build_dir,
         ));
 
-        // 9. Execute destruction steps with explicit step tracking
         match Self::execute_destruction_with_tracking(&destroying_env, &opentofu_client) {
             Ok(()) => {
-                // Transition to Destroyed state
                 let destroyed = destroying_env.destroyed();
 
-                // Persist final state
                 self.repository.save_destroyed(&destroyed)?;
 
                 info!(
@@ -169,12 +143,10 @@ impl DestroyCommandHandler {
                 Ok(destroyed)
             }
             Err((e, current_step)) => {
-                // Transition to error state with structured context
                 let context =
                     self.build_failure_context(&destroying_env, &e, current_step, started_at);
                 let failed = destroying_env.destroy_failed(context);
 
-                // Persist error state
                 self.repository.save_destroy_failed(&failed)?;
 
                 Err(e)
@@ -390,5 +362,27 @@ impl DestroyCommandHandler {
     ) -> Result<(), DestroyCommandHandlerError> {
         DestroyInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
         Ok(())
+    }
+
+    /// Load environment from storage
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * Persistence error occurs during load
+    /// * Environment does not exist
+    fn load_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<AnyEnvironmentState, DestroyCommandHandlerError> {
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(DestroyCommandHandlerError::StatePersistence)?;
+
+        any_env.ok_or_else(|| DestroyCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })
     }
 }

@@ -93,35 +93,14 @@ impl ReleaseCommandHandler {
         &self,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Released>, ReleaseCommandHandlerError> {
-        info!(
-            command = "release",
-            environment = %env_name,
-            "Starting software release workflow"
-        );
+        let environment = self.load_configured_environment(env_name)?;
 
-        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
-        let any_env = self
-            .repository
-            .inner()
-            .load(env_name)
-            .map_err(ReleaseCommandHandlerError::StatePersistence)?;
-
-        // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| ReleaseCommandHandlerError::EnvironmentNotFound {
-            name: env_name.to_string(),
-        })?;
-
-        // 3. Validate environment is in Configured state and restore type safety
-        let environment: Environment<Configured> = any_env.try_into_configured()?;
-
-        // 4. Validate instance IP is available (precondition for release)
         let instance_ip = environment.instance_ip().ok_or_else(|| {
             ReleaseCommandHandlerError::MissingInstanceIp {
                 name: env_name.to_string(),
             }
         })?;
 
-        // 5. Capture start time before transitioning to Releasing state
         let started_at = self.clock.now();
 
         info!(
@@ -133,10 +112,8 @@ impl ReleaseCommandHandler {
             "Environment loaded and validated. Transitioning to Releasing state."
         );
 
-        // 6. Transition to Releasing state
         let releasing_env = environment.start_releasing();
 
-        // 7. Persist intermediate state
         self.repository.save_releasing(&releasing_env)?;
 
         info!(
@@ -146,13 +123,11 @@ impl ReleaseCommandHandler {
             "Releasing state persisted. Executing release steps."
         );
 
-        // 8. Execute release workflow with explicit step tracking
         match self
             .execute_release_workflow(&releasing_env, instance_ip)
             .await
         {
             Ok(released) => {
-                // Persist final state
                 self.repository.save_released(&released)?;
 
                 info!(
@@ -165,12 +140,10 @@ impl ReleaseCommandHandler {
                 Ok(released)
             }
             Err((e, current_step)) => {
-                // Transition to error state with structured context
                 let context =
                     self.build_failure_context(&releasing_env, &e, current_step, started_at);
                 let failed = releasing_env.release_failed(context);
 
-                // Persist error state
                 self.repository.save_release_failed(&failed)?;
 
                 Err(e)
@@ -338,5 +311,31 @@ impl ReleaseCommandHandler {
         }
 
         context
+    }
+
+    /// Load environment from storage and validate it is in `Configured` state
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * Persistence error occurs during load
+    /// * Environment does not exist
+    /// * Environment is not in `Configured` state
+    #[allow(clippy::result_large_err)]
+    fn load_configured_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<Environment<Configured>, ReleaseCommandHandlerError> {
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(ReleaseCommandHandlerError::StatePersistence)?;
+
+        let any_env = any_env.ok_or_else(|| ReleaseCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })?;
+
+        Ok(any_env.try_into_configured()?)
     }
 }

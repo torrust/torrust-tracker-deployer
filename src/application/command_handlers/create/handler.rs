@@ -206,21 +206,10 @@ impl CreateCommandHandler {
         config: EnvironmentCreationConfig,
         working_dir: &std::path::Path,
     ) -> Result<Environment<Created>, CreateCommandHandlerError> {
-        info!(
-            command = "create",
-            environment = %config.environment.name,
-            "Starting environment creation"
-        );
-
-        // Step 1: Convert configuration to domain objects
-        // This validates environment name, instance name, provider config,
-        // SSH username, and file existence
         let (environment_name, _instance_name, provider_config, ssh_credentials, ssh_port) = config
             .to_environment_params()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
 
-        // Step 2: Check if environment already exists
-        // This prevents duplicate environments and provides clear feedback
         if self
             .environment_repository
             .exists(&environment_name)
@@ -231,9 +220,6 @@ impl CreateCommandHandler {
             });
         }
 
-        // Step 3: Create environment entity with working directory for absolute paths
-        // Note: Environment::with_working_dir auto-generates instance_name from environment_name
-        // The _instance_name from config is currently unused but available for future use
         let environment = Environment::with_working_dir(
             environment_name,
             provider_config,
@@ -242,8 +228,6 @@ impl CreateCommandHandler {
             working_dir,
         );
 
-        // Step 5: Persist environment state
-        // Repository handles directory creation atomically during save
         self.environment_repository
             .save(&environment.clone().into_any())
             .map_err(CreateCommandHandlerError::RepositoryError)?;

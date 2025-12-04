@@ -73,25 +73,7 @@ impl RunCommandHandler {
         &self,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Running>, RunCommandHandlerError> {
-        info!(
-            command = "run",
-            environment = %env_name,
-            "Starting stack execution workflow"
-        );
-
-        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
-        let any_env = self
-            .repository
-            .load(env_name)
-            .map_err(RunCommandHandlerError::StatePersistence)?;
-
-        // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| RunCommandHandlerError::EnvironmentNotFound {
-            name: env_name.to_string(),
-        })?;
-
-        // 3. Validate environment is in Released state and restore type safety
-        let environment: Environment<Released> = any_env.try_into_released()?;
+        let environment = self.load_released_environment(env_name)?;
 
         info!(
             command = "run",
@@ -101,13 +83,10 @@ impl RunCommandHandler {
             "Environment loaded and validated. Executing run steps (placeholder)."
         );
 
-        // 4. Execute run steps (placeholder - actual implementation in Phase 6)
         // TODO: Phase 6 will add actual run steps here
 
-        // 5. Transition to Running state
         let running_env = environment.start_running();
 
-        // 6. Persist final state
         self.repository
             .save(&running_env.clone().into_any())
             .map_err(RunCommandHandlerError::StatePersistence)?;
@@ -120,5 +99,29 @@ impl RunCommandHandler {
         );
 
         Ok(running_env)
+    }
+
+    /// Load environment from storage and validate it is in `Released` state
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * Persistence error occurs during load
+    /// * Environment does not exist
+    /// * Environment is not in `Released` state
+    fn load_released_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<Environment<Released>, RunCommandHandlerError> {
+        let any_env = self
+            .repository
+            .load(env_name)
+            .map_err(RunCommandHandlerError::StatePersistence)?;
+
+        let any_env = any_env.ok_or_else(|| RunCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })?;
+
+        Ok(any_env.try_into_released()?)
     }
 }

@@ -100,34 +100,12 @@ impl ProvisionCommandHandler {
         &self,
         env_name: &EnvironmentName,
     ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
-        info!(
-            command = "provision",
-            environment = %env_name,
-            "Starting complete infrastructure provisioning workflow"
-        );
+        let environment = self.load_created_environment(env_name)?;
 
-        // 1. Load the environment from storage (returns AnyEnvironmentState - type-erased)
-        let any_env = self
-            .repository
-            .inner()
-            .load(env_name)
-            .map_err(ProvisionCommandHandlerError::StatePersistence)?;
-
-        // 2. Check if environment exists
-        let any_env = any_env.ok_or_else(|| ProvisionCommandHandlerError::EnvironmentNotFound {
-            name: env_name.to_string(),
-        })?;
-
-        // 3. Validate environment is in Created state and restore type safety
-        let environment = any_env.try_into_created()?;
-
-        // 4. Capture start time before transitioning to Provisioning state
         let started_at = self.clock.now();
 
-        // Transition to Provisioning state
         let environment = environment.start_provisioning();
 
-        // Persist intermediate state
         self.repository.save_provisioning(&environment)?;
 
         // Execute provisioning workflow with explicit step tracking
@@ -498,5 +476,31 @@ impl ProvisionCommandHandler {
         }
 
         context
+    }
+
+    /// Load environment from storage and validate it is in `Created` state
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * Persistence error occurs during load
+    /// * Environment does not exist
+    /// * Environment is not in `Created` state
+    fn load_created_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<Environment<crate::domain::environment::Created>, ProvisionCommandHandlerError>
+    {
+        let any_env = self
+            .repository
+            .inner()
+            .load(env_name)
+            .map_err(ProvisionCommandHandlerError::StatePersistence)?;
+
+        let any_env = any_env.ok_or_else(|| ProvisionCommandHandlerError::EnvironmentNotFound {
+            name: env_name.to_string(),
+        })?;
+
+        Ok(any_env.try_into_created()?)
     }
 }
