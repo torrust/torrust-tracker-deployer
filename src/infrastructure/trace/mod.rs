@@ -9,8 +9,10 @@
 //!   - `sections` - Formatting utilities for trace sections
 //!   - `error` - Error types for trace writing operations
 //!   - `common` - Shared file I/O operations
-//!   - `commands` - Command-specific trace writers (provision, configure)
+//!   - `commands` - Command-specific trace writers (provision, configure, release)
 
 pub mod writer;
 
-pub use writer::{ConfigureTraceWriter, ProvisionTraceWriter, TraceWriterError};
+pub use writer::{
+    ConfigureTraceWriter, ProvisionTraceWriter, ReleaseTraceWriter, TraceWriterError,
+};

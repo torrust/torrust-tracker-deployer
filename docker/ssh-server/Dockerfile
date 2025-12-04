@@ -28,7 +28,9 @@ RUN ssh-keygen -A
 # Create test user for SSH authentication
 RUN adduser -D -s /bin/sh testuser && \
     echo 'testuser:testpass' | chpasswd && \
-    addgroup testuser wheel
+    addgroup testuser wheel && \
+    # Enable passwordless sudo for wheel group (required for deployment testing)
+    echo '%wheel ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
 # Configure SSH daemon
 RUN mkdir -p /run/sshd && \

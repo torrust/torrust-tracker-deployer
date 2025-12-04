@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::domain::environment::state::{
-    AnyEnvironmentState, ReleaseFailed, Released, StateTypeError,
+    AnyEnvironmentState, ReleaseFailed, ReleaseFailureContext, Released, StateTypeError,
 };
 use crate::domain::environment::Environment;
 
@@ -40,9 +40,13 @@ impl Environment<Releasing> {
     /// Transitions from Releasing to `ReleaseFailed` state
     ///
     /// This method indicates that release preparation failed at a specific step.
+    /// The context contains detailed failure information including:
+    /// - The step that failed
+    /// - Error classification
+    /// - Timing and trace information
     #[must_use]
-    pub fn release_failed(self, failed_step: String) -> Environment<ReleaseFailed> {
-        self.with_state(ReleaseFailed { failed_step })
+    pub fn release_failed(self, context: ReleaseFailureContext) -> Environment<ReleaseFailed> {
+        self.with_state(ReleaseFailed { context })
     }
 }
 
@@ -140,12 +144,18 @@ mod tests {
     }
 
     mod transition_tests {
+        use std::time::Duration;
+
+        use chrono::Utc;
+
         use super::*;
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
-        use crate::domain::environment::state::Released;
+        use crate::domain::environment::state::{BaseFailureContext, ReleaseStep, Released};
+        use crate::domain::environment::TraceId;
         use crate::domain::provider::{LxdConfig, ProviderConfig};
         use crate::domain::ProfileName;
+        use crate::shared::error::ErrorKind;
         use crate::shared::Username;
         use std::path::PathBuf;
 
@@ -176,6 +186,22 @@ mod tests {
             .start_releasing()
         }
 
+        fn create_test_failure_context(step: ReleaseStep) -> ReleaseFailureContext {
+            let now = Utc::now();
+            ReleaseFailureContext {
+                failed_step: step,
+                error_kind: ErrorKind::InfrastructureOperation,
+                base: BaseFailureContext {
+                    error_summary: "Test failure".to_string(),
+                    failed_at: now,
+                    execution_started_at: now,
+                    execution_duration: Duration::from_secs(5),
+                    trace_id: TraceId::new(),
+                    trace_file_path: None,
+                },
+            }
+        }
+
         #[test]
         fn it_should_transition_from_releasing_to_released() {
             let env = create_test_environment();
@@ -188,9 +214,13 @@ mod tests {
         #[test]
         fn it_should_transition_from_releasing_to_release_failed() {
             let env = create_test_environment();
-            let env = env.release_failed("build_artifacts_missing".to_string());
+            let context = create_test_failure_context(ReleaseStep::DeployComposeFilesToRemote);
+            let env = env.release_failed(context);
 
-            assert_eq!(env.state().failed_step, "build_artifacts_missing");
+            assert_eq!(
+                env.state().context.failed_step,
+                ReleaseStep::DeployComposeFilesToRemote
+            );
             assert_eq!(env.name().as_str(), "test-state");
         }
     }

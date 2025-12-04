@@ -336,6 +336,7 @@ impl AnsibleTemplateRenderer {
             "wait-cloud-init.yml",
             "configure-security-updates.yml",
             "configure-firewall.yml",
+            "deploy-compose-files.yml",
         ] {
             self.copy_static_file(template_manager, playbook, destination_dir)
                 .await?;
@@ -343,7 +344,7 @@ impl AnsibleTemplateRenderer {
 
         tracing::debug!(
             "Successfully copied {} static template files",
-            7 // ansible.cfg + 6 playbooks
+            8 // ansible.cfg + 7 playbooks
         );
 
         Ok(())

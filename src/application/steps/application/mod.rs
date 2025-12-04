@@ -6,7 +6,7 @@
 //!
 //! ## Available Steps
 //!
-//! - `release` - Deploys configuration and Docker Compose files to remote host
+//! - `deploy_compose_files` - Deploys Docker Compose files to remote host via Ansible
 //! - `run` - Starts the Docker Compose application stack
 //!
 //! ## Future Steps
@@ -22,8 +22,8 @@
 //! software installation steps to provide complete deployment workflows
 //! from infrastructure provisioning to application operation.
 
-pub mod release;
+pub mod deploy_compose_files;
 pub mod run;
 
-pub use release::{ReleaseStep, ReleaseStepError};
+pub use deploy_compose_files::{DeployComposeFilesStep, DeployComposeFilesStepError};
 pub use run::{RunStep, RunStepError};

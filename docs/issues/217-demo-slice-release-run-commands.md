@@ -474,54 +474,253 @@ python3 -c "import yaml; yaml.safe_load(open('build/e2e-full/docker-compose/dock
 cargo run -- destroy e2e-full
 ```
 
-### Phase 8: Steps Layer - Transfer Files to VM
+### Phase 8: Refactor Release Handler to Follow Provision Handler Patterns ✅ COMPLETE
 
-**Location**: `src/application/steps/application/`
+> **Status**: ✅ COMPLETE
+>
+> The `ReleaseCommandHandler` has been refactored to follow the established patterns from
+> `ProvisionCommandHandler`. All components have been implemented and tested.
 
-Create step:
+#### Implementation Summary
 
-- `transfer_files.rs` - Transfer release files to VM via SSH
+The refactoring aligned the release handler with the codebase architecture:
 
-**Location**: `src/adapters/ssh/` or `src/infrastructure/remote_actions/`
+| Aspect                 | Before Refactor                  | After Refactor                           |
+| ---------------------- | -------------------------------- | ---------------------------------------- |
+| **Repository Type**    | `Arc<dyn EnvironmentRepository>` | `TypedEnvironmentRepository` ✅          |
+| **Error Handling**     | Simple `Result`                  | Step tracking with `ReleaseStep` enum ✅ |
+| **Failure State**      | No failure state transition      | `ReleaseFailed` with context ✅          |
+| **Trace Files**        | None                             | `ReleaseTraceWriter` ✅                  |
+| **File Transfer**      | Direct SSH (`sudo tee`)          | Ansible playbook ✅                      |
+| **Workflow Structure** | Single `release_step.execute()`  | Multi-phase workflow ✅                  |
 
-Add file transfer capability:
+#### What Was Implemented
 
-- SCP-based file transfer using SSH client
-- Create target directories on VM
-- Handle permissions
+**1. `ReleaseStep` Enum for Step Tracking** ✅
 
-**Target directory on VM**: `/opt/torrust/` (configurable)
+```rust
+// src/domain/environment/state/release_failed.rs
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ReleaseStep {
+    RenderDockerComposeTemplates,
+    DeployComposeFiles,
+}
+```
 
-**Deliverable**: `release` command copies files to VM (E2E verifiable via SSH).
+**2. `ReleaseFailureContext`** ✅
 
-**Manual E2E Test**:
+```rust
+// src/domain/environment/state/release_failed.rs
+pub struct ReleaseFailureContext {
+    pub failed_step: ReleaseStep,
+    pub error_kind: ErrorKind,
+    pub base: BaseFailureContext,
+}
+```
+
+**3. `TypedEnvironmentRepository`** ✅
+
+```rust
+// src/application/command_handlers/release/handler.rs
+pub struct ReleaseCommandHandler {
+    clock: Arc<dyn Clock>,
+    repository: TypedEnvironmentRepository,
+}
+```
+
+**4. Multi-Phase Workflow** ✅
+
+The handler now executes two distinct steps:
+
+- `RenderDockerComposeTemplatesStep`: Renders templates to build directory
+- `DeployComposeFilesStep`: Deploys files to remote via Ansible
+
+**5. `ReleaseTraceWriter`** ✅
+
+```rust
+// src/infrastructure/trace/writer/commands/release.rs
+pub struct ReleaseTraceWriter {
+    traces_dir: PathBuf,
+    clock: Arc<dyn Clock>,
+}
+```
+
+**6. Failure State Transitions** ✅
+
+On failure, the handler:
+
+- Builds `ReleaseFailureContext` with step information
+- Writes trace file via `ReleaseTraceWriter`
+- Transitions to `ReleaseFailed` state
+- Saves state via repository
+
+#### Three-Level Architecture for File Transfer ✅
+
+The implementation follows the codebase architecture (Command → Step → Remote Action):
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Level 1: ReleaseCommandHandler                                  │
+│  - Orchestrates release workflow                                │
+│  - Manages state transitions (Releasing → Released/ReleaseFailed)│
+│  - Handles failure context and trace files                      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Level 2: Steps                                                 │
+│  - RenderDockerComposeTemplatesStep: Render templates to build  │
+│  - DeployComposeFilesStep: Execute Ansible playbook             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Level 3: Remote Actions (Ansible Playbook)                     │
+│  - deploy-compose-files.yml: Copy files to /opt/torrust/        │
+│  - Uses Ansible copy module (idempotent, permissions, backup)   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Why Ansible for File Transfer?
+
+| Aspect                 | Direct SSH (`sudo tee`) | Ansible Playbook            |
+| ---------------------- | ----------------------- | --------------------------- |
+| **Consistency**        | Different pattern       | Matches provision/configure |
+| **Idempotency**        | No (overwrites)         | Yes (copy module)           |
+| **Permissions**        | Manual chmod            | Built into copy module      |
+| **Directory Creation** | Separate mkdir          | Automatic                   |
+| **Error Handling**     | Basic success/fail      | Rich changed/ok/failed      |
+| **Logging**            | Manual tracing          | Detailed Ansible output     |
+| **Extensibility**      | Code changes            | Playbook changes            |
+| **Ops-Friendly**       | Rust code only          | Playbook can be inspected   |
+
+#### Ansible Playbook ✅
+
+**Location**: `templates/ansible/deploy-compose-files.yml` (embedded at compile time)
+
+```yaml
+---
+# Deploy Docker Compose Files Playbook
+# Copies the local docker-compose build folder to the remote host
+
+- name: Deploy Docker Compose Files
+  hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    remote_deploy_dir: /opt/torrust
+    local_compose_dir: "{{ compose_files_source_dir }}"
+
+  tasks:
+    - name: 📦 Starting Docker Compose files deployment
+      ansible.builtin.debug:
+        msg: "🚀 Deploying Docker Compose files to {{ inventory_hostname }}:{{ remote_deploy_dir }}"
+
+    - name: Ensure remote deployment directory exists
+      ansible.builtin.file:
+        path: "{{ remote_deploy_dir }}"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+
+    - name: Copy Docker Compose files to remote host
+      ansible.builtin.copy:
+        src: "{{ local_compose_dir }}/"
+        dest: "{{ remote_deploy_dir }}/"
+        mode: "0644"
+        directory_mode: "0755"
+        owner: root
+        group: root
+
+    - name: Verify docker-compose.yml exists on remote
+      ansible.builtin.stat:
+        path: "{{ remote_deploy_dir }}/docker-compose.yml"
+      register: compose_file_check
+
+    - name: Fail if docker-compose.yml was not deployed
+      ansible.builtin.fail:
+        msg: "docker-compose.yml was not found at {{ remote_deploy_dir }}/docker-compose.yml after deployment"
+      when: not compose_file_check.stat.exists
+
+    - name: Display deployment summary
+      ansible.builtin.debug:
+        msg: |
+          ✅ Docker Compose files deployed successfully!
+          📁 Destination: {{ remote_deploy_dir }}
+          📄 Files deployed: {{ deployed_files.files | length }}
+```
+
+#### `DeployComposeFilesStep` ✅
+
+**Location**: `src/application/steps/application/deploy_compose_files.rs`
+
+```rust
+/// Step that deploys Docker Compose files to a remote host via Ansible
+///
+/// This step uses the `deploy-compose-files.yml` playbook to:
+/// - Create the deployment directory on the remote host
+/// - Copy docker-compose.yml with proper permissions
+/// - Verify successful deployment
+pub struct DeployComposeFilesStep {
+    ansible_client: Arc<AnsibleClient>,
+    compose_build_dir: PathBuf,
+}
+```
+
+#### Files Created/Modified ✅
+
+**New Files Created**:
+
+- `src/domain/environment/state/release_failed.rs` ✅ - `ReleaseFailed` state, `ReleaseStep` enum, and `ReleaseFailureContext`
+- `src/infrastructure/trace/writer/commands/release.rs` ✅ - `ReleaseTraceWriter`
+- `src/application/steps/application/deploy_compose_files.rs` ✅ - `DeployComposeFilesStep`
+- `src/application/steps/rendering/docker_compose_templates.rs` ✅ - `RenderDockerComposeTemplatesStep`
+- `templates/ansible/deploy-compose-files.yml` ✅ - Ansible playbook
+
+**Modified Files**:
+
+- `src/application/command_handlers/release/handler.rs` ✅ - Refactored to match provision patterns
+- `src/application/command_handlers/release/errors.rs` ✅ - Added step-aware errors
+- `src/domain/environment/state/mod.rs` ✅ - Export new state types
+- `src/infrastructure/external_tools/ansible/template/renderer/mod.rs` ✅ - Registered new playbook
+
+**Removed Files** (deprecated code cleanup):
+
+- `src/application/steps/application/release.rs` ❌ - Removed deprecated `ReleaseStep` class
+- `src/adapters/ssh/client.rs` - Removed `write_remote_file` method (no longer needed)
+
+#### Deliverables ✅
+
+All deliverables completed:
+
+1. ✅ `ReleaseCommandHandler` follows the same patterns as `ProvisionCommandHandler`
+2. ✅ File transfer uses Ansible (consistent with configure command)
+3. ✅ Failure states are properly tracked with `ReleaseFailed` and trace files
+4. ✅ Step tracking enables precise error reporting
+5. ✅ Deprecated code removed (`write_remote_file`, old `ReleaseStep` class)
+
+**Manual E2E Test**: ✅ Verified
 
 ```bash
 # Setup: Full pipeline to configured state
-cargo run -- create environment --env-file envs/e2e-config.json
-cargo run -- provision e2e-config
-cargo run -- configure e2e-config
+cargo run -- create environment --env-file envs/e2e-full.json
+cargo run -- provision e2e-full
+cargo run -- configure e2e-full
 
-# Release should now transfer files to VM
-cargo run -- release e2e-config
+# Release should transfer files via Ansible
+cargo run -- release e2e-full
 
-# Get VM IP from tofu output
-VM_IP=$(cd build/e2e-config/tofu && tofu output -raw instance_ip)
+# Get VM IP
+VM_IP=$(cd build/e2e-full/tofu && tofu output -raw instance_ip)
 
-# SSH into VM and verify files were transferred
-ssh -i fixtures/testing_rsa ubuntu@$VM_IP "cat /opt/torrust/docker-compose.yml"
-# Expected: Contents of docker-compose.yml
-
-# Verify directory structure on VM
-ssh -i fixtures/testing_rsa ubuntu@$VM_IP "ls -la /opt/torrust/"
-# Expected: docker-compose.yml present
-
-# Verify file permissions
-ssh -i fixtures/testing_rsa ubuntu@$VM_IP "stat /opt/torrust/docker-compose.yml"
-# Expected: Appropriate permissions for docker compose
+# Verify files were transferred
+ssh -i fixtures/testing_rsa torrust@$VM_IP "cat /opt/torrust/docker-compose.yml"
+# Expected: Contents of docker-compose.yml with nginx:alpine service ✅
 
 # Cleanup
-cargo run -- destroy e2e-config
+cargo run -- destroy e2e-full
 ```
 
 ### Phase 9: Steps Layer - Start Services
@@ -813,16 +1012,16 @@ All errors must:
 ### Application Layer
 
 - `src/application/command_handlers/release/mod.rs`
-- `src/application/command_handlers/release/handler.rs`
-- `src/application/command_handlers/release/errors.rs`
+- `src/application/command_handlers/release/handler.rs` - Refactor to match provision patterns
+- `src/application/command_handlers/release/errors.rs` - Add step-aware errors
 - `src/application/command_handlers/run/mod.rs`
 - `src/application/command_handlers/run/handler.rs`
 - `src/application/command_handlers/run/errors.rs`
 
 ### Steps Layer
 
-- `src/application/steps/application/release.rs` ✅ (`ReleaseStep` with `DockerComposeTemplateRenderer` integration)
-- `src/application/steps/application/transfer_files.rs` (future - transfer files to VM)
+- `src/application/steps/application/deploy_compose_files.rs` ✅ (`DeployComposeFilesStep` - deploys via Ansible)
+- `src/application/steps/rendering/docker_compose_templates.rs` ✅ (`RenderDockerComposeTemplatesStep` - renders templates)
 - `src/application/steps/application/start_services.rs` (future - start docker compose services)
 - `src/application/steps/application/verify_services.rs` (future - verify services are running)
 
@@ -831,41 +1030,50 @@ All errors must:
 - `src/infrastructure/external_tools/docker_compose/mod.rs` ✅ (module exports and `DOCKER_COMPOSE_SUBFOLDER` constant)
 - `src/infrastructure/external_tools/docker_compose/template/mod.rs` ✅ (template module exports)
 - `src/infrastructure/external_tools/docker_compose/template/renderer/mod.rs` ✅ (`DockerComposeTemplateRenderer` implementation)
+- `src/infrastructure/trace/writer/commands/release.rs` ✅ (`ReleaseTraceWriter` for failure trace files)
 - `templates/docker-compose/docker-compose.yml` ✅ (embedded source template with nginx:alpine demo service)
-- (Future: `.env` generation if needed)
+- `templates/ansible/deploy-compose-files.yml` ✅ (Ansible playbook for file transfer)
+- `docker/ssh-server/Dockerfile` ✅ (updated with passwordless sudo for testing)
 
 ### Presentation Layer
 
-- `src/presentation/controllers/release/mod.rs`
-- `src/presentation/controllers/release/handler.rs`
-- `src/presentation/controllers/release/errors.rs`
-- `src/presentation/controllers/run/mod.rs`
-- `src/presentation/controllers/run/handler.rs`
-- `src/presentation/controllers/run/errors.rs`
+- `src/presentation/controllers/release/mod.rs` ✅
+- `src/presentation/controllers/release/errors.rs` ✅
+- `src/presentation/controllers/run/mod.rs` ✅
+- `src/presentation/controllers/run/errors.rs` ✅
 
-### Domain Layer (if needed)
+### Domain Layer
 
-- `src/domain/environment/state/starting.rs` (if `Starting` state doesn't exist)
-- `src/domain/environment/state/start_failed.rs` (if `StartFailed` state doesn't exist)
+- `src/domain/environment/state/release_failed.rs` ✅ (`ReleaseFailed` state, `ReleaseStep` enum, and `ReleaseFailureContext`)
+- `src/domain/environment/state/releasing.rs` ✅ (state transitions)
+- `src/domain/environment/state/released.rs` ✅ (released state)
+- `src/domain/environment/state/running.rs` ✅ (running state)
+- `src/domain/environment/state/run_failed.rs` ✅ (run failed state)
 
 ### E2E Tests (rename and update)
 
-- `src/bin/e2e_config_tests.rs` → `src/bin/e2e_config_and_release_tests.rs` (rename)
+- `src/bin/e2e_config_tests.rs` → `src/bin/e2e_config_and_release_tests.rs` ✅ (renamed)
 - `src/bin/e2e_tests_full.rs` (update to include release and run)
-- Update `Cargo.toml` binary definition
-- Update `scripts/pre-commit.sh` to use new test name
+- Update `Cargo.toml` binary definition ✅
+- Update `scripts/pre-commit.sh` to use new test name ✅
 
 ## Related Documentation
 
-- [Codebase Architecture](../codebase-architecture.md)
+- [Codebase Architecture](../codebase-architecture.md) - Three-level architecture (Command → Step → Remote Action)
 - [DDD Layer Placement](../contributing/ddd-layer-placement.md)
 - [Error Handling Guide](../contributing/error-handling.md)
 - [Module Organization](../contributing/module-organization.md)
 
 ## Reference Implementation
 
+- **`ProvisionCommandHandler`** - Primary pattern to follow for handler implementation:
+  - `TypedEnvironmentRepository` for typed save methods
+  - `StepResult<T, E, S>` for step tracking
+  - `ProvisionFailureContext` and `ProvisionTraceWriter` for failure handling
+  - Multi-phase workflow with dedicated methods
+- **`ConfigureCommandHandler`** - Pattern for Ansible playbook execution
+- **`WaitForCloudInitStep`** - Example of step wrapping Ansible playbook
 - [torrust-demo compose.yaml](https://github.com/torrust/torrust-demo/blob/main/compose.yaml) - Reference docker-compose for future slices
-- Existing `ConfigureCommandHandler` - Pattern to follow for handler implementation
 - Existing `ProvisionCommandHandler` - Pattern for async operations
 
 ## Notes

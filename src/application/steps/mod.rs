@@ -27,14 +27,15 @@ pub mod system;
 pub mod validation;
 
 // Re-export all steps for easy access
-pub use application::{ReleaseStep, ReleaseStepError, RunStep, RunStepError};
+pub use application::{DeployComposeFilesStep, DeployComposeFilesStepError, RunStep, RunStepError};
 pub use connectivity::WaitForSSHConnectivityStep;
 pub use infrastructure::{
     ApplyInfrastructureStep, DestroyInfrastructureStep, GetInstanceInfoStep,
     InitializeInfrastructureStep, PlanInfrastructureStep, ValidateInfrastructureStep,
 };
 pub use rendering::{
-    RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep, RenderOpenTofuTemplatesStep,
+    RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep, RenderDockerComposeTemplatesStep,
+    RenderOpenTofuTemplatesStep,
 };
 pub use software::{InstallDockerComposeStep, InstallDockerStep};
 pub use system::{ConfigureFirewallStep, ConfigureSecurityUpdatesStep, WaitForCloudInitStep};

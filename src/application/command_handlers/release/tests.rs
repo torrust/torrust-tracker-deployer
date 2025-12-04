@@ -25,9 +25,8 @@ fn create_test_handler() -> (ReleaseCommandHandler, TempDir) {
 
 #[test]
 fn it_should_create_handler_with_dependencies() {
-    let (handler, _temp_dir) = create_test_handler();
-    // Handler was created successfully - verify basic construction
-    assert!(Arc::strong_count(&handler.repository) >= 1);
+    let (_handler, _temp_dir) = create_test_handler();
+    // Handler was created successfully - basic construction verified
 }
 
 #[tokio::test]
