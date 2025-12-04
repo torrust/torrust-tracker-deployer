@@ -1,5 +1,6 @@
 //! Release command handler implementation
 
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -115,21 +116,29 @@ impl ReleaseCommandHandler {
         // 3. Validate environment is in Configured state and restore type safety
         let environment: Environment<Configured> = any_env.try_into_configured()?;
 
-        // 4. Capture start time before transitioning to Releasing state
+        // 4. Validate instance IP is available (precondition for release)
+        let instance_ip = environment.instance_ip().ok_or_else(|| {
+            ReleaseCommandHandlerError::MissingInstanceIp {
+                name: env_name.to_string(),
+            }
+        })?;
+
+        // 5. Capture start time before transitioning to Releasing state
         let started_at = self.clock.now();
 
         info!(
             command = "release",
             environment = %env_name,
+            instance_ip = %instance_ip,
             current_state = "configured",
             target_state = "releasing",
             "Environment loaded and validated. Transitioning to Releasing state."
         );
 
-        // 5. Transition to Releasing state
+        // 6. Transition to Releasing state
         let releasing_env = environment.start_releasing();
 
-        // 6. Persist intermediate state
+        // 7. Persist intermediate state
         self.repository.save_releasing(&releasing_env)?;
 
         info!(
@@ -139,8 +148,11 @@ impl ReleaseCommandHandler {
             "Releasing state persisted. Executing release steps."
         );
 
-        // 7. Execute release workflow with explicit step tracking
-        match self.execute_release_workflow(&releasing_env).await {
+        // 8. Execute release workflow with explicit step tracking
+        match self
+            .execute_release_workflow(&releasing_env, instance_ip)
+            .await
+        {
             Ok(released) => {
                 // Persist final state
                 self.repository.save_released(&released)?;
@@ -172,10 +184,15 @@ impl ReleaseCommandHandler {
     ///
     /// This method orchestrates the complete release workflow:
     /// 1. Render Docker Compose templates to the build directory
-    /// 2. Deploy compose files to the remote host via Ansible (if instance IP available)
+    /// 2. Deploy compose files to the remote host via Ansible
     ///
     /// If an error occurs, it returns both the error and the step that was being
     /// executed, enabling accurate failure context generation.
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Releasing state
+    /// * `instance_ip` - The validated instance IP address (precondition checked by caller)
     ///
     /// # Errors
     ///
@@ -183,21 +200,16 @@ impl ReleaseCommandHandler {
     async fn execute_release_workflow(
         &self,
         environment: &Environment<Releasing>,
+        instance_ip: IpAddr,
     ) -> StepResult<Environment<Released>, ReleaseCommandHandlerError, ReleaseStep> {
         // Step 1: Render Docker Compose templates
         let compose_build_dir = self.render_docker_compose_templates(environment).await?;
 
-        // Step 2: Deploy compose files to remote (if instance IP is available)
-        if environment.instance_ip().is_some() {
-            self.deploy_compose_files_to_remote(environment, &compose_build_dir)?;
-        } else {
-            info!(
-                command = "release",
-                "No instance IP available - skipping file deployment to remote host"
-            );
-        }
+        // Step 2: Deploy compose files to remote
+        self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
+        
         Ok(released)
     }
 
@@ -236,6 +248,12 @@ impl ReleaseCommandHandler {
 
     /// Deploy compose files to the remote host via Ansible
     ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Releasing state
+    /// * `compose_build_dir` - Path to the rendered compose files
+    /// * `instance_ip` - The target instance IP address
+    ///
     /// # Errors
     ///
     /// Returns a tuple of (error, `ReleaseStep::DeployComposeFilesToRemote`) if deployment fails
@@ -244,6 +262,7 @@ impl ReleaseCommandHandler {
         &self,
         environment: &Environment<Releasing>,
         compose_build_dir: &Path,
+        instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::DeployComposeFilesToRemote;
 
@@ -263,6 +282,7 @@ impl ReleaseCommandHandler {
         info!(
             command = "release",
             compose_build_dir = %compose_build_dir.display(),
+            instance_ip = %instance_ip,
             "Compose files deployed to remote host successfully"
         );
 

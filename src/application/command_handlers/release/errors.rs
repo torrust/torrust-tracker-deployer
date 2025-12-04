@@ -18,6 +18,16 @@ pub enum ReleaseCommandHandlerError {
         name: String,
     },
 
+    /// Instance IP address is not available (required for deployment)
+    ///
+    /// The release command requires the instance IP address to deploy files
+    /// to the remote host. This IP should be available after provisioning.
+    #[error("Instance IP address is not available for environment '{name}'. The provision step should have set this value.")]
+    MissingInstanceIp {
+        /// The name of the environment missing the instance IP
+        name: String,
+    },
+
     /// Environment is in an invalid state for release
     #[error("Environment is in an invalid state for release: {0}")]
     InvalidState(#[from] StateTypeError),
@@ -56,6 +66,9 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::EnvironmentNotFound { name } => {
                 format!("ReleaseCommandHandlerError: Environment not found - {name}")
             }
+            Self::MissingInstanceIp { name } => {
+                format!("ReleaseCommandHandlerError: Instance IP not available for environment '{name}'")
+            }
             Self::InvalidState(e) => {
                 format!("ReleaseCommandHandlerError: Invalid state for release - {e}")
             }
@@ -81,6 +94,7 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::DeploymentFailed { source, .. } => Some(source),
             Self::StatePersistence(_)
             | Self::EnvironmentNotFound { .. }
+            | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_)
             | Self::TemplateRendering(_)
             | Self::ReleaseOperationFailed { .. } => None,
@@ -89,7 +103,9 @@ impl Traceable for ReleaseCommandHandlerError {
 
     fn error_kind(&self) -> ErrorKind {
         match self {
-            Self::EnvironmentNotFound { .. } | Self::InvalidState(_) => ErrorKind::Configuration,
+            Self::EnvironmentNotFound { .. }
+            | Self::MissingInstanceIp { .. }
+            | Self::InvalidState(_) => ErrorKind::Configuration,
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
             Self::TemplateRendering(_) => ErrorKind::TemplateRendering,
             Self::DeploymentFailed { source, .. } => source.error_kind(),
@@ -154,6 +170,32 @@ For more information, see docs/user-guide/commands.md"
 
 State progression for release:
    Created → Provisioned → Configured → Released
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::MissingInstanceIp { .. } => {
+                "Missing Instance IP Address - Troubleshooting:
+
+The release command requires the instance IP address to deploy files to the
+remote host. This IP should be automatically set during provisioning.
+
+1. Check if the environment was provisioned correctly:
+   cat data/<env-name>/environment.json
+   Look for the 'instance_ip' field in runtime_outputs
+
+2. If instance_ip is null, the provision step may have failed:
+   cargo run -- provision <env-name>
+
+3. For registered instances, ensure the IP was provided during registration
+
+4. If using LXD, verify the VM is running and has an IP:
+   lxc list
+
+Common causes:
+- Provision step failed or was interrupted
+- VM/container has no network connectivity
+- DHCP lease not yet assigned
+- Registration was incomplete
 
 For more information, see docs/user-guide/commands.md"
             }
@@ -273,9 +315,23 @@ mod tests {
     }
 
     #[test]
+    fn it_should_provide_help_for_missing_instance_ip() {
+        let error = ReleaseCommandHandlerError::MissingInstanceIp {
+            name: "test-env".to_string(),
+        };
+
+        let help = error.help();
+        assert!(help.contains("Missing Instance IP"));
+        assert!(help.contains("Troubleshooting"));
+    }
+
+    #[test]
     fn it_should_have_help_for_all_error_variants() {
         let errors: Vec<ReleaseCommandHandlerError> = vec![
             ReleaseCommandHandlerError::EnvironmentNotFound {
+                name: "test".to_string(),
+            },
+            ReleaseCommandHandlerError::MissingInstanceIp {
                 name: "test".to_string(),
             },
             ReleaseCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
