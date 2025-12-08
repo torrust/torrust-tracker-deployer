@@ -25,12 +25,12 @@ use thiserror::Error;
 use tracing::{info, instrument};
 
 use crate::adapters::ssh::credentials::SshCredentials;
-use crate::infrastructure::external_tools::ansible::template::renderer::ConfigurationTemplateError;
+use crate::infrastructure::external_tools::ansible::template::renderer::AnsibleProjectGeneratorError;
 use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::{
     AnsibleHost, AnsiblePort, AnsiblePortError, InventoryContext, InventoryContextError,
     SshPrivateKeyFile, SshPrivateKeyFileError,
 };
-use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
+use crate::infrastructure::external_tools::ansible::AnsibleProjectGenerator;
 
 /// Errors that can occur during Ansible template rendering step execution
 #[derive(Error, Debug)]
@@ -49,7 +49,7 @@ pub enum RenderAnsibleTemplatesError {
 
     /// Template rendering failed
     #[error("Template rendering failed: {0}")]
-    TemplateRenderingError(#[from] ConfigurationTemplateError),
+    TemplateRenderingError(#[from] AnsibleProjectGeneratorError),
 }
 
 impl crate::shared::Traceable for RenderAnsibleTemplatesError {
@@ -82,7 +82,7 @@ impl crate::shared::Traceable for RenderAnsibleTemplatesError {
 
 /// Simple step that renders `Ansible` templates to the build directory with runtime variables
 pub struct RenderAnsibleTemplatesStep {
-    ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
+    ansible_project_generator: Arc<AnsibleProjectGenerator>,
     ssh_credentials: SshCredentials,
     ssh_socket_addr: SocketAddr,
 }
@@ -90,12 +90,12 @@ pub struct RenderAnsibleTemplatesStep {
 impl RenderAnsibleTemplatesStep {
     #[must_use]
     pub fn new(
-        ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
+        ansible_project_generator: Arc<AnsibleProjectGenerator>,
         ssh_credentials: SshCredentials,
         ssh_socket_addr: SocketAddr,
     ) -> Self {
         Self {
-            ansible_template_renderer,
+            ansible_project_generator,
             ssh_credentials,
             ssh_socket_addr,
         }
@@ -122,7 +122,7 @@ impl RenderAnsibleTemplatesStep {
         let inventory_context = self.create_inventory_context()?;
 
         // Use the configuration renderer to handle all template rendering
-        self.ansible_template_renderer
+        self.ansible_project_generator
             .render(&inventory_context)
             .await?;
 

@@ -27,7 +27,7 @@ use crate::config::Config;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::template::TemplateManager;
 use crate::domain::InstanceName;
-use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
+use crate::infrastructure::external_tools::ansible::AnsibleProjectGenerator;
 use crate::infrastructure::external_tools::ansible::ANSIBLE_SUBFOLDER;
 use crate::infrastructure::external_tools::tofu::TofuProjectGenerator;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
@@ -53,7 +53,7 @@ pub struct Services {
     // Template related services
     pub template_manager: Arc<TemplateManager>,
     pub tofu_template_renderer: Arc<TofuProjectGenerator>,
-    pub ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
+    pub ansible_project_generator: Arc<AnsibleProjectGenerator>,
 
     // Infrastructure services
     /// Clock service for testable time management
@@ -96,8 +96,8 @@ impl Services {
         );
 
         // Create configuration template renderer
-        let ansible_template_renderer =
-            AnsibleTemplateRenderer::new(config.build_dir.clone(), template_manager.clone());
+        let ansible_project_generator =
+            AnsibleProjectGenerator::new(config.build_dir.clone(), template_manager.clone());
 
         // Create repository factory
         let repository_factory =
@@ -115,7 +115,7 @@ impl Services {
             // Template related services
             template_manager: template_manager.clone(),
             tofu_template_renderer: Arc::new(tofu_template_renderer),
-            ansible_template_renderer: Arc::new(ansible_template_renderer),
+            ansible_project_generator: Arc::new(ansible_project_generator),
 
             // Infrastructure services
             clock,

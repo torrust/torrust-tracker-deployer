@@ -29,7 +29,7 @@ use tracing::info;
 use crate::adapters::ssh::SshCredentials;
 use crate::application::steps::RenderAnsibleTemplatesStep;
 use crate::domain::TemplateManager;
-use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
+use crate::infrastructure::external_tools::ansible::AnsibleProjectGenerator;
 
 /// Errors that can occur during Ansible template rendering
 #[derive(Error, Debug)]
@@ -57,7 +57,7 @@ pub enum AnsibleTemplateServiceError {
 /// This allows the service to be configured once and reused with different
 /// runtime parameters.
 pub struct AnsibleTemplateService {
-    ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
+    ansible_template_renderer: Arc<AnsibleProjectGenerator>,
 }
 
 impl AnsibleTemplateService {
@@ -67,7 +67,7 @@ impl AnsibleTemplateService {
     ///
     /// * `ansible_template_renderer` - The renderer for Ansible templates
     #[must_use]
-    pub fn new(ansible_template_renderer: Arc<AnsibleTemplateRenderer>) -> Self {
+    pub fn new(ansible_template_renderer: Arc<AnsibleProjectGenerator>) -> Self {
         Self {
             ansible_template_renderer,
         }
@@ -103,7 +103,7 @@ impl AnsibleTemplateService {
         let template_manager = Arc::new(TemplateManager::new(templates_dir));
 
         let ansible_template_renderer =
-            Arc::new(AnsibleTemplateRenderer::new(build_dir, template_manager));
+            Arc::new(AnsibleProjectGenerator::new(build_dir, template_manager));
 
         Self::new(ansible_template_renderer)
     }

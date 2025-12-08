@@ -14,14 +14,14 @@
 //! ```rust
 //! # use std::sync::Arc;
 //! # use tempfile::TempDir;
-//! use torrust_tracker_deployer_lib::infrastructure::external_tools::ansible::template::renderer::inventory::InventoryTemplateRenderer;
+//! use torrust_tracker_deployer_lib::infrastructure::external_tools::ansible::template::renderer::inventory::InventoryRenderer;
 //! use torrust_tracker_deployer_lib::domain::template::TemplateManager;
 //! use torrust_tracker_deployer_lib::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContext;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let temp_dir = TempDir::new()?;
 //! let template_manager = Arc::new(TemplateManager::new("/path/to/templates"));
-//! let renderer = InventoryTemplateRenderer::new(template_manager);
+//! let renderer = InventoryRenderer::new(template_manager);
 //!
 //! let inventory_context = InventoryContext::builder().build()?;
 //! renderer.render(&inventory_context, temp_dir.path())?;
@@ -41,7 +41,7 @@ use crate::infrastructure::external_tools::ansible::template::wrappers::inventor
 
 /// Errors that can occur during inventory template rendering
 #[derive(Error, Debug)]
-pub enum InventoryTemplateError {
+pub enum InventoryRendererError {
     /// Failed to get template path from template manager
     #[error("Failed to get template path for '{file_name}': {source}")]
     TemplatePathFailed {
@@ -87,11 +87,11 @@ pub enum InventoryTemplateError {
 /// - Loading the inventory.yml.tera template
 /// - Processing it with runtime context (hosts, SSH keys, etc.)
 /// - Rendering the final inventory.yml file for Ansible consumption
-pub struct InventoryTemplateRenderer {
+pub struct InventoryRenderer {
     template_manager: Arc<TemplateManager>,
 }
 
-impl InventoryTemplateRenderer {
+impl InventoryRenderer {
     /// Template filename for the inventory Tera template
     const INVENTORY_TEMPLATE_FILE: &'static str = "inventory.yml.tera";
 
@@ -137,21 +137,21 @@ impl InventoryTemplateRenderer {
         &self,
         inventory_context: &InventoryContext,
         output_dir: &Path,
-    ) -> Result<(), InventoryTemplateError> {
+    ) -> Result<(), InventoryRendererError> {
         tracing::debug!("Rendering inventory template with runtime variables");
 
         // Get the inventory template path
         let inventory_template_path = self
             .template_manager
             .get_template_path(&Self::build_template_path())
-            .map_err(|source| InventoryTemplateError::TemplatePathFailed {
+            .map_err(|source| InventoryRendererError::TemplatePathFailed {
                 file_name: Self::INVENTORY_TEMPLATE_FILE.to_string(),
                 source,
             })?;
 
         // Read template content
         let inventory_template_content = std::fs::read_to_string(&inventory_template_path)
-            .map_err(|source| InventoryTemplateError::TeraTemplateReadFailed {
+            .map_err(|source| InventoryRendererError::TeraTemplateReadFailed {
                 file_name: Self::INVENTORY_TEMPLATE_FILE.to_string(),
                 source,
             })?;
@@ -159,7 +159,7 @@ impl InventoryTemplateRenderer {
         // Create File object for template processing
         let inventory_template_file =
             File::new(Self::INVENTORY_TEMPLATE_FILE, inventory_template_content).map_err(
-                |source| InventoryTemplateError::FileCreationFailed {
+                |source| InventoryRendererError::FileCreationFailed {
                     file_name: Self::INVENTORY_TEMPLATE_FILE.to_string(),
                     source,
                 },
@@ -168,14 +168,14 @@ impl InventoryTemplateRenderer {
         // Create InventoryTemplate with runtime context
         let inventory_template =
             InventoryTemplate::new(&inventory_template_file, inventory_context.clone()).map_err(
-                |source| InventoryTemplateError::InventoryTemplateCreationFailed { source },
+                |source| InventoryRendererError::InventoryTemplateCreationFailed { source },
             )?;
 
         // Render to output file
         let inventory_output_path = output_dir.join(Self::INVENTORY_OUTPUT_FILE);
         inventory_template
             .render(&inventory_output_path)
-            .map_err(|source| InventoryTemplateError::InventoryTemplateRenderFailed { source })?;
+            .map_err(|source| InventoryRendererError::InventoryTemplateRenderFailed { source })?;
 
         tracing::debug!(
             "Successfully rendered inventory template to {}",
@@ -252,7 +252,7 @@ mod tests {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = InventoryTemplateRenderer::new(template_manager.clone());
+        let renderer = InventoryRenderer::new(template_manager.clone());
 
         assert!(Arc::ptr_eq(&renderer.template_manager, &template_manager));
     }
@@ -261,9 +261,9 @@ mod tests {
     fn it_should_build_correct_template_path() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
-        let _renderer = InventoryTemplateRenderer::new(template_manager);
+        let _renderer = InventoryRenderer::new(template_manager);
 
-        let template_path = InventoryTemplateRenderer::build_template_path();
+        let template_path = InventoryRenderer::build_template_path();
 
         assert_eq!(template_path, "ansible/inventory.yml.tera");
     }
@@ -284,7 +284,7 @@ mod tests {
             .ensure_templates_dir()
             .expect("Failed to ensure templates directory");
 
-        let renderer = InventoryTemplateRenderer::new(template_manager);
+        let renderer = InventoryRenderer::new(template_manager);
         let inventory_context = create_test_inventory_context(temp_dir.path());
 
         // Render template
@@ -339,7 +339,7 @@ mod tests {
             .ensure_templates_dir()
             .expect("Failed to ensure templates directory");
 
-        let renderer = InventoryTemplateRenderer::new(template_manager);
+        let renderer = InventoryRenderer::new(template_manager);
         let inventory_context = create_test_inventory_context(temp_dir.path());
 
         let result = renderer.render(&inventory_context, &output_dir);
@@ -349,7 +349,7 @@ mod tests {
             "Should fail when template references non-existent context field"
         );
         match result.unwrap_err() {
-            InventoryTemplateError::InventoryTemplateCreationFailed { .. } => {
+            InventoryRendererError::InventoryTemplateCreationFailed { .. } => {
                 // Expected error type when template engine fails to process template
             }
             other => panic!("Expected InventoryTemplateCreationFailed, got: {other:?}"),
@@ -379,7 +379,7 @@ mod tests {
             .ensure_templates_dir()
             .expect("Failed to ensure templates directory");
 
-        let renderer = InventoryTemplateRenderer::new(template_manager);
+        let renderer = InventoryRenderer::new(template_manager);
         let inventory_context = create_test_inventory_context(temp_dir.path());
 
         let result = renderer.render(&inventory_context, &output_dir);
@@ -388,7 +388,7 @@ mod tests {
         // The exact error type will depend on the template engine's error handling
         assert!(matches!(
             result.unwrap_err(),
-            InventoryTemplateError::InventoryTemplateCreationFailed { .. }
+            InventoryRendererError::InventoryTemplateCreationFailed { .. }
         ));
     }
 
@@ -414,7 +414,7 @@ mod tests {
             .ensure_templates_dir()
             .expect("Failed to ensure templates directory");
 
-        let renderer = InventoryTemplateRenderer::new(template_manager);
+        let renderer = InventoryRenderer::new(template_manager);
         let inventory_context = create_test_inventory_context(temp_dir.path());
 
         let result = renderer.render(&inventory_context, &output_dir);
@@ -424,7 +424,7 @@ mod tests {
             "Should fail when output directory is read-only"
         );
         match result.unwrap_err() {
-            InventoryTemplateError::InventoryTemplateRenderFailed { .. } => {
+            InventoryRendererError::InventoryTemplateRenderFailed { .. } => {
                 // Expected error type
             }
             other => panic!("Expected InventoryTemplateRenderFailed, got: {other:?}"),

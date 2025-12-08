@@ -11,7 +11,7 @@
 
 pub mod template;
 
-pub use template::{AnsibleTemplateRenderer, InventoryTemplateRenderer};
+pub use template::{AnsibleProjectGenerator, InventoryRenderer};
 
 /// Subdirectory name for Ansible-related files within the build directory.
 ///

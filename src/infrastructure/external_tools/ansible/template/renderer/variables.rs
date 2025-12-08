@@ -15,14 +15,14 @@
 //! ```rust
 //! # use std::sync::Arc;
 //! # use tempfile::TempDir;
-//! use torrust_tracker_deployer_lib::infrastructure::external_tools::ansible::template::renderer::variables::VariablesTemplateRenderer;
+//! use torrust_tracker_deployer_lib::infrastructure::external_tools::ansible::template::renderer::variables::VariablesRenderer;
 //! use torrust_tracker_deployer_lib::domain::template::TemplateManager;
 //! use torrust_tracker_deployer_lib::infrastructure::external_tools::ansible::template::wrappers::variables::AnsibleVariablesContext;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let temp_dir = TempDir::new()?;
 //! let template_manager = Arc::new(TemplateManager::new("/path/to/templates"));
-//! let renderer = VariablesTemplateRenderer::new(template_manager);
+//! let renderer = VariablesRenderer::new(template_manager);
 //!
 //! let variables_context = AnsibleVariablesContext::new(22)?;
 //! renderer.render(&variables_context, temp_dir.path())?;
@@ -42,7 +42,7 @@ use crate::infrastructure::external_tools::ansible::template::wrappers::variable
 
 /// Errors that can occur during variables template rendering
 #[derive(Error, Debug)]
-pub enum VariablesTemplateError {
+pub enum VariablesRendererError {
     /// Failed to get template path from template manager
     #[error("Failed to get template path for '{file_name}': {source}")]
     TemplatePathFailed {
@@ -88,11 +88,11 @@ pub enum VariablesTemplateError {
 /// - Loading the variables.yml.tera template
 /// - Processing it with system configuration variables
 /// - Rendering the final variables.yml file for Ansible consumption
-pub struct VariablesTemplateRenderer {
+pub struct VariablesRenderer {
     template_manager: Arc<TemplateManager>,
 }
 
-impl VariablesTemplateRenderer {
+impl VariablesRenderer {
     /// Template filename for the variables Tera template
     const VARIABLES_TEMPLATE_FILE: &'static str = "variables.yml.tera";
 
@@ -138,21 +138,21 @@ impl VariablesTemplateRenderer {
         &self,
         variables_context: &AnsibleVariablesContext,
         output_dir: &Path,
-    ) -> Result<(), VariablesTemplateError> {
+    ) -> Result<(), VariablesRendererError> {
         tracing::debug!("Rendering variables template with system configuration");
 
         // Get the variables template path
         let variables_template_path = self
             .template_manager
             .get_template_path(&Self::build_template_path())
-            .map_err(|source| VariablesTemplateError::TemplatePathFailed {
+            .map_err(|source| VariablesRendererError::TemplatePathFailed {
                 file_name: Self::VARIABLES_TEMPLATE_FILE.to_string(),
                 source,
             })?;
 
         // Read template content
         let variables_template_content = std::fs::read_to_string(&variables_template_path)
-            .map_err(|source| VariablesTemplateError::TeraTemplateReadFailed {
+            .map_err(|source| VariablesRendererError::TeraTemplateReadFailed {
                 file_name: Self::VARIABLES_TEMPLATE_FILE.to_string(),
                 source,
             })?;
@@ -160,7 +160,7 @@ impl VariablesTemplateRenderer {
         // Create File object for template processing
         let variables_template_file =
             File::new(Self::VARIABLES_TEMPLATE_FILE, variables_template_content).map_err(
-                |source| VariablesTemplateError::FileCreationFailed {
+                |source| VariablesRendererError::FileCreationFailed {
                     file_name: Self::VARIABLES_TEMPLATE_FILE.to_string(),
                     source,
                 },
@@ -169,14 +169,14 @@ impl VariablesTemplateRenderer {
         // Create AnsibleVariablesTemplate with system configuration context
         let variables_template =
             AnsibleVariablesTemplate::new(&variables_template_file, variables_context).map_err(
-                |source| VariablesTemplateError::VariablesTemplateCreationFailed { source },
+                |source| VariablesRendererError::VariablesTemplateCreationFailed { source },
             )?;
 
         // Render to output file
         let variables_output_path = output_dir.join(Self::VARIABLES_OUTPUT_FILE);
         variables_template
             .render(&variables_output_path)
-            .map_err(|source| VariablesTemplateError::VariablesTemplateRenderFailed { source })?;
+            .map_err(|source| VariablesRendererError::VariablesTemplateRenderFailed { source })?;
 
         tracing::debug!(
             "Successfully rendered variables template to {}",
@@ -227,7 +227,7 @@ ssh_port: {{ ssh_port }}
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let renderer = VariablesTemplateRenderer::new(template_manager.clone());
+        let renderer = VariablesRenderer::new(template_manager.clone());
 
         assert!(Arc::ptr_eq(&renderer.template_manager, &template_manager));
     }
@@ -236,9 +236,9 @@ ssh_port: {{ ssh_port }}
     fn it_should_build_correct_template_path() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
-        let _renderer = VariablesTemplateRenderer::new(template_manager);
+        let _renderer = VariablesRenderer::new(template_manager);
 
-        let template_path = VariablesTemplateRenderer::build_template_path();
+        let template_path = VariablesRenderer::build_template_path();
 
         assert_eq!(template_path, "ansible/variables.yml.tera");
     }
@@ -259,7 +259,7 @@ ssh_port: {{ ssh_port }}
             .ensure_templates_dir()
             .expect("Failed to ensure templates directory");
 
-        let renderer = VariablesTemplateRenderer::new(template_manager);
+        let renderer = VariablesRenderer::new(template_manager);
         let variables_context = create_test_variables_context();
 
         // Render template
@@ -297,7 +297,7 @@ ssh_port: {{ ssh_port }}
             .ensure_templates_dir()
             .expect("Failed to ensure templates directory");
 
-        let renderer = VariablesTemplateRenderer::new(template_manager);
+        let renderer = VariablesRenderer::new(template_manager);
 
         // Use custom SSH port
         let variables_context =

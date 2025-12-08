@@ -7,4 +7,4 @@
 pub mod renderer;
 pub mod wrappers;
 
-pub use renderer::{AnsibleTemplateRenderer, InventoryTemplateRenderer};
+pub use renderer::{AnsibleProjectGenerator, InventoryRenderer};
