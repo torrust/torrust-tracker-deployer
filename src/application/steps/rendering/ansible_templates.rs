@@ -25,12 +25,12 @@ use thiserror::Error;
 use tracing::{info, instrument};
 
 use crate::adapters::ssh::credentials::SshCredentials;
-use crate::infrastructure::external_tools::ansible::template::renderer::AnsibleProjectGeneratorError;
-use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::{
+use crate::infrastructure::templating::ansible::template::renderer::AnsibleProjectGeneratorError;
+use crate::infrastructure::templating::ansible::template::wrappers::inventory::{
     AnsibleHost, AnsiblePort, AnsiblePortError, InventoryContext, InventoryContextError,
     SshPrivateKeyFile, SshPrivateKeyFileError,
 };
-use crate::infrastructure::external_tools::ansible::AnsibleProjectGenerator;
+use crate::infrastructure::templating::ansible::AnsibleProjectGenerator;
 
 /// Errors that can occur during Ansible template rendering step execution
 #[derive(Error, Debug)]

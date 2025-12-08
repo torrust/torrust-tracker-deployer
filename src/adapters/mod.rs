@@ -49,11 +49,11 @@
 //! ## Relationship with Infrastructure Layer
 //!
 //! While these adapters live at the top level (`src/adapters/`), application-specific
-//! logic for using these tools remains in `src/infrastructure/external_tools/`:
+//! logic for using these tools remains in `src/infrastructure/templating/`:
 //!
 //! - **`src/adapters/`**: Generic CLI wrappers (this module)
-//! - **`src/infrastructure/external_tools/`**: Application-specific tool configuration
-//!   (e.g., Ansible inventory rendering, `OpenTofu` template generation)
+//! - **`src/infrastructure/templating/`**: Application-specific template generation
+//!   (e.g., Ansible inventory rendering, `OpenTofu` project generation, `Docker Compose` configs)
 //!
 //! This separation ensures adapters remain reusable while application-specific logic
 //! stays in the infrastructure layer.

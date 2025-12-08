@@ -5,7 +5,7 @@ use crate::adapters::tofu::client::OpenTofuError;
 use crate::application::services::AnsibleTemplateServiceError;
 use crate::application::steps::RenderAnsibleTemplatesError;
 use crate::domain::environment::state::StateTypeError;
-use crate::infrastructure::external_tools::tofu::TofuProjectGeneratorError;
+use crate::infrastructure::templating::tofu::TofuProjectGeneratorError;
 use crate::shared::command::CommandError;
 
 /// Comprehensive error type for the `ProvisionCommandHandler`
@@ -284,7 +284,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_opentofu_template_rendering() {
-        use crate::infrastructure::external_tools::tofu::TofuProjectGeneratorError;
+        use crate::infrastructure::templating::tofu::TofuProjectGeneratorError;
 
         let error = ProvisionCommandHandlerError::OpenTofuTemplateRendering(
             TofuProjectGeneratorError::DirectoryCreationFailed {
@@ -302,7 +302,7 @@ mod tests {
     #[test]
     fn it_should_provide_help_for_ansible_template_rendering() {
         use crate::application::steps::RenderAnsibleTemplatesError;
-        use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContextError;
+        use crate::infrastructure::templating::ansible::template::wrappers::inventory::InventoryContextError;
 
         let error = ProvisionCommandHandlerError::AnsibleTemplateRendering(
             RenderAnsibleTemplatesError::InventoryContextError(
@@ -396,8 +396,8 @@ mod tests {
     fn it_should_have_help_for_all_error_variants() {
         use crate::adapters::ssh::SshError;
         use crate::application::steps::RenderAnsibleTemplatesError;
-        use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::InventoryContextError;
-        use crate::infrastructure::external_tools::tofu::TofuProjectGeneratorError;
+        use crate::infrastructure::templating::ansible::template::wrappers::inventory::InventoryContextError;
+        use crate::infrastructure::templating::tofu::TofuProjectGeneratorError;
         use crate::shared::command::CommandError;
 
         let errors = vec![

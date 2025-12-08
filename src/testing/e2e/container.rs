@@ -27,10 +27,10 @@ use crate::config::Config;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::template::TemplateManager;
 use crate::domain::InstanceName;
-use crate::infrastructure::external_tools::ansible::AnsibleProjectGenerator;
-use crate::infrastructure::external_tools::ansible::ANSIBLE_SUBFOLDER;
-use crate::infrastructure::external_tools::tofu::TofuProjectGenerator;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::templating::ansible::AnsibleProjectGenerator;
+use crate::infrastructure::templating::ansible::ANSIBLE_SUBFOLDER;
+use crate::infrastructure::templating::tofu::TofuProjectGenerator;
 use crate::shared::Clock;
 use crate::testing::e2e::LXD_OPENTOFU_SUBFOLDER;
 

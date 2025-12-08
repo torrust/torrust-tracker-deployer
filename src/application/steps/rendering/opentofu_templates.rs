@@ -21,9 +21,7 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
-use crate::infrastructure::external_tools::tofu::{
-    TofuProjectGenerator, TofuProjectGeneratorError,
-};
+use crate::infrastructure::templating::tofu::{TofuProjectGenerator, TofuProjectGeneratorError};
 
 /// Simple step that renders `OpenTofu` templates to the build directory
 pub struct RenderOpenTofuTemplatesStep {

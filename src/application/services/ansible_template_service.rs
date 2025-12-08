@@ -29,7 +29,7 @@ use tracing::info;
 use crate::adapters::ssh::SshCredentials;
 use crate::application::steps::RenderAnsibleTemplatesStep;
 use crate::domain::TemplateManager;
-use crate::infrastructure::external_tools::ansible::AnsibleProjectGenerator;
+use crate::infrastructure::templating::ansible::AnsibleProjectGenerator;
 
 /// Errors that can occur during Ansible template rendering
 #[derive(Error, Debug)]

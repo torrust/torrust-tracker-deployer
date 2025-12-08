@@ -6,16 +6,16 @@
 //!
 //! ## Components
 //!
-//! - `external_tools` - Integration and delivery mechanisms for third-party console tools
-//!   - `adapters` - External tool integration adapters (Ansible, LXD, `OpenTofu`, SSH)
-//!   - `ansible` - Ansible delivery mechanism and implementation details
-//!   - `tofu` - `OpenTofu` delivery mechanism and implementation details
-//!   - `template` - Template rendering delivery mechanisms (wrappers)
+//! - `templating` - Template rendering and delivery mechanisms for deployment tools
+//!   - `ansible` - Ansible template generation and project structure
+//!   - `docker_compose` - Docker Compose template generation
+//!   - `tofu` - `OpenTofu` template generation and project structure
+//!   - `tracker` - Torrust Tracker configuration templates
 //! - `remote_actions` - Repository-like implementations for remote system operations
 //! - `persistence` - Persistence infrastructure (repositories, file locking, storage)
 //! - `trace` - Trace file generation for error analysis
 
-pub mod external_tools;
 pub mod persistence;
 pub mod remote_actions;
+pub mod templating;
 pub mod trace;

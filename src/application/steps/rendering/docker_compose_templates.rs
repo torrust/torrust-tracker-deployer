@@ -30,7 +30,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::domain::template::TemplateManager;
-use crate::infrastructure::external_tools::docker_compose::{
+use crate::infrastructure::templating::docker_compose::{
     DockerComposeTemplateError, DockerComposeTemplateRenderer,
 };
 
@@ -111,7 +111,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::infrastructure::external_tools::docker_compose::DOCKER_COMPOSE_SUBFOLDER;
+    use crate::infrastructure::templating::docker_compose::DOCKER_COMPOSE_SUBFOLDER;
 
     #[tokio::test]
     async fn it_should_create_render_docker_compose_templates_step() {

@@ -21,7 +21,7 @@ use crate::domain::environment::repository::{EnvironmentRepository, TypedEnviron
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
 use crate::domain::EnvironmentName;
-use crate::infrastructure::external_tools::tofu::TofuProjectGenerator;
+use crate::infrastructure::templating::tofu::TofuProjectGenerator;
 use crate::shared::error::Traceable;
 
 /// `ProvisionCommandHandler` orchestrates the complete infrastructure provisioning workflow
