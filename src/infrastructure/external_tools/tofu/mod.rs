@@ -6,11 +6,11 @@
 //! ## Components
 //!
 //! - `template` - Template renderers and context wrappers for infrastructure configuration files
-//!   - `TofuTemplateRenderer` - Handles generation of `OpenTofu` configuration files
-//!   - `CloudInitTemplateRenderer` - Specialized collaborator for cloud-init.yml.tera templates
+//!   - `TofuProjectGenerator` - Handles generation of `OpenTofu` configuration files
+//!   - `CloudInitRenderer` - Specialized collaborator for cloud-init.yml.tera templates
 //!
 //! Note: The `OpenTofu` adapter (`OpenTofuClient`) has been moved to `crate::adapters::tofu`
 
 pub mod template;
 
-pub use template::{CloudInitTemplateRenderer, TofuTemplateRenderer, TofuTemplateRendererError};
+pub use template::{CloudInitRenderer, TofuProjectGenerator, TofuProjectGeneratorError};

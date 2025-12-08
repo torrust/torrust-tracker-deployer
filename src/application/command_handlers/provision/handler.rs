@@ -21,7 +21,7 @@ use crate::domain::environment::repository::{EnvironmentRepository, TypedEnviron
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
 use crate::domain::EnvironmentName;
-use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
+use crate::infrastructure::external_tools::tofu::TofuProjectGenerator;
 use crate::shared::error::Traceable;
 
 /// `ProvisionCommandHandler` orchestrates the complete infrastructure provisioning workflow
@@ -237,18 +237,18 @@ impl ProvisionCommandHandler {
     /// # Returns
     ///
     /// Returns a tuple of:
-    /// - `TofuTemplateRenderer` - For rendering `OpenTofu` templates
+    /// - `TofuProjectGenerator` - For rendering `OpenTofu` templates
     /// - `OpenTofuClient` - For executing `OpenTofu` operations
     fn build_infrastructure_dependencies(
         environment: &Environment<Provisioning>,
-    ) -> (Arc<TofuTemplateRenderer>, Arc<OpenTofuClient>) {
+    ) -> (Arc<TofuProjectGenerator>, Arc<OpenTofuClient>) {
         let opentofu_client = Arc::new(OpenTofuClient::new(environment.tofu_build_dir()));
 
         let template_manager = Arc::new(crate::domain::TemplateManager::new(
             environment.templates_dir(),
         ));
 
-        let tofu_template_renderer = Arc::new(TofuTemplateRenderer::new(
+        let tofu_template_renderer = Arc::new(TofuProjectGenerator::new(
             template_manager,
             environment.build_dir(),
             environment.ssh_credentials().clone(),
@@ -355,7 +355,7 @@ impl ProvisionCommandHandler {
     /// Returns an error if template rendering fails
     async fn render_opentofu_templates(
         &self,
-        tofu_template_renderer: &Arc<TofuTemplateRenderer>,
+        tofu_template_renderer: &Arc<TofuProjectGenerator>,
     ) -> Result<(), ProvisionCommandHandlerError> {
         RenderOpenTofuTemplatesStep::new(tofu_template_renderer.clone())
             .execute()

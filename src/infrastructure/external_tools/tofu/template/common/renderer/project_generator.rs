@@ -1,12 +1,12 @@
-//! `OpenTofu` Template Renderer
+//! `OpenTofu` Project Generator
 //!
-//! This module provides the main template renderer for `OpenTofu` deployment workflows.
+//! This module provides the main project generator for `OpenTofu` deployment workflows.
 //! It manages the creation of build directories, copying template files, and processing
 //! them with variable substitution.
 //!
 //! ## Provider Support
 //!
-//! The renderer supports multiple infrastructure providers (LXD, Hetzner) with independent
+//! The generator supports multiple infrastructure providers (LXD, Hetzner) with independent
 //! template sets for each provider. Templates are not shared between providers to allow
 //! provider-specific customization.
 
@@ -19,7 +19,7 @@ use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::template::{TemplateManager, TemplateManagerError};
 use crate::domain::InstanceName;
 use crate::infrastructure::external_tools::tofu::template::common::renderer::cloud_init::{
-    CloudInitTemplateError, CloudInitTemplateRenderer,
+    CloudInitRenderer, CloudInitRendererError,
 };
 use crate::infrastructure::external_tools::tofu::template::providers::hetzner::wrappers::variables::VariablesTemplateError as HetznerVariablesTemplateError;
 use crate::infrastructure::external_tools::tofu::template::providers::lxd::wrappers::variables::{
@@ -27,9 +27,9 @@ use crate::infrastructure::external_tools::tofu::template::providers::lxd::wrapp
     VariablesTemplate as LxdVariablesTemplate, VariablesTemplateError as LxdVariablesTemplateError,
 };
 
-/// Errors that can occur during `OpenTofu` template rendering
+/// Errors that can occur during `OpenTofu` project generation
 #[derive(Error, Debug)]
-pub enum TofuTemplateRendererError {
+pub enum TofuProjectGeneratorError {
     /// Failed to create the build directory
     #[error("Failed to create build directory '{directory}': {source}")]
     DirectoryCreationFailed {
@@ -58,7 +58,7 @@ pub enum TofuTemplateRendererError {
     #[error("Failed to render cloud-init template: {source}")]
     CloudInitRenderingFailed {
         #[source]
-        source: CloudInitTemplateError,
+        source: CloudInitRendererError,
     },
 
     /// Failed to render LXD variables template
@@ -88,35 +88,35 @@ pub enum TofuTemplateRendererError {
     UnsupportedProvider { provider: String },
 }
 
-impl crate::shared::Traceable for TofuTemplateRendererError {
+impl crate::shared::Traceable for TofuProjectGeneratorError {
     fn trace_format(&self) -> String {
         match self {
             Self::DirectoryCreationFailed { directory, .. } => {
-                format!("TofuTemplateRendererError: Failed to create build directory '{directory}'")
+                format!("TofuProjectGeneratorError: Failed to create build directory '{directory}'")
             }
             Self::TemplatePathFailed { file_name, .. } => {
-                format!("TofuTemplateRendererError: Failed to get template path for '{file_name}'")
+                format!("TofuProjectGeneratorError: Failed to get template path for '{file_name}'")
             }
             Self::FileCopyFailed { file_name, .. } => {
-                format!("TofuTemplateRendererError: Failed to copy template file '{file_name}'")
+                format!("TofuProjectGeneratorError: Failed to copy template file '{file_name}'")
             }
             Self::CloudInitRenderingFailed { .. } => {
-                "TofuTemplateRendererError: Cloud-init template rendering failed".to_string()
+                "TofuProjectGeneratorError: Cloud-init template rendering failed".to_string()
             }
             Self::LxdVariablesRenderingFailed { .. } => {
-                "TofuTemplateRendererError: LXD variables template rendering failed".to_string()
+                "TofuProjectGeneratorError: LXD variables template rendering failed".to_string()
             }
             Self::HetznerVariablesRenderingFailed { .. } => {
-                "TofuTemplateRendererError: Hetzner variables template rendering failed".to_string()
+                "TofuProjectGeneratorError: Hetzner variables template rendering failed".to_string()
             }
             Self::HetznerContextBuildFailed { message } => {
-                format!("TofuTemplateRendererError: Hetzner context build failed: {message}")
+                format!("TofuProjectGeneratorError: Hetzner context build failed: {message}")
             }
             Self::ProviderConfigMismatch { expected } => {
-                format!("TofuTemplateRendererError: Expected {expected} provider configuration")
+                format!("TofuProjectGeneratorError: Expected {expected} provider configuration")
             }
             Self::UnsupportedProvider { provider } => {
-                format!("TofuTemplateRendererError: Provider '{provider}' is not yet supported")
+                format!("TofuProjectGeneratorError: Provider '{provider}' is not yet supported")
             }
         }
     }
@@ -131,26 +131,26 @@ impl crate::shared::Traceable for TofuTemplateRendererError {
     }
 }
 
-/// Renders `OpenTofu` provision templates to a build directory
+/// Generates `OpenTofu` provision project to a build directory
 ///
-/// This collaborator is responsible for preparing `OpenTofu` templates for deployment workflows.
+/// This collaborator is responsible for preparing `OpenTofu` project for deployment workflows.
 /// It copies static templates and renders Tera templates with runtime variables from the template
 /// manager to the specified build directory.
 ///
-/// The renderer is provider-aware and selects the appropriate template directory based on the
+/// The generator is provider-aware and selects the appropriate template directory based on the
 /// provider specified in the environment configuration.
-pub struct TofuTemplateRenderer {
+pub struct TofuProjectGenerator {
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
     ssh_credentials: SshCredentials,
-    cloud_init_renderer: CloudInitTemplateRenderer,
+    cloud_init_renderer: CloudInitRenderer,
     instance_name: InstanceName,
     provider: Provider,
     provider_config: ProviderConfig,
 }
 
-impl TofuTemplateRenderer {
-    /// Creates a new provision template renderer
+impl TofuProjectGenerator {
+    /// Creates a new provision project generator
     ///
     /// # Arguments
     ///
@@ -169,8 +169,7 @@ impl TofuTemplateRenderer {
         provider_config: ProviderConfig,
     ) -> Self {
         let provider = provider_config.provider();
-        let cloud_init_renderer =
-            CloudInitTemplateRenderer::new(template_manager.clone(), provider);
+        let cloud_init_renderer = CloudInitRenderer::new(template_manager.clone(), provider);
 
         Self {
             template_manager,
@@ -193,7 +192,7 @@ impl TofuTemplateRenderer {
         format!("tofu/{}", self.provider.as_str())
     }
 
-    /// Renders provision templates (`OpenTofu`) to the build directory
+    /// Generates provision project (`OpenTofu`) to the build directory
     ///
     /// This method:
     /// 1. Creates the build directory structure for `OpenTofu`
@@ -203,7 +202,7 @@ impl TofuTemplateRenderer {
     ///
     /// # Returns
     ///
-    /// * `Result<(), TofuTemplateRendererError>` - Success or error from the template rendering operation
+    /// * `Result<(), TofuProjectGeneratorError>` - Success or error from the template rendering operation
     ///
     /// # Errors
     ///
@@ -212,7 +211,7 @@ impl TofuTemplateRenderer {
     /// - Template copying fails
     /// - Template manager cannot provide required templates
     /// - Tera template rendering fails
-    pub async fn render(&self) -> Result<(), TofuTemplateRendererError> {
+    pub async fn render(&self) -> Result<(), TofuProjectGeneratorError> {
         tracing::info!(
             template_type = "opentofu",
             provider = %self.provider,
@@ -287,17 +286,17 @@ impl TofuTemplateRenderer {
     ///
     /// # Returns
     ///
-    /// * `Result<PathBuf, TofuTemplateRendererError>` - The created build directory path or an error
+    /// * `Result<PathBuf, TofuProjectGeneratorError>` - The created build directory path or an error
     ///
     /// # Errors
     ///
     /// Returns an error if directory creation fails
-    async fn create_build_directory(&self) -> Result<PathBuf, TofuTemplateRendererError> {
+    async fn create_build_directory(&self) -> Result<PathBuf, TofuProjectGeneratorError> {
         let build_tofu_dir = self.build_opentofu_directory();
         tokio::fs::create_dir_all(&build_tofu_dir)
             .await
             .map_err(
-                |source| TofuTemplateRendererError::DirectoryCreationFailed {
+                |source| TofuProjectGeneratorError::DirectoryCreationFailed {
                     directory: build_tofu_dir.display().to_string(),
                     source,
                 },
@@ -314,7 +313,7 @@ impl TofuTemplateRenderer {
     ///
     /// # Returns
     ///
-    /// * `Result<(), TofuTemplateRendererError>` - Success or error from the file copying operations
+    /// * `Result<(), TofuProjectGeneratorError>` - Success or error from the file copying operations
     ///
     /// # Errors
     ///
@@ -325,7 +324,7 @@ impl TofuTemplateRenderer {
         &self,
         file_names: &[&str],
         destination_dir: &Path,
-    ) -> Result<(), TofuTemplateRendererError> {
+    ) -> Result<(), TofuProjectGeneratorError> {
         tracing::debug!(
             "Copying {} template files to {}",
             file_names.len(),
@@ -338,7 +337,7 @@ impl TofuTemplateRenderer {
             let source_path = self
                 .template_manager
                 .get_template_path(&template_path)
-                .map_err(|source| TofuTemplateRendererError::TemplatePathFailed {
+                .map_err(|source| TofuProjectGeneratorError::TemplatePathFailed {
                     file_name: (*file_name).to_string(),
                     source,
                 })?;
@@ -353,7 +352,7 @@ impl TofuTemplateRenderer {
 
             tokio::fs::copy(&source_path, &dest_path)
                 .await
-                .map_err(|source| TofuTemplateRendererError::FileCopyFailed {
+                .map_err(|source| TofuProjectGeneratorError::FileCopyFailed {
                     file_name: (*file_name).to_string(),
                     source,
                 })?;
@@ -368,7 +367,7 @@ impl TofuTemplateRenderer {
     /// Renders Tera templates with runtime variables using collaborators
     ///
     /// This method delegates template rendering to specialized collaborators:
-    /// - cloud-init.yml.tera template rendering to the `CloudInitTemplateRenderer` collaborator
+    /// - cloud-init.yml.tera template rendering to the `CloudInitRenderer` collaborator
     /// - variables.tfvars.tera template rendering using the `VariablesTemplate`
     ///
     /// # Arguments
@@ -378,19 +377,19 @@ impl TofuTemplateRenderer {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - `CloudInitTemplateRenderer` fails to render the template
+    /// - `CloudInitRenderer` fails to render the template
     /// - `VariablesTemplate` fails to render the variables template
     async fn render_tera_templates(
         &self,
         destination_dir: &Path,
-    ) -> Result<(), TofuTemplateRendererError> {
+    ) -> Result<(), TofuProjectGeneratorError> {
         tracing::debug!("Rendering Tera templates with runtime variables using collaborators");
 
         // Use collaborator to render cloud-init.yml.tera template
         self.cloud_init_renderer
             .render(&self.ssh_credentials, destination_dir)
             .await
-            .map_err(|source| TofuTemplateRendererError::CloudInitRenderingFailed { source })?;
+            .map_err(|source| TofuProjectGeneratorError::CloudInitRenderingFailed { source })?;
 
         // Render variables.tfvars.tera template with instance name
         self.render_variables_template(destination_dir).await?;
@@ -414,7 +413,7 @@ impl TofuTemplateRenderer {
     async fn render_variables_template(
         &self,
         destination_dir: &Path,
-    ) -> Result<(), TofuTemplateRendererError> {
+    ) -> Result<(), TofuProjectGeneratorError> {
         tracing::debug!(
             provider = %self.provider,
             "Rendering variables.tfvars.tera template with provider-specific context"
@@ -425,7 +424,7 @@ impl TofuTemplateRenderer {
         let template_file_path = self
             .template_manager
             .get_template_path(&template_path)
-            .map_err(|source| TofuTemplateRendererError::TemplatePathFailed {
+            .map_err(|source| TofuProjectGeneratorError::TemplatePathFailed {
                 file_name: "variables.tfvars.tera".to_string(),
                 source,
             })?;
@@ -433,7 +432,7 @@ impl TofuTemplateRenderer {
         // Read the template file content
         let template_content = tokio::fs::read_to_string(&template_file_path)
             .await
-            .map_err(|source| TofuTemplateRendererError::FileCopyFailed {
+            .map_err(|source| TofuProjectGeneratorError::FileCopyFailed {
                 file_name: "variables.tfvars.tera".to_string(),
                 source,
             })?;
@@ -441,7 +440,7 @@ impl TofuTemplateRenderer {
         // Create template file wrapper
         let template_file =
             crate::domain::template::file::File::new("variables.tfvars.tera", template_content)
-                .map_err(|err| TofuTemplateRendererError::FileCopyFailed {
+                .map_err(|err| TofuProjectGeneratorError::FileCopyFailed {
                     file_name: "variables.tfvars.tera".to_string(),
                     source: std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string()),
                 })?;
@@ -461,10 +460,10 @@ impl TofuTemplateRenderer {
         &self,
         template_file: &crate::domain::template::file::File,
         destination_dir: &Path,
-    ) -> Result<(), TofuTemplateRendererError> {
+    ) -> Result<(), TofuProjectGeneratorError> {
         // Get LXD config (profile_name is LXD-specific)
         let lxd_config = self.provider_config.as_lxd().ok_or_else(|| {
-            TofuTemplateRendererError::ProviderConfigMismatch {
+            TofuProjectGeneratorError::ProviderConfigMismatch {
                 expected: "LXD".to_string(),
             }
         })?;
@@ -475,7 +474,7 @@ impl TofuTemplateRenderer {
             .with_profile_name(lxd_config.profile_name.clone())
             .build()
             .map_err(
-                |err| TofuTemplateRendererError::LxdVariablesRenderingFailed {
+                |err| TofuProjectGeneratorError::LxdVariablesRenderingFailed {
                     source: LxdVariablesTemplateError::TemplateEngineError {
                         source:
                             crate::domain::template::TemplateEngineError::ContextSerialization {
@@ -487,13 +486,13 @@ impl TofuTemplateRenderer {
 
         // Create and render the variables template
         let variables_template = LxdVariablesTemplate::new(template_file, context)
-            .map_err(|source| TofuTemplateRendererError::LxdVariablesRenderingFailed { source })?;
+            .map_err(|source| TofuProjectGeneratorError::LxdVariablesRenderingFailed { source })?;
 
         // Write the rendered template to the destination directory
         let output_path = destination_dir.join("variables.tfvars");
         variables_template
             .render(&output_path)
-            .map_err(|source| TofuTemplateRendererError::LxdVariablesRenderingFailed { source })?;
+            .map_err(|source| TofuProjectGeneratorError::LxdVariablesRenderingFailed { source })?;
 
         tracing::debug!("LXD variables template rendered successfully");
         Ok(())
@@ -504,7 +503,7 @@ impl TofuTemplateRenderer {
         &self,
         template_file: &crate::domain::template::file::File,
         destination_dir: &Path,
-    ) -> Result<(), TofuTemplateRendererError> {
+    ) -> Result<(), TofuProjectGeneratorError> {
         use crate::infrastructure::external_tools::tofu::template::providers::hetzner::wrappers::variables::{
             VariablesContextBuilder as HetznerVariablesContextBuilder,
             VariablesTemplate as HetznerVariablesTemplate,
@@ -512,7 +511,7 @@ impl TofuTemplateRenderer {
 
         // Get Hetzner config
         let hetzner_config = self.provider_config.as_hetzner().ok_or_else(|| {
-            TofuTemplateRendererError::ProviderConfigMismatch {
+            TofuProjectGeneratorError::ProviderConfigMismatch {
                 expected: "Hetzner".to_string(),
             }
         })?;
@@ -521,7 +520,7 @@ impl TofuTemplateRenderer {
         let ssh_public_key_content =
             tokio::fs::read_to_string(&self.ssh_credentials.ssh_pub_key_path)
                 .await
-                .map_err(|source| TofuTemplateRendererError::FileCopyFailed {
+                .map_err(|source| TofuProjectGeneratorError::FileCopyFailed {
                     file_name: "ssh public key".to_string(),
                     source,
                 })?;
@@ -535,20 +534,20 @@ impl TofuTemplateRenderer {
             .with_server_image(hetzner_config.image.clone())
             .with_ssh_public_key_content(ssh_public_key_content.trim().to_string())
             .build()
-            .map_err(|err| TofuTemplateRendererError::HetznerContextBuildFailed {
+            .map_err(|err| TofuProjectGeneratorError::HetznerContextBuildFailed {
                 message: err.to_string(),
             })?;
 
         // Create and render the variables template
         let variables_template =
             HetznerVariablesTemplate::new(template_file, context).map_err(|source| {
-                TofuTemplateRendererError::HetznerVariablesRenderingFailed { source }
+                TofuProjectGeneratorError::HetznerVariablesRenderingFailed { source }
             })?;
 
         // Write the rendered template to the destination directory
         let output_path = destination_dir.join("variables.tfvars");
         variables_template.render(&output_path).map_err(|source| {
-            TofuTemplateRendererError::HetznerVariablesRenderingFailed { source }
+            TofuProjectGeneratorError::HetznerVariablesRenderingFailed { source }
         })?;
 
         tracing::debug!("Hetzner variables template rendered successfully");
@@ -609,7 +608,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -628,7 +627,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -647,7 +646,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -666,7 +665,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -696,7 +695,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -737,7 +736,7 @@ mod tests {
         let build_path = readonly_path.join("build");
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -752,7 +751,7 @@ mod tests {
             "Should fail when directory creation is denied"
         );
         match result.unwrap_err() {
-            TofuTemplateRendererError::DirectoryCreationFailed {
+            TofuProjectGeneratorError::DirectoryCreationFailed {
                 directory,
                 source: _,
             } => {
@@ -774,7 +773,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -789,7 +788,7 @@ mod tests {
 
         assert!(result.is_err(), "Should fail when template is not found");
         match result.unwrap_err() {
-            TofuTemplateRendererError::TemplatePathFailed {
+            TofuProjectGeneratorError::TemplatePathFailed {
                 file_name,
                 source: _,
             } => {
@@ -835,7 +834,7 @@ mod tests {
             .expect("Failed to write test template");
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             temp_dir.path(),
             ssh_credentials,
@@ -847,7 +846,7 @@ mod tests {
 
         assert!(result.is_err(), "Should fail when file copy is denied");
         match result.unwrap_err() {
-            TofuTemplateRendererError::FileCopyFailed {
+            TofuProjectGeneratorError::FileCopyFailed {
                 file_name,
                 source: _,
             } => {
@@ -865,7 +864,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -883,7 +882,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -911,7 +910,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -939,7 +938,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
 
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -968,7 +967,7 @@ mod tests {
 
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -992,7 +991,7 @@ mod tests {
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             &build_path,
             ssh_credentials,
@@ -1029,7 +1028,7 @@ mod tests {
             .expect("Failed to write test template");
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             temp_dir.path(),
             ssh_credentials,
@@ -1077,7 +1076,7 @@ mod tests {
             .expect("Failed to write test template 2");
 
         let ssh_credentials1 = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer1 = TofuTemplateRenderer::new(
+        let renderer1 = TofuProjectGenerator::new(
             template_manager.clone(),
             &build_path1,
             ssh_credentials1,
@@ -1085,7 +1084,7 @@ mod tests {
             test_lxd_provider_config(),
         );
         let ssh_credentials2 = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer2 = TofuTemplateRenderer::new(
+        let renderer2 = TofuProjectGenerator::new(
             template_manager,
             &build_path2,
             ssh_credentials2,
@@ -1144,7 +1143,7 @@ mod tests {
             .expect("Failed to write existing template");
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             temp_dir.path(),
             ssh_credentials,
@@ -1163,7 +1162,7 @@ mod tests {
         // The first file might have been copied before the failure
         // This tests the partial failure behavior
         match result.unwrap_err() {
-            TofuTemplateRendererError::TemplatePathFailed {
+            TofuProjectGeneratorError::TemplatePathFailed {
                 file_name,
                 source: _,
             } => {
@@ -1203,7 +1202,7 @@ mod tests {
         }
 
         let ssh_credentials = create_dummy_ssh_credentials(temp_dir.path());
-        let renderer = TofuTemplateRenderer::new(
+        let renderer = TofuProjectGenerator::new(
             template_manager,
             temp_dir.path(),
             ssh_credentials,

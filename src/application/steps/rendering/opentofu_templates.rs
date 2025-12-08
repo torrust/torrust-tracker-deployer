@@ -22,17 +22,17 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::infrastructure::external_tools::tofu::{
-    TofuTemplateRenderer, TofuTemplateRendererError,
+    TofuProjectGenerator, TofuProjectGeneratorError,
 };
 
 /// Simple step that renders `OpenTofu` templates to the build directory
 pub struct RenderOpenTofuTemplatesStep {
-    tofu_template_renderer: Arc<TofuTemplateRenderer>,
+    tofu_template_renderer: Arc<TofuProjectGenerator>,
 }
 
 impl RenderOpenTofuTemplatesStep {
     #[must_use]
-    pub fn new(tofu_template_renderer: Arc<TofuTemplateRenderer>) -> Self {
+    pub fn new(tofu_template_renderer: Arc<TofuProjectGenerator>) -> Self {
         Self {
             tofu_template_renderer,
         }
@@ -49,7 +49,7 @@ impl RenderOpenTofuTemplatesStep {
         skip_all,
         fields(step_type = "rendering", template_type = "opentofu")
     )]
-    pub async fn execute(&self) -> Result<(), TofuTemplateRendererError> {
+    pub async fn execute(&self) -> Result<(), TofuProjectGeneratorError> {
         info!(
             step = "render_opentofu_templates",
             "Rendering OpenTofu templates"

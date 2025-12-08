@@ -1,12 +1,12 @@
 //! # Cloud-Init Template Renderer
 //!
-//! This module provides the `CloudInitTemplateRenderer`, a specialized template renderer for cloud-init.yml.tera
+//! This module provides the `CloudInitRenderer`, a specialized template renderer for cloud-init.yml.tera
 //! rendering within the `OpenTofu` deployment workflow. It extracts all cloud-init specific logic
-//! from the main `TofuTemplateRenderer` to follow the single responsibility principle.
+//! from the main `TofuProjectGenerator` to follow the single responsibility principle.
 //!
 //! ## Purpose
 //!
-//! The `CloudInitTemplateRenderer` is responsible for:
+//! The `CloudInitRenderer` is responsible for:
 //! - Handling the `cloud-init.yml.tera` template file specifically
 //! - Managing SSH public key injection into cloud-init configuration
 //! - Creating appropriate contexts from SSH credentials
@@ -20,7 +20,7 @@
 //! ```rust
 //! # use std::sync::Arc;
 //! # use std::path::Path;
-//! # use torrust_tracker_deployer_lib::infrastructure::external_tools::tofu::template::common::renderer::cloud_init::CloudInitTemplateRenderer;
+//! # use torrust_tracker_deployer_lib::infrastructure::external_tools::tofu::template::common::renderer::cloud_init::CloudInitRenderer;
 //! # use torrust_tracker_deployer_lib::domain::template::TemplateManager;
 //! # use torrust_tracker_deployer_lib::domain::provider::Provider;
 //! # use torrust_tracker_deployer_lib::shared::Username;
@@ -35,7 +35,7 @@
 //!     PathBuf::from("fixtures/testing_rsa.pub"),
 //!     Username::new("username").unwrap()
 //! );
-//! let renderer = CloudInitTemplateRenderer::new(template_manager, Provider::Lxd);
+//! let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
 //!
 //! // Just demonstrate creating the renderer - actual rendering requires
 //! // a proper template manager setup with cloud-init templates
@@ -54,7 +54,7 @@ use crate::domain::template::{TemplateManager, TemplateManagerError};
 
 /// Errors that can occur during cloud-init template rendering
 #[derive(Error, Debug)]
-pub enum CloudInitTemplateError {
+pub enum CloudInitRendererError {
     /// Failed to get cloud-init template path from template manager
     #[error("Failed to get template path for 'cloud-init.yml.tera': {source}")]
     TemplatePathFailed {
@@ -98,17 +98,17 @@ pub enum CloudInitTemplateError {
 /// - Template rendering and output file writing
 ///
 /// It follows the Single Responsibility Principle by focusing solely on cloud-init
-/// template operations, making the main `TofuTemplateRenderer` simpler and more focused.
+/// template operations, making the main `TofuProjectGenerator` simpler and more focused.
 ///
 /// Note: The provider field is kept for potential future provider-specific customization,
 /// but currently all providers use the same common cloud-init template.
-pub struct CloudInitTemplateRenderer {
+pub struct CloudInitRenderer {
     template_manager: Arc<TemplateManager>,
     #[allow(dead_code)]
     provider: Provider,
 }
 
-impl CloudInitTemplateRenderer {
+impl CloudInitRenderer {
     /// Template file name for cloud-init configuration
     const CLOUD_INIT_TEMPLATE_FILE: &'static str = "cloud-init.yml.tera";
 
@@ -129,7 +129,7 @@ impl CloudInitTemplateRenderer {
     ///
     /// # Returns
     ///
-    /// A new `CloudInitTemplateRenderer` instance ready to render cloud-init templates
+    /// * `CloudInitRenderer` - A new renderer instance
     #[must_use]
     pub fn new(template_manager: Arc<TemplateManager>, provider: Provider) -> Self {
         Self {
@@ -154,7 +154,7 @@ impl CloudInitTemplateRenderer {
     /// # Returns
     ///
     /// * `Ok(())` on successful template rendering
-    /// * `Err(CloudInitTemplateError)` on any failure during the rendering process
+    /// * `Err(CloudInitRendererError)` on any failure during the rendering process
     ///
     /// # Errors
     ///
@@ -170,7 +170,7 @@ impl CloudInitTemplateRenderer {
         &self,
         ssh_credentials: &SshCredentials,
         output_dir: &Path,
-    ) -> Result<(), CloudInitTemplateError> {
+    ) -> Result<(), CloudInitRendererError> {
         tracing::debug!(
             provider = %self.provider,
             "Rendering cloud-init template with SSH public key injection"
@@ -181,16 +181,16 @@ impl CloudInitTemplateRenderer {
         let source_path = self
             .template_manager
             .get_template_path(&template_path)
-            .map_err(|source| CloudInitTemplateError::TemplatePathFailed { source })?;
+            .map_err(|source| CloudInitRendererError::TemplatePathFailed { source })?;
 
         // Read template content from file
         let template_content = tokio::fs::read_to_string(&source_path)
             .await
-            .map_err(|source| CloudInitTemplateError::TemplateReadError { source })?;
+            .map_err(|source| CloudInitRendererError::TemplateReadError { source })?;
 
         // Create File object for template processing
         let template_file = File::new(Self::CLOUD_INIT_TEMPLATE_FILE, template_content)
-            .map_err(|_| CloudInitTemplateError::FileCreationFailed)?;
+            .map_err(|_| CloudInitRendererError::FileCreationFailed)?;
 
         // Render cloud-init template (shared logic for all providers)
         self.render_cloud_init(&template_file, ssh_credentials, output_dir)
@@ -202,7 +202,7 @@ impl CloudInitTemplateRenderer {
         template_file: &File,
         ssh_credentials: &SshCredentials,
         output_dir: &Path,
-    ) -> Result<(), CloudInitTemplateError> {
+    ) -> Result<(), CloudInitRendererError> {
         use crate::infrastructure::external_tools::tofu::template::common::wrappers::cloud_init::{
             CloudInitContext, CloudInitTemplate,
         };
@@ -211,21 +211,21 @@ impl CloudInitTemplateRenderer {
         // Note: All providers use the same context structure for cloud-init
         let cloud_init_context = CloudInitContext::builder()
             .with_ssh_public_key_from_file(&ssh_credentials.ssh_pub_key_path)
-            .map_err(|_| CloudInitTemplateError::SshKeyReadError)?
+            .map_err(|_| CloudInitRendererError::SshKeyReadError)?
             .with_username(ssh_credentials.ssh_username.as_str())
-            .map_err(|_| CloudInitTemplateError::ContextCreationFailed)?
+            .map_err(|_| CloudInitRendererError::ContextCreationFailed)?
             .build()
-            .map_err(|_| CloudInitTemplateError::ContextCreationFailed)?;
+            .map_err(|_| CloudInitRendererError::ContextCreationFailed)?;
 
         // Create CloudInitTemplate with context
         let cloud_init_template = CloudInitTemplate::new(template_file, cloud_init_context)
-            .map_err(|_| CloudInitTemplateError::CloudInitTemplateCreationFailed)?;
+            .map_err(|_| CloudInitRendererError::CloudInitTemplateCreationFailed)?;
 
         // Render template to output file
         let output_path = output_dir.join(Self::CLOUD_INIT_OUTPUT_FILE);
         cloud_init_template
             .render(&output_path)
-            .map_err(|_| CloudInitTemplateError::CloudInitTemplateRenderFailed)?;
+            .map_err(|_| CloudInitRendererError::CloudInitTemplateRenderFailed)?;
 
         tracing::debug!(
             provider = %self.provider,
@@ -310,7 +310,7 @@ users:
     #[test]
     fn it_should_create_cloud_init_renderer_with_template_manager_and_provider() {
         let template_manager = Arc::new(TemplateManager::new(std::env::temp_dir()));
-        let renderer = CloudInitTemplateRenderer::new(template_manager, Provider::Lxd);
+        let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
 
         // Verify the renderer was created successfully
         // Just check that it contains the expected template manager reference
@@ -321,14 +321,14 @@ users:
     #[test]
     fn it_should_build_common_template_path() {
         // All providers use the common template path
-        let template_path = CloudInitTemplateRenderer::build_template_path("cloud-init.yml.tera");
+        let template_path = CloudInitRenderer::build_template_path("cloud-init.yml.tera");
         assert_eq!(template_path, "tofu/common/cloud-init.yml.tera");
     }
 
     #[tokio::test]
     async fn it_should_render_cloud_init_template_successfully() {
         let template_manager = create_mock_template_manager_with_cloud_init();
-        let renderer = CloudInitTemplateRenderer::new(template_manager, Provider::Lxd);
+        let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let ssh_credentials = create_mock_ssh_credentials(temp_dir.path());
@@ -367,7 +367,7 @@ users:
     #[tokio::test]
     async fn it_should_fail_when_ssh_key_file_missing() {
         let template_manager = create_mock_template_manager_with_cloud_init();
-        let renderer = CloudInitTemplateRenderer::new(template_manager, Provider::Lxd);
+        let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
 
         // Create SSH credentials with non-existent key file
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -384,7 +384,7 @@ users:
 
         assert!(result.is_err(), "Should fail when SSH key file is missing");
         match result.unwrap_err() {
-            CloudInitTemplateError::SshKeyReadError => {
+            CloudInitRendererError::SshKeyReadError => {
                 // Expected error type
             }
             other => panic!("Expected SshKeyReadError, got: {other:?}"),
@@ -394,7 +394,7 @@ users:
     #[tokio::test]
     async fn it_should_fail_when_output_directory_is_readonly() {
         let template_manager = create_mock_template_manager_with_cloud_init();
-        let renderer = CloudInitTemplateRenderer::new(template_manager, Provider::Lxd);
+        let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let ssh_credentials = create_mock_ssh_credentials(temp_dir.path());
@@ -415,7 +415,7 @@ users:
             "Should fail when output directory is readonly"
         );
         match result.unwrap_err() {
-            CloudInitTemplateError::CloudInitTemplateRenderFailed => {
+            CloudInitRendererError::CloudInitTemplateRenderFailed => {
                 // Expected error type
             }
             other => panic!("Expected CloudInitTemplateRenderFailed, got: {other:?}"),

@@ -29,7 +29,7 @@ use crate::domain::template::TemplateManager;
 use crate::domain::InstanceName;
 use crate::infrastructure::external_tools::ansible::AnsibleTemplateRenderer;
 use crate::infrastructure::external_tools::ansible::ANSIBLE_SUBFOLDER;
-use crate::infrastructure::external_tools::tofu::TofuTemplateRenderer;
+use crate::infrastructure::external_tools::tofu::TofuProjectGenerator;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
 use crate::testing::e2e::LXD_OPENTOFU_SUBFOLDER;
@@ -52,7 +52,7 @@ pub struct Services {
 
     // Template related services
     pub template_manager: Arc<TemplateManager>,
-    pub tofu_template_renderer: Arc<TofuTemplateRenderer>,
+    pub tofu_template_renderer: Arc<TofuProjectGenerator>,
     pub ansible_template_renderer: Arc<AnsibleTemplateRenderer>,
 
     // Infrastructure services
@@ -87,7 +87,7 @@ impl Services {
         let ansible_client = AnsibleClient::new(config.build_dir.join(ANSIBLE_SUBFOLDER));
 
         // Create provision template renderer
-        let tofu_template_renderer = TofuTemplateRenderer::new(
+        let tofu_template_renderer = TofuProjectGenerator::new(
             template_manager.clone(),
             config.build_dir.clone(),
             ssh_credentials,

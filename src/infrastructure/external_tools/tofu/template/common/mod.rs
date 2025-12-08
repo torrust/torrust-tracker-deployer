@@ -6,8 +6,8 @@
 pub mod renderer;
 pub mod wrappers;
 
-pub use renderer::cloud_init::{CloudInitTemplateError, CloudInitTemplateRenderer};
-pub use renderer::{TofuTemplateRenderer, TofuTemplateRendererError};
+pub use renderer::cloud_init::{CloudInitRenderer, CloudInitRendererError};
+pub use renderer::{TofuProjectGenerator, TofuProjectGeneratorError};
 pub use wrappers::{
     CloudInitContext, CloudInitContextBuilder, CloudInitContextError, CloudInitTemplate,
 };

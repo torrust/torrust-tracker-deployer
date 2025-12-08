@@ -42,6 +42,6 @@
 //!    operations and reduce I/O overhead.
 
 pub mod cloud_init;
-mod tofu_template_renderer;
+mod project_generator;
 
-pub use tofu_template_renderer::{TofuTemplateRenderer, TofuTemplateRendererError};
+pub use project_generator::{TofuProjectGenerator, TofuProjectGeneratorError};

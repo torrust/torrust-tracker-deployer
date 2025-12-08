@@ -7,5 +7,5 @@
 pub mod common;
 pub mod providers;
 
-pub use common::renderer::cloud_init::{CloudInitTemplateError, CloudInitTemplateRenderer};
-pub use common::renderer::{TofuTemplateRenderer, TofuTemplateRendererError};
+pub use common::renderer::cloud_init::{CloudInitRenderer, CloudInitRendererError};
+pub use common::renderer::{TofuProjectGenerator, TofuProjectGeneratorError};

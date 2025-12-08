@@ -5,13 +5,13 @@
 use crate::adapters::ssh::SshError;
 use crate::adapters::tofu::client::OpenTofuError;
 use crate::application::command_handlers::provision::ProvisionCommandHandlerError;
-use crate::infrastructure::external_tools::tofu::TofuTemplateRendererError;
+use crate::infrastructure::external_tools::tofu::TofuProjectGeneratorError;
 use crate::shared::command::CommandError;
 
 #[test]
 fn it_should_have_correct_error_type_conversions() {
     // Test that all error types can convert to ProvisionCommandHandlerError
-    let template_error = TofuTemplateRendererError::DirectoryCreationFailed {
+    let template_error = TofuProjectGeneratorError::DirectoryCreationFailed {
         directory: "/test".to_string(),
         source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
     };
