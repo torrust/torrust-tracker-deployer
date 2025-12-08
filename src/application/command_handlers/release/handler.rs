@@ -194,7 +194,7 @@ impl ReleaseCommandHandler {
         Self::init_tracker_database(environment, instance_ip)?;
 
         // Step 3: Render tracker configuration templates
-        let tracker_build_dir = self.render_tracker_templates(environment)?;
+        let tracker_build_dir = Self::render_tracker_templates(environment)?;
 
         // Step 4: Deploy tracker configuration to remote
         self.deploy_tracker_config_to_remote(environment, &tracker_build_dir, instance_ip)?;
@@ -279,15 +279,18 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, `ReleaseStep::RenderTrackerTemplates`) if rendering fails
+    #[allow(clippy::result_large_err)]
     fn render_tracker_templates(
-        &self,
         environment: &Environment<Releasing>,
     ) -> StepResult<PathBuf, ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::RenderTrackerTemplates;
 
         let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
-        let step =
-            RenderTrackerTemplatesStep::new(template_manager, environment.build_dir().clone());
+        let step = RenderTrackerTemplatesStep::new(
+            Arc::new(environment.clone()),
+            template_manager,
+            environment.build_dir().clone(),
+        );
 
         let tracker_build_dir = step.execute().map_err(|e| {
             (
@@ -361,6 +364,7 @@ impl ReleaseCommandHandler {
 
         let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
         let step = RenderDockerComposeTemplatesStep::new(
+            Arc::new(environment.clone()),
             template_manager,
             environment.build_dir().clone(),
         );

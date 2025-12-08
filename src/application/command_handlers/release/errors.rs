@@ -102,10 +102,7 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::TrackerDatabaseInit(message) => {
                 format!("ReleaseCommandHandlerError: Tracker database initialization failed - {message}")
             }
-            Self::Deployment { message, .. } => {
-                format!("ReleaseCommandHandlerError: Deployment failed - {message}")
-            }
-            Self::DeploymentFailed { message, .. } => {
+            Self::Deployment { message, .. } | Self::DeploymentFailed { message, .. } => {
                 format!("ReleaseCommandHandlerError: Deployment failed - {message}")
             }
             Self::ReleaseOperationFailed { name, message } => {
@@ -118,9 +115,10 @@ impl Traceable for ReleaseCommandHandlerError {
 
     fn trace_source(&self) -> Option<&dyn Traceable> {
         match self {
-            Self::Deployment { .. } => None, // Box<dyn Error> doesn't implement Traceable
+            // Box<dyn Error> doesn't implement Traceable
             Self::DeploymentFailed { source, .. } => Some(source),
-            Self::StatePersistence(_)
+            Self::Deployment { .. }
+            | Self::StatePersistence(_)
             | Self::EnvironmentNotFound { .. }
             | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_)
@@ -140,9 +138,10 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::TemplateRendering(_)
             | Self::TrackerStorageCreation(_)
             | Self::TrackerDatabaseInit(_) => ErrorKind::TemplateRendering,
-            Self::Deployment { .. } => ErrorKind::InfrastructureOperation,
+            Self::Deployment { .. } | Self::ReleaseOperationFailed { .. } => {
+                ErrorKind::InfrastructureOperation
+            }
             Self::DeploymentFailed { source, .. } => source.error_kind(),
-            Self::ReleaseOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
     }
 }

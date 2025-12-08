@@ -189,10 +189,8 @@ impl Traceable for DeployTrackerConfigStepError {
     }
 
     fn trace_source(&self) -> Option<&dyn Traceable> {
-        match self {
-            Self::AnsiblePlaybookFailed { .. } => None, // CommandError doesn't implement Traceable
-            _ => None,
-        }
+        // CommandError doesn't implement Traceable
+        None
     }
 }
 

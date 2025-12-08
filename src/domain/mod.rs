@@ -18,6 +18,7 @@ pub mod instance_name;
 pub mod profile_name;
 pub mod provider;
 pub mod template;
+pub mod tracker;
 
 // Re-export commonly used domain types for convenience
 pub use environment::{

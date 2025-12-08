@@ -157,7 +157,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
     #[test]
     fn it_should_create_template_with_valid_content() {
         let template_str = sample_template_content();
-        let ctx = TrackerContext::new();
+        let ctx = TrackerContext::default_config();
 
         let template = TrackerTemplate::new(template_str.clone(), ctx);
         assert!(template.is_ok());
@@ -169,7 +169,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
     #[test]
     fn it_should_reject_invalid_tera_syntax() {
         let invalid_str = r"{{ unclosed_variable".to_string();
-        let ctx = TrackerContext::new();
+        let ctx = TrackerContext::default_config();
 
         let result = TrackerTemplate::new(invalid_str, ctx);
         assert!(result.is_err());
@@ -178,7 +178,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
     #[test]
     fn it_should_render_template_unchanged_in_phase_4() {
         let template_str = sample_template_content();
-        let ctx = TrackerContext::new();
+        let ctx = TrackerContext::default_config();
 
         let template = TrackerTemplate::new(template_str.clone(), ctx).unwrap();
         let rendered = template.render().unwrap();
@@ -193,7 +193,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
         let output_path = temp_dir.path().join("tracker.toml");
 
         let template_str = sample_template_content();
-        let ctx = TrackerContext::new();
+        let ctx = TrackerContext::default_config();
 
         let template = TrackerTemplate::new(template_str.clone(), ctx).unwrap();
         let result = template.render_to_file(&output_path);
@@ -208,21 +208,21 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
     #[test]
     fn it_should_provide_context_accessor() {
         let file_content = sample_template_content();
-        let ctx = TrackerContext::new();
+        let ctx = TrackerContext::default_config();
 
         let template = TrackerTemplate::new(file_content, ctx).unwrap();
         let retrieved_context = template.context();
 
         // Should return the same context
         let json1 = serde_json::to_value(retrieved_context).unwrap();
-        let json2 = serde_json::to_value(TrackerContext::new()).unwrap();
+        let json2 = serde_json::to_value(TrackerContext::default_config()).unwrap();
         assert_eq!(json1, json2);
     }
 
     #[test]
     fn it_should_handle_write_errors_gracefully() {
         let template_str = sample_template_content();
-        let ctx = TrackerContext::new();
+        let ctx = TrackerContext::default_config();
         let template = TrackerTemplate::new(template_str, ctx).unwrap();
 
         // Try to write to an invalid path

@@ -36,6 +36,7 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
 use crate::infrastructure::templating::tracker::{
     TrackerProjectGenerator, TrackerProjectGeneratorError,
@@ -46,21 +47,28 @@ use crate::infrastructure::templating::tracker::{
 /// This step handles the preparation of Tracker configuration files
 /// by rendering templates to the build directory. The rendered files are
 /// then ready to be deployed to the remote host by the `DeployTrackerConfigStep`.
-pub struct RenderTrackerTemplatesStep {
+pub struct RenderTrackerTemplatesStep<S> {
+    environment: Arc<Environment<S>>,
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
 }
 
-impl RenderTrackerTemplatesStep {
+impl<S> RenderTrackerTemplatesStep<S> {
     /// Creates a new `RenderTrackerTemplatesStep`
     ///
     /// # Arguments
     ///
+    /// * `environment` - The deployment environment
     /// * `template_manager` - The template manager for accessing templates
     /// * `build_dir` - The build directory where templates will be rendered
     #[must_use]
-    pub fn new(template_manager: Arc<TemplateManager>, build_dir: PathBuf) -> Self {
+    pub fn new(
+        environment: Arc<Environment<S>>,
+        template_manager: Arc<TemplateManager>,
+        build_dir: PathBuf,
+    ) -> Self {
         Self {
+            environment,
             template_manager,
             build_dir,
         }
@@ -100,9 +108,9 @@ impl RenderTrackerTemplatesStep {
         let generator =
             TrackerProjectGenerator::new(&self.build_dir, self.template_manager.clone());
 
-        // Phase 4: Render with hardcoded values (no environment config needed)
-        // Phase 6: Will extract config from environment and pass to generator
-        generator.render()?;
+        // Extract tracker config from environment (Phase 6)
+        let tracker_config = &self.environment.context().user_inputs.tracker;
+        generator.render(Some(tracker_config))?;
 
         let tracker_build_dir = self.build_dir.join("tracker");
 
@@ -124,6 +132,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
+    use crate::domain::environment::testing::EnvironmentTestBuilder;
 
     #[test]
     fn it_should_render_tracker_templates_to_build_directory() {
@@ -148,9 +157,17 @@ threshold = "info"
         )
         .expect("Failed to write tracker template");
 
+        let (environment, _, _, _temp_dir) =
+            EnvironmentTestBuilder::new().build_with_custom_paths();
+        let environment = Arc::new(environment);
+
         let template_manager = TemplateManager::new(&templates_dir);
 
-        let step = RenderTrackerTemplatesStep::new(Arc::new(template_manager), build_dir.clone());
+        let step = RenderTrackerTemplatesStep::new(
+            environment,
+            Arc::new(template_manager),
+            build_dir.clone(),
+        );
 
         let result = step.execute();
         assert!(
@@ -176,7 +193,7 @@ threshold = "info"
     }
 
     #[test]
-    fn it_should_return_error_when_template_manager_fails() {
+    fn it_should_use_embedded_template_when_not_in_external_dir() {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let templates_dir = temp_dir.path().join("templates");
         let build_dir = temp_dir.path().join("build");
@@ -184,14 +201,30 @@ threshold = "info"
         // Create empty templates directory (no tracker templates)
         fs::create_dir_all(&templates_dir).expect("Failed to create templates dir");
 
+        let (environment, _, _, _temp_dir) =
+            EnvironmentTestBuilder::new().build_with_custom_paths();
+        let environment = Arc::new(environment);
+
         let template_manager = TemplateManager::new(&templates_dir);
 
-        let step = RenderTrackerTemplatesStep::new(Arc::new(template_manager), build_dir);
+        let step = RenderTrackerTemplatesStep::new(
+            environment,
+            Arc::new(template_manager),
+            build_dir.clone(),
+        );
 
         let result = step.execute();
         assert!(
-            result.is_err(),
-            "Should return error when template not found"
+            result.is_ok(),
+            "Should succeed using embedded template: {:?}",
+            result.err()
+        );
+
+        // Verify tracker.toml was created using embedded template
+        let tracker_toml = build_dir.join("tracker/tracker.toml");
+        assert!(
+            tracker_toml.exists(),
+            "tracker.toml should be created from embedded template"
         );
     }
 
@@ -211,9 +244,17 @@ threshold = "info"
         )
         .expect("Failed to write tracker template");
 
+        let (environment, _, _, _temp_dir) =
+            EnvironmentTestBuilder::new().build_with_custom_paths();
+        let environment = Arc::new(environment);
+
         let template_manager = TemplateManager::new(&templates_dir);
 
-        let step = RenderTrackerTemplatesStep::new(Arc::new(template_manager), build_dir.clone());
+        let step = RenderTrackerTemplatesStep::new(
+            environment,
+            Arc::new(template_manager),
+            build_dir.clone(),
+        );
 
         step.execute().expect("Template rendering should succeed");
 

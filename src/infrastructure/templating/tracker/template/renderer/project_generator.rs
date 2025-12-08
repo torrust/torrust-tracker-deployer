@@ -94,8 +94,12 @@ impl TrackerProjectGenerator {
     ///
     /// This method:
     /// 1. Creates the build directory structure for Tracker config
-    /// 2. Renders tracker.toml.tera template with hardcoded values (Phase 4)
+    /// 2. Renders tracker.toml.tera template with provided or default configuration
     /// 3. Writes the rendered content to tracker.toml
+    ///
+    /// # Arguments
+    ///
+    /// * `tracker_config` - Optional tracker configuration. If None, uses default hardcoded values.
     ///
     /// # Errors
     ///
@@ -106,12 +110,15 @@ impl TrackerProjectGenerator {
     /// - Writing output file fails
     #[instrument(
         name = "tracker_project_generator_render",
-        skip(self),
+        skip(self, tracker_config),
         fields(
             build_dir = %self.build_dir.display()
         )
     )]
-    pub fn render(&self) -> Result<(), TrackerProjectGeneratorError> {
+    pub fn render(
+        &self,
+        tracker_config: Option<&crate::domain::environment::TrackerConfig>,
+    ) -> Result<(), TrackerProjectGeneratorError> {
         // Create build directory for tracker templates
         let tracker_build_dir = self.build_dir.join(Self::TRACKER_BUILD_PATH);
         std::fs::create_dir_all(&tracker_build_dir).map_err(|source| {
@@ -121,9 +128,11 @@ impl TrackerProjectGenerator {
             }
         })?;
 
-        // Phase 4: Use empty context (all values hardcoded in template)
-        // Phase 6: Will populate context with environment configuration
-        let context = TrackerContext::new();
+        // Create context from tracker config or use defaults
+        let context = match tracker_config {
+            Some(config) => TrackerContext::from_config(config),
+            None => TrackerContext::default_config(),
+        };
 
         // Render tracker.toml using TrackerRenderer
         self.tracker_renderer.render(&context, &tracker_build_dir)?;
@@ -146,7 +155,7 @@ mod tests {
         let template_manager = create_test_template_manager();
         let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
 
-        generator.render().expect("Failed to render templates");
+        generator.render(None).expect("Failed to render templates");
 
         let tracker_dir = build_dir.join("tracker");
         assert!(
@@ -167,7 +176,7 @@ mod tests {
         let template_manager = create_test_template_manager();
         let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
 
-        generator.render().expect("Failed to render templates");
+        generator.render(None).expect("Failed to render templates");
 
         let tracker_toml_path = build_dir.join("tracker/tracker.toml");
         assert!(tracker_toml_path.exists(), "tracker.toml should be created");
@@ -201,7 +210,7 @@ mod tests {
         let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
 
         // Should succeed because TemplateManager extracts from embedded resources
-        let result = generator.render();
+        let result = generator.render(None);
         assert!(
             result.is_ok(),
             "Should succeed using embedded template: {:?}",

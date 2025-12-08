@@ -125,6 +125,12 @@ pub use state::{
 };
 pub use user_inputs::UserInputs;
 
+// Re-export tracker types for convenience
+pub use crate::domain::tracker::{
+    DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig,
+    UdpTrackerConfig,
+};
+
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::{InstanceName, ProfileName};
@@ -1055,6 +1061,7 @@ mod tests {
                     provider_config,
                     ssh_credentials,
                     ssh_port: 22,
+                    tracker: crate::domain::tracker::TrackerConfig::default(),
                 },
                 internal_config: InternalConfig {
                     data_dir: data_dir.clone(),

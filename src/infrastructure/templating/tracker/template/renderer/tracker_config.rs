@@ -151,7 +151,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
         let renderer = TrackerConfigRenderer::new(template_manager);
 
         let temp_output = TempDir::new().expect("Failed to create output dir");
-        let ctx = TrackerContext::new();
+        let ctx = TrackerContext::default_config();
 
         let result = renderer.render(&ctx, temp_output.path());
         assert!(result.is_ok());
@@ -170,7 +170,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
         let renderer = TrackerConfigRenderer::new(template_manager);
 
         let temp_output = TempDir::new().expect("Failed to create output dir");
-        let ctx = TrackerContext::new();
+        let ctx = TrackerContext::default_config();
 
         renderer
             .render(&ctx, temp_output.path())
@@ -192,7 +192,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
         let renderer = TrackerConfigRenderer::new(template_manager);
 
         let temp_output = TempDir::new().expect("Failed to create output dir");
-        let context = TrackerContext::new();
+        let context = TrackerContext::default_config();
 
         // Should succeed because TemplateManager extracts from embedded resources
         let result = renderer.render(&context, temp_output.path());

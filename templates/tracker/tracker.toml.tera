@@ -8,7 +8,7 @@ threshold = "info"
 
 [core]
 listed = false
-private = false
+private = {{ tracker_core_private }}
 
 [core.tracker_policy]
 persistent_torrent_completed_stat = true
@@ -24,16 +24,17 @@ on_reverse_proxy = true
 driver = "sqlite3"
 # Note: This path is inside the Docker container. The host path is /opt/torrust/storage/tracker/database/
 # which is mounted to /var/lib/torrust/tracker/ inside the container.
-path = "/var/lib/torrust/tracker/database/sqlite3.db"
+path = "/var/lib/torrust/tracker/database/{{ tracker_database_name }}"
 
+{% for udp_tracker in udp_trackers %}
 [[udp_trackers]]
-bind_address = "0.0.0.0:6868"
+bind_address = "{{ udp_tracker.bind_address }}"
 
-[[udp_trackers]]
-bind_address = "0.0.0.0:6969"
-
+{% endfor %}
+{% for http_tracker in http_trackers %}
 [[http_trackers]]
-bind_address = "0.0.0.0:7070"
+bind_address = "{{ http_tracker.bind_address }}"
 
+{% endfor %}
 [http_api]
 bind_address = "0.0.0.0:1212"
