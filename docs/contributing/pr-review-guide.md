@@ -44,7 +44,7 @@ Verify contributors followed these project conventions:
 ### Templates (if applicable)
 
 - [ ] **Tera templates use correct syntax**: `{{ variable }}` not `{ { variable } }` (see [templates.md](./templates.md))
-- [ ] **Static Ansible playbooks** (without `.tera` extension) are registered in `src/infrastructure/external_tools/ansible/template/renderer/mod.rs`
+- [ ] **Static Ansible playbooks** (without `.tera` extension) are registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs`
 
 ## 🚩 Quick Red Flags
 

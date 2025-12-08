@@ -149,7 +149,7 @@ Write standard Ansible YAML with no Tera variables:
 
 **This is the step that's easy to miss!**
 
-Add your playbook filename to the array in `src/infrastructure/external_tools/ansible/template/renderer/mod.rs`:
+Add your playbook filename to the array in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs`:
 
 ```rust
 // Find the copy_static_templates method
@@ -268,7 +268,7 @@ When adding a static Ansible playbook:
 
 - [ ] Create `.yml` file in `templates/ansible/`
 - [ ] Write standard Ansible YAML (no Tera variables)
-- [ ] Add filename to `copy_static_templates` array in `src/infrastructure/external_tools/ansible/template/renderer/mod.rs`
+- [ ] Add filename to `copy_static_templates` array in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs`
 - [ ] Update file count in debug log
 - [ ] Run E2E tests to verify
 - [ ] Create application step to execute the playbook

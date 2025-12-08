@@ -82,18 +82,18 @@ For Ansible templates, the system uses a **hybrid approach** combining static pl
 - name: Configure UFW firewall
   hosts: all
   vars_files:
-    - variables.yml  # Load centralized variables
-  
+    - variables.yml # Load centralized variables
+
   tasks:
     - name: Allow SSH access
       community.general.ufw:
-        port: "{{ ssh_port }}"  # Variable from variables.yml
+        port: "{{ ssh_port }}" # Variable from variables.yml
 ```
 
 ```yaml
 # templates/ansible/variables.yml.tera (rendered once)
 ---
-ssh_port: {{ ssh_port }}
+ssh_port: { { ssh_port } }
 ```
 
 ## 🔧 Key Components
@@ -106,9 +106,14 @@ ssh_port: {{ ssh_port }}
 
 ### Template Renderers
 
-- **OpenTofu Renderer**: Processes infrastructure templates
-- **Ansible Renderer**: Processes configuration management templates
-- Handle the template → build directory rendering process
+The system uses a **Project Generator** pattern (Orchestrator/Worker) to standardize how different tools (OpenTofu, Ansible) generate their project files.
+
+- **Orchestrator (`ProjectGenerator`)**: Manages the overall generation process.
+  - `OpenTofuProjectGenerator`
+  - `AnsibleProjectGenerator`
+- **Workers (`Renderer`)**: Handle specific file types.
+  - **Static File Copying**: Copies files without `.tera` extension (requires explicit registration).
+  - **Dynamic Template Rendering**: Renders `.tera` files with variable substitution (e.g., `InventoryRenderer`, `VariablesRenderer`).
 
 **Two-Phase Processing:**
 
