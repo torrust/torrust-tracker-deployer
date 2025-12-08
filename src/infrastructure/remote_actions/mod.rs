@@ -6,9 +6,9 @@
 //!
 //! ## Available Remote Actions
 //!
-//! - `cloud_init` - Cloud-init status checking and validation
-//! - `docker` - Docker installation and service management
-//! - `docker_compose` - Docker Compose installation and validation
+//! - `validators::cloud_init` - Cloud-init status checking and validation
+//! - `validators::docker` - Docker installation and service management
+//! - `validators::docker_compose` - Docker Compose installation and validation
 //!
 //! ## Architecture Pattern
 //!
@@ -25,6 +25,13 @@ use std::net::IpAddr;
 use thiserror::Error;
 
 use crate::shared::command::CommandError;
+
+pub mod validators;
+
+pub use validators::cloud_init::CloudInitValidator;
+pub use validators::docker::DockerValidator;
+pub use validators::docker_compose::DockerComposeValidator;
+pub use validators::running_services::RunningServicesValidator;
 
 /// Errors that can occur during remote action execution
 #[derive(Error, Debug)]
@@ -51,16 +58,6 @@ pub enum RemoteActionError {
         message: String,
     },
 }
-
-pub mod cloud_init;
-pub mod docker;
-pub mod docker_compose;
-pub mod running_services;
-
-pub use cloud_init::CloudInitValidator;
-pub use docker::DockerValidator;
-pub use docker_compose::DockerComposeValidator;
-pub use running_services::RunningServicesValidator;
 
 /// Trait for remote actions that can be executed on a server via SSH
 ///

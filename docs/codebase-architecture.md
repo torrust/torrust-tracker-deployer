@@ -346,9 +346,9 @@ Application-specific template rendering and configuration for external tools:
 **Level 3: Remote System Operations:**
 
 - ✅ `src/infrastructure/remote_actions/mod.rs` - Remote operations root
-- ✅ `src/infrastructure/remote_actions/cloud_init.rs` - Validate cloud-init completion
-- ✅ `src/infrastructure/remote_actions/docker.rs` - Verify Docker installation
-- ✅ `src/infrastructure/remote_actions/docker_compose.rs` - Validate Docker Compose
+- ✅ `src/infrastructure/remote_actions/validators/cloud_init.rs` - Validate cloud-init completion
+- ✅ `src/infrastructure/remote_actions/validators/docker.rs` - Verify Docker installation
+- ✅ `src/infrastructure/remote_actions/validators/docker_compose.rs` - Validate Docker Compose
 
 **Persistence Layer:**
 
