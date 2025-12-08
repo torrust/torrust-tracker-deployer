@@ -10,7 +10,8 @@ use super::errors::ReleaseCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
-    application::CreateTrackerStorageStep, DeployComposeFilesStep, RenderDockerComposeTemplatesStep,
+    application::{CreateTrackerStorageStep, InitTrackerDatabaseStep},
+    DeployComposeFilesStep, RenderDockerComposeTemplatesStep,
 };
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ReleaseFailureContext, ReleaseStep};
@@ -164,8 +165,10 @@ impl ReleaseCommandHandler {
     /// Execute the release workflow with step tracking
     ///
     /// This method orchestrates the complete release workflow:
-    /// 1. Render Docker Compose templates to the build directory
-    /// 2. Deploy compose files to the remote host via Ansible
+    /// 1. Create tracker storage directories
+    /// 2. Initialize tracker `SQLite` database
+    /// 3. Render Docker Compose templates to the build directory
+    /// 4. Deploy compose files to the remote host via Ansible
     ///
     /// If an error occurs, it returns both the error and the step that was being
     /// executed, enabling accurate failure context generation.
@@ -186,10 +189,13 @@ impl ReleaseCommandHandler {
         // Step 1: Create tracker storage directories
         Self::create_tracker_storage(environment, instance_ip)?;
 
-        // Step 2: Render Docker Compose templates
+        // Step 2: Initialize tracker database
+        Self::init_tracker_database(environment, instance_ip)?;
+
+        // Step 3: Render Docker Compose templates
         let compose_build_dir = self.render_docker_compose_templates(environment).await?;
 
-        // Step 3: Deploy compose files to remote
+        // Step 4: Deploy compose files to remote
         self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
@@ -224,6 +230,38 @@ impl ReleaseCommandHandler {
             command = "release",
             step = %current_step,
             "Tracker storage directories created successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Initialize tracker database on the remote host
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::InitTrackerDatabase`) if initialization fails
+    #[allow(clippy::result_large_err)]
+    fn init_tracker_database(
+        environment: &Environment<Releasing>,
+        _instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::InitTrackerDatabase;
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
+
+        InitTrackerDatabaseStep::new(ansible_client)
+            .execute()
+            .map_err(|e| {
+                (
+                    ReleaseCommandHandlerError::TrackerDatabaseInit(e.to_string()),
+                    current_step,
+                )
+            })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Tracker database initialized successfully"
         );
 
         Ok(())

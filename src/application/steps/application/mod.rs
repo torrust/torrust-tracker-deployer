@@ -7,6 +7,7 @@
 //! ## Available Steps
 //!
 //! - `create_tracker_storage` - Creates tracker storage directory structure on remote host
+//! - `init_tracker_database` - Initializes `SQLite` database file for the tracker
 //! - `deploy_compose_files` - Deploys Docker Compose files to remote host via Ansible
 //! - `start_services` - Starts Docker Compose services via Ansible
 //! - `run` - Legacy run step (placeholder)
@@ -26,10 +27,12 @@
 
 pub mod create_tracker_storage;
 pub mod deploy_compose_files;
+pub mod init_tracker_database;
 pub mod run;
 pub mod start_services;
 
 pub use create_tracker_storage::CreateTrackerStorageStep;
 pub use deploy_compose_files::{DeployComposeFilesStep, DeployComposeFilesStepError};
+pub use init_tracker_database::InitTrackerDatabaseStep;
 pub use run::{RunStep, RunStepError};
 pub use start_services::{StartServicesStep, StartServicesStepError};

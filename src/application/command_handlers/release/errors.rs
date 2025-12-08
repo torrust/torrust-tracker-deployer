@@ -44,6 +44,10 @@ pub enum ReleaseCommandHandlerError {
     #[error("Tracker storage creation failed: {0}")]
     TrackerStorageCreation(String),
 
+    /// Tracker database initialization failed
+    #[error("Tracker database initialization failed: {0}")]
+    TrackerDatabaseInit(String),
+
     /// Deployment to remote host failed
     #[error("Deployment to remote host failed: {message}")]
     DeploymentFailed {
@@ -85,6 +89,9 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::TrackerStorageCreation(message) => {
                 format!("ReleaseCommandHandlerError: Tracker storage creation failed - {message}")
             }
+            Self::TrackerDatabaseInit(message) => {
+                format!("ReleaseCommandHandlerError: Tracker database initialization failed - {message}")
+            }
             Self::DeploymentFailed { message, .. } => {
                 format!("ReleaseCommandHandlerError: Deployment failed - {message}")
             }
@@ -105,6 +112,7 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::InvalidState(_)
             | Self::TemplateRendering(_)
             | Self::TrackerStorageCreation(_)
+            | Self::TrackerDatabaseInit(_)
             | Self::ReleaseOperationFailed { .. } => None,
         }
     }
@@ -115,9 +123,9 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_) => ErrorKind::Configuration,
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
-            Self::TemplateRendering(_) | Self::TrackerStorageCreation(_) => {
-                ErrorKind::TemplateRendering
-            }
+            Self::TemplateRendering(_)
+            | Self::TrackerStorageCreation(_)
+            | Self::TrackerDatabaseInit(_) => ErrorKind::TemplateRendering,
             Self::DeploymentFailed { source, .. } => source.error_kind(),
             Self::ReleaseOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
@@ -258,6 +266,31 @@ For more information, see docs/user-guide/commands.md"
 Common causes:
 - Insufficient disk space on target instance
 - Permission denied on target directories
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::TrackerDatabaseInit(_) => {
+                "Tracker Database Initialization Failed - Troubleshooting:
+
+1. Verify the tracker storage directories were created:
+   ssh <user>@<instance-ip> 'ls -la /opt/torrust/storage/tracker/lib/database'
+
+2. Check that the instance has sufficient disk space:
+   df -h
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/init-tracker-database.yml
+
+4. Check file permissions on the database directory
+
+5. Review the error message above for specific details
+
+Common causes:
+- Storage directories don't exist (run CreateTrackerStorage step first)
+- Insufficient disk space on target instance
+- Permission denied on database directory
 - Ansible playbook not found
 - Network connectivity issues
 

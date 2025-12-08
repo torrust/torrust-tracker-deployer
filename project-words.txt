@@ -104,6 +104,7 @@ hotfixes
 htdocs
 hugepages
 impls
+isreg
 journalctl
 jsonlint
 keepalive

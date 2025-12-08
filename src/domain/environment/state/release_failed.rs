@@ -32,6 +32,8 @@ use crate::shared::error::ErrorKind;
 pub enum ReleaseStep {
     /// Creating tracker storage directories on remote host
     CreateTrackerStorage,
+    /// Initializing tracker `SQLite` database file
+    InitTrackerDatabase,
     /// Rendering Docker Compose templates to the build directory
     RenderDockerComposeTemplates,
     /// Deploying compose files to the remote host via Ansible
@@ -42,6 +44,7 @@ impl fmt::Display for ReleaseStep {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             Self::CreateTrackerStorage => "Create Tracker Storage",
+            Self::InitTrackerDatabase => "Initialize Tracker Database",
             Self::RenderDockerComposeTemplates => "Render Docker Compose Templates",
             Self::DeployComposeFilesToRemote => "Deploy Compose Files to Remote",
         };

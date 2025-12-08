@@ -302,6 +302,7 @@ impl AnsibleProjectGenerator {
             "configure-security-updates.yml",
             "configure-firewall.yml",
             "create-tracker-storage.yml",
+            "init-tracker-database.yml",
             "deploy-compose-files.yml",
             "run-compose-services.yml",
         ] {
@@ -311,7 +312,7 @@ impl AnsibleProjectGenerator {
 
         tracing::debug!(
             "Successfully copied {} static template files",
-            10 // ansible.cfg + 9 playbooks
+            11 // ansible.cfg + 10 playbooks
         );
 
         Ok(())
