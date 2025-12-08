@@ -76,6 +76,7 @@ distutils
 doctest
 doctests
 downcasted
+drwxr
 downcasting
 dpkg
 dtolnay
@@ -110,6 +111,7 @@ keygen
 keypair
 keyrings
 larstobi
+leechers
 lifecycles
 lineinfile
 listenfd

@@ -34,17 +34,19 @@ From [docs/roadmap.md](../roadmap.md):
 
 Slices will be implemented sequentially, each delivering a working deployment:
 
-- [ ] **3.2.1** Hello World slice (scaffolding)
+- [x] **3.2.1** Hello World slice (scaffolding) - ✅ #217
 
   - Create `release` and `run` commands structure (App + UI layers)
-  - Add minimal docker-compose template with hello-world container
+  - Add minimal docker-compose template with nginx demo container
   - Validate full pipeline: release → run → verify container running
+  - **Specification**: [docs/issues/217-demo-slice-release-run-commands.md](217-demo-slice-release-run-commands.md)
 
-- [ ] **3.2.2** Torrust Tracker slice
+- [ ] **3.2.2** Torrust Tracker slice - #220
 
-  - Replace hello-world with Torrust Tracker service
+  - Replace nginx demo with Torrust Tracker service
   - Add tracker configuration template (start with hardcoded defaults)
   - Progressively expose configuration options to environment config
+  - **Specification**: [docs/issues/220-tracker-slice-release-run-commands.md](220-tracker-slice-release-run-commands.md)
 
 - [ ] **3.2.3** MySQL slice
 
