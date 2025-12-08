@@ -12,6 +12,9 @@ pub use ansible_host::{AnsibleHost, AnsibleHostError};
 pub use ansible_port::{AnsiblePort, AnsiblePortError};
 pub use ssh_private_key_file::{SshPrivateKeyFile, SshPrivateKeyFileError};
 
+pub mod builder;
+pub use builder::InventoryContextBuilder;
+
 /// Errors that can occur when creating an `InventoryContext`
 #[derive(Debug, Error)]
 pub enum InventoryContextError {
@@ -47,82 +50,6 @@ pub struct InventoryContext {
     ansible_ssh_private_key_file: SshPrivateKeyFile,
     ansible_port: AnsiblePort,
     ansible_user: String,
-}
-
-/// Builder for `InventoryContext` with fluent interface
-#[derive(Debug, Default)]
-#[allow(clippy::struct_field_names)] // Field names mirror Ansible inventory variables
-pub struct InventoryContextBuilder {
-    ansible_host: Option<AnsibleHost>,
-    ansible_ssh_private_key_file: Option<SshPrivateKeyFile>,
-    ansible_port: Option<AnsiblePort>,
-    ansible_user: Option<String>,
-}
-
-impl InventoryContextBuilder {
-    /// Creates a new empty builder
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Sets the Ansible host for the builder.
-    #[must_use]
-    pub fn with_host(mut self, ansible_host: AnsibleHost) -> Self {
-        self.ansible_host = Some(ansible_host);
-        self
-    }
-
-    /// Sets the SSH port for the builder.
-    #[must_use]
-    pub fn with_ssh_port(mut self, ansible_port: AnsiblePort) -> Self {
-        self.ansible_port = Some(ansible_port);
-        self
-    }
-
-    /// Sets the SSH private key file path for the builder.
-    #[must_use]
-    pub fn with_ssh_priv_key_path(mut self, ssh_private_key_file: SshPrivateKeyFile) -> Self {
-        self.ansible_ssh_private_key_file = Some(ssh_private_key_file);
-        self
-    }
-
-    /// Sets the Ansible user for the builder.
-    #[must_use]
-    pub fn with_ansible_user(mut self, ansible_user: String) -> Self {
-        self.ansible_user = Some(ansible_user);
-        self
-    }
-
-    /// Builds the `InventoryContext`
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if any required field is missing
-    pub fn build(self) -> Result<InventoryContext, InventoryContextError> {
-        let ansible_host = self
-            .ansible_host
-            .ok_or(InventoryContextError::MissingAnsibleHost)?;
-
-        let ansible_ssh_private_key_file = self
-            .ansible_ssh_private_key_file
-            .ok_or(InventoryContextError::MissingSshPrivateKeyFile)?;
-
-        let ansible_port = self
-            .ansible_port
-            .ok_or(InventoryContextError::MissingSshPort)?;
-
-        let ansible_user = self
-            .ansible_user
-            .ok_or(InventoryContextError::MissingAnsibleUser)?;
-
-        Ok(InventoryContext {
-            ansible_host,
-            ansible_ssh_private_key_file,
-            ansible_port,
-            ansible_user,
-        })
-    }
 }
 
 impl InventoryContext {
@@ -333,5 +260,17 @@ mod tests {
         );
         assert_eq!(inventory_context.ansible_port(), 22);
         assert_eq!(inventory_context.ansible_user(), "ubuntu");
+    }
+
+    #[test]
+    fn it_should_create_inventory_context_with_ipv6() {
+        let host = AnsibleHost::from_str("2001:db8::1").unwrap();
+        let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
+        let ssh_port = AnsiblePort::new(22).unwrap();
+        let user = "ubuntu".to_string();
+
+        let inventory_context = InventoryContext::new(host, ssh_key, ssh_port, user).unwrap();
+
+        assert_eq!(inventory_context.ansible_host(), "2001:db8::1");
     }
 }
