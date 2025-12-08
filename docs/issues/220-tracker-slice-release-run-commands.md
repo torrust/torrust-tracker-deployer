@@ -436,10 +436,39 @@ rg "external_tools" src/
 
 - [x] Create `templates/ansible/create-tracker-storage.yml` (static playbook)
 - [x] Register playbook in `AnsibleProjectGenerator::copy_static_templates`
-- [x] Create `CreateTrackerStorageStep` in `src/application/steps/system/create_tracker_storage.rs` following the pattern of `InstallDockerStep`
+- [x] Create `CreateTrackerStorageStep` in `src/application/steps/application/create_tracker_storage.rs` following the pattern of `InstallDockerStep`
 - [x] Add step invocation to `ReleaseCommandHandler::execute_release_workflow()` (before rendering templates)
 - [x] Add `CreateTrackerStorage` to `ReleaseStep` enum and error handling
-- [ ] Run manual E2E test to verify directories are created
+- [x] Run manual E2E test to verify directories are created
+
+**Manual E2E Test Results** (✅ PASSED):
+
+```bash
+# Test executed: 2025-12-08 15:29 UTC
+# Environment: test-phase1 (LXD VM)
+# VM IP: 10.140.190.105
+
+# Verified directory structure
+$ ssh -i fixtures/testing_rsa torrust@$VM_IP "find /opt/torrust/storage/tracker -type d | sort"
+/opt/torrust/storage/tracker
+/opt/torrust/storage/tracker/etc
+/opt/torrust/storage/tracker/lib
+/opt/torrust/storage/tracker/lib/database
+/opt/torrust/storage/tracker/log
+
+# Verified ownership and permissions
+$ ssh -i fixtures/testing_rsa torrust@$VM_IP "ls -ld /opt/torrust/storage/tracker/*"
+drwxr-xr-x 2 torrust torrust 4096 Dec  8 15:29 /opt/torrust/storage/tracker/etc
+drwxr-xr-x 3 torrust torrust 4096 Dec  8 15:29 /opt/torrust/storage/tracker/lib
+drwxr-xr-x 2 torrust torrust 4096 Dec  8 15:29 /opt/torrust/storage/tracker/log
+
+✅ All verification checks passed:
+- Directory structure correct
+- Ownership: torrust:torrust (ansible_user)
+- Permissions: 0755 (drwxr-xr-x)
+- Executed as part of ReleaseCommand workflow
+- Idempotent operation
+```
 
 **Playbook Content**:
 
@@ -466,13 +495,15 @@ rg "external_tools" src/
 **Verification** (after running complete E2E workflow through step 4):
 
 ```bash
+# Note: Use username "torrust" for all future tests (not "ubuntu")
+
 # Verify directories exist on VM
-ssh -i fixtures/testing_rsa ubuntu@$VM_IP "ls -la /opt/torrust/storage/tracker/"
+ssh -i fixtures/testing_rsa torrust@$VM_IP "ls -la /opt/torrust/storage/tracker/"
 
 # Expected: Three subdirectories (etc, lib, log) with correct permissions
-# drwxr-xr-x 2 ubuntu ubuntu 4096 ... etc
-# drwxr-xr-x 3 ubuntu ubuntu 4096 ... lib
-# drwxr-xr-x 2 ubuntu ubuntu 4096 ... log
+# drwxr-xr-x 2 torrust torrust 4096 ... etc
+# drwxr-xr-x 3 torrust torrust 4096 ... lib
+# drwxr-xr-x 2 torrust torrust 4096 ... log
 ```
 
 ### Phase 2: Initialize SQLite Database (45 mins)
