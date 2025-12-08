@@ -40,6 +40,10 @@ pub enum ReleaseCommandHandlerError {
     #[error("Template rendering failed: {0}")]
     TemplateRendering(String),
 
+    /// Tracker storage directory creation failed
+    #[error("Tracker storage creation failed: {0}")]
+    TrackerStorageCreation(String),
+
     /// Deployment to remote host failed
     #[error("Deployment to remote host failed: {message}")]
     DeploymentFailed {
@@ -78,6 +82,9 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::TemplateRendering(message) => {
                 format!("ReleaseCommandHandlerError: Template rendering failed - {message}")
             }
+            Self::TrackerStorageCreation(message) => {
+                format!("ReleaseCommandHandlerError: Tracker storage creation failed - {message}")
+            }
             Self::DeploymentFailed { message, .. } => {
                 format!("ReleaseCommandHandlerError: Deployment failed - {message}")
             }
@@ -97,6 +104,7 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_)
             | Self::TemplateRendering(_)
+            | Self::TrackerStorageCreation(_)
             | Self::ReleaseOperationFailed { .. } => None,
         }
     }
@@ -107,7 +115,9 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_) => ErrorKind::Configuration,
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
-            Self::TemplateRendering(_) => ErrorKind::TemplateRendering,
+            Self::TemplateRendering(_) | Self::TrackerStorageCreation(_) => {
+                ErrorKind::TemplateRendering
+            }
             Self::DeploymentFailed { source, .. } => source.error_kind(),
             Self::ReleaseOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
@@ -135,6 +145,7 @@ impl ReleaseCommandHandlerError {
     /// assert!(help.contains("Troubleshooting"));
     /// ```
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn help(&self) -> &'static str {
         match self {
             Self::EnvironmentNotFound { .. } => {
@@ -225,6 +236,30 @@ Common causes:
 - Invalid template syntax
 - Insufficient disk space
 - Permission denied on build directory
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::TrackerStorageCreation(_) => {
+                "Tracker Storage Creation Failed - Troubleshooting:
+
+1. Verify the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+2. Check that the instance has sufficient disk space:
+   df -h
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/create-tracker-storage.yml
+
+4. Check Ansible execution permissions
+
+5. Review the error message above for specific details
+
+Common causes:
+- Insufficient disk space on target instance
+- Permission denied on target directories
+- Ansible playbook not found
+- Network connectivity issues
 
 For more information, see docs/user-guide/commands.md"
             }

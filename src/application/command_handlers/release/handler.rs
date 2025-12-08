@@ -9,7 +9,9 @@ use tracing::{error, info, instrument};
 use super::errors::ReleaseCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
-use crate::application::steps::{DeployComposeFilesStep, RenderDockerComposeTemplatesStep};
+use crate::application::steps::{
+    application::CreateTrackerStorageStep, DeployComposeFilesStep, RenderDockerComposeTemplatesStep,
+};
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ReleaseFailureContext, ReleaseStep};
 use crate::domain::environment::{Configured, Environment, Released, Releasing};
@@ -181,15 +183,50 @@ impl ReleaseCommandHandler {
         environment: &Environment<Releasing>,
         instance_ip: IpAddr,
     ) -> StepResult<Environment<Released>, ReleaseCommandHandlerError, ReleaseStep> {
-        // Step 1: Render Docker Compose templates
+        // Step 1: Create tracker storage directories
+        Self::create_tracker_storage(environment, instance_ip)?;
+
+        // Step 2: Render Docker Compose templates
         let compose_build_dir = self.render_docker_compose_templates(environment).await?;
 
-        // Step 2: Deploy compose files to remote
+        // Step 3: Deploy compose files to remote
         self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
 
         Ok(released)
+    }
+
+    /// Create tracker storage directories on the remote host
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::CreateTrackerStorage`) if creation fails
+    #[allow(clippy::result_large_err)]
+    fn create_tracker_storage(
+        environment: &Environment<Releasing>,
+        _instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::CreateTrackerStorage;
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
+
+        CreateTrackerStorageStep::new(ansible_client)
+            .execute()
+            .map_err(|e| {
+                (
+                    ReleaseCommandHandlerError::TrackerStorageCreation(e.to_string()),
+                    current_step,
+                )
+            })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Tracker storage directories created successfully"
+        );
+
+        Ok(())
     }
 
     /// Render Docker Compose templates to the build directory

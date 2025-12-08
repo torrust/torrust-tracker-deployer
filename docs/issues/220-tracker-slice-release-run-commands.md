@@ -297,7 +297,7 @@ pub struct HttpApiConfig {
 Track completion status for each phase:
 
 - [x] **Phase 0**: Rename Module for Clarity (30 mins) - ✅ Completed in commit 2d5625c
-- [ ] **Phase 1**: Create Storage Directories (30 mins)
+- [x] **Phase 1**: Create Storage Directories (30 mins) - ✅ Completed
 - [ ] **Phase 2**: Initialize SQLite Database (45 mins)
 - [ ] **Phase 3**: Add Docker Compose `.env` File (1 hour)
 - [ ] **Phase 4**: Add Tracker Configuration Template (1.5 hours)
@@ -428,15 +428,18 @@ rg "external_tools" src/
 
 ### Phase 1: Create Storage Directories (30 mins)
 
-**Goal**: Provision VM has correct directory structure for tracker
+**Goal**: Released VM has correct directory structure for tracker
+
+**Architecture Note**: This step belongs in **ReleaseCommand**, not ConfigureCommand. The ConfigureCommand prepares the system (Docker, security updates, firewall), while ReleaseCommand deploys the application (creates app directories, deploys configs).
 
 **Tasks**:
 
-- [ ] Create `templates/ansible/create-tracker-storage.yml` (static playbook)
-- [ ] Register playbook in `AnsibleProjectGenerator::copy_static_templates`
-- [ ] Create `CreateTrackerStorageStep` in `src/application/steps/system/create_tracker_storage.rs` following the pattern of `InstallDockerStep`
-- [ ] Add step invocation to `ConfigureCommandHandler::execute_configuration_with_tracking()` (after docker install steps)
-- [ ] Update `variables.yml.tera` if directory paths need to be configurable
+- [x] Create `templates/ansible/create-tracker-storage.yml` (static playbook)
+- [x] Register playbook in `AnsibleProjectGenerator::copy_static_templates`
+- [x] Create `CreateTrackerStorageStep` in `src/application/steps/system/create_tracker_storage.rs` following the pattern of `InstallDockerStep`
+- [x] Add step invocation to `ReleaseCommandHandler::execute_release_workflow()` (before rendering templates)
+- [x] Add `CreateTrackerStorage` to `ReleaseStep` enum and error handling
+- [ ] Run manual E2E test to verify directories are created
 
 **Playbook Content**:
 
