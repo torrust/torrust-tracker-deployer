@@ -13,7 +13,7 @@
 
 pub mod template;
 
-pub use template::{DockerComposeTemplateError, DockerComposeTemplateRenderer};
+pub use template::{DockerComposeProjectGenerator, DockerComposeProjectGeneratorError};
 
 /// Subdirectory name for Docker Compose-related files within the build directory.
 ///

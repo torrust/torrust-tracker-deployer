@@ -104,37 +104,144 @@ ssh_port: { { ssh_port } }
 - Manages template source selection (embedded vs external directory)
 - Coordinates template availability and caching
 
-### Template Renderers
+### Project Generator Pattern (Orchestrator/Worker)
 
-The system uses a **Project Generator** pattern (Orchestrator/Worker) to standardize how different tools (OpenTofu, Ansible) generate their project files.
+The system uses a **Project Generator** pattern to standardize how different tools (OpenTofu, Ansible, Docker Compose) generate their project files. This pattern separates concerns into three distinct layers:
 
-- **Orchestrator (`ProjectGenerator`)**: Manages the overall generation process.
-  - `OpenTofuProjectGenerator`
-  - `AnsibleProjectGenerator`
-- **Workers (`Renderer`)**: Handle specific file types.
-  - **Static File Copying**: Copies files without `.tera` extension (requires explicit registration).
-  - **Dynamic Template Rendering**: Renders `.tera` files with variable substitution (e.g., `InventoryRenderer`, `VariablesRenderer`).
+#### 1. **Wrapper Types** (Template Representation)
 
-**Two-Phase Processing:**
+Wrappers are domain types that represent templates statically and define the variables needed:
 
-1. **Phase 1 - Static File Copying**:
+- **Context**: Contains the variables needed by a template (e.g., `InventoryContext`, `EnvContext`)
+  - Strongly typed fields that match template variables
+  - Serializable for Tera rendering
+  - Validated at construction time
+- **Template**: Wraps the template file and context together (e.g., `InventoryTemplate`, `EnvTemplate`)
+  - Validates template syntax at creation
+  - Performs variable substitution
+  - Provides rendering to output file
 
+**Example**:
+
+```rust
+// Context defines what variables the template needs
+pub struct EnvContext {
+    tracker_api_admin_token: String,
+}
+
+// Template wraps the .tera file content and context
+pub struct EnvTemplate {
+    context: EnvContext,
+    content: String, // Rendered content
+}
+```
+
+#### 2. **Renderer Types** (Template Processing)
+
+One renderer per `.tera` template file. Renderers are responsible for:
+
+- Loading the specific `.tera` template from the template manager
+- Creating the Template wrapper with the provided Context
+- Rendering the template to an output file
+
+**Examples**:
+
+- `InventoryRenderer` - Renders `inventory.yml.tera` for Ansible
+- `VariablesRenderer` - Renders `variables.yml.tera` for Ansible
+- `EnvRenderer` - Renders `env.tera` for Docker Compose
+
+**Example**:
+
+```rust
+pub struct EnvRenderer {
+    template_manager: Arc<TemplateManager>,
+}
+
+impl EnvRenderer {
+    pub fn render(&self, env_context: &EnvContext, output_dir: &Path) -> Result<()> {
+        // 1. Load env.tera template file
+        // 2. Create EnvTemplate with context
+        // 3. Render to .env file
+    }
+}
+```
+
+#### 3. **Project Generator** (Orchestration)
+
+One project generator per tool (Ansible, OpenTofu, Docker Compose). Orchestrates all renderers and static file copying:
+
+- **Orchestrator (`ProjectGenerator`)**: Manages the overall generation process
+  - `AnsibleProjectGenerator` - Orchestrates Ansible template rendering
+  - `OpenTofuProjectGenerator` - Orchestrates OpenTofu template rendering
+  - `DockerComposeProjectGenerator` - Orchestrates Docker Compose template rendering
+- **Responsibilities**:
+  - Create build directory structure
+  - Call individual renderers with appropriate contexts
+  - Copy static files (files without `.tera` extension)
+  - Coordinate the complete template generation workflow
+
+**Example**:
+
+```rust
+pub struct DockerComposeProjectGenerator {
+    env_renderer: EnvRenderer,
+    template_manager: Arc<TemplateManager>,
+}
+
+impl DockerComposeProjectGenerator {
+    pub async fn render(&self, env_context: &EnvContext) -> Result<PathBuf> {
+        // 1. Create build directory
+        // 2. Render .env using EnvRenderer
+        // 3. Copy static files (docker-compose.yml)
+    }
+}
+```
+
+### Two-Phase Processing
+
+1. **Phase 1 - Dynamic Template Rendering**:
+
+   - Files with `.tera` extension are processed first
+   - Each `.tera` file has its own Renderer
+   - Renderers use Context and Template wrappers
+   - Example: `env.tera` → `.env` (EnvRenderer with EnvContext)
+
+2. **Phase 2 - Static File Copying**:
    - Files without `.tera` extension are copied as-is
-   - **Requires explicit registration** in the renderer's copy list
-   - Example: `install-docker.yml` must be added to `copy_static_templates` array
+   - **Requires explicit registration** in the ProjectGenerator's copy list
+   - Example: `docker-compose.yml` must be added to `copy_static_templates` method
 
-2. **Phase 2 - Dynamic Template Rendering**:
-   - Files with `.tera` extension are processed for variable substitution
-   - Automatically discovered, no manual registration needed
-   - Example: `inventory.ini.tera` → `inventory.ini` with resolved variables
+⚠️ **Common Pitfalls**:
 
-⚠️ **Common Pitfall**: Forgetting to register static files in Phase 1 will cause "file not found" errors at runtime.
+- Forgetting to register static files in Phase 2 will cause "file not found" errors at runtime
+- Creating a `.tera` file without a corresponding Renderer and Wrapper types
+- Not following the naming convention: `{template_name}.tera` → `{TemplateName}Renderer`
+
+### Architecture Summary
+
+```text
+┌────────────────────────────────────────────────────────┐
+│ ProjectGenerator (e.g., DockerComposeProjectGenerator) │
+│                                                        │
+│  ┌─────────────────────┐  ┌──────────────────────┐     │
+│  │ EnvRenderer         │  │ Static File Copying  │     │
+│  │                     │  │                      │     │
+│  │  ┌──────────────┐   │  │ - docker-compose.yml │     │
+│  │  │ EnvTemplate  │   │  │ (registered in code) │     │
+│  │  │ EnvContext   │   │  │                      │     │
+│  │  └──────────────┘   │  └──────────────────────┘     │
+│  │                     │                               │
+│  │  env.tera ────→ .env│                               │
+│  └─────────────────────┘                               │
+└────────────────────────────────────────────────────────┘
+```
 
 ### Template Engine
 
 - Tera-based templating for dynamic content
-- Variable context resolution
+- Variable context resolution via Context types
 - Template syntax validation and error handling
+- Strongly typed wrappers prevent runtime template errors
 
 ## ⚠️ Important Behaviors
 

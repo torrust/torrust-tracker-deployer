@@ -7,7 +7,7 @@
 //! ## Key Features
 //!
 //! - Template rendering for Docker Compose configurations
-//! - Integration with the `DockerComposeTemplateRenderer` for file generation
+//! - Integration with the `DockerComposeProjectGenerator` for file generation
 //! - Build directory preparation for deployment operations
 //! - Comprehensive error handling for template processing
 //!
@@ -30,8 +30,9 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::domain::template::TemplateManager;
+use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
-    DockerComposeTemplateError, DockerComposeTemplateRenderer,
+    DockerComposeProjectGenerator, DockerComposeProjectGeneratorError,
 };
 
 /// Step that renders Docker Compose templates to the build directory
@@ -82,7 +83,7 @@ impl RenderDockerComposeTemplatesStep {
             build_dir = %self.build_dir.display()
         )
     )]
-    pub async fn execute(&self) -> Result<PathBuf, DockerComposeTemplateError> {
+    pub async fn execute(&self) -> Result<PathBuf, DockerComposeProjectGeneratorError> {
         info!(
             step = "render_docker_compose_templates",
             templates_dir = %self.template_manager.templates_dir().display(),
@@ -90,10 +91,13 @@ impl RenderDockerComposeTemplatesStep {
             "Rendering Docker Compose templates"
         );
 
-        let renderer =
-            DockerComposeTemplateRenderer::new(self.template_manager.clone(), &self.build_dir);
+        let generator =
+            DockerComposeProjectGenerator::new(&self.build_dir, self.template_manager.clone());
 
-        let compose_build_dir = renderer.render().await?;
+        // TODO: Phase 3 - Hardcoded admin token. Will be extracted from environment config in Phase 6
+        let env_context = EnvContext::new("MyAccessToken".to_string());
+
+        let compose_build_dir = generator.render(&env_context).await?;
 
         info!(
             step = "render_docker_compose_templates",

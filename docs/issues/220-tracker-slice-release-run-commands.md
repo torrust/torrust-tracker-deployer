@@ -298,8 +298,8 @@ Track completion status for each phase:
 
 - [x] **Phase 0**: Rename Module for Clarity (30 mins) - ✅ Completed in commit 2d5625c
 - [x] **Phase 1**: Create Storage Directories (30 mins) - ✅ Completed
-- [ ] **Phase 2**: Initialize SQLite Database (45 mins)
-- [ ] **Phase 3**: Add Docker Compose `.env` File (1 hour)
+- [x] **Phase 2**: Initialize SQLite Database (45 mins) - ✅ Completed
+- [x] **Phase 3**: Add Docker Compose `.env` File (1 hour) - ✅ Completed
 - [ ] **Phase 4**: Add Tracker Configuration Template (1.5 hours)
 - [ ] **Phase 5**: Replace Docker Compose Service (1 hour)
 - [ ] **Phase 6**: Add Environment Configuration Support (2 hours)
@@ -321,38 +321,43 @@ rm -rf envs/test-env.json
 
 #### Complete E2E Test Flow
 
+**Recommended Workflow**: Use `create template` to generate environment configuration, then customize it with your values. This ensures proper structure and provides helpful placeholders.
+
 ```bash
-# 1. Create environment configuration file
+# RECOMMENDED: Generate environment template first
+cargo run -- create template --provider lxd > envs/test-env.json
+
+# Edit the generated template and replace placeholders:
+# - REPLACE_WITH_ENVIRONMENT_NAME → your environment name (e.g., "test-env")
+# - REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH → path to SSH private key
+# - REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH → path to SSH public key
+# - REPLACE_WITH_LXD_PROFILE_NAME → LXD profile name (e.g., "test-profile")
+
+# Alternative (manual creation - NOT recommended):
+# You can create environment.json manually, but use the template as a reference
+# to ensure correct structure. Example shown below for reference only.
+
 cat > envs/test-env.json <<EOF
 {
-  "name": "test-env",
-  "provider": "lxd",
-  "vm": {
-    "instance_name": "test-env-vm",
-    "ssh_username": "ubuntu",
-    "ssh_key_path": "fixtures/testing_rsa"
+  "environment": {
+    "name": "test-env",
+    "instance_name": null
   },
-  "tracker": {
-    "core": {
-      "database_name": "tracker.db",
-      "private": false
-    },
-    "udp_trackers": [
-      { "bind_address": "0.0.0.0:6868" },
-      { "bind_address": "0.0.0.0:6969" }
-    ],
-    "http_trackers": [
-      { "bind_address": "0.0.0.0:7070" }
-    ],
-    "http_api": {
-      "admin_token": "TestAdminToken123"
-    }
+  "ssh_credentials": {
+    "private_key_path": "/absolute/path/to/fixtures/testing_rsa",
+    "public_key_path": "/absolute/path/to/fixtures/testing_rsa.pub",
+    "username": "torrust",
+    "port": 22
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "test-profile"
   }
 }
 EOF
 
 # 2. Create environment
-cargo run -- create test-env --env-file envs/test-env.json
+cargo run -- create environment --env-file envs/test-env.json
 
 # 3. Provision VM
 cargo run -- provision test-env
@@ -596,76 +601,151 @@ $ ssh -o StrictHostKeyChecking=no -i fixtures/testing_rsa torrust@$VM_IP "file /
         success_msg: "Database file created successfully"
 ```
 
-### Phase 3: Add Docker Compose `.env` File (1 hour)
+### Phase 3: Add Docker Compose `.env` File (1 hour) ✅ COMPLETE
 
 **Goal**: Docker compose has environment variables file
 
 **Tasks**:
 
-- [ ] Create `templates/docker-compose/env.tera` with tracker variables
-- [ ] Create `EnvFileRenderer` in `src/infrastructure/templating/docker_compose/template/renderer/`
-- [ ] Add renderer to `DockerComposeProjectGenerator::generate_all_templates()`
-- [ ] Note: `.env` file will be automatically deployed to VM by existing `deploy-compose-files.yml` playbook (synchronizes entire docker-compose directory)
+- [x] Rename template: `templates/docker-compose/env.tera` → `.env.tera` (File type requires `.env` extension)
+- [x] Create wrapper types: `EnvContext` and `EnvTemplate` in `src/infrastructure/templating/docker_compose/template/wrappers/env/`
+- [x] Create `EnvRenderer` in `src/infrastructure/templating/docker_compose/template/renderer/env.rs`
+- [x] Refactor to Project Generator pattern: create `DockerComposeProjectGenerator` in `src/infrastructure/templating/docker_compose/template/renderer/project_generator.rs`
+- [x] Update `RenderDockerComposeTemplatesStep` to use `DockerComposeProjectGenerator::render()`
+- [x] Add `.env` format support to `src/domain/template/file.rs` (Format::Env, Extension::Env)
+- [x] Update documentation: `docs/technical/template-system-architecture.md`
+- [x] Run manual E2E test to verify `.env` file generation and deployment
 
-**Template Content** (`env.tera`):
+**Manual E2E Test Results** (✅ PASSED):
 
 ```bash
+# Test executed: 2025-12-08 16:35 UTC
+# Environment: e2e-phase3-test (LXD VM)
+# VM IP: 10.140.190.48
+
+# Test workflow:
+# 1. Generated environment template: cargo run -- create template --provider lxd > envs/e2e-phase3.json
+# 2. Customized template with test values (name: e2e-phase3-test, profile: e2e-phase3-profile)
+# 3. Created environment: cargo run -- create environment --env-file envs/e2e-phase3.json
+# 4. Provisioned: cargo run -- provision e2e-phase3-test (27.4s)
+# 5. Configured: cargo run -- configure e2e-phase3-test (101.1s)
+# 6. Released: cargo run -- release e2e-phase3-test (deployment step)
+# 7. Run: cargo run -- run e2e-phase3-test (8.0s)
+
+# Verified .env file in build directory
+$ cat build/e2e-phase3-test/docker-compose/.env
+# Docker Compose Environment Variables
+# This file contains environment variables used by docker-compose services
+
 # Tracker Configuration
-TORRUST_TRACKER_CONFIG_TOML_PATH='/etc/torrust/tracker/tracker.toml'
+# Path to the tracker TOML configuration file inside the container
+TORRUST_TRACKER_CONFIG_TOML_PATH=/etc/torrust/tracker/tracker.toml
+
+# Admin API token for tracker HTTP API access
+# This overrides the admin token in the tracker configuration file
+TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=MyAccessToken
+
+# Verified .env file deployed to VM
+$ ssh -i fixtures/testing_rsa torrust@10.140.190.48 "cat /opt/torrust/.env"
+# Docker Compose Environment Variables
+# This file contains environment variables used by docker-compose services
+
+# Tracker Configuration
+# Path to the tracker TOML configuration file inside the container
+TORRUST_TRACKER_CONFIG_TOML_PATH=/etc/torrust/tracker/tracker.toml
+
+# Admin API token for tracker HTTP API access
+# This overrides the admin token in the tracker configuration file
+TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=MyAccessToken
+
+# Verified file listing on VM
+$ ssh -i fixtures/testing_rsa torrust@10.140.190.48 "ls -la /opt/torrust/"
+total 20
+drwxr-xr-x 3 root    root    4096 Dec  8 16:34 .
+drwxr-xr-x 4 root    root    4096 Dec  8 16:33 ..
+-rw-r--r-- 1 root    root     464 Dec  8 16:34 .env
+-rw-r--r-- 1 root    root     685 Dec  8 16:33 docker-compose.yml
+drwxr-xr-x 3 torrust torrust 4096 Dec  8 16:33 storage
+
+✅ All verification checks passed:
+- .env file generated in build directory: build/e2e-phase3-test/docker-compose/.env
+- .env file deployed to VM: /opt/torrust/.env
+- File contains hardcoded "MyAccessToken" as expected (Phase 6 will make this configurable)
+- Permissions: 0644 (-rw-r--r--)
+- Ownership: root:root (deployed via Ansible)
+- File synchronization via deploy-compose-files.yml playbook working correctly
+- Project Generator pattern properly orchestrating Wrapper → Renderer → Generator layers
+```
+
+**Architecture Implementation**:
+
+Refactored to **Project Generator pattern** (three-layer architecture):
+
+1. **Wrapper Layer**: Context + Template types
+
+   - `EnvContext` - holds template variables (tracker_api_admin_token)
+   - `EnvTemplate` - wraps context and rendered content
+
+2. **Renderer Layer**: One renderer per template file
+
+   - `EnvRenderer` - renders `.env.tera` → `.env` file
+
+3. **Generator Layer**: Orchestrator for all renderers
+   - `DockerComposeProjectGenerator` - manages all Docker Compose template generation
+   - Calls `EnvRenderer` for dynamic templates
+   - Copies static files (docker-compose.yml)
+
+**Implementation Notes**:
+
+- Template renamed: `env.tera` → `.env.tera` (File type needs proper extension for Format::Env)
+- Hardcoded "MyAccessToken" in EnvContext (TODO comment: will be configurable in Phase 6)
+- Removed old monolithic `DockerComposeTemplateRenderer` (~700 lines)
+- New clean module structure (~30 lines in mod.rs, ~370 lines in project_generator.rs)
+- Added comprehensive unit tests for all components
+- All linters passing (markdown, yaml, toml, cspell, clippy, rustfmt, shellcheck)
+- All unit tests passing (1353 tests)
+
+**Template Content** (`templates/docker-compose/.env.tera`):
+
+```bash
+# Docker Compose Environment Variables
+# This file contains environment variables used by docker-compose services
+
+# Tracker Configuration
+# Path to the tracker TOML configuration file inside the container
+TORRUST_TRACKER_CONFIG_TOML_PATH=/etc/torrust/tracker/tracker.toml
+
+# Admin API token for tracker HTTP API access
+# This overrides the admin token in the tracker configuration file
 TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN={{ tracker_api_admin_token }}
 ```
 
-**Renderer Implementation**:
+**Deployment Flow**:
 
-```rust
-// src/infrastructure/templating/docker_compose/template/renderer/env_file.rs
-use tera::{Context, Tera};
-use crate::infrastructure::templating::docker_compose::template::error::DockerComposeTemplateError;
+1. `RenderDockerComposeTemplatesStep` creates `EnvContext` with hardcoded "MyAccessToken"
+2. Calls `DockerComposeProjectGenerator::render(&env_context)`
+3. Generator calls `EnvRenderer::render()` to process `.env.tera`
+4. Writes `.env` to `build/e2e-phase3-test/docker-compose/.env`
+5. `DeployComposeFilesStep` synchronizes entire directory to VM via Ansible
+6. Result: `/opt/torrust/.env` contains rendered environment variables
 
-pub struct EnvFileRenderer;
-
-impl EnvFileRenderer {
-    pub fn render(tera: &Tera, tracker_api_admin_token: &str) -> Result<String, DockerComposeTemplateError> {
-        let mut context = Context::new();
-        context.insert("tracker_api_admin_token", tracker_api_admin_token);
-        tera.render("env.tera", &context)
-            .map_err(DockerComposeTemplateError::from)
-    }
-}
-```
-
-**ProjectGenerator Update**:
-
-```rust
-// src/infrastructure/templating/docker_compose/template/renderer/mod.rs
-pub fn generate_all_templates(&self, environment_config: &EnvironmentConfig) -> Result<(), DockerComposeTemplateError> {
-    // ... existing code ...
-
-    // Render .env file with tracker config from environment
-    let tracker_api_admin_token = environment_config
-        .tracker
-        .as_ref()
-        .map(|t| t.http_api.admin_token.as_str())
-        .unwrap_or("MyAccessToken"); // Fallback for backward compatibility
-    let env_content = EnvFileRenderer::render(&self.tera, tracker_api_admin_token)?;
-    self.write_template(".env", &env_content)?;
-
-    Ok(())
-}
-```
-
-**Verification** (after running complete E2E workflow through step 5):
+**Verification** (complete E2E workflow):
 
 ```bash
+# Use template generation workflow (recommended):
+cargo run -- create template --provider lxd > envs/test-env.json
+# Customize the generated template with your values
+# Then: cargo run -- create environment --env-file envs/test-env.json
+
 # Verify .env file in build directory
 cat build/test-env/docker-compose/.env
 
 # Verify .env file deployed to VM
-ssh -i fixtures/testing_rsa ubuntu@$VM_IP "cat /opt/torrust/docker-compose/.env"
+ssh -i fixtures/testing_rsa torrust@$VM_IP "cat /opt/torrust/.env"
 
 # Expected content:
 # TORRUST_TRACKER_CONFIG_TOML_PATH=/etc/torrust/tracker/tracker.toml
-# TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=TestAdminToken123
+# TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=MyAccessToken
 ```
 
 ### Phase 4: Add Tracker Configuration Template (1.5 hours)
