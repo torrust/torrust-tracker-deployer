@@ -1,0 +1,39 @@
+[metadata]
+app = "torrust-tracker"
+purpose = "configuration"
+schema_version = "2.0.0"
+
+[logging]
+threshold = "info"
+
+[core]
+listed = false
+private = false
+
+[core.tracker_policy]
+persistent_torrent_completed_stat = true
+
+[core.announce_policy]
+interval = 300
+interval_min = 300
+
+[core.net]
+on_reverse_proxy = true
+
+[core.database]
+driver = "sqlite3"
+# Note: This path is inside the Docker container. The host path is /opt/torrust/storage/tracker/database/
+# which is mounted to /var/lib/torrust/tracker/ inside the container.
+path = "/var/lib/torrust/tracker/database/sqlite3.db"
+
+[[udp_trackers]]
+bind_address = "0.0.0.0:6868"
+
+[[udp_trackers]]
+bind_address = "0.0.0.0:6969"
+
+[[http_trackers]]
+bind_address = "0.0.0.0:7070"
+
+[http_api]
+bind_address = "0.0.0.0:1212"

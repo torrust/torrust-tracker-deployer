@@ -34,6 +34,10 @@ pub enum ReleaseStep {
     CreateTrackerStorage,
     /// Initializing tracker `SQLite` database file
     InitTrackerDatabase,
+    /// Rendering Tracker configuration templates to the build directory
+    RenderTrackerTemplates,
+    /// Deploying tracker configuration to the remote host via Ansible
+    DeployTrackerConfigToRemote,
     /// Rendering Docker Compose templates to the build directory
     RenderDockerComposeTemplates,
     /// Deploying compose files to the remote host via Ansible
@@ -45,6 +49,8 @@ impl fmt::Display for ReleaseStep {
         let name = match self {
             Self::CreateTrackerStorage => "Create Tracker Storage",
             Self::InitTrackerDatabase => "Initialize Tracker Database",
+            Self::RenderTrackerTemplates => "Render Tracker Templates",
+            Self::DeployTrackerConfigToRemote => "Deploy Tracker Config to Remote",
             Self::RenderDockerComposeTemplates => "Render Docker Compose Templates",
             Self::DeployComposeFilesToRemote => "Deploy Compose Files to Remote",
         };

@@ -20,6 +20,8 @@
 //!   - `file_manager` - File manager for Docker Compose configuration files
 //! - `tofu` - `OpenTofu` infrastructure provisioning integration
 //!   - `template` - Template renderers for `OpenTofu` configuration files
+//! - `tracker` - Torrust Tracker configuration management
+//!   - `template` - Template renderers for Tracker configuration files
 //!
 //! ## Template Rendering
 //!
@@ -31,3 +33,4 @@
 pub mod ansible;
 pub mod docker_compose;
 pub mod tofu;
+pub mod tracker;

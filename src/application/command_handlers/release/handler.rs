@@ -10,7 +10,8 @@ use super::errors::ReleaseCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
-    application::{CreateTrackerStorageStep, InitTrackerDatabaseStep},
+    application::{CreateTrackerStorageStep, DeployTrackerConfigStep, InitTrackerDatabaseStep},
+    rendering::RenderTrackerTemplatesStep,
     DeployComposeFilesStep, RenderDockerComposeTemplatesStep,
 };
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
@@ -192,10 +193,16 @@ impl ReleaseCommandHandler {
         // Step 2: Initialize tracker database
         Self::init_tracker_database(environment, instance_ip)?;
 
-        // Step 3: Render Docker Compose templates
+        // Step 3: Render tracker configuration templates
+        let tracker_build_dir = self.render_tracker_templates(environment)?;
+
+        // Step 4: Deploy tracker configuration to remote
+        self.deploy_tracker_config_to_remote(environment, &tracker_build_dir, instance_ip)?;
+
+        // Step 5: Render Docker Compose templates
         let compose_build_dir = self.render_docker_compose_templates(environment).await?;
 
-        // Step 4: Deploy compose files to remote
+        // Step 6: Deploy compose files to remote
         self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
@@ -262,6 +269,80 @@ impl ReleaseCommandHandler {
             command = "release",
             step = %current_step,
             "Tracker database initialized successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Render Tracker configuration templates to the build directory
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::RenderTrackerTemplates`) if rendering fails
+    fn render_tracker_templates(
+        &self,
+        environment: &Environment<Releasing>,
+    ) -> StepResult<PathBuf, ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::RenderTrackerTemplates;
+
+        let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+        let step =
+            RenderTrackerTemplatesStep::new(template_manager, environment.build_dir().clone());
+
+        let tracker_build_dir = step.execute().map_err(|e| {
+            (
+                ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                current_step,
+            )
+        })?;
+
+        info!(
+            command = "release",
+            tracker_build_dir = %tracker_build_dir.display(),
+            "Tracker configuration templates rendered successfully"
+        );
+
+        Ok(tracker_build_dir)
+    }
+
+    /// Deploy tracker configuration to the remote host via Ansible
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Releasing state
+    /// * `tracker_build_dir` - Path to the rendered tracker configuration
+    /// * `instance_ip` - The target instance IP address
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::DeployTrackerConfigToRemote`) if deployment fails
+    #[allow(clippy::result_large_err, clippy::unused_self)]
+    fn deploy_tracker_config_to_remote(
+        &self,
+        environment: &Environment<Releasing>,
+        tracker_build_dir: &Path,
+        _instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::DeployTrackerConfigToRemote;
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
+
+        DeployTrackerConfigStep::new(ansible_client, tracker_build_dir.to_path_buf())
+            .execute()
+            .map_err(|e| {
+                (
+                    ReleaseCommandHandlerError::Deployment {
+                        message: e.to_string(),
+                        source: Box::new(e),
+                    },
+                    current_step,
+                )
+            })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Tracker configuration deployed successfully"
         );
 
         Ok(())

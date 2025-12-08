@@ -48,6 +48,16 @@ pub enum ReleaseCommandHandlerError {
     #[error("Tracker database initialization failed: {0}")]
     TrackerDatabaseInit(String),
 
+    /// General deployment operation failed
+    #[error("Deployment failed: {message}")]
+    Deployment {
+        /// The error message
+        message: String,
+        /// The underlying error source
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
     /// Deployment to remote host failed
     #[error("Deployment to remote host failed: {message}")]
     DeploymentFailed {
@@ -92,6 +102,9 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::TrackerDatabaseInit(message) => {
                 format!("ReleaseCommandHandlerError: Tracker database initialization failed - {message}")
             }
+            Self::Deployment { message, .. } => {
+                format!("ReleaseCommandHandlerError: Deployment failed - {message}")
+            }
             Self::DeploymentFailed { message, .. } => {
                 format!("ReleaseCommandHandlerError: Deployment failed - {message}")
             }
@@ -105,6 +118,7 @@ impl Traceable for ReleaseCommandHandlerError {
 
     fn trace_source(&self) -> Option<&dyn Traceable> {
         match self {
+            Self::Deployment { .. } => None, // Box<dyn Error> doesn't implement Traceable
             Self::DeploymentFailed { source, .. } => Some(source),
             Self::StatePersistence(_)
             | Self::EnvironmentNotFound { .. }
@@ -126,6 +140,7 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::TemplateRendering(_)
             | Self::TrackerStorageCreation(_)
             | Self::TrackerDatabaseInit(_) => ErrorKind::TemplateRendering,
+            Self::Deployment { .. } => ErrorKind::InfrastructureOperation,
             Self::DeploymentFailed { source, .. } => source.error_kind(),
             Self::ReleaseOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
@@ -293,6 +308,29 @@ Common causes:
 - Permission denied on database directory
 - Ansible playbook not found
 - Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::Deployment { .. } => {
+                "Deployment Failed - Troubleshooting:
+
+1. Verify the build directory exists and contains expected files
+
+2. Check that the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+3. Ensure Ansible playbook executed successfully
+
+4. Review the error message above for specific details
+
+5. Check file permissions and disk space on target
+
+Common causes:
+- Build directory not found or incomplete
+- Network connectivity issues
+- SSH authentication failure
+- Insufficient permissions on target
+- Disk space issues on target instance
 
 For more information, see docs/user-guide/commands.md"
             }
