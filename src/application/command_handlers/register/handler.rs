@@ -153,7 +153,7 @@ impl RegisterCommandHandler {
     /// Prepare for configuration stages
     ///
     /// This method handles preparation for future configuration stages:
-    /// - Render Ansible templates with instance IP
+    /// - Render Ansible templates with user inputs and instance IP
     ///
     /// # Arguments
     ///
@@ -174,11 +174,7 @@ impl RegisterCommandHandler {
         );
 
         ansible_template_service
-            .render_templates(
-                environment.ssh_credentials(),
-                instance_ip,
-                environment.ssh_port(),
-            )
+            .render_templates(&environment.context().user_inputs, instance_ip)
             .await
             .map_err(|e| RegisterCommandHandlerError::TemplateRenderingFailed {
                 reason: e.to_string(),

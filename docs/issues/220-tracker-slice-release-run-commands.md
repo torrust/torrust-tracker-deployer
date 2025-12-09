@@ -303,7 +303,7 @@ Track completion status for each phase:
 - [x] **Phase 4**: Add Tracker Configuration Template (1.5 hours) - ✅ Completed in commit 659e407
 - [x] **Phase 5**: Replace Docker Compose Service (1 hour) - ✅ Completed in commit 59e3762
 - [x] **Phase 6**: Add Environment Configuration Support (2 hours) - ✅ Completed in commit 52d7c2a
-- [x] **Phase 7**: Configure Firewall for Tracker Ports (1 hour) - 🔨 Infrastructure complete (commit 6939553), wiring pending
+- [x] **Phase 7**: Configure Firewall for Tracker Ports (1 hour) - ✅ Completed (infrastructure: 6939553, wiring: TBD)
 
 **Total Estimated Time**: ~8.5 hours
 
@@ -1281,7 +1281,7 @@ ssh -i fixtures/testing_rsa ubuntu@$VM_IP "echo 'SSH still works'"
 
 **Manual E2E Test Results** (🔨 PARTIAL - Infrastructure tested, wiring pending):
 
-```bash
+````bash
 # Test executed: 2025-12-09 08:10 UTC
 # Test type: Full E2E test (e2e-tests-full)
 # Environment: e2e-full (LXD VM)
@@ -1307,19 +1307,72 @@ ssh -i fixtures/testing_rsa ubuntu@$VM_IP "echo 'SSH still works'"
 - ConfigureStep enum updated
 - All 1390 tests passing
 
-⏳ Pending work (to complete Phase 7):
-- Wire tracker config from environment through provision workflow
-- Update AnsibleTemplateService to accept environment config
-- Update ProvisionCommandHandler to pass tracker config
-- Update RenderAnsibleTemplatesStep to forward tracker config
-- Manual E2E test with actual tracker configuration
-- Verify UFW rules on deployed VM with tracker ports
+**Phase 7 Wiring Completed** (2025-12-09):
 
-Note: Phase 7 infrastructure is complete and tested. The firewall playbook
-will be functional once tracker configuration is wired through the provision
-workflow. Current behavior: playbook copies to build directory but skips
-all tasks (no tracker ports in variables.yml yet).
-```
+✅ Tracker configuration successfully wired through provision workflow:
+- Updated `RenderAnsibleTemplatesStep` to accept and forward `TrackerConfig`
+- Refactored `AnsibleTemplateService` to accept `UserInputs` instead of individual parameters
+  - **Design improvement**: Pass cohesive `UserInputs` + `instance_ip` (runtime output)
+  - Reduces parameter list from 4 to 2 parameters
+  - Better separation of UserInputs (immutable) vs RuntimeOutputs (generated)
+- Updated `ProvisionCommandHandler` to pass `UserInputs` from environment context
+- Updated `RegisterCommandHandler` to use new signature
+
+**Manual E2E Test Results** (✅ PASSED - 2025-12-09 08:52 UTC):
+
+```bash
+# Test environment: phase7-test (LXD VM)
+# VM IP: 10.140.190.118
+
+# Verified UFW firewall rules include all tracker ports:
+$ ssh -i fixtures/testing_rsa torrust@10.140.190.118 "sudo ufw status numbered"
+
+Status: active
+
+     To                         Action      From
+     --                         ------      ----
+[ 1] 22/tcp                     ALLOW IN    Anywhere                   # SSH access (configured port 22)
+[ 2] 6868/udp                   ALLOW IN    Anywhere                   # Torrust Tracker UDP
+[ 3] 6969/udp                   ALLOW IN    Anywhere                   # Torrust Tracker UDP
+[ 4] 7070/tcp                   ALLOW IN    Anywhere                   # Torrust Tracker HTTP
+[ 5] 1212/tcp                   ALLOW IN    Anywhere                   # Torrust Tracker HTTP API
+[ 6] 22/tcp (v6)                ALLOW IN    Anywhere (v6)              # SSH access (configured port 22)
+[ 7] 6868/udp (v6)              ALLOW IN    Anywhere (v6)              # Torrust Tracker UDP
+[ 8] 6969/udp (v6)              ALLOW IN    Anywhere (v6)              # Torrust Tracker UDP
+[ 9] 7070/tcp (v6)              ALLOW IN    Anywhere (v6)              # Torrust Tracker HTTP
+[10] 1212/tcp (v6)              ALLOW IN    Anywhere (v6)              # Torrust Tracker HTTP API
+
+✅ All firewall rules verified:
+- SSH port 22 configured (configure-firewall.yml)
+- UDP tracker ports 6868, 6969 configured (configure-tracker-firewall.yml)
+- HTTP tracker port 7070 configured (configure-tracker-firewall.yml)
+- HTTP API port 1212 configured (configure-tracker-firewall.yml)
+- All ports have correct "Torrust Tracker" comments
+- IPv4 and IPv6 rules both present
+
+# Verified variables.yml contains extracted tracker ports:
+$ cat build/phase7-test/ansible/variables.yml | grep -A 5 "Tracker Firewall"
+
+# Tracker Firewall Configuration
+tracker_udp_ports:
+  - 6868
+  - 6969
+tracker_http_ports:
+  - 7070
+tracker_api_port: 1212
+````
+
+**Test Results Summary**:
+
+- ✅ Full E2E test passed (102.0s, all 1390 unit tests passing)
+- ✅ Tracker ports correctly extracted from environment configuration
+- ✅ Variables.yml populated with tracker firewall configuration
+- ✅ UFW firewall rules applied for all tracker ports
+- ✅ Port comments correctly identify "Torrust Tracker" services
+- ✅ Both IPv4 and IPv6 rules configured
+- ✅ All pre-commit checks passing
+
+**Phase 7 Status**: ✅ **COMPLETE**
 
 ## Acceptance Criteria
 

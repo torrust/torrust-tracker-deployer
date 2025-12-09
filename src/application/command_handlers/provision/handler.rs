@@ -262,7 +262,7 @@ impl ProvisionCommandHandler {
     /// Prepare for configuration stages
     ///
     /// This method handles preparation for future configuration stages:
-    /// - Render Ansible templates with runtime instance IP
+    /// - Render Ansible templates with user inputs and runtime instance IP
     ///
     /// # Arguments
     ///
@@ -285,11 +285,7 @@ impl ProvisionCommandHandler {
         );
 
         ansible_template_service
-            .render_templates(
-                environment.ssh_credentials(),
-                instance_ip,
-                environment.ssh_port(),
-            )
+            .render_templates(&environment.context().user_inputs, instance_ip)
             .await
             .map_err(|e| {
                 (
