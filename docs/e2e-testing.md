@@ -359,6 +359,33 @@ docker rmi torrust-provisioned-instance
 - Reliable networking for Ansible connectivity
 - No nested virtualization issues
 
+### SSH Port Conflicts on GitHub Actions
+
+**Problem**: GitHub Actions runners have SSH service running on port 22, which conflicts with test containers that also expose SSH on port 22.
+
+**Root Cause**: When using Docker host networking (`--network host`), the container's SSH port 22 directly conflicts with the runner's SSH service on port 22.
+
+**Solution**: Use Docker bridge networking (default) with dynamic port mapping:
+
+- Container SSH port 22 is mapped to a random host port (e.g., 33061)
+- The `register` command accepts an optional `--ssh-port` argument to specify the mapped port
+- Ansible inventory is automatically updated with the custom SSH port
+
+**Implementation**:
+
+```bash
+# E2E test discovers the mapped SSH port and passes it to register command
+torrust-tracker-deployer register e2e-config --instance-ip 127.0.0.1 --ssh-port 33061
+```
+
+**Technical Details**: See [ADR: Register Command SSH Port Override](decisions/register-ssh-port-override.md) for the complete architectural decision, implementation strategy, and alternatives considered.
+
+This enhancement also supports real-world scenarios:
+
+- Registering instances with non-standard SSH ports for security
+- Working with containerized environments where port mapping is common
+- Connecting to instances behind port-forwarding configurations
+
 ### Debug Mode
 
 Use the `--keep` flag to inspect the environment after test completion:
