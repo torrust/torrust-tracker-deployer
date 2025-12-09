@@ -117,6 +117,7 @@ impl AnsibleTemplateService {
     ///
     /// * `user_inputs` - User-provided environment configuration (SSH credentials, tracker config, etc.)
     /// * `instance_ip` - IP address of the provisioned instance (runtime output)
+    /// * `ssh_port_override` - Optional SSH port override (takes precedence over `user_inputs.ssh_port`)
     ///
     /// # Errors
     ///
@@ -128,20 +129,24 @@ impl AnsibleTemplateService {
     /// use std::net::IpAddr;
     ///
     /// let service = AnsibleTemplateService::new(renderer);
-    /// service.render_templates(&user_inputs, "192.168.1.100".parse().unwrap()).await?;
+    /// service.render_templates(&user_inputs, "192.168.1.100".parse().unwrap(), None).await?;
     /// ```
     pub async fn render_templates(
         &self,
         user_inputs: &UserInputs,
         instance_ip: IpAddr,
+        ssh_port_override: Option<u16>,
     ) -> Result<(), AnsibleTemplateServiceError> {
+        let effective_ssh_port = ssh_port_override.unwrap_or(user_inputs.ssh_port);
+
         info!(
             instance_ip = %instance_ip,
-            ssh_port = user_inputs.ssh_port,
+            ssh_port = effective_ssh_port,
+            ssh_port_override = ?ssh_port_override,
             "Rendering Ansible templates"
         );
 
-        let ssh_socket_addr = SocketAddr::new(instance_ip, user_inputs.ssh_port);
+        let ssh_socket_addr = SocketAddr::new(instance_ip, effective_ssh_port);
 
         RenderAnsibleTemplatesStep::new(
             self.ansible_template_renderer.clone(),
@@ -157,7 +162,7 @@ impl AnsibleTemplateService {
 
         info!(
             instance_ip = %instance_ip,
-            ssh_port = user_inputs.ssh_port,
+            ssh_port = effective_ssh_port,
             "Ansible templates rendered successfully"
         );
 

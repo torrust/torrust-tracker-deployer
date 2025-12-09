@@ -285,7 +285,7 @@ impl ProvisionCommandHandler {
         );
 
         ansible_template_service
-            .render_templates(&environment.context().user_inputs, instance_ip)
+            .render_templates(&environment.context().user_inputs, instance_ip, None)
             .await
             .map_err(|e| {
                 (

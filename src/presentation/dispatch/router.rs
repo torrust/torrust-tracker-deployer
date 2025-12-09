@@ -147,11 +147,12 @@ pub async fn route_command(
         Commands::Register {
             environment,
             instance_ip,
+            ssh_port,
         } => {
             context
                 .container()
                 .create_register_controller()
-                .execute(&environment, &instance_ip)
+                .execute(&environment, &instance_ip, ssh_port)
                 .await?;
             Ok(())
         }

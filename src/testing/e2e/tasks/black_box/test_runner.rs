@@ -195,17 +195,18 @@ impl E2eTestRunner {
     /// # Errors
     ///
     /// Returns an error if the register command fails.
-    pub fn register_instance(&self, instance_ip: &str) -> Result<()> {
+    pub fn register_instance(&self, instance_ip: &str, ssh_port: Option<u16>) -> Result<()> {
         info!(
             step = "register",
             environment = %self.environment_name,
             instance_ip = %instance_ip,
+            ssh_port = ?ssh_port,
             "Registering existing instance"
         );
 
         let register_result = self
             .runner
-            .run_register_command(&self.environment_name, instance_ip)
+            .run_register_command(&self.environment_name, instance_ip, ssh_port)
             .map_err(|e| anyhow::anyhow!("Failed to execute register command: {e}"))?;
 
         if !register_result.success() {
@@ -227,6 +228,7 @@ impl E2eTestRunner {
             step = "register",
             environment = %self.environment_name,
             instance_ip = %instance_ip,
+            ssh_port = ?ssh_port,
             status = "success",
             "Instance registered successfully"
         );

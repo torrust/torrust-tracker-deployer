@@ -173,31 +173,47 @@ impl ProcessRunner {
         &self,
         environment_name: &str,
         instance_ip: &str,
+        ssh_port: Option<u16>,
     ) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
 
         if let Some(working_dir) = &self.working_dir {
             // Build command with working directory
-            cmd.args([
+            let mut args = vec![
                 "run",
                 "--",
                 "register",
                 environment_name,
                 "--instance-ip",
                 instance_ip,
-                "--working-dir",
-                working_dir.to_str().unwrap(),
-            ]);
+            ];
+
+            // Add optional SSH port
+            let ssh_port_str = ssh_port.map(|p| p.to_string());
+            if let Some(ref port_str) = ssh_port_str {
+                args.extend(["--ssh-port", port_str]);
+            }
+
+            args.extend(["--working-dir", working_dir.to_str().unwrap()]);
+            cmd.args(args);
         } else {
             // No working directory, use relative paths
-            cmd.args([
+            let mut args = vec![
                 "run",
                 "--",
                 "register",
                 environment_name,
                 "--instance-ip",
                 instance_ip,
-            ]);
+            ];
+
+            // Add optional SSH port
+            let ssh_port_str = ssh_port.map(|p| p.to_string());
+            if let Some(ref port_str) = ssh_port_str {
+                args.extend(["--ssh-port", port_str]);
+            }
+
+            cmd.args(args);
         }
 
         let output = cmd.output().context("Failed to execute register command")?;

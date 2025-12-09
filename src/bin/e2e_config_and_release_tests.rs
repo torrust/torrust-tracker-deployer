@@ -256,19 +256,13 @@ async fn run_deployer_workflow(
     // Create environment (CLI: cargo run -- create environment --env-file <file>)
     test_runner.create_environment(&config_env.config_file_path)?;
 
-    // TODO: The register command doesn't work with bridge networking because it reads
-    // ssh_port from the environment config (22) but the actual SSH server is on a
-    // mapped port (e.g., 33049). We need to either:
-    // 1. Make register command support custom SSH port via CLI arg
-    // 2. Skip register and manually create the registered state
-    // 3. Use host networking (reverts the GitHub Actions fix)
-    // For now, this test will fail at the register step with bridge networking.
-
-    // Register the container's IP as an existing instance
-    // (CLI: cargo run -- register <env> --instance-ip <ip>)
+    // Register the container's IP as an existing instance with custom SSH port
+    // (CLI: cargo run -- register <env> --instance-ip <ip> --ssh-port <port>)
+    // With bridge networking, we pass the actual mapped SSH port from Docker
     let socket_addr = runtime_env.ssh_socket_addr();
     let instance_ip = socket_addr.ip().to_string();
-    test_runner.register_instance(&instance_ip)?;
+    let ssh_port = runtime_env.container_ports.ssh_port;
+    test_runner.register_instance(&instance_ip, Some(ssh_port))?;
 
     // Configure services via Ansible
     // (CLI: cargo run -- configure <env>)

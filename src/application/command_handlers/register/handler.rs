@@ -55,6 +55,7 @@ impl RegisterCommandHandler {
     ///
     /// * `env_name` - The name of the environment to register the instance with
     /// * `instance_ip` - The IP address of the existing instance
+    /// * `ssh_port` - Optional SSH port (overrides environment config if provided)
     ///
     /// # Returns
     ///
@@ -73,19 +74,21 @@ impl RegisterCommandHandler {
         fields(
             command_type = "register",
             environment = %env_name,
-            instance_ip = %instance_ip
+            instance_ip = %instance_ip,
+            ssh_port = ?ssh_port
         )
     )]
     pub async fn execute(
         &self,
         env_name: &EnvironmentName,
         instance_ip: IpAddr,
+        ssh_port: Option<u16>,
     ) -> Result<Environment<Provisioned>, RegisterCommandHandlerError> {
         let environment = self.load_created_environment(env_name)?;
 
-        self.validate_ssh_connectivity(&environment, instance_ip)?;
+        self.validate_ssh_connectivity(&environment, instance_ip, ssh_port)?;
 
-        self.prepare_for_configuration(&environment, instance_ip)
+        self.prepare_for_configuration(&environment, instance_ip, ssh_port)
             .await?;
 
         let provisioned = environment.register(instance_ip);
@@ -107,6 +110,12 @@ impl RegisterCommandHandler {
     /// This performs a minimal validation by attempting to establish an SSH connection
     /// to the instance using the credentials from the environment.
     ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Created state
+    /// * `instance_ip` - The IP address to test connectivity against
+    /// * `ssh_port` - Optional SSH port (overrides environment config if provided)
+    ///
     /// # Errors
     ///
     /// Returns `ConnectivityFailed` if unable to connect via SSH.
@@ -115,16 +124,19 @@ impl RegisterCommandHandler {
         &self,
         environment: &Environment<Created>,
         instance_ip: IpAddr,
+        ssh_port: Option<u16>,
     ) -> Result<(), RegisterCommandHandlerError> {
         info!(
             instance_ip = %instance_ip,
+            ssh_port = ?ssh_port,
             "Validating SSH connectivity to instance"
         );
 
         let ssh_credentials = environment.ssh_credentials();
-        let ssh_port = environment.ssh_port();
+        let config_ssh_port = environment.ssh_port();
+        let effective_ssh_port = ssh_port.unwrap_or(config_ssh_port);
 
-        let ssh_socket_addr = SocketAddr::new(instance_ip, ssh_port);
+        let ssh_socket_addr = SocketAddr::new(instance_ip, effective_ssh_port);
         let ssh_config = SshConfig::new(ssh_credentials.clone(), ssh_socket_addr);
         let ssh_client = SshClient::new(ssh_config);
 
@@ -144,6 +156,7 @@ impl RegisterCommandHandler {
 
         info!(
             instance_ip = %instance_ip,
+            ssh_port = effective_ssh_port,
             "SSH connectivity validated successfully"
         );
 
@@ -159,6 +172,7 @@ impl RegisterCommandHandler {
     ///
     /// * `environment` - The environment in Created state
     /// * `instance_ip` - IP address of the instance to register
+    /// * `ssh_port_override` - Optional SSH port override for Ansible inventory
     ///
     /// # Errors
     ///
@@ -167,6 +181,7 @@ impl RegisterCommandHandler {
         &self,
         environment: &Environment<Created>,
         instance_ip: IpAddr,
+        ssh_port_override: Option<u16>,
     ) -> Result<(), RegisterCommandHandlerError> {
         let ansible_template_service = AnsibleTemplateService::from_paths(
             environment.templates_dir(),
@@ -174,7 +189,11 @@ impl RegisterCommandHandler {
         );
 
         ansible_template_service
-            .render_templates(&environment.context().user_inputs, instance_ip)
+            .render_templates(
+                &environment.context().user_inputs,
+                instance_ip,
+                ssh_port_override,
+            )
             .await
             .map_err(|e| RegisterCommandHandlerError::TemplateRenderingFailed {
                 reason: e.to_string(),

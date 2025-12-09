@@ -592,6 +592,7 @@ mod tests {
             Commands::Register {
                 environment,
                 instance_ip,
+                ssh_port: _,
             } => {
                 assert_eq!(environment, "my-env");
                 assert_eq!(instance_ip, "192.168.1.100");
