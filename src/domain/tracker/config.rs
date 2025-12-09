@@ -28,7 +28,6 @@ use super::DatabaseConfig;
 ///         private: false,
 ///     },
 ///     udp_trackers: vec![
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6868".to_string() },
 ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".to_string() },
 ///     ],
 ///     http_trackers: vec![
@@ -92,7 +91,7 @@ impl Default for TrackerConfig {
     ///
     /// - Database: `SQLite` with filename "tracker.db"
     /// - Mode: Public tracker (private = false)
-    /// - UDP trackers: Two instances on ports 6868 and 6969
+    /// - UDP trackers: One instance on port 6969
     /// - HTTP trackers: One instance on port 7070
     /// - Admin token: `MyAccessToken`
     fn default() -> Self {
@@ -103,14 +102,9 @@ impl Default for TrackerConfig {
                 },
                 private: false,
             },
-            udp_trackers: vec![
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6868".to_string(),
-                },
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".to_string(),
-                },
-            ],
+            udp_trackers: vec![UdpTrackerConfig {
+                bind_address: "0.0.0.0:6969".to_string(),
+            }],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".to_string(),
             }],
@@ -183,10 +177,9 @@ mod tests {
         // Verify public tracker mode
         assert!(!config.core.private);
 
-        // Verify UDP trackers (2 instances)
-        assert_eq!(config.udp_trackers.len(), 2);
-        assert_eq!(config.udp_trackers[0].bind_address, "0.0.0.0:6868");
-        assert_eq!(config.udp_trackers[1].bind_address, "0.0.0.0:6969");
+        // Verify UDP trackers (1 instance)
+        assert_eq!(config.udp_trackers.len(), 1);
+        assert_eq!(config.udp_trackers[0].bind_address, "0.0.0.0:6969");
 
         // Verify HTTP trackers (1 instance)
         assert_eq!(config.http_trackers.len(), 1);
