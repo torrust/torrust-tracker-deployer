@@ -16,8 +16,8 @@
 //! ## Port Configuration
 //!
 //! The step reads port numbers from the tracker configuration in variables.yml:
-//! - `tracker_udp_ports`: Array of UDP tracker ports (e.g., [6868, 6969])
-//! - `tracker_http_ports`: Array of HTTP tracker ports (e.g., [7070])
+//! - `tracker_udp_ports`: Array of UDP tracker ports (e.g., \[6868, 6969\])
+//! - `tracker_http_ports`: Array of HTTP tracker ports (e.g., \[7070\])
 //! - `tracker_api_port`: HTTP API port for tracker management (e.g., 1212)
 //!
 //! ## Execution Order
@@ -28,7 +28,7 @@
 //! ## Safety
 //!
 //! This step is designed to be safe for the following reasons:
-//! 1. SSH firewall rules are already configured by ConfigureFirewallStep
+//! 1. SSH firewall rules are already configured by `ConfigureFirewallStep`
 //! 2. Only opens explicitly configured tracker ports
 //! 3. Firewall reload preserves existing rules
 //! 4. No risk of SSH lockout (SSH rules already applied)
@@ -73,7 +73,7 @@ impl ConfigureTrackerFirewallStep {
     /// # Safety
     ///
     /// This method is designed to be safe because:
-    /// - SSH firewall rules are already configured by ConfigureFirewallStep
+    /// - SSH firewall rules are already configured by `ConfigureFirewallStep`
     /// - Only opens explicitly configured tracker ports
     /// - Firewall reload preserves existing SSH rules
     ///
@@ -86,7 +86,12 @@ impl ConfigureTrackerFirewallStep {
     #[instrument(
         name = "configure_tracker_firewall",
         skip_all,
-        fields(step_type = "system", component = "firewall", service = "tracker", method = "ansible")
+        fields(
+            step_type = "system",
+            component = "firewall",
+            service = "tracker",
+            method = "ansible"
+        )
     )]
     pub fn execute(&self) -> Result<(), CommandError> {
         info!(

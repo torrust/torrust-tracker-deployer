@@ -39,7 +39,10 @@ impl AnsibleVariablesContext {
     /// # Errors
     ///
     /// Returns an error if the SSH port is invalid (0 or out of range)
-    pub fn new(ssh_port: u16, tracker_config: Option<&TrackerConfig>) -> Result<Self, AnsibleVariablesContextError> {
+    pub fn new(
+        ssh_port: u16,
+        tracker_config: Option<&TrackerConfig>,
+    ) -> Result<Self, AnsibleVariablesContextError> {
         // Validate SSH port using existing validation
         crate::infrastructure::templating::ansible::template::wrappers::inventory::context::AnsiblePort::new(ssh_port)?;
 
@@ -56,8 +59,10 @@ impl AnsibleVariablesContext {
 
     /// Extract port numbers from tracker configuration
     ///
-    /// Returns a tuple of (udp_ports, http_ports, api_port)
-    fn extract_tracker_ports(tracker_config: Option<&TrackerConfig>) -> (Vec<u16>, Vec<u16>, Option<u16>) {
+    /// Returns a tuple of (`udp_ports`, `http_ports`, `api_port`)
+    fn extract_tracker_ports(
+        tracker_config: Option<&TrackerConfig>,
+    ) -> (Vec<u16>, Vec<u16>, Option<u16>) {
         let Some(config) = tracker_config else {
             return (Vec::new(), Vec::new(), None);
         };
@@ -82,7 +87,7 @@ impl AnsibleVariablesContext {
         (udp_ports, http_ports, api_port)
     }
 
-    /// Helper function to extract port from bind_address (e.g., "0.0.0.0:6868" -> 6868)
+    /// Helper function to extract port from `bind_address` (e.g., "0.0.0.0:6868" -> 6868)
     fn extract_port(bind_address: &str) -> Option<u16> {
         bind_address.split(':').nth(1)?.parse().ok()
     }
@@ -169,7 +174,9 @@ mod tests {
 
     #[test]
     fn it_should_extract_tracker_ports_from_config() {
-        use crate::domain::tracker::{ DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerCoreConfig, UdpTrackerConfig};
+        use crate::domain::tracker::{
+            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+        };
 
         let tracker_config = TrackerConfig {
             core: TrackerCoreConfig {
@@ -228,7 +235,9 @@ mod tests {
 
     #[test]
     fn it_should_skip_invalid_bind_addresses() {
-        use crate::domain::tracker::{DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerCoreConfig, UdpTrackerConfig};
+        use crate::domain::tracker::{
+            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+        };
 
         let tracker_config = TrackerConfig {
             core: TrackerCoreConfig {
