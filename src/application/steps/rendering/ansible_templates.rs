@@ -123,7 +123,7 @@ impl RenderAnsibleTemplatesStep {
 
         // Use the configuration renderer to handle all template rendering
         self.ansible_project_generator
-            .render(&inventory_context)
+            .render(&inventory_context, None)
             .await?;
 
         info!(

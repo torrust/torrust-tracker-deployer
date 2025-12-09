@@ -49,6 +49,8 @@ pub enum ConfigureStep {
     ConfigureSecurityUpdates,
     /// Configuring UFW firewall
     ConfigureFirewall,
+    /// Configuring Tracker firewall rules
+    ConfigureTrackerFirewall,
 }
 
 /// Error state - Application configuration failed
