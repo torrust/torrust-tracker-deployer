@@ -9,24 +9,24 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-/// Complete E2E environment information including ports and configuration paths
+/// E2E configuration environment - represents the desired configuration
 ///
-/// This type encapsulates all the information needed for E2E container setup
-/// and testing, avoiding coupling with production types.
+/// This type contains the configuration we want to use for E2E testing,
+/// including the ports we request from the environment config.
 #[derive(Debug, Clone)]
-pub struct E2eEnvironmentInfo {
+pub struct E2eConfigEnvironment {
     /// Environment name (e.g., "e2e-config")
     pub environment_name: String,
     /// Path to the environment configuration JSON file
     pub config_file_path: PathBuf,
-    /// SSH port for container access
+    /// SSH port for container access (from config)
     pub ssh_port: u16,
-    /// Tracker port configuration
+    /// Tracker port configuration (from config)
     pub tracker_ports: TrackerPorts,
 }
 
-impl E2eEnvironmentInfo {
-    /// Create E2E environment info from configuration file
+impl E2eConfigEnvironment {
+    /// Create E2E config environment from configuration file
     ///
     /// # Arguments
     /// * `environment_name` - Name of the environment
@@ -56,16 +56,97 @@ impl E2eEnvironmentInfo {
             tracker_ports,
         })
     }
+}
 
-    /// Get the SSH socket address for this environment
-    ///
-    /// With host networking, the SSH port inside and outside the container
-    /// is the same, so we bind to localhost with the configured SSH port.
+/// E2E runtime environment - represents actual runtime state after container starts
+///
+/// This type contains the actual mapped ports returned by Docker when using
+/// bridge networking mode. These may differ from the requested ports in the config.
+#[derive(Debug, Clone)]
+pub struct E2eRuntimeEnvironment {
+    /// Configuration environment (what we requested)
+    pub config: E2eConfigEnvironment,
+    /// Actual mapped ports from Docker (what we got)
+    pub container_ports: ContainerPorts,
+}
+
+impl E2eRuntimeEnvironment {
+    /// Create a new runtime environment from config and container ports
+    #[must_use]
+    pub fn new(config: E2eConfigEnvironment, container_ports: ContainerPorts) -> Self {
+        Self {
+            config,
+            container_ports,
+        }
+    }
+
+    /// Get the SSH socket address using the mapped SSH port
     #[must_use]
     pub fn ssh_socket_addr(&self) -> std::net::SocketAddr {
-        std::net::SocketAddr::from(([127, 0, 0, 1], self.ssh_port))
+        std::net::SocketAddr::from(([127, 0, 0, 1], self.container_ports.ssh_port))
+    }
+
+    /// Get the tracker API URL for external access
+    #[must_use]
+    pub fn tracker_api_url(&self) -> String {
+        format!("http://127.0.0.1:{}", self.container_ports.http_api_port)
+    }
+
+    /// Get the HTTP tracker URL for external access
+    #[must_use]
+    pub fn http_tracker_url(&self) -> String {
+        format!(
+            "http://127.0.0.1:{}",
+            self.container_ports.http_tracker_port
+        )
     }
 }
+
+/// Container ports - actual mapped ports from Docker
+///
+/// With bridge networking, Docker dynamically assigns host ports that map to
+/// the container's internal ports. This type holds those actual mapped ports.
+#[derive(Debug, Clone)]
+pub struct ContainerPorts {
+    /// Mapped SSH port on the host
+    pub ssh_port: u16,
+    /// Mapped HTTP API port on the host
+    pub http_api_port: u16,
+    /// Mapped HTTP tracker port on the host
+    pub http_tracker_port: u16,
+    /// Mapped UDP tracker port on the host
+    pub udp_tracker_port: u16,
+}
+
+impl ContainerPorts {
+    /// Create container ports from a list of mapped ports
+    ///
+    /// # Arguments
+    /// * `ssh_port` - Mapped SSH port
+    /// * `additional_ports` - Mapped additional ports in order: [`http_api`, `http_tracker`, `udp_tracker`]
+    ///
+    /// # Panics
+    /// Panics if `additional_ports` doesn't have exactly 3 elements
+    #[must_use]
+    pub fn from_mapped_ports(ssh_port: u16, additional_ports: &[u16]) -> Self {
+        assert_eq!(
+            additional_ports.len(),
+            3,
+            "Expected exactly 3 additional ports (http_api, http_tracker, udp_tracker)"
+        );
+
+        Self {
+            ssh_port,
+            http_api_port: additional_ports[0],
+            http_tracker_port: additional_ports[1],
+            udp_tracker_port: additional_ports[2],
+        }
+    }
+}
+
+// Deprecated: Keep for backward compatibility during migration
+/// @deprecated Use `E2eConfigEnvironment` instead
+pub type E2eEnvironmentInfo = E2eConfigEnvironment;
 
 /// Tracker port configuration extracted from environment JSON file
 ///

@@ -218,18 +218,16 @@ impl StoppedProvisionedContainer {
         })?;
 
         // Start the container with privileged mode for Docker-in-Docker support
-        // and host network mode for direct port access (E2E testing)
         // and optional container name
         let container = if let Some(name) = container_name {
-            info!(container_name = %name, "Starting container with custom name, privileged mode, and host networking");
+            info!(container_name = %name, "Starting container with custom name and privileged mode");
             image
                 .with_privileged(true)
-                .with_network("host")
                 .with_container_name(name)
                 .start()
                 .await
         } else {
-            image.with_privileged(true).with_network("host").start().await
+            image.with_privileged(true).start().await
         }
         .map_err(|source| {
             Box::new(ContainerError::ContainerRuntime {
@@ -242,18 +240,46 @@ impl StoppedProvisionedContainer {
             })
         })?;
 
-        // With host networking, ports are directly accessible (no mapping needed)
-        // The SSH port is the same inside and outside the container
-        let mapped_ssh_port = ssh_port;
+        // Get the dynamically assigned ports from Docker's port mapping (bridge networking)
+        let mapped_ssh_port = container.get_host_port_ipv4(ssh_port).await.map_err(|e| {
+            Box::new(ContainerError::ContainerRuntime {
+                source: ContainerRuntimeError::StartupFailed {
+                    image_name: DEFAULT_IMAGE_NAME.to_string(),
+                    image_tag: DEFAULT_IMAGE_TAG.to_string(),
+                    reason: format!("Failed to get mapped SSH port: {e}"),
+                    source: e,
+                },
+            })
+        })?;
+
+        // Get mapped ports for all additional ports (tracker services)
+        let mut mapped_additional_ports = Vec::new();
+        for port in additional_ports {
+            let mapped_port = container.get_host_port_ipv4(*port).await.map_err(|e| {
+                Box::new(ContainerError::ContainerRuntime {
+                    source: ContainerRuntimeError::StartupFailed {
+                        image_name: DEFAULT_IMAGE_NAME.to_string(),
+                        image_tag: DEFAULT_IMAGE_TAG.to_string(),
+                        reason: format!("Failed to get mapped port for {port}: {e}"),
+                        source: e,
+                    },
+                })
+            })?;
+            mapped_additional_ports.push(mapped_port);
+        }
 
         info!(
             container_id = %container.id(),
-            ssh_port = mapped_ssh_port,
-            network_mode = "host",
-            "Container started successfully with host networking"
+            mapped_ssh_port,
+            mapped_additional_ports = ?mapped_additional_ports,
+            "Container started successfully with bridge networking"
         );
 
-        Ok(RunningProvisionedContainer::new(container, mapped_ssh_port))
+        Ok(RunningProvisionedContainer::new(
+            container,
+            mapped_ssh_port,
+            mapped_additional_ports,
+        ))
     }
 }
 
@@ -261,6 +287,7 @@ impl StoppedProvisionedContainer {
 pub struct RunningProvisionedContainer {
     container: ContainerAsync<GenericImage>,
     ssh_port: u16,
+    additional_mapped_ports: Vec<u16>,
 }
 
 impl ContainerExecutor for RunningProvisionedContainer {
@@ -273,10 +300,15 @@ impl ContainerExecutor for RunningProvisionedContainer {
 }
 
 impl RunningProvisionedContainer {
-    pub(crate) fn new(container: ContainerAsync<GenericImage>, ssh_port: u16) -> Self {
+    pub(crate) fn new(
+        container: ContainerAsync<GenericImage>,
+        ssh_port: u16,
+        additional_mapped_ports: Vec<u16>,
+    ) -> Self {
         Self {
             container,
             ssh_port,
+            additional_mapped_ports,
         }
     }
 
@@ -284,6 +316,13 @@ impl RunningProvisionedContainer {
     #[must_use]
     pub fn ssh_socket_addr(&self) -> SocketAddr {
         SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), self.ssh_port)
+    }
+
+    /// Get the mapped additional ports (tracker API, HTTP tracker, UDP tracker, etc.)
+    /// Returns ports in the same order they were requested when starting the container
+    #[must_use]
+    pub fn additional_mapped_ports(&self) -> &[u16] {
+        &self.additional_mapped_ports
     }
 
     /// Get the container ID for logging/debugging

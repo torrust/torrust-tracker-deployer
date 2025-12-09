@@ -66,8 +66,11 @@ use torrust_tracker_deployer_lib::testing::e2e::containers::actions::{
     SshKeySetupAction, SshWaitAction,
 };
 use torrust_tracker_deployer_lib::testing::e2e::containers::timeout::ContainerTimeouts;
+use torrust_tracker_deployer_lib::testing::e2e::containers::tracker_ports::{
+    ContainerPorts, E2eConfigEnvironment, E2eRuntimeEnvironment,
+};
 use torrust_tracker_deployer_lib::testing::e2e::containers::{
-    E2eEnvironmentInfo, RunningProvisionedContainer, StoppedProvisionedContainer,
+    RunningProvisionedContainer, StoppedProvisionedContainer,
 };
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
     generate_environment_config_with_port, run_container_preflight_cleanup,
@@ -211,22 +214,22 @@ async fn run_configure_release_run_tests() -> Result<()> {
     let ssh_credentials = build_test_ssh_credentials();
 
     // Step 1: Generate environment configuration
-    // This returns environment name, config path, SSH port, and tracker ports all in one
-    // With host networking, ports inside and outside the container are identical
-    let env_info = generate_environment_config_with_port(ENVIRONMENT_NAME)?;
+    // This returns configuration with desired ports from environment.json
+    let config_env = generate_environment_config_with_port(ENVIRONMENT_NAME)?;
 
-    // Step 2: Create and start Docker container with ports from environment config
-    // Ports are extracted from tracker config: HTTP API (1212), HTTP tracker (7070), UDP tracker (6969)
-    let running_container = create_and_start_container(&env_info).await?;
+    // Step 2: Create and start Docker container
+    // With bridge networking, Docker assigns random mapped ports
+    // Returns runtime environment with both config and actual mapped ports
+    let (runtime_env, running_container) = create_and_start_container(&config_env).await?;
 
-    let socket_addr = env_info.ssh_socket_addr();
+    // Get SSH socket address from runtime environment (using actual mapped port)
+    let socket_addr = runtime_env.ssh_socket_addr();
 
-    // Step 3: Establish SSH connectivity using the socket address from env_info
+    // Step 3: Establish SSH connectivity using the mapped SSH port
     establish_ssh_connectivity(socket_addr, &ssh_credentials, Some(&running_container)).await?;
 
     // Step 4: Run deployer commands (black-box via CLI)
-    let test_result =
-        run_deployer_workflow(socket_addr, &env_info, &ssh_credentials, &running_container).await;
+    let test_result = run_deployer_workflow(&config_env, &runtime_env, &ssh_credentials).await;
 
     // Step 5: Stop container regardless of test result
     stop_test_infrastructure(running_container);
@@ -238,19 +241,32 @@ async fn run_configure_release_run_tests() -> Result<()> {
 ///
 /// This executes the create → register → configure → release → run workflow
 /// via CLI commands, with validation after each major step.
+///
+/// # Arguments
+/// * `config_env` - Configuration environment with desired ports and settings
+/// * `runtime_env` - Runtime environment with actual mapped ports from Docker
+/// * `ssh_credentials` - SSH credentials for container access
 async fn run_deployer_workflow(
-    socket_addr: SocketAddr,
-    env_info: &E2eEnvironmentInfo,
+    config_env: &E2eConfigEnvironment,
+    runtime_env: &E2eRuntimeEnvironment,
     ssh_credentials: &SshCredentials,
-    _running_container: &RunningProvisionedContainer,
 ) -> Result<()> {
     let test_runner = E2eTestRunner::new(ENVIRONMENT_NAME);
 
     // Create environment (CLI: cargo run -- create environment --env-file <file>)
-    test_runner.create_environment(&env_info.config_file_path)?;
+    test_runner.create_environment(&config_env.config_file_path)?;
+
+    // TODO: The register command doesn't work with bridge networking because it reads
+    // ssh_port from the environment config (22) but the actual SSH server is on a
+    // mapped port (e.g., 33049). We need to either:
+    // 1. Make register command support custom SSH port via CLI arg
+    // 2. Skip register and manually create the registered state
+    // 3. Use host networking (reverts the GitHub Actions fix)
+    // For now, this test will fail at the register step with bridge networking.
 
     // Register the container's IP as an existing instance
     // (CLI: cargo run -- register <env> --instance-ip <ip>)
+    let socket_addr = runtime_env.ssh_socket_addr();
     let instance_ip = socket_addr.ip().to_string();
     test_runner.register_instance(&instance_ip)?;
 
@@ -276,12 +292,12 @@ async fn run_deployer_workflow(
     // (CLI: cargo run -- run <env>)
     test_runner.run_services()?;
 
-    // Validate services are running (Docker Compose services started and healthy)
+    // Validate services are running using actual mapped ports from runtime environment
     run_run_validation(
         socket_addr,
         ssh_credentials,
-        env_info.tracker_ports.http_api_port,
-        Some(env_info.tracker_ports.http_tracker_port),
+        runtime_env.container_ports.http_api_port,
+        Some(runtime_env.container_ports.http_tracker_port),
     )
     .await
     .map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -315,22 +331,26 @@ fn build_test_ssh_credentials() -> SshCredentials {
 /// This function creates a new Docker container from the provisioned instance image
 /// and starts it, making it ready for SSH connectivity and configuration testing.
 ///
-/// With host networking, all ports (SSH + tracker ports) are identical inside and
-/// outside the container, eliminating the need for port mapping.
+/// With bridge networking (default Docker mode), ports are dynamically mapped.
+/// The function returns both the configuration (desired ports) and runtime
+/// (actual mapped ports) in an `E2eRuntimeEnvironment`.
 ///
 /// # Arguments
-/// * `env_info` - Complete E2E environment information including ports and config
+/// * `config_env` - E2E configuration with desired ports and environment settings
+///
+/// # Returns
+/// * `(E2eRuntimeEnvironment, RunningProvisionedContainer)` - Runtime environment and container reference
 async fn create_and_start_container(
-    env_info: &E2eEnvironmentInfo,
-) -> Result<RunningProvisionedContainer> {
-    let additional_ports = env_info.tracker_ports.all_ports();
+    config_env: &E2eConfigEnvironment,
+) -> Result<(E2eRuntimeEnvironment, RunningProvisionedContainer)> {
+    let additional_ports = config_env.tracker_ports.all_ports();
 
     info!(
-        environment_name = %env_info.environment_name,
-        ssh_port = %env_info.ssh_port,
-        http_api_port = env_info.tracker_ports.http_api_port,
-        http_tracker_port = env_info.tracker_ports.http_tracker_port,
-        udp_tracker_port = env_info.tracker_ports.udp_tracker_port,
+        environment_name = %config_env.environment_name,
+        ssh_port = %config_env.ssh_port,
+        http_api_port = config_env.tracker_ports.http_api_port,
+        http_tracker_port = config_env.tracker_ports.http_tracker_port,
+        udp_tracker_port = config_env.tracker_ports.udp_tracker_port,
         "Creating and starting Docker container for E2E testing with tracker ports from config"
     );
 
@@ -338,21 +358,30 @@ async fn create_and_start_container(
 
     let running_container = stopped_container
         .start(
-            Some(env_info.environment_name.clone()),
-            env_info.ssh_port,
+            Some(config_env.environment_name.clone()),
+            config_env.ssh_port,
             &additional_ports,
         )
         .await
         .context("Failed to start provisioned instance container")?;
 
+    // Get the actual mapped ports from Docker
+    let ssh_mapped_port = running_container.ssh_socket_addr().port();
+    let additional_mapped_ports = running_container.additional_mapped_ports();
+
+    // Build runtime environment with both config and actual mapped ports
+    let container_ports =
+        ContainerPorts::from_mapped_ports(ssh_mapped_port, additional_mapped_ports);
+    let runtime_env = E2eRuntimeEnvironment::new(config_env.clone(), container_ports);
+
     info!(
-        environment_name = %env_info.environment_name,
+        environment_name = %config_env.environment_name,
         container_id = %running_container.container_id(),
         ssh_socket_addr = %running_container.ssh_socket_addr(),
         "Docker container setup completed successfully"
     );
 
-    Ok(running_container)
+    Ok((runtime_env, running_container))
 }
 
 /// Establish SSH connectivity for a running Docker container
