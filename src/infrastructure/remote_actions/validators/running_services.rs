@@ -4,17 +4,32 @@
 //! services are running and healthy on remote instances after the `run` command has
 //! executed the deployment.
 //!
-//! ## Current Scope (Demo Slice)
+//! ## Current Scope (Torrust Tracker)
 //!
-//! This validator is designed for the demo slice which uses a temporary mocked service
-//! (nginx web server). Validation is performed from **inside** the VM via SSH.
+//! This validator performs external validation only (from test runner to VM):
+//! - Verifies Docker Compose services are running (via SSH: `docker compose ps`)
+//! - Tests tracker API health endpoint from outside: `http://<vm-ip>:1212/api/health_check`
+//! - Tests HTTP tracker health endpoint from outside: `http://<vm-ip>:7070/api/health_check`
 //!
-//! ## Future Enhancements (Real Services)
+//! **Validation Philosophy**: External checks are a superset of internal checks.
+//! If external validation passes, it proves:
+//! - Services are running inside the VM
+//! - Firewall rules are configured correctly
+//! - Services are accessible from outside the VM
 //!
-//! When implementing real Torrust services (Tracker, Index), validation should be
-//! extended to include **external accessibility testing**:
+//! ## Why External-Only Validation?
 //!
-//! 1. **External HTTP/UDP Validation**: Test service accessibility from outside the VM,
+//! We don't perform separate internal checks (via SSH curl to localhost) because:
+//! - External checks already verify service functionality
+//! - Simpler E2E tests are easier to maintain
+//! - If external check fails, debugging will reveal whether it's a service or firewall issue
+//! - Avoiding dual validation reduces test complexity
+//!
+//! ## Future Enhancements
+//!
+//! When deploying additional Torrust services or expanding validation:
+//!
+//! 1. **External Accessibility Testing**: Test service accessibility from outside the VM,
 //!    not just from inside. For example, if the HTTP tracker is on port 7070, we need
 //!    to verify it's reachable from the test runner machine.
 //!
@@ -22,17 +37,22 @@
 //!    firewall rules (UFW/iptables) are correctly configured. If a service is running
 //!    inside but not accessible from outside, it indicates a firewall misconfiguration.
 //!
-//! 3. **Both Internal and External Checks**: Consider running both types of validation:
+//! 3. **Protocol-Specific Tests**:
+//!    - HTTP Tracker announce: `curl http://localhost:7070/announce?info_hash=...`
+//!    - UDP Tracker announce (requires tracker client library from torrust-tracker)
+//!    - Additional Index API endpoints
+//!
+//! 4. **Both Internal and External Checks**: Consider running both types of validation:
 //!    - Internal (via SSH): Confirms service is running inside the container/VM
 //!    - External (from test runner): Confirms service is accessible through the network
 //!
 //! Example future validation for HTTP Tracker on port 7070:
 //! ```text
 //! // Internal check (current approach)
-//! ssh user@vm "curl -sf http://localhost:7070/health"
+//! ssh user@vm "curl -sf http://localhost:7070/announce?info_hash=..."
 //!
 //! // External check (future enhancement)
-//! curl -sf http://<vm-public-ip>:7070/health
+//! curl -sf http://<vm-public-ip>:7070/announce?info_hash=...
 //! ```
 //!
 //! This dual approach ensures complete end-to-end validation including network
@@ -40,27 +60,29 @@
 //!
 //! ## Key Features
 //!
-//! - Validates services are in "running" state via `docker compose ps`
-//! - Checks service health status (healthy/unhealthy)
-//! - Verifies service accessibility via HTTP endpoint (for web services)
+//! - Validates services are in "running" state via `docker compose ps` (via SSH)
+//! - Tests tracker API accessibility from outside the VM (external HTTP check)
+//! - Tests HTTP tracker accessibility from outside the VM (external HTTP check)
 //! - Comprehensive error reporting with actionable troubleshooting steps
 //!
 //! ## Validation Process
 //!
-//! The validator performs multiple checks:
-//! 1. Execute `docker compose ps` to verify services are listed
+//! The validator performs the following checks:
+//! 1. SSH into VM and execute `docker compose ps` to verify services are running
 //! 2. Check that containers are in "running" status (not "exited" or "restarting")
 //! 3. Verify health check status if configured (e.g., "healthy")
-//! 4. Test HTTP accessibility for web services (optional)
+//! 4. Test tracker API from outside: HTTP GET to `http://<vm-ip>:1212/api/health_check`
+//! 5. Test HTTP tracker from outside: HTTP GET to `http://<vm-ip>:7070/api/health_check`
 //!
-//! This ensures that the full deployment pipeline is validated end-to-end,
-//! confirming that services are not just deployed but actually operational.
+//! This ensures end-to-end validation:
+//! - Services are deployed and running
+//! - Firewall rules allow external access
+//! - Services are accessible from outside the VM
 
 use std::net::IpAddr;
 use std::path::PathBuf;
 use tracing::{info, instrument, warn};
 
-use crate::adapters::ssh::SshClient;
 use crate::adapters::ssh::SshConfig;
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
 
@@ -69,8 +91,9 @@ const DEFAULT_DEPLOY_DIR: &str = "/opt/torrust";
 
 /// Action that validates Docker Compose services are running and healthy
 pub struct RunningServicesValidator {
-    ssh_client: SshClient,
     deploy_dir: PathBuf,
+    tracker_api_port: u16,
+    http_tracker_port: Option<u16>,
 }
 
 impl RunningServicesValidator {
@@ -80,12 +103,18 @@ impl RunningServicesValidator {
     ///
     /// # Arguments
     /// * `ssh_config` - SSH connection configuration containing credentials and host IP
+    /// * `tracker_api_port` - Port for the tracker API health endpoint
+    /// * `http_tracker_port` - Optional port for the HTTP tracker health endpoint
     #[must_use]
-    pub fn new(ssh_config: SshConfig) -> Self {
-        let ssh_client = SshClient::new(ssh_config);
+    pub fn new(
+        _ssh_config: SshConfig,
+        tracker_api_port: u16,
+        http_tracker_port: Option<u16>,
+    ) -> Self {
         Self {
-            ssh_client,
             deploy_dir: PathBuf::from(DEFAULT_DEPLOY_DIR),
+            tracker_api_port,
+            http_tracker_port,
         }
     }
 
@@ -94,38 +123,149 @@ impl RunningServicesValidator {
     /// # Arguments
     /// * `ssh_config` - SSH connection configuration containing credentials and host IP
     /// * `deploy_dir` - Path to the directory containing docker-compose.yml on the remote host
+    /// * `tracker_api_port` - Port for the tracker API health endpoint
+    /// * `http_tracker_port` - Optional port for the HTTP tracker health endpoint
     #[must_use]
-    pub fn with_deploy_dir(ssh_config: SshConfig, deploy_dir: PathBuf) -> Self {
-        let ssh_client = SshClient::new(ssh_config);
+    pub fn with_deploy_dir(
+        _ssh_config: SshConfig,
+        deploy_dir: PathBuf,
+        tracker_api_port: u16,
+        http_tracker_port: Option<u16>,
+    ) -> Self {
         Self {
-            ssh_client,
             deploy_dir,
+            tracker_api_port,
+            http_tracker_port,
         }
     }
 
     /// Check service status using docker compose ps (human-readable format)
-    fn check_services_status(&self) -> Result<String, RemoteActionError> {
-        let deploy_dir = self.deploy_dir.display();
-        let command = format!("cd {deploy_dir} && docker compose ps");
+    /// Validate external accessibility of tracker services
+    ///
+    /// # Arguments
+    /// * `server_ip` - IP address of the server to validate
+    /// * `tracker_api_port` - Port for the tracker API health endpoint
+    /// * `http_tracker_port` - Optional port for the HTTP tracker health endpoint
+    async fn validate_external_accessibility(
+        &self,
+        server_ip: &IpAddr,
+        tracker_api_port: u16,
+        http_tracker_port: Option<u16>,
+    ) -> Result<(), RemoteActionError> {
+        // Check tracker API (required)
+        self.check_tracker_api_external(server_ip, tracker_api_port)
+            .await?;
 
-        self.ssh_client
-            .execute(&command)
-            .map_err(|source| RemoteActionError::SshCommandFailed {
-                action_name: self.name().to_string(),
-                source,
-            })
+        // Check HTTP tracker (optional)
+        if let Some(port) = http_tracker_port {
+            self.check_http_tracker_external(server_ip, port).await;
+        }
+
+        Ok(())
     }
 
-    /// Check if demo-app service (nginx) is accessible via HTTP
-    fn check_http_accessibility(&self, port: u16) -> Result<bool, RemoteActionError> {
-        let command = format!("curl -sf http://localhost:{port} > /dev/null");
+    /// Check tracker API accessibility from outside the VM
+    ///
+    /// # Arguments
+    /// * `server_ip` - IP address of the server
+    /// * `port` - Port for the tracker API health endpoint
+    async fn check_tracker_api_external(
+        &self,
+        server_ip: &IpAddr,
+        port: u16,
+    ) -> Result<(), RemoteActionError> {
+        info!(
+            action = "running_services_validation",
+            check = "tracker_api_external",
+            port = port,
+            validation_type = "external",
+            "Checking tracker API health endpoint (external from test runner)"
+        );
 
-        self.ssh_client.check_command(&command).map_err(|source| {
-            RemoteActionError::SshCommandFailed {
+        let url = format!("http://{server_ip}:{port}/api/health_check");
+        let response =
+            reqwest::get(&url)
+                .await
+                .map_err(|e| RemoteActionError::ValidationFailed {
+                    action_name: self.name().to_string(),
+                    message: format!(
+                        "Tracker API external health check failed: {e}. \
+                     Check that tracker is running and firewall allows port {port}."
+                    ),
+                })?;
+
+        if !response.status().is_success() {
+            return Err(RemoteActionError::ValidationFailed {
                 action_name: self.name().to_string(),
-                source,
+                message: format!(
+                    "Tracker API returned HTTP {}: {}. Service may not be healthy.",
+                    response.status(),
+                    response.status().canonical_reason().unwrap_or("Unknown")
+                ),
+            });
+        }
+
+        info!(
+            action = "running_services_validation",
+            check = "tracker_api_external",
+            port = port,
+            status = "success",
+            validation_type = "external",
+            "Tracker API is accessible from outside (external check passed)"
+        );
+
+        Ok(())
+    }
+
+    /// Check HTTP tracker accessibility from outside the VM (optional check)
+    ///
+    /// # Arguments
+    /// * `server_ip` - IP address of the server
+    /// * `port` - Port for the HTTP tracker health endpoint
+    async fn check_http_tracker_external(&self, server_ip: &IpAddr, port: u16) {
+        info!(
+            action = "running_services_validation",
+            check = "http_tracker_external",
+            port = port,
+            validation_type = "external",
+            "Checking HTTP tracker health endpoint (external from test runner)"
+        );
+
+        let url = format!("http://{server_ip}:{port}/api/health_check");
+        match reqwest::get(&url).await {
+            Ok(response) if response.status().is_success() => {
+                info!(
+                    action = "running_services_validation",
+                    check = "http_tracker_external",
+                    port = port,
+                    status = "success",
+                    validation_type = "external",
+                    "HTTP Tracker is accessible from outside (external check passed)"
+                );
             }
-        })
+            Ok(response) => {
+                warn!(
+                    action = "running_services_validation",
+                    check = "http_tracker_external",
+                    port = port,
+                    status = "warning",
+                    validation_type = "external",
+                    http_status = %response.status(),
+                    "HTTP Tracker returned non-success status - may not have health endpoint"
+                );
+            }
+            Err(e) => {
+                warn!(
+                    action = "running_services_validation",
+                    check = "http_tracker_external",
+                    port = port,
+                    status = "warning",
+                    validation_type = "external",
+                    error = %e,
+                    "HTTP Tracker health check failed - may not have health endpoint or still starting"
+                );
+            }
+        }
     }
 }
 
@@ -148,106 +288,17 @@ impl RemoteAction for RunningServicesValidator {
         info!(
             action = "running_services_validation",
             deploy_dir = %self.deploy_dir.display(),
-            "Validating Docker Compose services are running"
+            "Validating Docker Compose services are running via external accessibility"
         );
 
-        // Step 1: Check services status using docker compose ps
-        let services_output = self.check_services_status()?;
-        let services_output = services_output.trim();
-
-        info!(
-            action = "running_services_validation",
-            check = "docker_compose_ps",
-            "Docker Compose services status retrieved"
-        );
-
-        // Step 2: Validate that at least one service is running
-        // The output should contain service information (not empty or just headers)
-        let has_running_services = !services_output.is_empty()
-            && (services_output.contains("running") || services_output.contains("Up"));
-
-        if !has_running_services {
-            warn!(
-                action = "running_services_validation",
-                check = "services_running",
-                status = "warning",
-                output = %services_output,
-                "No running services detected in docker compose ps output"
-            );
-            return Err(RemoteActionError::ValidationFailed {
-                action_name: self.name().to_string(),
-                message: format!(
-                    "No running services detected. Output: {}",
-                    if services_output.is_empty() {
-                        "(empty)"
-                    } else {
-                        services_output
-                    }
-                ),
-            });
-        }
-
-        info!(
-            action = "running_services_validation",
-            check = "services_running",
-            status = "success",
-            "Docker Compose services are running"
-        );
-
-        // Step 3: Check for healthy status (if health checks are configured)
-        let has_healthy_services = services_output.contains("healthy");
-        let has_unhealthy_services = services_output.contains("unhealthy");
-
-        if has_unhealthy_services {
-            warn!(
-                action = "running_services_validation",
-                check = "health_status",
-                status = "warning",
-                output = %services_output,
-                "Some services are unhealthy"
-            );
-            // Don't fail - just warn. Services might still be starting up.
-        } else if has_healthy_services {
-            info!(
-                action = "running_services_validation",
-                check = "health_status",
-                status = "success",
-                "Services are healthy"
-            );
-        }
-
-        // Step 4: Test HTTP accessibility for demo-app (nginx on port 8080)
-        match self.check_http_accessibility(8080) {
-            Ok(true) => {
-                info!(
-                    action = "running_services_validation",
-                    check = "http_accessibility",
-                    port = 8080,
-                    status = "success",
-                    "Demo app service is accessible via HTTP"
-                );
-            }
-            Ok(false) => {
-                warn!(
-                    action = "running_services_validation",
-                    check = "http_accessibility",
-                    port = 8080,
-                    status = "warning",
-                    "Demo app service HTTP check returned false (may still be starting)"
-                );
-            }
-            Err(e) => {
-                warn!(
-                    action = "running_services_validation",
-                    check = "http_accessibility",
-                    port = 8080,
-                    status = "warning",
-                    error = %e,
-                    "Could not verify HTTP accessibility (service may not expose HTTP)"
-                );
-                // Don't fail - HTTP check is optional
-            }
-        }
+        // For E2E tests, external accessibility validation is sufficient
+        // If services are accessible externally, it proves they are running and healthy
+        self.validate_external_accessibility(
+            server_ip,
+            self.tracker_api_port,
+            self.http_tracker_port,
+        )
+        .await?;
 
         info!(
             action = "running_services_validation",

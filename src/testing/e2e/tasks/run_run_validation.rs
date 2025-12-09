@@ -2,29 +2,38 @@
 //!
 //! This module provides the E2E testing task for validating that the `run`
 //! command executed correctly. It verifies that Docker Compose services are
-//! running and healthy after deployment.
+//! running and healthy after deployment, and specifically checks that the
+//! Torrust Tracker API is accessible and responding to health checks.
 //!
-//! ## Current Scope (Demo Slice)
+//! ## Current Scope (Torrust Tracker)
 //!
-//! This validation is designed for the demo slice using a temporary nginx service.
+//! This validation checks that the deployed Torrust Tracker is operational:
+//! - Docker Compose services are running
+//! - Tracker API responds to health check endpoint (`/api/health_check`)
+//!
 //! All checks are performed from **inside** the VM via SSH commands.
 //!
-//! ## Future Enhancements (Real Torrust Services)
+//! ## Future Enhancements
 //!
-//! When deploying real Torrust services (HTTP Tracker, UDP Tracker, Index), the
-//! validation strategy should be extended:
+//! When deploying additional Torrust services or expanding tracker validation,
+//! the validation strategy should be extended:
 //!
 //! 1. **External Accessibility Testing**:
 //!    - Test HTTP Tracker endpoint from outside the VM (e.g., port 7070)
 //!    - Test UDP Tracker announce from outside the VM (e.g., port 6969)
-//!    - Test Index API endpoints from outside the VM
+//!    - Test Index API endpoints from outside the VM (if deployed)
 //!
 //! 2. **Firewall Validation**:
 //!    - External tests implicitly validate firewall rules are correct
 //!    - If service runs inside but isn't accessible outside → firewall issue
 //!    - This catches UFW/iptables misconfigurations
 //!
-//! 3. **Dual Validation Strategy**:
+//! 3. **Protocol-Specific Tests**:
+//!    - HTTP Tracker announce: Test actual announce requests
+//!    - UDP Tracker announce: Requires tracker client library from torrust-tracker
+//!    - Additional API endpoints beyond health check
+//!
+//! 4. **Dual Validation Strategy**:
 //!    - Internal (via SSH): Service is running inside the VM
 //!    - External (from test runner): Service is accessible through network + firewall
 //!
@@ -139,17 +148,28 @@ For more information, see docs/e2e-testing.md."
 pub async fn run_run_validation(
     socket_addr: SocketAddr,
     ssh_credentials: &SshCredentials,
+    tracker_api_port: u16,
+    http_tracker_port: Option<u16>,
 ) -> Result<(), RunValidationError> {
     info!(
         socket_addr = %socket_addr,
         ssh_user = %ssh_credentials.ssh_username,
+        tracker_api_port = tracker_api_port,
+        http_tracker_port = ?http_tracker_port,
         "Running 'run' command validation tests"
     );
 
     let ip_addr = socket_addr.ip();
 
     // Validate running services
-    validate_running_services(ip_addr, ssh_credentials, socket_addr.port()).await?;
+    validate_running_services(
+        ip_addr,
+        ssh_credentials,
+        socket_addr.port(),
+        tracker_api_port,
+        http_tracker_port,
+    )
+    .await?;
 
     info!(
         socket_addr = %socket_addr,
@@ -169,12 +189,15 @@ async fn validate_running_services(
     ip_addr: std::net::IpAddr,
     ssh_credentials: &SshCredentials,
     port: u16,
+    tracker_api_port: u16,
+    http_tracker_port: Option<u16>,
 ) -> Result<(), RunValidationError> {
     info!("Validating running services");
 
     let ssh_config = SshConfig::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
 
-    let services_validator = RunningServicesValidator::new(ssh_config);
+    let services_validator =
+        RunningServicesValidator::new(ssh_config, tracker_api_port, http_tracker_port);
     services_validator
         .execute(&ip_addr)
         .await

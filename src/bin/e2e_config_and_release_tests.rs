@@ -59,7 +59,7 @@ use clap::Parser;
 use torrust_dependency_installer::Dependency;
 use tracing::{error, info};
 
-use torrust_tracker_deployer_lib::adapters::ssh::{SshCredentials, DEFAULT_SSH_PORT};
+use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::e2e::containers::actions::{
@@ -67,7 +67,7 @@ use torrust_tracker_deployer_lib::testing::e2e::containers::actions::{
 };
 use torrust_tracker_deployer_lib::testing::e2e::containers::timeout::ContainerTimeouts;
 use torrust_tracker_deployer_lib::testing::e2e::containers::{
-    RunningProvisionedContainer, StoppedProvisionedContainer,
+    E2eEnvironmentInfo, RunningProvisionedContainer, StoppedProvisionedContainer,
 };
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
     generate_environment_config_with_port, run_container_preflight_cleanup,
@@ -192,37 +192,43 @@ pub async fn main() -> Result<()> {
 /// Run the complete configure → release → run workflow tests using black-box CLI commands
 ///
 /// This function orchestrates the full software deployment workflow:
-/// 1. Create environment from config file
-/// 2. Register the container's IP as an existing instance
-/// 3. Configure services via Ansible (install Docker, etc.)
-/// 4. Release software (deploy Docker Compose files)
-/// 5. Run services (start Docker Compose)
+/// 1. Generate environment configuration with all E2E info (name, ports, config path)
+/// 2. Create Docker container with ports from environment config (host networking)
+/// 3. Establish SSH connectivity
+/// 4. Register the container's IP as an existing instance
+/// 5. Configure services via Ansible (install Docker, etc.)
+/// 6. Release software (deploy Docker Compose files)
+/// 7. Run services (start Docker Compose)
+///
+/// With host networking, ports are identical inside and outside the container,
+/// eliminating the cyclic dependency between config generation and container creation.
 ///
 /// Each step is followed by validation to ensure correctness.
 async fn run_configure_release_run_tests() -> Result<()> {
     info!("Starting configure → release → run tests with Docker container (black-box approach)");
 
-    // Build SSH credentials (same as used in e2e_config_tests)
-    let project_root = std::env::current_dir().expect("Failed to get current directory");
-    let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
-    let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
-    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
-    let ssh_credentials = SshCredentials::new(ssh_private_key_path, ssh_public_key_path, ssh_user);
+    // Build SSH credentials
+    let ssh_credentials = build_test_ssh_credentials();
 
-    // Step 1: Start Docker container (infrastructure managed externally)
-    let running_container =
-        create_and_start_container(ENVIRONMENT_NAME.to_string(), DEFAULT_SSH_PORT).await?;
+    // Step 1: Generate environment configuration
+    // This returns environment name, config path, SSH port, and tracker ports all in one
+    // With host networking, ports inside and outside the container are identical
+    let env_info = generate_environment_config_with_port(ENVIRONMENT_NAME)?;
 
-    let socket_addr = running_container.ssh_socket_addr();
+    // Step 2: Create and start Docker container with ports from environment config
+    // Ports are extracted from tracker config: HTTP API (1212), HTTP tracker (7070), UDP tracker (6969)
+    let running_container = create_and_start_container(&env_info).await?;
 
-    // Step 2: Establish SSH connectivity
+    let socket_addr = env_info.ssh_socket_addr();
+
+    // Step 3: Establish SSH connectivity using the socket address from env_info
     establish_ssh_connectivity(socket_addr, &ssh_credentials, Some(&running_container)).await?;
 
-    // Step 3: Run deployer commands (black-box via CLI)
+    // Step 4: Run deployer commands (black-box via CLI)
     let test_result =
-        run_deployer_workflow(socket_addr, &ssh_credentials, &running_container).await;
+        run_deployer_workflow(socket_addr, &env_info, &ssh_credentials, &running_container).await;
 
-    // Step 4: Stop container regardless of test result
+    // Step 5: Stop container regardless of test result
     stop_test_infrastructure(running_container);
 
     test_result
@@ -234,18 +240,14 @@ async fn run_configure_release_run_tests() -> Result<()> {
 /// via CLI commands, with validation after each major step.
 async fn run_deployer_workflow(
     socket_addr: SocketAddr,
+    env_info: &E2eEnvironmentInfo,
     ssh_credentials: &SshCredentials,
     _running_container: &RunningProvisionedContainer,
 ) -> Result<()> {
     let test_runner = E2eTestRunner::new(ENVIRONMENT_NAME);
 
-    // Generate environment configuration file with the container's mapped SSH port
-    // The port must be specified because the container exposes SSH on a dynamic port
-    let config_path =
-        generate_environment_config_with_port(ENVIRONMENT_NAME, Some(socket_addr.port()))?;
-
     // Create environment (CLI: cargo run -- create environment --env-file <file>)
-    test_runner.create_environment(&config_path)?;
+    test_runner.create_environment(&env_info.config_file_path)?;
 
     // Register the container's IP as an existing instance
     // (CLI: cargo run -- register <env> --instance-ip <ip>)
@@ -275,38 +277,76 @@ async fn run_deployer_workflow(
     test_runner.run_services()?;
 
     // Validate services are running (Docker Compose services started and healthy)
-    run_run_validation(socket_addr, ssh_credentials)
-        .await
-        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    run_run_validation(
+        socket_addr,
+        ssh_credentials,
+        env_info.tracker_ports.http_api_port,
+        Some(env_info.tracker_ports.http_tracker_port),
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     info!("Configure → release → run workflow tests completed successfully");
 
     Ok(())
 }
 
+/// Build SSH credentials for E2E testing
+///
+/// Creates SSH credentials using the test fixtures located in the `fixtures/` directory.
+/// These credentials are used to establish SSH connectivity with the test container.
+///
+/// # Returns
+///
+/// Returns `SshCredentials` configured with:
+/// - Private key: `fixtures/testing_rsa`
+/// - Public key: `fixtures/testing_rsa.pub`
+/// - Username: `torrust`
+fn build_test_ssh_credentials() -> SshCredentials {
+    let project_root = std::env::current_dir().expect("Failed to get current directory");
+    let ssh_private_key_path = project_root.join("fixtures/testing_rsa");
+    let ssh_public_key_path = project_root.join("fixtures/testing_rsa.pub");
+    let ssh_user = Username::new("torrust").expect("Valid hardcoded username");
+    SshCredentials::new(ssh_private_key_path, ssh_public_key_path, ssh_user)
+}
+
 /// Create and start a Docker container for E2E testing
 ///
 /// This function creates a new Docker container from the provisioned instance image
 /// and starts it, making it ready for SSH connectivity and configuration testing.
+///
+/// With host networking, all ports (SSH + tracker ports) are identical inside and
+/// outside the container, eliminating the need for port mapping.
+///
+/// # Arguments
+/// * `env_info` - Complete E2E environment information including ports and config
 async fn create_and_start_container(
-    container_name: String,
-    ssh_port: u16,
+    env_info: &E2eEnvironmentInfo,
 ) -> Result<RunningProvisionedContainer> {
+    let additional_ports = env_info.tracker_ports.all_ports();
+
     info!(
-        container_name = %container_name,
-        ssh_port = %ssh_port,
-        "Creating and starting Docker container for E2E testing"
+        environment_name = %env_info.environment_name,
+        ssh_port = %env_info.ssh_port,
+        http_api_port = env_info.tracker_ports.http_api_port,
+        http_tracker_port = env_info.tracker_ports.http_tracker_port,
+        udp_tracker_port = env_info.tracker_ports.udp_tracker_port,
+        "Creating and starting Docker container for E2E testing with tracker ports from config"
     );
 
     let stopped_container = StoppedProvisionedContainer::default();
 
     let running_container = stopped_container
-        .start(Some(container_name.clone()), ssh_port)
+        .start(
+            Some(env_info.environment_name.clone()),
+            env_info.ssh_port,
+            &additional_ports,
+        )
         .await
         .context("Failed to start provisioned instance container")?;
 
     info!(
-        container_name = %container_name,
+        environment_name = %env_info.environment_name,
         container_id = %running_container.container_id(),
         ssh_socket_addr = %running_container.ssh_socket_addr(),
         "Docker container setup completed successfully"

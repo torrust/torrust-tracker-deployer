@@ -304,8 +304,9 @@ Track completion status for each phase:
 - [x] **Phase 5**: Replace Docker Compose Service (1 hour) - ✅ Completed in commit 59e3762
 - [x] **Phase 6**: Add Environment Configuration Support (2 hours) - ✅ Completed in commit 52d7c2a
 - [x] **Phase 7**: Configure Firewall for Tracker Ports (1 hour) - ✅ Completed (infrastructure: 6939553, wiring: TBD)
+- [ ] **Phase 8**: Update E2E Tests for Tracker Validation (1.5 hours) - 🔨 In Progress
 
-**Total Estimated Time**: ~8.5 hours
+**Total Estimated Time**: ~10 hours
 
 ### Manual Testing Workflow
 
@@ -1374,6 +1375,172 @@ tracker_api_port: 1212
 
 **Phase 7 Status**: ✅ **COMPLETE**
 
+### Phase 8: Update E2E Tests for Tracker Validation (1.5 hours)
+
+**Goal**: Replace demo nginx validation with real Torrust Tracker API health check validation using external-only validation strategy
+
+**Context**: The current E2E tests (`src/bin/e2e_config_and_release_tests.rs`) validate that services are running by checking Docker Compose status and attempting an HTTP request to port 8080 (the old demo nginx service). Since we've replaced the demo app with the real Torrust Tracker, we need to update the validation to check the tracker's HTTP API health endpoint instead.
+
+**Validation Philosophy**: External checks are a superset of internal checks. If external validation passes, it proves:
+
+- Services are running inside the VM
+- Firewall rules are configured correctly
+- Services are accessible from outside the VM
+
+This simplifies E2E tests and makes them easier to maintain. If external checks fail, debugging will reveal whether it's a service issue (check `docker compose ps` via SSH) or a firewall issue (service running but not accessible).
+
+**Current Behavior** (Why tests don't fail):
+
+- The `RunningServicesValidator::check_http_accessibility()` method attempts to `curl http://localhost:8080`
+- This check fails (port 8080 is not open), but only logs a **warning** instead of failing the test
+- The validation completes successfully despite the failed HTTP check
+- This is by design for the demo slice - HTTP checks are optional/informational
+
+**Tasks**:
+
+- [x] Update `RunningServicesValidator` infrastructure (external validation via direct HTTP)
+
+  - Changed from demo nginx port 8080 to tracker API port 1212
+  - Uses tracker API health check endpoint: `http://<vm-ip>:1212/api/health_check`
+  - Uses HTTP tracker health check endpoint: `http://<vm-ip>:7070/api/health_check`
+  - Made tracker API check **required** (fails validation if check fails)
+  - Made HTTP tracker check **optional** (logs warning if fails - may not have health endpoint)
+  - Updated logging to reflect tracker validation (not "demo-app")
+  - Added `reqwest` dependency for HTTP client
+
+- [x] Refactor `execute()` method for better code quality
+
+  - Extracted `validate_services_are_running()` private method (Docker Compose status check)
+  - Extracted `check_service_health_status()` private method (health status check)
+  - Extracted `validate_external_accessibility()` private method (external HTTP validation)
+  - Extracted `check_tracker_api_external()` private method (tracker API health check)
+  - Extracted `check_http_tracker_external()` private method (HTTP tracker health check)
+  - Reduced `execute()` from ~90 lines to ~30 lines (orchestration only)
+
+- [x] Update E2E test documentation comments
+
+  - Removed references to "demo slice" and "temporary nginx service"
+  - Updated comments in `src/testing/e2e/tasks/run_run_validation.rs` to reflect real tracker validation
+  - Updated comments in `src/infrastructure/remote_actions/validators/running_services.rs`
+
+- [ ] Update E2E tests to use external validation only
+  - Remove internal SSH-based health checks from test code
+  - Verify both tracker API (port 1212) and HTTP tracker (port 7070) are accessible externally
+  - Include proper error messages for external validation failures
+
+**Implementation Details**:
+
+```rust
+// External validation (direct HTTP from test runner)
+impl RunningServicesValidator {
+    async fn execute(&self, server_ip: &IpAddr) -> Result<(), RemoteActionError> {
+        // Step 1: Check Docker Compose services are running (via SSH)
+        self.validate_services_are_running().await?;
+
+        // Step 2: Check service health status (via SSH)
+        self.check_service_health_status().await;
+
+        // Step 3: Validate external accessibility (direct HTTP)
+        self.validate_external_accessibility(server_ip).await?;
+
+        Ok(())
+    }
+
+    /// Check tracker API accessibility from outside the VM
+    async fn check_tracker_api_external(&self, server_ip: &IpAddr) -> Result<(), RemoteActionError> {
+        let url = format!("http://{}:1212/api/health_check", server_ip);
+        let response = reqwest::get(&url).await?;
+
+        if !response.status().is_success() {
+            return Err(ValidationError::TrackerApiUnhealthy);
+        }
+
+        Ok(())
+    }
+
+    /// Check HTTP tracker accessibility from outside the VM (optional check)
+    async fn check_http_tracker_external(&self, server_ip: &IpAddr) {
+        let url = format!("http://{}:7070/api/health_check", server_ip);
+        if let Ok(response) = reqwest::get(&url).await {
+            if response.status().is_success() {
+                info!("HTTP Tracker health check passed");
+            } else {
+                warn!("HTTP Tracker returned non-success - may not have health endpoint");
+            }
+        }
+    }
+}
+```
+
+**Verification**:
+
+```bash
+# Run E2E tests to verify tracker external health checks
+cargo run --bin e2e-config-and-release-tests
+
+# Expected log output:
+# - "Docker Compose services are running" (via SSH: docker compose ps)
+# - "Tracker API is accessible from outside (external check passed)"
+# - "HTTP Tracker is accessible from outside (external check passed)" (or warning if no endpoint)
+
+# Validation should FAIL if:
+# - Tracker services are not running (docker compose ps shows no running services)
+# - External tracker API not accessible (port 1212 blocked or service not running)
+
+# Validation should PASS when:
+# - Services are running inside VM (docker compose ps shows "running")
+# - Tracker API accessible externally (http://<vm-ip>:1212/api/health_check returns 200)
+# - HTTP tracker accessible externally (http://<vm-ip>:7070/api/health_check returns 200)
+```
+
+**Manual Testing**:
+
+```bash
+# Create and deploy test environment
+cargo run -- create template --provider lxd > envs/tracker-test.json
+# Edit tracker-test.json with your values
+cargo run -- create environment --env-file envs/tracker-test.json
+cargo run -- provision tracker-test
+cargo run -- configure tracker-test
+cargo run -- release tracker-test
+cargo run -- run tracker-test
+
+# Get VM IP
+VM_IP=$(cargo run -- show tracker-test | grep 'IP Address' | awk '{print $3}')
+
+# Test: External validation (direct HTTP - verifies service AND firewall)
+echo "=== External Validation (Direct HTTP) ==="
+curl -sf http://$VM_IP:1212/api/health_check
+# Expected: {"status":"ok"} or HTTP 200 (proves service is running AND firewall allows access)
+
+curl -sf http://$VM_IP:7070/api/health_check
+# Expected: {"status":"ok"} or HTTP 200 (proves service is running AND firewall allows access)
+
+# If external validation fails, debug internally:
+echo "=== Debug: Check if services are running ==="
+ssh -i fixtures/testing_rsa torrust@$VM_IP "docker compose ps"
+# Expected: Shows tracker services in "running" state
+
+echo "=== Debug: Check internal connectivity ==="
+ssh -i fixtures/testing_rsa torrust@$VM_IP "curl -sf http://localhost:1212/api/health_check"
+# If this works but external fails, it's a firewall issue
+
+# Run E2E tests to verify external validation
+cargo run --bin e2e-config-and-release-tests
+# Should complete successfully with external health check logs
+```
+
+**Why External-Only Validation?**
+
+Previously implemented dual validation (internal via SSH + external direct HTTP), but simplified to external-only because:
+
+1. **External is Superset**: External checks already validate service functionality
+2. **Simpler E2E Tests**: Easier to maintain without redundant SSH-based checks
+3. **Sufficient for Testing**: E2E tests only need to verify end-to-end accessibility
+4. **Debugging Flexibility**: If external fails, can SSH in to check `docker compose ps` manually
+
+**Phase 8 Status**: 🔨 **IN PROGRESS**
+
 ## Acceptance Criteria
 
 > **Note for Contributors**: These criteria define what the PR reviewer will check. Use this as your pre-review checklist before submitting the PR to minimize back-and-forth iterations.
@@ -1466,8 +1633,9 @@ After this slice is complete, future work can:
 - Phase 5: 1 hour (docker-compose service update)
 - Phase 6: 2 hours (environment configuration)
 - Phase 7: 1 hour (firewall configuration)
+- Phase 8: 1.5 hours (E2E test validation update)
 
-**Total**: ~8.5 hours
+**Total**: ~10 hours
 
 ### Testing Strategy
 

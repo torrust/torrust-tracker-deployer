@@ -17,6 +17,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use tracing::info;
 
+use crate::testing::e2e::containers::E2eEnvironmentInfo;
+
 /// Generates the environment configuration file with absolute SSH key paths.
 ///
 /// This function creates a configuration file with absolute paths
@@ -44,22 +46,27 @@ use tracing::info;
 /// let config_path = generate_environment_config("e2e-full")?;
 /// ```
 pub fn generate_environment_config(environment_name: &str) -> Result<PathBuf> {
-    generate_environment_config_with_port(environment_name, None)
+    let env_info = generate_environment_config_with_port(environment_name)?;
+    Ok(env_info.config_file_path)
 }
 
-/// Generates the environment configuration file with absolute SSH key paths and optional SSH port.
+/// Generates the environment configuration file with absolute SSH key paths.
 ///
-/// This variant allows specifying a custom SSH port, which is useful for container-based
-/// testing where the SSH port is dynamically mapped.
+/// Creates a complete E2E environment configuration including tracker ports,
+/// SSH credentials, and provider settings. With host networking, the SSH port
+/// is defined in the configuration and remains the same inside and outside the container.
 ///
 /// # Arguments
 ///
 /// * `environment_name` - The name of the environment to create
-/// * `ssh_port` - Optional SSH port (defaults to 22 if not specified)
 ///
 /// # Returns
 ///
-/// Returns the path to the generated configuration file.
+/// Returns `E2eEnvironmentInfo` containing all necessary information for E2E testing:
+/// - Environment name
+/// - Path to the generated configuration file
+/// - SSH port (extracted from tracker configuration)
+/// - Tracker ports (extracted from tracker configuration)
 ///
 /// # Errors
 ///
@@ -70,16 +77,10 @@ pub fn generate_environment_config(environment_name: &str) -> Result<PathBuf> {
 /// ```rust,ignore
 /// use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::generate_environment_config_with_port;
 ///
-/// // Use default port (22)
-/// let config_path = generate_environment_config_with_port("e2e-provision", None)?;
-///
-/// // Use custom port for container testing
-/// let config_path = generate_environment_config_with_port("e2e-config", Some(32808))?;
+/// let env_info = generate_environment_config_with_port("e2e-config")?;
+/// let socket_addr = env_info.ssh_socket_addr();
 /// ```
-pub fn generate_environment_config_with_port(
-    environment_name: &str,
-    ssh_port: Option<u16>,
-) -> Result<PathBuf> {
+pub fn generate_environment_config_with_port(environment_name: &str) -> Result<E2eEnvironmentInfo> {
     use std::fs;
 
     // Get project root from current directory (cargo run runs from project root)
@@ -104,16 +105,11 @@ pub fn generate_environment_config_with_port(
         ));
     }
 
-    // Create configuration JSON with absolute paths
-    let mut ssh_credentials = serde_json::json!({
+    // Create configuration JSON with absolute paths and tracker configuration
+    let ssh_credentials = serde_json::json!({
         "private_key_path": private_key_path.to_string_lossy(),
         "public_key_path": public_key_path.to_string_lossy()
     });
-
-    // Add port if specified
-    if let Some(port) = ssh_port {
-        ssh_credentials["port"] = serde_json::json!(port);
-    }
 
     // Create provider configuration with profile name based on environment name
     let provider = serde_json::json!({
@@ -121,7 +117,25 @@ pub fn generate_environment_config_with_port(
         "profile_name": format!("torrust-profile-{}", environment_name)
     });
 
+    // Create tracker configuration with default ports
+    let tracker = serde_json::json!({
+        "udp_trackers": [
+            {"bind_address": "0.0.0.0:6969"}
+        ],
+        "http_trackers": [
+            {"bind_address": "0.0.0.0:7070"}
+        ],
+        "http_api": {
+            "bind_address": "0.0.0.0:1212"
+        }
+    });
+
+    // Create full environment configuration matching the expected structure
     let config = serde_json::json!({
+        "Created": {
+            "ssh_port": 22,
+            "tracker": tracker
+        },
         "environment": {
             "name": environment_name
         },
@@ -145,9 +159,9 @@ pub fn generate_environment_config_with_port(
         config_path = %config_path.display(),
         private_key = %private_key_path.display(),
         public_key = %public_key_path.display(),
-        ssh_port = ?ssh_port,
         "Generated environment configuration with absolute SSH key paths"
     );
 
-    Ok(config_path)
+    // Create E2eEnvironmentInfo from the generated config
+    E2eEnvironmentInfo::from_config_file(environment_name.to_string(), config_path, None)
 }
