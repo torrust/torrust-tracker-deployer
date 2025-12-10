@@ -45,7 +45,7 @@ Phase 0: Architecture Fix
   [x] Step 0.3: Implement HttpTrackerSection DTO
   [x] Step 0.4: Implement HttpApiSection DTO
   [x] Step 0.5: Implement TrackerCoreSection DTO
-  [ ] Step 0.6: Implement TrackerSection DTO
+  [x] Step 0.6: Implement TrackerSection DTO
   [ ] Step 0.7: Update domain types to use SocketAddr
   [ ] Step 0.8: Update EnvironmentCreationConfig
   [ ] Step 0.9: Update all application imports
