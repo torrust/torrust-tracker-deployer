@@ -464,9 +464,38 @@ This architecture provides:
 3. **Coverage**: Combined suites provide complete deployment validation
 4. **Debugging**: Clear separation makes issue identification easier
 
-## � Docker Architecture for E2E Testing
+## 🐳 Docker Architecture for E2E Testing
 
-The E2E testing system uses a Docker architecture representing different deployment phases, allowing for efficient testing of the configuration, release, and run phases of the deployment pipeline.
+The E2E testing system uses a Docker-based architecture for testing the deployment workflow commands (configure, release, run, test) efficiently and reliably in CI environments.
+
+### Architecture Decision: Single Image with Sequential Command Execution
+
+We use a **single Docker image** (`provisioned-instance`) representing the pre-provisioned state, and execute all deployment commands **sequentially** within that container during E2E tests.
+
+**Why Sequential Instead of Multi-Image?**
+
+Initially, we considered creating separate Docker images for each deployment phase (configured, released, running). However, this approach was **rejected** due to:
+
+- **High Maintenance Overhead**: Every code change would require updating multiple Docker images
+- **Slower Execution**: Building 4 images takes longer than running 4 commands sequentially
+- **Synchronization Complexity**: Keeping multiple images in sync with code changes is error-prone
+- **No Real Benefit**: Parallel test execution overhead (Docker build + startup) exceeds sequential execution time
+
+**Sequential Execution Benefits**:
+
+- ✅ **Single Source of Truth**: One Dockerfile to maintain
+- ✅ **Faster Overall**: Sequential commands in one container (~48s) vs multiple image builds
+- ✅ **Realistic Testing**: Matches real deployment workflow exactly
+- ✅ **Easy Debugging**: Single container lifecycle with `--keep` flag
+- ✅ **Automatic Synchronization**: Code changes tested via Ansible playbooks without image rebuilds
+
+**Trade-offs Accepted**:
+
+- ❌ Cannot test individual commands in isolation (use unit/integration tests for that)
+- ❌ Cannot run E2E tests for different commands in parallel
+- ❌ Must run full sequence to test later commands
+
+See [ADR: Single Docker Image for Sequential E2E Command Testing](decisions/single-docker-image-sequential-testing.md) for the complete architectural decision.
 
 ### Current Implementation
 
@@ -482,108 +511,79 @@ The E2E testing system uses a Docker architecture representing different deploym
 - No application dependencies installed
 - Ready for Ansible configuration
 
-**Usage**: E2E configuration testing - simulates a freshly provisioned VM ready for software installation.
+**E2E Test Workflow**:
 
-### Future Expansion Architecture
+```rust
+// E2E deployment workflow tests (simplified)
+async fn run_deployment_workflow_tests() -> Result<()> {
+    // 1. Start single container (provisioned state)
+    let container = start_provisioned_container().await?;
 
-#### Recommended Approach: Multiple Dockerfiles
+    // 2. Run deployment commands sequentially
+    run_create_command()?;       // Create environment
+    run_register_command()?;     // Register container IP
+    run_configure_command()?;    // Install dependencies (modifies container)
+    run_release_command()?;      // Deploy applications (modifies container)
+    run_run_command()?;          // Start services (modifies container)
+    run_test_command()?;         // Validate deployment
 
-The planned architecture uses separate directories for each deployment phase:
-
-```text
-docker/
-├── provisioned-instance/          # ✅ Current - post-provision
-│   ├── Dockerfile
-│   ├── supervisord.conf
-│   ├── entrypoint.sh
-│   └── README.md
-├── configured-instance/           # 🔄 Future - post-configure
-│   ├── Dockerfile
-│   ├── docker-compose.yml         # Example: Docker services
-│   └── README.md
-├── released-instance/             # 🔄 Future - post-release
-│   ├── Dockerfile
-│   ├── app-configs/               # Application configurations
-│   └── README.md
-└── running-instance/              # 🔄 Future - post-run
-    ├── Dockerfile
-    ├── service-configs/           # Service validation configs
-    └── README.md
+    // 3. Cleanup
+    container.stop().await?;
+    Ok(())
+}
 ```
 
-#### Benefits of This Architecture
+**Key Characteristics**:
 
-- **Clear Separation**: Each phase has its own directory and concerns
-- **Independent Evolution**: Each Dockerfile can evolve independently
-- **Easier Maintenance**: Simpler to understand and debug individual phases
-- **Flexible Building**: Can build any phase independently
-- **Better Documentation**: Each directory can have phase-specific docs
+- **Stateful Testing**: Each command modifies the container state for the next command
+- **Complete Workflow**: Tests the full deployment pipeline end-to-end
+- **Fast Execution**: ~48 seconds total (container start + all commands + validation)
+- **CI Reliable**: Avoids GitHub Actions connectivity issues with LXD VMs
 
-#### Usage Example
+### Benefits of Single-Image Sequential Architecture
 
-```bash
-# Build specific phase containers
-docker build -f docker/provisioned-instance/Dockerfile -t torrust-provisioned:latest .
-docker build -f docker/configured-instance/Dockerfile -t torrust-configured:latest .
-docker build -f docker/released-instance/Dockerfile -t torrust-released:latest .
-docker build -f docker/running-instance/Dockerfile -t torrust-running:latest .
-```
+1. **Low Maintenance**: Single Dockerfile, changes propagate automatically via playbooks
+2. **Realistic Testing**: Sequential execution matches real deployment workflow exactly
+3. **Fast Feedback**: Faster than building multiple images, comparable to parallel execution
+4. **Simple Debugging**: Use `--keep` flag to inspect final container state
+5. **CI Reliability**: Single container uses fewer resources, avoids VM networking issues
+6. **Code Synchronization**: Ansible playbooks ensure image reflects current code
 
-### Implementation Strategy
+### Testing Strategy
 
-#### Phase 1: ✅ COMPLETED
+**What This Tests**:
 
-- [x] `docker/provisioned-instance/` - Base system ready for configuration
+- ✅ Complete deployment workflow (create → register → configure → release → run → test)
+- ✅ Command integration and state transitions
+- ✅ Ansible playbook execution in container environment
+- ✅ Service deployment and validation
 
-#### Phase 2: Future
+**What This Doesn't Test**:
 
-- [ ] `docker/configured-instance/` - System with Docker, dependencies installed
-  - Build FROM `torrust-provisioned-instance:latest`
-  - Add Ansible playbook execution results
-  - Verify Docker daemon, Docker Compose installation
+- ❌ Individual command isolation (use unit tests)
+- ❌ Infrastructure provisioning (use `e2e-infrastructure-lifecycle-tests`)
+- ❌ VM-specific features (use `e2e-complete-workflow-tests` locally)
 
-#### Phase 3: Future
+### Container vs VM Trade-offs
 
-- [ ] `docker/released-instance/` - System with applications deployed
-  - Build FROM `torrust-configured-instance:latest`
-  - Add application artifacts
-  - Add service configurations
+| Aspect                       | Docker Container                  | LXD VM                          |
+| ---------------------------- | --------------------------------- | ------------------------------- |
+| **Network Reliability (CI)** | ✅ Excellent                      | ❌ Poor (GitHub Actions issues) |
+| **Startup Time**             | ✅ ~2-3 seconds                   | ⚠️ ~17-30 seconds               |
+| **Production Similarity**    | ⚠️ Container (different from VMs) | ✅ Full VM (matches production) |
+| **Resource Usage**           | ✅ Lightweight                    | ⚠️ Higher overhead              |
+| **Best For**                 | Configuration/deployment workflow | Infrastructure provisioning     |
 
-#### Phase 4: Future
+**Result**: Use Docker containers for deployment workflow tests, LXD VMs for infrastructure tests.
 
-- [ ] `docker/running-instance/` - System with services started and validated
-  - Build FROM `torrust-released-instance:latest`
-  - Start all services
-  - Run validation checks
+## 📝 Contributing to E2E Tests
 
-### Benefits of Docker Phase Architecture
+When adding new features or making changes:
 
-1. **Test Coverage**: Complete deployment pipeline testing
-2. **Fast Feedback**: Test individual phases quickly (~2-3 seconds vs ~17-30 seconds for LXD)
-3. **Debugging**: Isolate issues to specific deployment phases
-4. **Scalability**: Easy to add new phases or modify existing ones
-5. **Documentation**: Each phase self-documents its purpose and setup
-6. **Reusability**: Containers can be used outside of testing (demos, development)
-7. **CI Reliability**: Avoids GitHub Actions connectivity issues with nested VMs
+### Infrastructure Changes
 
-### Phase-Specific Testing Integration
+For OpenTofu, LXD, or cloud-init modifications:
 
-Each deployment phase has distinct concerns that are tested appropriately:
-
-- **Provisioned Phase**: Base system setup, user management, SSH connectivity
-- **Configured Phase**: Software installation, system configuration, dependency management
-- **Released Phase**: Application deployment, service configuration, artifact management
-- **Running Phase**: Service validation, monitoring setup, operational readiness
-
-This architecture enables:
-
-- **Testing Isolation**: E2E tests can target specific phases independently
-- **Development Workflow**: Teams can work on different phases independently
-- **Issue Isolation**: Phase-specific containers make it easier to isolate problems
-
-The Docker phase architecture complements the split E2E testing strategy by providing fast, reliable containers for configuration testing while maintaining comprehensive coverage of the entire deployment pipeline.
-
-## �📝 Contributing to E2E Tests
 
 When adding new features or making changes:
 
