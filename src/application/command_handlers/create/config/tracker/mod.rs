@@ -6,8 +6,10 @@
 
 mod http_api_section;
 mod http_tracker_section;
+mod tracker_core_section;
 mod udp_tracker_section;
 
 pub use http_api_section::HttpApiSection;
 pub use http_tracker_section::HttpTrackerSection;
+pub use tracker_core_section::{DatabaseSection, TrackerCoreSection};
 pub use udp_tracker_section::UdpTrackerSection;
