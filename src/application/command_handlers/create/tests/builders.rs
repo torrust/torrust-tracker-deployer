@@ -16,6 +16,7 @@ use crate::application::command_handlers::create::config::{
 use crate::application::command_handlers::create::CreateCommandHandler;
 use crate::domain::environment::{Environment, EnvironmentName};
 use crate::domain::provider::{LxdConfig, ProviderConfig};
+use crate::domain::tracker::TrackerConfig;
 use crate::domain::ProfileName;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
@@ -269,6 +270,7 @@ pub fn create_valid_test_config(temp_dir: &TempDir, env_name: &str) -> Environme
         ProviderSection::Lxd(LxdProviderSection {
             profile_name: format!("lxd-{env_name}"),
         }),
+        TrackerConfig::default(),
     )
 }
 

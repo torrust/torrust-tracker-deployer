@@ -148,6 +148,30 @@ impl UserInputs {
         }
     }
 
+    /// Creates a new `UserInputs` with custom tracker configuration
+    ///
+    /// This is similar to `new` but allows specifying a custom tracker
+    /// configuration instead of using the default.
+    #[must_use]
+    pub fn with_tracker(
+        name: &EnvironmentName,
+        provider_config: ProviderConfig,
+        ssh_credentials: SshCredentials,
+        ssh_port: u16,
+        tracker: TrackerConfig,
+    ) -> Self {
+        let instance_name = Self::generate_instance_name(name);
+
+        Self {
+            name: name.clone(),
+            instance_name,
+            provider_config,
+            ssh_credentials,
+            ssh_port,
+            tracker,
+        }
+    }
+
     // ========================================================================
     // Provider Accessor Methods
     // ========================================================================

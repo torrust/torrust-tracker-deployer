@@ -29,6 +29,7 @@
 //!     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
 //!     SshCredentialsConfig,
 //! };
+//! use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
 //! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 //! use torrust_tracker_deployer_lib::shared::{SystemClock, Clock};
 //!
@@ -55,6 +56,7 @@
 //!     ProviderSection::Lxd(LxdProviderSection {
 //!         profile_name: "lxd-production".to_string(),
 //!     }),
+//!     TrackerConfig::default(),
 //! );
 //!
 //! // Execute command with working directory

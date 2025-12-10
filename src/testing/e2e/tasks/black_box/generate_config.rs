@@ -106,41 +106,37 @@ pub fn generate_environment_config_with_port(environment_name: &str) -> Result<E
     }
 
     // Create configuration JSON with absolute paths and tracker configuration
-    let ssh_credentials = serde_json::json!({
-        "private_key_path": private_key_path.to_string_lossy(),
-        "public_key_path": public_key_path.to_string_lossy()
-    });
-
-    // Create provider configuration with profile name based on environment name
-    let provider = serde_json::json!({
-        "provider": "lxd",
-        "profile_name": format!("torrust-profile-{}", environment_name)
-    });
-
-    // Create tracker configuration with default ports
-    let tracker = serde_json::json!({
-        "udp_trackers": [
-            {"bind_address": "0.0.0.0:6969"}
-        ],
-        "http_trackers": [
-            {"bind_address": "0.0.0.0:7070"}
-        ],
-        "http_api": {
-            "bind_address": "0.0.0.0:1212"
-        }
-    });
-
-    // Create full environment configuration matching the expected structure
+    // This must match the format expected by EnvironmentCreationConfig
     let config = serde_json::json!({
-        "Created": {
-            "ssh_port": 22,
-            "tracker": tracker
-        },
         "environment": {
             "name": environment_name
         },
-        "ssh_credentials": ssh_credentials,
-        "provider": provider
+        "ssh_credentials": {
+            "private_key_path": private_key_path.to_string_lossy(),
+            "public_key_path": public_key_path.to_string_lossy()
+        },
+        "provider": {
+            "provider": "lxd",
+            "profile_name": format!("torrust-profile-{}", environment_name)
+        },
+        "tracker": {
+            "core": {
+                "database": {
+                    "driver": "sqlite3",
+                    "database_name": "tracker.db"
+                },
+                "private": false
+            },
+            "udp_trackers": [
+                {"bind_address": "0.0.0.0:6969"}
+            ],
+            "http_trackers": [
+                {"bind_address": "0.0.0.0:7070"}
+            ],
+            "http_api": {
+                "admin_token": "MyAccessToken"
+            }
+        }
     });
 
     // Write to envs directory

@@ -244,6 +244,35 @@ impl EnvironmentContext {
         }
     }
 
+    /// Creates a new environment context with custom tracker configuration
+    ///
+    /// This is similar to `with_working_dir` but allows specifying a custom
+    /// tracker configuration instead of using the default.
+    #[must_use]
+    pub fn with_working_dir_and_tracker(
+        name: &EnvironmentName,
+        provider_config: ProviderConfig,
+        ssh_credentials: SshCredentials,
+        ssh_port: u16,
+        tracker_config: crate::domain::tracker::TrackerConfig,
+        working_dir: &std::path::Path,
+    ) -> Self {
+        Self {
+            user_inputs: UserInputs::with_tracker(
+                name,
+                provider_config,
+                ssh_credentials,
+                ssh_port,
+                tracker_config,
+            ),
+            internal_config: InternalConfig::with_working_dir(name, working_dir),
+            runtime_outputs: RuntimeOutputs {
+                instance_ip: None,
+                provision_method: None,
+            },
+        }
+    }
+
     /// Returns the SSH username for this environment
     #[must_use]
     pub fn ssh_username(&self) -> &crate::shared::Username {

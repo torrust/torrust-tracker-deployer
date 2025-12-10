@@ -29,6 +29,7 @@ use crate::application::command_handlers::create::{
     CreateCommandHandler, CreateCommandHandlerError,
 };
 use crate::domain::environment::Created;
+use crate::domain::tracker::TrackerConfig;
 use crate::domain::Environment;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
@@ -98,6 +99,7 @@ pub fn run_create_command(
         ProviderSection::Lxd(LxdProviderSection {
             profile_name: format!("lxd-{environment_name}"),
         }),
+        TrackerConfig::default(),
     );
 
     // Execute the command

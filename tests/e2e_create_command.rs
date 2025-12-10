@@ -212,6 +212,28 @@ fn create_test_environment_config(env_name: &str) -> String {
         "provider": {
             "provider": "lxd",
             "profile_name": format!("lxd-{}", env_name)
+        },
+        "tracker": {
+            "core": {
+                "database": {
+                    "driver": "sqlite3",
+                    "database_name": "tracker.db"
+                },
+                "private": false
+            },
+            "udp_trackers": [
+                {
+                    "bind_address": "0.0.0.0:6969"
+                }
+            ],
+            "http_trackers": [
+                {
+                    "bind_address": "0.0.0.0:7070"
+                }
+            ],
+            "http_api": {
+                "admin_token": "MyAccessToken"
+            }
         }
     })
     .to_string()

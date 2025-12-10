@@ -175,15 +175,44 @@ impl TrackerPorts {
     /// - JSON parsing fails
     /// - Required tracker configuration is missing
     pub fn from_env_file(env_file_path: &Path) -> Result<Self> {
-        let json_content = std::fs::read_to_string(env_file_path).with_context(|| {
+        let json_content = std::fs::read(env_file_path).with_context(|| {
             format!(
                 "Failed to read environment file: {}",
                 env_file_path.display()
             )
         })?;
 
+        // Try to parse as EnvironmentCreationConfig first (new format)
+        if let Ok(config_json) = serde_json::from_slice::<ConfigJson>(&json_content) {
+            // Extract HTTP API port (default 1212 - not configurable in user config)
+            let http_api_port = 1212;
+
+            // Extract HTTP tracker port from first HTTP tracker (or default 7070)
+            let http_tracker_port = config_json
+                .tracker
+                .http_trackers
+                .first()
+                .and_then(|tracker| extract_port_from_bind_address(&tracker.bind_address))
+                .unwrap_or(7070);
+
+            // Extract UDP tracker port from first UDP tracker (or default 6969)
+            let udp_tracker_port = config_json
+                .tracker
+                .udp_trackers
+                .first()
+                .and_then(|tracker| extract_port_from_bind_address(&tracker.bind_address))
+                .unwrap_or(6969);
+
+            return Ok(Self {
+                http_api_port,
+                http_tracker_port,
+                udp_tracker_port,
+            });
+        }
+
+        // Fallback to EnvironmentJson format (old saved state format)
         let env_json: EnvironmentJson =
-            serde_json::from_str(&json_content).context("Failed to parse environment JSON")?;
+            serde_json::from_slice(&json_content).context("Failed to parse environment JSON")?;
 
         // Extract HTTP API port (from http_api.bind_address if present, otherwise default 1212)
         let http_api_port = env_json
@@ -246,11 +275,51 @@ fn extract_port_from_bind_address(bind_address: &str) -> Option<u16> {
 /// Extract SSH port from environment configuration file
 fn extract_ssh_port_from_file(env_file_path: &Path) -> Option<u16> {
     let json_content = std::fs::read_to_string(env_file_path).ok()?;
+
+    // Try to parse as EnvironmentCreationConfig first (new format)
+    if let Ok(config_json) = serde_json::from_str::<ConfigJson>(&json_content) {
+        return Some(config_json.ssh_credentials.port.unwrap_or(22));
+    }
+
+    // Fallback to EnvironmentJson format (old saved state format)
     let env_json: EnvironmentJson = serde_json::from_str(&json_content).ok()?;
     Some(env_json.user_inputs.ssh_port)
 }
 
-// E2E-specific JSON structure (minimal, only what we need)
+// EnvironmentCreationConfig JSON structure (new format - configuration files)
+#[derive(Debug, Deserialize, Serialize)]
+struct ConfigJson {
+    ssh_credentials: SshCredentialsConfig,
+    tracker: TrackerConfigCreation,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct SshCredentialsConfig {
+    #[serde(default)]
+    port: Option<u16>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct TrackerConfigCreation {
+    core: TrackerCoreConfig,
+    #[serde(default)]
+    udp_trackers: Vec<TrackerBinding>,
+    #[serde(default)]
+    http_trackers: Vec<TrackerBinding>,
+    http_api: HttpApiConfigCreation,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct TrackerCoreConfig {
+    // We don't need the fields, just need the struct to exist
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct HttpApiConfigCreation {
+    admin_token: String,
+}
+
+// E2E-specific JSON structure (old format - saved environment state)
 #[derive(Debug, Deserialize, Serialize)]
 struct EnvironmentJson {
     #[serde(rename = "Created")]

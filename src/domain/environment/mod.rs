@@ -353,6 +353,35 @@ impl Environment {
             state: Created,
         }
     }
+
+    /// Creates a new environment in Created state with custom tracker configuration
+    ///
+    /// This is similar to `with_working_dir` but allows specifying a custom
+    /// tracker configuration instead of using the default.
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
+    pub fn with_working_dir_and_tracker(
+        name: EnvironmentName,
+        provider_config: ProviderConfig,
+        ssh_credentials: SshCredentials,
+        ssh_port: u16,
+        tracker_config: TrackerConfig,
+        working_dir: &std::path::Path,
+    ) -> Environment<Created> {
+        let context = EnvironmentContext::with_working_dir_and_tracker(
+            &name,
+            provider_config,
+            ssh_credentials,
+            ssh_port,
+            tracker_config,
+            working_dir,
+        );
+
+        Environment {
+            context,
+            state: Created,
+        }
+    }
 }
 
 // Common transitions available from any state
