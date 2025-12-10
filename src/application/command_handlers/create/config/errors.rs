@@ -50,6 +50,16 @@ pub enum CreateConfigError {
     #[error("Invalid SSH port: {port} (must be between 1 and 65535)")]
     InvalidPort { port: u16 },
 
+    /// Invalid bind address format
+    #[error("Invalid bind address '{address}': failed to parse as IP:PORT")]
+    InvalidBindAddress {
+        /// The invalid bind address that was provided
+        address: String,
+        /// The underlying parse error
+        #[source]
+        source: std::net::AddrParseError,
+    },
+
     /// Failed to serialize configuration template to JSON
     #[error("Failed to serialize configuration template to JSON")]
     TemplateSerializationFailed {
@@ -194,6 +204,23 @@ impl CreateConfigError {
                  - 2222 (common alternative)\n\
                  \n\
                  Fix: Update the SSH port in your configuration to a valid port number (1-65535)."
+            }
+            Self::InvalidBindAddress { .. } => {
+                "Invalid bind address format.\n\
+                 \n\
+                 Bind addresses must be in the format IP:PORT (e.g., '0.0.0.0:8080').\n\
+                 \n\
+                 Valid examples:\n\
+                 - '0.0.0.0:6969' (bind to all interfaces on port 6969)\n\
+                 - '127.0.0.1:7070' (bind to localhost on port 7070)\n\
+                 - '[::]:1212' (bind to all IPv6 interfaces on port 1212)\n\
+                 \n\
+                 Common mistakes:\n\
+                 - Missing port number (e.g., '0.0.0.0')\n\
+                 - Invalid IP address format\n\
+                 - Port number out of range (must be 1-65535)\n\
+                 \n\
+                 Fix: Update the bind_address in your configuration to use valid IP:PORT format."
             }
             Self::TemplateSerializationFailed { .. } => {
                 "Template serialization failed.\n\
