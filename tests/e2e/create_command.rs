@@ -20,10 +20,8 @@
 //! 3. Missing config file: Appropriate error when file not found
 //! 4. Duplicate detection: Error when environment already exists
 
-mod support;
-
+use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
 use anyhow::Result;
-use support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
 use torrust_dependency_installer::{verify_dependencies, Dependency};
 
 /// Verify that all required dependencies are installed for create command E2E tests.

@@ -18,10 +18,8 @@
 //! 2. Custom working directory: Destroy environment from temporary directory
 //! 3. Full lifecycle: Create → Destroy with custom working directory
 
-mod support;
-
+use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
 use anyhow::Result;
-use support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
 use torrust_dependency_installer::{verify_dependencies, Dependency};
 
 /// Verify that all required dependencies are installed for destroy command E2E tests.
