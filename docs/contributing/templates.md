@@ -2,6 +2,8 @@
 
 This document explains the correct syntax for defining variables in Tera templates used in the Torrust Tracker Deployer project.
 
+> **See Also**: For architectural details about how the template system works, see [Template System Architecture](../technical/template-system-architecture.md).
+
 ## 📝 Correct Variable Syntax
 
 All Tera template variables must use **double curly braces** with **no spaces** inside the braces:

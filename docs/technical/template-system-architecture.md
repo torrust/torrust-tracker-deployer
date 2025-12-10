@@ -2,6 +2,8 @@
 
 Technical documentation for contributors working with the template rendering system.
 
+> **See Also**: For practical guidance on working with templates, see [Tera Template Variable Syntax](../contributing/templates.md).
+
 ## 🏗️ System Overview
 
 The template system uses a **double indirection** approach to provide flexible infrastructure deployment while maintaining portability and customizability.
