@@ -19,17 +19,16 @@ impl HttpApiSection {
     /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
     pub fn to_http_api_config(&self) -> Result<HttpApiConfig, CreateConfigError> {
         // Validate that the bind address can be parsed as SocketAddr
-        let _bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
+        let bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
             CreateConfigError::InvalidBindAddress {
                 address: self.bind_address.clone(),
                 source: e,
             }
         })?;
 
-        // For now, keep as String since domain type still uses String
-        // This will be updated in Step 0.7 when we enhance domain types
+        // Domain type now uses SocketAddr (Step 0.7 completed)
         Ok(HttpApiConfig {
-            bind_address: self.bind_address.clone(),
+            bind_address,
             admin_token: self.admin_token.clone(),
         })
     }
@@ -50,7 +49,10 @@ mod tests {
         assert!(result.is_ok());
 
         let config = result.unwrap();
-        assert_eq!(config.bind_address, "0.0.0.0:1212");
+        assert_eq!(
+            config.bind_address,
+            "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
+        );
         assert_eq!(config.admin_token, "MyAccessToken");
     }
 

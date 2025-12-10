@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use serde::Serialize;
 use thiserror::Error;
 
@@ -71,14 +73,14 @@ impl AnsibleVariablesContext {
         let udp_ports: Vec<u16> = config
             .udp_trackers
             .iter()
-            .filter_map(|tracker| Self::extract_port(&tracker.bind_address))
+            .map(|tracker| Self::extract_port(&tracker.bind_address))
             .collect();
 
         // Extract HTTP tracker ports
         let http_ports: Vec<u16> = config
             .http_trackers
             .iter()
-            .filter_map(|tracker| Self::extract_port(&tracker.bind_address))
+            .map(|tracker| Self::extract_port(&tracker.bind_address))
             .collect();
 
         // Extract HTTP API port (hardcoded to 1212 for now - can be made configurable later)
@@ -87,9 +89,9 @@ impl AnsibleVariablesContext {
         (udp_ports, http_ports, api_port)
     }
 
-    /// Helper function to extract port from `bind_address` (e.g., "0.0.0.0:6868" -> 6868)
-    fn extract_port(bind_address: &str) -> Option<u16> {
-        bind_address.split(':').nth(1)?.parse().ok()
+    /// Helper function to extract port from `SocketAddr`
+    fn extract_port(bind_address: &SocketAddr) -> u16 {
+        bind_address.port()
     }
 
     /// Get the SSH port
@@ -187,17 +189,17 @@ mod tests {
             },
             udp_trackers: vec![
                 UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6868".to_string(),
+                    bind_address: "0.0.0.0:6868".parse().unwrap(),
                 },
                 UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".to_string(),
+                    bind_address: "0.0.0.0:6969".parse().unwrap(),
                 },
             ],
             http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".to_string(),
+                bind_address: "0.0.0.0:7070".parse().unwrap(),
             }],
             http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".to_string(),
+                bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "MyAccessToken".to_string(),
             },
         };
@@ -223,7 +225,7 @@ mod tests {
             udp_trackers: vec![],
             http_trackers: vec![],
             http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".to_string(),
+                bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "Token123".to_string(),
             },
         };
@@ -250,25 +252,25 @@ mod tests {
             },
             udp_trackers: vec![
                 UdpTrackerConfig {
-                    bind_address: "invalid".to_string(), // Invalid format
+                    bind_address: "0.0.0.0:6868".parse().unwrap(), // Valid address
                 },
                 UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".to_string(), // Valid
+                    bind_address: "0.0.0.0:6969".parse().unwrap(), // Valid address
                 },
             ],
             http_trackers: vec![HttpTrackerConfig {
-                bind_address: "no_port_here".to_string(), // Invalid format
+                bind_address: "0.0.0.0:7070".parse().unwrap(), // Valid address
             }],
             http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".to_string(),
+                bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "Token".to_string(),
             },
         };
 
         let context = AnsibleVariablesContext::new(22, Some(&tracker_config)).unwrap();
 
-        // Only valid port should be extracted
-        assert_eq!(context.tracker_udp_ports(), &[6969]);
-        assert!(context.tracker_http_ports().is_empty());
+        // All valid ports should be extracted (domain now enforces valid SocketAddr)
+        assert_eq!(context.tracker_udp_ports(), &[6868, 6969]);
+        assert_eq!(context.tracker_http_ports(), &[7070]);
     }
 }

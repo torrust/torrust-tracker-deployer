@@ -32,14 +32,14 @@ use serde::Serialize;
 ///         private: true,
 ///     },
 ///     udp_trackers: vec![
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6868".to_string() },
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".to_string() },
+///         UdpTrackerConfig { bind_address: "0.0.0.0:6868".parse().unwrap() },
+///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
 ///     ],
 ///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".to_string() },
+///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap() },
 ///     ],
 ///     http_api: HttpApiConfig {
-///         bind_address: "0.0.0.0:1212".to_string(),
+///         bind_address: "0.0.0.0:1212".parse().unwrap(),
 ///         admin_token: "MyToken".to_string(),
 ///     },
 /// };
@@ -90,17 +90,17 @@ impl TrackerContext {
                 .udp_trackers
                 .iter()
                 .map(|t| UdpTrackerEntry {
-                    bind_address: t.bind_address.clone(),
+                    bind_address: t.bind_address.to_string(),
                 })
                 .collect(),
             http_trackers: config
                 .http_trackers
                 .iter()
                 .map(|t| HttpTrackerEntry {
-                    bind_address: t.bind_address.clone(),
+                    bind_address: t.bind_address.to_string(),
                 })
                 .collect(),
-            http_api_bind_address: config.http_api.bind_address.clone(),
+            http_api_bind_address: config.http_api.bind_address.to_string(),
         }
     }
 
@@ -108,6 +108,10 @@ impl TrackerContext {
     ///
     /// Used when no tracker configuration is provided in environment.
     /// Provides backward compatibility with Phase 4 defaults.
+    ///
+    /// # Panics
+    ///
+    /// Panics if default IP addresses fail to parse (should never happen with valid constants).
     #[must_use]
     pub fn default_config() -> Self {
         Self {
@@ -115,16 +119,16 @@ impl TrackerContext {
             tracker_core_private: false,
             udp_trackers: vec![
                 UdpTrackerEntry {
-                    bind_address: "0.0.0.0:6868".to_string(),
+                    bind_address: "0.0.0.0:6868".parse().unwrap(),
                 },
                 UdpTrackerEntry {
-                    bind_address: "0.0.0.0:6969".to_string(),
+                    bind_address: "0.0.0.0:6969".parse().unwrap(),
                 },
             ],
             http_trackers: vec![HttpTrackerEntry {
-                bind_address: "0.0.0.0:7070".to_string(),
+                bind_address: "0.0.0.0:7070".parse().unwrap(),
             }],
-            http_api_bind_address: "0.0.0.0:1212".to_string(),
+            http_api_bind_address: "0.0.0.0:1212".parse().unwrap(),
         }
     }
 }
@@ -153,17 +157,17 @@ mod tests {
             },
             udp_trackers: vec![
                 UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6868".to_string(),
+                    bind_address: "0.0.0.0:6868".parse().unwrap(),
                 },
                 UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".to_string(),
+                    bind_address: "0.0.0.0:6969".parse().unwrap(),
                 },
             ],
             http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".to_string(),
+                bind_address: "0.0.0.0:7070".parse().unwrap(),
             }],
             http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".to_string(),
+                bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_admin_token".to_string(),
             },
         }

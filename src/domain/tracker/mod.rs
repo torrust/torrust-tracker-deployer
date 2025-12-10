@@ -30,13 +30,13 @@
 //!         private: false,
 //!     },
 //!     udp_trackers: vec![
-//!         UdpTrackerConfig { bind_address: "0.0.0.0:6868".to_string() },
+//!         UdpTrackerConfig { bind_address: "0.0.0.0:6868".parse().unwrap() },
 //!     ],
 //!     http_trackers: vec![
-//!         HttpTrackerConfig { bind_address: "0.0.0.0:7070".to_string() },
+//!         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap() },
 //!     ],
 //!     http_api: HttpApiConfig {
-//!         bind_address: "0.0.0.0:1212".to_string(),
+//!         bind_address: "0.0.0.0:1212".parse().unwrap(),
 //!         admin_token: "MyToken".to_string(),
 //!     },
 //! };

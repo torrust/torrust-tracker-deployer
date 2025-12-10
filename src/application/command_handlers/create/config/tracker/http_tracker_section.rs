@@ -18,18 +18,15 @@ impl HttpTrackerSection {
     /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
     pub fn to_http_tracker_config(&self) -> Result<HttpTrackerConfig, CreateConfigError> {
         // Validate that the bind address can be parsed as SocketAddr
-        let _bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
+        let bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
             CreateConfigError::InvalidBindAddress {
                 address: self.bind_address.clone(),
                 source: e,
             }
         })?;
 
-        // For now, keep as String since domain type still uses String
-        // This will be updated in Step 0.7 when we enhance domain types
-        Ok(HttpTrackerConfig {
-            bind_address: self.bind_address.clone(),
-        })
+        // Domain type now uses SocketAddr (Step 0.7 completed)
+        Ok(HttpTrackerConfig { bind_address })
     }
 }
 
@@ -47,7 +44,10 @@ mod tests {
         assert!(result.is_ok());
 
         let config = result.unwrap();
-        assert_eq!(config.bind_address, "0.0.0.0:7070");
+        assert_eq!(
+            config.bind_address,
+            "0.0.0.0:7070".parse::<SocketAddr>().unwrap()
+        );
     }
 
     #[test]

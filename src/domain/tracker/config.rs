@@ -3,6 +3,8 @@
 //! This module contains the main tracker configuration and component types
 //! used for deploying the Torrust Tracker.
 
+use std::net::SocketAddr;
+
 use serde::{Deserialize, Serialize};
 
 use super::DatabaseConfig;
@@ -28,13 +30,13 @@ use super::DatabaseConfig;
 ///         private: false,
 ///     },
 ///     udp_trackers: vec![
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".to_string() },
+///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
 ///     ],
 ///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".to_string() },
+///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap() },
 ///     ],
 ///     http_api: HttpApiConfig {
-///         bind_address: "0.0.0.0:1212".to_string(),
+///         bind_address: "0.0.0.0:1212".parse().unwrap(),
 ///         admin_token: "MyAccessToken".to_string(),
 ///     },
 /// };
@@ -68,21 +70,33 @@ pub struct TrackerCoreConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UdpTrackerConfig {
     /// Bind address (e.g., "0.0.0.0:6868")
-    pub bind_address: String,
+    #[serde(
+        serialize_with = "serialize_socket_addr",
+        deserialize_with = "deserialize_socket_addr"
+    )]
+    pub bind_address: SocketAddr,
 }
 
 /// HTTP tracker bind configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HttpTrackerConfig {
     /// Bind address (e.g., "0.0.0.0:7070")
-    pub bind_address: String,
+    #[serde(
+        serialize_with = "serialize_socket_addr",
+        deserialize_with = "deserialize_socket_addr"
+    )]
+    pub bind_address: SocketAddr,
 }
 
 /// HTTP API configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HttpApiConfig {
     /// Bind address (e.g., "0.0.0.0:1212")
-    pub bind_address: String,
+    #[serde(
+        serialize_with = "serialize_socket_addr",
+        deserialize_with = "deserialize_socket_addr"
+    )]
+    pub bind_address: SocketAddr,
 
     /// Admin access token for HTTP API authentication
     pub admin_token: String,
@@ -108,17 +122,32 @@ impl Default for TrackerConfig {
                 private: false,
             },
             udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6969".to_string(),
+                bind_address: "0.0.0.0:6969".parse().expect("valid address"),
             }],
             http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".to_string(),
+                bind_address: "0.0.0.0:7070".parse().expect("valid address"),
             }],
             http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".to_string(),
+                bind_address: "0.0.0.0:1212".parse().expect("valid address"),
                 admin_token: "MyAccessToken".to_string(),
             },
         }
     }
+}
+
+fn serialize_socket_addr<S>(addr: &SocketAddr, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&addr.to_string())
+}
+
+fn deserialize_socket_addr<'de, D>(deserializer: D) -> Result<SocketAddr, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    s.parse().map_err(serde::de::Error::custom)
 }
 
 #[cfg(test)]
@@ -135,13 +164,13 @@ mod tests {
                 private: true,
             },
             udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6868".to_string(),
+                bind_address: "0.0.0.0:6868".parse().unwrap(),
             }],
             http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".to_string(),
+                bind_address: "0.0.0.0:7070".parse().unwrap(),
             }],
             http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".to_string(),
+                bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_token".to_string(),
             },
         };
@@ -164,7 +193,7 @@ mod tests {
             udp_trackers: vec![],
             http_trackers: vec![],
             http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".to_string(),
+                bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "token123".to_string(),
             },
         };
@@ -187,14 +216,23 @@ mod tests {
 
         // Verify UDP trackers (1 instance)
         assert_eq!(config.udp_trackers.len(), 1);
-        assert_eq!(config.udp_trackers[0].bind_address, "0.0.0.0:6969");
+        assert_eq!(
+            config.udp_trackers[0].bind_address,
+            "0.0.0.0:6969".parse::<SocketAddr>().unwrap()
+        );
 
         // Verify HTTP trackers (1 instance)
         assert_eq!(config.http_trackers.len(), 1);
-        assert_eq!(config.http_trackers[0].bind_address, "0.0.0.0:7070");
+        assert_eq!(
+            config.http_trackers[0].bind_address,
+            "0.0.0.0:7070".parse::<SocketAddr>().unwrap()
+        );
 
         // Verify HTTP API configuration
-        assert_eq!(config.http_api.bind_address, "0.0.0.0:1212");
+        assert_eq!(
+            config.http_api.bind_address,
+            "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
+        );
         assert_eq!(config.http_api.admin_token, "MyAccessToken");
     }
 }

@@ -85,6 +85,8 @@ impl TrackerSection {
 
 #[cfg(test)]
 mod tests {
+    use std::net::SocketAddr;
+
     use super::*;
     use crate::application::command_handlers::create::config::tracker::tracker_core_section::DatabaseSection;
     use crate::domain::tracker::DatabaseConfig;
@@ -121,7 +123,10 @@ mod tests {
         assert!(!config.core.private);
         assert_eq!(config.udp_trackers.len(), 1);
         assert_eq!(config.http_trackers.len(), 1);
-        assert_eq!(config.http_api.bind_address, "0.0.0.0:1212");
+        assert_eq!(
+            config.http_api.bind_address,
+            "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
+        );
     }
 
     #[test]

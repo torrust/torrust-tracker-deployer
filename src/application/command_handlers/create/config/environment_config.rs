@@ -308,6 +308,10 @@ impl EnvironmentCreationConfig {
     /// let template = EnvironmentCreationConfig::template(Provider::Lxd);
     /// assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if default IP addresses fail to parse (should never happen with valid constants).
     #[must_use]
     pub fn template(provider: Provider) -> Self {
         let provider_section = match provider {
@@ -342,13 +346,13 @@ impl EnvironmentCreationConfig {
                     private: false,
                 },
                 udp_trackers: vec![UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".to_string(),
+                    bind_address: "0.0.0.0:6969".parse().unwrap(),
                 }],
                 http_trackers: vec![HttpTrackerConfig {
-                    bind_address: "0.0.0.0:7070".to_string(),
+                    bind_address: "0.0.0.0:7070".parse().unwrap(),
                 }],
                 http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:1212".to_string(),
+                    bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "MyAccessToken".to_string(),
                 },
             },

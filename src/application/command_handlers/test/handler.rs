@@ -33,6 +33,7 @@
 //! For rationale and alternatives, see:
 //! - `docs/decisions/test-command-as-smoke-test.md` - Architectural decision record
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use tracing::{info, instrument};
@@ -126,20 +127,21 @@ impl TestCommandHandler {
         let tracker_config = any_env.tracker_config();
 
         // Get HTTP API port from bind_address (e.g., "0.0.0.0:1212" -> 1212)
-        let tracker_api_port =
-            Self::extract_port_from_bind_address(&tracker_config.http_api.bind_address)
-                .ok_or_else(|| TestCommandHandlerError::InvalidTrackerConfiguration {
-                    message: format!(
-                        "Invalid HTTP API bind_address: {}. Expected format: 'host:port'",
-                        tracker_config.http_api.bind_address
-                    ),
-                })?;
+        let tracker_api_port = Some(Self::extract_port_from_bind_address(
+            &tracker_config.http_api.bind_address,
+        ))
+        .ok_or_else(|| TestCommandHandlerError::InvalidTrackerConfiguration {
+            message: format!(
+                "Invalid HTTP API bind_address: {}. Expected format: 'host:port'",
+                tracker_config.http_api.bind_address
+            ),
+        })?;
 
         // Get HTTP Tracker port from first HTTP tracker (optional)
         let http_tracker_port = tracker_config
             .http_trackers
             .first()
-            .and_then(|tracker| Self::extract_port_from_bind_address(&tracker.bind_address));
+            .map(|tracker| Self::extract_port_from_bind_address(&tracker.bind_address));
 
         let ssh_config =
             SshConfig::with_default_port(any_env.ssh_credentials().clone(), instance_ip);
@@ -162,12 +164,9 @@ impl TestCommandHandler {
         Ok(())
     }
 
-    /// Extract port number from `bind_address` string (e.g., "0.0.0.0:1212" -> Some(1212))
-    fn extract_port_from_bind_address(bind_address: &str) -> Option<u16> {
-        bind_address
-            .split(':')
-            .nth(1)
-            .and_then(|port_str| port_str.parse::<u16>().ok())
+    /// Extract port number from `SocketAddr` (e.g., `"0.0.0.0:1212".parse()` returns 1212)
+    fn extract_port_from_bind_address(bind_address: &SocketAddr) -> u16 {
+        bind_address.port()
     }
 
     /// Load environment from storage
