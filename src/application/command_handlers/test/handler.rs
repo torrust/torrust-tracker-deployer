@@ -162,7 +162,7 @@ impl TestCommandHandler {
         Ok(())
     }
 
-    /// Extract port number from bind_address string (e.g., "0.0.0.0:1212" -> Some(1212))
+    /// Extract port number from `bind_address` string (e.g., "0.0.0.0:1212" -> Some(1212))
     fn extract_port_from_bind_address(bind_address: &str) -> Option<u16> {
         bind_address
             .split(':')

@@ -132,6 +132,7 @@ pub mod environment_config;
 pub mod errors;
 pub mod provider;
 pub mod ssh_credentials_config;
+pub mod tracker;
 
 // Re-export commonly used types for convenience
 pub use environment_config::{EnvironmentCreationConfig, EnvironmentSection};
