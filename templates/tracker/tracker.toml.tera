@@ -37,4 +37,4 @@ bind_address = "{{ http_tracker.bind_address }}"
 
 {% endfor %}
 [http_api]
-bind_address = "0.0.0.0:1212"
+bind_address = "{{ http_api_bind_address }}"

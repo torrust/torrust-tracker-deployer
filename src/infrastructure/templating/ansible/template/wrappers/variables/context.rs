@@ -197,6 +197,7 @@ mod tests {
                 bind_address: "0.0.0.0:7070".to_string(),
             }],
             http_api: HttpApiConfig {
+                bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
             },
         };
@@ -222,6 +223,7 @@ mod tests {
             udp_trackers: vec![],
             http_trackers: vec![],
             http_api: HttpApiConfig {
+                bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "Token123".to_string(),
             },
         };
@@ -258,6 +260,7 @@ mod tests {
                 bind_address: "no_port_here".to_string(), // Invalid format
             }],
             http_api: HttpApiConfig {
+                bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "Token".to_string(),
             },
         };

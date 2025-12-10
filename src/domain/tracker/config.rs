@@ -34,6 +34,7 @@ use super::DatabaseConfig;
 ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".to_string() },
 ///     ],
 ///     http_api: HttpApiConfig {
+///         bind_address: "0.0.0.0:1212".to_string(),
 ///         admin_token: "MyAccessToken".to_string(),
 ///     },
 /// };
@@ -80,6 +81,9 @@ pub struct HttpTrackerConfig {
 /// HTTP API configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HttpApiConfig {
+    /// Bind address (e.g., "0.0.0.0:1212")
+    pub bind_address: String,
+
     /// Admin access token for HTTP API authentication
     pub admin_token: String,
 }
@@ -93,6 +97,7 @@ impl Default for TrackerConfig {
     /// - Mode: Public tracker (private = false)
     /// - UDP trackers: One instance on port 6969
     /// - HTTP trackers: One instance on port 7070
+    /// - HTTP API: Bind address 0.0.0.0:1212
     /// - Admin token: `MyAccessToken`
     fn default() -> Self {
         Self {
@@ -109,6 +114,7 @@ impl Default for TrackerConfig {
                 bind_address: "0.0.0.0:7070".to_string(),
             }],
             http_api: HttpApiConfig {
+                bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
             },
         }
@@ -135,6 +141,7 @@ mod tests {
                 bind_address: "0.0.0.0:7070".to_string(),
             }],
             http_api: HttpApiConfig {
+                bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "test_token".to_string(),
             },
         };
@@ -157,6 +164,7 @@ mod tests {
             udp_trackers: vec![],
             http_trackers: vec![],
             http_api: HttpApiConfig {
+                bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "token123".to_string(),
             },
         };
@@ -186,6 +194,7 @@ mod tests {
         assert_eq!(config.http_trackers[0].bind_address, "0.0.0.0:7070");
 
         // Verify HTTP API configuration
+        assert_eq!(config.http_api.bind_address, "0.0.0.0:1212");
         assert_eq!(config.http_api.admin_token, "MyAccessToken");
     }
 }

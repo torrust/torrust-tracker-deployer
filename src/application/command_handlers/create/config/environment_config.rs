@@ -62,6 +62,7 @@ use super::ssh_credentials_config::SshCredentialsConfig;
 ///             }
 ///         ],
 ///         "http_api": {
+///             "bind_address": "0.0.0.0:1212",
 ///             "admin_token": "MyAccessToken"
 ///         }
 ///     }
@@ -347,6 +348,7 @@ impl EnvironmentCreationConfig {
                     bind_address: "0.0.0.0:7070".to_string(),
                 }],
                 http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:1212".to_string(),
                     admin_token: "MyAccessToken".to_string(),
                 },
             },
@@ -497,6 +499,7 @@ mod tests {
                     }
                 ],
                 "http_api": {
+                    "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
                 }
             }
@@ -557,6 +560,7 @@ mod tests {
                     }
                 ],
                 "http_api": {
+                    "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
                 }
             }

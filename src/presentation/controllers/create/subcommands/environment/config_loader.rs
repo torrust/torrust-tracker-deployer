@@ -148,6 +148,7 @@ mod tests {
                     }}
                 ],
                 "http_api": {{
+                    "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
                 }}
             }}
@@ -259,6 +260,7 @@ mod tests {
                     }}
                 ],
                 "http_api": {{
+                    "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
                 }}
             }}
@@ -315,6 +317,7 @@ mod tests {
                     }
                 ],
                 "http_api": {
+                    "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
                 }
             }
@@ -376,6 +379,7 @@ mod tests {
                     }}
                 ],
                 "http_api": {{
+                    "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
                 }}
             }}

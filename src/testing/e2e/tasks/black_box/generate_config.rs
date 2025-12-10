@@ -226,6 +226,7 @@ pub fn create_test_environment_config(environment_name: &str) -> String {
                 {"bind_address": "0.0.0.0:7070"}
             ],
             "http_api": {
+                "bind_address": "0.0.0.0:1212",
                 "admin_token": "MyAccessToken"
             }
         }

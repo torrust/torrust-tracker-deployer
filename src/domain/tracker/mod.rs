@@ -36,6 +36,7 @@
 //!         HttpTrackerConfig { bind_address: "0.0.0.0:7070".to_string() },
 //!     ],
 //!     http_api: HttpApiConfig {
+//!         bind_address: "0.0.0.0:1212".to_string(),
 //!         admin_token: "MyToken".to_string(),
 //!     },
 //! };

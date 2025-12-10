@@ -39,6 +39,7 @@ use serde::Serialize;
 ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".to_string() },
 ///     ],
 ///     http_api: HttpApiConfig {
+///         bind_address: "0.0.0.0:1212".to_string(),
 ///         admin_token: "MyToken".to_string(),
 ///     },
 /// };
@@ -57,6 +58,9 @@ pub struct TrackerContext {
 
     /// HTTP tracker bind addresses
     pub http_trackers: Vec<HttpTrackerEntry>,
+
+    /// HTTP API bind address
+    pub http_api_bind_address: String,
 }
 
 /// UDP tracker entry for template rendering
@@ -96,6 +100,7 @@ impl TrackerContext {
                     bind_address: t.bind_address.clone(),
                 })
                 .collect(),
+            http_api_bind_address: config.http_api.bind_address.clone(),
         }
     }
 
@@ -119,6 +124,7 @@ impl TrackerContext {
             http_trackers: vec![HttpTrackerEntry {
                 bind_address: "0.0.0.0:7070".to_string(),
             }],
+            http_api_bind_address: "0.0.0.0:1212".to_string(),
         }
     }
 }
@@ -157,6 +163,7 @@ mod tests {
                 bind_address: "0.0.0.0:7070".to_string(),
             }],
             http_api: HttpApiConfig {
+                bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "test_admin_token".to_string(),
             },
         }
