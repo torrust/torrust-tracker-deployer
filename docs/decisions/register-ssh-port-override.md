@@ -184,7 +184,7 @@ Application Layer (RegisterCommandHandler)
 
 - **GitHub Issue**: [#221 - Tracker Slice - Release and Run Commands](https://github.com/torrust/torrust-tracker-deployer/pull/221)
 - **Implementation Commit**: `f16d6cd` - feat: [#221] add optional --ssh-port argument to register command
-- **E2E Testing Guide**: [docs/e2e-testing.md](../e2e-testing.md)
+- **E2E Testing Guide**: [docs/e2e-testing/](../e2e-testing/)
 - **Register Command User Guide**: [docs/user-guide/commands/register.md](../user-guide/commands/register.md)
 - **Docker Bridge Networking**: <https://docs.docker.com/network/bridge/>
 - **GitHub Actions SSH Port Conflict**: SSH service on runners uses port 22 by default

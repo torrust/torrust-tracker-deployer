@@ -82,7 +82,7 @@ impl ReleaseValidationError {
    - Re-run release command: cargo run -- release <environment>
    - Or manually copy files to /opt/torrust/
 
-For more information, see docs/e2e-testing.md."
+For more information, see docs/e2e-testing/."
             }
         }
     }

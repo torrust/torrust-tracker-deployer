@@ -82,7 +82,7 @@ impl DestroyTaskError {
    - Use provider-specific tools (e.g., lxc commands) for manual cleanup
    - Remove state files after manual cleanup is complete
 
-For more information, see docs/e2e-testing.md and docs/vm-providers.md."
+For more information, see docs/e2e-testing/ and docs/vm-providers.md."
             }
         }
     }

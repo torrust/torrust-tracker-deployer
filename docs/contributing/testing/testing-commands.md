@@ -201,4 +201,4 @@ if let Err(e) = run_destroy_command(&context).await {
 - Validate state transitions at each step
 - Ensure cleanup regardless of test outcome
 
-For detailed E2E testing information, see [`docs/e2e-testing.md`](../../e2e-testing.md).
+For detailed E2E testing information, see [`docs/e2e-testing/`](../../e2e-testing/).

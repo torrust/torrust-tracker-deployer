@@ -136,7 +136,7 @@ When creating new packages:
 - [Development Principles](../docs/development-principles.md) - Core principles guiding all packages
 - [Error Handling Guide](../docs/contributing/error-handling.md) - Error handling patterns
 - [Testing Conventions](../docs/contributing/testing/) - Testing standards
-- [E2E Testing Guide](../docs/e2e-testing.md) - How packages integrate with E2E tests
+- [E2E Testing Guide](../docs/e2e-testing/) - How packages integrate with E2E tests
 
 ## 💡 Future Packages
 

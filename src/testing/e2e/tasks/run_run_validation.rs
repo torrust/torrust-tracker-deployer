@@ -119,7 +119,7 @@ impl RunValidationError {
    - Re-run the 'run' command: cargo run -- run <environment>
    - Or manually: cd /opt/torrust && docker compose up -d
 
-For more information, see docs/e2e-testing.md."
+For more information, see docs/e2e-testing/."
             }
         }
     }

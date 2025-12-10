@@ -102,7 +102,7 @@ impl ConfigurationValidationError {
    - Re-run configuration command to attempt Docker installation again
    - Or manually install Docker following official documentation
 
-For more information, see docs/e2e-testing.md."
+For more information, see docs/e2e-testing/."
             }
 
             Self::DockerComposeValidationFailed { .. } => {
@@ -128,7 +128,7 @@ For more information, see docs/e2e-testing.md."
    - Re-run configuration command to attempt installation again
    - Or manually install Docker Compose following official documentation
 
-For more information, see docs/e2e-testing.md."
+For more information, see docs/e2e-testing/."
             }
         }
     }

@@ -116,7 +116,7 @@ For more information, see the E2E testing documentation."
    - Re-run configuration command if services missing
    - Check instance system logs (journalctl)
 
-For more information, see docs/e2e-testing.md."
+For more information, see docs/e2e-testing/."
             }
         }
     }

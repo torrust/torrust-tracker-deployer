@@ -118,7 +118,7 @@ For more information, see the E2E testing documentation."
    - Verify cloud-init configuration syntax
    - Check SSH key permissions and format
 
-For more information, see docs/e2e-testing.md and docs/vm-providers.md."
+For more information, see docs/e2e-testing/ and docs/vm-providers.md."
             }
         }
     }

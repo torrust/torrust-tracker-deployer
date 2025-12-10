@@ -344,4 +344,4 @@ Otherwise, use the centralized variables pattern for simplicity.
 
 - **Architecture**: [`docs/technical/template-system-architecture.md`](../technical/template-system-architecture.md) - Understanding the two-phase template system
 - **Tera Syntax**: This document (above) - When you DO need dynamic templates with variables
-- **Testing**: [`docs/e2e-testing.md`](../e2e-testing.md) - How to run E2E tests to validate your changes
+- **Testing**: [`docs/e2e-testing/`](../e2e-testing/) - How to run E2E tests to validate your changes

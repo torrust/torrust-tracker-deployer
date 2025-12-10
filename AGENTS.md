@@ -134,6 +134,6 @@ These principles should guide all development decisions, code reviews, and featu
   - `cargo run --bin e2e-infrastructure-lifecycle-tests` - Infrastructure provisioning and destruction tests (GitHub runner-compatible)
   - `cargo run --bin e2e-deployment-workflow-tests` - Software installation, configuration, release, and run workflow tests (GitHub runner-compatible)
   - Pre-commit hook runs the split tests (`e2e-infrastructure-lifecycle-tests` + `e2e-deployment-workflow-tests`) for GitHub Copilot compatibility
-  - See [`docs/e2e-testing.md`](docs/e2e-testing.md) for detailed information about CI limitations
+  - See [`docs/e2e-testing/`](docs/e2e-testing/) for detailed information about CI limitations
 
 Follow the project conventions and ensure all checks pass.
