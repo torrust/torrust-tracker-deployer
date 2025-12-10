@@ -207,7 +207,7 @@ ssh -i ~/.ssh/your-key user@$VM_IP "ls -la /opt/torrust/storage/tracker/lib/data
 ssh -i ~/.ssh/your-key user@$VM_IP "sudo ufw status numbered"
 
 # Check if ports are listening
-ssh -i ~/.ssh/your-key user@$VM_IP "sudo netstat -tulpn | grep -E '6868|6969|7070|1212'"
+ssh -i ~/.ssh/your-key user@$VM_IP "sudo netstat -tulnp | grep -E '6868|6969|7070|1212'"
 
 # Test connectivity from host
 nc -zv $VM_IP 7070  # HTTP Tracker
