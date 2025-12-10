@@ -134,8 +134,8 @@ This script runs all mandatory checks:
 2. **Run all linters**: `cargo run --bin linter all` (stable & nightly toolchains)
 3. **Run tests**: `cargo test`
 4. **Test documentation builds**: `cargo doc --no-deps --bins --examples --workspace --all-features`
-5. **Run E2E provision and destroy tests**: `cargo run --bin e2e-provision-and-destroy-tests`
-6. **Run E2E configuration and release tests**: `cargo run --bin e2e-config-and-release-tests`
+5. **Run E2E infrastructure lifecycle tests**: `cargo run --bin e2e-infrastructure-lifecycle-tests`
+6. **Run E2E deployment workflow tests**: `cargo run --bin e2e-deployment-workflow-tests`
 
 **Note**: Code coverage is checked automatically in CI via GitHub Actions, not in the pre-commit script, to keep local commits fast and efficient.
 

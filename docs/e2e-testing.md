@@ -6,8 +6,8 @@ This guide explains how to run and understand the End-to-End (E2E) tests for the
 
 The E2E tests validate the complete deployment process using two independent test suites:
 
-1. **E2E Provision and Destroy Tests** - Test infrastructure provisioning and destruction lifecycle using LXD VMs
-2. **E2E Configuration Tests** - Test software installation and configuration using Docker containers
+1. **E2E Infrastructure Lifecycle Tests** - Test infrastructure provisioning and destruction lifecycle using LXD VMs
+2. **E2E Deployment Workflow Tests** - Test software installation and configuration using Docker containers
 
 This split approach ensures reliable testing in CI environments while maintaining comprehensive coverage.
 
@@ -15,20 +15,20 @@ This split approach ensures reliable testing in CI environments while maintainin
 
 ### Independent Test Suites
 
-#### Provision and Destroy Tests
+#### Infrastructure Lifecycle Tests
 
 Test infrastructure provisioning and destruction lifecycle (VM creation, cloud-init, and destruction):
 
 ```bash
-cargo run --bin e2e-provision-and-destroy-tests
+cargo run --bin e2e-infrastructure-lifecycle-tests
 ```
 
-#### Configuration Tests
+#### Deployment Workflow Tests
 
 Test software installation, configuration, release, and run workflows (Ansible playbooks):
 
 ```bash
-cargo run --bin e2e-config-and-release-tests
+cargo run --bin e2e-deployment-workflow-tests
 ```
 
 #### Full Local Testing
@@ -36,10 +36,10 @@ cargo run --bin e2e-config-and-release-tests
 For local development, you can run the complete end-to-end test:
 
 ```bash
-cargo run --bin e2e-tests-full
+cargo run --bin e2e-complete-workflow-tests
 ```
 
-⚠️ **Note**: The `e2e-tests-full` binary cannot run on GitHub Actions due to network connectivity issues, but is useful for local validation.
+⚠️ **Note**: The `e2e-complete-workflow-tests` binary cannot run on GitHub Actions due to network connectivity issues, but is useful for local validation.
 
 ### Command Line Options
 
@@ -52,22 +52,22 @@ All test binaries support these options:
 ### Examples
 
 ```bash
-# Run provision and destroy tests
-cargo run --bin e2e-provision-and-destroy-tests
+# Run infrastructure lifecycle tests
+cargo run --bin e2e-infrastructure-lifecycle-tests
 
-# Run provision and destroy tests with debugging (keep environment)
-cargo run --bin e2e-provision-and-destroy-tests -- --keep
+# Run infrastructure lifecycle tests with debugging (keep environment)
+cargo run --bin e2e-infrastructure-lifecycle-tests -- --keep
 
-# Run configuration tests with debugging
-cargo run --bin e2e-config-and-release-tests -- --keep
+# Run deployment workflow tests with debugging
+cargo run --bin e2e-deployment-workflow-tests -- --keep
 
 # Run full local tests with custom templates
-cargo run --bin e2e-tests-full -- --templates-dir ./custom/templates
+cargo run --bin e2e-complete-workflow-tests -- --templates-dir ./custom/templates
 ```
 
 ## 📋 Test Sequences
 
-### E2E Provision and Destroy Tests (`e2e-provision-and-destroy-tests`)
+### E2E Infrastructure Lifecycle Tests (`e2e-infrastructure-lifecycle-tests`)
 
 Tests the complete infrastructure lifecycle using LXD VMs:
 
@@ -147,7 +147,7 @@ For detailed destroy command documentation, see:
 - [Destroy Command User Guide](user-guide/commands/destroy.md)
 - [Destroy Command Developer Guide](contributing/commands.md#destroycommand)
 
-### E2E Configuration and Release Tests (`e2e-config-and-release-tests`)
+### E2E Deployment Workflow Tests (`e2e-deployment-workflow-tests`)
 
 Tests software installation and configuration using Docker containers:
 
@@ -174,7 +174,7 @@ Tests software installation and configuration using Docker containers:
 - ✅ Docker Compose version command works
 - ✅ Can parse and validate a test docker-compose.yml file
 
-### Full Local Tests (`e2e-tests-full`)
+### E2E Complete Workflow Tests (`e2e-complete-workflow-tests`)
 
 Combines both provision and configuration phases in a single LXD VM for comprehensive local testing.
 

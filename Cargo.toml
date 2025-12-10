@@ -21,16 +21,16 @@ name = "torrust-tracker-deployer"
 path = "src/main.rs"
 
 [[bin]]
-name = "e2e-tests-full"
-path = "src/bin/e2e_tests_full.rs"
+name = "e2e-complete-workflow-tests"
+path = "src/bin/e2e_complete_workflow_tests.rs"
 
 [[bin]]
-name = "e2e-config-and-release-tests"
-path = "src/bin/e2e_config_and_release_tests.rs"
+name = "e2e-deployment-workflow-tests"
+path = "src/bin/e2e_deployment_workflow_tests.rs"
 
 [[bin]]
-name = "e2e-provision-and-destroy-tests"
-path = "src/bin/e2e_provision_and_destroy_tests.rs"
+name = "e2e-infrastructure-lifecycle-tests"
+path = "src/bin/e2e_infrastructure_lifecycle_tests.rs"
 
 [[bin]]
 name = "linter"

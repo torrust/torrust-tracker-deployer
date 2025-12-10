@@ -206,7 +206,7 @@ Run E2E tests to verify the playbook is copied correctly:
 
 ```bash
 # Run E2E config and release tests (faster, tests configuration only)
-cargo run --bin e2e-config-and-release-tests
+cargo run --bin e2e-deployment-workflow-tests
 
 # Or run full E2E tests
 cargo run --bin e2e-tests-full

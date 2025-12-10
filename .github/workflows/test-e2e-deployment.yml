@@ -1,5 +1,5 @@
 ---
-name: E2E Configuration Tests
+name: E2E Deployment Workflow Tests
 
 # This workflow tests ONLY software configuration, release, and run phases
 # using Docker containers. It does NOT test infrastructure provisioning
@@ -22,7 +22,7 @@ on:
   workflow_dispatch: # Allow manual triggering
 
 jobs:
-  e2e-config-and-release-tests:
+  e2e-deployment-workflow-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 45 # Timeout for complete configuration testing with software installation
 
@@ -62,16 +62,16 @@ jobs:
           chmod 600 fixtures/testing_rsa
           ls -la fixtures/testing_rsa
 
-      - name: Build E2E configuration and release tests binary
+      - name: Build E2E deployment workflow tests binary
         run: |
-          cargo build --bin e2e-config-and-release-tests --release
+          cargo build --bin e2e-deployment-workflow-tests --release
 
-      - name: Run E2E configuration and release test
+      - name: Run E2E deployment workflow test
         run: |
-          # Run the E2E configuration and release test with debug logging for better debugging
-          echo "🚀 Starting E2E configuration and release test at $(date)"
-          cargo run --bin e2e-config-and-release-tests
-          echo "✅ E2E configuration and release test completed at $(date)"
+          # Run the E2E deployment workflow test with debug logging for better debugging
+          echo "🚀 Starting E2E deployment workflow test at $(date)"
+          cargo run --bin e2e-deployment-workflow-tests
+          echo "✅ E2E deployment workflow test completed at $(date)"
         env:
           # Preserve environment variables for the E2E test
           RUST_LOG: debug
@@ -113,8 +113,8 @@ jobs:
           # properly (e.g., if the test was abruptly halted). Under normal circumstances,
           # the testcontainers crate should automatically clean up containers when tests finish.
 
-          # Clean up the specific container created for e2e-config tests
-          docker rm -f torrust-tracker-vm-e2e-config 2>/dev/null || echo "Container torrust-tracker-vm-e2e-config not found or already removed"
+          # Clean up the specific container created for e2e-deployment tests
+          docker rm -f torrust-tracker-vm-e2e-deployment 2>/dev/null || echo "Container torrust-tracker-vm-e2e-deployment not found or already removed"
 
           # Clean up any test images if needed
           docker images --filter "reference=torrust-provisioned-instance*" -q | xargs -r docker rmi -f || echo "No test images to remove"
@@ -126,9 +126,9 @@ jobs:
           docker ps -a
 
           echo "=== Test Summary ==="
-          echo "E2E configuration test workflow completed"
+          echo "E2E deployment workflow test completed"
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ All configuration tests passed successfully"
+            echo "✅ All deployment workflow tests passed successfully"
           else
-            echo "❌ Some configuration tests failed - check logs above"
+            echo "❌ Some deployment workflow tests failed - check logs above"
           fi

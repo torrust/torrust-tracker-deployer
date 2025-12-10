@@ -1,36 +1,43 @@
-//! End-to-End Provisioning and Destruction Tests for Torrust Tracker Deployer
+//! Full End-to-End Testing Binary for Torrust Tracker Deployer (LOCAL DEVELOPMENT ONLY)
 //!
-//! This binary tests the complete infrastructure lifecycle: provisioning and destruction.
-//! It executes the CLI commands as a black box, testing the public interface exactly as
-//! end-users would use it. This does NOT test software configuration or installation.
+//! This binary provides complete end-to-end testing by combining infrastructure provisioning,
+//! configuration management, and validation in a single LXD VM. It's designed for local
+//! development and comprehensive testing workflows.
+//!
+//! ⚠️ **IMPORTANT**: This binary cannot run on GitHub Actions due to network connectivity
+//! issues within LXD VMs on GitHub runners. For CI environments, use the split test suites:
+//! - `cargo run --bin e2e-infrastructure-lifecycle-tests` - Infrastructure provisioning only
+//! - `cargo run --bin e2e-deployment-workflow-tests` - Configuration, release, and run workflows
 //!
 //! ## Usage
 //!
-//! Run the E2E provisioning and destruction tests:
+//! Run the full E2E test suite:
 //!
 //! ```bash
-//! cargo run --bin e2e-provision-and-destroy-tests
+//! cargo run --bin e2e-complete-workflow-tests
 //! ```
 //!
 //! Run with custom options:
 //!
 //! ```bash
 //! # Keep test environment after completion (for debugging)
-//! cargo run --bin e2e-provision-and-destroy-tests -- --keep
+//! cargo run --bin e2e-complete-workflow-tests -- --keep
 //!
 //! # Change logging format
-//! cargo run --bin e2e-provision-and-destroy-tests -- --log-format json
+//! cargo run --bin e2e-complete-workflow-tests -- --log-format json
 //!
 //! # Show help
-//! cargo run --bin e2e-provision-and-destroy-tests -- --help
+//! cargo run --bin e2e-complete-workflow-tests -- --help
 //! ```
 //!
 //! ## Test Workflow
 //!
 //! 1. **Preflight cleanup** - Remove any artifacts from previous test runs
 //! 2. **Create environment** - Execute `create environment` CLI command
-//! 3. **Provision infrastructure** - Execute `provision` CLI command
-//! 4. **Destroy infrastructure** - Execute `destroy` CLI command
+//! 3. **Provision infrastructure** - Execute `provision` CLI command (creates LXD VM)
+//! 4. **Configure services** - Execute `configure` CLI command (runs Ansible playbooks)
+//! 5. **Validate deployment** - Execute `test` CLI command (verifies services)
+//! 6. **Destroy infrastructure** - Execute `destroy` CLI command (cleanup)
 //!
 //! ## Black-Box Testing Approach
 //!
@@ -49,12 +56,12 @@ use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
     generate_environment_config, run_preflight_cleanup, verify_required_dependencies, E2eTestRunner,
 };
 
-// Constants for the e2e-provision environment
-const ENVIRONMENT_NAME: &str = "e2e-provision";
+// Constants for the e2e-complete environment
+const ENVIRONMENT_NAME: &str = "e2e-complete";
 
 #[derive(Parser)]
-#[command(name = "e2e-provision-and-destroy-tests")]
-#[command(about = "E2E provisioning and destruction tests for Torrust Tracker Deployer")]
+#[command(name = "e2e-complete-workflow-tests")]
+#[command(about = "Full E2E tests for Torrust Tracker Deployer (LOCAL ONLY)")]
 struct Cli {
     /// Keep the test environment after completion (skip destroy step)
     #[arg(long)]
@@ -69,13 +76,13 @@ struct Cli {
     log_format: LogFormat,
 }
 
-/// Main entry point for the E2E provisioning and destruction test suite
+/// Main entry point for the full E2E test suite
 ///
-/// This function orchestrates the complete provision+destroy test workflow:
+/// This function orchestrates the complete E2E test workflow:
 /// 1. Initializes logging
 /// 2. Verifies required dependencies
 /// 3. Performs pre-flight cleanup
-/// 4. Executes CLI commands: create → provision → destroy
+/// 4. Executes CLI commands: create → provision → configure → test → destroy
 /// 5. Reports results
 ///
 /// Returns `Ok(())` if all tests pass, `Err` otherwise.
@@ -89,19 +96,19 @@ struct Cli {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    LoggingBuilder::new(std::path::Path::new("./data/e2e-provision/logs"))
+    LoggingBuilder::new(std::path::Path::new("./data/e2e-complete/logs"))
         .with_format(cli.log_format.clone())
         .with_output(LogOutput::FileAndStderr)
         .init();
 
     info!(
         application = "torrust_tracker_deployer",
-        test_suite = "e2e_provision_and_destroy_tests",
+        test_suite = "e2e_complete_workflow_tests",
         log_format = ?cli.log_format,
-        "Starting E2E provisioning and destruction tests (black-box)"
+        "Starting full E2E tests (black-box, LOCAL ONLY)"
     );
 
-    verify_required_dependencies(&[Dependency::Ansible])?;
+    verify_required_dependencies(&[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd])?;
 
     run_preflight_cleanup(ENVIRONMENT_NAME)?;
 
@@ -115,24 +122,24 @@ fn main() -> Result<()> {
         performance = "test_execution",
         duration_secs = test_duration.as_secs_f64(),
         duration = ?test_duration,
-        "Provisioning and destruction test execution completed"
+        "Full E2E test execution completed"
     );
 
     // Report final results
     match &test_result {
         Ok(()) => {
             info!(
-                test_suite = "e2e_provision_and_destroy_tests",
+                test_suite = "e2e_complete_workflow_tests",
                 status = "success",
-                "All provisioning and destruction tests passed successfully"
+                "All full E2E tests passed successfully"
             );
         }
         Err(e) => {
             error!(
-                test_suite = "e2e_provision_and_destroy_tests",
+                test_suite = "e2e_complete_workflow_tests",
                 status = "failed",
                 error = %e,
-                "E2E test failed"
+                "Full E2E test failed"
             );
         }
     }
@@ -140,17 +147,19 @@ fn main() -> Result<()> {
     test_result
 }
 
-/// Runs the E2E test workflow using CLI commands.
+/// Runs the full E2E test workflow using CLI commands.
 ///
 /// Executes the following commands in sequence:
 /// 1. `create environment` - Create the environment from config
-/// 2. `provision` - Provision the infrastructure
-/// 3. `destroy` - Destroy the infrastructure (if `destroy` is true)
+/// 2. `provision` - Provision the infrastructure (LXD VM)
+/// 3. `configure` - Configure services (Ansible playbooks)
+/// 4. `test` - Validate deployment
+/// 5. `destroy` - Destroy the infrastructure (if `destroy` is true)
 ///
 /// # Arguments
 ///
 /// * `environment_name` - The name of the environment to test
-/// * `destroy` - If true, destroy the infrastructure after provisioning; if false, keep it for debugging
+/// * `destroy` - If true, destroy the infrastructure after testing; if false, keep it for debugging
 ///
 /// # Errors
 ///
@@ -163,6 +172,14 @@ fn run_e2e_test_workflow(environment_name: &str, destroy: bool) -> Result<()> {
     test_runner.create_environment(&config_path)?;
 
     test_runner.provision_infrastructure()?;
+
+    test_runner.configure_services()?;
+
+    test_runner.release_software()?;
+
+    test_runner.run_services()?;
+
+    test_runner.validate_deployment()?;
 
     if destroy {
         test_runner.destroy_infrastructure()?;

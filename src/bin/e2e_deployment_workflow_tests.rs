@@ -1,4 +1,4 @@
-//! End-to-End Configuration and Release Testing Binary for Torrust Tracker Deployer (Black-box)
+//! End-to-End Deployment Workflow Testing Binary for Torrust Tracker Deployer (Black-box)
 //!
 //! This binary orchestrates configuration and release testing of the deployment infrastructure using
 //! Docker containers instead of VMs. It uses a black-box approach, executing CLI commands
@@ -6,20 +6,20 @@
 //!
 //! ## Usage
 //!
-//! Run the E2E configuration and release tests:
+//! Run the E2E deployment workflow tests:
 //!
 //! ```bash
-//! cargo run --bin e2e-config-and-release-tests
+//! cargo run --bin e2e-deployment-workflow-tests
 //! ```
 //!
 //! Run with custom options:
 //!
 //! ```bash
 //! # Change logging format
-//! cargo run --bin e2e-config-and-release-tests -- --log-format json
+//! cargo run --bin e2e-deployment-workflow-tests -- --log-format json
 //!
 //! # Show help
-//! cargo run --bin e2e-config-and-release-tests -- --help
+//! cargo run --bin e2e-deployment-workflow-tests -- --help
 //! ```
 //!
 //! ## Test Workflow
@@ -82,13 +82,11 @@ use torrust_tracker_deployer_lib::testing::e2e::tasks::run_release_validation::r
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_run_validation::run_run_validation;
 
 /// Environment name for this E2E test
-const ENVIRONMENT_NAME: &str = "e2e-config";
+const ENVIRONMENT_NAME: &str = "e2e-deployment";
 
 #[derive(Parser)]
-#[command(name = "e2e-config-and-release-tests")]
-#[command(
-    about = "E2E configuration and release tests using black-box approach with Docker containers"
-)]
+#[command(name = "e2e-deployment-workflow-tests")]
+#[command(about = "E2E deployment workflow tests using black-box approach with Docker containers")]
 struct CliArgs {
     /// Logging format to use
     #[arg(
@@ -139,14 +137,14 @@ pub async fn main() -> Result<()> {
     // so we can test the run command that starts Docker Compose services.
 
     // Initialize logging with production log location for E2E tests using the builder pattern
-    LoggingBuilder::new(std::path::Path::new("./data/logs"))
+    LoggingBuilder::new(std::path::Path::new("./data/e2e-deployment/logs"))
         .with_format(cli.log_format.clone())
         .with_output(LogOutput::FileAndStderr)
         .init();
 
     info!(
         application = "torrust_tracker_deployer",
-        test_suite = "e2e_config_and_release_tests",
+        test_suite = "e2e_deployment_workflow_tests",
         log_format = ?cli.log_format,
         "Starting E2E configuration and release tests (black-box) with Docker containers"
     );
@@ -174,7 +172,7 @@ pub async fn main() -> Result<()> {
     match test_result {
         Ok(()) => {
             info!(
-                test_suite = "e2e_config_and_release_tests",
+                test_suite = "e2e_deployment_workflow_tests",
                 status = "success",
                 "All configuration and release tests passed successfully"
             );
@@ -182,7 +180,7 @@ pub async fn main() -> Result<()> {
         }
         Err(error) => {
             error!(
-                test_suite = "e2e_config_and_release_tests",
+                test_suite = "e2e_deployment_workflow_tests",
                 status = "failed",
                 error = %error,
                 "Configuration and release tests failed"

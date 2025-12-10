@@ -1,4 +1,4 @@
-name: E2E Provision and Destroy Tests
+name: E2E Infrastructure Lifecycle Tests
 
 # This workflow tests infrastructure provisioning and destruction (creating and destroying VMs/containers)
 # It does NOT test software configuration/installation to avoid GitHub Actions
@@ -18,7 +18,7 @@ on:
   workflow_dispatch: # Allow manual triggering
 
 jobs:
-  e2e-provision-tests:
+  e2e-infrastructure-lifecycle-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30 # Reduced timeout since we're not installing software
 
@@ -48,17 +48,17 @@ jobs:
           tofu version
           cargo --version
 
-      - name: Build E2E provision and destroy tests binary
+      - name: Build E2E infrastructure lifecycle tests binary
         run: |
-          cargo build --bin e2e-provision-and-destroy-tests --release
+          cargo build --bin e2e-infrastructure-lifecycle-tests --release
 
-      - name: Run E2E provision and destroy test
+      - name: Run E2E infrastructure lifecycle test
         run: |
-          # Run the E2E provision and destroy test with debug logging for better debugging
+          # Run the E2E infrastructure lifecycle test with debug logging for better debugging
           # Use sudo -E and preserve PATH to ensure cargo is accessible
-          echo "🚀 Starting E2E provision and destroy test at $(date)"
-          sudo -E env "PATH=$PATH" cargo run --bin e2e-provision-and-destroy-tests
-          echo "✅ E2E provision and destroy test completed at $(date)"
+          echo "🚀 Starting E2E infrastructure lifecycle test at $(date)"
+          sudo -E env "PATH=$PATH" cargo run --bin e2e-infrastructure-lifecycle-tests
+          echo "✅ E2E infrastructure lifecycle test completed at $(date)"
         env:
           # Preserve environment variables for the E2E test
           RUST_LOG: debug
@@ -68,18 +68,18 @@ jobs:
         run: |
           echo "=== Infrastructure Outputs ==="
           # Only check outputs if build directory still exists (it may be cleaned up by DestroyCommand)
-          if [ -d "build/e2e-provision/tofu/lxd" ]; then
-            cd build/e2e-provision/tofu/lxd
+          if [ -d "build/e2e-infrastructure/tofu/lxd" ]; then
+            cd build/e2e-infrastructure/tofu/lxd
             sudo -E tofu output || echo "No outputs available"
           else
             echo "Build directory not found (likely cleaned up by DestroyCommand)"
           fi
 
           echo "=== Container Status ==="
-          sudo lxc list torrust-tracker-vm-e2e-provision || echo "Container not found"
+          sudo lxc list torrust-tracker-vm-e2e-infrastructure || echo "Container not found"
 
           # Check if the container has an IP address before proceeding
-          sudo lxc info torrust-tracker-vm-e2e-provision || echo "Container info not available"
+          sudo lxc info torrust-tracker-vm-e2e-infrastructure || echo "Container info not available"
 
       - name: Debug information (on failure)
         if: failure()
@@ -88,8 +88,8 @@ jobs:
           sudo lxc list || echo "LXC list failed"
 
           echo "=== OpenTofu State ==="
-          if [ -d "build/e2e-provision/tofu/lxd" ]; then
-            cd build/e2e-provision/tofu/lxd
+          if [ -d "build/e2e-infrastructure/tofu/lxd" ]; then
+            cd build/e2e-infrastructure/tofu/lxd
             sudo -E tofu show || echo "No state to show"
           else
             echo "No OpenTofu state directory found"
@@ -108,9 +108,9 @@ jobs:
           echo "Test failed - attempting emergency cleanup..."
 
           # Try OpenTofu cleanup only if build directory still exists
-          if [ -d "build/e2e-provision/tofu/lxd" ]; then
+          if [ -d "build/e2e-infrastructure/tofu/lxd" ]; then
             echo "Found OpenTofu state directory, attempting tofu destroy..."
-            cd build/e2e-provision/tofu/lxd
+            cd build/e2e-infrastructure/tofu/lxd
             sudo -E tofu destroy -auto-approve || echo "Tofu destroy failed or nothing to destroy"
           else
             echo "No OpenTofu state directory found (likely cleaned up by DestroyCommand)"
@@ -118,8 +118,8 @@ jobs:
 
           # Always attempt LXD cleanup (no working directory dependency)
           echo "Attempting LXD resource cleanup..."
-          sudo lxc delete torrust-tracker-vm-e2e-provision --force || echo "Container deletion failed or container doesn't exist"
-          sudo lxc profile delete torrust-profile-e2e-provision || echo "Profile deletion failed or profile doesn't exist"
+          sudo lxc delete torrust-tracker-vm-e2e-infrastructure --force || echo "Container deletion failed or container doesn't exist"
+          sudo lxc profile delete torrust-profile-e2e-infrastructure || echo "Profile deletion failed or profile doesn't exist"
 
       - name: Final verification
         if: always()
@@ -128,9 +128,9 @@ jobs:
           sudo lxc list
 
           echo "=== Test Summary ==="
-          echo "E2E provision and destroy test workflow completed"
+          echo "E2E infrastructure lifecycle test workflow completed"
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ All provision and destroy tests passed successfully"
+            echo "✅ All infrastructure lifecycle tests passed successfully"
           else
-            echo "❌ Some provision and destroy tests failed - check logs above"
+            echo "❌ Some infrastructure lifecycle tests failed - check logs above"
           fi

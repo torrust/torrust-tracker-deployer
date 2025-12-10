@@ -164,18 +164,18 @@ Use the E2E test binaries to run automated infrastructure tests with hardcoded e
 
 ```bash
 # Run comprehensive E2E tests (LOCAL ONLY - connectivity issues in GitHub runners)
-cargo run --bin e2e-tests-full
+cargo run --bin e2e-complete-workflow-tests
 
 # Run individual E2E test suites
-cargo run --bin e2e-config-and-release-tests      # Configuration, release, and run workflow tests
-cargo run --bin e2e-provision-and-destroy-tests   # Infrastructure provisioning tests
+cargo run --bin e2e-deployment-workflow-tests         # Configuration, release, and run workflow tests
+cargo run --bin e2e-infrastructure-lifecycle-tests   # Infrastructure provisioning tests
 
 # Keep the test environment after completion for inspection
-cargo run --bin e2e-tests-full -- --keep
-cargo run --bin e2e-provision-and-destroy-tests -- --keep
+cargo run --bin e2e-complete-workflow-tests -- --keep
+cargo run --bin e2e-infrastructure-lifecycle-tests -- --keep
 
 # Use custom templates directory
-cargo run --bin e2e-tests-full -- --templates-dir ./custom/templates
+cargo run --bin e2e-complete-workflow-tests -- --templates-dir ./custom/templates
 
 # See all available options
 cargo run --bin e2e-tests-full -- --help
