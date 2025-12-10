@@ -21,6 +21,7 @@
 use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
 use anyhow::Result;
 use torrust_dependency_installer::{verify_dependencies, Dependency};
+use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::create_test_environment_config;
 
 /// Verify that all required dependencies are installed for destroy command E2E tests.
 ///
@@ -46,53 +47,6 @@ fn verify_required_dependencies() -> Result<()> {
     let required_deps: &[Dependency] = &[];
     verify_dependencies(required_deps)?;
     Ok(())
-}
-
-/// Helper function to create a test environment configuration
-fn create_test_environment_config(env_name: &str) -> String {
-    // Use absolute paths to SSH keys to ensure they work regardless of current directory
-    let project_root = env!("CARGO_MANIFEST_DIR");
-    let private_key_path = format!("{project_root}/fixtures/testing_rsa");
-    let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
-
-    serde_json::json!({
-        "environment": {
-            "name": env_name
-        },
-        "ssh_credentials": {
-            "private_key_path": private_key_path,
-            "public_key_path": public_key_path,
-            "username": "torrust",
-            "port": 22
-        },
-        "provider": {
-            "provider": "lxd",
-            "profile_name": format!("lxd-{}", env_name)
-        },
-        "tracker": {
-            "core": {
-                "database": {
-                    "driver": "sqlite3",
-                    "database_name": "tracker.db"
-                },
-                "private": false
-            },
-            "udp_trackers": [
-                {
-                    "bind_address": "0.0.0.0:6969"
-                }
-            ],
-            "http_trackers": [
-                {
-                    "bind_address": "0.0.0.0:7070"
-                }
-            ],
-            "http_api": {
-                "admin_token": "MyAccessToken"
-            }
-        }
-    })
-    .to_string()
 }
 
 #[test]

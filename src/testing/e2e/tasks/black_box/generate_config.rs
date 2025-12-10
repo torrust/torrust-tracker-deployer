@@ -86,7 +86,7 @@ pub fn generate_environment_config_with_port(environment_name: &str) -> Result<E
     let project_root = std::env::current_dir()
         .map_err(|e| anyhow::anyhow!("Failed to get current directory: {e}"))?;
 
-    let config_json = create_test_environment_config(environment_name)?;
+    let config_json = create_test_environment_config(environment_name);
 
     // Write to envs directory
     let config_path = project_root.join(format!("envs/{environment_name}.json"));
@@ -112,9 +112,12 @@ pub fn generate_environment_config_with_port(environment_name: &str) -> Result<E
 /// Creates a test environment configuration with absolute SSH key paths
 ///
 /// Generates a JSON configuration string for E2E testing with:
-/// - Absolute paths to SSH keys in fixtures/
+/// - Absolute paths to SSH keys in fixtures/ (using `CARGO_MANIFEST_DIR`)
 /// - LXD provider configuration
 /// - Default tracker configuration (UDP 6969, HTTP 7070, API token)
+///
+/// This function uses `env!("CARGO_MANIFEST_DIR")` to locate the project root at compile time,
+/// ensuring SSH keys are found regardless of the current working directory at runtime.
 ///
 /// # Arguments
 ///
@@ -124,50 +127,36 @@ pub fn generate_environment_config_with_port(environment_name: &str) -> Result<E
 ///
 /// Returns a `String` containing the complete environment configuration as pretty-printed JSON
 ///
-/// # Errors
-///
-/// Returns an error if:
-/// - Current directory cannot be determined
-/// - SSH key files do not exist in fixtures/
-///
 /// # Example
 ///
 /// ```rust,ignore
-/// let config = create_test_environment_config("test-env")?;
+/// use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::create_test_environment_config;
+///
+/// let config = create_test_environment_config("test-env");
 /// println!("{}", config);
 /// ```
-fn create_test_environment_config(environment_name: &str) -> Result<String> {
-    // Get project root from current directory (cargo run runs from project root)
-    let project_root = std::env::current_dir()
-        .map_err(|e| anyhow::anyhow!("Failed to get current directory: {e}"))?;
+pub fn create_test_environment_config(environment_name: &str) -> String {
+    // Use compile-time constant to get project root - more reliable than current_dir()
+    let project_root = env!("CARGO_MANIFEST_DIR");
+    let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+    let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
 
-    // Build absolute paths to SSH keys
-    let private_key_path = project_root.join("fixtures/testing_rsa");
-    let public_key_path = project_root.join("fixtures/testing_rsa.pub");
-
-    // Verify SSH keys exist
-    if !private_key_path.exists() {
-        return Err(anyhow::anyhow!(
-            "SSH private key not found at: {}",
-            private_key_path.display()
-        ));
-    }
-    if !public_key_path.exists() {
-        return Err(anyhow::anyhow!(
-            "SSH public key not found at: {}",
-            public_key_path.display()
-        ));
-    }
+    info!(
+        private_key = %private_key_path,
+        public_key = %public_key_path,
+        environment_name = %environment_name,
+        "Generated environment configuration with absolute SSH key paths"
+    );
 
     // Create configuration JSON with absolute paths and tracker configuration
     // This must match the format expected by EnvironmentCreationConfig
-    let config = serde_json::json!({
+    serde_json::json!({
         "environment": {
             "name": environment_name
         },
         "ssh_credentials": {
-            "private_key_path": private_key_path.to_string_lossy(),
-            "public_key_path": public_key_path.to_string_lossy()
+            "private_key_path": private_key_path,
+            "public_key_path": public_key_path
         },
         "provider": {
             "provider": "lxd",
@@ -191,16 +180,8 @@ fn create_test_environment_config(environment_name: &str) -> Result<String> {
                 "admin_token": "MyAccessToken"
             }
         }
-    });
-
-    info!(
-        private_key = %private_key_path.display(),
-        public_key = %public_key_path.display(),
-        "Generated environment configuration with absolute SSH key paths"
-    );
-
-    serde_json::to_string_pretty(&config)
-        .map_err(|e| anyhow::anyhow!("Failed to serialize config to JSON: {e}"))
+    })
+    .to_string()
 }
 
 /// Update the SSH port in an existing environment configuration file

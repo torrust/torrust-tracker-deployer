@@ -51,7 +51,8 @@ pub use test_runner::E2eTestRunner;
 
 // Re-export standalone setup functions
 pub use generate_config::{
-    generate_environment_config, generate_environment_config_with_port, update_environment_ssh_port,
+    create_test_environment_config, generate_environment_config,
+    generate_environment_config_with_port, update_environment_ssh_port,
 };
 pub use preflight_cleanup::run_container_preflight_cleanup;
 pub use preflight_cleanup::run_preflight_cleanup;
