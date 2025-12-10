@@ -8,22 +8,21 @@
 
 - **Create Template**: Generate environment configuration template (JSON)
 - **Create Environment**: Create new deployment environment from configuration file
-- **Provision**: VM infrastructure provisioning with OpenTofu (LXD instances)
+- **Provision**: VM infrastructure provisioning with OpenTofu (LXD and Hetzner Cloud)
 - **Register**: Register existing instances as an alternative to provisioning (for pre-existing VMs, servers, or containers)
-- **Configure**: VM configuration with Docker and Docker Compose installation via Ansible
+- **Configure**: VM configuration with Docker, Docker Compose, and firewall via Ansible
 - **Test**: Verification of deployment infrastructure (cloud-init, Docker, Docker Compose)
+- **Release**: Deploy application configuration and files (tracker config, docker-compose stack)
+- **Run**: Start Torrust Tracker services and validate accessibility
 - **Destroy**: Infrastructure cleanup and environment destruction
-- Template rendering system (OpenTofu and Ansible templates)
+- Template rendering system (OpenTofu, Ansible, Tracker, Docker Compose templates)
 - SSH connectivity validation
 - Environment state management and persistence
 
 ### ⚠️ What's NOT Yet Implemented
 
-- Application deployment (Docker Compose stack for Torrust Tracker)
-- Release command (deploy application files and configuration)
-- Run command (start/stop Torrust Tracker services)
 - Porcelain commands (high-level `deploy` command)
-- Multiple cloud provider support (only LXD currently supported)
+- Additional cloud providers (AWS, Azure, GCP)
 
 ## Deployment States
 
@@ -38,18 +37,18 @@ The deployment follows a linear state progression:
 
 Each command transitions the deployment to the next state.
 
-## Current Deployment Workflow
+## Complete Deployment Workflow
 
-The currently available commands for infrastructure management:
+The full deployment workflow with all implemented commands:
 
 ```bash
 # 1. Generate configuration template
-torrust-tracker-deployer create template my-env.json
+torrust-tracker-deployer create template --provider lxd > my-env.json
 
-# 2. Edit my-env.json with your settings
+# 2. Edit my-env.json with your settings (SSH keys, tracker config, etc.)
 
 # 3. Create environment from configuration
-torrust-tracker-deployer create environment -f my-env.json
+torrust-tracker-deployer create environment --env-file my-env.json
 
 # 4a. Provision NEW VM infrastructure
 torrust-tracker-deployer provision my-environment
@@ -57,17 +56,23 @@ torrust-tracker-deployer provision my-environment
 # 4b. OR Register EXISTING infrastructure (alternative to provision)
 torrust-tracker-deployer register my-environment --instance-ip 192.168.1.100
 
-# 5. Configure system (Docker, Docker Compose)
+# 5. Configure system (Docker, Docker Compose, firewall)
 torrust-tracker-deployer configure my-environment
 
 # 6. Verify deployment infrastructure
 torrust-tracker-deployer test my-environment
 
-# 7. Destroy environment when done
+# 7. Deploy application configuration and files
+torrust-tracker-deployer release my-environment
+
+# 8. Start Torrust Tracker services
+torrust-tracker-deployer run my-environment
+
+# 9. Destroy environment when done
 torrust-tracker-deployer destroy my-environment
 ```
 
-This workflow deploys VM infrastructure with Docker and Docker Compose installed, ready for application deployment (coming soon with `release` and `run` commands).
+This workflow deploys a complete Torrust Tracker instance with all configuration and services running.
 
 ## Hybrid Command Architecture
 
@@ -119,15 +124,15 @@ torrust-tracker-deployer list            # List all environments (not yet implem
 # Environment Management
 torrust-tracker-deployer create template [PATH]         # ✅ Generate configuration template
 torrust-tracker-deployer create environment -f <file>   # ✅ Create environment from config
-torrust-tracker-deployer status <env>                   # Show environment info (not yet implemented)
-torrust-tracker-deployer destroy <env>                  # ✅ Clean up infrastructure
-
-# Porcelain Commands (High-Level) - Future
-torrust-tracker-deployer deploy <env>    # Smart deployment from current state (not yet implemented)
-
 # Plumbing Commands (Low-Level)
 torrust-tracker-deployer provision <env> # ✅ Create VM infrastructure
 torrust-tracker-deployer register <env> --instance-ip <IP>  # ✅ Register existing infrastructure
+torrust-tracker-deployer configure <env> # ✅ Setup VM (Docker, Docker Compose, firewall)
+torrust-tracker-deployer release <env>   # ✅ Deploy application files and configuration
+torrust-tracker-deployer run <env>       # ✅ Start Torrust Tracker services
+
+# Validation
+torrust-tracker-deployer test <env>      # ✅ Verify infrastructure (cloud-init, Docker, Docker Compose)
 torrust-tracker-deployer configure <env> # ✅ Setup VM (Docker, Docker Compose)
 torrust-tracker-deployer release <env>   # Deploy application files (not yet implemented)
 torrust-tracker-deployer run <env>       # Start application stack (not yet implemented)
@@ -518,6 +523,157 @@ torrust-tracker-deployer test my-environment
 - Torrent tracker API validation (when tracker is running)
 - Database connectivity tests (when database is deployed)
 - Performance baseline checks
+
+---
+
+### `release` - Deploy Application Configuration
+
+**Status**: ✅ Implemented  
+**State Transition**: `Configured` → `Released`  
+**Purpose**: Deploy application configuration files and prepare the environment for running services.
+
+```bash
+torrust-tracker-deployer release <environment>
+```
+
+**Current Implementation**:
+
+- Creates storage directory structure on VM (`/opt/torrust/storage/tracker/`)
+- Initializes SQLite database for tracker
+- Renders tracker configuration from environment settings (`tracker.toml`)
+- Generates Docker Compose environment variables (`.env`)
+- Deploys all configuration files to VM
+- Synchronizes Docker Compose stack files
+
+**What Gets Deployed**:
+
+- Tracker configuration: `/opt/torrust/storage/tracker/etc/tracker.toml`
+- Database file: `/opt/torrust/storage/tracker/lib/database/tracker.db`
+- Environment variables: `/opt/torrust/.env`
+- Docker Compose stack: `/opt/torrust/docker-compose.yml`
+
+**Use Cases**:
+
+- Deploy application after infrastructure is configured
+- Update tracker configuration (re-run after editing environment.json)
+- Prepare environment for running services
+
+**Example**:
+
+```bash
+# Deploy application configuration
+torrust-tracker-deployer release my-environment
+
+# Output:
+# ✓ Creating tracker storage directories...
+# ✓ Initializing tracker database...
+# ✓ Rendering tracker templates...
+# ✓ Deploying tracker configuration...
+# ✓ Deploying Docker Compose files...
+# ✓ Release complete - environment ready to run
+```
+
+**Configuration Source**:
+
+The release command uses tracker configuration from your environment JSON:
+
+```json
+{
+  "tracker": {
+    "core": {
+      "database_name": "tracker.db",
+      "private": false
+    },
+    "udp_trackers": [{ "bind_address": "0.0.0.0:6868" }],
+    "http_trackers": [{ "bind_address": "0.0.0.0:7070" }],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "MyAccessToken"
+    }
+  }
+}
+```
+
+**Idempotent Operation**:
+
+- Can be re-run safely to update configuration
+- Existing database is preserved
+- Configuration files are overwritten with new values
+
+---
+
+### `run` - Start Tracker Services
+
+**Status**: ✅ Implemented  
+**State Transition**: `Released` → `Running`  
+**Purpose**: Start the Torrust Tracker application services and validate they are running.
+
+```bash
+torrust-tracker-deployer run <environment>
+```
+
+**Current Implementation**:
+
+- Starts Docker Compose services (`docker compose up -d`)
+- Validates services are running via Docker status
+- Performs external health checks on tracker API
+- Verifies firewall allows external access
+
+**Services Started**:
+
+- **Tracker container** (`torrust/tracker:develop`)
+  - UDP Tracker endpoints (ports 6868, 6969 by default)
+  - HTTP Tracker endpoint (port 7070 by default)
+  - HTTP API endpoint (port 1212 by default)
+
+**Health Checks Performed**:
+
+1. **Docker Compose Status** - Verifies containers are running
+2. **Tracker API Health** (required) - Tests external accessibility of HTTP API
+   - Endpoint: `http://<vm-ip>:1212/api/health_check`
+   - Validates service functionality AND firewall configuration
+3. **HTTP Tracker Health** (optional) - Tests external accessibility of HTTP tracker
+   - Endpoint: `http://<vm-ip>:7070/api/health_check`
+   - Warning only if check fails (not all versions have endpoint)
+
+**Use Cases**:
+
+- Start tracker services after release
+- Restart services after configuration changes
+- Validate tracker is accessible externally
+
+**Example**:
+
+```bash
+# Start tracker services
+torrust-tracker-deployer run my-environment
+
+# Output:
+# ✓ Starting Docker Compose services...
+# ✓ Validating services are running...
+# ✓ Checking tracker API accessibility...
+# ✓ Tracker services running and accessible
+```
+
+**Verification**:
+
+After running, you can access the tracker:
+
+```bash
+# Get VM IP
+VM_IP=$(torrust-tracker-deployer show my-environment | grep 'IP Address' | awk '{print $3}')
+
+# Test tracker API
+curl http://$VM_IP:1212/api/health_check
+
+# Get tracker statistics
+curl http://$VM_IP:1212/api/v1/stats
+```
+
+**Announce URLs**:
+
+- UDP: `udp://<vm-ip>:6868/announce` or `udp://<vm-ip>:6969/announce`
+- HTTP: `http://<vm-ip>:7070/announce`
 
 ---
 
