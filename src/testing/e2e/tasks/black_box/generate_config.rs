@@ -83,6 +83,60 @@ pub fn generate_environment_config(environment_name: &str) -> Result<PathBuf> {
 pub fn generate_environment_config_with_port(environment_name: &str) -> Result<E2eEnvironmentInfo> {
     use std::fs;
 
+    let project_root = std::env::current_dir()
+        .map_err(|e| anyhow::anyhow!("Failed to get current directory: {e}"))?;
+
+    let config_json = create_test_environment_config(environment_name)?;
+
+    // Write to envs directory
+    let config_path = project_root.join(format!("envs/{environment_name}.json"));
+
+    // Ensure parent directory exists
+    if let Some(parent) = config_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| anyhow::anyhow!("Failed to create config directory: {e}"))?;
+    }
+
+    fs::write(&config_path, config_json)
+        .map_err(|e| anyhow::anyhow!("Failed to write config file: {e}"))?;
+
+    info!(
+        config_path = %config_path.display(),
+        "Generated environment configuration"
+    );
+
+    // Create E2eEnvironmentInfo from the generated config
+    E2eEnvironmentInfo::from_config_file(environment_name.to_string(), config_path, None)
+}
+
+/// Creates a test environment configuration with absolute SSH key paths
+///
+/// Generates a JSON configuration string for E2E testing with:
+/// - Absolute paths to SSH keys in fixtures/
+/// - LXD provider configuration
+/// - Default tracker configuration (UDP 6969, HTTP 7070, API token)
+///
+/// # Arguments
+///
+/// * `environment_name` - The name of the environment to create
+///
+/// # Returns
+///
+/// Returns a `String` containing the complete environment configuration as pretty-printed JSON
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Current directory cannot be determined
+/// - SSH key files do not exist in fixtures/
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let config = create_test_environment_config("test-env")?;
+/// println!("{}", config);
+/// ```
+fn create_test_environment_config(environment_name: &str) -> Result<String> {
     // Get project root from current directory (cargo run runs from project root)
     let project_root = std::env::current_dir()
         .map_err(|e| anyhow::anyhow!("Failed to get current directory: {e}"))?;
@@ -139,27 +193,14 @@ pub fn generate_environment_config_with_port(environment_name: &str) -> Result<E
         }
     });
 
-    // Write to envs directory
-    let config_path = project_root.join(format!("envs/{environment_name}.json"));
-
-    // Ensure parent directory exists
-    if let Some(parent) = config_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| anyhow::anyhow!("Failed to create config directory: {e}"))?;
-    }
-
-    fs::write(&config_path, serde_json::to_string_pretty(&config)?)
-        .map_err(|e| anyhow::anyhow!("Failed to write config file: {e}"))?;
-
     info!(
-        config_path = %config_path.display(),
         private_key = %private_key_path.display(),
         public_key = %public_key_path.display(),
         "Generated environment configuration with absolute SSH key paths"
     );
 
-    // Create E2eEnvironmentInfo from the generated config
-    E2eEnvironmentInfo::from_config_file(environment_name.to_string(), config_path, None)
+    serde_json::to_string_pretty(&config)
+        .map_err(|e| anyhow::anyhow!("Failed to serialize config to JSON: {e}"))
 }
 
 /// Update the SSH port in an existing environment configuration file
