@@ -1,8 +1,8 @@
 [alias]
 lint = "run --bin linter all"
-e2e-full = "run --bin e2e-tests-full"
-e2e-provision = "run --bin e2e-provision-tests"
-e2e-config = "run --bin e2e-config-and-release-tests"
+e2e-complete = "run --bin e2e-complete-workflow-tests"
+e2e-infrastructure = "run --bin e2e-infrastructure-lifecycle-tests"
+e2e-deployment = "run --bin e2e-deployment-workflow-tests"
 cov = "llvm-cov"
 cov-check = "llvm-cov --all-features --workspace --fail-under-lines 70"
 cov-lcov = "llvm-cov --lcov --output-path=./.coverage/lcov.info"
