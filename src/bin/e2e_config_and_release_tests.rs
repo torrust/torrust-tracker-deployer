@@ -73,8 +73,8 @@ use torrust_tracker_deployer_lib::testing::e2e::containers::{
     RunningProvisionedContainer, StoppedProvisionedContainer,
 };
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
-    generate_environment_config_with_port, run_container_preflight_cleanup,
-    verify_required_dependencies, E2eTestRunner,
+    build_e2e_test_config, run_container_preflight_cleanup, verify_required_dependencies,
+    write_environment_config, E2eTestRunner,
 };
 use torrust_tracker_deployer_lib::testing::e2e::tasks::container::cleanup_infrastructure::stop_test_infrastructure;
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configuration_validation::run_configuration_validation;
@@ -213,9 +213,9 @@ async fn run_configure_release_run_tests() -> Result<()> {
     // Build SSH credentials
     let ssh_credentials = build_test_ssh_credentials();
 
-    // Step 1: Generate environment configuration
-    // This returns configuration with desired ports from environment.json
-    let config_env = generate_environment_config_with_port(ENVIRONMENT_NAME)?;
+    // Step 1: Build E2E test configuration in-memory
+    // This creates the configuration structure without file I/O
+    let config_env = build_e2e_test_config(ENVIRONMENT_NAME);
 
     // Step 2: Create and start Docker container
     // With bridge networking, Docker assigns random mapped ports
@@ -223,10 +223,15 @@ async fn run_configure_release_run_tests() -> Result<()> {
     let (runtime_env, running_container) = create_and_start_container(&config_env).await?;
 
     // Get SSH socket address from runtime environment (using actual mapped port)
-    let socket_addr = runtime_env.ssh_socket_addr();
+    let ssh_socket_address = runtime_env.ssh_socket_addr();
 
     // Step 3: Establish SSH connectivity using the mapped SSH port
-    establish_ssh_connectivity(socket_addr, &ssh_credentials, Some(&running_container)).await?;
+    establish_ssh_connectivity(
+        ssh_socket_address,
+        &ssh_credentials,
+        Some(&running_container),
+    )
+    .await?;
 
     // Step 4: Run deployer commands (black-box via CLI)
     let test_result = run_deployer_workflow(&config_env, &runtime_env, &ssh_credentials).await;
@@ -252,6 +257,9 @@ async fn run_deployer_workflow(
     ssh_credentials: &SshCredentials,
 ) -> Result<()> {
     let test_runner = E2eTestRunner::new(ENVIRONMENT_NAME);
+
+    // Write environment configuration to disk (needed by create command)
+    write_environment_config(config_env)?;
 
     // Create environment (CLI: cargo run -- create environment --env-file <file>)
     test_runner.create_environment(&config_env.config_file_path)?;

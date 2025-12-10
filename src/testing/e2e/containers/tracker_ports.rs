@@ -26,6 +26,90 @@ pub struct E2eConfigEnvironment {
 }
 
 impl E2eConfigEnvironment {
+    /// Create E2E config environment directly from values
+    ///
+    /// This is the primary constructor that builds the configuration in-memory
+    /// without requiring file I/O. Use this when you want to work with the
+    /// configuration before writing it to disk.
+    ///
+    /// # Arguments
+    /// * `environment_name` - Name of the environment
+    /// * `config_file_path` - Path where config will be written (if needed)
+    /// * `ssh_port` - SSH port to use
+    /// * `tracker_ports` - Tracker port configuration
+    #[must_use]
+    pub fn new(
+        environment_name: String,
+        config_file_path: PathBuf,
+        ssh_port: u16,
+        tracker_ports: TrackerPorts,
+    ) -> Self {
+        Self {
+            environment_name,
+            config_file_path,
+            ssh_port,
+            tracker_ports,
+        }
+    }
+
+    /// Generate JSON configuration string from this E2E environment
+    ///
+    /// Creates a complete environment configuration JSON using the values
+    /// from this struct, with absolute paths to SSH keys.
+    ///
+    /// # Returns
+    ///
+    /// Returns a JSON string ready to be written to the environment config file.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let env_info = E2eConfigEnvironment::new(...);
+    /// let json = env_info.to_json_config();
+    /// ```
+    #[must_use]
+    pub fn to_json_config(&self) -> String {
+        // Use compile-time constant to get project root - more reliable than current_dir()
+        let project_root = env!("CARGO_MANIFEST_DIR");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+        // Create configuration JSON with absolute paths and tracker configuration
+        // This must match the format expected by EnvironmentCreationConfig
+        serde_json::json!({
+            "environment": {
+                "name": &self.environment_name
+            },
+            "ssh_credentials": {
+                "private_key_path": private_key_path,
+                "public_key_path": public_key_path
+            },
+            "provider": {
+                "provider": "lxd",
+                "profile_name": format!("torrust-profile-{}", &self.environment_name)
+            },
+            "tracker": {
+                "core": {
+                    "database": {
+                        "driver": "sqlite3",
+                        "database_name": "tracker.db"
+                    },
+                    "private": false
+                },
+                "udp_trackers": [
+                    {"bind_address": format!("0.0.0.0:{}", self.tracker_ports.udp_tracker_port)}
+                ],
+                "http_trackers": [
+                    {"bind_address": format!("0.0.0.0:{}", self.tracker_ports.http_tracker_port)}
+                ],
+                "http_api": {
+                    "admin_token": "MyAccessToken"
+                }
+            }
+        })
+        .to_string()
+    }
+
     /// Create E2E config environment from configuration file
     ///
     /// # Arguments
@@ -160,6 +244,22 @@ pub struct TrackerPorts {
     pub http_tracker_port: u16,
     /// UDP tracker port (default: 6969)
     pub udp_tracker_port: u16,
+}
+
+impl Default for TrackerPorts {
+    /// Create tracker ports with default values
+    ///
+    /// Default ports match the standard test configuration:
+    /// - HTTP API: 1212
+    /// - HTTP tracker: 7070
+    /// - UDP tracker: 6969
+    fn default() -> Self {
+        Self {
+            http_api_port: 1212,
+            http_tracker_port: 7070,
+            udp_tracker_port: 6969,
+        }
+    }
 }
 
 impl TrackerPorts {
