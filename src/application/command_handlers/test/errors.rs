@@ -20,6 +20,9 @@ pub enum TestCommandHandlerError {
     #[error("Environment '{environment_name}' does not have an instance IP set. The environment must be provisioned before running tests.")]
     MissingInstanceIp { environment_name: String },
 
+    #[error("Invalid tracker configuration: {message}")]
+    InvalidTrackerConfiguration { message: String },
+
     #[error("Invalid state transition: {0}")]
     StateTransition(#[from] StateTypeError),
 
@@ -44,6 +47,9 @@ impl crate::shared::Traceable for TestCommandHandlerError {
                     "TestCommandHandlerError: Missing instance IP for environment '{environment_name}'"
                 )
             }
+            Self::InvalidTrackerConfiguration { message } => {
+                format!("TestCommandHandlerError: Invalid tracker configuration - {message}")
+            }
             Self::StateTransition(e) => {
                 format!("TestCommandHandlerError: Invalid state transition - {e}")
             }
@@ -59,6 +65,7 @@ impl crate::shared::Traceable for TestCommandHandlerError {
             Self::EnvironmentNotFound { .. }
             | Self::RemoteAction(_)
             | Self::MissingInstanceIp { .. }
+            | Self::InvalidTrackerConfiguration { .. }
             | Self::StateTransition(_)
             | Self::StatePersistence(_) => None,
         }
@@ -66,9 +73,9 @@ impl crate::shared::Traceable for TestCommandHandlerError {
 
     fn error_kind(&self) -> crate::shared::ErrorKind {
         match self {
-            Self::EnvironmentNotFound { .. } | Self::MissingInstanceIp { .. } => {
-                crate::shared::ErrorKind::Configuration
-            }
+            Self::EnvironmentNotFound { .. }
+            | Self::MissingInstanceIp { .. }
+            | Self::InvalidTrackerConfiguration { .. } => crate::shared::ErrorKind::Configuration,
             Self::Command(_) | Self::RemoteAction(_) => crate::shared::ErrorKind::CommandExecution,
             Self::StateTransition(_) | Self::StatePersistence(_) => {
                 crate::shared::ErrorKind::StatePersistence
@@ -136,6 +143,24 @@ This typically means the environment was created but not provisioned.
 3. Then run the test command
 
 For workflow details, see docs/deployment-overview.md"
+            }
+            Self::InvalidTrackerConfiguration { .. } => {
+                "Invalid Tracker Configuration - Troubleshooting:
+
+The tracker configuration in the environment is invalid or incomplete.
+
+1. Check the tracker configuration in your environment file:
+   cat data/<env-name>/environment.json
+
+2. Verify the HTTP API bind_address format:
+   Expected: \"0.0.0.0:1212\" (host:port)
+
+3. If needed, recreate the environment with correct configuration:
+   cargo run -- create template my-config.json
+   # Edit my-config.json with correct tracker settings
+   cargo run -- create environment --env-file my-config.json
+
+For tracker configuration details, see docs/user-guide/configuration.md"
             }
             Self::StateTransition(_) => {
                 "Invalid State Transition - Troubleshooting:
@@ -210,6 +235,9 @@ mod tests {
             }),
             TestCommandHandlerError::MissingInstanceIp {
                 environment_name: "test-env".to_string(),
+            },
+            TestCommandHandlerError::InvalidTrackerConfiguration {
+                message: "Invalid bind address".to_string(),
             },
             TestCommandHandlerError::StateTransition(StateTypeError::UnexpectedState {
                 expected: "Provisioned",

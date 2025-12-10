@@ -2,22 +2,33 @@
 //!
 //! **Purpose**: Smoke test for running Torrust Tracker services
 //!
-//! This handler validates that a deployed Tracker application is running and accessible.
-//! The command is designed for post-deployment verification - checking that services
-//! respond correctly to requests, not validating infrastructure components.
+//! This handler validates that a deployed Tracker application is running and accessible
+//! from external clients. The command performs comprehensive end-to-end verification
+//! including service status, health checks, and external accessibility validation.
 //!
-//! **Current Implementation Status**: Work in Progress / Temporary Scaffolding
+//! ## Validation Strategy
 //!
-//! The current validation steps (cloud-init, Docker, Docker Compose) are **temporary
-//! scaffolding** that exist only because the complete deployment workflow is not yet
-//! implemented. These steps will be **removed** when the full deployment is implemented
-//! and replaced with actual smoke tests.
+//! The test command validates deployed services through:
 //!
-//! **Target Implementation** (when `Running` state is implemented):
+//! 1. **Docker Compose Service Status** - Verifies containers are running
+//! 2. **External Health Checks** - Tests service accessibility from outside the VM:
+//!    - Tracker API health endpoint (required): `http://<vm-ip>:<api-port>/api/health_check`
+//!    - HTTP Tracker health endpoint (optional): `http://<vm-ip>:<tracker-port>/api/health_check`
 //!
-//! - Make HTTP requests to publicly exposed Tracker services
-//! - Verify services respond correctly (health checks, basic API calls)
-//! - Confirm deployment is production-ready from end-user perspective
+//! ## Why External-Only Validation?
+//!
+//! We perform external accessibility checks (from test runner to VM) rather than
+//! internal checks (via SSH to localhost) because:
+//! - External checks are a superset of internal checks
+//! - If services are accessible externally, they must be running internally
+//! - External checks validate firewall configuration automatically
+//! - Simpler test implementation reduces maintenance burden
+//!
+//! ## Port Configuration
+//!
+//! The test command extracts tracker ports from the environment's tracker configuration:
+//! - HTTP API port from `environment.context.user_inputs.tracker.http_api.bind_address`
+//! - HTTP Tracker port from `environment.context.user_inputs.tracker.http_trackers[0].bind_address`
 //!
 //! For rationale and alternatives, see:
 //! - `docs/decisions/test-command-as-smoke-test.md` - Architectural decision record
@@ -28,33 +39,29 @@ use tracing::{info, instrument};
 
 use super::errors::TestCommandHandlerError;
 use crate::adapters::ssh::SshConfig;
-use crate::application::steps::{
-    ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
-    ValidateDockerInstallationStep,
-};
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::EnvironmentName;
+use crate::infrastructure::remote_actions::{RemoteAction, RunningServicesValidator};
 
 /// `TestCommandHandler` orchestrates smoke testing for running Torrust Tracker services
 ///
 /// **Purpose**: Post-deployment smoke test to verify the application is running and accessible
 ///
-/// **Current Status**: Work in Progress - Current implementation is temporary scaffolding
+/// This handler validates that deployed services are operational and accessible from
+/// external clients by performing comprehensive health checks on the Tracker API and
+/// HTTP Tracker endpoints.
 ///
-/// The current validation steps are **placeholders** until the complete deployment workflow
-/// is implemented with the `Running` state. See module documentation for details.
+/// ## Validation Steps
 ///
-/// ## Current Validation Steps (Temporary)
+/// 1. **Service Status** - Verifies Docker Compose services are running via SSH
+/// 2. **Tracker API Health** (required) - Tests external accessibility of HTTP API
+/// 3. **HTTP Tracker Health** (optional) - Tests external accessibility of HTTP tracker
 ///
-/// 1. Validate cloud-init completion
-/// 2. Validate Docker installation
-/// 3. Validate Docker Compose installation
+/// ## Port Discovery
 ///
-/// ## Target Validation Steps (Future)
-///
-/// 1. HTTP health check to Tracker service
-/// 2. Basic API request verification
-/// 3. Metrics endpoint validation
+/// The handler extracts tracker ports from the environment's tracker configuration:
+/// - HTTP API port from `tracker.http_api.bind_address`
+/// - HTTP Tracker port from `tracker.http_trackers[0].bind_address`
 ///
 /// ## Design Rationale
 ///
@@ -80,6 +87,9 @@ impl TestCommandHandler {
 
     /// Execute the complete testing and validation workflow
     ///
+    /// Validates that the Torrust Tracker services are running and accessible by
+    /// performing external health checks on the deployed services.
+    ///
     /// # Arguments
     ///
     /// * `env_name` - The name of the environment to test
@@ -89,10 +99,11 @@ impl TestCommandHandler {
     /// Returns an error if:
     /// * Environment not found
     /// * Environment does not have an instance IP set
-    /// * Any validation step fails:
-    ///   - Cloud-init completion validation fails
-    ///   - Docker installation validation fails
-    ///   - Docker Compose installation validation fails
+    /// * Tracker configuration is invalid or missing required ports
+    /// * Running services validation fails:
+    ///   - Services are not running
+    ///   - Health check endpoints are not accessible
+    ///   - Firewall rules block external access
     #[instrument(
         name = "test_command",
         skip_all,
@@ -111,29 +122,52 @@ impl TestCommandHandler {
                     environment_name: env_name.to_string(),
                 })?;
 
+        // Extract tracker ports from configuration
+        let tracker_config = any_env.tracker_config();
+
+        // Get HTTP API port from bind_address (e.g., "0.0.0.0:1212" -> 1212)
+        let tracker_api_port =
+            Self::extract_port_from_bind_address(&tracker_config.http_api.bind_address)
+                .ok_or_else(|| TestCommandHandlerError::InvalidTrackerConfiguration {
+                    message: format!(
+                        "Invalid HTTP API bind_address: {}. Expected format: 'host:port'",
+                        tracker_config.http_api.bind_address
+                    ),
+                })?;
+
+        // Get HTTP Tracker port from first HTTP tracker (optional)
+        let http_tracker_port = tracker_config
+            .http_trackers
+            .first()
+            .and_then(|tracker| Self::extract_port_from_bind_address(&tracker.bind_address));
+
         let ssh_config =
             SshConfig::with_default_port(any_env.ssh_credentials().clone(), instance_ip);
 
-        ValidateCloudInitCompletionStep::new(ssh_config.clone())
-            .execute()
-            .await?;
+        // Validate running services with external accessibility checks
+        let services_validator =
+            RunningServicesValidator::new(ssh_config, tracker_api_port, http_tracker_port);
 
-        ValidateDockerInstallationStep::new(ssh_config.clone())
-            .execute()
-            .await?;
-
-        ValidateDockerComposeInstallationStep::new(ssh_config)
-            .execute()
-            .await?;
+        services_validator.execute(&instance_ip).await?;
 
         info!(
             command = "test",
             environment = %env_name,
             instance_ip = ?instance_ip,
-            "Infrastructure testing workflow completed successfully"
+            tracker_api_port = tracker_api_port,
+            http_tracker_port = ?http_tracker_port,
+            "Service testing workflow completed successfully"
         );
 
         Ok(())
+    }
+
+    /// Extract port number from bind_address string (e.g., "0.0.0.0:1212" -> Some(1212))
+    fn extract_port_from_bind_address(bind_address: &str) -> Option<u16> {
+        bind_address
+            .split(':')
+            .nth(1)
+            .and_then(|port_str| port_str.parse::<u16>().ok())
     }
 
     /// Load environment from storage

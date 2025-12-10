@@ -427,6 +427,19 @@ impl AnyEnvironmentState {
         self.context().user_inputs.ssh_port
     }
 
+    /// Get the tracker configuration regardless of current state
+    ///
+    /// This method provides access to the tracker configuration without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the `TrackerConfig` contained within the environment.
+    #[must_use]
+    pub fn tracker_config(&self) -> &crate::domain::tracker::TrackerConfig {
+        &self.context().user_inputs.tracker
+    }
+
     /// Get the instance IP address if available, regardless of current state
     ///
     /// This method provides access to the instance IP without needing to
