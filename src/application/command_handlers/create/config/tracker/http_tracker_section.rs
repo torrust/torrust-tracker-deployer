@@ -16,6 +16,7 @@ impl HttpTrackerSection {
     /// # Errors
     ///
     /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
+    /// Returns `CreateConfigError::DynamicPortNotSupported` if port 0 (dynamic port assignment) is specified.
     pub fn to_http_tracker_config(&self) -> Result<HttpTrackerConfig, CreateConfigError> {
         // Validate that the bind address can be parsed as SocketAddr
         let bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
@@ -24,6 +25,13 @@ impl HttpTrackerSection {
                 source: e,
             }
         })?;
+
+        // Reject port 0 (dynamic port assignment)
+        if bind_address.port() == 0 {
+            return Err(CreateConfigError::DynamicPortNotSupported {
+                bind_address: self.bind_address.clone(),
+            });
+        }
 
         // Domain type now uses SocketAddr (Step 0.7 completed)
         Ok(HttpTrackerConfig { bind_address })
