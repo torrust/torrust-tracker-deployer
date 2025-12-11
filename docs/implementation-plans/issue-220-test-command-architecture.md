@@ -47,8 +47,8 @@ Phase 0: Architecture Fix
   [x] Step 0.5: Implement TrackerCoreSection DTO
   [x] Step 0.6: Implement TrackerSection DTO
   [x] Step 0.7: Update domain types to use SocketAddr
-  [ ] Step 0.8: Update EnvironmentCreationConfig
-  [ ] Step 0.9: Update all application imports
+  [x] Step 0.8: Update EnvironmentCreationConfig
+  [x] Step 0.9: Update all application imports (already correct)
 
 Phase 1: Port 0 Validation
   [ ] Step 1.1: Create ADR document
