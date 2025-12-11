@@ -53,7 +53,7 @@ Phase 0: Architecture Fix
 Phase 1: Port 0 Validation
   [x] Step 1.1: Create ADR document
   [x] Step 1.2: Add DynamicPortNotSupported error
-  [ ] Step 1.3: Add port 0 validation in conversions
+  [x] Step 1.3: Add port 0 validation in conversions
   [ ] Step 1.4: Add validation tests
 
 Phase 2: Multiple HTTP Trackers
