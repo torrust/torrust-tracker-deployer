@@ -343,13 +343,17 @@ Application-specific template rendering and configuration for external tools:
 - ✅ `src/infrastructure/external_tools/tofu/template/renderer/cloud_init.rs` - Cloud-init rendering
 - ✅ `src/infrastructure/external_tools/tofu/template/wrappers/lxd/` - LXD template wrappers
 
-**Level 3: Remote System Operations:**
+**Level 3: Remote System Operations (SSH-based, inside VM):**
 
-- ✅ `src/infrastructure/remote_actions/mod.rs` - Remote operations root
-- ✅ `src/infrastructure/remote_actions/validators/cloud_init.rs` - Validate cloud-init completion
-- ✅ `src/infrastructure/remote_actions/validators/docker.rs` - Verify Docker installation
-- ✅ `src/infrastructure/remote_actions/validators/docker_compose.rs` - Validate Docker Compose
-- ✅ `src/infrastructure/remote_actions/validators/running_services.rs` - Validate tracker services (validates all HTTP tracker instances)
+- ✅ `src/infrastructure/remote_actions/mod.rs` - Remote operations root (SSH-based validators)
+- ✅ `src/infrastructure/remote_actions/validators/cloud_init.rs` - Validate cloud-init completion (via SSH)
+- ✅ `src/infrastructure/remote_actions/validators/docker.rs` - Verify Docker installation (via SSH)
+- ✅ `src/infrastructure/remote_actions/validators/docker_compose.rs` - Validate Docker Compose (via SSH)
+
+**Level 3: External Validators (E2E, outside VM):**
+
+- ✅ `src/infrastructure/external_validators/mod.rs` - External validators root (HTTP-based E2E validation)
+- ✅ `src/infrastructure/external_validators/running_services.rs` - Validate tracker services externally (validates all HTTP tracker instances via HTTP health checks from test runner)
 
 **Persistence Layer:**
 
