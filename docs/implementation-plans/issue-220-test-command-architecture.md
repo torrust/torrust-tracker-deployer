@@ -63,12 +63,12 @@ Phase 2: Multiple HTTP Trackers
   [x] Step 2.4: Update E2E test task
   [x] Step 2.5: Add multiple tracker tests
 
-Phase 3: Service Location
-  [ ] Step 3.1: Create TrackerHealthService
-  [ ] Step 3.2: Update application services module
-  [ ] Step 3.3: Remove old validator
+Phase 3: Infrastructure Module Reorganization
+  [ ] Step 3.1: Create external_validators module
+  [ ] Step 3.2: Move running_services.rs to external_validators
+  [ ] Step 3.3: Update infrastructure module exports
   [ ] Step 3.4: Update all imports
-  [ ] Step 3.5: Update error types and documentation
+  [ ] Step 3.5: Update documentation and ADR
 
 Phase 4: Documentation
   [x] Step 4.1: Update command documentation
@@ -466,12 +466,142 @@ Phase 4: Documentation
 
 ---
 
-## Phase 3: Move to Application Services Layer
+## Phase 3: Infrastructure Module Reorganization
 
-**Priority**: Medium | **Effort**: Low | **Time**: 45 minutes  
+**Priority**: Medium | **Effort**: Low | **Time**: 30 minutes  
 **Incremental Commits**: 5 commits (one per step)
 
-### Step 3.1: Create TrackerHealthService
+**Goal**: Clarify the distinction between SSH-based validators (executed inside VM) and external validators (E2E validation from outside VM)
+
+**Current Problem**: `running_services.rs` performs external HTTP validation but is located in `remote_actions/validators/` alongside SSH-based validators (cloud_init, docker, docker_compose). This creates architectural confusion about execution context.
+
+**Solution**: Create `src/infrastructure/external_validators/` to separate:
+
+- **remote_actions**: Actions executed INSIDE the VM via SSH
+- **external_validators**: Validation from OUTSIDE the VM via HTTP (E2E testing)
+
+Both remain in infrastructure layer (correct DDD placement - external system interactions) but with clear execution context distinction.
+
+### Step 3.1: Create External Validators Module
+
+**Commit**: `refactor: [#220] create external_validators module structure`
+
+**Actions**:
+
+1. Create: `src/infrastructure/external_validators/mod.rs`
+2. Content:
+
+   ```rust
+   //! External validators module
+   //!
+   //! This module contains validators that perform end-to-end validation from
+   //! OUTSIDE the VM, testing services as an external user would access them.
+   //!
+   //! ## Execution Context
+   //!
+   //! Unlike `remote_actions` which execute commands INSIDE the VM via SSH,
+   //! external validators:
+   //! - Run from the test runner or deployment machine
+   //! - Test service accessibility via HTTP/HTTPS from outside
+   //! - Validate end-to-end functionality including network and firewall
+   //!
+   //! ## Available Validators
+   //!
+   //! - `running_services` - Validates Docker Compose services via external HTTP health checks
+
+   pub mod running_services;
+
+   pub use running_services::RunningServicesValidator;
+   ```
+
+**Pre-commit**: Run linters, commit
+
+---
+
+### Step 3.2: Move running_services.rs to external_validators
+
+**Commit**: `refactor: [#220] move running_services validator to external_validators`
+
+**Actions**:
+
+1. Move file:
+
+   ```bash
+   git mv src/infrastructure/remote_actions/validators/running_services.rs \
+           src/infrastructure/external_validators/running_services.rs
+   ```
+
+2. Update file header documentation in `running_services.rs`:
+   - Change module intro to emphasize "external validation from outside VM"
+   - Add section explaining why it's in `external_validators` not `remote_actions`
+
+**Pre-commit**: Run tests (expect failures), commit anyway
+
+---
+
+### Step 3.3: Update Infrastructure Module Exports
+
+**Commit**: `refactor: [#220] update infrastructure exports for external validators`
+
+**Actions**:
+
+1. Edit: `src/infrastructure/mod.rs` - Add external_validators module
+2. Edit: `src/infrastructure/remote_actions/mod.rs` - Remove RunningServicesValidator export
+3. Edit: `src/infrastructure/remote_actions/validators/mod.rs` - Remove running_services module
+
+**Pre-commit**: Run tests (expect failures), run linters, commit
+
+---
+
+### Step 3.4: Update All Imports
+
+**Commit**: `refactor: [#220] update imports to use external_validators path`
+
+**Actions**:
+
+1. Find all files importing `RunningServicesValidator`:
+
+   ```bash
+   git grep "RunningServicesValidator" --name-only
+   ```
+
+2. Update import paths in each file:
+
+   ```rust
+   // Old
+   use crate::infrastructure::remote_actions::RunningServicesValidator;
+
+   // New
+   use crate::infrastructure::external_validators::RunningServicesValidator;
+   ```
+
+**Pre-commit**: Run tests, run linters, commit
+
+---
+
+### Step 3.5: Update Documentation and Create ADR
+
+**Commit**: `docs: [#220] add ADR for infrastructure module organization`
+
+**Actions**:
+
+1. Create: `docs/decisions/infrastructure-module-organization.md`
+2. Document decision to separate:
+   - `remote_actions/` - SSH-based operations inside VM
+   - `external_validators/` - HTTP-based E2E validation from outside
+3. Update: `docs/codebase-architecture.md` - Document new module structure
+4. Update module docs in `src/infrastructure/remote_actions/mod.rs` to clarify scope
+
+**Pre-commit**: Run linters, commit
+
+---
+
+## Phase 4: Documentation
+
+**Priority**: High | **Effort**: Low | **Time**: 30 minutes  
+**Incremental Commits**: 4 commits (one per step)
+
+### Step 4.1: Update Run Command Documentation
 
 **Commit**: `step: [#220] create TrackerHealthService in application layer`
 

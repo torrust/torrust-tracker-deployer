@@ -182,7 +182,7 @@ impl RunningServicesValidator {
             "Checking tracker API health endpoint (external from test runner)"
         );
 
-        let url = format!("http://{server_ip}:{port}/api/health_check");
+        let url = format!("http://{server_ip}:{port}/api/health_check"); // DevSkim: ignore DS137138
         let response =
             reqwest::get(&url)
                 .await
@@ -231,7 +231,7 @@ impl RunningServicesValidator {
             "Checking HTTP tracker health endpoint (external from test runner)"
         );
 
-        let url = format!("http://{server_ip}:{port}/api/health_check");
+        let url = format!("http://{server_ip}:{port}/api/health_check"); // DevSkim: ignore DS137138
         match reqwest::get(&url).await {
             Ok(response) if response.status().is_success() => {
                 info!(
