@@ -36,9 +36,11 @@ When you run an environment:
 
 1. **Starts Docker Compose services** - Brings up tracker container (`docker compose up -d`)
 2. **Validates services are running** - Checks Docker Compose status
-3. **Validates external accessibility** - Verifies tracker API responds from outside VM
-   - Tracker API health check (port 1212)
-   - HTTP Tracker health check (port 7070) - optional
+3. **Validates external accessibility** - Verifies tracker services respond from outside VM
+   - Tracker API health check (port 1212) - **required**
+   - HTTP Tracker health checks (all configured HTTP tracker ports) - **optional**
+
+**Note**: All tracker ports must be explicitly configured (port 0 for dynamic assignment is not supported). See [ADR: Port Zero Not Supported](../../decisions/port-zero-not-supported.md) for details.
 
 ## Services Started
 
@@ -255,13 +257,14 @@ The `run` command performs external health checks to validate deployment:
 2. **Tracker API Health Check** (external, direct HTTP)
 
    - Tests `http://<vm-ip>:1212/api/health_check`
-   - **Required check** - fails if not accessible
+   - **Required check** - deployment fails if not accessible
    - Validates both service functionality AND firewall rules
 
-3. **HTTP Tracker Health Check** (external, direct HTTP)
-   - Tests `http://<vm-ip>:7070/api/health_check`
-   - **Optional check** - warns if not accessible
-   - Some tracker versions may not have health endpoint
+3. **HTTP Tracker Health Checks** (external, direct HTTP)
+   - Tests `http://<vm-ip>:<port>/api/health_check` for **all configured HTTP trackers**
+   - **Optional checks** - logs warnings if not accessible, but doesn't fail deployment
+   - Some tracker versions may not have health endpoints
+   - If you configure multiple HTTP trackers (e.g., ports 7070, 7071, 7072), all will be validated
 
 If external checks fail but Docker shows services running, it indicates a firewall or network configuration issue.
 
@@ -320,11 +323,14 @@ The run command executes these steps in order:
 1. **Start services** (`StartServicesStep`) - Runs `docker compose up -d` via Ansible
 2. **Validate running services** (`RunningServicesValidator`)
    - Checks Docker Compose status (via SSH)
-   - Checks external tracker API accessibility (direct HTTP)
-   - Checks external HTTP tracker accessibility (direct HTTP, optional)
+   - Checks external tracker API accessibility (direct HTTP - **required**)
+   - Checks external HTTP tracker accessibility for **all configured HTTP trackers** (direct HTTP - **optional**)
 
 The validation ensures:
 
 - Services are actually running inside the VM
 - Firewall rules allow external access
 - Tracker API responds to health checks
+- All HTTP tracker instances (if configured) are accessible externally
+
+**Port Configuration Note**: Dynamic port assignment (port 0) is not supported. All tracker ports must be explicitly specified in the environment configuration. This ensures deterministic deployment and reliable firewall configuration.
