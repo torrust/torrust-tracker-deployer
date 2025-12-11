@@ -1,8 +1,24 @@
-//! Running services validation remote action
+//! Running services external validation
 //!
-//! This module provides the `RunningServicesValidator` which checks that Docker Compose
-//! services are running and healthy on remote instances after the `run` command has
-//! executed the deployment.
+//! This module provides the `RunningServicesValidator` which performs **end-to-end validation
+//! from OUTSIDE the VM** to verify that Docker Compose services are running and accessible
+//! after the `run` command has executed the deployment.
+//!
+//! ## Execution Context: External Validation
+//!
+//! **Why this validator is in `external_validators/` instead of `remote_actions/`**:
+//!
+//! This validator runs from the **test runner or deployment machine** and makes HTTP requests
+//! to services **from outside the VM**, unlike validators in `remote_actions/` which execute
+//! commands **inside the VM via SSH**.
+//!
+//! **Comparison**:
+//! - `remote_actions/validators/docker.rs` - Executes `docker --version` inside VM via SSH
+//! - `external_validators/running_services.rs` - Makes HTTP GET to `http://<vm-ip>:1212/health` from outside
+//!
+//! This distinction is crucial for understanding the validation scope:
+//! - **Remote actions**: Validate internal VM state and configuration
+//! - **External validators**: Validate end-to-end accessibility including network and firewall
 //!
 //! ## Current Scope (Torrust Tracker)
 //!
