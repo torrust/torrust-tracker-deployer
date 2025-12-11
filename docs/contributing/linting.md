@@ -10,6 +10,8 @@ We use multiple linting tools to maintain code quality across different file typ
 | ------------------ | ----------------------------- | ----------------- | --------------------------- |
 | `markdownlint-cli` | Markdown formatting and style | `*.md`            | `.markdownlint.json`        |
 | `yamllint`         | YAML syntax and style         | `*.yml`, `*.yaml` | `.yamllint-ci.yml`          |
+| `taplo`            | TOML formatting and linting   | `*.toml`          | `.taplo.toml`               |
+| `cspell`           | Spell checking                | All text files    | `cspell.json`               |
 | `shellcheck`       | Shell script analysis         | `*.sh`, `*.bash`  | Built-in rules              |
 | `clippy`           | Rust code analysis            | `*.rs`            | `Cargo.toml` + command args |
 | `rustfmt`          | Rust code formatting          | `*.rs`            | `rustfmt.toml` (default)    |
@@ -41,6 +43,12 @@ cargo run --bin linter yaml
 cargo run --bin linter toml
 ```
 
+**Spell checking**:
+
+```bash
+cargo run --bin linter cspell
+```
+
 **Rust code analysis**:
 
 ```bash
@@ -59,34 +67,27 @@ cargo run --bin linter rustfmt
 cargo run --bin linter shellcheck
 ```
 
-### Direct Script Execution
+### Linting Implementation
+
+All linting is managed through a unified Rust binary (`src/bin/linter.rs`) that wraps the individual linting tools. This provides:
+
+- **Consistent interface**: Single command structure across all linters
+- **Better error handling**: Structured error messages and exit codes
+- **Unified logging**: Consistent output formatting
+- **Easy extensibility**: Add new linters by implementing the `Linter` trait
+
+The linter binary is part of the `torrust-linting` package (`packages/linting/`), which provides a reusable linting framework.
+
+### Alternative: Shell Script Wrapper
+
+A convenience wrapper script is available:
 
 ```bash
-# Direct script calls (alternative approach)
-./scripts/linting/markdown.sh
-./scripts/linting/yaml.sh
-./scripts/linting/clippy.sh
-./scripts/linting/rustfmt.sh
-./scripts/linting/shellcheck.sh
+# Wrapper that calls the Rust binary
+./scripts/lint.sh
 ```
 
-### Parallel Execution (Experimental)
-
-For scenarios where you want to run linters concurrently:
-
-```bash
-# Run linters in parallel using process-level parallelization
-./scripts/lint-parallel.sh
-```
-
-**Note**: Parallel execution provides minimal performance improvement (~1s, 7% faster) and may produce interleaved output. Sequential execution is recommended for regular development.
-
-**When to use**:
-
-- ✅ CI/CD pipelines where every second counts
-- ❌ Regular development (use sequential for clean output)
-
-See [Linter Parallel Execution Feature](../features/linter-parallel-execution/README.md) for detailed analysis and trade-offs.
+This script simply invokes `cargo run --bin linter all` and is provided for backwards compatibility.
 
 ## 📋 Tool-Specific Guidelines
 
@@ -190,6 +191,51 @@ name="torrust-tracker"    # Bad - needs spaces
 # Fix all TOML files automatically
 taplo fmt **/*.toml
 ```
+
+### Spell Checking (`cspell`)
+
+**Configuration**: `cspell.json`
+
+Key settings:
+
+- **Custom dictionary**: `project-words.txt` for project-specific terms
+- **Language**: English (US)
+- **File types**: All text files (markdown, code, configs)
+
+**Common workflow**:
+
+```bash
+# Add new words to project dictionary
+echo "torrust" >> project-words.txt
+echo "opentofu" >> project-words.txt
+
+# Run spell check
+cargo run --bin linter cspell
+```
+
+### Excluded Directories
+
+**Important**: The following directories contain **generated or runtime data** and are excluded from all linting:
+
+- `build/` - Generated build artifacts and rendered templates
+- `data/` - Runtime application data and test outputs
+- `envs/` - User environment configurations (JSON files)
+
+These directories are configured to be ignored in:
+
+- `.taplo.toml` - TOML linting exclusions
+- `.markdownlint.json` - Markdown linting exclusions (via `ignores`)
+- `.yamllint-ci.yml` - YAML linting exclusions (via `ignore`)
+- `cspell.json` - Spell check exclusions (via `ignorePaths`)
+
+**Why exclude these folders?**
+
+1. **Generated content**: Linting generated files creates noise and false positives
+2. **User data**: Environment configs are user-specific and may not follow project conventions
+3. **Test artifacts**: Temporary test data shouldn't affect linting status
+4. **Performance**: Excluding these folders significantly speeds up linting
+
+If you add a new linting tool, ensure these directories are excluded from its scope.
 
 ### Shell Script Linting (`shellcheck`)
 
@@ -373,23 +419,19 @@ rustup component add clippy rustfmt
 # Run specific linters for faster feedback during development
 cargo run --bin linter markdown    # Only markdown (~1s)
 cargo run --bin linter yaml        # Only YAML files (~0.2s)
+cargo run --bin linter toml        # Only TOML files (~0.1s)
+cargo run --bin linter cspell      # Spell check (~2.5s)
 cargo run --bin linter clippy      # Only Rust analysis (~12s - slowest)
 
 # Run non-Rust linters for quick checks
 cargo run --bin linter markdown
 cargo run --bin linter yaml
 cargo run --bin linter toml
+cargo run --bin linter cspell
 # Skip clippy for faster iteration during active development
 ```
 
-**Parallel execution** is also possible but provides minimal benefit:
-
-```bash
-# Process-level parallelization (experimental, ~1s faster)
-./scripts/lint-parallel.sh
-```
-
-Note: Parallel execution trades clean output for minimal speed gain. Use sequential execution for regular development.
+**Tip**: The linter binary runs tools sequentially with clean output. For fastest iteration during development, run only the linter relevant to the files you're editing.
 
 ## 🚨 Troubleshooting
 

@@ -21,6 +21,7 @@
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::EnvironmentName;
 use crate::domain::provider::{Provider, ProviderConfig};
+use crate::domain::tracker::TrackerConfig;
 use crate::domain::InstanceName;
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +37,7 @@ use serde::{Deserialize, Serialize};
 /// use torrust_tracker_deployer_lib::domain::{InstanceName, EnvironmentName, ProfileName};
 /// use torrust_tracker_deployer_lib::domain::provider::{ProviderConfig, LxdConfig};
 /// use torrust_tracker_deployer_lib::domain::environment::user_inputs::UserInputs;
+/// use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
 /// use torrust_tracker_deployer_lib::shared::Username;
 /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 /// use std::path::PathBuf;
@@ -54,13 +56,14 @@ use serde::{Deserialize, Serialize};
 ///         Username::new("torrust".to_string())?,
 ///     ),
 ///     ssh_port: 22,
+///     tracker: TrackerConfig::default(),
 /// };
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserInputs {
     /// The validated environment name
-    pub name: crate::domain::environment::EnvironmentName,
+    pub name: EnvironmentName,
 
     /// The instance name for this environment (auto-generated from name)
     pub instance_name: InstanceName,
@@ -73,6 +76,9 @@ pub struct UserInputs {
 
     /// SSH port for connecting to instances in this environment
     pub ssh_port: u16,
+
+    /// Tracker deployment configuration
+    pub tracker: TrackerConfig,
 }
 
 impl UserInputs {
@@ -138,6 +144,31 @@ impl UserInputs {
             provider_config,
             ssh_credentials,
             ssh_port,
+            tracker: TrackerConfig::default(),
+        }
+    }
+
+    /// Creates a new `UserInputs` with custom tracker configuration
+    ///
+    /// This is similar to `new` but allows specifying a custom tracker
+    /// configuration instead of using the default.
+    #[must_use]
+    pub fn with_tracker(
+        name: &EnvironmentName,
+        provider_config: ProviderConfig,
+        ssh_credentials: SshCredentials,
+        ssh_port: u16,
+        tracker: TrackerConfig,
+    ) -> Self {
+        let instance_name = Self::generate_instance_name(name);
+
+        Self {
+            name: name.clone(),
+            instance_name,
+            provider_config,
+            ssh_credentials,
+            ssh_port,
+            tracker,
         }
     }
 

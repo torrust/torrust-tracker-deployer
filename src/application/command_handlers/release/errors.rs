@@ -40,6 +40,24 @@ pub enum ReleaseCommandHandlerError {
     #[error("Template rendering failed: {0}")]
     TemplateRendering(String),
 
+    /// Tracker storage directory creation failed
+    #[error("Tracker storage creation failed: {0}")]
+    TrackerStorageCreation(String),
+
+    /// Tracker database initialization failed
+    #[error("Tracker database initialization failed: {0}")]
+    TrackerDatabaseInit(String),
+
+    /// General deployment operation failed
+    #[error("Deployment failed: {message}")]
+    Deployment {
+        /// The error message
+        message: String,
+        /// The underlying error source
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
     /// Deployment to remote host failed
     #[error("Deployment to remote host failed: {message}")]
     DeploymentFailed {
@@ -78,7 +96,13 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::TemplateRendering(message) => {
                 format!("ReleaseCommandHandlerError: Template rendering failed - {message}")
             }
-            Self::DeploymentFailed { message, .. } => {
+            Self::TrackerStorageCreation(message) => {
+                format!("ReleaseCommandHandlerError: Tracker storage creation failed - {message}")
+            }
+            Self::TrackerDatabaseInit(message) => {
+                format!("ReleaseCommandHandlerError: Tracker database initialization failed - {message}")
+            }
+            Self::Deployment { message, .. } | Self::DeploymentFailed { message, .. } => {
                 format!("ReleaseCommandHandlerError: Deployment failed - {message}")
             }
             Self::ReleaseOperationFailed { name, message } => {
@@ -91,12 +115,16 @@ impl Traceable for ReleaseCommandHandlerError {
 
     fn trace_source(&self) -> Option<&dyn Traceable> {
         match self {
+            // Box<dyn Error> doesn't implement Traceable
             Self::DeploymentFailed { source, .. } => Some(source),
-            Self::StatePersistence(_)
+            Self::Deployment { .. }
+            | Self::StatePersistence(_)
             | Self::EnvironmentNotFound { .. }
             | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_)
             | Self::TemplateRendering(_)
+            | Self::TrackerStorageCreation(_)
+            | Self::TrackerDatabaseInit(_)
             | Self::ReleaseOperationFailed { .. } => None,
         }
     }
@@ -107,9 +135,13 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_) => ErrorKind::Configuration,
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
-            Self::TemplateRendering(_) => ErrorKind::TemplateRendering,
+            Self::TemplateRendering(_)
+            | Self::TrackerStorageCreation(_)
+            | Self::TrackerDatabaseInit(_) => ErrorKind::TemplateRendering,
+            Self::Deployment { .. } | Self::ReleaseOperationFailed { .. } => {
+                ErrorKind::InfrastructureOperation
+            }
             Self::DeploymentFailed { source, .. } => source.error_kind(),
-            Self::ReleaseOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
     }
 }
@@ -135,6 +167,7 @@ impl ReleaseCommandHandlerError {
     /// assert!(help.contains("Troubleshooting"));
     /// ```
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn help(&self) -> &'static str {
         match self {
             Self::EnvironmentNotFound { .. } => {
@@ -225,6 +258,78 @@ Common causes:
 - Invalid template syntax
 - Insufficient disk space
 - Permission denied on build directory
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::TrackerStorageCreation(_) => {
+                "Tracker Storage Creation Failed - Troubleshooting:
+
+1. Verify the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+2. Check that the instance has sufficient disk space:
+   df -h
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/create-tracker-storage.yml
+
+4. Check Ansible execution permissions
+
+5. Review the error message above for specific details
+
+Common causes:
+- Insufficient disk space on target instance
+- Permission denied on target directories
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::TrackerDatabaseInit(_) => {
+                "Tracker Database Initialization Failed - Troubleshooting:
+
+1. Verify the tracker storage directories were created:
+   ssh <user>@<instance-ip> 'ls -la /opt/torrust/storage/tracker/lib/database'
+
+2. Check that the instance has sufficient disk space:
+   df -h
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/init-tracker-database.yml
+
+4. Check file permissions on the database directory
+
+5. Review the error message above for specific details
+
+Common causes:
+- Storage directories don't exist (run CreateTrackerStorage step first)
+- Insufficient disk space on target instance
+- Permission denied on database directory
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::Deployment { .. } => {
+                "Deployment Failed - Troubleshooting:
+
+1. Verify the build directory exists and contains expected files
+
+2. Check that the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+3. Ensure Ansible playbook executed successfully
+
+4. Review the error message above for specific details
+
+5. Check file permissions and disk space on target
+
+Common causes:
+- Build directory not found or incomplete
+- Network connectivity issues
+- SSH authentication failure
+- Insufficient permissions on target
+- Disk space issues on target instance
 
 For more information, see docs/user-guide/commands.md"
             }

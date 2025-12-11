@@ -2,6 +2,8 @@
 
 This document explains the correct syntax for defining variables in Tera templates used in the Torrust Tracker Deployer project.
 
+> **See Also**: For architectural details about how the template system works, see [Template System Architecture](../technical/template-system-architecture.md).
+
 ## 📝 Correct Variable Syntax
 
 All Tera template variables must use **double curly braces** with **no spaces** inside the braces:
@@ -206,7 +208,7 @@ Run E2E tests to verify the playbook is copied correctly:
 
 ```bash
 # Run E2E config and release tests (faster, tests configuration only)
-cargo run --bin e2e-config-and-release-tests
+cargo run --bin e2e-deployment-workflow-tests
 
 # Or run full E2E tests
 cargo run --bin e2e-tests-full
@@ -344,4 +346,4 @@ Otherwise, use the centralized variables pattern for simplicity.
 
 - **Architecture**: [`docs/technical/template-system-architecture.md`](../technical/template-system-architecture.md) - Understanding the two-phase template system
 - **Tera Syntax**: This document (above) - When you DO need dynamic templates with variables
-- **Testing**: [`docs/e2e-testing.md`](../e2e-testing.md) - How to run E2E tests to validate your changes
+- **Testing**: [`docs/e2e-testing/`](../e2e-testing/) - How to run E2E tests to validate your changes

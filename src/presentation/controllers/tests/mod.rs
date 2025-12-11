@@ -163,6 +163,29 @@ pub fn create_valid_config(path: &Path, env_name: &str) -> PathBuf {
     "provider": {{
         "provider": "lxd",
         "profile_name": "lxd-{env_name}"
+    }},
+    "tracker": {{
+        "core": {{
+            "database": {{
+                "driver": "sqlite3",
+                "database_name": "tracker.db"
+            }},
+            "private": false
+        }},
+        "udp_trackers": [
+            {{
+                "bind_address": "0.0.0.0:6969"
+            }}
+        ],
+        "http_trackers": [
+            {{
+                "bind_address": "0.0.0.0:7070"
+            }}
+        ],
+        "http_api": {{
+            "bind_address": "0.0.0.0:1212",
+            "admin_token": "MyAccessToken"
+        }}
     }}
 }}"#
     );
@@ -256,6 +279,29 @@ pub fn create_config_with_invalid_name(path: &Path) -> PathBuf {
     "provider": {{
         "provider": "lxd",
         "profile_name": "lxd-test"
+    }},
+    "tracker": {{
+        "core": {{
+            "database": {{
+                "driver": "sqlite3",
+                "database_name": "tracker.db"
+            }},
+            "private": false
+        }},
+        "udp_trackers": [
+            {{
+                "bind_address": "0.0.0.0:6969"
+            }}
+        ],
+        "http_trackers": [
+            {{
+                "bind_address": "0.0.0.0:7070"
+            }}
+        ],
+        "http_api": {{
+            "bind_address": "0.0.0.0:1212",
+            "admin_token": "MyAccessToken"
+        }}
     }}
 }}"#
     );
@@ -306,6 +352,29 @@ pub fn create_config_with_missing_keys(path: &Path) -> PathBuf {
     "provider": {
         "provider": "lxd",
         "profile_name": "lxd-test-env"
+    },
+    "tracker": {
+        "core": {
+            "database": {
+                "driver": "sqlite3",
+                "database_name": "tracker.db"
+            },
+            "private": false
+        },
+        "udp_trackers": [
+            {
+                "bind_address": "0.0.0.0:6969"
+            }
+        ],
+        "http_trackers": [
+            {
+                "bind_address": "0.0.0.0:7070"
+            }
+        ],
+        "http_api": {
+            "bind_address": "0.0.0.0:1212",
+            "admin_token": "MyAccessToken"
+        }
     }
 }"#;
 

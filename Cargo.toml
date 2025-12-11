@@ -21,16 +21,16 @@ name = "torrust-tracker-deployer"
 path = "src/main.rs"
 
 [[bin]]
-name = "e2e-tests-full"
-path = "src/bin/e2e_tests_full.rs"
+name = "e2e-complete-workflow-tests"
+path = "src/bin/e2e_complete_workflow_tests.rs"
 
 [[bin]]
-name = "e2e-config-and-release-tests"
-path = "src/bin/e2e_config_and_release_tests.rs"
+name = "e2e-deployment-workflow-tests"
+path = "src/bin/e2e_deployment_workflow_tests.rs"
 
 [[bin]]
-name = "e2e-provision-and-destroy-tests"
-path = "src/bin/e2e_provision_and_destroy_tests.rs"
+name = "e2e-infrastructure-lifecycle-tests"
+path = "src/bin/e2e_infrastructure_lifecycle_tests.rs"
 
 [[bin]]
 name = "linter"
@@ -48,6 +48,7 @@ clap = { version = "4.0", features = [ "derive" ] }
 derive_more = "0.99"
 figment = { version = "0.10", features = [ "json" ] }
 parking_lot = "0.12"
+reqwest = "0.12"
 rust-embed = "8.0"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = "1.0"

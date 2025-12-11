@@ -120,6 +120,14 @@ pub enum Commands {
         /// configured in the environment.
         #[arg(long, value_name = "IP_ADDRESS")]
         instance_ip: String,
+
+        /// SSH port for the instance (optional - overrides environment config)
+        ///
+        /// If not provided, uses the SSH port from the environment configuration.
+        /// This is useful when the instance uses a non-standard SSH port,
+        /// such as in Docker bridge networking where ports are dynamically mapped.
+        #[arg(long, value_name = "PORT")]
+        ssh_port: Option<u16>,
     },
 
     /// Release application files to a configured environment

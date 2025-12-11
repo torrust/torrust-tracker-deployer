@@ -138,6 +138,7 @@ impl EnvironmentTestBuilder {
                 provider_config,
                 ssh_credentials,
                 ssh_port: 22,
+                tracker: crate::domain::tracker::TrackerConfig::default(),
             },
             internal_config: crate::domain::environment::InternalConfig {
                 data_dir: data_dir.clone(),

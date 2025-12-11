@@ -7,7 +7,7 @@
 //! ## Key Features
 //!
 //! - Template rendering for Docker Compose configurations
-//! - Integration with the `DockerComposeTemplateRenderer` for file generation
+//! - Integration with the `DockerComposeProjectGenerator` for file generation
 //! - Build directory preparation for deployment operations
 //! - Comprehensive error handling for template processing
 //!
@@ -29,9 +29,11 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
-use crate::infrastructure::external_tools::docker_compose::{
-    DockerComposeTemplateError, DockerComposeTemplateRenderer,
+use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
+use crate::infrastructure::templating::docker_compose::{
+    DockerComposeProjectGenerator, DockerComposeProjectGeneratorError,
 };
 
 /// Step that renders Docker Compose templates to the build directory
@@ -39,21 +41,28 @@ use crate::infrastructure::external_tools::docker_compose::{
 /// This step handles the preparation of Docker Compose configuration files
 /// by rendering templates to the build directory. The rendered files are
 /// then ready to be deployed to the remote host by the `DeployComposeFilesStep`.
-pub struct RenderDockerComposeTemplatesStep {
+pub struct RenderDockerComposeTemplatesStep<S> {
+    environment: Arc<Environment<S>>,
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
 }
 
-impl RenderDockerComposeTemplatesStep {
+impl<S> RenderDockerComposeTemplatesStep<S> {
     /// Creates a new `RenderDockerComposeTemplatesStep`
     ///
     /// # Arguments
     ///
+    /// * `environment` - The deployment environment
     /// * `template_manager` - The template manager for accessing templates
     /// * `build_dir` - The build directory where templates will be rendered
     #[must_use]
-    pub fn new(template_manager: Arc<TemplateManager>, build_dir: PathBuf) -> Self {
+    pub fn new(
+        environment: Arc<Environment<S>>,
+        template_manager: Arc<TemplateManager>,
+        build_dir: PathBuf,
+    ) -> Self {
         Self {
+            environment,
             template_manager,
             build_dir,
         }
@@ -82,7 +91,7 @@ impl RenderDockerComposeTemplatesStep {
             build_dir = %self.build_dir.display()
         )
     )]
-    pub async fn execute(&self) -> Result<PathBuf, DockerComposeTemplateError> {
+    pub async fn execute(&self) -> Result<PathBuf, DockerComposeProjectGeneratorError> {
         info!(
             step = "render_docker_compose_templates",
             templates_dir = %self.template_manager.templates_dir().display(),
@@ -90,10 +99,21 @@ impl RenderDockerComposeTemplatesStep {
             "Rendering Docker Compose templates"
         );
 
-        let renderer =
-            DockerComposeTemplateRenderer::new(self.template_manager.clone(), &self.build_dir);
+        let generator =
+            DockerComposeProjectGenerator::new(&self.build_dir, self.template_manager.clone());
 
-        let compose_build_dir = renderer.render().await?;
+        // Extract admin token from environment config
+        let admin_token = self
+            .environment
+            .context()
+            .user_inputs
+            .tracker
+            .http_api
+            .admin_token
+            .clone();
+        let env_context = EnvContext::new(admin_token);
+
+        let compose_build_dir = generator.render(&env_context).await?;
 
         info!(
             step = "render_docker_compose_templates",
@@ -111,15 +131,21 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::infrastructure::external_tools::docker_compose::DOCKER_COMPOSE_SUBFOLDER;
+    use crate::domain::environment::testing::EnvironmentTestBuilder;
+    use crate::infrastructure::templating::docker_compose::DOCKER_COMPOSE_SUBFOLDER;
 
     #[tokio::test]
     async fn it_should_create_render_docker_compose_templates_step() {
         let templates_dir = TempDir::new().expect("Failed to create templates dir");
         let build_dir = TempDir::new().expect("Failed to create build dir");
 
+        let (environment, _, _, _temp_dir) =
+            EnvironmentTestBuilder::new().build_with_custom_paths();
+        let environment = Arc::new(environment);
+
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
         let step = RenderDockerComposeTemplatesStep::new(
+            environment.clone(),
             template_manager.clone(),
             build_dir.path().to_path_buf(),
         );
@@ -133,9 +159,16 @@ mod tests {
         let templates_dir = TempDir::new().expect("Failed to create templates dir");
         let build_dir = TempDir::new().expect("Failed to create build dir");
 
+        let (environment, _, _, _temp_dir) =
+            EnvironmentTestBuilder::new().build_with_custom_paths();
+        let environment = Arc::new(environment);
+
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
-        let step =
-            RenderDockerComposeTemplatesStep::new(template_manager, build_dir.path().to_path_buf());
+        let step = RenderDockerComposeTemplatesStep::new(
+            environment,
+            template_manager,
+            build_dir.path().to_path_buf(),
+        );
 
         let result = step.execute().await;
 
@@ -149,9 +182,16 @@ mod tests {
         let templates_dir = TempDir::new().expect("Failed to create templates dir");
         let build_dir = TempDir::new().expect("Failed to create build dir");
 
+        let (environment, _, _, _temp_dir) =
+            EnvironmentTestBuilder::new().build_with_custom_paths();
+        let environment = Arc::new(environment);
+
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
-        let step =
-            RenderDockerComposeTemplatesStep::new(template_manager, build_dir.path().to_path_buf());
+        let step = RenderDockerComposeTemplatesStep::new(
+            environment,
+            template_manager,
+            build_dir.path().to_path_buf(),
+        );
 
         let result = step.execute().await;
         assert!(result.is_ok());
@@ -166,7 +206,7 @@ mod tests {
         .expect("Failed to read output");
 
         // Verify it contains expected content from embedded template
-        assert!(output_content.contains("nginx:alpine"));
-        assert!(output_content.contains("demo-app"));
+        assert!(output_content.contains("torrust/tracker"));
+        assert!(output_content.contains("./storage/tracker/lib:/var/lib/torrust/tracker"));
     }
 }

@@ -4,6 +4,15 @@
 //! containing leaf-level actions that directly interact with remote systems via SSH.
 //! These actions are the building blocks used by steps (Level 2) and commands (Level 1).
 //!
+//! ## Execution Context: Inside VM via SSH
+//!
+//! All remote actions in this module execute commands **INSIDE the VM via SSH**.
+//! For external validation (E2E testing from outside the VM), see `external_validators/`.
+//!
+//! **Distinction**:
+//! - **`remote_actions`** (this module): Execute commands inside VM via SSH
+//! - **`external_validators`**: Validate services from outside VM via HTTP
+//!
 //! ## Available Remote Actions
 //!
 //! - `validators::cloud_init` - Cloud-init status checking and validation
@@ -31,7 +40,6 @@ pub mod validators;
 pub use validators::cloud_init::CloudInitValidator;
 pub use validators::docker::DockerValidator;
 pub use validators::docker_compose::DockerComposeValidator;
-pub use validators::running_services::RunningServicesValidator;
 
 /// Errors that can occur during remote action execution
 #[derive(Error, Debug)]

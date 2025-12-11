@@ -128,6 +128,29 @@ mod tests {
             "provider": {{
                 "provider": "lxd",
                 "profile_name": "lxd-test-env"
+            }},
+            "tracker": {{
+                "core": {{
+                    "database": {{
+                        "driver": "sqlite3",
+                        "database_name": "tracker.db"
+                    }},
+                    "private": false
+                }},
+                "udp_trackers": [
+                    {{
+                        "bind_address": "0.0.0.0:6969"
+                    }}
+                ],
+                "http_trackers": [
+                    {{
+                        "bind_address": "0.0.0.0:7070"
+                    }}
+                ],
+                "http_api": {{
+                    "bind_address": "0.0.0.0:1212",
+                    "admin_token": "MyAccessToken"
+                }}
             }}
         }}"#
         );
@@ -217,6 +240,29 @@ mod tests {
             "provider": {{
                 "provider": "lxd",
                 "profile_name": "lxd-test"
+            }},
+            "tracker": {{
+                "core": {{
+                    "database": {{
+                        "driver": "sqlite3",
+                        "database_name": "tracker.db"
+                    }},
+                    "private": false
+                }},
+                "udp_trackers": [
+                    {{
+                        "bind_address": "0.0.0.0:6969"
+                    }}
+                ],
+                "http_trackers": [
+                    {{
+                        "bind_address": "0.0.0.0:7070"
+                    }}
+                ],
+                "http_api": {{
+                    "bind_address": "0.0.0.0:1212",
+                    "admin_token": "MyAccessToken"
+                }}
             }}
         }}"#
         );
@@ -251,6 +297,29 @@ mod tests {
             "provider": {
                 "provider": "lxd",
                 "profile_name": "lxd-test-env"
+            },
+            "tracker": {
+                "core": {
+                    "database": {
+                        "driver": "sqlite3",
+                        "database_name": "tracker.db"
+                    },
+                    "private": false
+                },
+                "udp_trackers": [
+                    {
+                        "bind_address": "0.0.0.0:6969"
+                    }
+                ],
+                "http_trackers": [
+                    {
+                        "bind_address": "0.0.0.0:7070"
+                    }
+                ],
+                "http_api": {
+                    "bind_address": "0.0.0.0:1212",
+                    "admin_token": "MyAccessToken"
+                }
             }
         }"#;
         fs::write(&config_path, config_json).unwrap();
@@ -290,6 +359,29 @@ mod tests {
             "provider": {{
                 "provider": "lxd",
                 "profile_name": "lxd-test-env"
+            }},
+            "tracker": {{
+                "core": {{
+                    "database": {{
+                        "driver": "sqlite3",
+                        "database_name": "tracker.db"
+                    }},
+                    "private": false
+                }},
+                "udp_trackers": [
+                    {{
+                        "bind_address": "0.0.0.0:6969"
+                    }}
+                ],
+                "http_trackers": [
+                    {{
+                        "bind_address": "0.0.0.0:7070"
+                    }}
+                ],
+                "http_api": {{
+                    "bind_address": "0.0.0.0:1212",
+                    "admin_token": "MyAccessToken"
+                }}
             }}
         }}"#
         );

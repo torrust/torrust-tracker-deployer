@@ -25,12 +25,13 @@ use thiserror::Error;
 use tracing::{info, instrument};
 
 use crate::adapters::ssh::credentials::SshCredentials;
-use crate::infrastructure::external_tools::ansible::template::renderer::AnsibleProjectGeneratorError;
-use crate::infrastructure::external_tools::ansible::template::wrappers::inventory::{
+use crate::domain::tracker::TrackerConfig;
+use crate::infrastructure::templating::ansible::template::renderer::AnsibleProjectGeneratorError;
+use crate::infrastructure::templating::ansible::template::wrappers::inventory::{
     AnsibleHost, AnsiblePort, AnsiblePortError, InventoryContext, InventoryContextError,
     SshPrivateKeyFile, SshPrivateKeyFileError,
 };
-use crate::infrastructure::external_tools::ansible::AnsibleProjectGenerator;
+use crate::infrastructure::templating::ansible::AnsibleProjectGenerator;
 
 /// Errors that can occur during Ansible template rendering step execution
 #[derive(Error, Debug)]
@@ -85,6 +86,7 @@ pub struct RenderAnsibleTemplatesStep {
     ansible_project_generator: Arc<AnsibleProjectGenerator>,
     ssh_credentials: SshCredentials,
     ssh_socket_addr: SocketAddr,
+    tracker_config: TrackerConfig,
 }
 
 impl RenderAnsibleTemplatesStep {
@@ -93,11 +95,13 @@ impl RenderAnsibleTemplatesStep {
         ansible_project_generator: Arc<AnsibleProjectGenerator>,
         ssh_credentials: SshCredentials,
         ssh_socket_addr: SocketAddr,
+        tracker_config: TrackerConfig,
     ) -> Self {
         Self {
             ansible_project_generator,
             ssh_credentials,
             ssh_socket_addr,
+            tracker_config,
         }
     }
 
@@ -123,7 +127,7 @@ impl RenderAnsibleTemplatesStep {
 
         // Use the configuration renderer to handle all template rendering
         self.ansible_project_generator
-            .render(&inventory_context)
+            .render(&inventory_context, Some(&self.tracker_config))
             .await?;
 
         info!(

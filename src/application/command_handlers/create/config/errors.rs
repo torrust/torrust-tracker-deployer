@@ -50,6 +50,23 @@ pub enum CreateConfigError {
     #[error("Invalid SSH port: {port} (must be between 1 and 65535)")]
     InvalidPort { port: u16 },
 
+    /// Invalid bind address format
+    #[error("Invalid bind address '{address}': failed to parse as IP:PORT")]
+    InvalidBindAddress {
+        /// The invalid bind address that was provided
+        address: String,
+        /// The underlying parse error
+        #[source]
+        source: std::net::AddrParseError,
+    },
+
+    /// Dynamic port assignment (port 0) is not supported
+    #[error("Dynamic port assignment (port 0) is not supported in bind address '{bind_address}'")]
+    DynamicPortNotSupported {
+        /// The bind address containing port 0
+        bind_address: String,
+    },
+
     /// Failed to serialize configuration template to JSON
     #[error("Failed to serialize configuration template to JSON")]
     TemplateSerializationFailed {
@@ -194,6 +211,47 @@ impl CreateConfigError {
                  - 2222 (common alternative)\n\
                  \n\
                  Fix: Update the SSH port in your configuration to a valid port number (1-65535)."
+            }
+            Self::InvalidBindAddress { .. } => {
+                "Invalid bind address format.\n\
+                 \n\
+                 Bind addresses must be in the format IP:PORT (e.g., '0.0.0.0:8080').\n\
+                 \n\
+                 Valid examples:\n\
+                 - '0.0.0.0:6969' (bind to all interfaces on port 6969)\n\
+                 - '127.0.0.1:7070' (bind to localhost on port 7070)\n\
+                 - '[::]:1212' (bind to all IPv6 interfaces on port 1212)\n\
+                 \n\
+                 Common mistakes:\n\
+                 - Missing port number (e.g., '0.0.0.0')\n\
+                 - Invalid IP address format\n\
+                 - Port number out of range (must be 1-65535)\n\
+                 \n\
+                 Fix: Update the bind_address in your configuration to use valid IP:PORT format."
+            }
+            Self::DynamicPortNotSupported { .. } => {
+                "Dynamic port assignment (port 0) is not supported.\n\
+                 \n\
+                 Port 0 tells the operating system to assign any available port dynamically.\n\
+                 This conflicts with our deployment workflow which requires:\n\
+                 - Firewall rules configured before service starts\n\
+                 - Predictable ports for health checks and monitoring\n\
+                 - Consistent port numbers across deployment phases\n\
+                 \n\
+                 Why:\n\
+                 The 'configure' command must open firewall ports before the tracker starts.\n\
+                 With port 0, we won't know which port to open until after the service runs.\n\
+                 \n\
+                 Solution: Specify an explicit port number in your configuration:\n\
+                 - UDP Tracker: Use a port like 6969 (default)\n\
+                 - HTTP Tracker: Use a port like 7070 (default)\n\
+                 - HTTP API: Use a port like 1212 (default)\n\
+                 \n\
+                 Example:\n\
+                 Instead of: \"bind_address\": \"0.0.0.0:0\"\n\
+                 Use:        \"bind_address\": \"0.0.0.0:6969\"\n\
+                 \n\
+                 See docs/decisions/port-zero-not-supported.md for details."
             }
             Self::TemplateSerializationFailed { .. } => {
                 "Template serialization failed.\n\

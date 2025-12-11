@@ -46,6 +46,7 @@ use super::errors::CreateCommandHandlerError;
 ///     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
 ///     SshCredentialsConfig,
 /// };
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::TrackerSection;
 /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 /// use torrust_tracker_deployer_lib::shared::{SystemClock, Clock};
 ///
@@ -72,6 +73,7 @@ use super::errors::CreateCommandHandlerError;
 ///     ProviderSection::Lxd(LxdProviderSection {
 ///         profile_name: "lxd-dev".to_string(),
 ///     }),
+///     TrackerSection::default(),
 /// );
 ///
 /// // Execute command with working directory
@@ -169,6 +171,7 @@ impl CreateCommandHandler {
     ///     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
     ///     SshCredentialsConfig,
     /// };
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::TrackerSection;
     ///
     /// # fn example(command: CreateCommandHandler) -> Result<(), Box<dyn std::error::Error>> {
     /// let config = EnvironmentCreationConfig::new(
@@ -185,6 +188,7 @@ impl CreateCommandHandler {
     ///     ProviderSection::Lxd(LxdProviderSection {
     ///         profile_name: "lxd-staging".to_string(),
     ///     }),
+    ///     TrackerSection::default(),
     /// );
     ///
     /// let working_dir = std::path::Path::new(".");
@@ -206,7 +210,14 @@ impl CreateCommandHandler {
         config: EnvironmentCreationConfig,
         working_dir: &std::path::Path,
     ) -> Result<Environment<Created>, CreateCommandHandlerError> {
-        let (environment_name, _instance_name, provider_config, ssh_credentials, ssh_port) = config
+        let (
+            environment_name,
+            _instance_name,
+            provider_config,
+            ssh_credentials,
+            ssh_port,
+            tracker_config,
+        ) = config
             .to_environment_params()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
 
@@ -220,11 +231,12 @@ impl CreateCommandHandler {
             });
         }
 
-        let environment = Environment::with_working_dir(
+        let environment = Environment::with_working_dir_and_tracker(
             environment_name,
             provider_config,
             ssh_credentials,
             ssh_port,
+            tracker_config,
             working_dir,
         );
 

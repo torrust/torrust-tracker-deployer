@@ -153,16 +153,13 @@ torrust-tracker-deployer provision my-environment
 **Output**:
 
 ```text
-✓ Rendering OpenTofu templates...
-✓ Initializing infrastructure...
-✓ Planning infrastructure changes...
-✓ Applying infrastructure...
-✓ Retrieving instance information...
-✓ Instance IP: 10.140.190.42
-✓ Rendering Ansible templates...
-✓ Waiting for SSH connectivity...
-✓ Waiting for cloud-init completion...
-✓ Environment provisioned successfully
+⏳ [1/3] Validating environment...
+  ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/3] Creating command handler...
+  ✓ Done (took 0ms)
+⏳ [3/3] Provisioning infrastructure...
+  ✓ Infrastructure provisioned (took 39.0s)
+✅ Environment 'my-environment' provisioned successfully
 ```
 
 **What happens**:
@@ -172,7 +169,7 @@ torrust-tracker-deployer provision my-environment
 - Deploys SSH keys
 - Waits for VM initialization
 
-**Duration**: ~2-3 minutes (depending on your system)
+**Duration**: ~40-60 seconds
 
 ### Step 5: Configure Software
 
@@ -185,13 +182,13 @@ torrust-tracker-deployer configure my-environment
 **Output**:
 
 ```text
-✓ Validating prerequisites...
-✓ Running Ansible playbooks...
-✓ Installing Docker...
-✓ Installing Docker Compose...
-✓ Configuring permissions...
-✓ Verifying installation...
-✓ Environment configured successfully
+⏳ [1/3] Validating environment...
+  ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/3] Creating command handler...
+  ✓ Done (took 0ms)
+⏳ [3/3] Configuring infrastructure...
+  ✓ Infrastructure configured (took 43.1s)
+✅ Environment 'my-environment' configured successfully
 ```
 
 **What happens**:
@@ -199,39 +196,64 @@ torrust-tracker-deployer configure my-environment
 - Installs Docker Engine
 - Installs Docker Compose plugin
 - Adds SSH user to docker group
+- Configures security updates and firewall
 - Verifies installation
 
-**Duration**: ~3-5 minutes (depending on network speed)
+**Duration**: ~40-60 seconds
 
-### Step 6: Verify Infrastructure
+### Step 6: Release Tracker
 
-Test that everything is working correctly:
+Pull the Docker image and prepare for running:
 
 ```bash
-torrust-tracker-deployer test my-environment
+torrust-tracker-deployer release my-environment
 ```
 
 **Output**:
 
 ```text
-✓ Validating environment state...
-✓ Checking VM connectivity...
-✓ Testing Docker installation...
-✓ Testing Docker Compose...
-✓ Verifying user permissions...
-✓ Running infrastructure tests...
-✓ All tests passed
+⏳ [1/2] Validating environment...
+  ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/2] Releasing application...
+  ✓ Application released successfully (took 7.1s)
+✅ Release command completed successfully for 'my-environment'
 ```
 
-**What is tested**:
+**What happens**:
 
-- SSH connectivity
-- Docker daemon running
-- Docker CLI accessible
-- Docker Compose available
-- Non-root Docker access
+- Pulls tracker Docker image from registry
+- Prepares Docker container configuration
+- Sets up runtime environment
 
-### Step 7: Clean Up
+**Duration**: ~7-10 seconds
+
+### Step 7: Run Tracker
+
+Start the tracker service:
+
+```bash
+torrust-tracker-deployer run my-environment
+```
+
+**Output**:
+
+```text
+⏳ [1/2] Validating environment...
+  ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/2] Running application services...
+  ✓ Services started (took 10.3s)
+✅ Run command completed for 'my-environment'
+```
+
+**What happens**:
+
+- Starts tracker Docker container
+- Waits for health checks to pass
+- Verifies tracker is accessible
+
+**Duration**: ~10-15 seconds
+
+### Step 8: Clean Up
 
 When you're done, destroy the environment:
 
@@ -242,10 +264,13 @@ torrust-tracker-deployer destroy my-environment
 **Output**:
 
 ```text
-✓ Stopping containers...
-✓ Destroying infrastructure...
-✓ Cleaning up resources...
-✓ Environment destroyed successfully
+⏳ [1/3] Validating environment...
+  ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/3] Creating command handler...
+  ✓ Done (took 0ms)
+⏳ [3/3] Tearing down infrastructure...
+  ✓ Infrastructure torn down (took 218ms)
+✅ Environment 'my-environment' destroyed successfully
 ```
 
 **What happens**:
@@ -254,19 +279,21 @@ torrust-tracker-deployer destroy my-environment
 - Destroys LXD VM instance
 - Removes LXD profile
 - Cleans up OpenTofu state
+- Removes environment directories
 
 ## Quick Reference
 
-### One-line Setup
+### Complete Workflow
 
 ```bash
-# Create template, edit it, then provision, configure, and test
+# Create template, edit it, then provision, configure, release, and run
 torrust-tracker-deployer create template dev.json && \
   # Edit dev.json with your SSH keys and settings, then:
   torrust-tracker-deployer create environment --env-file dev.json && \
   torrust-tracker-deployer provision dev && \
   torrust-tracker-deployer configure dev && \
-  torrust-tracker-deployer test dev
+  torrust-tracker-deployer release dev && \
+  torrust-tracker-deployer run dev
 ```
 
 ### Common Commands
@@ -287,7 +314,13 @@ torrust-tracker-deployer provision <environment>
 # Configure software
 torrust-tracker-deployer configure <environment>
 
-# Verify infrastructure
+# Release tracker
+torrust-tracker-deployer release <environment>
+
+# Run tracker
+torrust-tracker-deployer run <environment>
+
+# Run smoke tests
 torrust-tracker-deployer test <environment>
 
 # Clean up

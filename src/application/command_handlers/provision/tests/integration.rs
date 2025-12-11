@@ -5,7 +5,7 @@
 use crate::adapters::ssh::SshError;
 use crate::adapters::tofu::client::OpenTofuError;
 use crate::application::command_handlers::provision::ProvisionCommandHandlerError;
-use crate::infrastructure::external_tools::tofu::TofuProjectGeneratorError;
+use crate::infrastructure::templating::tofu::TofuProjectGeneratorError;
 use crate::shared::command::CommandError;
 
 #[test]

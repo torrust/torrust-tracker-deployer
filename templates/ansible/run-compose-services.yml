@@ -29,6 +29,24 @@
             cargo run -- release <environment>
       when: not compose_file_check.stat.exists
 
+    - name: Verify .env file exists
+      ansible.builtin.stat:
+        path: "{{ deploy_dir }}/.env"
+      register: env_file_check
+
+    - name: Fail if .env file not found
+      ansible.builtin.fail:
+        msg: |
+          .env file not found at {{ deploy_dir }}/.env
+
+          Docker Compose requires a .env file with environment variables.
+          Please run the 'release' command first to deploy the .env file:
+            cargo run -- release <environment>
+
+          For more information, see:
+          https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/#use-the-env_file-attribute
+      when: not env_file_check.stat.exists
+
     - name: Pull Docker images
       ansible.builtin.command:
         cmd: docker compose pull

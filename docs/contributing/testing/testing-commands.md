@@ -176,10 +176,10 @@ Commands should be integrated into E2E test suites:
 
 ### Provision and Destroy E2E Tests
 
-The `e2e-provision-and-destroy-tests` binary tests the complete infrastructure lifecycle:
+The `e2e-infrastructure-lifecycle-tests` binary tests the complete infrastructure lifecycle:
 
 ```rust
-// From src/bin/e2e_provision_and_destroy_tests.rs
+// From src/bin/e2e_infrastructure_lifecycle_tests.rs
 
 // Provision infrastructure
 let provisioned_env = run_provision_command(&context).await?;
@@ -201,4 +201,4 @@ if let Err(e) = run_destroy_command(&context).await {
 - Validate state transitions at each step
 - Ensure cleanup regardless of test outcome
 
-For detailed E2E testing information, see [`docs/e2e-testing.md`](../../e2e-testing.md).
+For detailed E2E testing information, see [`docs/e2e-testing/`](../../e2e-testing/).

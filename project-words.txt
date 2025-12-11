@@ -104,6 +104,7 @@ hotfixes
 htdocs
 hugepages
 impls
+isreg
 journalctl
 jsonlint
 keepalive
@@ -220,6 +221,7 @@ tfvars
 thiserror
 tlnp
 tlsv
+tulnp
 tmpbwr
 tmpelq
 tmpfiles

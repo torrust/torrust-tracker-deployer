@@ -8,11 +8,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::provider::{Provider, ProviderConfig};
+use crate::domain::tracker::TrackerConfig;
 use crate::domain::{EnvironmentName, InstanceName};
 
 use super::errors::CreateConfigError;
 use super::provider::{HetznerProviderSection, LxdProviderSection, ProviderSection};
 use super::ssh_credentials_config::SshCredentialsConfig;
+use super::tracker::TrackerSection;
 
 /// Configuration for creating a deployment environment
 ///
@@ -38,13 +40,36 @@ use super::ssh_credentials_config::SshCredentialsConfig;
 ///     "provider": {
 ///         "provider": "lxd",
 ///         "profile_name": "torrust-profile-dev"
+///     },
+///     "tracker": {
+///         "core": {
+///             "database": {
+///                 "driver": "sqlite3",
+///                 "database_name": "tracker.db"
+///             },
+///             "private": false
+///         },
+///         "udp_trackers": [
+///             {
+///                 "bind_address": "0.0.0.0:6969"
+///             }
+///         ],
+///         "http_trackers": [
+///             {
+///                 "bind_address": "0.0.0.0:7070"
+///             }
+///         ],
+///         "http_api": {
+///             "bind_address": "0.0.0.0:1212",
+///             "admin_token": "MyAccessToken"
+///         }
 ///     }
 /// }"#;
 ///
 /// let config: EnvironmentCreationConfig = serde_json::from_str(json)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EnvironmentCreationConfig {
     /// Environment-specific settings
     pub environment: EnvironmentSection,
@@ -57,6 +82,12 @@ pub struct EnvironmentCreationConfig {
     /// Uses `ProviderSection` for JSON parsing with raw primitives.
     /// Converted to domain `ProviderConfig` via `to_environment_params()`.
     pub provider: ProviderSection,
+
+    /// Tracker deployment configuration
+    ///
+    /// Uses `TrackerSection` for JSON parsing with String primitives.
+    /// Converted to domain `TrackerConfig` via `to_environment_params()`.
+    pub tracker: TrackerSection,
 }
 
 /// Environment-specific configuration section
@@ -95,6 +126,7 @@ impl EnvironmentCreationConfig {
     ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
     ///     ProviderSection, LxdProviderSection
     /// };
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::TrackerSection;
     ///
     /// let config = EnvironmentCreationConfig::new(
     ///     EnvironmentSection {
@@ -110,6 +142,7 @@ impl EnvironmentCreationConfig {
     ///     ProviderSection::Lxd(LxdProviderSection {
     ///         profile_name: "torrust-profile-dev".to_string(),
     ///     }),
+    ///     TrackerSection::default(),
     /// );
     /// ```
     #[must_use]
@@ -117,11 +150,13 @@ impl EnvironmentCreationConfig {
         environment: EnvironmentSection,
         ssh_credentials: SshCredentialsConfig,
         provider: ProviderSection,
+        tracker: TrackerSection,
     ) -> Self {
         Self {
             environment,
             ssh_credentials,
             provider,
+            tracker,
         }
     }
 
@@ -165,6 +200,7 @@ impl EnvironmentCreationConfig {
     ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
     ///     ProviderSection, LxdProviderSection
     /// };
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::TrackerSection;
     /// use torrust_tracker_deployer_lib::domain::Environment;
     ///
     /// let config = EnvironmentCreationConfig::new(
@@ -181,9 +217,10 @@ impl EnvironmentCreationConfig {
     ///     ProviderSection::Lxd(LxdProviderSection {
     ///         profile_name: "torrust-profile-dev".to_string(),
     ///     }),
+    ///     TrackerSection::default(),
     /// );
     ///
-    /// let (name, instance_name, provider_config, credentials, port) = config.to_environment_params()?;
+    /// let (name, instance_name, provider_config, credentials, port, tracker) = config.to_environment_params()?;
     ///
     /// // Instance name auto-generated from environment name
     /// assert_eq!(instance_name.as_str(), "torrust-tracker-vm-dev");
@@ -198,6 +235,7 @@ impl EnvironmentCreationConfig {
             ProviderConfig,
             SshCredentials,
             u16,
+            TrackerConfig,
         ),
         CreateConfigError,
     > {
@@ -224,12 +262,16 @@ impl EnvironmentCreationConfig {
         // Convert SSH credentials config to domain type
         let ssh_credentials = self.ssh_credentials.to_ssh_credentials()?;
 
+        // Convert TrackerSection (DTO) to domain TrackerConfig (validates bind addresses, etc.)
+        let tracker_config = self.tracker.to_tracker_config()?;
+
         Ok((
             environment_name,
             instance_name,
             provider_config,
             ssh_credentials,
             ssh_port,
+            tracker_config,
         ))
     }
 
@@ -267,6 +309,10 @@ impl EnvironmentCreationConfig {
     /// let template = EnvironmentCreationConfig::template(Provider::Lxd);
     /// assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if default IP addresses fail to parse (should never happen with valid constants).
     #[must_use]
     pub fn template(provider: Provider) -> Self {
         let provider_section = match provider {
@@ -293,6 +339,24 @@ impl EnvironmentCreationConfig {
                 port: 22,                        // default value
             },
             provider: provider_section,
+            tracker: TrackerSection {
+                core: super::tracker::TrackerCoreSection {
+                    database: super::tracker::DatabaseSection::Sqlite {
+                        database_name: "tracker.db".to_string(),
+                    },
+                    private: false,
+                },
+                udp_trackers: vec![super::tracker::UdpTrackerSection {
+                    bind_address: "0.0.0.0:6969".to_string(),
+                }],
+                http_trackers: vec![super::tracker::HttpTrackerSection {
+                    bind_address: "0.0.0.0:7070".to_string(),
+                }],
+                http_api: super::tracker::HttpApiSection {
+                    bind_address: "0.0.0.0:1212".to_string(),
+                    admin_token: "MyAccessToken".to_string(),
+                },
+            },
         }
     }
 
@@ -371,6 +435,7 @@ impl EnvironmentCreationConfig {
 mod tests {
     use super::*;
     use crate::application::command_handlers::create::config::provider::LxdProviderSection;
+    use crate::application::command_handlers::create::config::tracker::TrackerSection;
     use crate::domain::provider::Provider;
 
     /// Helper to create a default LXD provider section for tests
@@ -394,6 +459,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(),
         );
 
         assert_eq!(config.environment.name, "dev");
@@ -419,6 +485,29 @@ mod tests {
             "provider": {
                 "provider": "lxd",
                 "profile_name": "torrust-profile-e2e-config"
+            },
+            "tracker": {
+                "core": {
+                    "database": {
+                        "driver": "sqlite3",
+                        "database_name": "tracker.db"
+                    },
+                    "private": false
+                },
+                "udp_trackers": [
+                    {
+                        "bind_address": "0.0.0.0:6969"
+                    }
+                ],
+                "http_trackers": [
+                    {
+                        "bind_address": "0.0.0.0:7070"
+                    }
+                ],
+                "http_api": {
+                    "bind_address": "0.0.0.0:1212",
+                    "admin_token": "MyAccessToken"
+                }
             }
         }"#;
 
@@ -457,6 +546,29 @@ mod tests {
                 "server_type": "cx22",
                 "location": "nbg1",
                 "image": "ubuntu-24.04"
+            },
+            "tracker": {
+                "core": {
+                    "database": {
+                        "driver": "sqlite3",
+                        "database_name": "tracker.db"
+                    },
+                    "private": false
+                },
+                "udp_trackers": [
+                    {
+                        "bind_address": "0.0.0.0:6969"
+                    }
+                ],
+                "http_trackers": [
+                    {
+                        "bind_address": "0.0.0.0:7070"
+                    }
+                ],
+                "http_api": {
+                    "bind_address": "0.0.0.0:1212",
+                    "admin_token": "MyAccessToken"
+                }
             }
         }"#;
 
@@ -488,6 +600,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-staging"),
+            TrackerSection::default(),
         );
 
         let json = serde_json::to_string(&config).unwrap();
@@ -510,12 +623,13 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(),
         );
 
         let result = config.to_environment_params();
         assert!(result.is_ok(), "Expected successful conversion");
 
-        let (name, instance_name, provider_config, credentials, port) = result.unwrap();
+        let (name, instance_name, provider_config, credentials, port, _tracker) = result.unwrap();
 
         assert_eq!(name.as_str(), "dev");
         assert_eq!(instance_name.as_str(), "torrust-tracker-vm-dev"); // Auto-generated
@@ -538,12 +652,14 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-prod"),
+            TrackerSection::default(),
         );
 
         let result = config.to_environment_params();
         assert!(result.is_ok(), "Expected successful conversion");
 
-        let (name, instance_name, _provider_config, _credentials, _port) = result.unwrap();
+        let (name, instance_name, _provider_config, _credentials, _port, _tracker) =
+            result.unwrap();
 
         assert_eq!(name.as_str(), "prod");
         assert_eq!(instance_name.as_str(), "my-custom-instance"); // Custom provided
@@ -563,6 +679,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile"),
+            TrackerSection::default(),
         );
 
         let result = config.to_environment_params();
@@ -590,6 +707,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile"),
+            TrackerSection::default(),
         );
 
         let result = config.to_environment_params();
@@ -620,6 +738,7 @@ mod tests {
             ProviderSection::Lxd(LxdProviderSection {
                 profile_name: "invalid-".to_string(), // ends with dash - invalid
             }),
+            TrackerSection::default(),
         );
 
         let result = config.to_environment_params();
@@ -647,6 +766,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(),
         );
 
         let result = config.to_environment_params();
@@ -674,6 +794,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(),
         );
 
         let result = config.to_environment_params();
@@ -701,6 +822,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(),
         );
 
         let result = config.to_environment_params();
@@ -731,9 +853,10 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-test-env"),
+            TrackerSection::default(),
         );
 
-        let (name, _instance_name, provider_config, credentials, port) =
+        let (name, _instance_name, provider_config, credentials, port, _tracker) =
             config.to_environment_params().unwrap();
         let environment = Environment::new(name.clone(), provider_config, credentials, port);
 
@@ -758,6 +881,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(),
         );
 
         let json = serde_json::to_string_pretty(&original).unwrap();
@@ -845,6 +969,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("test-profile"),
+            TrackerSection::default(),
         );
 
         // Both should serialize to same structure (different values)

@@ -1,0 +1,17 @@
+---
+- name: Create Tracker storage directories
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create Tracker directory structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      loop:
+        - /opt/torrust/storage/tracker/etc
+        - /opt/torrust/storage/tracker/lib/database
+        - /opt/torrust/storage/tracker/log

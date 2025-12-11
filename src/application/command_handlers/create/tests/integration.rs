@@ -110,6 +110,7 @@ fn it_should_persist_environment_state_to_repository() {
 
 #[test]
 fn it_should_fail_with_invalid_environment_name() {
+    use crate::application::command_handlers::create::config::tracker::TrackerSection;
     use crate::application::command_handlers::create::config::{
         EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
         SshCredentialsConfig,
@@ -139,6 +140,7 @@ fn it_should_fail_with_invalid_environment_name() {
         ProviderSection::Lxd(LxdProviderSection {
             profile_name: "test-profile".to_string(),
         }),
+        TrackerSection::default(),
     );
 
     // Act
@@ -159,6 +161,7 @@ fn it_should_fail_with_invalid_environment_name() {
 
 #[test]
 fn it_should_fail_when_ssh_private_key_not_found() {
+    use crate::application::command_handlers::create::config::tracker::TrackerSection;
     use crate::application::command_handlers::create::config::{
         EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
         SshCredentialsConfig,
@@ -186,6 +189,7 @@ fn it_should_fail_when_ssh_private_key_not_found() {
         ProviderSection::Lxd(LxdProviderSection {
             profile_name: "test-profile".to_string(),
         }),
+        TrackerSection::default(),
     );
 
     // Act

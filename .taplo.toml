@@ -1,5 +1,13 @@
 # Taplo configuration file for TOML formatting
 # Used by the "Even Better TOML" VS Code extension
+
+# Exclude generated and runtime folders from linting
+exclude = [
+  "build/**",
+  "data/**",
+  "envs/**",
+]
+
 [formatting]
 # Preserve blank lines that exist
 allowed_blank_lines = 1

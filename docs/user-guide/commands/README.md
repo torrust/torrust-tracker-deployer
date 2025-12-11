@@ -16,6 +16,11 @@ This directory contains detailed guides for all Torrust Tracker Deployer command
 - **[configure](configure.md)** - Configure provisioned infrastructure
 - **[test](test.md)** - Verify deployment infrastructure
 
+### Application Deployment
+
+- **[release](release.md)** - Deploy application configuration and files
+- **[run](run.md)** - Start Torrust Tracker services
+
 ### Environment Cleanup
 
 - **[destroy](destroy.md)** - Destroy deployment environment
@@ -29,10 +34,11 @@ The typical command sequence for a complete deployment:
 2. (edit template)    → Customize your settings
 3. create environment → Create environment from config
 4. provision          → Provision VM infrastructure
-5. configure          → Install Docker, Docker Compose
+5. configure          → Install Docker, Docker Compose, configure firewall
 6. test               → Verify infrastructure readiness
-7. (deploy app)       → Deploy Torrust Tracker (coming soon)
-8. destroy            → Clean up when done
+7. release            → Deploy application configuration and files
+8. run                → Start Torrust Tracker services
+9. destroy            → Clean up when done
 ```
 
 ## Command Categories
@@ -45,6 +51,9 @@ These commands provide fine-grained control over each deployment step:
 - `provision`
 - `configure`
 - `test`
+- `release`
+- `run`
+- `destroy`
 - `destroy`
 
 **Best for**: CI/CD pipelines, automation, advanced users, debugging
@@ -57,16 +66,18 @@ Simplified commands that orchestrate multiple plumbing commands:
 
 **Best for**: Quick deployments, beginners, interactive use
 
-## Quick Reference
-
-| Command              | State Transition         | Description              |
-| -------------------- | ------------------------ | ------------------------ |
-| `create template`    | N/A → Template           | Generate config template |
-| `create environment` | Template → Created       | Create environment       |
-| `provision`          | Created → Provisioned    | Provision infrastructure |
-| `configure`          | Provisioned → Configured | Install software         |
-| `test`               | (validation only)        | Verify infrastructure    |
-| `destroy`            | Any → Destroyed          | Clean up resources       |
+| Command              | State Transition         | Description                |
+| -------------------- | ------------------------ | -------------------------- |
+| `create template`    | N/A → Template           | Generate config template   |
+| `create environment` | Template → Created       | Create environment         |
+| `provision`          | Created → Provisioned    | Provision infrastructure   |
+| `configure`          | Provisioned → Configured | Install software, firewall |
+| `test`               | (validation only)        | Verify infrastructure      |
+| `release`            | Configured → Released    | Deploy application files   |
+| `run`                | Released → Running       | Start tracker services     |
+| `destroy`            | Any → Destroyed          | Clean up resources         |
+| `test`               | (validation only)        | Verify infrastructure      |
+| `destroy`            | Any → Destroyed          | Clean up resources         |
 
 ## Getting Started
 

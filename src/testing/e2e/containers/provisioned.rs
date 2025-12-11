@@ -33,8 +33,8 @@
 //!     // Start with stopped state
 //!     let stopped = StoppedProvisionedContainer::default();
 //!     
-//!     // Transition to running state
-//!     let running = stopped.start(None, 22).await?;
+//!     // Transition to running state (expose SSH port only)
+//!     let running = stopped.start(None, 22, &[]).await?;
 //!     
 //!     // Get connection details
 //!     let socket_addr = running.ssh_socket_addr();
@@ -60,17 +60,13 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
-use testcontainers::{
-    core::{IntoContainerPort, WaitFor},
-    runners::AsyncRunner,
-    ContainerAsync, GenericImage, ImageExt,
-};
+use testcontainers::{core::WaitFor, runners::AsyncRunner, ContainerAsync, GenericImage, ImageExt};
 use tracing::info;
 
 use super::config_builder::ContainerConfigBuilder;
-use super::errors::{
-    ContainerError, ContainerImageError, ContainerNetworkingError, ContainerRuntimeError, Result,
-};
+#[cfg(test)]
+use super::errors::ContainerNetworkingError;
+use super::errors::{ContainerError, ContainerImageError, ContainerRuntimeError, Result};
 use super::executor::ContainerExecutor;
 use super::image_builder::ContainerImageBuilder;
 use super::timeout::ContainerTimeouts;
@@ -175,6 +171,7 @@ impl StoppedProvisionedContainer {
     ///
     /// * `container_name` - Optional name for the running container. If provided, the container will be named accordingly.
     /// * `ssh_port` - The internal SSH port to expose from the container
+    /// * `additional_ports` - Additional TCP ports to expose (e.g., tracker API, HTTP tracker)
     ///
     /// # Errors
     ///
@@ -186,29 +183,39 @@ impl StoppedProvisionedContainer {
         self,
         container_name: Option<String>,
         ssh_port: u16,
+        additional_ports: &[u16],
     ) -> Result<RunningProvisionedContainer> {
         // First build the Docker image if needed
         Self::build_image(self.timeouts.docker_build)?;
 
-        info!(ssh_port = %ssh_port, "Starting provisioned instance container with Docker-in-Docker support");
+        info!(
+            ssh_port = %ssh_port,
+            additional_ports = ?additional_ports,
+            "Starting provisioned instance container with Docker-in-Docker support"
+        );
 
         // Create and start the container using the configuration builder
         // Wait for both SSH and Docker daemon to be ready
-        let image =
+        let mut config_builder =
             ContainerConfigBuilder::new(format!("{DEFAULT_IMAGE_NAME}:{DEFAULT_IMAGE_TAG}"))
                 .with_exposed_port(ssh_port)
-                .with_wait_condition(WaitFor::message_on_stdout("dockerd entered RUNNING state"))
-                .build()
-                .map_err(|source| {
-                    Box::new(ContainerError::ContainerRuntime {
-                        source: ContainerRuntimeError::InvalidConfiguration {
-                            image_name: DEFAULT_IMAGE_NAME.to_string(),
-                            image_tag: DEFAULT_IMAGE_TAG.to_string(),
-                            reason: "Container configuration validation failed".to_string(),
-                            source: *source,
-                        },
-                    })
-                })?;
+                .with_wait_condition(WaitFor::message_on_stdout("dockerd entered RUNNING state"));
+
+        // Add additional ports (tracker API, HTTP tracker, etc.)
+        for port in additional_ports {
+            config_builder = config_builder.with_exposed_port(*port);
+        }
+
+        let image = config_builder.build().map_err(|source| {
+            Box::new(ContainerError::ContainerRuntime {
+                source: ContainerRuntimeError::InvalidConfiguration {
+                    image_name: DEFAULT_IMAGE_NAME.to_string(),
+                    image_tag: DEFAULT_IMAGE_TAG.to_string(),
+                    reason: "Container configuration validation failed".to_string(),
+                    source: *source,
+                },
+            })
+        })?;
 
         // Start the container with privileged mode for Docker-in-Docker support
         // and optional container name
@@ -233,30 +240,46 @@ impl StoppedProvisionedContainer {
             })
         })?;
 
-        // Get the actual mapped port from testcontainers
-        let mapped_ssh_port =
-            container
-                .get_host_port_ipv4(ssh_port.tcp())
-                .await
-                .map_err(|source| {
-                    Box::new(ContainerError::ContainerNetworking {
-                        source: ContainerNetworkingError::PortMappingFailed {
-                            container_id: container.id().to_string(),
-                            internal_port: ssh_port,
-                            reason: "Failed to retrieve SSH port mapping from container"
-                                .to_string(),
-                            source,
-                        },
-                    })
-                })?;
+        // Get the dynamically assigned ports from Docker's port mapping (bridge networking)
+        let mapped_ssh_port = container.get_host_port_ipv4(ssh_port).await.map_err(|e| {
+            Box::new(ContainerError::ContainerRuntime {
+                source: ContainerRuntimeError::StartupFailed {
+                    image_name: DEFAULT_IMAGE_NAME.to_string(),
+                    image_tag: DEFAULT_IMAGE_TAG.to_string(),
+                    reason: format!("Failed to get mapped SSH port: {e}"),
+                    source: e,
+                },
+            })
+        })?;
+
+        // Get mapped ports for all additional ports (tracker services)
+        let mut mapped_additional_ports = Vec::new();
+        for port in additional_ports {
+            let mapped_port = container.get_host_port_ipv4(*port).await.map_err(|e| {
+                Box::new(ContainerError::ContainerRuntime {
+                    source: ContainerRuntimeError::StartupFailed {
+                        image_name: DEFAULT_IMAGE_NAME.to_string(),
+                        image_tag: DEFAULT_IMAGE_TAG.to_string(),
+                        reason: format!("Failed to get mapped port for {port}: {e}"),
+                        source: e,
+                    },
+                })
+            })?;
+            mapped_additional_ports.push(mapped_port);
+        }
 
         info!(
             container_id = %container.id(),
-            mapped_ssh_port = mapped_ssh_port,
-            "Container started successfully"
+            mapped_ssh_port,
+            mapped_additional_ports = ?mapped_additional_ports,
+            "Container started successfully with bridge networking"
         );
 
-        Ok(RunningProvisionedContainer::new(container, mapped_ssh_port))
+        Ok(RunningProvisionedContainer::new(
+            container,
+            mapped_ssh_port,
+            mapped_additional_ports,
+        ))
     }
 }
 
@@ -264,6 +287,7 @@ impl StoppedProvisionedContainer {
 pub struct RunningProvisionedContainer {
     container: ContainerAsync<GenericImage>,
     ssh_port: u16,
+    additional_mapped_ports: Vec<u16>,
 }
 
 impl ContainerExecutor for RunningProvisionedContainer {
@@ -276,10 +300,15 @@ impl ContainerExecutor for RunningProvisionedContainer {
 }
 
 impl RunningProvisionedContainer {
-    pub(crate) fn new(container: ContainerAsync<GenericImage>, ssh_port: u16) -> Self {
+    pub(crate) fn new(
+        container: ContainerAsync<GenericImage>,
+        ssh_port: u16,
+        additional_mapped_ports: Vec<u16>,
+    ) -> Self {
         Self {
             container,
             ssh_port,
+            additional_mapped_ports,
         }
     }
 
@@ -287,6 +316,13 @@ impl RunningProvisionedContainer {
     #[must_use]
     pub fn ssh_socket_addr(&self) -> SocketAddr {
         SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), self.ssh_port)
+    }
+
+    /// Get the mapped additional ports (tracker API, HTTP tracker, UDP tracker, etc.)
+    /// Returns ports in the same order they were requested when starting the container
+    #[must_use]
+    pub fn additional_mapped_ports(&self) -> &[u16] {
+        &self.additional_mapped_ports
     }
 
     /// Get the container ID for logging/debugging

@@ -1,25 +1,31 @@
 # Docker Compose configuration for Torrust Tracker deployment
-#
-# This is a demo/MVP configuration using nginx as a simple web service
-# to validate the deployment workflow. In production, this will be replaced
-# with actual Torrust Tracker services.
-#
-# Usage:
-#   docker compose up -d
-#   docker compose ps
-#   docker compose logs
-#   docker compose down
 
 services:
-  demo-app:
-    image: nginx:alpine
-    container_name: torrust-demo-app
-    ports:
-      - "8080:80"
+  tracker:
+    image: torrust/tracker:develop
+    container_name: tracker
+    tty: true
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    environment:
+      - USER_ID=1000
+      - TORRUST_TRACKER_CONFIG_TOML_PATH=${TORRUST_TRACKER_CONFIG_TOML_PATH}
+      - TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER=sqlite3
+      - TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=${TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN}
+    networks:
+      - backend_network
+    ports:
+      - 6868:6868/udp
+      - 6969:6969/udp
+      - 7070:7070
+      - 1212:1212
+    volumes:
+      - ./storage/tracker/lib:/var/lib/torrust/tracker:Z
+      - ./storage/tracker/log:/var/log/torrust/tracker:Z
+      - ./storage/tracker/etc:/etc/torrust/tracker:Z
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+
+networks:
+  backend_network: {}

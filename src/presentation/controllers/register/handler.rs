@@ -100,6 +100,7 @@ impl RegisterCommandController {
     ///
     /// * `environment_name` - The name of the environment to register the instance with
     /// * `instance_ip_str` - The IP address string of the existing instance
+    /// * `ssh_port` - Optional SSH port (overrides environment config if provided)
     ///
     /// # Errors
     ///
@@ -113,13 +114,14 @@ impl RegisterCommandController {
         &mut self,
         environment_name: &str,
         instance_ip_str: &str,
+        ssh_port: Option<u16>,
     ) -> Result<Environment<Provisioned>, RegisterSubcommandError> {
         let (env_name, instance_ip) = self.validate_input(environment_name, instance_ip_str)?;
 
         let handler = self.create_command_handler()?;
 
         let provisioned = self
-            .register_instance(&handler, &env_name, instance_ip)
+            .register_instance(&handler, &env_name, instance_ip, ssh_port)
             .await?;
 
         self.complete_workflow(environment_name)?;
@@ -180,12 +182,13 @@ impl RegisterCommandController {
         handler: &RegisterCommandHandler,
         env_name: &EnvironmentName,
         instance_ip: IpAddr,
+        ssh_port: Option<u16>,
     ) -> Result<Environment<Provisioned>, RegisterSubcommandError> {
         self.progress
             .start_step(RegisterStep::RegisterInstance.description())?;
 
         let provisioned = handler
-            .execute(env_name, instance_ip)
+            .execute(env_name, instance_ip, ssh_port)
             .await
             .map_err(|source| RegisterSubcommandError::RegisterOperationFailed {
                 name: env_name.to_string(),

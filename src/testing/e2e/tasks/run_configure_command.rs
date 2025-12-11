@@ -141,7 +141,7 @@ impl ConfigureTaskError {
    - Instance not fully initialized (cloud-init still running)
    - Package repository connectivity issues
 
-For more information, see docs/e2e-testing.md."
+For more information, see docs/e2e-testing/."
             }
         }
     }

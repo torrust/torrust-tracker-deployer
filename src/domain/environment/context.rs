@@ -183,59 +183,28 @@ impl EnvironmentContext {
         }
     }
 
-    /// Creates a new environment context with directories relative to a working directory
+    /// Creates a new environment context with custom tracker configuration
     ///
-    /// This version creates absolute paths for data and build directories by
-    /// using the provided working directory as the base.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The environment name
-    /// * `provider_config` - Provider-specific configuration (LXD, Hetzner, etc.)
-    /// * `ssh_credentials` - SSH credentials for accessing the instance
-    /// * `ssh_port` - SSH port (typically 22)
-    /// * `working_dir` - The base working directory for operations
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::domain::environment::{EnvironmentContext, EnvironmentName};
-    /// use torrust_tracker_deployer_lib::domain::provider::{ProviderConfig, LxdConfig};
-    /// use torrust_tracker_deployer_lib::domain::ProfileName;
-    /// use torrust_tracker_deployer_lib::adapters::SshCredentials;
-    /// use torrust_tracker_deployer_lib::shared::Username;
-    /// use std::path::PathBuf;
-    ///
-    /// let env_name = EnvironmentName::new("production".to_string())?;
-    /// let username = Username::new("torrust".to_string())?;
-    /// let ssh_credentials = SshCredentials::new(
-    ///     PathBuf::from("keys/prod_rsa"),
-    ///     PathBuf::from("keys/prod_rsa.pub"),
-    ///     username,
-    /// );
-    /// let provider_config = ProviderConfig::Lxd(LxdConfig {
-    ///     profile_name: ProfileName::new("torrust-profile-production".to_string())?,
-    /// });
-    /// let working_dir = PathBuf::from("/opt/deployments");
-    ///
-    /// let context = EnvironmentContext::with_working_dir(&env_name, provider_config, ssh_credentials, 22, &working_dir);
-    ///
-    /// assert_eq!(context.user_inputs.instance_name.as_str(), "torrust-tracker-vm-production");
-    /// assert_eq!(context.internal_config.data_dir, PathBuf::from("/opt/deployments/data/production"));
-    /// assert_eq!(context.internal_config.build_dir, PathBuf::from("/opt/deployments/build/production"));
-    ///
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
+    /// This creates absolute paths for data and build directories by using the
+    /// provided working directory as the base, and allows specifying a custom
+    /// tracker configuration instead of using the default.
     #[must_use]
-    pub fn with_working_dir(
+    pub fn with_working_dir_and_tracker(
         name: &EnvironmentName,
         provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
+        tracker_config: crate::domain::tracker::TrackerConfig,
         working_dir: &std::path::Path,
     ) -> Self {
         Self {
-            user_inputs: UserInputs::new(name, provider_config, ssh_credentials, ssh_port),
+            user_inputs: UserInputs::with_tracker(
+                name,
+                provider_config,
+                ssh_credentials,
+                ssh_port,
+                tracker_config,
+            ),
             internal_config: InternalConfig::with_working_dir(name, working_dir),
             runtime_outputs: RuntimeOutputs {
                 instance_ip: None,

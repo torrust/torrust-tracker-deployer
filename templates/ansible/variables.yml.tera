@@ -8,4 +8,22 @@
 
 # System Configuration
 ssh_port: {{ ssh_port }}
-# Future service variables can be added here when needed
+
+# Tracker Firewall Configuration
+{% if tracker_udp_ports is defined and tracker_udp_ports | length > 0 -%}
+tracker_udp_ports:
+{%- for port in tracker_udp_ports %}
+  - {{ port }}
+{%- endfor %}
+{% endif -%}
+
+{% if tracker_http_ports is defined and tracker_http_ports | length > 0 -%}
+tracker_http_ports:
+{%- for port in tracker_http_ports %}
+  - {{ port }}
+{%- endfor %}
+{% endif -%}
+
+{% if tracker_api_port is defined -%}
+tracker_api_port: {{ tracker_api_port }}
+{% endif -%}

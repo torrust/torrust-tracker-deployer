@@ -37,6 +37,7 @@ pub mod executor;
 pub mod image_builder;
 pub mod provisioned;
 pub mod timeout;
+pub mod tracker_ports;
 
 // Re-export provisioned container types for backward compatibility
 pub use provisioned::{RunningProvisionedContainer, StoppedProvisionedContainer};
@@ -55,3 +56,6 @@ pub use config_builder::ContainerConfigBuilder;
 
 // Re-export executor trait for container actions
 pub use executor::ContainerExecutor;
+
+// Re-export tracker ports for E2E testing
+pub use tracker_ports::{E2eEnvironmentInfo, TrackerPorts};

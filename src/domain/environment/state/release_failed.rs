@@ -30,6 +30,14 @@ use crate::shared::error::ErrorKind;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ReleaseStep {
+    /// Creating tracker storage directories on remote host
+    CreateTrackerStorage,
+    /// Initializing tracker `SQLite` database file
+    InitTrackerDatabase,
+    /// Rendering Tracker configuration templates to the build directory
+    RenderTrackerTemplates,
+    /// Deploying tracker configuration to the remote host via Ansible
+    DeployTrackerConfigToRemote,
     /// Rendering Docker Compose templates to the build directory
     RenderDockerComposeTemplates,
     /// Deploying compose files to the remote host via Ansible
@@ -39,6 +47,10 @@ pub enum ReleaseStep {
 impl fmt::Display for ReleaseStep {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
+            Self::CreateTrackerStorage => "Create Tracker Storage",
+            Self::InitTrackerDatabase => "Initialize Tracker Database",
+            Self::RenderTrackerTemplates => "Render Tracker Templates",
+            Self::DeployTrackerConfigToRemote => "Deploy Tracker Config to Remote",
             Self::RenderDockerComposeTemplates => "Render Docker Compose Templates",
             Self::DeployComposeFilesToRemote => "Deploy Compose Files to Remote",
         };

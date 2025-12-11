@@ -42,6 +42,29 @@ async fn it_should_create_environment_from_valid_config() {
         "provider": {{
             "provider": "lxd",
             "profile_name": "lxd-test-create-env"
+        }},
+        "tracker": {{
+            "core": {{
+                "database": {{
+                    "driver": "sqlite3",
+                    "database_name": "tracker.db"
+                }},
+                "private": false
+            }},
+            "udp_trackers": [
+                {{
+                    "bind_address": "0.0.0.0:6969"
+                }}
+            ],
+            "http_trackers": [
+                {{
+                    "bind_address": "0.0.0.0:7070"
+                }}
+            ],
+            "http_api": {{
+                "bind_address": "0.0.0.0:1212",
+                "admin_token": "MyAccessToken"
+            }}
         }}
     }}"#
     );
@@ -140,6 +163,29 @@ async fn it_should_return_error_for_duplicate_environment() {
         "provider": {{
             "provider": "lxd",
             "profile_name": "lxd-duplicate-env"
+        }},
+        "tracker": {{
+            "core": {{
+                "database": {{
+                    "driver": "sqlite3",
+                    "database_name": "tracker.db"
+                }},
+                "private": false
+            }},
+            "udp_trackers": [
+                {{
+                    "bind_address": "0.0.0.0:6969"
+                }}
+            ],
+            "http_trackers": [
+                {{
+                    "bind_address": "0.0.0.0:7070"
+                }}
+            ],
+            "http_api": {{
+                "bind_address": "0.0.0.0:1212",
+                "admin_token": "MyAccessToken"
+            }}
         }}
     }}"#
     );
@@ -198,6 +244,29 @@ async fn it_should_create_environment_in_custom_working_dir() {
         "provider": {{
             "provider": "lxd",
             "profile_name": "lxd-custom-location-env"
+        }},
+        "tracker": {{
+            "core": {{
+                "database": {{
+                    "driver": "sqlite3",
+                    "database_name": "tracker.db"
+                }},
+                "private": false
+            }},
+            "udp_trackers": [
+                {{
+                    "bind_address": "0.0.0.0:6969"
+                }}
+            ],
+            "http_trackers": [
+                {{
+                    "bind_address": "0.0.0.0:7070"
+                }}
+            ],
+            "http_api": {{
+                "bind_address": "0.0.0.0:1212",
+                "admin_token": "MyAccessToken"
+            }}
         }}
     }}"#
     );

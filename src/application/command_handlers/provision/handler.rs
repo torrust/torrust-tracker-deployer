@@ -21,7 +21,7 @@ use crate::domain::environment::repository::{EnvironmentRepository, TypedEnviron
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
 use crate::domain::EnvironmentName;
-use crate::infrastructure::external_tools::tofu::TofuProjectGenerator;
+use crate::infrastructure::templating::tofu::TofuProjectGenerator;
 use crate::shared::error::Traceable;
 
 /// `ProvisionCommandHandler` orchestrates the complete infrastructure provisioning workflow
@@ -262,7 +262,7 @@ impl ProvisionCommandHandler {
     /// Prepare for configuration stages
     ///
     /// This method handles preparation for future configuration stages:
-    /// - Render Ansible templates with runtime instance IP
+    /// - Render Ansible templates with user inputs and runtime instance IP
     ///
     /// # Arguments
     ///
@@ -285,11 +285,7 @@ impl ProvisionCommandHandler {
         );
 
         ansible_template_service
-            .render_templates(
-                environment.ssh_credentials(),
-                instance_ip,
-                environment.ssh_port(),
-            )
+            .render_templates(&environment.context().user_inputs, instance_ip, None)
             .await
             .map_err(|e| {
                 (

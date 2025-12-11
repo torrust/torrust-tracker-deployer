@@ -21,6 +21,7 @@ use std::sync::Arc;
 use thiserror::Error;
 use tracing::info;
 
+use crate::application::command_handlers::create::config::tracker::TrackerSection;
 use crate::application::command_handlers::create::config::{
     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
     SshCredentialsConfig,
@@ -98,6 +99,7 @@ pub fn run_create_command(
         ProviderSection::Lxd(LxdProviderSection {
             profile_name: format!("lxd-{environment_name}"),
         }),
+        TrackerSection::default(),
     );
 
     // Execute the command

@@ -1,4 +1,4 @@
-[![Linting](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/linting.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/linting.yml) [![Testing](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/testing.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/testing.yml) [![E2E Provision Tests](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-provision.yml) [![E2E Config Tests](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-config.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-config.yml) [![Test LXD Container Provisioning](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-lxd-provision.yml) [![Coverage](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/coverage.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/coverage.yml)
+[![Linting](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/linting.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/linting.yml) [![Testing](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/testing.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/testing.yml) [![E2E Infrastructure Tests](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-infrastructure.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-infrastructure.yml) [![E2E Deployment Tests](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-deployment.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-deployment.yml) [![Test LXD Container Provisioning](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-lxd-provision.yml) [![Coverage](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/coverage.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/coverage.yml)
 
 # Torrust Tracker Deployer
 
@@ -12,9 +12,9 @@
 > - ✅ **Hetzner Cloud support** for production deployments
 > - ✅ Development and testing workflows
 > - ✅ Multi-provider architecture (provider selection via configuration)
-> - ❌ Application deployment (Torrust Tracker stack) - coming soon
+> - ✅ **Application deployment** (Torrust Tracker stack with Docker Compose)
 >
-> 📋 **MVP Goal:** After completing the [roadmap](docs/roadmap.md), we will have a fully automated deployment solution for Torrust Tracker with complete application stack management.
+> 📋 **MVP Goal:** After completing the [roadmap](docs/roadmap.md), we will have a fully automated deployment solution for Torrust Tracker with complete application stack management and multi-cloud provider support.
 
 This Rust application provides automated deployment infrastructure for Torrust tracker projects. It supports **local development** with LXD and **production deployments** with Hetzner Cloud. The multi-provider architecture allows easy extension to additional cloud providers.
 
@@ -28,12 +28,13 @@ This Rust application provides automated deployment infrastructure for Torrust t
 - ✅ **Fast, easy to install and use** local development solution
 - ✅ **No nested virtualization dependency** (CI compatibility)
 - ✅ **Multi-provider support** (LXD for local, Hetzner Cloud for production)
+- ✅ **Application stack deployment** (Torrust Tracker with Docker Compose)
 
 **Future MVP Goals:** (See [roadmap](docs/roadmap.md))
 
 - 🔄 **Additional cloud providers** (AWS, GCP, Azure)
-- 🔄 **Application stack deployment** (Torrust Tracker with Docker Compose)
 - 🔄 **Multi-environment management**
+- 🔄 **Enhanced observability** (monitoring, alerting, metrics)
 
 ## 🔧 Local Development Approach
 
@@ -164,18 +165,18 @@ Use the E2E test binaries to run automated infrastructure tests with hardcoded e
 
 ```bash
 # Run comprehensive E2E tests (LOCAL ONLY - connectivity issues in GitHub runners)
-cargo run --bin e2e-tests-full
+cargo run --bin e2e-complete-workflow-tests
 
 # Run individual E2E test suites
-cargo run --bin e2e-config-and-release-tests      # Configuration, release, and run workflow tests
-cargo run --bin e2e-provision-and-destroy-tests   # Infrastructure provisioning tests
+cargo run --bin e2e-deployment-workflow-tests         # Configuration, release, and run workflow tests
+cargo run --bin e2e-infrastructure-lifecycle-tests   # Infrastructure provisioning tests
 
 # Keep the test environment after completion for inspection
-cargo run --bin e2e-tests-full -- --keep
-cargo run --bin e2e-provision-and-destroy-tests -- --keep
+cargo run --bin e2e-complete-workflow-tests -- --keep
+cargo run --bin e2e-infrastructure-lifecycle-tests -- --keep
 
 # Use custom templates directory
-cargo run --bin e2e-tests-full -- --templates-dir ./custom/templates
+cargo run --bin e2e-complete-workflow-tests -- --templates-dir ./custom/templates
 
 # See all available options
 cargo run --bin e2e-tests-full -- --help
@@ -190,15 +191,16 @@ cargo run --bin e2e-tests-full -- --help
 
 ### 📖 Manual Deployment Steps
 
-> **✅ Infrastructure commands are now available!** You can create, provision, configure, test, and destroy deployment environments using the CLI.
+> **✅ Complete deployment workflow is now available!** You can create, provision, configure, test, deploy, run, and destroy Torrust Tracker environments using the CLI.
 >
 > **Current Status:**
 >
 > - ✅ **Environment Management**: Create and manage deployment environments
-> - ✅ **Infrastructure Provisioning**: Provision VM infrastructure with LXD
+> - ✅ **Infrastructure Provisioning**: Provision VM infrastructure with LXD or Hetzner Cloud
 > - ✅ **Configuration**: Configure provisioned infrastructure (Docker, Docker Compose)
 > - ✅ **Verification**: Test deployment infrastructure
-> - ⚠️ **Application Deployment**: Not yet available - tracker application deployment coming soon
+> - ✅ **Application Deployment**: Deploy Torrust Tracker configuration and database
+> - ✅ **Service Management**: Start and manage tracker services
 >
 > **Available Commands:**
 >
@@ -220,7 +222,13 @@ cargo run --bin e2e-tests-full -- --help
 > # 6. Verify deployment infrastructure
 > torrust-tracker-deployer test my-environment
 >
-> # 7. Destroy environment when done
+> # 7. Deploy tracker application configuration
+> torrust-tracker-deployer release my-environment
+>
+> # 8. Start tracker services
+> torrust-tracker-deployer run my-environment
+>
+> # 9. Destroy environment when done
 > torrust-tracker-deployer destroy my-environment
 > ```
 >

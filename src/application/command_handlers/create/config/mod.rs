@@ -69,13 +69,36 @@
 //!     "provider": {
 //!         "provider": "lxd",
 //!         "profile_name": "torrust-profile-dev"
+//!     },
+//!     "tracker": {
+//!         "core": {
+//!             "database": {
+//!                 "driver": "sqlite3",
+//!                 "database_name": "tracker.db"
+//!             },
+//!             "private": false
+//!         },
+//!         "udp_trackers": [
+//!             {
+//!                 "bind_address": "0.0.0.0:6969"
+//!             }
+//!         ],
+//!         "http_trackers": [
+//!             {
+//!                 "bind_address": "0.0.0.0:7070"
+//!             }
+//!         ],
+//!         "http_api": {
+//!             "bind_address": "0.0.0.0:1212",
+//!             "admin_token": "MyAccessToken"
+//!         }
 //!     }
 //! }"#;
 //!
 //! let config: EnvironmentCreationConfig = serde_json::from_str(json)?;
 //!
 //! // Convert to domain parameters
-//! let (name, instance_name, provider_config, credentials, port) = config.to_environment_params()?;
+//! let (name, instance_name, provider_config, credentials, port, tracker) = config.to_environment_params()?;
 //!
 //! // Create domain entity - Environment::new() will use the provider_config
 //! let environment = Environment::new(name, provider_config, credentials, port);
@@ -109,6 +132,7 @@ pub mod environment_config;
 pub mod errors;
 pub mod provider;
 pub mod ssh_credentials_config;
+pub mod tracker;
 
 // Re-export commonly used types for convenience
 pub use environment_config::{EnvironmentCreationConfig, EnvironmentSection};

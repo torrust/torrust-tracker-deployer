@@ -34,11 +34,14 @@ pub use infrastructure::{
     InitializeInfrastructureStep, PlanInfrastructureStep, ValidateInfrastructureStep,
 };
 pub use rendering::{
-    RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep, RenderDockerComposeTemplatesStep,
-    RenderOpenTofuTemplatesStep,
+    ansible_templates::RenderAnsibleTemplatesError, RenderAnsibleTemplatesStep,
+    RenderDockerComposeTemplatesStep, RenderOpenTofuTemplatesStep,
 };
 pub use software::{InstallDockerComposeStep, InstallDockerStep};
-pub use system::{ConfigureFirewallStep, ConfigureSecurityUpdatesStep, WaitForCloudInitStep};
+pub use system::{
+    ConfigureFirewallStep, ConfigureSecurityUpdatesStep, ConfigureTrackerFirewallStep,
+    WaitForCloudInitStep,
+};
 pub use validation::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,

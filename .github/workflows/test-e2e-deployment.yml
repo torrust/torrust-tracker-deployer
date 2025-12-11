@@ -1,0 +1,134 @@
+---
+name: E2E Deployment Workflow Tests
+
+# This workflow tests ONLY software configuration, release, and run phases
+# using Docker containers. It does NOT test infrastructure provisioning
+# (VMs/containers creation) as that is handled by the E2E Provision Tests
+# workflow.
+#
+# This workflow uses Docker containers instead of LXD VMs to avoid GitHub
+# Actions network connectivity issues within VMs that prevent software
+# installation.
+#
+# NETWORK TUNING: We use smorimoto/tune-github-hosted-runner-network to fix
+# flaky networking issues that cause Docker GPG key downloads to fail
+# intermittently in GitHub Actions.
+# See: https://github.com/actions/runner-images/issues/1187 and
+# https://github.com/actions/runner-images/issues/2890
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  e2e-deployment-workflow-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45 # Timeout for complete configuration testing with software installation
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Tune GitHub hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: |
+          cargo build -p torrust-dependency-installer --bin dependency-installer
+          cargo run -p torrust-dependency-installer --bin dependency-installer -- install
+
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify installations
+        run: |
+          docker --version
+          ansible --version
+          cargo --version
+
+      - name: Set SSH key permissions
+        run: |
+          # SSH requires private key files to have restrictive permissions (0600)
+          # Git checkout doesn't preserve file permissions, so we need to set them manually
+          chmod 600 fixtures/testing_rsa
+          ls -la fixtures/testing_rsa
+
+      - name: Build E2E deployment workflow tests binary
+        run: |
+          cargo build --bin e2e-deployment-workflow-tests --release
+
+      - name: Run E2E deployment workflow test
+        run: |
+          # Run the E2E deployment workflow test with debug logging for better debugging
+          echo "🚀 Starting E2E deployment workflow test at $(date)"
+          cargo run --bin e2e-deployment-workflow-tests
+          echo "✅ E2E deployment workflow test completed at $(date)"
+        env:
+          # Preserve environment variables for the E2E test
+          RUST_LOG: debug
+
+      - name: Get test outputs (on success)
+        if: success()
+        run: |
+          echo "=== Docker Containers ==="
+          docker ps -a || echo "No containers found"
+
+          echo "=== Docker Images ==="
+          docker images || echo "No images found"
+
+      - name: Debug information (on failure)
+        if: failure()
+        run: |
+          echo "=== Docker Status ==="
+          docker ps -a || echo "Docker ps failed"
+
+          echo "=== Docker Logs ==="
+          # Get logs from any containers that might still be running
+          for container in $(docker ps -aq 2>/dev/null || true); do
+            echo "=== Logs for container $container ==="
+            docker logs "$container" 2>/dev/null || echo "Could not get logs for container $container"
+          done
+
+          echo "=== System Resources ==="
+          df -h
+          free -h
+
+          echo "=== Recent logs ==="
+          sudo journalctl --since "10 minutes ago" --no-pager | tail -50 || echo "Journal logs not available"
+
+      - name: Cleanup containers (always run)
+        if: always()
+        run: |
+          echo "Cleaning up test containers..."
+          # This is a safety fallback cleanup in case testcontainers cleanup didn't complete
+          # properly (e.g., if the test was abruptly halted). Under normal circumstances,
+          # the testcontainers crate should automatically clean up containers when tests finish.
+
+          # Clean up the specific container created for e2e-deployment tests
+          docker rm -f torrust-tracker-vm-e2e-deployment 2>/dev/null || echo "Container torrust-tracker-vm-e2e-deployment not found or already removed"
+
+          # Clean up any test images if needed
+          docker images --filter "reference=torrust-provisioned-instance*" -q | xargs -r docker rmi -f || echo "No test images to remove"
+
+      - name: Final verification
+        if: always()
+        run: |
+          echo "Verifying final cleanup..."
+          docker ps -a
+
+          echo "=== Test Summary ==="
+          echo "E2E deployment workflow test completed"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ All deployment workflow tests passed successfully"
+          else
+            echo "❌ Some deployment workflow tests failed - check logs above"
+          fi
