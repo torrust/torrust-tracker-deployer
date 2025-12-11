@@ -137,18 +137,19 @@ impl TestCommandHandler {
             ),
         })?;
 
-        // Get HTTP Tracker port from first HTTP tracker (optional)
-        let http_tracker_port = tracker_config
+        // Get all HTTP Tracker ports
+        let http_tracker_ports: Vec<u16> = tracker_config
             .http_trackers
-            .first()
-            .map(|tracker| Self::extract_port_from_bind_address(&tracker.bind_address));
+            .iter()
+            .map(|tracker| Self::extract_port_from_bind_address(&tracker.bind_address))
+            .collect();
 
         let ssh_config =
             SshConfig::with_default_port(any_env.ssh_credentials().clone(), instance_ip);
 
         // Validate running services with external accessibility checks
         let services_validator =
-            RunningServicesValidator::new(ssh_config, tracker_api_port, http_tracker_port);
+            RunningServicesValidator::new(ssh_config, tracker_api_port, http_tracker_ports.clone());
 
         services_validator.execute(&instance_ip).await?;
 
@@ -157,7 +158,7 @@ impl TestCommandHandler {
             environment = %env_name,
             instance_ip = ?instance_ip,
             tracker_api_port = tracker_api_port,
-            http_tracker_port = ?http_tracker_port,
+            http_tracker_ports = ?http_tracker_ports,
             "Service testing workflow completed successfully"
         );
 

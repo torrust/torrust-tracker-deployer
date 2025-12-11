@@ -297,7 +297,7 @@ async fn run_deployer_workflow(
         socket_addr,
         ssh_credentials,
         runtime_env.container_ports.http_api_port,
-        Some(runtime_env.container_ports.http_tracker_port),
+        vec![runtime_env.container_ports.http_tracker_port],
     )
     .await
     .map_err(|e| anyhow::anyhow!("{e}"))?;

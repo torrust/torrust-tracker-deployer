@@ -52,7 +52,7 @@
 //! This validation runs after the `run` command to ensure services are
 //! operational before considering the deployment successful.
 
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use thiserror::Error;
 use tracing::info;
 
@@ -134,6 +134,8 @@ For more information, see docs/e2e-testing/."
 ///
 /// * `socket_addr` - Socket address where the target instance can be reached
 /// * `ssh_credentials` - SSH credentials for connecting to the instance
+/// * `tracker_api_port` - Port for the tracker API health endpoint
+/// * `http_tracker_ports` - Ports for HTTP tracker health endpoints (can be empty)
 ///
 /// # Returns
 ///
@@ -149,13 +151,13 @@ pub async fn run_run_validation(
     socket_addr: SocketAddr,
     ssh_credentials: &SshCredentials,
     tracker_api_port: u16,
-    http_tracker_port: Option<u16>,
+    http_tracker_ports: Vec<u16>,
 ) -> Result<(), RunValidationError> {
     info!(
         socket_addr = %socket_addr,
         ssh_user = %ssh_credentials.ssh_username,
         tracker_api_port = tracker_api_port,
-        http_tracker_port = ?http_tracker_port,
+        http_tracker_ports = ?http_tracker_ports,
         "Running 'run' command validation tests"
     );
 
@@ -167,7 +169,7 @@ pub async fn run_run_validation(
         ssh_credentials,
         socket_addr.port(),
         tracker_api_port,
-        http_tracker_port,
+        http_tracker_ports,
     )
     .await?;
 
@@ -186,18 +188,18 @@ pub async fn run_run_validation(
 /// on the target instance. It checks the status of services started by the `run`
 /// command and verifies they are operational.
 async fn validate_running_services(
-    ip_addr: std::net::IpAddr,
+    ip_addr: IpAddr,
     ssh_credentials: &SshCredentials,
     port: u16,
     tracker_api_port: u16,
-    http_tracker_port: Option<u16>,
+    http_tracker_ports: Vec<u16>,
 ) -> Result<(), RunValidationError> {
     info!("Validating running services");
 
     let ssh_config = SshConfig::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
 
     let services_validator =
-        RunningServicesValidator::new(ssh_config, tracker_api_port, http_tracker_port);
+        RunningServicesValidator::new(ssh_config, tracker_api_port, http_tracker_ports);
     services_validator
         .execute(&ip_addr)
         .await

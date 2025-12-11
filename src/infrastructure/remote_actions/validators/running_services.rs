@@ -93,7 +93,7 @@ const DEFAULT_DEPLOY_DIR: &str = "/opt/torrust";
 pub struct RunningServicesValidator {
     deploy_dir: PathBuf,
     tracker_api_port: u16,
-    http_tracker_port: Option<u16>,
+    http_tracker_ports: Vec<u16>,
 }
 
 impl RunningServicesValidator {
@@ -104,17 +104,17 @@ impl RunningServicesValidator {
     /// # Arguments
     /// * `ssh_config` - SSH connection configuration containing credentials and host IP
     /// * `tracker_api_port` - Port for the tracker API health endpoint
-    /// * `http_tracker_port` - Optional port for the HTTP tracker health endpoint
+    /// * `http_tracker_ports` - Ports for HTTP tracker health endpoints (can be empty)
     #[must_use]
     pub fn new(
         _ssh_config: SshConfig,
         tracker_api_port: u16,
-        http_tracker_port: Option<u16>,
+        http_tracker_ports: Vec<u16>,
     ) -> Self {
         Self {
             deploy_dir: PathBuf::from(DEFAULT_DEPLOY_DIR),
             tracker_api_port,
-            http_tracker_port,
+            http_tracker_ports,
         }
     }
 
@@ -124,18 +124,18 @@ impl RunningServicesValidator {
     /// * `ssh_config` - SSH connection configuration containing credentials and host IP
     /// * `deploy_dir` - Path to the directory containing docker-compose.yml on the remote host
     /// * `tracker_api_port` - Port for the tracker API health endpoint
-    /// * `http_tracker_port` - Optional port for the HTTP tracker health endpoint
+    /// * `http_tracker_ports` - Ports for HTTP tracker health endpoints (can be empty)
     #[must_use]
     pub fn with_deploy_dir(
         _ssh_config: SshConfig,
         deploy_dir: PathBuf,
         tracker_api_port: u16,
-        http_tracker_port: Option<u16>,
+        http_tracker_ports: Vec<u16>,
     ) -> Self {
         Self {
             deploy_dir,
             tracker_api_port,
-            http_tracker_port,
+            http_tracker_ports,
         }
     }
 
@@ -145,20 +145,20 @@ impl RunningServicesValidator {
     /// # Arguments
     /// * `server_ip` - IP address of the server to validate
     /// * `tracker_api_port` - Port for the tracker API health endpoint
-    /// * `http_tracker_port` - Optional port for the HTTP tracker health endpoint
+    /// * `http_tracker_ports` - Ports for HTTP tracker health endpoints (can be empty)
     async fn validate_external_accessibility(
         &self,
         server_ip: &IpAddr,
         tracker_api_port: u16,
-        http_tracker_port: Option<u16>,
+        http_tracker_ports: &[u16],
     ) -> Result<(), RemoteActionError> {
         // Check tracker API (required)
         self.check_tracker_api_external(server_ip, tracker_api_port)
             .await?;
 
-        // Check HTTP tracker (optional)
-        if let Some(port) = http_tracker_port {
-            self.check_http_tracker_external(server_ip, port).await;
+        // Check all HTTP trackers
+        for port in http_tracker_ports {
+            self.check_http_tracker_external(server_ip, *port).await;
         }
 
         Ok(())
@@ -296,7 +296,7 @@ impl RemoteAction for RunningServicesValidator {
         self.validate_external_accessibility(
             server_ip,
             self.tracker_api_port,
-            self.http_tracker_port,
+            &self.http_tracker_ports,
         )
         .await?;
 
