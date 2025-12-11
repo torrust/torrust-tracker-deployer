@@ -75,6 +75,22 @@ mod tests {
     }
 
     #[test]
+    fn it_should_reject_port_zero() {
+        let section = UdpTrackerSection {
+            bind_address: "0.0.0.0:0".to_string(),
+        };
+
+        let result = section.to_udp_tracker_config();
+        assert!(result.is_err());
+
+        if let Err(CreateConfigError::DynamicPortNotSupported { bind_address }) = result {
+            assert_eq!(bind_address, "0.0.0.0:0");
+        } else {
+            panic!("Expected DynamicPortNotSupported error");
+        }
+    }
+
+    #[test]
     fn it_should_be_serializable() {
         let section = UdpTrackerSection {
             bind_address: "0.0.0.0:6969".to_string(),

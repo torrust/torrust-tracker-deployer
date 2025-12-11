@@ -82,6 +82,23 @@ mod tests {
     }
 
     #[test]
+    fn it_should_reject_port_zero() {
+        let section = HttpApiSection {
+            bind_address: "0.0.0.0:0".to_string(),
+            admin_token: "token".to_string(),
+        };
+
+        let result = section.to_http_api_config();
+        assert!(result.is_err());
+
+        if let Err(CreateConfigError::DynamicPortNotSupported { bind_address }) = result {
+            assert_eq!(bind_address, "0.0.0.0:0");
+        } else {
+            panic!("Expected DynamicPortNotSupported error");
+        }
+    }
+
+    #[test]
     fn it_should_be_serializable() {
         let section = HttpApiSection {
             bind_address: "0.0.0.0:1212".to_string(),
