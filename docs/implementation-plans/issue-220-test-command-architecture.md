@@ -57,11 +57,11 @@ Phase 1: Port 0 Validation
   [x] Step 1.4: Add validation tests
 
 Phase 2: Multiple HTTP Trackers
-  [ ] Step 2.1: Update RunningServicesValidator signature
-  [ ] Step 2.2: Update validation logic for multiple ports
-  [ ] Step 2.3: Update test command handler
-  [ ] Step 2.4: Update E2E test task
-  [ ] Step 2.5: Add multiple tracker tests
+  [x] Step 2.1: Update RunningServicesValidator signature
+  [x] Step 2.2: Update validation logic for multiple ports
+  [x] Step 2.3: Update test command handler
+  [x] Step 2.4: Update E2E test task
+  [x] Step 2.5: Add multiple tracker tests
 
 Phase 3: Service Location
   [ ] Step 3.1: Create TrackerHealthService
