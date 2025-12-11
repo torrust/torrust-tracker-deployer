@@ -42,7 +42,8 @@ use super::errors::TestCommandHandlerError;
 use crate::adapters::ssh::SshConfig;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::EnvironmentName;
-use crate::infrastructure::remote_actions::{RemoteAction, RunningServicesValidator};
+use crate::infrastructure::external_validators::RunningServicesValidator;
+use crate::infrastructure::remote_actions::RemoteAction;
 
 /// `TestCommandHandler` orchestrates smoke testing for running Torrust Tracker services
 ///

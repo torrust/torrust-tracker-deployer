@@ -10,8 +10,8 @@
 //! For external validation (E2E testing from outside the VM), see `external_validators/`.
 //!
 //! **Distinction**:
-//! - **remote_actions** (this module): Execute commands inside VM via SSH
-//! - **external_validators**: Validate services from outside VM via HTTP
+//! - **`remote_actions`** (this module): Execute commands inside VM via SSH
+//! - **`external_validators`**: Validate services from outside VM via HTTP
 //!
 //! ## Available Remote Actions
 //!

@@ -58,9 +58,8 @@ use tracing::info;
 
 use crate::adapters::ssh::SshConfig;
 use crate::adapters::ssh::SshCredentials;
-use crate::infrastructure::remote_actions::{
-    RemoteAction, RemoteActionError, RunningServicesValidator,
-};
+use crate::infrastructure::external_validators::RunningServicesValidator;
+use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
 
 /// Errors that can occur during run validation
 #[derive(Debug, Error)]
