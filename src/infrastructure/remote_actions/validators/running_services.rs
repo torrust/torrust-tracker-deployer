@@ -312,7 +312,21 @@ impl RemoteAction for RunningServicesValidator {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
+    use crate::adapters::ssh::{SshConfig, SshCredentials};
+    use crate::shared::Username;
+
     use super::*;
+
+    fn create_test_ssh_config() -> SshConfig {
+        let credentials = SshCredentials::new(
+            PathBuf::from("/mock/path/to/private_key"),
+            PathBuf::from("/mock/path/to/public_key.pub"),
+            Username::new("testuser").unwrap(),
+        );
+        SshConfig::with_default_port(credentials, "127.0.0.1".parse().unwrap())
+    }
 
     #[test]
     fn test_default_deploy_dir() {
@@ -323,5 +337,62 @@ mod tests {
     fn test_action_name() {
         // Can't test without SSH config, but we can verify the constant
         assert_eq!("running-services-validation", "running-services-validation");
+    }
+
+    #[test]
+    fn test_validator_accepts_empty_http_tracker_ports() {
+        let ssh_config = create_test_ssh_config();
+        let validator = RunningServicesValidator::new(ssh_config, 6969, vec![]);
+
+        assert_eq!(validator.http_tracker_ports.len(), 0);
+    }
+
+    #[test]
+    fn test_validator_accepts_single_http_tracker_port() {
+        let ssh_config = create_test_ssh_config();
+        let validator = RunningServicesValidator::new(ssh_config, 6969, vec![6060]);
+
+        assert_eq!(validator.http_tracker_ports.len(), 1);
+        assert_eq!(validator.http_tracker_ports[0], 6060);
+    }
+
+    #[test]
+    fn test_validator_accepts_multiple_http_tracker_ports() {
+        let ssh_config = create_test_ssh_config();
+        let ports = vec![6060, 6061, 6062];
+        let validator = RunningServicesValidator::new(ssh_config, 6969, ports.clone());
+
+        assert_eq!(validator.http_tracker_ports.len(), 3);
+        assert_eq!(validator.http_tracker_ports, ports);
+    }
+
+    #[test]
+    fn test_with_deploy_dir_accepts_empty_http_tracker_ports() {
+        let ssh_config = create_test_ssh_config();
+        let validator = RunningServicesValidator::with_deploy_dir(
+            ssh_config,
+            PathBuf::from("/custom/path"),
+            6969,
+            vec![],
+        );
+
+        assert_eq!(validator.http_tracker_ports.len(), 0);
+        assert_eq!(validator.deploy_dir, PathBuf::from("/custom/path"));
+    }
+
+    #[test]
+    fn test_with_deploy_dir_accepts_multiple_http_tracker_ports() {
+        let ssh_config = create_test_ssh_config();
+        let ports = vec![6060, 6061];
+        let validator = RunningServicesValidator::with_deploy_dir(
+            ssh_config,
+            PathBuf::from("/custom/path"),
+            6969,
+            ports.clone(),
+        );
+
+        assert_eq!(validator.http_tracker_ports.len(), 2);
+        assert_eq!(validator.http_tracker_ports, ports);
+        assert_eq!(validator.deploy_dir, PathBuf::from("/custom/path"));
     }
 }
