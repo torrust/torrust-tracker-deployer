@@ -32,19 +32,17 @@ users:
       # SSH public key injected from SshConfig.ssh_pub_key_path
       - {{ ssh_public_key }}
 
-# Configure SSH service port before starting
-# This ensures SSH is listening on the correct port from the very first connection
 write_files:
   - path: /etc/ssh/sshd_config.d/99-custom-port.conf
     content: |
       # Custom SSH port configuration
-      # Managed by cloud-init during VM provisioning
       Port {{ ssh_port }}
     permissions: '0644'
     owner: root:root
 
 runcmd:
-  - echo "VM provisioned successfully" > /tmp/provision_complete
-  # Restart SSH to apply port configuration
-  - systemctl restart ssh
-  - systemctl enable ssh
+  # Reboot to apply SSH port configuration
+  # The reboot ensures SSH service fully restarts with the new port from write_files
+  # This is the recommended approach per Hetzner cloud-config best practices
+  - reboot
+

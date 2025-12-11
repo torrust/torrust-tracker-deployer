@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                              | Summary                                                                                   |
 | ------------- | ---------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ✅ Accepted   | 2025-12-11 | [Cloud-Init SSH Port Configuration with Reboot](./cloud-init-ssh-port-reboot.md)                      | Use cloud-init with reboot pattern to configure custom SSH ports during VM provisioning   |
 | ✅ Accepted   | 2025-12-10 | [Single Docker Image for Sequential E2E Command Testing](./single-docker-image-sequential-testing.md) | Use single Docker image with sequential command execution instead of multi-image phases   |
 | ✅ Accepted   | 2025-12-09 | [Register Command SSH Port Override](./register-ssh-port-override.md)                                 | Add optional --ssh-port argument to register command for non-standard SSH ports           |
 | ✅ Accepted   | 2025-11-19 | [Disable MD060 Table Formatting Rule](./md060-table-formatting-disabled.md)                           | Disable MD060 to allow flexible table formatting and emoji usage                          |
