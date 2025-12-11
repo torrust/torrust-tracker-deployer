@@ -60,6 +60,13 @@ pub enum CreateConfigError {
         source: std::net::AddrParseError,
     },
 
+    /// Dynamic port assignment (port 0) is not supported
+    #[error("Dynamic port assignment (port 0) is not supported in bind address '{bind_address}'")]
+    DynamicPortNotSupported {
+        /// The bind address containing port 0
+        bind_address: String,
+    },
+
     /// Failed to serialize configuration template to JSON
     #[error("Failed to serialize configuration template to JSON")]
     TemplateSerializationFailed {
@@ -221,6 +228,30 @@ impl CreateConfigError {
                  - Port number out of range (must be 1-65535)\n\
                  \n\
                  Fix: Update the bind_address in your configuration to use valid IP:PORT format."
+            }
+            Self::DynamicPortNotSupported { .. } => {
+                "Dynamic port assignment (port 0) is not supported.\n\
+                 \n\
+                 Port 0 tells the operating system to assign any available port dynamically.\n\
+                 This conflicts with our deployment workflow which requires:\n\
+                 - Firewall rules configured before service starts\n\
+                 - Predictable ports for health checks and monitoring\n\
+                 - Consistent port numbers across deployment phases\n\
+                 \n\
+                 Why:\n\
+                 The 'configure' command must open firewall ports before the tracker starts.\n\
+                 With port 0, we won't know which port to open until after the service runs.\n\
+                 \n\
+                 Solution: Specify an explicit port number in your configuration:\n\
+                 - UDP Tracker: Use a port like 6969 (default)\n\
+                 - HTTP Tracker: Use a port like 7070 (default)\n\
+                 - HTTP API: Use a port like 1212 (default)\n\
+                 \n\
+                 Example:\n\
+                 Instead of: \"bind_address\": \"0.0.0.0:0\"\n\
+                 Use:        \"bind_address\": \"0.0.0.0:6969\"\n\
+                 \n\
+                 See docs/decisions/port-zero-not-supported.md for details."
             }
             Self::TemplateSerializationFailed { .. } => {
                 "Template serialization failed.\n\
