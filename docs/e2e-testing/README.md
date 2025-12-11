@@ -6,11 +6,12 @@ This guide explains how to run and understand the End-to-End (E2E) tests for the
 
 - **[README.md](README.md)** - This overview and quick start guide
 - **[architecture.md](architecture.md)** - E2E testing architecture, design decisions, and Docker strategy
-- **[running-tests.md](running-tests.md)** - How to run tests, command-line options, and prerequisites
+- **[running-tests.md](running-tests.md)** - How to run automated tests, command-line options, and prerequisites
+- **[manual-testing.md](manual-testing.md)** - Complete guide for running manual E2E tests with CLI commands
 - **[test-suites.md](test-suites.md)** - Detailed description of each test suite and what they validate
 - **[troubleshooting.md](troubleshooting.md)** - Common issues, debugging techniques, and cleanup procedures
 - **[contributing.md](contributing.md)** - Guidelines for extending E2E tests
-- **[advanced.md](advanced.md)** - Advanced techniques including manual testing and cross-environment registration
+- **[advanced.md](advanced.md)** - Advanced techniques including cross-environment registration
 
 ## 🧪 What are E2E Tests?
 
@@ -66,6 +67,7 @@ For detailed prerequisites and manual setup, see [running-tests.md](running-test
 ## 📚 Learn More
 
 - **New to E2E testing?** Start with [test-suites.md](test-suites.md) to understand what each test does
+- **Want to run manual tests?** Follow [manual-testing.md](manual-testing.md) for step-by-step CLI workflow
 - **Running into issues?** Check [troubleshooting.md](troubleshooting.md)
 - **Want to understand the architecture?** Read [architecture.md](architecture.md)
 - **Adding new tests?** See [contributing.md](contributing.md)
