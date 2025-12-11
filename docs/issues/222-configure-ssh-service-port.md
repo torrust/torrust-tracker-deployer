@@ -66,6 +66,7 @@ The SSH port is configured by:
 The cloud-init template uses the **reboot pattern** as documented in [Hetzner's cloud-config tutorial](https://community.hetzner.com/tutorials/basic-cloud-config):
 
 ```yaml
+{% if ssh_port != 22 %}
 write_files:
   - path: /etc/ssh/sshd_config.d/99-custom-port.conf
     content: |
@@ -79,7 +80,10 @@ runcmd:
   # The reboot ensures SSH service fully restarts with the new port from write_files
   # This is the recommended approach per Hetzner cloud-config best practices
   - reboot
+{% endif %}
 ```
+
+**Important**: The SSH port configuration and reboot are **conditional** - they only execute when `ssh_port != 22`. This avoids unnecessary reboots for environments using the default SSH port.
 
 **Why reboot?** Three critical reasons (from Hetzner documentation):
 

@@ -31,6 +31,7 @@ We configure the custom SSH port via cloud-init using the **`write_files` + `reb
 1. **Write SSH configuration file** using cloud-init's `write_files` directive:
 
    ```yaml
+   {% if ssh_port != 22 %}
    write_files:
      - path: /etc/ssh/sshd_config.d/99-custom-port.conf
        content: |
@@ -45,7 +46,10 @@ We configure the custom SSH port via cloud-init using the **`write_files` + `reb
    ```yaml
    runcmd:
      - reboot
+   {% endif %}
    ```
+
+**Conditional Configuration**: The SSH port configuration and reboot only execute when `ssh_port != 22`, avoiding unnecessary reboots for environments using the default SSH port.
 
 The reboot ensures:
 
@@ -70,6 +74,7 @@ Additionally, we made two critical fixes to the provision handler:
 - **Correct architecture**: Infrastructure configuration happens during infrastructure provisioning
 - **No special cases**: Ansible can connect normally using the configured port without overrides or workarounds
 - **Compile-time safety**: Provision handler correctly waits for the configured port, preventing connection failures
+- **Conditional execution**: Only reboots when custom port is needed (ssh_port != 22), avoiding unnecessary reboots for default configurations
 
 ### Negative
 

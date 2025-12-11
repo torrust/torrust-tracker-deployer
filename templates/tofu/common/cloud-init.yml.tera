@@ -32,6 +32,7 @@ users:
       # SSH public key injected from SshConfig.ssh_pub_key_path
       - {{ ssh_public_key }}
 
+{% if ssh_port != 22 %}
 write_files:
   - path: /etc/ssh/sshd_config.d/99-custom-port.conf
     content: |
@@ -45,4 +46,5 @@ runcmd:
   # The reboot ensures SSH service fully restarts with the new port from write_files
   # This is the recommended approach per Hetzner cloud-config best practices
   - reboot
+{% endif %}
 
