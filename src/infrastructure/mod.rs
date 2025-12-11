@@ -11,10 +11,12 @@
 //!   - `docker_compose` - Docker Compose template generation
 //!   - `tofu` - `OpenTofu` template generation and project structure
 //!   - `tracker` - Torrust Tracker configuration templates
-//! - `remote_actions` - Repository-like implementations for remote system operations
+//! - `remote_actions` - SSH-based operations executed inside VMs
+//! - `external_validators` - E2E validation from outside VMs (HTTP health checks)
 //! - `persistence` - Persistence infrastructure (repositories, file locking, storage)
 //! - `trace` - Trace file generation for error analysis
 
+pub mod external_validators;
 pub mod persistence;
 pub mod remote_actions;
 pub mod templating;
