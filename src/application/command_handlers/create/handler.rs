@@ -46,7 +46,7 @@ use super::errors::CreateCommandHandlerError;
 ///     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
 ///     SshCredentialsConfig,
 /// };
-/// use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::TrackerSection;
 /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 /// use torrust_tracker_deployer_lib::shared::{SystemClock, Clock};
 ///
@@ -73,7 +73,7 @@ use super::errors::CreateCommandHandlerError;
 ///     ProviderSection::Lxd(LxdProviderSection {
 ///         profile_name: "lxd-dev".to_string(),
 ///     }),
-///     TrackerConfig::default(),
+///     TrackerSection::default(),
 /// );
 ///
 /// // Execute command with working directory
@@ -171,7 +171,7 @@ impl CreateCommandHandler {
     ///     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
     ///     SshCredentialsConfig,
     /// };
-    /// use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::TrackerSection;
     ///
     /// # fn example(command: CreateCommandHandler) -> Result<(), Box<dyn std::error::Error>> {
     /// let config = EnvironmentCreationConfig::new(
@@ -188,7 +188,7 @@ impl CreateCommandHandler {
     ///     ProviderSection::Lxd(LxdProviderSection {
     ///         profile_name: "lxd-staging".to_string(),
     ///     }),
-    ///     TrackerConfig::default(),
+    ///     TrackerSection::default(),
     /// );
     ///
     /// let working_dir = std::path::Path::new(".");

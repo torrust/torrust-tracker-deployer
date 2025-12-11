@@ -21,6 +21,7 @@ use std::sync::Arc;
 use thiserror::Error;
 use tracing::info;
 
+use crate::application::command_handlers::create::config::tracker::TrackerSection;
 use crate::application::command_handlers::create::config::{
     EnvironmentCreationConfig, EnvironmentSection, LxdProviderSection, ProviderSection,
     SshCredentialsConfig,
@@ -29,7 +30,6 @@ use crate::application::command_handlers::create::{
     CreateCommandHandler, CreateCommandHandlerError,
 };
 use crate::domain::environment::Created;
-use crate::domain::tracker::TrackerConfig;
 use crate::domain::Environment;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
@@ -99,7 +99,7 @@ pub fn run_create_command(
         ProviderSection::Lxd(LxdProviderSection {
             profile_name: format!("lxd-{environment_name}"),
         }),
-        TrackerConfig::default(),
+        TrackerSection::default(),
     );
 
     // Execute the command

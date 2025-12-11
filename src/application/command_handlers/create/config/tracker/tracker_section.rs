@@ -83,6 +83,39 @@ impl TrackerSection {
     }
 }
 
+impl Default for TrackerSection {
+    /// Returns a default tracker configuration DTO suitable for development and testing
+    ///
+    /// # Default Values
+    ///
+    /// - Database: `SQLite` with filename "tracker.db"
+    /// - Mode: Public tracker (private = false)
+    /// - UDP trackers: One instance on "0.0.0.0:6969"
+    /// - HTTP trackers: One instance on "0.0.0.0:7070"
+    /// - HTTP API: Bind address "0.0.0.0:1212"
+    /// - Admin token: `MyAccessToken`
+    fn default() -> Self {
+        Self {
+            core: TrackerCoreSection {
+                database: super::tracker_core_section::DatabaseSection::Sqlite {
+                    database_name: "tracker.db".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![UdpTrackerSection {
+                bind_address: "0.0.0.0:6969".to_string(),
+            }],
+            http_trackers: vec![HttpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+            }],
+            http_api: HttpApiSection {
+                bind_address: "0.0.0.0:1212".to_string(),
+                admin_token: "MyAccessToken".to_string(),
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::net::SocketAddr;
