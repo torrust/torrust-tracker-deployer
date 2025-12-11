@@ -51,8 +51,8 @@ Phase 0: Architecture Fix
   [x] Step 0.9: Update all application imports (already correct)
 
 Phase 1: Port 0 Validation
-  [ ] Step 1.1: Create ADR document
-  [ ] Step 1.2: Add DynamicPortNotSupported error
+  [x] Step 1.1: Create ADR document
+  [x] Step 1.2: Add DynamicPortNotSupported error
   [ ] Step 1.3: Add port 0 validation in conversions
   [ ] Step 1.4: Add validation tests
 
