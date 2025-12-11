@@ -91,6 +91,7 @@ impl Services {
             template_manager.clone(),
             config.build_dir.clone(),
             ssh_credentials,
+            22, // Default SSH port for tests
             instance_name,
             provider_config,
         );

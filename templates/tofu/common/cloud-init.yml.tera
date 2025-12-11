@@ -7,6 +7,7 @@
 # Template Variables (Tera syntax):
 # - username: The SSH user to create
 # - ssh_public_key: The public SSH key content for authentication
+# - ssh_port: The SSH service port (default: 22)
 #
 # Note: Package updates are commented out for faster VM creation during
 # development. Uncomment for production deployments.
@@ -31,7 +32,19 @@ users:
       # SSH public key injected from SshConfig.ssh_pub_key_path
       - {{ ssh_public_key }}
 
+# Configure SSH service port before starting
+# This ensures SSH is listening on the correct port from the very first connection
+write_files:
+  - path: /etc/ssh/sshd_config.d/99-custom-port.conf
+    content: |
+      # Custom SSH port configuration
+      # Managed by cloud-init during VM provisioning
+      Port {{ ssh_port }}
+    permissions: '0644'
+    owner: root:root
+
 runcmd:
   - echo "VM provisioned successfully" > /tmp/provision_complete
+  # Restart SSH to apply port configuration
+  - systemctl restart ssh
   - systemctl enable ssh
-  - systemctl start ssh

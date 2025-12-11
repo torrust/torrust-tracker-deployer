@@ -316,7 +316,7 @@ impl AnsibleProjectGenerator {
 
         tracing::debug!(
             "Successfully copied {} static template files",
-            13 // ansible.cfg + 12 playbooks
+            14 // ansible.cfg + 13 playbooks
         );
 
         Ok(())

@@ -252,6 +252,7 @@ impl ProvisionCommandHandler {
             template_manager,
             environment.build_dir(),
             environment.ssh_credentials().clone(),
+            environment.ssh_port(),
             environment.instance_name().clone(),
             environment.provider_config().clone(),
         ));
