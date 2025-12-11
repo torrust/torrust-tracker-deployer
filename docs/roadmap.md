@@ -88,10 +88,10 @@ When starting work on a new feature:
 
   **Strategy:** Build incrementally with working deployments at each step. Each slice adds a new service to the docker-compose stack.
 
-  - [ ] **3.2.1** Hello World slice (scaffolding)
+  - [x] **3.2.1** Hello World slice (scaffolding) - [Issue #217](https://github.com/torrust/torrust-tracker-deployer/issues/217) ✅ Completed
     - Create `release` and `run` commands with minimal docker-compose template
     - Deploy and run a simple hello-world container to validate the full pipeline
-  - [ ] **3.2.2** Torrust Tracker slice
+  - [x] **3.2.2** Torrust Tracker slice - [Issue #220](https://github.com/torrust/torrust-tracker-deployer/issues/220) ✅ Completed
     - Replace hello-world with Torrust Tracker service
     - Add tracker configuration template (start with hardcoded defaults, then progressively expose configuration options)
   - [ ] **3.2.3** MySQL slice
