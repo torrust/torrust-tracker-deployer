@@ -64,11 +64,11 @@ Phase 2: Multiple HTTP Trackers
   [x] Step 2.5: Add multiple tracker tests
 
 Phase 3: Infrastructure Module Reorganization
-  [ ] Step 3.1: Create external_validators module
-  [ ] Step 3.2: Move running_services.rs to external_validators
-  [ ] Step 3.3: Update infrastructure module exports
-  [ ] Step 3.4: Update all imports
-  [ ] Step 3.5: Update documentation and ADR
+  [x] Step 3.1: Create external_validators module
+  [x] Step 3.2: Move running_services.rs to external_validators
+  [x] Step 3.3: Update infrastructure module exports
+  [x] Step 3.4: Update all imports
+  [x] Step 3.5: Update documentation and ADR
 
 Phase 4: Documentation
   [x] Step 4.1: Update command documentation
