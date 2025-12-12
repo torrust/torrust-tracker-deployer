@@ -179,7 +179,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_create_ssh_credentials_config() {
+    fn it_should_create_ssh_credentials_config_when_provided_valid_parameters() {
         let config = SshCredentialsConfig::new(
             "fixtures/testing_rsa".to_string(),
             "fixtures/testing_rsa.pub".to_string(),
@@ -194,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_with_defaults() {
+    fn it_should_use_default_values_when_deserializing_partial_config() {
         let json = r#"{
             "private_key_path": "fixtures/testing_rsa",
             "public_key_path": "fixtures/testing_rsa.pub"
@@ -209,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_with_explicit_values() {
+    fn it_should_use_explicit_values_when_provided_in_config() {
         let json = r#"{
             "private_key_path": "path/to/key",
             "public_key_path": "path/to/key.pub",
@@ -226,7 +226,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serialize_ssh_credentials_config() {
+    fn it_should_serialize_to_json_when_converting_ssh_credentials_config() {
         let config = SshCredentialsConfig::new(
             "fixtures/testing_rsa".to_string(),
             "fixtures/testing_rsa.pub".to_string(),
@@ -241,7 +241,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_ssh_credentials_success() {
+    fn it_should_convert_to_ssh_credentials_when_config_is_valid() {
         use std::env;
 
         // Get absolute paths to existing test fixtures
@@ -272,7 +272,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_ssh_credentials_invalid_username() {
+    fn it_should_return_error_when_username_is_invalid() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -298,7 +298,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_ssh_credentials_private_key_not_found() {
+    fn it_should_return_error_when_private_key_file_not_found() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -323,7 +323,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_ssh_credentials_public_key_not_found() {
+    fn it_should_return_error_when_public_key_file_not_found() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -348,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    fn test_default_functions() {
+    fn it_should_provide_correct_default_values_when_using_default_functions() {
         assert_eq!(default_ssh_username(), "torrust");
         assert_eq!(default_ssh_port(), 22);
     }

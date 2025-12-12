@@ -96,7 +96,7 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn test_init_tracker_database_step_new() {
+    fn it_should_initialize_tracker_database_step_when_instantiating_new() {
         let ansible_client = Arc::new(AnsibleClient::new(PathBuf::from("/fake/build/dir")));
         let step = InitTrackerDatabaseStep::new(ansible_client);
         assert!(Arc::strong_count(&step.ansible_client) >= 1);

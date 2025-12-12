@@ -311,7 +311,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_project_generator_creates_build_directory() {
+    async fn it_should_create_build_directory_when_generating_project() {
         let (template_manager, _temp_dir) = create_template_manager_with_embedded();
         let build_dir = TempDir::new().expect("Failed to create build directory");
 
@@ -327,7 +327,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_project_generator_copies_docker_compose_yml() {
+    async fn it_should_copy_docker_compose_yml_when_generating_project() {
         let (template_manager, _temp_dir) = create_template_manager_with_embedded();
         let build_dir = TempDir::new().expect("Failed to create build directory");
 
@@ -348,7 +348,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_project_generator_renders_env_file() {
+    async fn it_should_render_env_file_when_generating_project() {
         let (template_manager, _temp_dir) = create_template_manager_with_embedded();
         let build_dir = TempDir::new().expect("Failed to create build directory");
 
@@ -370,7 +370,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_project_generator_returns_build_directory_path() {
+    async fn it_should_return_build_directory_path_when_project_generated() {
         let (template_manager, _temp_dir) = create_template_manager_with_embedded();
         let build_dir = TempDir::new().expect("Failed to create build directory");
 

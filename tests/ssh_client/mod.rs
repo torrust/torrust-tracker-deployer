@@ -76,7 +76,7 @@ impl SshTestBuilder {
     pub fn with_mock_container(mut self, container: &MockSshServerContainer) -> Self {
         self.host_ip = Some(container.host_ip());
         self.port = Some(container.ssh_port());
-        self.username = Some(container.test_username().to_string());
+        self.username = Some(container.username().to_string());
         self.private_key_path = Some(PathBuf::from(REAL_SSH_PRIVATE_KEY));
         self.public_key_path = Some(PathBuf::from(REAL_SSH_PUBLIC_KEY));
         self
@@ -86,7 +86,7 @@ impl SshTestBuilder {
     pub fn with_real_container(mut self, container: &RealSshServerContainer) -> Self {
         self.host_ip = Some(container.host_ip());
         self.port = Some(container.ssh_port());
-        self.username = Some(container.test_username().to_string());
+        self.username = Some(container.username().to_string());
         self.private_key_path = Some(PathBuf::from(REAL_SSH_PRIVATE_KEY));
         self.public_key_path = Some(PathBuf::from(REAL_SSH_PUBLIC_KEY));
         self

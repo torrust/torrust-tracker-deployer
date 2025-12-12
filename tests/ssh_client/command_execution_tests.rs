@@ -86,7 +86,7 @@ async fn it_should_execute_remote_command_on_real_ssh_server() {
             let username = output.trim();
             assert_eq!(
                 username,
-                ssh_container.test_username(),
+                ssh_container.username(),
                 "whoami should return the test username"
             );
         }

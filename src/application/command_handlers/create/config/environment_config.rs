@@ -446,7 +446,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_environment_creation_config() {
+    fn it_should_create_environment_creation_config_when_provided_valid_inputs() {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
@@ -473,7 +473,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_from_json_with_lxd_provider() {
+    fn it_should_deserialize_from_json_when_using_lxd_provider() {
         let json = r#"{
             "environment": {
                 "name": "e2e-config"
@@ -528,7 +528,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_from_json_with_hetzner_provider() {
+    fn it_should_deserialize_from_json_when_using_hetzner_provider() {
         let json = r#"{
             "environment": {
                 "name": "production",
@@ -587,7 +587,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serialize_environment_creation_config() {
+    fn it_should_serialize_to_json_when_converting_environment_creation_config() {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "staging".to_string(),
@@ -610,7 +610,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_environment_params_success_auto_generated_instance_name() {
+    fn it_should_convert_to_environment_params_when_using_auto_generated_instance_name() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -640,7 +640,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_environment_params_success_custom_instance_name() {
+    fn it_should_convert_to_environment_params_when_using_custom_instance_name() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -668,7 +668,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_environment_params_invalid_environment_name() {
+    fn it_should_return_error_when_environment_name_is_invalid() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -697,7 +697,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_environment_params_invalid_instance_name() {
+    fn it_should_return_error_when_instance_name_is_invalid() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -727,7 +727,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_environment_params_invalid_profile_name() {
+    fn it_should_return_error_when_profile_name_is_invalid() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -758,7 +758,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_environment_params_invalid_username() {
+    fn it_should_return_error_when_username_is_invalid() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -792,7 +792,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_environment_params_private_key_not_found() {
+    fn it_should_return_error_when_private_key_file_not_found() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -825,7 +825,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_environment_params_public_key_not_found() {
+    fn it_should_return_error_when_public_key_file_not_found() {
         use std::env;
 
         let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -858,7 +858,7 @@ mod tests {
     }
 
     #[test]
-    fn test_integration_with_environment_new() {
+    fn it_should_integrate_with_environment_new_when_creating_from_config() {
         // This test verifies that the converted parameters work with Environment::new()
         use crate::domain::Environment;
         use std::env;
@@ -889,7 +889,7 @@ mod tests {
     }
 
     #[test]
-    fn test_round_trip_serialization() {
+    fn it_should_preserve_data_when_performing_round_trip_serialization() {
         let original = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
@@ -912,7 +912,7 @@ mod tests {
     }
 
     #[test]
-    fn test_template_has_placeholder_values() {
+    fn it_should_contain_placeholder_values_when_generating_lxd_template() {
         let template = EnvironmentCreationConfig::template(Provider::Lxd);
 
         assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
@@ -931,7 +931,7 @@ mod tests {
     }
 
     #[test]
-    fn test_template_for_hetzner_has_placeholder_values() {
+    fn it_should_contain_placeholder_values_when_generating_hetzner_template() {
         let template = EnvironmentCreationConfig::template(Provider::Hetzner);
 
         assert_eq!(template.environment.name, "REPLACE_WITH_ENVIRONMENT_NAME");
@@ -959,7 +959,7 @@ mod tests {
     }
 
     #[test]
-    fn test_template_serializes_to_valid_json() {
+    fn it_should_serialize_to_valid_json_when_converting_template() {
         let template = EnvironmentCreationConfig::template(Provider::Lxd);
         let json = serde_json::to_string_pretty(&template).unwrap();
 
@@ -974,7 +974,7 @@ mod tests {
     }
 
     #[test]
-    fn test_template_structure_matches_config() {
+    fn it_should_match_config_structure_when_validating_template() {
         let template = EnvironmentCreationConfig::template(Provider::Lxd);
 
         // Verify template has same structure as regular config
@@ -1011,7 +1011,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_template_file() {
+    fn it_should_generate_template_file_when_creating_new_template() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -1039,7 +1039,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_template_file_creates_parent_directories() {
+    fn it_should_create_parent_directories_when_generating_template_file() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -1058,7 +1058,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_template_file_overwrites_existing() {
+    fn it_should_overwrite_existing_file_when_generating_template() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -1079,7 +1079,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_template_file_sync() {
+    fn it_should_generate_template_file_synchronously_when_called() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -1105,7 +1105,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_template_file_sync_creates_parent_directories() {
+    fn it_should_create_parent_directories_when_generating_template_file_sync() {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();

@@ -18,7 +18,7 @@ mod integration_tests {
 
     /// Test that the real inventory template renders correctly
     #[test]
-    fn test_real_inventory_template_rendering() -> Result<()> {
+    fn it_should_render_inventory_template_when_using_real_configuration() -> Result<()> {
         // Use the actual inventory template
         let template_path = PathBuf::from("templates/ansible/inventory.yml.tera");
 
@@ -78,7 +78,7 @@ mod integration_tests {
 
     /// Test variable validation with real template
     #[test]
-    fn test_real_template_variable_validation() -> Result<()> {
+    fn it_should_validate_template_variables_when_rendering_real_templates() -> Result<()> {
         let template_path = PathBuf::from("templates/ansible/inventory.yml.tera");
 
         // Skip test if template file doesn't exist
@@ -149,7 +149,7 @@ mod integration_tests {
 
     /// Test that template rendering doesn't modify any files in the templates directory
     #[test]
-    fn test_no_template_directory_modifications() -> Result<()> {
+    fn it_should_not_modify_template_directory_when_rendering_templates() -> Result<()> {
         let template_path = PathBuf::from("templates/ansible/inventory.yml.tera");
 
         if !template_path.exists() {
@@ -191,7 +191,7 @@ mod integration_tests {
 
     /// Test build directory workflow simulation
     #[test]
-    fn test_build_directory_workflow() -> Result<()> {
+    fn it_should_execute_full_build_directory_workflow_when_generating_templates() -> Result<()> {
         // Simulate the complete build directory workflow
         let temp_dir = TempDir::new()?;
         let build_root = temp_dir.path().join("build");

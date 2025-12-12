@@ -92,7 +92,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tracker_core_section_converts_to_domain_config() {
+    fn it_should_convert_to_domain_config_when_transforming_tracker_core_section() {
         let section = TrackerCoreSection {
             database: DatabaseSection::Sqlite {
                 database_name: "tracker.db".to_string(),
@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tracker_core_section_handles_private_mode() {
+    fn it_should_handle_private_mode_flag_when_configuring_tracker() {
         let section = TrackerCoreSection {
             database: DatabaseSection::Sqlite {
                 database_name: "private.db".to_string(),
@@ -126,7 +126,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tracker_core_section_serialization() {
+    fn it_should_serialize_to_json_when_converting_core_section() {
         let section = TrackerCoreSection {
             database: DatabaseSection::Sqlite {
                 database_name: "tracker.db".to_string(),
@@ -141,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tracker_core_section_deserialization() {
+    fn it_should_deserialize_from_json_when_parsing_core_section() {
         let json = r#"{
             "database": {
                 "driver": "sqlite3",

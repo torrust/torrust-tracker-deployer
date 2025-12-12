@@ -14,7 +14,7 @@ use crate::presentation::views::{UserOutput, VerbosityLevel};
 /// 3. With `std::sync::Mutex`, this would deadlock because same thread tries to acquire twice
 /// 4. With `ReentrantMutex`, this should work fine
 #[test]
-fn test_reentrancy_deadlock_fix_issue_164() {
+fn it_should_not_deadlock_when_nested_user_output_calls_occur() {
     // Create a UserOutput wrapped in ReentrantMutex<RefCell<>> pattern
     let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(
         VerbosityLevel::Silent,
@@ -53,7 +53,7 @@ fn test_reentrancy_deadlock_fix_issue_164() {
 
 /// More comprehensive test that simulates the exact deadlock scenario from production
 #[test]
-fn test_comprehensive_reentrancy_scenario() {
+fn it_should_handle_complex_nested_output_when_testing_reentrancy() {
     let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(
         VerbosityLevel::Silent,
     ))));

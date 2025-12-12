@@ -100,13 +100,13 @@ impl MockSshServerContainer {
 
     /// Get the test username configured in the container
     #[must_use]
-    pub fn test_username(&self) -> &str {
+    pub fn username(&self) -> &str {
         &self.config.username
     }
 
     /// Get the test password configured in the container
     #[must_use]
-    pub fn test_password(&self) -> &str {
+    pub fn password(&self) -> &str {
         &self.config.password
     }
 }
@@ -120,11 +120,11 @@ impl super::SshServerContainer for MockSshServerContainer {
         self.host_ip
     }
 
-    fn test_username(&self) -> &str {
+    fn username(&self) -> &str {
         &self.config.username
     }
 
-    fn test_password(&self) -> &str {
+    fn password(&self) -> &str {
         &self.config.password
     }
 }

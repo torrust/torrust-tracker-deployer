@@ -117,7 +117,7 @@ impl TestCommandController {
         let handler = self.create_command_handler()?;
 
         // 3. Execute validation workflow via application layer
-        self.test_infrastructure(&handler, &env_name).await?;
+        self.fixture_infrastructure(&handler, &env_name).await?;
 
         // 4. Complete workflow
         self.complete_workflow(environment_name)?;
@@ -176,7 +176,7 @@ impl TestCommandController {
     /// # Errors
     ///
     /// Returns `TestSubcommandError::ValidationFailed` if any validation check fails
-    async fn test_infrastructure(
+    async fn fixture_infrastructure(
         &mut self,
         handler: &TestCommandHandler,
         env_name: &EnvironmentName,
