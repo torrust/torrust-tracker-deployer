@@ -261,9 +261,9 @@ The `run` command performs external health checks to validate deployment:
    - Validates both service functionality AND firewall rules
 
 3. **HTTP Tracker Health Checks** (external, direct HTTP)
-   - Tests `http://<vm-ip>:<port>/api/health_check` for **all configured HTTP trackers**
-   - **Optional checks** - logs warnings if not accessible, but doesn't fail deployment
-   - Some tracker versions may not have health endpoints
+
+   - Tests `http://<vm-ip>:<port>/health_check` for **all configured HTTP trackers**
+   - **Required checks** - deployment fails if not accessible
    - If you configure multiple HTTP trackers (e.g., ports 7070, 7071, 7072), all will be validated
 
 If external checks fail but Docker shows services running, it indicates a firewall or network configuration issue.

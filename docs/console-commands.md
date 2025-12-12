@@ -632,9 +632,9 @@ torrust-tracker-deployer run <environment>
 2. **Tracker API Health** (required) - Tests external accessibility of HTTP API
    - Endpoint: `http://<vm-ip>:1212/api/health_check`
    - Validates service functionality AND firewall configuration
-3. **HTTP Tracker Health** (optional) - Tests external accessibility of HTTP tracker
-   - Endpoint: `http://<vm-ip>:7070/api/health_check`
-   - Warning only if check fails (not all versions have endpoint)
+3. **HTTP Tracker Health** (required) - Tests external accessibility of HTTP tracker
+   - Endpoint: `http://<vm-ip>:7070/health_check`
+   - Validates HTTP tracker is accessible externally
 
 **Use Cases**:
 

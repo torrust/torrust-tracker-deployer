@@ -13,7 +13,7 @@
 //! 1. **Docker Compose Service Status** - Verifies containers are running
 //! 2. **External Health Checks** - Tests service accessibility from outside the VM:
 //!    - Tracker API health endpoint (required): `http://<vm-ip>:<api-port>/api/health_check`
-//!    - HTTP Tracker health endpoint (optional): `http://<vm-ip>:<tracker-port>/api/health_check`
+//!    - HTTP Tracker health endpoint (required): `http://<vm-ip>:<tracker-port>/health_check`
 //!
 //! ## Why External-Only Validation?
 //!

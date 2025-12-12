@@ -25,7 +25,7 @@
 //! This validator performs external validation only (from test runner to VM):
 //! - Verifies Docker Compose services are running (via SSH: `docker compose ps`)
 //! - Tests tracker API health endpoint from outside: `http://<vm-ip>:1212/api/health_check`
-//! - Tests HTTP tracker health endpoint from outside: `http://<vm-ip>:7070/api/health_check`
+//! - Tests HTTP tracker health endpoint from outside: `http://<vm-ip>:7070/health_check`
 //!
 //! **Validation Philosophy**: External checks are a superset of internal checks.
 //! If external validation passes, it proves:
@@ -88,7 +88,7 @@
 //! 2. Check that containers are in "running" status (not "exited" or "restarting")
 //! 3. Verify health check status if configured (e.g., "healthy")
 //! 4. Test tracker API from outside: HTTP GET to `http://<vm-ip>:1212/api/health_check`
-//! 5. Test HTTP tracker from outside: HTTP GET to `http://<vm-ip>:7070/api/health_check`
+//! 5. Test HTTP tracker from outside: HTTP GET to `http://<vm-ip>:7070/health_check`
 //!
 //! This ensures end-to-end validation:
 //! - Services are deployed and running
@@ -97,7 +97,7 @@
 
 use std::net::IpAddr;
 use std::path::PathBuf;
-use tracing::{info, instrument, warn};
+use tracing::{info, instrument};
 
 use crate::adapters::ssh::SshConfig;
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
@@ -172,9 +172,9 @@ impl RunningServicesValidator {
         self.check_tracker_api_external(server_ip, tracker_api_port)
             .await?;
 
-        // Check all HTTP trackers
+        // Check all HTTP trackers (required)
         for port in http_tracker_ports {
-            self.check_http_tracker_external(server_ip, *port).await;
+            self.check_http_tracker_external(server_ip, *port).await?;
         }
 
         Ok(())
@@ -233,12 +233,16 @@ impl RunningServicesValidator {
         Ok(())
     }
 
-    /// Check HTTP tracker accessibility from outside the VM (optional check)
+    /// Check HTTP tracker accessibility from outside the VM
     ///
     /// # Arguments
     /// * `server_ip` - IP address of the server
     /// * `port` - Port for the HTTP tracker health endpoint
-    async fn check_http_tracker_external(&self, server_ip: &IpAddr, port: u16) {
+    async fn check_http_tracker_external(
+        &self,
+        server_ip: &IpAddr,
+        port: u16,
+    ) -> Result<(), RemoteActionError> {
         info!(
             action = "running_services_validation",
             check = "http_tracker_external",
@@ -247,41 +251,40 @@ impl RunningServicesValidator {
             "Checking HTTP tracker health endpoint (external from test runner)"
         );
 
-        let url = format!("http://{server_ip}:{port}/api/health_check"); // DevSkim: ignore DS137138
-        match reqwest::get(&url).await {
-            Ok(response) if response.status().is_success() => {
-                info!(
-                    action = "running_services_validation",
-                    check = "http_tracker_external",
-                    port = port,
-                    status = "success",
-                    validation_type = "external",
-                    "HTTP Tracker is accessible from outside (external check passed)"
-                );
-            }
-            Ok(response) => {
-                warn!(
-                    action = "running_services_validation",
-                    check = "http_tracker_external",
-                    port = port,
-                    status = "warning",
-                    validation_type = "external",
-                    http_status = %response.status(),
-                    "HTTP Tracker returned non-success status - may not have health endpoint"
-                );
-            }
-            Err(e) => {
-                warn!(
-                    action = "running_services_validation",
-                    check = "http_tracker_external",
-                    port = port,
-                    status = "warning",
-                    validation_type = "external",
-                    error = %e,
-                    "HTTP Tracker health check failed - may not have health endpoint or still starting"
-                );
-            }
+        let url = format!("http://{server_ip}:{port}/health_check"); // DevSkim: ignore DS137138
+        let response =
+            reqwest::get(&url)
+                .await
+                .map_err(|e| RemoteActionError::ValidationFailed {
+                    action_name: self.name().to_string(),
+                    message: format!(
+                        "HTTP Tracker external health check failed for URL '{url}': {e}. \n\
+                     Check that HTTP tracker is running and firewall allows port {port}."
+                    ),
+                })?;
+
+        if !response.status().is_success() {
+            return Err(RemoteActionError::ValidationFailed {
+                action_name: self.name().to_string(),
+                message: format!(
+                    "HTTP Tracker returned HTTP {} for URL '{url}': {}. Service may not be healthy.",
+                    response.status(),
+                    response.status().canonical_reason().unwrap_or("Unknown")
+                ),
+            });
         }
+
+        info!(
+            action = "running_services_validation",
+            check = "http_tracker_external",
+            port = port,
+            status = "success",
+            validation_type = "external",
+            url = %url,
+            "HTTP Tracker is accessible from outside (external check passed)"
+        );
+
+        Ok(())
     }
 }
 
