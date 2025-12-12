@@ -125,7 +125,7 @@ mod tests {
     use crate::domain::tracker::DatabaseConfig;
 
     #[test]
-    fn test_tracker_section_converts_to_domain_config() {
+    fn it_should_convert_to_domain_config_when_transforming_tracker_section() {
         let section = TrackerSection {
             core: TrackerCoreSection {
                 database: DatabaseSection::Sqlite {
@@ -163,7 +163,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tracker_section_handles_multiple_trackers() {
+    fn it_should_handle_multiple_tracker_instances_when_configured() {
         let section = TrackerSection {
             core: TrackerCoreSection {
                 database: DatabaseSection::Sqlite {
@@ -200,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tracker_section_fails_for_invalid_bind_address() {
+    fn it_should_fail_when_bind_address_is_invalid() {
         let section = TrackerSection {
             core: TrackerCoreSection {
                 database: DatabaseSection::Sqlite {
@@ -228,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tracker_section_serialization() {
+    fn it_should_serialize_to_json_when_converting_section() {
         let section = TrackerSection {
             core: TrackerCoreSection {
                 database: DatabaseSection::Sqlite {
@@ -256,7 +256,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tracker_section_deserialization() {
+    fn it_should_deserialize_from_json_when_parsing_section() {
         let json = r#"{
             "core": {
                 "database": {
