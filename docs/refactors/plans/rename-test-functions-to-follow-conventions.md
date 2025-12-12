@@ -836,4 +836,5 @@ Remember to run `./scripts/pre-commit.sh` before each commit. This ensures:
 
 **Created**: December 12, 2025  
 **Last Updated**: December 12, 2025  
-**Status**: 📋 Planning
+**Status**: 📋 Planning  
+**Issue**: [#227](https://github.com/torrust/torrust-tracker-deployer/issues/227)
