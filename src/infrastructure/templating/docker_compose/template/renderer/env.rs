@@ -227,7 +227,7 @@ TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN={{ tracker_api_ad
     }
 
     #[test]
-    fn test_env_renderer_renders_template_successfully() {
+    fn it_should_render_template_successfully_when_generating_env_file() {
         // Setup: Create temporary directories for templates and output
         let templates_temp_dir = TempDir::new().expect("Failed to create templates temp directory");
         let output_temp_dir = TempDir::new().expect("Failed to create output temp directory");
