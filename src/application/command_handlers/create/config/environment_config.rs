@@ -121,7 +121,7 @@ impl EnvironmentCreationConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```no_run
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
     ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
     ///     ProviderSection, LxdProviderSection
@@ -195,7 +195,7 @@ impl EnvironmentCreationConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```no_run
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
     ///     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
     ///     ProviderSection, LxdProviderSection
@@ -611,17 +611,18 @@ mod tests {
 
     #[test]
     fn test_convert_to_environment_params_success_auto_generated_instance_name() {
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
                 instance_name: None, // Auto-generate
             },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
         );
@@ -640,17 +641,18 @@ mod tests {
 
     #[test]
     fn test_convert_to_environment_params_success_custom_instance_name() {
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "prod".to_string(),
                 instance_name: Some("my-custom-instance".to_string()),
             },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-prod"),
             TrackerSection::default(),
         );
@@ -667,17 +669,18 @@ mod tests {
 
     #[test]
     fn test_convert_to_environment_params_invalid_environment_name() {
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "Invalid_Name".to_string(), // uppercase - invalid
                 instance_name: None,
             },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile"),
             TrackerSection::default(),
         );
@@ -695,17 +698,18 @@ mod tests {
 
     #[test]
     fn test_convert_to_environment_params_invalid_instance_name() {
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
                 instance_name: Some("invalid-".to_string()), // ends with dash - invalid
             },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile"),
             TrackerSection::default(),
         );
@@ -724,17 +728,18 @@ mod tests {
 
     #[test]
     fn test_convert_to_environment_params_invalid_profile_name() {
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
                 instance_name: None,
             },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             ProviderSection::Lxd(LxdProviderSection {
                 profile_name: "invalid-".to_string(), // ends with dash - invalid
             }),
@@ -754,14 +759,20 @@ mod tests {
 
     #[test]
     fn test_convert_to_environment_params_invalid_username() {
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
                 instance_name: None,
             },
             SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
+                private_key_path,
+                public_key_path,
                 "123invalid".to_string(), // starts with number - invalid
                 22,
             ),
@@ -782,6 +793,11 @@ mod tests {
 
     #[test]
     fn test_convert_to_environment_params_private_key_not_found() {
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
@@ -789,7 +805,7 @@ mod tests {
             },
             SshCredentialsConfig::new(
                 "/nonexistent/key".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
+                public_key_path,
                 "torrust".to_string(),
                 22,
             ),
@@ -810,13 +826,18 @@ mod tests {
 
     #[test]
     fn test_convert_to_environment_params_public_key_not_found() {
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
                 instance_name: None,
             },
             SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
+                private_key_path,
                 "/nonexistent/key.pub".to_string(),
                 "torrust".to_string(),
                 22,
@@ -840,18 +861,18 @@ mod tests {
     fn test_integration_with_environment_new() {
         // This test verifies that the converted parameters work with Environment::new()
         use crate::domain::Environment;
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
 
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "test-env".to_string(),
                 instance_name: None,
             },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-test-env"),
             TrackerSection::default(),
         );

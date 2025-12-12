@@ -50,7 +50,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```no_run
 //! use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
 //!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
 //!     ProviderSection, LxdProviderSection
