@@ -568,12 +568,12 @@ mod tests {
     use crate::shared::Username;
 
     /// Test instance name for unit tests
-    fn test_instance_name() -> InstanceName {
+    fn fixture_instance_name() -> InstanceName {
         InstanceName::new("test-instance".to_string()).expect("Valid test instance name")
     }
 
     /// Test profile name for unit tests
-    fn test_profile_name() -> ProfileName {
+    fn fixture_profile_name() -> ProfileName {
         ProfileName::new("test-profile".to_string()).expect("Valid test profile name")
     }
 
@@ -598,10 +598,10 @@ mod tests {
     }
 
     /// Helper function to create a test LXD provider config
-    fn test_lxd_provider_config() -> ProviderConfig {
+    fn fixture_lxd_provider_config() -> ProviderConfig {
         use crate::domain::provider::LxdConfig;
         ProviderConfig::Lxd(LxdConfig {
-            profile_name: test_profile_name(),
+            profile_name: fixture_profile_name(),
         })
     }
 
@@ -617,8 +617,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22, // Default SSH port for tests
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         assert_eq!(renderer.build_dir, build_path);
@@ -637,8 +637,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22, // Default SSH port for tests
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
         let actual_path = renderer.build_opentofu_directory();
 
@@ -657,8 +657,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
         let template_path = renderer.build_template_path("main.tf");
 
@@ -677,8 +677,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         assert_eq!(
@@ -708,8 +708,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
         let created_path = renderer
             .create_build_directory()
@@ -750,8 +750,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         let result = renderer.create_build_directory().await;
@@ -788,8 +788,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         // Try to copy a non-existent template
@@ -850,8 +850,8 @@ mod tests {
             temp_dir.path(),
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         let result = renderer.copy_templates(&["test.tf"], &build_path).await;
@@ -881,8 +881,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
         let template_path = renderer.build_template_path("");
         assert_eq!(template_path, "tofu/lxd/");
@@ -900,8 +900,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         // File names with forward slashes should be handled literally
@@ -929,8 +929,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         // File names with spaces
@@ -958,8 +958,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         // Create a very long file name (300 characters)
@@ -988,8 +988,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
         let created_path = renderer
             .create_build_directory()
@@ -1013,8 +1013,8 @@ mod tests {
             &build_path,
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         // Should succeed with empty array
@@ -1051,8 +1051,8 @@ mod tests {
             temp_dir.path(),
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         // Copy the same file twice - should succeed (overwrite)
@@ -1100,8 +1100,8 @@ mod tests {
             &build_path1,
             ssh_credentials1,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
         let ssh_credentials2 = create_dummy_ssh_credentials(temp_dir.path());
         let renderer2 = TofuProjectGenerator::new(
@@ -1109,8 +1109,8 @@ mod tests {
             &build_path2,
             ssh_credentials2,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         tokio::fs::create_dir_all(&build_path1)
@@ -1169,8 +1169,8 @@ mod tests {
             temp_dir.path(),
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         // Try to copy both existing and non-existing files
@@ -1229,8 +1229,8 @@ mod tests {
             temp_dir.path(),
             ssh_credentials,
             22,
-            test_instance_name(),
-            test_lxd_provider_config(),
+            fixture_instance_name(),
+            fixture_lxd_provider_config(),
         );
 
         let file_refs: Vec<&str> = file_names.iter().map(std::string::String::as_str).collect();
