@@ -442,6 +442,41 @@ impl ProgressReporter {
         self.with_output(|output| output.steps(title, steps))?;
         Ok(())
     }
+
+    /// Output result data to stdout
+    ///
+    /// Wraps `UserOutput::result()` to write result data to stdout.
+    /// Result data goes to stdout (not stderr) so it can be piped or redirected.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The result data to output
+    ///
+    /// # Errors
+    ///
+    /// Returns error if the user output mutex is poisoned
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
+    /// use torrust_tracker_deployer_lib::presentation::views::progress::ProgressReporter;
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
+    /// let progress = ProgressReporter::new(output, 1);
+    ///
+    /// progress.result(r#"{"schema": "..."}"#)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn result(&self, message: &str) -> Result<(), ProgressReporterError> {
+        self.with_output(|output| output.result(message))?;
+        Ok(())
+    }
 }
 
 /// Format duration in a human-readable way

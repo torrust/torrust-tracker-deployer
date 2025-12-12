@@ -208,7 +208,8 @@ mod tests {
                 crate::presentation::input::cli::CreateAction::Environment { env_file } => {
                     assert_eq!(env_file, std::path::PathBuf::from("config.json"));
                 }
-                crate::presentation::input::cli::CreateAction::Template { .. } => {
+                crate::presentation::input::cli::CreateAction::Template { .. }
+                | crate::presentation::input::cli::CreateAction::Schema { .. } => {
                     panic!("Expected Environment action")
                 }
             },
@@ -240,7 +241,8 @@ mod tests {
                 crate::presentation::input::cli::CreateAction::Environment { env_file } => {
                     assert_eq!(env_file, std::path::PathBuf::from("env.json"));
                 }
-                crate::presentation::input::cli::CreateAction::Template { .. } => {
+                crate::presentation::input::cli::CreateAction::Template { .. }
+                | crate::presentation::input::cli::CreateAction::Schema { .. } => {
                     panic!("Expected Environment action")
                 }
             },
@@ -293,7 +295,8 @@ mod tests {
                 crate::presentation::input::cli::CreateAction::Environment { env_file } => {
                     assert_eq!(env_file, std::path::PathBuf::from("config.json"));
                 }
-                crate::presentation::input::cli::CreateAction::Template { .. } => {
+                crate::presentation::input::cli::CreateAction::Template { .. }
+                | crate::presentation::input::cli::CreateAction::Schema { .. } => {
                     panic!("Expected Environment action")
                 }
             },
@@ -375,7 +378,8 @@ mod tests {
                     assert!(output_path.is_none());
                     assert_eq!(provider, Provider::Lxd);
                 }
-                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                crate::presentation::input::cli::CreateAction::Environment { .. }
+                | crate::presentation::input::cli::CreateAction::Schema { .. } => {
                     panic!("Expected Template action")
                 }
             },
@@ -411,7 +415,8 @@ mod tests {
                         Some(std::path::PathBuf::from("./config/my-env.json"))
                     );
                 }
-                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                crate::presentation::input::cli::CreateAction::Environment { .. }
+                | crate::presentation::input::cli::CreateAction::Schema { .. } => {
                     panic!("Expected Template action")
                 }
             },
@@ -445,7 +450,8 @@ mod tests {
                 crate::presentation::input::cli::CreateAction::Template { provider, .. } => {
                     assert_eq!(provider, Provider::Lxd);
                 }
-                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                crate::presentation::input::cli::CreateAction::Environment { .. }
+                | crate::presentation::input::cli::CreateAction::Schema { .. } => {
                     panic!("Expected Template action")
                 }
             },
@@ -471,7 +477,8 @@ mod tests {
                 crate::presentation::input::cli::CreateAction::Template { provider, .. } => {
                     assert_eq!(provider, Provider::Hetzner);
                 }
-                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                crate::presentation::input::cli::CreateAction::Environment { .. }
+                | crate::presentation::input::cli::CreateAction::Schema { .. } => {
                     panic!("Expected Template action")
                 }
             },
@@ -497,7 +504,8 @@ mod tests {
                 crate::presentation::input::cli::CreateAction::Template { provider, .. } => {
                     assert_eq!(provider, Provider::Hetzner);
                 }
-                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                crate::presentation::input::cli::CreateAction::Environment { .. }
+                | crate::presentation::input::cli::CreateAction::Schema { .. } => {
                     panic!("Expected Template action")
                 }
             },
@@ -531,7 +539,8 @@ mod tests {
                     );
                     assert_eq!(provider, Provider::Hetzner);
                 }
-                crate::presentation::input::cli::CreateAction::Environment { .. } => {
+                crate::presentation::input::cli::CreateAction::Environment { .. }
+                | crate::presentation::input::cli::CreateAction::Schema { .. } => {
                     panic!("Expected Template action")
                 }
             },

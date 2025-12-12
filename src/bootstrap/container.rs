@@ -14,6 +14,7 @@ use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::controllers::configure::ConfigureCommandController;
 use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::controllers::create::subcommands::environment::CreateEnvironmentCommandController;
+use crate::presentation::controllers::create::subcommands::schema::CreateSchemaCommandController;
 use crate::presentation::controllers::create::subcommands::template::CreateTemplateCommandController;
 use crate::presentation::controllers::destroy::DestroyCommandController;
 use crate::presentation::controllers::provision::ProvisionCommandController;
@@ -200,6 +201,12 @@ impl Container {
     #[must_use]
     pub fn create_template_controller(&self) -> CreateTemplateCommandController {
         CreateTemplateCommandController::new(&self.user_output())
+    }
+
+    /// Create a new `CreateSchemaCommandController`
+    #[must_use]
+    pub fn create_schema_controller(&self) -> CreateSchemaCommandController {
+        CreateSchemaCommandController::new(&self.user_output())
     }
 
     /// Create a new `ProvisionCommandController`

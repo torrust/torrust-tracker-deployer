@@ -96,5 +96,5 @@ pub fn handle_error(error: &CommandError, user_output: &Arc<ReentrantMutex<RefCe
     let mut output = lock.borrow_mut();
     output.error(&format!("{error}"));
     output.blank_line();
-    output.info_block("For detailed troubleshooting:", &[help_text]);
+    output.info_block("For detailed troubleshooting:", &[&help_text]);
 }

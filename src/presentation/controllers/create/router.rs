@@ -12,11 +12,11 @@ use super::errors::CreateCommandError;
 
 /// Route the create command to its appropriate subcommand
 ///
-/// This function routes between different create subcommands (environment or template).
+/// This function routes between different create subcommands (environment, template, or schema).
 ///
 /// # Arguments
 ///
-/// * `action` - The create action to perform (environment creation or template generation)
+/// * `action` - The create action to perform (environment creation, template generation, or schema generation)
 /// * `working_dir` - Root directory for environment data storage
 /// * `context` - Execution context providing access to application services
 ///
@@ -53,5 +53,10 @@ pub async fn route_command(
                 .await
                 .map_err(CreateCommandError::Template)
         }
+        CreateAction::Schema { output_path } => context
+            .container()
+            .create_schema_controller()
+            .execute(output_path.as_ref())
+            .map_err(CreateCommandError::Schema),
     }
 }
