@@ -168,6 +168,7 @@ println
 publickey
 pytest
 readlink
+realpath
 reentrancy
 reprioritize
 reprovision
