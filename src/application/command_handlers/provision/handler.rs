@@ -18,6 +18,7 @@ use crate::application::steps::{
     WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
+use crate::domain::environment::runtime_outputs::ProvisionMethod;
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
 use crate::domain::EnvironmentName;
@@ -112,8 +113,10 @@ impl ProvisionCommandHandler {
         // This allows us to know exactly which step failed if an error occurs
         match self.execute_provisioning_workflow(&environment).await {
             Ok((provisioned, instance_ip)) => {
-                // Store instance IP in the environment context
-                let provisioned = provisioned.with_instance_ip(instance_ip);
+                // Store instance IP and provision method in the environment context
+                let provisioned = provisioned
+                    .with_instance_ip(instance_ip)
+                    .with_provision_method(ProvisionMethod::Provisioned);
 
                 info!(
                     command = "provision",
