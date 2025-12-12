@@ -348,18 +348,18 @@ mod tests {
     }
 
     #[test]
-    fn test_default_deploy_dir() {
+    fn it_should_use_default_deploy_dir_when_not_specified() {
         assert_eq!(DEFAULT_DEPLOY_DIR, "/opt/torrust");
     }
 
     #[test]
-    fn test_action_name() {
+    fn it_should_return_correct_action_name_when_queried() {
         // Can't test without SSH config, but we can verify the constant
         assert_eq!("running-services-validation", "running-services-validation");
     }
 
     #[test]
-    fn test_validator_accepts_empty_http_tracker_ports() {
+    fn it_should_accept_validation_when_http_tracker_ports_are_empty() {
         let ssh_config = create_test_ssh_config();
         let validator = RunningServicesValidator::new(ssh_config, 6969, vec![]);
 
@@ -367,7 +367,7 @@ mod tests {
     }
 
     #[test]
-    fn test_validator_accepts_single_http_tracker_port() {
+    fn it_should_accept_validation_when_single_http_tracker_port_configured() {
         let ssh_config = create_test_ssh_config();
         let validator = RunningServicesValidator::new(ssh_config, 6969, vec![6060]);
 
@@ -376,7 +376,7 @@ mod tests {
     }
 
     #[test]
-    fn test_validator_accepts_multiple_http_tracker_ports() {
+    fn it_should_accept_validation_when_multiple_http_tracker_ports_configured() {
         let ssh_config = create_test_ssh_config();
         let ports = vec![6060, 6061, 6062];
         let validator = RunningServicesValidator::new(ssh_config, 6969, ports.clone());
@@ -386,7 +386,7 @@ mod tests {
     }
 
     #[test]
-    fn test_with_deploy_dir_accepts_empty_http_tracker_ports() {
+    fn it_should_accept_empty_ports_when_using_custom_deploy_dir() {
         let ssh_config = create_test_ssh_config();
         let validator = RunningServicesValidator::with_deploy_dir(
             ssh_config,
@@ -400,7 +400,7 @@ mod tests {
     }
 
     #[test]
-    fn test_with_deploy_dir_accepts_multiple_http_tracker_ports() {
+    fn it_should_accept_multiple_ports_when_using_custom_deploy_dir() {
         let ssh_config = create_test_ssh_config();
         let ports = vec![6060, 6061];
         let validator = RunningServicesValidator::with_deploy_dir(
