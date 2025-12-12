@@ -55,10 +55,10 @@ pub trait SshServerContainer {
     fn host_ip(&self) -> IpAddr;
 
     /// Get the test username configured in the container
-    fn test_username(&self) -> &str;
+    fn username(&self) -> &str;
 
     /// Get the test password configured in the container
-    fn test_password(&self) -> &str;
+    fn password(&self) -> &str;
 }
 
 #[cfg(test)]
@@ -79,8 +79,8 @@ mod tests {
                 let host_ip = ssh_container.host_ip();
                 assert_eq!(host_ip, IpAddr::V4(Ipv4Addr::LOCALHOST));
 
-                assert_eq!(ssh_container.test_username(), "testuser");
-                assert_eq!(ssh_container.test_password(), "testpass");
+                assert_eq!(ssh_container.username(), "testuser");
+                assert_eq!(ssh_container.password(), "testpass");
             }
             Err(e) => {
                 panic!("Mock container should always start successfully: {e}");
@@ -101,8 +101,8 @@ mod tests {
                 let host_ip = ssh_container.host_ip();
                 assert_eq!(host_ip, IpAddr::V4(Ipv4Addr::LOCALHOST));
 
-                assert_eq!(ssh_container.test_username(), "testuser");
-                assert_eq!(ssh_container.test_password(), "testpass");
+                assert_eq!(ssh_container.username(), "testuser");
+                assert_eq!(ssh_container.password(), "testpass");
             }
             Err(e) => {
                 // Real container start might fail in CI environments without Docker
@@ -122,8 +122,8 @@ mod tests {
         let container: &dyn SshServerContainer = &mock;
         assert!(container.ssh_port() > 0);
         assert_eq!(container.host_ip(), IpAddr::V4(Ipv4Addr::LOCALHOST));
-        assert_eq!(container.test_username(), "testuser");
-        assert_eq!(container.test_password(), "testpass");
+        assert_eq!(container.username(), "testuser");
+        assert_eq!(container.password(), "testpass");
     }
 
     #[tokio::test]
@@ -131,7 +131,7 @@ mod tests {
         // Helper function that works with any SshServerContainer
         fn verify_container<C: SshServerContainer>(container: &C) {
             assert!(container.ssh_port() > 0);
-            assert_eq!(container.test_username(), "testuser");
+            assert_eq!(container.username(), "testuser");
         }
 
         let mock = MockSshServerContainer::start()

@@ -143,7 +143,7 @@ impl SshWaitAction {
                 "Attempting SSH connection"
             );
 
-            match Self::test_ssh_connection(socket_addr) {
+            match Self::verify_ssh_connection(socket_addr) {
                 Ok(()) => {
                     info!(
                         socket_addr = %socket_addr,
@@ -187,7 +187,7 @@ impl SshWaitAction {
     ///
     /// This approach minimizes error noise by doing the lightweight port check first,
     /// then only checking SSH protocol when the port is already open.
-    fn test_ssh_connection(socket_addr: SocketAddr) -> Result<()> {
+    fn verify_ssh_connection(socket_addr: SocketAddr) -> Result<()> {
         // Stage 1: Check if port is open (lightweight, no SSH errors)
         Self::check_port_availability(socket_addr)?;
 
