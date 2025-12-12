@@ -25,7 +25,9 @@ pub const DEFAULT_SSH_PORT: u16 = 22;
 pub const DEFAULT_CONNECT_TIMEOUT_SECS: u32 = 5;
 
 /// Default maximum number of connection retry attempts
-pub const DEFAULT_MAX_RETRY_ATTEMPTS: u32 = 30;
+/// Set to 60 to allow up to 120 seconds total wait time (60 attempts × 2 second interval)
+/// This accounts for cloud-init completion time when custom SSH ports are configured
+pub const DEFAULT_MAX_RETRY_ATTEMPTS: u32 = 60;
 
 /// Default retry interval in seconds
 pub const DEFAULT_RETRY_INTERVAL_SECS: u32 = 2;
@@ -115,7 +117,7 @@ impl SshConnectionConfig {
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshConnectionConfig;
     ///
     /// let config = SshConnectionConfig::default();
-    /// assert_eq!(config.total_timeout_secs(), 60); // 30 attempts × 2 seconds
+    /// assert_eq!(config.total_timeout_secs(), 120); // 60 attempts × 2 seconds
     /// ```
     #[must_use]
     pub fn total_timeout_secs(&self) -> u32 {

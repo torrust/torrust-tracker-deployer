@@ -22,7 +22,6 @@
 //! # use std::path::Path;
 //! # use torrust_tracker_deployer_lib::infrastructure::templating::tofu::template::common::renderer::cloud_init::CloudInitRenderer;
 //! # use torrust_tracker_deployer_lib::domain::template::TemplateManager;
-//! # use torrust_tracker_deployer_lib::domain::provider::Provider;
 //! # use torrust_tracker_deployer_lib::shared::Username;
 //! use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 //! # use std::path::PathBuf;
@@ -35,7 +34,7 @@
 //!     PathBuf::from("fixtures/testing_rsa.pub"),
 //!     Username::new("username").unwrap()
 //! );
-//! let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
+//! let renderer = CloudInitRenderer::new(template_manager);
 //!
 //! // Just demonstrate creating the renderer - actual rendering requires
 //! // a proper template manager setup with cloud-init templates
@@ -48,7 +47,6 @@ use std::sync::Arc;
 use thiserror::Error;
 
 use crate::adapters::ssh::credentials::SshCredentials;
-use crate::domain::provider::Provider;
 use crate::domain::template::file::File;
 use crate::domain::template::{TemplateManager, TemplateManagerError};
 
@@ -100,12 +98,10 @@ pub enum CloudInitRendererError {
 /// It follows the Single Responsibility Principle by focusing solely on cloud-init
 /// template operations, making the main `TofuProjectGenerator` simpler and more focused.
 ///
-/// Note: The provider field is kept for potential future provider-specific customization,
-/// but currently all providers use the same common cloud-init template.
+/// All providers (LXD, Hetzner) use the same common cloud-init template, so no
+/// provider-specific logic is needed.
 pub struct CloudInitRenderer {
     template_manager: Arc<TemplateManager>,
-    #[allow(dead_code)]
-    provider: Provider,
 }
 
 impl CloudInitRenderer {
@@ -125,17 +121,13 @@ impl CloudInitRenderer {
     /// # Arguments
     ///
     /// * `template_manager` - Arc reference to the template manager for file operations
-    /// * `provider` - The infrastructure provider (LXD, Hetzner) - kept for future customization
     ///
     /// # Returns
     ///
     /// * `CloudInitRenderer` - A new renderer instance
     #[must_use]
-    pub fn new(template_manager: Arc<TemplateManager>, provider: Provider) -> Self {
-        Self {
-            template_manager,
-            provider,
-        }
+    pub fn new(template_manager: Arc<TemplateManager>) -> Self {
+        Self { template_manager }
     }
 
     /// Renders the cloud-init.yml.tera template with SSH credentials
@@ -149,6 +141,7 @@ impl CloudInitRenderer {
     /// # Arguments
     ///
     /// * `ssh_credentials` - SSH credentials containing public key path for cloud-init injection
+    /// * `ssh_port` - The SSH service port to configure in cloud-init
     /// * `output_dir` - Directory where the rendered `cloud-init.yml` file will be written
     ///
     /// # Returns
@@ -169,10 +162,11 @@ impl CloudInitRenderer {
     pub async fn render(
         &self,
         ssh_credentials: &SshCredentials,
+        ssh_port: u16,
         output_dir: &Path,
     ) -> Result<(), CloudInitRendererError> {
         tracing::debug!(
-            provider = %self.provider,
+            ssh_port = ssh_port,
             "Rendering cloud-init template with SSH public key injection"
         );
 
@@ -193,14 +187,14 @@ impl CloudInitRenderer {
             .map_err(|_| CloudInitRendererError::FileCreationFailed)?;
 
         // Render cloud-init template (shared logic for all providers)
-        self.render_cloud_init(&template_file, ssh_credentials, output_dir)
+        Self::render_cloud_init(&template_file, ssh_credentials, ssh_port, output_dir)
     }
 
     /// Renders cloud-init template (shared logic for all providers)
     fn render_cloud_init(
-        &self,
         template_file: &File,
         ssh_credentials: &SshCredentials,
+        ssh_port: u16,
         output_dir: &Path,
     ) -> Result<(), CloudInitRendererError> {
         use crate::infrastructure::templating::tofu::template::common::wrappers::cloud_init::{
@@ -214,6 +208,7 @@ impl CloudInitRenderer {
             .map_err(|_| CloudInitRendererError::SshKeyReadError)?
             .with_username(ssh_credentials.ssh_username.as_str())
             .map_err(|_| CloudInitRendererError::ContextCreationFailed)?
+            .with_ssh_port(ssh_port)
             .build()
             .map_err(|_| CloudInitRendererError::ContextCreationFailed)?;
 
@@ -228,7 +223,6 @@ impl CloudInitRenderer {
             .map_err(|_| CloudInitRendererError::CloudInitTemplateRenderFailed)?;
 
         tracing::debug!(
-            provider = %self.provider,
             "Successfully rendered cloud-init template to {}",
             output_path.display()
         );
@@ -308,9 +302,9 @@ users:
     }
 
     #[test]
-    fn it_should_create_cloud_init_renderer_with_template_manager_and_provider() {
+    fn it_should_create_cloud_init_renderer_with_template_manager() {
         let template_manager = Arc::new(TemplateManager::new(std::env::temp_dir()));
-        let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
+        let renderer = CloudInitRenderer::new(template_manager);
 
         // Verify the renderer was created successfully
         // Just check that it contains the expected template manager reference
@@ -328,13 +322,15 @@ users:
     #[tokio::test]
     async fn it_should_render_cloud_init_template_successfully() {
         let template_manager = create_mock_template_manager_with_cloud_init();
-        let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
+        let renderer = CloudInitRenderer::new(template_manager);
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let ssh_credentials = create_mock_ssh_credentials(temp_dir.path());
         let output_dir = TempDir::new().expect("Failed to create output dir");
 
-        let result = renderer.render(&ssh_credentials, output_dir.path()).await;
+        let result = renderer
+            .render(&ssh_credentials, 22, output_dir.path())
+            .await;
 
         assert!(
             result.is_ok(),
@@ -367,7 +363,7 @@ users:
     #[tokio::test]
     async fn it_should_fail_when_ssh_key_file_missing() {
         let template_manager = create_mock_template_manager_with_cloud_init();
-        let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
+        let renderer = CloudInitRenderer::new(template_manager);
 
         // Create SSH credentials with non-existent key file
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -380,7 +376,9 @@ users:
 
         let output_dir = TempDir::new().expect("Failed to create output dir");
 
-        let result = renderer.render(&ssh_credentials, output_dir.path()).await;
+        let result = renderer
+            .render(&ssh_credentials, 22, output_dir.path())
+            .await;
 
         assert!(result.is_err(), "Should fail when SSH key file is missing");
         match result.unwrap_err() {
@@ -394,7 +392,7 @@ users:
     #[tokio::test]
     async fn it_should_fail_when_output_directory_is_readonly() {
         let template_manager = create_mock_template_manager_with_cloud_init();
-        let renderer = CloudInitRenderer::new(template_manager, Provider::Lxd);
+        let renderer = CloudInitRenderer::new(template_manager);
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let ssh_credentials = create_mock_ssh_credentials(temp_dir.path());
@@ -408,7 +406,9 @@ users:
         fs::set_permissions(output_dir.path(), permissions)
             .expect("Failed to set readonly permissions");
 
-        let result = renderer.render(&ssh_credentials, output_dir.path()).await;
+        let result = renderer
+            .render(&ssh_credentials, 22, output_dir.path())
+            .await;
 
         assert!(
             result.is_err(),

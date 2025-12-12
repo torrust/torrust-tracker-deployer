@@ -35,6 +35,8 @@ pub struct CloudInitContext {
     pub ssh_public_key: SshPublicKey,
     /// Username to be created in the cloud-init configuration
     pub username: Username,
+    /// SSH service port (default: 22)
+    pub ssh_port: u16,
 }
 
 /// Builder for `CloudInitContext` with fluent interface
@@ -42,6 +44,7 @@ pub struct CloudInitContext {
 pub struct CloudInitContextBuilder {
     ssh_public_key: Option<SshPublicKey>,
     username: Option<Username>,
+    ssh_port: Option<u16>,
 }
 
 impl CloudInitContextBuilder {
@@ -71,6 +74,15 @@ impl CloudInitContextBuilder {
             .map_err(|e| CloudInitContextError::InvalidUsername(e.to_string()))?;
         self.username = Some(username);
         Ok(self)
+    }
+
+    /// Set the SSH port for the cloud-init configuration
+    ///
+    /// If not set, defaults to 22
+    #[must_use]
+    pub fn with_ssh_port(mut self, ssh_port: u16) -> Self {
+        self.ssh_port = Some(ssh_port);
+        self
     }
 
     /// Set the SSH public key by reading from a file path
@@ -109,9 +121,12 @@ impl CloudInitContextBuilder {
             .username
             .ok_or(CloudInitContextError::MissingUsername)?;
 
+        let ssh_port = self.ssh_port.unwrap_or(22);
+
         Ok(CloudInitContext {
             ssh_public_key,
             username,
+            ssh_port,
         })
     }
 }
@@ -133,6 +148,7 @@ impl CloudInitContext {
         Ok(Self {
             ssh_public_key: key,
             username,
+            ssh_port: 22, // Default SSH port
         })
     }
 

@@ -1,6 +1,6 @@
 //! Provision command handler implementation
 
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 
 use tracing::{error, info, instrument};
@@ -252,6 +252,7 @@ impl ProvisionCommandHandler {
             template_manager,
             environment.build_dir(),
             environment.ssh_credentials().clone(),
+            environment.ssh_port(),
             environment.instance_name().clone(),
             environment.provider_config().clone(),
         ));
@@ -300,7 +301,7 @@ impl ProvisionCommandHandler {
     /// Wait for system readiness
     ///
     /// This method waits for the provisioned instance to be ready:
-    /// - Wait for SSH connectivity
+    /// - Wait for SSH connectivity on the configured port
     /// - Wait for cloud-init completion
     ///
     /// # Arguments
@@ -318,9 +319,10 @@ impl ProvisionCommandHandler {
     ) -> StepResult<(), ProvisionCommandHandlerError, ProvisionStep> {
         let ansible_client = Self::build_ansible_client(environment);
         let ssh_credentials = environment.ssh_credentials();
+        let ssh_port = environment.ssh_port();
 
         let current_step = ProvisionStep::WaitSshConnectivity;
-        self.wait_for_readiness(&ansible_client, ssh_credentials, instance_ip)
+        self.wait_for_readiness(&ansible_client, ssh_credentials, instance_ip, ssh_port)
             .await
             .map_err(|e| (e, current_step))?;
 
@@ -402,8 +404,10 @@ impl ProvisionCommandHandler {
     ///
     /// # Arguments
     ///
+    /// * `ansible_client` - Ansible client for running cloud-init wait playbook
     /// * `ssh_credentials` - SSH credentials for connecting to the instance
     /// * `instance_ip` - IP address of the provisioned instance
+    /// * `ssh_port` - The configured SSH port to wait for
     ///
     /// # Errors
     ///
@@ -413,8 +417,10 @@ impl ProvisionCommandHandler {
         ansible_client: &Arc<AnsibleClient>,
         ssh_credentials: &SshCredentials,
         instance_ip: IpAddr,
+        ssh_port: u16,
     ) -> Result<(), ProvisionCommandHandlerError> {
-        let ssh_config = SshConfig::with_default_port(ssh_credentials.clone(), instance_ip);
+        let ssh_socket_addr = SocketAddr::new(instance_ip, ssh_port);
+        let ssh_config = SshConfig::new(ssh_credentials.clone(), ssh_socket_addr);
 
         WaitForSSHConnectivityStep::new(ssh_config)
             .execute()

@@ -143,6 +143,7 @@ pub struct TofuProjectGenerator {
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
     ssh_credentials: SshCredentials,
+    ssh_port: u16,
     cloud_init_renderer: CloudInitRenderer,
     instance_name: InstanceName,
     provider: Provider,
@@ -157,6 +158,7 @@ impl TofuProjectGenerator {
     /// * `template_manager` - The template manager to source templates from
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `ssh_credentials` - The SSH credentials for injecting public key into cloud-init
+    /// * `ssh_port` - The SSH service port to configure in cloud-init
     /// * `instance_name` - The name of the instance to be created (for template rendering)
     /// * `provider_config` - The provider configuration containing provider type and settings
     ///
@@ -165,16 +167,18 @@ impl TofuProjectGenerator {
         template_manager: Arc<TemplateManager>,
         build_dir: P,
         ssh_credentials: SshCredentials,
+        ssh_port: u16,
         instance_name: InstanceName,
         provider_config: ProviderConfig,
     ) -> Self {
         let provider = provider_config.provider();
-        let cloud_init_renderer = CloudInitRenderer::new(template_manager.clone(), provider);
+        let cloud_init_renderer = CloudInitRenderer::new(template_manager.clone());
 
         Self {
             template_manager,
             build_dir: build_dir.as_ref().to_path_buf(),
             ssh_credentials,
+            ssh_port,
             cloud_init_renderer,
             instance_name,
             provider,
@@ -387,7 +391,7 @@ impl TofuProjectGenerator {
 
         // Use collaborator to render cloud-init.yml.tera template
         self.cloud_init_renderer
-            .render(&self.ssh_credentials, destination_dir)
+            .render(&self.ssh_credentials, self.ssh_port, destination_dir)
             .await
             .map_err(|source| TofuProjectGeneratorError::CloudInitRenderingFailed { source })?;
 
@@ -612,6 +616,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22, // Default SSH port for tests
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -631,6 +636,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22, // Default SSH port for tests
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -650,6 +656,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -669,6 +676,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -699,6 +707,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -740,6 +749,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -777,6 +787,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -838,6 +849,7 @@ mod tests {
             template_manager,
             temp_dir.path(),
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -868,6 +880,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -886,6 +899,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -914,6 +928,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -942,6 +957,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -971,6 +987,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -995,6 +1012,7 @@ mod tests {
             template_manager,
             &build_path,
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -1032,6 +1050,7 @@ mod tests {
             template_manager,
             temp_dir.path(),
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -1080,6 +1099,7 @@ mod tests {
             template_manager.clone(),
             &build_path1,
             ssh_credentials1,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -1088,6 +1108,7 @@ mod tests {
             template_manager,
             &build_path2,
             ssh_credentials2,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -1147,6 +1168,7 @@ mod tests {
             template_manager,
             temp_dir.path(),
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
@@ -1206,6 +1228,7 @@ mod tests {
             template_manager,
             temp_dir.path(),
             ssh_credentials,
+            22,
             test_instance_name(),
             test_lxd_provider_config(),
         );
