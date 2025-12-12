@@ -15,6 +15,7 @@ Feature documentation serves to:
 
 | Feature                                                              | Status         | Priority | Created      |
 | -------------------------------------------------------------------- | -------------- | -------- | ------------ |
+| [JSON Schema Generation](./json-schema-generation/README.md)         | 📋 Specified   | High     | Dec 12, 2025 |
 | [Hetzner Provider Support](./hetzner-provider-support/README.md)     | 📋 Specified   | High     | Dec 1, 2025  |
 | [Register Existing Instances](./import-existing-instances/README.md) | 📋 Specified   | High     | Nov 19, 2025 |
 | [Linter Auto-fix](./linter-auto-fix/README.md)                       | 📋 Specified   | Medium   | Oct 9, 2025  |
