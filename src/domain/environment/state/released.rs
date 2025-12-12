@@ -73,9 +73,11 @@ mod tests {
         use super::*;
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
+        use crate::domain::environment::runtime_outputs::ProvisionMethod;
         use crate::domain::provider::{LxdConfig, ProviderConfig};
         use crate::domain::ProfileName;
         use crate::shared::Username;
+        use std::net::{IpAddr, Ipv4Addr};
         use std::path::PathBuf;
 
         fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
@@ -103,7 +105,10 @@ mod tests {
                 22,
             )
             .start_provisioning()
-            .provisioned()
+            .provisioned(
+                IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                ProvisionMethod::Provisioned,
+            )
             .start_configuring()
             .configured()
             .start_releasing()
@@ -130,10 +135,12 @@ mod tests {
         use super::*;
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
+        use crate::domain::environment::runtime_outputs::ProvisionMethod;
         use crate::domain::environment::state::Running;
         use crate::domain::provider::{LxdConfig, ProviderConfig};
         use crate::domain::ProfileName;
         use crate::shared::Username;
+        use std::net::{IpAddr, Ipv4Addr};
         use std::path::PathBuf;
 
         fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
@@ -157,7 +164,10 @@ mod tests {
                 22,
             )
             .start_provisioning()
-            .provisioned()
+            .provisioned(
+                IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                ProvisionMethod::Provisioned,
+            )
             .start_configuring()
             .configured()
             .start_releasing()

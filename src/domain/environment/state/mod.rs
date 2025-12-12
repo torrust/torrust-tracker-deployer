@@ -833,6 +833,8 @@ mod tests {
 
     // Tests for AnyEnvironmentState enum (Type Erasure)
     mod any_environment_state_tests {
+        use std::net::{IpAddr, Ipv4Addr};
+
         use super::*;
 
         // Note: Helper functions for creating test environments and contexts
@@ -888,7 +890,10 @@ mod tests {
         fn it_should_convert_provisioned_environment_into_any() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned();
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                );
             let any_env = env.into_any();
             assert!(matches!(any_env, AnyEnvironmentState::Provisioned(_)));
         }
@@ -897,7 +902,10 @@ mod tests {
         fn it_should_convert_configuring_environment_into_any() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring();
             let any_env = env.into_any();
             assert!(matches!(any_env, AnyEnvironmentState::Configuring(_)));
@@ -907,7 +915,10 @@ mod tests {
         fn it_should_convert_configured_environment_into_any() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured();
             let any_env = env.into_any();
@@ -918,7 +929,10 @@ mod tests {
         fn it_should_convert_releasing_environment_into_any() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing();
@@ -930,7 +944,10 @@ mod tests {
         fn it_should_convert_released_environment_into_any() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing()
@@ -943,7 +960,10 @@ mod tests {
         fn it_should_convert_running_environment_into_any() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing()
@@ -966,7 +986,10 @@ mod tests {
         fn it_should_convert_configure_failed_environment_into_any() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configure_failed(super::create_test_configure_context("ansible error"));
             let any_env = env.into_any();
@@ -977,7 +1000,10 @@ mod tests {
         fn it_should_convert_release_failed_environment_into_any() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing()
@@ -990,7 +1016,10 @@ mod tests {
         fn it_should_convert_run_failed_environment_into_any() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing()
@@ -1022,7 +1051,10 @@ mod tests {
         fn it_should_convert_any_to_provisioned_successfully() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned();
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                );
             let any_env = env.into_any();
             let result = any_env.try_into_provisioned();
             assert!(result.is_ok());
@@ -1032,7 +1064,10 @@ mod tests {
         fn it_should_convert_any_to_configuring_successfully() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring();
             let any_env = env.into_any();
             let result = any_env.try_into_configuring();
@@ -1043,7 +1078,10 @@ mod tests {
         fn it_should_convert_any_to_configured_successfully() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured();
             let any_env = env.into_any();
@@ -1055,7 +1093,10 @@ mod tests {
         fn it_should_convert_any_to_releasing_successfully() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing();
@@ -1068,7 +1109,10 @@ mod tests {
         fn it_should_convert_any_to_released_successfully() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing()
@@ -1082,7 +1126,10 @@ mod tests {
         fn it_should_convert_any_to_running_successfully() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing()
@@ -1107,7 +1154,10 @@ mod tests {
         fn it_should_convert_any_to_configure_failed_successfully() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configure_failed(super::create_test_configure_context("test error"));
             let any_env = env.into_any();
@@ -1119,7 +1169,10 @@ mod tests {
         fn it_should_convert_any_to_release_failed_successfully() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing()
@@ -1133,7 +1186,10 @@ mod tests {
         fn it_should_convert_any_to_run_failed_successfully() {
             let env = super::create_test_environment_created()
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing()
@@ -1299,6 +1355,9 @@ mod tests {
         }
 
         mod state_name {
+            use std::net::{IpAddr, Ipv4Addr};
+
+            use super::super::ProvisionMethod;
 
             #[test]
             fn it_should_return_created_for_created_state() {
@@ -1318,7 +1377,10 @@ mod tests {
             fn it_should_return_provisioned_for_provisioned_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .into_any();
                 assert_eq!(any_env.state_name(), "provisioned");
             }
@@ -1327,7 +1389,10 @@ mod tests {
             fn it_should_return_configuring_for_configuring_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .into_any();
                 assert_eq!(any_env.state_name(), "configuring");
@@ -1337,7 +1402,10 @@ mod tests {
             fn it_should_return_configured_for_configured_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .into_any();
@@ -1348,7 +1416,10 @@ mod tests {
             fn it_should_return_releasing_for_releasing_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1360,7 +1431,10 @@ mod tests {
             fn it_should_return_released_for_released_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1373,7 +1447,10 @@ mod tests {
             fn it_should_return_running_for_running_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1396,7 +1473,10 @@ mod tests {
             fn it_should_return_configure_failed_for_configure_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configure_failed(super::create_test_configure_context("error"))
                     .into_any();
@@ -1407,7 +1487,10 @@ mod tests {
             fn it_should_return_release_failed_for_release_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1420,7 +1503,10 @@ mod tests {
             fn it_should_return_run_failed_for_run_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1441,6 +1527,9 @@ mod tests {
         }
 
         mod is_success_state {
+            use std::net::{IpAddr, Ipv4Addr};
+
+            use super::super::ProvisionMethod;
 
             #[test]
             fn it_should_return_true_for_created_state() {
@@ -1460,7 +1549,10 @@ mod tests {
             fn it_should_return_true_for_provisioned_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .into_any();
                 assert!(any_env.is_success_state());
             }
@@ -1469,7 +1561,10 @@ mod tests {
             fn it_should_return_true_for_configuring_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .into_any();
                 assert!(any_env.is_success_state());
@@ -1479,7 +1574,10 @@ mod tests {
             fn it_should_return_true_for_configured_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .into_any();
@@ -1490,7 +1588,10 @@ mod tests {
             fn it_should_return_true_for_releasing_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1502,7 +1603,10 @@ mod tests {
             fn it_should_return_true_for_released_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1515,7 +1619,10 @@ mod tests {
             fn it_should_return_true_for_running_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1546,7 +1653,10 @@ mod tests {
             fn it_should_return_false_for_configure_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configure_failed(super::create_test_configure_context("error"))
                     .into_any();
@@ -1557,7 +1667,10 @@ mod tests {
             fn it_should_return_false_for_release_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1570,7 +1683,10 @@ mod tests {
             fn it_should_return_false_for_run_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1583,6 +1699,9 @@ mod tests {
         }
 
         mod is_error_state {
+            use std::net::{IpAddr, Ipv4Addr};
+
+            use super::super::ProvisionMethod;
 
             #[test]
             fn it_should_return_false_for_success_states() {
@@ -1593,29 +1712,44 @@ mod tests {
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .start_releasing()
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .start_releasing()
@@ -1623,7 +1757,10 @@ mod tests {
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .start_releasing()
@@ -1653,7 +1790,10 @@ mod tests {
             fn it_should_return_true_for_configure_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configure_failed(super::create_test_configure_context("error"))
                     .into_any();
@@ -1664,7 +1804,10 @@ mod tests {
             fn it_should_return_true_for_release_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1677,7 +1820,10 @@ mod tests {
             fn it_should_return_true_for_run_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1690,6 +1836,9 @@ mod tests {
         }
 
         mod is_terminal_state {
+            use std::net::{IpAddr, Ipv4Addr};
+
+            use super::super::ProvisionMethod;
 
             #[test]
             fn it_should_return_false_for_transient_states() {
@@ -1700,29 +1849,44 @@ mod tests {
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .start_releasing()
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .start_releasing()
@@ -1739,7 +1903,10 @@ mod tests {
             fn it_should_return_true_for_running_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1770,7 +1937,10 @@ mod tests {
             fn it_should_return_true_for_configure_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configure_failed(super::create_test_configure_context("error"))
                     .into_any();
@@ -1781,7 +1951,10 @@ mod tests {
             fn it_should_return_true_for_release_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1794,7 +1967,10 @@ mod tests {
             fn it_should_return_true_for_run_failed_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1807,6 +1983,9 @@ mod tests {
         }
 
         mod error_details {
+            use std::net::{IpAddr, Ipv4Addr};
+
+            use super::super::ProvisionMethod;
 
             #[test]
             fn it_should_return_none_for_success_states() {
@@ -1817,29 +1996,44 @@ mod tests {
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .start_releasing()
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .start_releasing()
@@ -1847,7 +2041,10 @@ mod tests {
                         .into_any(),
                     super::create_test_environment_created()
                         .start_provisioning()
-                        .provisioned()
+                        .provisioned(
+                            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                            ProvisionMethod::Provisioned,
+                        )
                         .start_configuring()
                         .configured()
                         .start_releasing()
@@ -1880,7 +2077,10 @@ mod tests {
                 let error_message = "ansible playbook failed";
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configure_failed(super::create_test_configure_context(error_message))
                     .into_any();
@@ -1893,7 +2093,10 @@ mod tests {
                 let error_message = "release process error";
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1908,7 +2111,10 @@ mod tests {
                 let error_message = "application crash";
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1922,6 +2128,9 @@ mod tests {
         }
 
         mod display {
+            use std::net::{IpAddr, Ipv4Addr};
+
+            use super::super::ProvisionMethod;
 
             #[test]
             fn it_should_format_success_state_without_error_details() {
@@ -1937,7 +2146,10 @@ mod tests {
             fn it_should_format_running_state() {
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured()
                     .start_releasing()
@@ -1969,7 +2181,10 @@ mod tests {
                 let error_message = "ansible error";
                 let any_env = super::create_test_environment_created()
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configure_failed(super::create_test_configure_context(error_message))
                     .into_any();

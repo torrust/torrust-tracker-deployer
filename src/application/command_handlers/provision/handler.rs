@@ -112,12 +112,7 @@ impl ProvisionCommandHandler {
         // Execute provisioning workflow with explicit step tracking
         // This allows us to know exactly which step failed if an error occurs
         match self.execute_provisioning_workflow(&environment).await {
-            Ok((provisioned, instance_ip)) => {
-                // Store instance IP and provision method in the environment context
-                let provisioned = provisioned
-                    .with_instance_ip(instance_ip)
-                    .with_provision_method(ProvisionMethod::Provisioned);
-
+            Ok(provisioned) => {
                 info!(
                     command = "provision",
                     environment = %provisioned.name(),
@@ -154,7 +149,7 @@ impl ProvisionCommandHandler {
     /// This method orchestrates the complete provisioning workflow across multiple phases:
     /// 1. Infrastructure provisioning (`OpenTofu`)
     /// 2. Configuration preparation (Ansible templates and system readiness)
-    /// 3. State transition to Provisioned
+    /// 3. State transition to Provisioned (with instance IP and provision method)
     ///
     /// If an error occurs, it returns both the error and the step that was being
     /// executed, enabling accurate failure context generation.
@@ -165,14 +160,11 @@ impl ProvisionCommandHandler {
     ///
     /// # Returns
     ///
-    /// Returns a tuple of:
-    /// - The provisioned environment
-    /// - The instance IP address
+    /// Returns the provisioned environment with instance IP and provision method set
     async fn execute_provisioning_workflow(
         &self,
         environment: &Environment<Provisioning>,
-    ) -> StepResult<(Environment<Provisioned>, IpAddr), ProvisionCommandHandlerError, ProvisionStep>
-    {
+    ) -> StepResult<Environment<Provisioned>, ProvisionCommandHandlerError, ProvisionStep> {
         let instance_ip = self.provision_infrastructure(environment).await?;
 
         self.prepare_for_configuration(environment, instance_ip)
@@ -181,9 +173,11 @@ impl ProvisionCommandHandler {
         self.wait_for_system_readiness(environment, instance_ip)
             .await?;
 
-        let provisioned = environment.clone().provisioned();
+        let provisioned = environment
+            .clone()
+            .provisioned(instance_ip, ProvisionMethod::Provisioned);
 
-        Ok((provisioned, instance_ip))
+        Ok(provisioned)
     }
 
     // Private helper methods - organized from higher to lower level of abstraction

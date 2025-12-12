@@ -1283,6 +1283,8 @@ mod tests {
 
     // State transition tests
     mod state_transitions {
+        use std::net::{IpAddr, Ipv4Addr};
+
         use super::*;
 
         /// Helper function to create a test environment for state transition tests
@@ -1313,7 +1315,10 @@ mod tests {
             // Act: Complete happy path: Created -> Running
             let env = env
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured()
                 .start_releasing()
@@ -1343,7 +1348,10 @@ mod tests {
             // Act: Go through several transitions
             let env = env
                 .start_provisioning()
-                .provisioned()
+                .provisioned(
+                    IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                    ProvisionMethod::Provisioned,
+                )
                 .start_configuring()
                 .configured();
 
@@ -1392,7 +1400,10 @@ mod tests {
 
                 let _env = env
                     .start_provisioning()
-                    .provisioned()
+                    .provisioned(
+                        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                        ProvisionMethod::Provisioned,
+                    )
                     .start_configuring()
                     .configured();
 

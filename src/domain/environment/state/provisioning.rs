@@ -9,8 +9,11 @@
 //! - Success: `Provisioned`
 //! - Failure: `ProvisionFailed`
 
+use std::net::IpAddr;
+
 use serde::{Deserialize, Serialize};
 
+use crate::domain::environment::runtime_outputs::ProvisionMethod;
 use crate::domain::environment::state::{
     AnyEnvironmentState, ProvisionFailed, Provisioned, StateTypeError,
 };
@@ -32,9 +35,26 @@ impl Environment<Provisioning> {
     /// Transitions from Provisioning to Provisioned state
     ///
     /// This method indicates that infrastructure provisioning completed successfully.
+    /// It requires the instance IP address and provision method as proof of successful
+    /// provisioning, ensuring that an `Environment<Provisioned>` always has this data.
+    ///
+    /// # Arguments
+    ///
+    /// * `instance_ip` - The IP address of the provisioned instance
+    /// * `provision_method` - How the instance was provisioned (always `Provisioned` for this transition)
+    ///
+    /// # Returns
+    ///
+    /// Returns the environment in `Provisioned` state with instance IP and provision method set
     #[must_use]
-    pub fn provisioned(self) -> Environment<Provisioned> {
-        self.with_state(Provisioned)
+    pub fn provisioned(
+        self,
+        instance_ip: IpAddr,
+        provision_method: ProvisionMethod,
+    ) -> Environment<Provisioned> {
+        self.with_instance_ip(instance_ip)
+            .with_provision_method(provision_method)
+            .with_state(Provisioned)
     }
 
     /// Transitions from Provisioning to `ProvisionFailed` state
@@ -162,10 +182,12 @@ mod tests {
         use super::super::*;
         use crate::adapters::ssh::SshCredentials;
         use crate::domain::environment::name::EnvironmentName;
+        use crate::domain::environment::runtime_outputs::ProvisionMethod;
         use crate::domain::environment::state::Provisioned;
         use crate::domain::provider::{LxdConfig, ProviderConfig};
         use crate::domain::ProfileName;
         use crate::shared::Username;
+        use std::net::{IpAddr, Ipv4Addr};
         use std::path::PathBuf;
 
         fn default_lxd_provider_config(env_name: &EnvironmentName) -> ProviderConfig {
@@ -198,7 +220,10 @@ mod tests {
         #[test]
         fn it_should_transition_from_provisioning_to_provisioned() {
             let env = create_test_environment_provisioning();
-            let env = env.provisioned();
+            let env = env.provisioned(
+                IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
+                ProvisionMethod::Provisioned,
+            );
 
             assert_eq!(*env.state(), Provisioned);
             assert_eq!(env.name().as_str(), "test-env");
