@@ -70,27 +70,24 @@ impl CreateSchemaCommandController {
         &mut self,
         output_path: Option<&PathBuf>,
     ) -> Result<(), CreateSchemaCommandError> {
-        self.progress
-            .start_step(CreateSchemaStep::GenerateSchema.description())?;
-
         // Generate schema using application layer handler
         let schema = CreateSchemaCommandHandler::execute(output_path.cloned())
             .map_err(|source| CreateSchemaCommandError::CommandFailed { source })?;
 
-        // Handle output
-        if output_path.is_some() {
+        // Handle output based on destination
+        if let Some(_path) = output_path {
+            // When writing to file, show progress to user
+            self.progress
+                .start_step(CreateSchemaStep::GenerateSchema.description())?;
             self.progress
                 .complete_step(Some("Schema written to file successfully"))?;
+            self.progress
+                .complete("Schema generation completed successfully")?;
         } else {
-            // Output to stdout using ProgressReporter abstraction
-            self.progress.complete_step(Some("Schema generated"))?;
-
-            // Write schema to stdout (result data goes to stdout, not stderr)
+            // When writing to stdout, only output the schema (no progress messages)
+            // This enables clean piping: `cmd create schema > file.json`
             self.progress.result(&schema)?;
         }
-
-        self.progress
-            .complete("Schema generation completed successfully")?;
 
         Ok(())
     }

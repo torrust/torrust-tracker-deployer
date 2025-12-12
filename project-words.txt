@@ -108,6 +108,7 @@ impls
 isreg
 journalctl
 jsonlint
+jsonls
 keepalive
 keygen
 keypair
@@ -122,6 +123,7 @@ logfile
 logfiles
 logicaldisk
 loglevel
+lspconfig
 lxdbr
 maxbytes
 mgmt
