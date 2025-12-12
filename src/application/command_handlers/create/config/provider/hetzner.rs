@@ -4,6 +4,7 @@
 //! Uses raw `String` fields for JSON deserialization, which are then validated
 //! when converting to domain types.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Hetzner-specific configuration section
@@ -23,7 +24,7 @@ use serde::{Deserialize, Serialize};
 ///     image: "ubuntu-24.04".to_string(),
 /// };
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct HetznerProviderSection {
     /// Hetzner API token (raw string).
     pub api_token: String,

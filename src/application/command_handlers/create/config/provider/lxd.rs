@@ -4,6 +4,7 @@
 //! Uses raw `String` for JSON deserialization, which is then validated
 //! when converting to domain types.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// LXD-specific configuration section
@@ -20,7 +21,7 @@ use serde::{Deserialize, Serialize};
 ///     profile_name: "torrust-profile-dev".to_string(),
 /// };
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct LxdProviderSection {
     /// LXD profile name (raw string - validated on conversion).
     pub profile_name: String,

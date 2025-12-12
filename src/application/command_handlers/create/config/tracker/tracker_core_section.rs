@@ -4,6 +4,7 @@
 //! used for JSON deserialization and validation before converting
 //! to domain types.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
@@ -22,7 +23,7 @@ use crate::domain::tracker::{DatabaseConfig, TrackerCoreConfig};
 ///   "database_name": "tracker.db"
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 #[serde(tag = "driver")]
 pub enum DatabaseSection {
     /// `SQLite` file-based database
@@ -65,7 +66,7 @@ impl DatabaseSection {
 ///   "private": false
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct TrackerCoreSection {
     /// Database configuration
     pub database: DatabaseSection,
