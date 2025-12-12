@@ -377,7 +377,7 @@ mod tests {
     use crate::shared::Username;
 
     #[test]
-    fn test_invalid_environment_name_error() {
+    fn it_should_return_error_when_environment_name_is_invalid() {
         let result = EnvironmentName::new("Invalid_Name");
         assert!(result.is_err());
 
@@ -388,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_username_error() {
+    fn it_should_return_error_when_username_is_invalid() {
         let result = Username::new("123invalid");
         assert!(result.is_err());
 
@@ -399,7 +399,7 @@ mod tests {
     }
 
     #[test]
-    fn test_private_key_not_found_error() {
+    fn it_should_return_error_when_private_key_file_not_found() {
         let error = CreateConfigError::PrivateKeyNotFound {
             path: PathBuf::from("/nonexistent/key"),
         };
@@ -410,7 +410,7 @@ mod tests {
     }
 
     #[test]
-    fn test_public_key_not_found_error() {
+    fn it_should_return_error_when_public_key_file_not_found() {
         let error = CreateConfigError::PublicKeyNotFound {
             path: PathBuf::from("/nonexistent/key.pub"),
         };
@@ -421,7 +421,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_port_error() {
+    fn it_should_return_error_when_port_is_invalid() {
         let error = CreateConfigError::InvalidPort { port: 0 };
         assert!(error.to_string().contains("Invalid SSH port"));
         assert!(error.to_string().contains("must be between 1 and 65535"));
@@ -430,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn test_all_errors_have_help() {
+    fn it_should_provide_help_messages_for_all_errors() {
         // Verify all error variants have help text
         let errors = vec![
             CreateConfigError::PrivateKeyNotFound {
@@ -457,7 +457,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_instance_name_error() {
+    fn it_should_return_error_when_instance_name_is_invalid() {
         let error = CreateConfigError::InvalidInstanceName {
             name: "invalid-".to_string(),
             reason: "Instance name must not end with a dash".to_string(),
@@ -471,7 +471,7 @@ mod tests {
     }
 
     #[test]
-    fn test_template_serialization_failed_error() {
+    fn it_should_return_error_when_template_serialization_fails() {
         // Simulate serialization error (hard to create naturally)
         let json_error = serde_json::from_str::<serde_json::Value>("invalid").unwrap_err();
         let error = CreateConfigError::TemplateSerializationFailed { source: json_error };
@@ -484,7 +484,7 @@ mod tests {
     }
 
     #[test]
-    fn test_template_directory_creation_failed_error() {
+    fn it_should_return_error_when_template_directory_creation_fails() {
         let error = CreateConfigError::TemplateDirectoryCreationFailed {
             path: PathBuf::from("/test/path"),
             source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
@@ -497,7 +497,7 @@ mod tests {
     }
 
     #[test]
-    fn test_template_file_write_failed_error() {
+    fn it_should_return_error_when_template_file_write_fails() {
         let error = CreateConfigError::TemplateFileWriteFailed {
             path: PathBuf::from("/test/file.json"),
             source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
