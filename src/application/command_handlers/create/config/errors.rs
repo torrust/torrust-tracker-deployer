@@ -46,6 +46,14 @@ pub enum CreateConfigError {
     #[error("SSH public key file not found: {path}")]
     PublicKeyNotFound { path: PathBuf },
 
+    /// SSH private key path must be absolute
+    #[error("SSH private key path must be absolute: {path:?}")]
+    RelativePrivateKeyPath { path: PathBuf },
+
+    /// SSH public key path must be absolute
+    #[error("SSH public key path must be absolute: {path:?}")]
+    RelativePublicKeyPath { path: PathBuf },
+
     /// Invalid SSH port (must be 1-65535)
     #[error("Invalid SSH port: {port} (must be between 1 and 65535)")]
     InvalidPort { port: u16 },
@@ -200,6 +208,66 @@ impl CreateConfigError {
                  2. Verify the file exists: ls -la <path>\n\
                  3. Ensure you have read permissions on the file\n\
                  4. Generate public key from private key if needed: ssh-keygen -y -f <private_key> > <public_key>"
+            }
+            Self::RelativePrivateKeyPath { .. } => {
+                // Note: Can't use format! in const context, so we use a static message
+                // The actual path will be shown in the error message itself
+                "SSH private key path must be absolute.\n\
+                 \n\
+                 SSH key paths must be absolute to ensure they work correctly across\n\
+                 different working directories and command invocations.\n\
+                 \n\
+                 Fix:\n\
+                 1. Convert relative path to absolute path:\n\
+                 \n\
+                 Use the `realpath` command to get the absolute path:\n\
+                 \n\
+                 realpath <your-relative-path>\n\
+                 \n\
+                 Example:\n\
+                 - Current (relative): fixtures/testing_rsa\n\
+                 - Command: realpath fixtures/testing_rsa\n\
+                 - Result: /home/user/project/fixtures/testing_rsa\n\
+                 \n\
+                 2. Update your configuration file with the absolute path\n\
+                 \n\
+                 3. Alternative approaches:\n\
+                 - Use ~ for home directory (e.g., ~/.ssh/id_rsa)\n\
+                 - Use environment variables (e.g., $HOME/.ssh/id_rsa)\n\
+                 \n\
+                 Why absolute paths?\n\
+                 - Commands may run from different working directories\n\
+                 - Environment state persists paths that must remain valid\n\
+                 - Multi-command workflows (create → provision → configure)"
+            }
+            Self::RelativePublicKeyPath { .. } => {
+                "SSH public key path must be absolute.\n\
+                 \n\
+                 SSH key paths must be absolute to ensure they work correctly across\n\
+                 different working directories and command invocations.\n\
+                 \n\
+                 Fix:\n\
+                 1. Convert relative path to absolute path:\n\
+                 \n\
+                 Use the `realpath` command to get the absolute path:\n\
+                 \n\
+                 realpath <your-relative-path>\n\
+                 \n\
+                 Example:\n\
+                 - Current (relative): fixtures/testing_rsa.pub\n\
+                 - Command: realpath fixtures/testing_rsa.pub\n\
+                 - Result: /home/user/project/fixtures/testing_rsa.pub\n\
+                 \n\
+                 2. Update your configuration file with the absolute path\n\
+                 \n\
+                 3. Alternative approaches:\n\
+                 - Use ~ for home directory (e.g., ~/.ssh/id_rsa.pub)\n\
+                 - Use environment variables (e.g., $HOME/.ssh/id_rsa.pub)\n\
+                 \n\
+                 Why absolute paths?\n\
+                 - Commands may run from different working directories\n\
+                 - Environment state persists paths that must remain valid\n\
+                 - Multi-command workflows (create → provision → configure)"
             }
             Self::InvalidPort { .. } => {
                 "Invalid SSH port number.\n\
