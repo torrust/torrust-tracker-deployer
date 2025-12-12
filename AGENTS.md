@@ -144,3 +144,52 @@ These principles should guide all development decisions, code reviews, and featu
   - Cleanup procedures for both application and LXD resources
 
 Follow the project conventions and ensure all checks pass.
+
+## 📚 Documentation
+
+The project has comprehensive documentation organized in the [`docs/`](docs/) directory. See the complete [Documentation Index](docs/README.md) for detailed navigation.
+
+### Documentation by Category
+
+**For Users:**
+
+- Getting started: [`docs/user-guide/README.md`](docs/user-guide/README.md), [`docs/user-guide/quick-start.md`](docs/user-guide/quick-start.md)
+- Commands: [`docs/user-guide/commands/`](docs/user-guide/commands/), [`docs/console-commands.md`](docs/console-commands.md)
+- Providers: [`docs/user-guide/providers/`](docs/user-guide/providers/)
+
+**For Contributors:**
+
+- Contributing Guide: [`docs/contributing/README.md`](docs/contributing/README.md)
+- Architecture: [`docs/codebase-architecture.md`](docs/codebase-architecture.md), [`docs/contributing/ddd-layer-placement.md`](docs/contributing/ddd-layer-placement.md)
+- Testing: [`docs/contributing/testing/`](docs/contributing/testing/), [`docs/e2e-testing/`](docs/e2e-testing/)
+- Code Quality: [`docs/contributing/linting.md`](docs/contributing/linting.md), [`docs/development-principles.md`](docs/development-principles.md)
+
+**For Maintainers:**
+
+- Decisions: [`docs/decisions/`](docs/decisions/) (30+ ADRs)
+- Features: [`docs/features/`](docs/features/) (active and planned features)
+- Refactoring: [`docs/refactors/`](docs/refactors/) (ongoing improvements)
+- Roadmap: [`docs/roadmap.md`](docs/roadmap.md)
+
+**For Researchers/Architects:**
+
+- Research: [`docs/research/`](docs/research/) (testing strategies, UX patterns, MVVM analysis)
+- Analysis: [`docs/analysis/`](docs/analysis/) (code structure analysis)
+- Vision: [`docs/vision-infrastructure-as-software.md`](docs/vision-infrastructure-as-software.md)
+
+### Quick Navigation by Task
+
+| Task                      | Start Here                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| Start using the deployer  | [`docs/user-guide/README.md`](docs/user-guide/README.md)                                 |
+| Contribute code           | [`docs/contributing/README.md`](docs/contributing/README.md)                             |
+| Understand architecture   | [`docs/codebase-architecture.md`](docs/codebase-architecture.md)                         |
+| Add code to correct layer | [`docs/contributing/ddd-layer-placement.md`](docs/contributing/ddd-layer-placement.md)   |
+| Run E2E tests             | [`docs/e2e-testing/README.md`](docs/e2e-testing/README.md)                               |
+| Write unit tests          | [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) |
+| Understand a decision     | [`docs/decisions/README.md`](docs/decisions/README.md)                                   |
+| Plan a new feature        | [`docs/features/README.md`](docs/features/README.md)                                     |
+| Fix a CI issue            | [`docs/github-actions-issues/README.md`](docs/github-actions-issues/README.md)           |
+| Work with templates       | [`docs/contributing/templates.md`](docs/contributing/templates.md)                       |
+| Handle errors properly    | [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md)             |
+| Organize Rust modules     | [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md)   |
