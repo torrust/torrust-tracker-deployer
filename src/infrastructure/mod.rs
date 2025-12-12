@@ -15,9 +15,11 @@
 //! - `external_validators` - E2E validation from outside VMs (HTTP health checks)
 //! - `persistence` - Persistence infrastructure (repositories, file locking, storage)
 //! - `trace` - Trace file generation for error analysis
+//! - `schema` - JSON Schema generation from Rust types
 
 pub mod external_validators;
 pub mod persistence;
 pub mod remote_actions;
+pub mod schema;
 pub mod templating;
 pub mod trace;
