@@ -269,7 +269,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_invalid_environment_name_help_message() {
+    fn it_should_display_help_message_when_environment_name_is_invalid() {
         let error = TestSubcommandError::InvalidEnvironmentName {
             name: "invalid_name".to_string(),
             source: EnvironmentNameError::InvalidFormat {
@@ -286,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn test_environment_not_found_help_message() {
+    fn it_should_display_help_message_when_environment_not_found() {
         let error = TestSubcommandError::EnvironmentNotFound {
             name: "test-env".to_string(),
             data_dir: "/path/to/data".to_string(),
@@ -299,7 +299,7 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_instance_ip_help_message() {
+    fn it_should_display_help_message_when_instance_ip_is_missing() {
         let error = TestSubcommandError::MissingInstanceIp {
             name: "test-env".to_string(),
         };
@@ -310,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    fn test_validation_failed_help_message() {
+    fn it_should_display_help_message_when_validation_fails() {
         let error = TestSubcommandError::ValidationFailed {
             name: "test-env".to_string(),
             source: Box::new(TestCommandHandlerError::MissingInstanceIp {
