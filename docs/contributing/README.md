@@ -14,6 +14,7 @@ This guide will help you understand our development practices and contribution w
 | Code quality and linting             | [linting.md](./linting.md)                                           |
 | Module organization and imports      | [module-organization.md](./module-organization.md)                   |
 | Error handling principles            | [error-handling.md](./error-handling.md)                             |
+| Output handling with UserOutput      | [output-handling.md](./output-handling.md)                           |
 | Working with Tera templates          | [templates.md](./templates.md)                                       |
 | Environment variables naming         | [environment-variables-naming.md](./environment-variables-naming.md) |
 | Debugging techniques                 | [debugging.md](./debugging.md)                                       |
