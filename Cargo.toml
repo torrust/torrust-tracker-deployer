@@ -45,7 +45,7 @@ tokio = { version = "1.0", features = [ "full" ] }
 anyhow = "1.0"
 chrono = { version = "0.4", features = [ "serde" ] }
 clap = { version = "4.0", features = [ "derive" ] }
-derive_more = "0.99"
+derive_more = { version = "2.1", features = [ "display", "from" ] }
 figment = { version = "0.10", features = [ "json" ] }
 parking_lot = "0.12"
 reqwest = "0.12"
