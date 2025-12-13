@@ -56,7 +56,7 @@ serde_json = "1.0"
 tempfile = "3.0"
 tera = "1.0"
 testcontainers = { version = "0.26", features = [ "blocking" ] }
-thiserror = "1.0"
+thiserror = "2.0"
 torrust-dependency-installer = { path = "packages/dependency-installer" }
 torrust-linting = { path = "packages/linting" }
 tracing = { version = "0.1", features = [ "attributes" ] }
