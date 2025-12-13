@@ -179,18 +179,17 @@ impl CommandError {
     /// # }
     /// ```
     #[must_use]
-    pub fn help(&self) -> &'static str {
+    pub fn help(&self) -> String {
         match self {
             Self::Create(e) => e.help(),
-            Self::Destroy(e) => e.help(),
-            Self::Provision(e) => e.help(),
-            Self::Configure(e) => e.help(),
-            Self::Register(e) => e.help(),
-            Self::Test(e) => e.as_ref().help(),
-            Self::Release(e) => e.help(),
-            Self::Run(e) => e.help(),
-            Self::UserOutputLockFailed => {
-                "User Output Lock Failed - Detailed Troubleshooting:
+            Self::Destroy(e) => e.help().to_string(),
+            Self::Provision(e) => e.help().to_string(),
+            Self::Configure(e) => e.help().to_string(),
+            Self::Register(e) => e.help().to_string(),
+            Self::Test(e) => e.as_ref().help().to_string(),
+            Self::Release(e) => e.help().to_string(),
+            Self::Run(e) => e.help().to_string(),
+            Self::UserOutputLockFailed => "User Output Lock Failed - Detailed Troubleshooting:
 
 This error indicates that a panic occurred in another thread while it was using
 the user output system, leaving the mutex in a \"poisoned\" state.
@@ -209,7 +208,7 @@ the user output system, leaving the mutex in a \"poisoned\" state.
    - Report the issue with the full error output and steps to reproduce
 
 This is a serious application error that indicates a bug. Please report it to the developers."
-            }
+                .to_string(),
         }
     }
 }

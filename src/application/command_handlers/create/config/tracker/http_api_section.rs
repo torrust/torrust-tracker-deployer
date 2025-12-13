@@ -1,11 +1,12 @@
 use std::net::SocketAddr;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
 use crate::domain::tracker::HttpApiConfig;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct HttpApiSection {
     pub bind_address: String,
     pub admin_token: String,

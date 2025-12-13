@@ -40,6 +40,7 @@ mod lxd;
 pub use hetzner::HetznerProviderSection;
 pub use lxd::LxdProviderSection;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::CreateConfigError;
@@ -71,7 +72,7 @@ use crate::domain::ProfileName;
 /// let config = section.to_provider_config().unwrap();
 /// assert_eq!(config.provider_name(), "lxd");
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "provider")]
 pub enum ProviderSection {
     /// LXD provider configuration

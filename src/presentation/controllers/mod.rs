@@ -165,6 +165,13 @@
 //!                 .await
 //!                 .map_err(CreateCommandError::Template)
 //!         }
+//!         CreateAction::Schema { output_path } => {
+//!             context
+//!                 .container()
+//!                 .create_schema_controller()
+//!                 .execute(output_path.as_ref())
+//!                 .map_err(CreateCommandError::Schema)
+//!         }
 //!     }
 //! }
 //! # }

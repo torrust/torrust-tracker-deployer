@@ -154,6 +154,7 @@ impl CreateTemplateCommandController {
         self.progress.steps(
             "Next steps:",
             &[
+                "View JSON Schema for IDE support:\n   torrust-tracker-deployer create schema",
                 "Edit the template file and replace placeholder values:\n   - REPLACE_WITH_ENVIRONMENT_NAME: Choose a unique environment name (e.g., 'dev', 'staging')\n   - REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH: Path to your SSH private key\n   - REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH: Path to your SSH public key",
                 "Review default values:\n   - username: 'torrust' (can be changed if needed)\n   - port: 22 (standard SSH port)",
                 &format!(

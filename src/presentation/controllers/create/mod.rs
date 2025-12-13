@@ -53,4 +53,5 @@ mod tests;
 pub use errors::CreateCommandError;
 pub use router::route_command;
 pub use subcommands::environment::{ConfigFormat, ConfigLoader, CreateEnvironmentCommandError};
+pub use subcommands::schema::CreateSchemaCommandError;
 pub use subcommands::template::CreateEnvironmentTemplateCommandError;

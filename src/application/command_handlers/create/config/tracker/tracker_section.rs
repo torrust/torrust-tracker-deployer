@@ -3,6 +3,7 @@
 //! This module provides the aggregated DTO for complete tracker configuration,
 //! used for JSON deserialization and validation before converting to domain types.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::{HttpApiSection, HttpTrackerSection, TrackerCoreSection, UdpTrackerSection};
@@ -37,7 +38,7 @@ use crate::domain::tracker::{HttpApiConfig, HttpTrackerConfig, TrackerConfig, Ud
 ///   }
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct TrackerSection {
     /// Core tracker configuration (database, privacy mode)
     pub core: TrackerCoreSection,

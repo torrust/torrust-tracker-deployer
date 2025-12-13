@@ -2,5 +2,13 @@
     "evenBetterToml.formatter.allowedBlankLines": 1,
     "cSpell.words": [
         "millis"
+    ],
+    "json.schemas": [
+        {
+            "fileMatch": [
+                "envs/*.json"
+            ],
+            "url": "./schemas/environment-config.json"
+        }
     ]
 }

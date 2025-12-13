@@ -4,8 +4,10 @@
 //! SSH credentials in the configuration layer (distinct from the adapter layer).
 //! It handles string-based paths and usernames that will be converted to domain types.
 
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use crate::adapters::ssh::SshCredentials;
 use crate::shared::Username;
@@ -36,7 +38,7 @@ const DEFAULT_SSH_PORT: u16 = 22;
 ///     port: 22,
 /// };
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct SshCredentialsConfig {
     /// Path to the SSH private key file (as string in config)
     pub private_key_path: String,

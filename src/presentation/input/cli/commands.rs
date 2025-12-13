@@ -220,6 +220,21 @@ pub enum CreateAction {
         #[arg(long, short = 'p', value_enum)]
         provider: Provider,
     },
+
+    /// Generate JSON Schema for environment configuration
+    ///
+    /// This subcommand generates a JSON Schema that describes the structure
+    /// and validation rules for environment configuration files. The schema
+    /// can be used by IDEs, editors, and AI assistants for autocomplete,
+    /// validation, and inline documentation.
+    Schema {
+        /// Output path for the schema file (optional)
+        ///
+        /// If not provided, outputs the schema to stdout.
+        /// Parent directories will be created automatically if they don't exist.
+        #[arg(value_name = "PATH")]
+        output_path: Option<PathBuf>,
+    },
 }
 
 impl CreateAction {

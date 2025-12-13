@@ -4,6 +4,7 @@
 //! all configuration needed to create a deployment environment. It handles
 //! deserialization from configuration sources and conversion to domain types.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::ssh::SshCredentials;
@@ -69,7 +70,7 @@ use super::tracker::TrackerSection;
 /// let config: EnvironmentCreationConfig = serde_json::from_str(json)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct EnvironmentCreationConfig {
     /// Environment-specific settings
     pub environment: EnvironmentSection,
@@ -93,7 +94,7 @@ pub struct EnvironmentCreationConfig {
 /// Environment-specific configuration section
 ///
 /// Contains configuration specific to the environment being created.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct EnvironmentSection {
     /// Name of the environment to create
     ///
