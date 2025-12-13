@@ -1,12 +1,11 @@
 //! Docker Compose Project Generator
 //!
 //! This module handles Docker Compose template rendering for deployment workflows.
-//! It manages the creation of build directories, copying static template files (docker-compose.yml),
-//! and processing dynamic Tera templates with runtime variables (.env).
+//! It manages the creation of build directories and processing dynamic Tera templates
+//! with runtime variables (.env and docker-compose.yml).
 //!
 //! ## Key Features
 //!
-//! - **Static file copying**: Handles Docker Compose files that don't need templating
 //! - **Dynamic template rendering**: Processes Tera templates with runtime variables
 //! - **Structured error handling**: Provides specific error types with detailed context and source chaining
 //! - **Tracing integration**: Comprehensive logging for debugging and monitoring deployment processes
@@ -16,10 +15,14 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
 
-use crate::domain::template::{TemplateManager, TemplateManagerError};
+use crate::domain::template::TemplateManager;
+use crate::infrastructure::templating::docker_compose::template::renderer::docker_compose::{
+    DockerComposeRenderer, DockerComposeRendererError,
+};
 use crate::infrastructure::templating::docker_compose::template::renderer::env::{
     EnvRenderer, EnvRendererError,
 };
+use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::DockerComposeContext;
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 
 /// Errors that can occur during Docker Compose project generation
@@ -33,47 +36,35 @@ pub enum DockerComposeProjectGeneratorError {
         source: std::io::Error,
     },
 
-    /// Failed to get template path from template manager
-    #[error("Failed to get template path for '{file_name}': {source}")]
-    TemplatePathFailed {
-        file_name: String,
-        #[source]
-        source: TemplateManagerError,
-    },
-
-    /// Failed to copy static template file
-    #[error("Failed to copy static template file '{file_name}' to build directory: {source}")]
-    StaticFileCopyFailed {
-        file_name: String,
-        #[source]
-        source: std::io::Error,
-    },
-
     /// Failed to render .env template using renderer
     #[error("Failed to render .env template: {source}")]
     EnvRenderingFailed {
         #[source]
         source: EnvRendererError,
     },
+
+    /// Failed to render docker-compose.yml template using renderer
+    #[error("Failed to render docker-compose.yml template: {source}")]
+    DockerComposeRenderingFailed {
+        #[source]
+        source: DockerComposeRendererError,
+    },
 }
 
 /// Renders Docker Compose templates to a build directory
 ///
 /// This collaborator is responsible for preparing Docker Compose templates for deployment workflows.
-/// It handles both static files (docker-compose.yml) and dynamic Tera templates that
-/// require runtime variable substitution (.env with environment variables).
+/// It handles dynamic Tera templates that require runtime variable substitution
+/// (.env with environment variables and docker-compose.yml with service configurations).
 pub struct DockerComposeProjectGenerator {
     build_dir: PathBuf,
-    template_manager: Arc<TemplateManager>,
     env_renderer: EnvRenderer,
+    docker_compose_renderer: DockerComposeRenderer,
 }
 
 impl DockerComposeProjectGenerator {
     /// Default relative path for Docker Compose configuration files
     const DOCKER_COMPOSE_BUILD_PATH: &'static str = "docker-compose";
-
-    /// Default template path prefix for Docker Compose templates
-    const DOCKER_COMPOSE_TEMPLATE_PATH: &'static str = "docker-compose";
 
     /// Creates a new Docker Compose project generator
     ///
@@ -82,13 +73,14 @@ impl DockerComposeProjectGenerator {
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `template_manager` - The template manager to source templates from
     #[must_use]
-    pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: Arc<TemplateManager>) -> Self {
+    pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: &Arc<TemplateManager>) -> Self {
         let env_renderer = EnvRenderer::new(template_manager.clone());
+        let docker_compose_renderer = DockerComposeRenderer::new(template_manager.clone());
 
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
-            template_manager,
             env_renderer,
+            docker_compose_renderer,
         }
     }
 
@@ -96,13 +88,13 @@ impl DockerComposeProjectGenerator {
     ///
     /// This method:
     /// 1. Creates the build directory structure for Docker Compose
-    /// 2. Renders dynamic Tera templates with runtime variables (.env)
-    /// 3. Copies static templates (docker-compose.yml) from the template manager
-    /// 4. Provides debug logging via the tracing crate
+    /// 2. Renders dynamic Tera templates with runtime variables (.env and docker-compose.yml)
+    /// 3. Provides debug logging via the tracing crate
     ///
     /// # Arguments
     ///
     /// * `env_context` - Runtime context for .env template rendering (tracker admin token, etc.)
+    /// * `docker_compose_context` - Runtime context for docker-compose.yml template rendering (database configuration, etc.)
     ///
     /// # Returns
     ///
@@ -112,13 +104,12 @@ impl DockerComposeProjectGenerator {
     ///
     /// Returns an error if:
     /// - Directory creation fails
-    /// - Template copying fails
-    /// - Template manager cannot provide required templates
     /// - Dynamic template rendering fails
     /// - Runtime variable substitution fails
     pub async fn render(
         &self,
         env_context: &EnvContext,
+        docker_compose_context: &DockerComposeContext,
     ) -> Result<PathBuf, DockerComposeProjectGeneratorError> {
         tracing::info!(
             template_type = "docker_compose",
@@ -133,9 +124,14 @@ impl DockerComposeProjectGenerator {
             .render(env_context, &build_compose_dir)
             .map_err(|source| DockerComposeProjectGeneratorError::EnvRenderingFailed { source })?;
 
-        // Copy static Docker Compose files
-        self.copy_static_templates(&self.template_manager, &build_compose_dir)
-            .await?;
+        // Render dynamic docker-compose.yml template with runtime variables using renderer
+        self.docker_compose_renderer
+            .render(docker_compose_context, &build_compose_dir)
+            .map_err(
+                |source| DockerComposeProjectGeneratorError::DockerComposeRenderingFailed {
+                    source,
+                },
+            )?;
 
         tracing::debug!(
             template_type = "docker_compose",
@@ -161,19 +157,6 @@ impl DockerComposeProjectGenerator {
         self.build_dir.join(Self::DOCKER_COMPOSE_BUILD_PATH)
     }
 
-    /// Builds the template path for a specific file in the Docker Compose template directory
-    ///
-    /// # Arguments
-    ///
-    /// * `file_name` - The name of the template file
-    ///
-    /// # Returns
-    ///
-    /// * `String` - The complete template path for the specified file
-    fn build_template_path(file_name: &str) -> String {
-        format!("{}/{file_name}", Self::DOCKER_COMPOSE_TEMPLATE_PATH)
-    }
-
     /// Creates the Docker Compose build directory structure
     ///
     /// # Returns
@@ -194,96 +177,6 @@ impl DockerComposeProjectGenerator {
                 },
             )?;
         Ok(build_compose_dir)
-    }
-
-    /// Copies static Docker Compose template files that don't require variable substitution
-    ///
-    /// This includes docker-compose.yml that uses native Docker Compose variable substitution
-    /// from the .env file.
-    ///
-    /// # Arguments
-    ///
-    /// * `template_manager` - Source of template files
-    /// * `destination_dir` - Directory where static files will be copied
-    ///
-    /// # Returns
-    ///
-    /// * `Result<(), DockerComposeProjectGeneratorError>` - Success or error from file copying operations
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - Template manager cannot provide required template paths
-    /// - File copying fails for any of the specified files
-    async fn copy_static_templates(
-        &self,
-        template_manager: &TemplateManager,
-        destination_dir: &Path,
-    ) -> Result<(), DockerComposeProjectGeneratorError> {
-        tracing::debug!("Copying static Docker Compose template files");
-
-        // Copy docker-compose.yml
-        self.copy_static_file(template_manager, "docker-compose.yml", destination_dir)
-            .await?;
-
-        tracing::debug!("Successfully copied 1 static template file");
-
-        Ok(())
-    }
-
-    /// Copies a single static template file from template manager to destination
-    ///
-    /// # Arguments
-    ///
-    /// * `template_manager` - Source of template files
-    /// * `file_name` - Name of the file to copy (without path prefix)
-    /// * `destination_dir` - Directory where the file will be copied
-    ///
-    /// # Returns
-    ///
-    /// * `Result<(), DockerComposeProjectGeneratorError>` - Success or error from the file copying operation
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - Template manager cannot provide the template path
-    /// - File copying fails
-    async fn copy_static_file(
-        &self,
-        template_manager: &TemplateManager,
-        file_name: &str,
-        destination_dir: &Path,
-    ) -> Result<(), DockerComposeProjectGeneratorError> {
-        let template_path = Self::build_template_path(file_name);
-
-        let source_path = template_manager
-            .get_template_path(&template_path)
-            .map_err(
-                |source| DockerComposeProjectGeneratorError::TemplatePathFailed {
-                    file_name: file_name.to_string(),
-                    source,
-                },
-            )?;
-
-        let destination_path = destination_dir.join(file_name);
-
-        tokio::fs::copy(&source_path, &destination_path)
-            .await
-            .map_err(
-                |source| DockerComposeProjectGeneratorError::StaticFileCopyFailed {
-                    file_name: file_name.to_string(),
-                    source,
-                },
-            )?;
-
-        tracing::trace!(
-            file = file_name,
-            source = %source_path.display(),
-            destination = %destination_path.display(),
-            "Copied static template file"
-        );
-
-        Ok(())
     }
 }
 
@@ -310,15 +203,23 @@ mod tests {
         EnvContext::new("TestAdminToken123".to_string())
     }
 
+    /// Helper function to create a test docker-compose context with `SQLite`
+    fn create_test_docker_compose_context_sqlite() -> DockerComposeContext {
+        DockerComposeContext::new_sqlite()
+    }
+
     #[tokio::test]
     async fn it_should_create_build_directory_when_generating_project() {
         let (template_manager, _temp_dir) = create_template_manager_with_embedded();
         let build_dir = TempDir::new().expect("Failed to create build directory");
 
-        let generator = DockerComposeProjectGenerator::new(build_dir.path(), template_manager);
+        let generator = DockerComposeProjectGenerator::new(build_dir.path(), &template_manager);
         let env_context = create_test_env_context();
+        let docker_compose_context = create_test_docker_compose_context_sqlite();
 
-        let result = generator.render(&env_context).await;
+        let result = generator
+            .render(&env_context, &docker_compose_context)
+            .await;
 
         assert!(result.is_ok());
         let compose_dir = build_dir.path().join(DOCKER_COMPOSE_SUBFOLDER);
@@ -327,15 +228,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn it_should_copy_docker_compose_yml_when_generating_project() {
+    async fn it_should_render_docker_compose_yml_when_generating_project() {
         let (template_manager, _temp_dir) = create_template_manager_with_embedded();
         let build_dir = TempDir::new().expect("Failed to create build directory");
 
-        let generator = DockerComposeProjectGenerator::new(build_dir.path(), template_manager);
+        let generator = DockerComposeProjectGenerator::new(build_dir.path(), &template_manager);
         let env_context = create_test_env_context();
+        let docker_compose_context = create_test_docker_compose_context_sqlite();
 
         generator
-            .render(&env_context)
+            .render(&env_context, &docker_compose_context)
             .await
             .expect("Failed to render templates");
 
@@ -352,11 +254,12 @@ mod tests {
         let (template_manager, _temp_dir) = create_template_manager_with_embedded();
         let build_dir = TempDir::new().expect("Failed to create build directory");
 
-        let generator = DockerComposeProjectGenerator::new(build_dir.path(), template_manager);
+        let generator = DockerComposeProjectGenerator::new(build_dir.path(), &template_manager);
         let env_context = create_test_env_context();
+        let docker_compose_context = create_test_docker_compose_context_sqlite();
 
         generator
-            .render(&env_context)
+            .render(&env_context, &docker_compose_context)
             .await
             .expect("Failed to render templates");
 
@@ -374,10 +277,13 @@ mod tests {
         let (template_manager, _temp_dir) = create_template_manager_with_embedded();
         let build_dir = TempDir::new().expect("Failed to create build directory");
 
-        let generator = DockerComposeProjectGenerator::new(build_dir.path(), template_manager);
+        let generator = DockerComposeProjectGenerator::new(build_dir.path(), &template_manager);
         let env_context = create_test_env_context();
+        let docker_compose_context = create_test_docker_compose_context_sqlite();
 
-        let result = generator.render(&env_context).await;
+        let result = generator
+            .render(&env_context, &docker_compose_context)
+            .await;
 
         assert!(result.is_ok());
         let returned_path = result.unwrap();

@@ -1,0 +1,66 @@
+# Docker Compose configuration for Torrust Tracker deployment
+
+services:
+  tracker:
+    image: torrust/tracker:develop
+    container_name: tracker
+    tty: true
+    restart: unless-stopped
+    environment:
+      - USER_ID=1000
+      - TORRUST_TRACKER_CONFIG_TOML_PATH=${TORRUST_TRACKER_CONFIG_TOML_PATH}
+      - TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER=sqlite3
+      - TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=${TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN}
+    networks:
+      - backend_network
+    ports:
+      - 6868:6868/udp
+      - 6969:6969/udp
+      - 7070:7070
+      - 1212:1212
+    volumes:
+      - ./storage/tracker/lib:/var/lib/torrust/tracker:Z
+      - ./storage/tracker/log:/var/log/torrust/tracker:Z
+      - ./storage/tracker/etc:/etc/torrust/tracker:Z
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+
+{% if database.driver == "mysql" %}
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD={{ database.mysql.root_password }}
+      - MYSQL_DATABASE={{ database.mysql.database }}
+      - MYSQL_USER={{ database.mysql.user }}
+      - MYSQL_PASSWORD={{ database.mysql.password }}
+    networks:
+      - backend_network
+    ports:
+      - "{{ database.mysql.port }}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+{% endif %}
+
+networks:
+  backend_network: {}
+
+{% if database.driver == "mysql" %}
+volumes:
+  mysql_data:
+    driver: local
+{% endif %}

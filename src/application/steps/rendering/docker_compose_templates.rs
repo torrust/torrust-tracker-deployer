@@ -31,6 +31,7 @@ use tracing::{info, instrument};
 
 use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
+use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::DockerComposeContext;
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
     DockerComposeProjectGenerator, DockerComposeProjectGeneratorError,
@@ -99,8 +100,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             "Rendering Docker Compose templates"
         );
 
-        let generator =
-            DockerComposeProjectGenerator::new(&self.build_dir, self.template_manager.clone());
+        let generator = DockerComposeProjectGenerator::new(&self.build_dir, &self.template_manager);
 
         // Extract admin token from environment config
         let admin_token = self
@@ -113,7 +113,12 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             .clone();
         let env_context = EnvContext::new(admin_token);
 
-        let compose_build_dir = generator.render(&env_context).await?;
+        // For now, use SQLite configuration (MySQL support will be added in Phase 2)
+        let docker_compose_context = DockerComposeContext::new_sqlite();
+
+        let compose_build_dir = generator
+            .render(&env_context, &docker_compose_context)
+            .await?;
 
         info!(
             step = "render_docker_compose_templates",
