@@ -24,7 +24,7 @@ pub enum AnsibleHostError {
 ///
 /// For this implementation, we only support IP addresses (IPv4 and IPv6) for simplicity.
 #[derive(Debug, Clone, PartialEq, Eq, Display, From, Serialize)]
-#[display(fmt = "{ip}")]
+#[display("{ip}")]
 #[serde(transparent)]
 pub struct AnsibleHost {
     ip: IpAddr,

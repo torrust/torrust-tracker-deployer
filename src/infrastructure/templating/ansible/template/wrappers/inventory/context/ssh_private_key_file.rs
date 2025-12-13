@@ -17,7 +17,7 @@ pub enum SshPrivateKeyFileError {
 
 /// Wrapper type for SSH private key file path using the newtype pattern
 #[derive(Debug, Clone, PartialEq, Eq, Display, From, Serialize)]
-#[display(fmt = "{}", "path.display()")]
+#[display("{}", path.display())]
 #[serde(transparent)]
 pub struct SshPrivateKeyFile {
     path: PathBuf,

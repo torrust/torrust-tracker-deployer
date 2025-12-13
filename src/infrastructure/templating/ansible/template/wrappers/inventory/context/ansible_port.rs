@@ -20,7 +20,7 @@ pub enum AnsiblePortError {
 /// Ansible's `ansible_port` represents the SSH port to connect to.
 /// Valid port numbers are in the range 1-65535.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, From, Serialize)]
-#[display(fmt = "{port}")]
+#[display("{port}")]
 #[serde(transparent)]
 pub struct AnsiblePort {
     port: u16,
