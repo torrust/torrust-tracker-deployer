@@ -41,17 +41,18 @@ Slices will be implemented sequentially, each delivering a working deployment:
   - Validate full pipeline: release → run → verify container running
   - **Specification**: [docs/issues/217-demo-slice-release-run-commands.md](217-demo-slice-release-run-commands.md)
 
-- [ ] **3.2.2** Torrust Tracker slice - #220
+- [x] **3.2.2** Torrust Tracker slice - ✅ #220
 
   - Replace nginx demo with Torrust Tracker service
   - Add tracker configuration template (start with hardcoded defaults)
   - Progressively expose configuration options to environment config
   - **Specification**: [docs/issues/220-tracker-slice-release-run-commands.md](220-tracker-slice-release-run-commands.md)
 
-- [ ] **3.2.3** MySQL slice
+- [ ] **3.2.3** MySQL slice - #232
 
   - Add MySQL service to docker-compose stack
   - Allow user to choose between SQLite and MySQL in environment config
+  - **Specification**: [docs/issues/232-mysql-slice-release-run-commands.md](232-mysql-slice-release-run-commands.md)
 
 - [ ] **3.2.4** Prometheus slice
 
