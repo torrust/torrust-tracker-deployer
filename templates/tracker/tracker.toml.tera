@@ -21,10 +21,16 @@ interval_min = 300
 on_reverse_proxy = true
 
 [core.database]
-driver = "sqlite3"
+driver = "{{ database_driver }}"
+{% if database_driver == "sqlite3" %}
 # Note: This path is inside the Docker container. The host path is /opt/torrust/storage/tracker/database/
 # which is mounted to /var/lib/torrust/tracker/ inside the container.
 path = "/var/lib/torrust/tracker/database/{{ tracker_database_name }}"
+{% elif database_driver == "mysql" %}
+# MySQL connection string format: mysql://<user>:<password>@<host>:<port>/<database>
+# The hostname "mysql" references the MySQL service in docker-compose network
+path = "mysql://{{ mysql_user }}:{{ mysql_password }}@{{ mysql_host }}:{{ mysql_port }}/{{ mysql_database }}"
+{% endif %}
 
 {% for udp_tracker in udp_trackers %}
 [[udp_trackers]]

@@ -27,6 +27,7 @@ use std::sync::Arc;
 use thiserror::Error;
 use tracing::instrument;
 
+use crate::domain::environment::TrackerConfig;
 use crate::domain::template::TemplateManager;
 use crate::infrastructure::templating::tracker::template::{
     renderer::{TrackerConfigRenderer, TrackerConfigRendererError},
@@ -117,7 +118,7 @@ impl TrackerProjectGenerator {
     )]
     pub fn render(
         &self,
-        tracker_config: Option<&crate::domain::environment::TrackerConfig>,
+        tracker_config: Option<&TrackerConfig>,
     ) -> Result<(), TrackerProjectGeneratorError> {
         // Create build directory for tracker templates
         let tracker_build_dir = self.build_dir.join(Self::TRACKER_BUILD_PATH);
@@ -183,17 +184,110 @@ mod tests {
 
         let content = fs::read_to_string(&tracker_toml_path).expect("Failed to read tracker.toml");
 
-        // Verify hardcoded values in template
+        // Verify default values (uses TrackerContext::default_config())
         assert!(content.contains(r#"app = "torrust-tracker""#));
         assert!(content.contains(r#"schema_version = "2.0.0""#));
         assert!(content.contains(r#"threshold = "info""#));
         assert!(content.contains("listed = false"));
         assert!(content.contains("private = false"));
         assert!(content.contains(r#"driver = "sqlite3""#));
+        assert!(content.contains(r#"path = "/var/lib/torrust/tracker/database/sqlite3.db""#));
         assert!(content.contains(r#"bind_address = "0.0.0.0:6868""#));
         assert!(content.contains(r#"bind_address = "0.0.0.0:6969""#));
         assert!(content.contains(r#"bind_address = "0.0.0.0:7070""#));
         assert!(content.contains(r#"bind_address = "0.0.0.0:1212""#));
+    }
+
+    #[test]
+    fn it_should_render_tracker_toml_with_sqlite_database_path() {
+        use crate::domain::environment::{
+            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig,
+            UdpTrackerConfig,
+        };
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let build_dir = temp_dir.path().join("build");
+
+        let template_manager = create_test_template_manager();
+        let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
+
+        let tracker_config = TrackerConfig {
+            core: TrackerCoreConfig {
+                database: DatabaseConfig::Sqlite {
+                    database_name: "tracker.db".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![UdpTrackerConfig {
+                bind_address: "0.0.0.0:6969".parse().unwrap(),
+            }],
+            http_trackers: vec![HttpTrackerConfig {
+                bind_address: "0.0.0.0:7070".parse().unwrap(),
+            }],
+            http_api: HttpApiConfig {
+                bind_address: "0.0.0.0:1212".parse().unwrap(),
+                admin_token: "test_token".to_string(),
+            },
+        };
+
+        generator
+            .render(Some(&tracker_config))
+            .expect("Failed to render templates");
+
+        let content = fs::read_to_string(build_dir.join("tracker/tracker.toml"))
+            .expect("Failed to read tracker.toml");
+
+        assert!(content.contains(r#"driver = "sqlite3""#));
+        assert!(content.contains("path = \"/var/lib/torrust/tracker/database/tracker.db\""));
+    }
+
+    #[test]
+    fn it_should_render_tracker_toml_with_mysql_connection_string() {
+        use crate::domain::environment::{
+            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig,
+            UdpTrackerConfig,
+        };
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let build_dir = temp_dir.path().join("build");
+
+        let template_manager = create_test_template_manager();
+        let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
+
+        let tracker_config = TrackerConfig {
+            core: TrackerCoreConfig {
+                database: DatabaseConfig::Mysql {
+                    host: "mysql".to_string(),
+                    port: 3306,
+                    database_name: "tracker_db".to_string(),
+                    username: "tracker_user".to_string(),
+                    password: "secure_pass".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![UdpTrackerConfig {
+                bind_address: "0.0.0.0:6969".parse().unwrap(),
+            }],
+            http_trackers: vec![HttpTrackerConfig {
+                bind_address: "0.0.0.0:7070".parse().unwrap(),
+            }],
+            http_api: HttpApiConfig {
+                bind_address: "0.0.0.0:1212".parse().unwrap(),
+                admin_token: "test_token".to_string(),
+            },
+        };
+
+        generator
+            .render(Some(&tracker_config))
+            .expect("Failed to render templates");
+
+        let content = fs::read_to_string(build_dir.join("tracker/tracker.toml"))
+            .expect("Failed to read tracker.toml");
+
+        assert!(content.contains(r#"driver = "mysql""#));
+        assert!(
+            content.contains("path = \"mysql://tracker_user:secure_pass@mysql:3306/tracker_db\"")
+        );
     }
 
     #[test]
@@ -247,7 +341,7 @@ mod tests {
 
         fs::create_dir_all(&tracker_dir).expect("Failed to create tracker dir");
 
-        // Create tracker.toml.tera with hardcoded test content
+        // Create tracker.toml.tera with dynamic Tera template (Phase 3 - supports both SQLite and MySQL)
         let tracker_template_content = r#"[metadata]
 app = "torrust-tracker"
 purpose = "configuration"
@@ -258,7 +352,7 @@ threshold = "info"
 
 [core]
 listed = false
-private = false
+private = {{ tracker_core_private }}
 
 [core.tracker_policy]
 persistent_torrent_completed_stat = true
@@ -271,20 +365,25 @@ interval_min = 300
 on_reverse_proxy = true
 
 [core.database]
-driver = "sqlite3"
-path = "/var/lib/torrust/tracker/database/sqlite3.db"
+driver = "{{ database_driver }}"
+{% if database_driver == "sqlite3" %}
+path = "/var/lib/torrust/tracker/database/{{ tracker_database_name }}"
+{% elif database_driver == "mysql" %}
+path = "mysql://{{ mysql_user }}:{{ mysql_password }}@{{ mysql_host }}:{{ mysql_port }}/{{ mysql_database }}"
+{% endif %}
 
+{% for udp_tracker in udp_trackers %}
 [[udp_trackers]]
-bind_address = "0.0.0.0:6868"
+bind_address = "{{ udp_tracker.bind_address }}"
 
-[[udp_trackers]]
-bind_address = "0.0.0.0:6969"
-
+{% endfor %}
+{% for http_tracker in http_trackers %}
 [[http_trackers]]
-bind_address = "0.0.0.0:7070"
+bind_address = "{{ http_tracker.bind_address }}"
 
+{% endfor %}
 [http_api]
-bind_address = "0.0.0.0:1212"
+bind_address = "{{ http_api_bind_address }}"
 "#;
 
         fs::write(
