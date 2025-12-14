@@ -69,16 +69,45 @@ These principles should guide all development decisions, code reviews, and featu
 
 ## 🔧 Essential Rules
 
-1. **Before placing code in DDD layers**: Read [`docs/contributing/ddd-layer-placement.md`](docs/contributing/ddd-layer-placement.md) for comprehensive guidance on which code belongs in which layer (Domain, Application, Infrastructure, Presentation). This guide includes rules, red flags, examples, and a decision flowchart to help you make the right architectural decisions.
+1. **CRITICAL - Understanding `envs/` vs `data/` directories** (⚠️ **MOST FREQUENTLY VIOLATED RULE**):
 
-2. **Before creating branches**: Read [`docs/contributing/branching.md`](docs/contributing/branching.md) for naming conventions (`{issue-number}-{short-description}`)
+   **TWO COMPLETELY DIFFERENT FILE PURPOSES:**
 
-3. **Before committing**: Read [`docs/contributing/commit-process.md`](docs/contributing/commit-process.md) for conventional commits
+   - **`envs/` directory** - User Environment Configurations (USER INPUT):
+
+     - Purpose: User-created configuration files for environment creation
+     - Format: Environment creation schema (see `envs/environment-schema.json`)
+     - Contains: Provider config, SSH credentials, tracker settings, database config
+     - Usage: Passed to `create environment --env-file envs/your-config.json`
+     - Example: `envs/manual-test-mysql.json`
+     - Version Control: Gitignored (user-specific)
+     - **Rule**: You MAY create/edit files here as part of documentation or testing
+
+   - **`data/` directory** - Internal Application State (APPLICATION MANAGED):
+     - Purpose: Serialized Rust structs representing deployment state machine
+     - Format: Rust `Environment<State>` domain model serialization
+     - Contains: State transitions, runtime outputs, trace IDs, timestamps
+     - Usage: Internal state management, read-only inspection
+     - Example: `data/manual-test-mysql/environment.json` (NOT the same as `envs/manual-test-mysql.json`)
+     - Version Control: Gitignored (runtime-generated)
+     - **Rule**: You MUST NEVER create/edit files here - READ ONLY for debugging/verification
+
+   **NEVER CONFUSE THESE TWO!** When documenting or testing:
+
+   - User creates config in `envs/your-env.json`
+   - Application manages state in `data/your-env/environment.json`
+   - These are completely different JSON structures with different purposes
+
+2. **Before placing code in DDD layers**: Read [`docs/contributing/ddd-layer-placement.md`](docs/contributing/ddd-layer-placement.md) for comprehensive guidance on which code belongs in which layer (Domain, Application, Infrastructure, Presentation). This guide includes rules, red flags, examples, and a decision flowchart to help you make the right architectural decisions.
+
+3. **Before creating branches**: Read [`docs/contributing/branching.md`](docs/contributing/branching.md) for naming conventions (`{issue-number}-{short-description}`)
+
+4. **Before committing**: Read [`docs/contributing/commit-process.md`](docs/contributing/commit-process.md) for conventional commits
 
    - **With issue branch**: `{type}: [#{issue}] {description}` (when branch name starts with `{issue-number}-`)
    - **Without issue branch**: `{type}: {description}` (when working on main or branch without issue number prefix)
 
-4. **Before committing**: Always run the pre-commit verification script - all checks must pass before staging files or creating commits, regardless of the tool or method used:
+5. **Before committing**: Always run the pre-commit verification script - all checks must pass before staging files or creating commits, regardless of the tool or method used:
 
    ```bash
    ./scripts/pre-commit.sh
@@ -92,32 +121,32 @@ These principles should guide all development decisions, code reviews, and featu
    - Git clients: GitHub Desktop, GitKraken, etc.
    - CI/CD: Any automated commits or merges
 
-5. **Before working with Tera templates**: Read [`docs/contributing/templates.md`](docs/contributing/templates.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
+6. **Before working with Tera templates**: Read [`docs/contributing/templates.md`](docs/contributing/templates.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
 
-6. **When adding new Ansible playbooks**: Read [`docs/contributing/templates.md`](docs/contributing/templates.md) for the complete guide. **CRITICAL**: Static playbooks (without `.tera` extension) must be registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs` in the `copy_static_templates` method, otherwise they won't be copied to the build directory and Ansible will fail with "playbook not found" error.
+7. **When adding new Ansible playbooks**: Read [`docs/contributing/templates.md`](docs/contributing/templates.md) for the complete guide. **CRITICAL**: Static playbooks (without `.tera` extension) must be registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs` in the `copy_static_templates` method, otherwise they won't be copied to the build directory and Ansible will fail with "playbook not found" error.
 
-7. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
+8. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
 
-8. **When producing any output to users** (CRITICAL for architecture): Read [`docs/contributing/output-handling.md`](docs/contributing/output-handling.md) for output handling conventions. **NEVER use `println!`, `eprintln!`, `print!`, `eprint!`, or direct access to `std::io::stdout()`/`std::io::stderr()`**. Always use `UserOutput` methods through the execution context. This ensures testability, consistent formatting, proper channel routing (stdout vs stderr), verbosity control, and theme support. Example: `ctx.user_output().lock().borrow_mut().progress("Processing...")` instead of `println!("Processing...")`.
+9. **When producing any output to users** (CRITICAL for architecture): Read [`docs/contributing/output-handling.md`](docs/contributing/output-handling.md) for output handling conventions. **NEVER use `println!`, `eprintln!`, `print!`, `eprint!`, or direct access to `std::io::stdout()`/`std::io::stderr()`**. Always use `UserOutput` methods through the execution context. This ensures testability, consistent formatting, proper channel routing (stdout vs stderr), verbosity control, and theme support. Example: `ctx.user_output().lock().borrow_mut().progress("Processing...")` instead of `println!("Processing...")`.
 
-9. **Understanding expected errors**: Read [`docs/contributing/known-issues.md`](docs/contributing/known-issues.md) for known issues and expected behaviors. Some errors that appear red in E2E test output (like SSH host key warnings) are normal and expected - not actual failures.
+10. **Understanding expected errors**: Read [`docs/contributing/known-issues.md`](docs/contributing/known-issues.md) for known issues and expected behaviors. Some errors that appear red in E2E test output (like SSH host key warnings) are normal and expected - not actual failures.
 
-10. **Before making engineering decisions**: Document significant architectural or design decisions as Architectural Decision Records (ADRs) in `docs/decisions/`. Read [`docs/decisions/README.md`](docs/decisions/README.md) for the ADR template and guidelines. This ensures decisions are properly documented with context, rationale, and consequences for future reference.
+11. **Before making engineering decisions**: Document significant architectural or design decisions as Architectural Decision Records (ADRs) in `docs/decisions/`. Read [`docs/decisions/README.md`](docs/decisions/README.md) for the ADR template and guidelines. This ensures decisions are properly documented with context, rationale, and consequences for future reference.
 
-11. **When organizing code within modules**: Follow the module organization conventions in [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md). Use top-down organization with public items first, high-level abstractions before low-level details, and important responsibilities before secondary concerns like error types.
+12. **When organizing code within modules**: Follow the module organization conventions in [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md). Use top-down organization with public items first, high-level abstractions before low-level details, and important responsibilities before secondary concerns like error types.
 
-12. **When writing Rust imports** (CRITICAL for code style): Follow the import conventions in [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md). Two essential rules:
+13. **When writing Rust imports** (CRITICAL for code style): Follow the import conventions in [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md). Two essential rules:
 
     - **Imports Always First**: Keep all imports at the top of the file, organized in groups (std → external crates → internal crate).
     - **Prefer Imports Over Full Paths**: Always import types and use short names (e.g., `Arc<UserOutput>`) rather than fully-qualified paths. Never use long paths like `std::sync::Arc<crate::presentation::views::UserOutput>` in regular code - only use full paths when disambiguating naming conflicts.
 
-13. **When writing Markdown documentation**: Be aware of GitHub Flavored Markdown's automatic linking behavior. Read [`docs/contributing/github-markdown-pitfalls.md`](docs/contributing/github-markdown-pitfalls.md) for critical patterns to avoid. **NEVER use hash-number patterns for enumeration or step numbering** - this creates unintended links to GitHub issues/PRs. Use ordered lists or alternative formats instead.
+14. **When writing Markdown documentation**: Be aware of GitHub Flavored Markdown's automatic linking behavior. Read [`docs/contributing/github-markdown-pitfalls.md`](docs/contributing/github-markdown-pitfalls.md) for critical patterns to avoid. **NEVER use hash-number patterns for enumeration or step numbering** - this creates unintended links to GitHub issues/PRs. Use ordered lists or alternative formats instead.
 
-14. **When creating new environment variables**: Read [`docs/contributing/environment-variables-naming.md`](docs/contributing/environment-variables-naming.md) for comprehensive guidance on naming conventions (condition-based vs action-based), decision frameworks, and best practices. Also review [`docs/decisions/environment-variable-prefix.md`](docs/decisions/environment-variable-prefix.md) to ensure all project environment variables use the `TORRUST_TD_` prefix for proper namespacing and avoiding conflicts with system or user variables.
+15. **When creating new environment variables**: Read [`docs/contributing/environment-variables-naming.md`](docs/contributing/environment-variables-naming.md) for comprehensive guidance on naming conventions (condition-based vs action-based), decision frameworks, and best practices. Also review [`docs/decisions/environment-variable-prefix.md`](docs/decisions/environment-variable-prefix.md) to ensure all project environment variables use the `TORRUST_TD_` prefix for proper namespacing and avoiding conflicts with system or user variables.
 
-15. **When adding new templates**: Read [`docs/technical/template-system-architecture.md`](docs/technical/template-system-architecture.md) to understand the Project Generator pattern. The `templates/` directory contains source templates. Dynamic templates (`.tera`) are automatically processed, but static files must be explicitly registered in their respective `ProjectGenerator` to be copied to the build directory.
+16. **When adding new templates**: Read [`docs/technical/template-system-architecture.md`](docs/technical/template-system-architecture.md) to understand the Project Generator pattern. The `templates/` directory contains source templates. Dynamic templates (`.tera`) are automatically processed, but static files must be explicitly registered in their respective `ProjectGenerator` to be copied to the build directory.
 
-16. **When writing unit tests** (CRITICAL for test quality): Read [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) and follow the behavior-driven naming convention. **NEVER use the `test_` prefix** for test function names. Always use the `it_should_{expected_behavior}_when_{condition}` or `it_should_{expected_behavior}_given_{state}` pattern. This ensures tests clearly document the behavior being validated and the conditions under which it occurs. Example: `it_should_return_error_when_username_is_invalid()` instead of `test_invalid_username()`. Test names should follow the three-part structure (What-When-Then) and be descriptive enough that the test's purpose is clear without reading the code.
+17. **When writing unit tests** (CRITICAL for test quality): Read [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) and follow the behavior-driven naming convention. **NEVER use the `test_` prefix** for test function names. Always use the `it_should_{expected_behavior}_when_{condition}` or `it_should_{expected_behavior}_given_{state}` pattern. This ensures tests clearly document the behavior being validated and the conditions under which it occurs. Example: `it_should_return_error_when_username_is_invalid()` instead of `test_invalid_username()`. Test names should follow the three-part structure (What-When-Then) and be descriptive enough that the test's purpose is clear without reading the code.
 
 ## 🧪 Build & Test
 

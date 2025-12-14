@@ -12,6 +12,9 @@ use serde::Serialize;
 pub struct EnvContext {
     /// The admin token for the Torrust Tracker HTTP API
     tracker_api_admin_token: String,
+    /// Database driver type ("sqlite3" or "mysql")
+    /// Controls which config template the container entrypoint uses
+    database_driver: String,
     /// `MySQL` root password (only used when `MySQL` driver is configured)
     #[serde(skip_serializing_if = "Option::is_none")]
     mysql_root_password: Option<String>,
@@ -45,13 +48,13 @@ impl EnvContext {
     pub fn new(tracker_api_admin_token: String) -> Self {
         Self {
             tracker_api_admin_token,
+            database_driver: "sqlite3".to_string(),
             mysql_root_password: None,
             mysql_database: None,
             mysql_user: None,
             mysql_password: None,
         }
     }
-
     /// Creates a new `EnvContext` with `MySQL` credentials
     ///
     /// # Arguments
@@ -71,6 +74,7 @@ impl EnvContext {
     ) -> Self {
         Self {
             tracker_api_admin_token,
+            database_driver: "mysql".to_string(),
             mysql_root_password: Some(mysql_root_password),
             mysql_database: Some(mysql_database),
             mysql_user: Some(mysql_user),
