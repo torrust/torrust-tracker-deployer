@@ -243,22 +243,22 @@ mod tests {
             "Should use MySQL 8.0 image"
         );
 
-        // Verify MySQL environment variables
+        // Verify MySQL environment variables use environment variable references
         assert!(
-            content.contains("MYSQL_ROOT_PASSWORD=rootpass123"),
-            "Should contain root password"
+            content.contains("MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}"),
+            "Should reference MYSQL_ROOT_PASSWORD from .env file"
         );
         assert!(
-            content.contains("MYSQL_DATABASE=tracker_db"),
-            "Should contain database name"
+            content.contains("MYSQL_DATABASE=${MYSQL_DATABASE}"),
+            "Should reference MYSQL_DATABASE from .env file"
         );
         assert!(
-            content.contains("MYSQL_USER=tracker_user"),
-            "Should contain username"
+            content.contains("MYSQL_USER=${MYSQL_USER}"),
+            "Should reference MYSQL_USER from .env file"
         );
         assert!(
-            content.contains("MYSQL_PASSWORD=userpass123"),
-            "Should contain password"
+            content.contains("MYSQL_PASSWORD=${MYSQL_PASSWORD}"),
+            "Should reference MYSQL_PASSWORD from .env file"
         );
 
         // Verify MySQL healthcheck
@@ -302,7 +302,8 @@ mod tests {
         let result = renderer.render(&sqlite_context, output_dir.path());
         assert!(
             result.is_ok(),
-            "Rendering with SQLite context should succeed"
+            "Rendering with SQLite context should succeed: {:?}",
+            result.err()
         );
 
         let output_path = output_dir.path().join("docker-compose.yml");

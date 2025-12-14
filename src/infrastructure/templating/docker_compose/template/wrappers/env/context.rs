@@ -12,10 +12,22 @@ use serde::Serialize;
 pub struct EnvContext {
     /// The admin token for the Torrust Tracker HTTP API
     tracker_api_admin_token: String,
+    /// `MySQL` root password (only used when `MySQL` driver is configured)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mysql_root_password: Option<String>,
+    /// `MySQL` database name (only used when `MySQL` driver is configured)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mysql_database: Option<String>,
+    /// `MySQL` user (only used when `MySQL` driver is configured)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mysql_user: Option<String>,
+    /// `MySQL` password (only used when `MySQL` driver is configured)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mysql_password: Option<String>,
 }
 
 impl EnvContext {
-    /// Creates a new `EnvContext` with the tracker admin token
+    /// Creates a new `EnvContext` with the tracker admin token (`SQLite` mode)
     ///
     /// # Arguments
     ///
@@ -33,6 +45,36 @@ impl EnvContext {
     pub fn new(tracker_api_admin_token: String) -> Self {
         Self {
             tracker_api_admin_token,
+            mysql_root_password: None,
+            mysql_database: None,
+            mysql_user: None,
+            mysql_password: None,
+        }
+    }
+
+    /// Creates a new `EnvContext` with `MySQL` credentials
+    ///
+    /// # Arguments
+    ///
+    /// * `tracker_api_admin_token` - The admin token for tracker API authentication
+    /// * `mysql_root_password` - `MySQL` root password
+    /// * `mysql_database` - `MySQL` database name
+    /// * `mysql_user` - `MySQL` user
+    /// * `mysql_password` - `MySQL` password
+    #[must_use]
+    pub fn new_with_mysql(
+        tracker_api_admin_token: String,
+        mysql_root_password: String,
+        mysql_database: String,
+        mysql_user: String,
+        mysql_password: String,
+    ) -> Self {
+        Self {
+            tracker_api_admin_token,
+            mysql_root_password: Some(mysql_root_password),
+            mysql_database: Some(mysql_database),
+            mysql_user: Some(mysql_user),
+            mysql_password: Some(mysql_password),
         }
     }
 
@@ -40,6 +82,30 @@ impl EnvContext {
     #[must_use]
     pub fn tracker_api_admin_token(&self) -> &str {
         &self.tracker_api_admin_token
+    }
+
+    /// Get the `MySQL` root password (if configured)
+    #[must_use]
+    pub fn mysql_root_password(&self) -> Option<&str> {
+        self.mysql_root_password.as_deref()
+    }
+
+    /// Get the `MySQL` database name (if configured)
+    #[must_use]
+    pub fn mysql_database(&self) -> Option<&str> {
+        self.mysql_database.as_deref()
+    }
+
+    /// Get the `MySQL` user (if configured)
+    #[must_use]
+    pub fn mysql_user(&self) -> Option<&str> {
+        self.mysql_user.as_deref()
+    }
+
+    /// Get the `MySQL` password (if configured)
+    #[must_use]
+    pub fn mysql_password(&self) -> Option<&str> {
+        self.mysql_password.as_deref()
     }
 }
 

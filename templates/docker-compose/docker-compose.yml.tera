@@ -1,5 +1,24 @@
 # Docker Compose configuration for Torrust Tracker deployment
 
+# IMPORTANT: Environment Variable Injection Pattern
+# ================================================
+# All configuration values that may need to be changed during maintenance
+# should be injected via environment variables from the .env file, not
+# hardcoded in this docker-compose template.
+#
+# Pattern to follow:
+#   CORRECT:   - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+#   INCORRECT: - MYSQL_ROOT_PASSWORD=hardcoded_value
+#
+# Rationale:
+# - System administrators can modify .env values and restart services without
+#   regenerating templates
+# - Supports runtime configuration changes without redeployment
+# - Follows Docker Compose best practices for configuration management
+# - Separates template generation (deploy-time) from configuration (runtime)
+#
+# See ADR: docs/decisions/environment-variable-injection-in-docker-compose.md
+
 services:
   tracker:
     image: torrust/tracker:develop
@@ -33,14 +52,14 @@ services:
     container_name: mysql
     restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD={{ database.mysql.root_password }}
-      - MYSQL_DATABASE={{ database.mysql.database }}
-      - MYSQL_USER={{ database.mysql.user }}
-      - MYSQL_PASSWORD={{ database.mysql.password }}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     networks:
       - backend_network
     ports:
-      - "{{ database.mysql.port }}:3306"
+      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password
