@@ -200,7 +200,7 @@ fi
 - **Tracker Entrypoint**: <https://github.com/torrust/torrust-tracker/blob/develop/share/container/entry_script_sh>
 - **Demo Compose**: <https://github.com/torrust/torrust-demo/blob/main/compose.yaml>
 - **Configuration Override Pattern**: Uses `TORRUST_TRACKER_CONFIG_OVERRIDE_*` prefix for environment variable overrides
-- **Related**: Environment variable naming decision - [`docs/decisions/environment-variable-prefix.md`](../decisions/environment-variable-prefix.md)
+- **Related**: Environment variable naming decision - [`docs/decisions/environment-variable-prefix.md`](../../decisions/environment-variable-prefix.md)
 
 ## Action Items
 
@@ -212,6 +212,6 @@ fi
 
 ## Related Documentation
 
-- **Our Environment Variable Injection**: [`docs/decisions/environment-variable-injection-in-docker-compose.md`](../decisions/environment-variable-injection-in-docker-compose.md)
-- **Template System**: [`docs/technical/template-system-architecture.md`](../technical/template-system-architecture.md)
-- **Output Handling**: [`docs/contributing/output-handling.md`](../contributing/output-handling.md)
+- **Our Environment Variable Injection**: [`docs/decisions/environment-variable-injection-in-docker-compose.md`](../../decisions/environment-variable-injection-in-docker-compose.md)
+- **Template System**: [`docs/technical/template-system-architecture.md`](../../technical/template-system-architecture.md)
+- **Output Handling**: [`docs/contributing/output-handling.md`](../../contributing/output-handling.md)

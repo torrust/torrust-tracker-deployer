@@ -36,7 +36,7 @@ docs/
 ├── refactors/            🔄 Refactoring plans and tracking
 ├── implementation-plans/ 📝 Step-by-step plans for complex changes
 ├── issues/               📋 Issue templates and specifications
-├── github-actions-issues/ ⚠️ CI/CD troubleshooting
+├── external-issues/      ⚠️ External tool issues (GitHub Actions, Tracker)
 └── analysis/             📊 Code analysis (presentation layer structure)
 ```
 
@@ -82,7 +82,7 @@ docs/
 | Write unit tests          | [`contributing/testing/unit-testing.md`](contributing/testing/unit-testing.md) |
 | Understand a decision     | [`decisions/README.md`](decisions/README.md)                                   |
 | Plan a new feature        | [`features/README.md`](features/README.md)                                     |
-| Fix a CI issue            | [`github-actions-issues/README.md`](github-actions-issues/README.md)           |
+| Fix external tool issues  | [`external-issues/README.md`](external-issues/README.md)                       |
 | Work with templates       | [`contributing/templates.md`](contributing/templates.md)                       |
 | Handle errors properly    | [`contributing/error-handling.md`](contributing/error-handling.md)             |
 | Handle output properly    | [`contributing/output-handling.md`](contributing/output-handling.md)           |
@@ -246,9 +246,11 @@ Ansible testing strategy, Docker vs LXD, E2E testing, UX patterns, MVVM analysis
 
 - [`issues/`](issues/) - Templates for epics, issues, and specifications
 
-**CI/CD Troubleshooting:**
+**External Tool Issues:**
 
-- [`github-actions-issues/README.md`](github-actions-issues/README.md) - GitHub Actions runner issues
+- [`external-issues/README.md`](external-issues/README.md) - Issues with external tools (GitHub Actions, Tracker)
+- [`external-issues/github-actions/`](external-issues/github-actions/) - GitHub Actions CI/CD issues
+- [`external-issues/tracker/`](external-issues/tracker/) - Torrust Tracker issues
 
 **Code Analysis:**
 

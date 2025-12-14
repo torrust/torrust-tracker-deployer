@@ -220,7 +220,7 @@ The project has comprehensive documentation organized in the [`docs/`](docs/) di
 | Write unit tests          | [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) |
 | Understand a decision     | [`docs/decisions/README.md`](docs/decisions/README.md)                                   |
 | Plan a new feature        | [`docs/features/README.md`](docs/features/README.md)                                     |
-| Fix a CI issue            | [`docs/github-actions-issues/README.md`](docs/github-actions-issues/README.md)           |
+| Fix external tool issues  | [`docs/external-issues/README.md`](docs/external-issues/README.md)                       |
 | Work with templates       | [`docs/contributing/templates.md`](docs/contributing/templates.md)                       |
 | Handle errors properly    | [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md)             |
 | Handle output properly    | [`docs/contributing/output-handling.md`](docs/contributing/output-handling.md)           |

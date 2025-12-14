@@ -20,7 +20,7 @@ When testing the deployer, we sometimes discover issues, limitations, or unexpec
 **OUT OF SCOPE** (belongs elsewhere):
 
 - Deployer bugs → GitHub Issues in this repository
-- Infrastructure provisioning issues → `docs/github-actions-issues/` or `docs/contributing/known-issues.md`
+- Infrastructure provisioning issues → `docs/external-issues/github-actions/` or `docs/contributing/known-issues.md`
 - Template rendering problems → Code fixes in `src/infrastructure/templating/`
 - Ansible playbook issues → Code fixes in `templates/ansible/`
 
@@ -43,4 +43,5 @@ Each issue should be documented with:
 
 - [Torrust Tracker Repository](https://github.com/torrust/torrust-tracker)
 - [Torrust Tracker Container Images](https://hub.docker.com/r/torrust/tracker)
-- [Contributing Guidelines](../contributing/README.md)
+- [External Issues Overview](../README.md)
+- [Contributing Guidelines](../../contributing/README.md)
