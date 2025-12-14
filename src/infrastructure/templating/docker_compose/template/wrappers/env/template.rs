@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn it_should_create_env_template_successfully() {
-        let template_content = "TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN={{ tracker_api_admin_token }}\n";
+        let template_content = "TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN={{ tracker.api_admin_token }}\n";
 
         let template_file = File::new(".env.tera", template_content.to_string()).unwrap();
 
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn it_should_render_template_with_substituted_variables() {
-        let template_content = "TOKEN={{ tracker_api_admin_token }}\n";
+        let template_content = "TOKEN={{ tracker.api_admin_token }}\n";
 
         let template_file = File::new(".env.tera", template_content.to_string()).unwrap();
 
@@ -141,7 +141,7 @@ mod tests {
     fn it_should_render_to_file() {
         use tempfile::TempDir;
 
-        let template_content = "ADMIN_TOKEN={{ tracker_api_admin_token }}\n";
+        let template_content = "ADMIN_TOKEN={{ tracker.api_admin_token }}\n";
         let template_file = File::new(".env.tera", template_content.to_string()).unwrap();
 
         let env_context = EnvContext::new("FileTestToken".to_string());

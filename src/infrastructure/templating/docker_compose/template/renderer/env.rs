@@ -218,7 +218,7 @@ mod tests {
 TORRUST_TRACKER_CONFIG_TOML_PATH=/etc/torrust/tracker/tracker.toml
 
 # Override the admin token for the tracker HTTP API
-TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN={{ tracker_api_admin_token }}
+TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN={{ tracker.api_admin_token }}
 ";
 
         fs::write(docker_compose_dir.join(".env.tera"), template_content)?;
