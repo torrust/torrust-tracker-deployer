@@ -22,9 +22,10 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
 **DDD Layers**: Infrastructure + Domain
 **Module Paths**:
 
-- `src/infrastructure/templating/docker_compose/` - Docker Compose template rendering with Prometheus service
 - `src/infrastructure/templating/prometheus/` - Prometheus configuration template system (NEW)
-- `src/domain/config/environment/` - Environment configuration schema extensions
+- `src/infrastructure/templating/docker_compose/` - Docker Compose template rendering with Prometheus service
+- `src/domain/prometheus/` - Prometheus configuration domain types (NEW)
+- `src/application/command_handlers/create/config/prometheus/` - Prometheus config creation handlers (NEW)
 
 **Pattern**: Template System with Project Generator pattern + Configuration-driven service selection
 
@@ -72,32 +73,30 @@ The implementation follows an **enabled-by-default, opt-out approach** where Pro
 
 ### Prometheus Service Enablement
 
-**Environment Configuration Addition**:
+**Environment Configuration Addition** (top-level, alongside `tracker`):
 
 ```json
 {
-  "deployment": {
-    "tracker": {
-      "monitoring": {
-        "prometheus": {
-          "scrape_interval": 15
-        }
-      }
-    }
+  "environment": { "name": "my-deployment" },
+  "provider": { ... },
+  "ssh_credentials": { ... },
+  "tracker": { ... },
+  "prometheus": {
+    "scrape_interval": 15
   }
 }
 ```
 
 **Default Behavior in Generated Templates**:
 
-- The `monitoring.prometheus` section is **included by default** when generating environment templates
+- The `prometheus` section is **included by default** when generating environment templates
 - If the section is **present** in the environment config → Prometheus service is included in docker-compose
 - If the section is **removed/absent** from the environment config → Prometheus service is NOT included
 
 **Service Detection**:
 
-- Presence of `monitoring.prometheus` section (regardless of content) → Service enabled
-- Absence of `monitoring.prometheus` section → Service disabled
+- Presence of `prometheus` section (regardless of content) → Service enabled
+- Absence of `prometheus` section → Service disabled
 
 **Configuration Model**: Uses `Option<PrometheusConfig>` in Rust domain model:
 
@@ -202,14 +201,18 @@ scrape_configs:
 
 ### Environment Configuration Schema Extensions
 
-**Add to Domain Layer** (`src/domain/config/environment/`):
+**Add to Domain Layer** (`src/domain/prometheus/`):
 
 ```rust
-// In tracker configuration
-pub struct TrackerMonitoring {
-    pub prometheus: Option<PrometheusConfig>,
-}
+// New file: src/domain/prometheus/mod.rs
+pub mod config;
+pub use config::PrometheusConfig;
 
+// New file: src/domain/prometheus/config.rs
+/// Prometheus metrics collection configuration
+///
+/// Configures how Prometheus scrapes metrics from the tracker.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PrometheusConfig {
     /// Scrape interval in seconds
     pub scrape_interval: u32,
@@ -222,33 +225,42 @@ impl Default for PrometheusConfig {
 }
 ```
 
+**Add to Environment User Inputs** (`src/domain/environment/user_inputs.rs` or similar):
+
+The environment's user inputs struct should have a top-level optional `prometheus` field:
+
+```rust
+pub struct UserInputs {
+    pub provider: ProviderConfig,
+    pub ssh_credentials: SshCredentials,
+    pub tracker: TrackerConfig,
+    /// Prometheus metrics collection (optional third-party service)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prometheus: Option<PrometheusConfig>,
+}
+```
+
 **JSON Schema Addition** (`schemas/environment-config.json`):
 
 ```json
 {
-  "deployment": {
-    "tracker": {
-      "monitoring": {
-        "prometheus": {
-          "type": "object",
-          "description": "Prometheus metrics collection service configuration. Remove this section to disable Prometheus.",
-          "properties": {
-            "scrape_interval": {
-              "type": "integer",
-              "description": "How often to scrape metrics from tracker (in seconds). Minimum 5s to avoid overwhelming the tracker.",
-              "default": 15,
-              "minimum": 5,
-              "maximum": 300
-            }
-          }
-        }
+  "prometheus": {
+    "type": "object",
+    "description": "Prometheus metrics collection service configuration. Remove this section to disable Prometheus.",
+    "properties": {
+      "scrape_interval": {
+        "type": "integer",
+        "description": "How often to scrape metrics from tracker (in seconds). Minimum 5s to avoid overwhelming the tracker.",
+        "default": 15,
+        "minimum": 5,
+        "maximum": 300
       }
     }
   }
 }
 ```
 
-**Template Generation**: When generating environment templates with `create environment --template`, include the `monitoring.prometheus` section by default.
+**Template Generation**: When generating environment templates with `create environment --template`, include the `prometheus` section by default at the top level (alongside `tracker`).
 
 ### Template File Organization
 
@@ -335,7 +347,13 @@ volumes:
 
 ## Implementation Plan
 
-> **Important**: After completing each phase, run `./scripts/pre-commit.sh` to verify all checks pass, then commit your changes with a descriptive message following the [commit conventions](../contributing/commit-process.md). This ensures incremental progress is saved and issues are caught early.
+> **Important Workflow**: After completing each phase:
+>
+> 1. Run `./scripts/pre-commit.sh` to verify all checks pass
+> 2. Commit your changes with a descriptive message following the [commit conventions](../contributing/commit-process.md)
+> 3. **STOP and wait for feedback/approval before proceeding to the next phase**
+>
+> This ensures incremental progress is saved, issues are caught early, and each phase is reviewed before moving forward.
 
 ### Phase 1: Template Structure & Data Flow Design (1 hour)
 
@@ -345,13 +363,17 @@ volumes:
 - [ ] Create initial `prometheus.yml.tera` template with placeholder variables
 - [ ] Verify template variables match context struct fields
 
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 2.
+
 ### Phase 2: Environment Configuration (1-2 hours)
 
-- [ ] Extend domain `TrackerConfig` with `monitoring.prometheus: Option<PrometheusConfig>` field
-- [ ] Update JSON schema with Prometheus configuration (scrape_interval field)
-- [ ] Add Prometheus config to application layer conversion methods
-- [ ] Ensure generated templates include Prometheus section by default
+- [ ] Create new domain module `src/domain/prometheus/` with `PrometheusConfig` struct
+- [ ] Add `prometheus: Option<PrometheusConfig>` to environment's `UserInputs` struct (top-level, alongside tracker)
+- [ ] Update JSON schema with Prometheus configuration (top-level)
+- [ ] Ensure generated templates include Prometheus section by default (at top level)
 - [ ] Add unit tests for Prometheus configuration serialization/deserialization (with and without section)
+
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 3.
 
 ### Phase 3: Prometheus Template Renderer (2 hours)
 
@@ -363,6 +385,8 @@ volumes:
 - [ ] Register Prometheus templates in project generator
 - [ ] Add comprehensive unit tests for renderer (with different scrape intervals, tokens, ports)
 
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 4.
+
 ### Phase 4: Docker Compose Integration (2-3 hours)
 
 **Why Phase 4**: Now we can integrate with the existing Prometheus renderer from Phase 3.
@@ -373,6 +397,8 @@ volumes:
 - [ ] Update docker-compose template renderer to handle Prometheus context
 - [ ] Add unit tests for Prometheus service rendering (with and without Prometheus section)
 
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 5.
+
 ### Phase 5: Release Command Integration (1 hour)
 
 **Why Phase 5**: Orchestrates both renderers (docker-compose + prometheus) created in previous phases.
@@ -382,12 +408,16 @@ volumes:
 - [ ] Verify build directory structure includes Prometheus configuration
 - [ ] Test release command with Prometheus enabled and disabled
 
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 6.
+
 ### Phase 6: Ansible Deployment (1 hour)
 
 - [ ] Extend release playbook with Prometheus configuration tasks
 - [ ] Add conditional directory creation for Prometheus
 - [ ] Add conditional file copy for prometheus.yml
 - [ ] Test Ansible playbook with Prometheus enabled/disabled
+
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 7.
 
 ### Phase 7: Testing & Verification (2-3 hours)
 
@@ -399,6 +429,8 @@ volumes:
 - [ ] Verify Prometheus scrapes metrics from tracker endpoints
 - [ ] Update manual testing documentation
 
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 8.
+
 ### Phase 8: Documentation (1 hour)
 
 - [ ] Create ADR for Prometheus integration pattern
@@ -406,6 +438,8 @@ volumes:
 - [ ] Document Prometheus UI access and basic usage
 - [ ] Add Prometheus to architecture diagrams
 - [ ] Update AGENTS.md if needed
+
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit final changes, and mark issue as complete.
 
 **Total Estimated Time**: 13-17 hours
 
