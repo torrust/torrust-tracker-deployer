@@ -14,7 +14,7 @@ scrape_configs:
       token: ["{{ api_token }}"]
       format: ["prometheus"]
     static_configs:
-      - targets: ["tracker:{{ metrics_port }}"]
+      - targets: ["tracker:{{ api_port }}"]
 
   # Tracker Metrics - Detailed operational metrics
   - job_name: "tracker_metrics"
@@ -23,4 +23,4 @@ scrape_configs:
       token: ["{{ api_token }}"]
       format: ["prometheus"]
     static_configs:
-      - targets: ["tracker:{{ metrics_port }}"]
+      - targets: ["tracker:{{ api_port }}"]
