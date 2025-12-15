@@ -6,5 +6,7 @@
 pub mod renderer;
 pub mod wrapper;
 
-pub use renderer::{PrometheusConfigRenderer, PrometheusProjectGenerator};
+pub use renderer::{
+    PrometheusConfigRenderer, PrometheusProjectGenerator, PrometheusProjectGeneratorError,
+};
 pub use wrapper::PrometheusContext;

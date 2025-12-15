@@ -152,7 +152,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         // Create contexts based on database configuration
         let database_config = &self.environment.context().user_inputs.tracker.core.database;
-        let (env_context, docker_compose_context) = match database_config {
+        let (env_context, mut docker_compose_context) = match database_config {
             DatabaseConfig::Sqlite { .. } => {
                 let env_context = EnvContext::new(admin_token);
                 let docker_compose_context = DockerComposeContext::new_sqlite(ports);
@@ -188,6 +188,12 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
                 (env_context, docker_compose_context)
             }
         };
+
+        // Add Prometheus configuration if present
+        if let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus {
+            docker_compose_context =
+                docker_compose_context.with_prometheus(prometheus_config.clone());
+        }
 
         let compose_build_dir = generator
             .render(&env_context, &docker_compose_context)

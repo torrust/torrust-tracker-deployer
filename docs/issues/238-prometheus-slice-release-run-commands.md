@@ -42,7 +42,7 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
   - Added 12 comprehensive unit tests with full coverage
   - All linters passing
 
-- ✅ **Phase 4**: Docker Compose Integration (commit: pending)
+- ✅ **Phase 4**: Docker Compose Integration (commit: 22790de)
 
   - Added `prometheus_config: Option<PrometheusConfig>` field to `DockerComposeContext`
   - Implemented `with_prometheus()` method for context builder pattern
@@ -51,7 +51,19 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
   - Added 4 comprehensive unit tests for Prometheus service rendering
   - All linters passing
 
-- ⏳ **Phase 5**: Release Command Implementation (pending)
+- ✅ **Phase 5**: Release Command Integration (commit: TBD)
+
+  - **FIXED**: Moved Prometheus template rendering from docker-compose step to independent step in release handler
+  - Created `RenderPrometheusTemplatesStep` to render Prometheus templates
+  - Added `render_prometheus_templates()` method to `ReleaseCommandHandler`
+  - Prometheus templates now rendered independently at Step 5 (after tracker templates, before docker-compose)
+  - Docker Compose step only adds Prometheus config to context (no template rendering)
+  - Added `RenderPrometheusTemplates` variant to `ReleaseStep` enum
+  - Extended `EnvironmentTestBuilder` with `with_prometheus_config()` method
+  - All linters passing, all tests passing (1507 tests)
+  - **Architectural Principle**: Each service renders its templates independently in the release handler
+
+- ⏳ **Phase 6**: Ansible Deployment (pending)
 - ⏳ **Phase 6**: Ansible Playbook Integration (pending)
 - ⏳ **Phase 7**: Testing (pending)
 - ⏳ **Phase 8**: Documentation (pending)
@@ -85,8 +97,26 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
 - [ ] Prometheus depends on tracker service (starts after tracker container starts, no health check)
 - [ ] Metrics API token and port read from tracker HTTP API configuration (`tracker.http_api.admin_token` and `tracker.http_api.bind_address`)
 - [ ] Prometheus configuration is dynamic (uses Tera templating)
+- [x] **Independent Template Rendering**: Each service renders its templates independently in the release handler
+  - Prometheus templates rendered by dedicated `RenderPrometheusTemplatesStep` in release handler
+  - Tracker templates rendered by dedicated `RenderTrackerTemplatesStep` in release handler
+  - Docker Compose templates rendered by dedicated `RenderDockerComposeTemplatesStep` in release handler
+  - **Rationale**: Docker Compose templates are NOT the "master" templates - they only define service orchestration
+  - **Source of Truth**: The environment configuration determines which services are enabled
+  - **Example**: MySQL service has docker-compose configuration but no separate config files (service-specific)
 
 ### Anti-Patterns to Avoid
+
+- ❌ Making Prometheus mandatory for all deployments
+- ❌ Hardcoding API tokens in templates
+- ❌ Starting Prometheus before tracker is ready
+- ❌ Duplicating tracker endpoint configuration
+- ❌ Mixing metrics collection logic with other services
+- ❌ **Rendering service templates from within docker-compose template rendering** (CRITICAL)
+
+  - Docker Compose step should ONLY render docker-compose files
+  - Each service's templates should be rendered independently in the release handler
+  - The handler orchestrates all template rendering steps based on environment config
 
 - ❌ Making Prometheus mandatory for all deployments
 - ❌ Hardcoding API tokens in templates

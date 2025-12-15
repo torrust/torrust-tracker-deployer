@@ -11,7 +11,7 @@ use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
     application::{CreateTrackerStorageStep, DeployTrackerConfigStep, InitTrackerDatabaseStep},
-    rendering::RenderTrackerTemplatesStep,
+    rendering::{RenderPrometheusTemplatesStep, RenderTrackerTemplatesStep},
     DeployComposeFilesStep, RenderDockerComposeTemplatesStep,
 };
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
@@ -199,10 +199,13 @@ impl ReleaseCommandHandler {
         // Step 4: Deploy tracker configuration to remote
         self.deploy_tracker_config_to_remote(environment, &tracker_build_dir, instance_ip)?;
 
-        // Step 5: Render Docker Compose templates
+        // Step 5: Render Prometheus configuration templates (if enabled)
+        Self::render_prometheus_templates(environment)?;
+
+        // Step 6: Render Docker Compose templates
         let compose_build_dir = self.render_docker_compose_templates(environment).await?;
 
-        // Step 6: Deploy compose files to remote
+        // Step 7: Deploy compose files to remote
         self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
@@ -306,6 +309,54 @@ impl ReleaseCommandHandler {
         );
 
         Ok(tracker_build_dir)
+    }
+
+    /// Render Prometheus configuration templates to the build directory (if enabled)
+    ///
+    /// This step is optional and only executes if Prometheus is configured in the environment.
+    /// If Prometheus is not configured, the step is skipped without error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::RenderPrometheusTemplates`) if rendering fails
+    #[allow(clippy::result_large_err)]
+    fn render_prometheus_templates(
+        environment: &Environment<Releasing>,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::RenderPrometheusTemplates;
+
+        // Check if Prometheus is configured
+        if environment.context().user_inputs.prometheus.is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "Prometheus not configured - skipping template rendering"
+            );
+            return Ok(());
+        }
+
+        let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+        let step = RenderPrometheusTemplatesStep::new(
+            Arc::new(environment.clone()),
+            template_manager,
+            environment.build_dir().clone(),
+        );
+
+        step.execute().map_err(|e| {
+            (
+                ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                current_step,
+            )
+        })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Prometheus configuration templates rendered successfully"
+        );
+
+        Ok(())
     }
 
     /// Deploy tracker configuration to the remote host via Ansible

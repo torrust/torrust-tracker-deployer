@@ -37,6 +37,7 @@ pub struct EnvironmentTestBuilder {
     ssh_key_name: String,
     ssh_username: String,
     temp_dir: TempDir,
+    prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
 }
 
 impl EnvironmentTestBuilder {
@@ -52,6 +53,7 @@ impl EnvironmentTestBuilder {
             ssh_key_name: "test_key".to_string(),
             ssh_username: "torrust".to_string(),
             temp_dir: TempDir::new().expect("Failed to create temp directory"),
+            prometheus_config: Some(crate::domain::prometheus::PrometheusConfig::default()),
         }
     }
 
@@ -73,6 +75,16 @@ impl EnvironmentTestBuilder {
     #[must_use]
     pub fn with_ssh_username(mut self, username: &str) -> Self {
         self.ssh_username = username.to_string();
+        self
+    }
+
+    /// Sets the Prometheus configuration
+    #[must_use]
+    pub fn with_prometheus_config(
+        mut self,
+        config: Option<crate::domain::prometheus::PrometheusConfig>,
+    ) -> Self {
+        self.prometheus_config = config;
         self
     }
 
@@ -139,7 +151,7 @@ impl EnvironmentTestBuilder {
                 ssh_credentials,
                 ssh_port: 22,
                 tracker: crate::domain::tracker::TrackerConfig::default(),
-                prometheus: Some(crate::domain::prometheus::PrometheusConfig::default()),
+                prometheus: self.prometheus_config,
             },
             internal_config: crate::domain::environment::InternalConfig {
                 data_dir: data_dir.clone(),
