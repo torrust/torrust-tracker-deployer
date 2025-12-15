@@ -57,6 +57,26 @@ services:
         max-size: "10m"
         max-file: "10"
 
+{% if prometheus_config %}
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: prometheus
+    tty: true
+    restart: unless-stopped
+    networks:
+      - backend_network
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./storage/prometheus/etc:/etc/prometheus:Z
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+    depends_on:
+      - tracker
+{% endif %}
+
 {% if database.driver == "mysql" %}
   mysql:
     image: mysql:8.0

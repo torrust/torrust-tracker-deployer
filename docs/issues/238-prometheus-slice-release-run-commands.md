@@ -33,13 +33,24 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
   - Implemented comprehensive unit tests (5 tests)
   - Updated all constructors and test fixtures
 
-- 🚧 **Phase 3**: Prometheus Template Renderer (in progress)
+- ✅ **Phase 3**: Prometheus Template Renderer (commit: 731eaf4)
 
-  - Create `PrometheusProjectGenerator` implementation
-  - Integrate with template rendering system
-  - Wire up data flow: UserInputs → PrometheusContext → Template
+  - Created `PrometheusConfigRenderer` to load and render `prometheus.yml.tera`
+  - Implemented `PrometheusTemplate` wrapper for Tera integration
+  - Created `PrometheusProjectGenerator` to orchestrate rendering workflow
+  - Implemented context extraction from `PrometheusConfig` and `TrackerConfig`
+  - Added 12 comprehensive unit tests with full coverage
+  - All linters passing
 
-- ⏳ **Phase 4**: Docker Compose Integration (pending)
+- ✅ **Phase 4**: Docker Compose Integration (commit: pending)
+
+  - Added `prometheus_config: Option<PrometheusConfig>` field to `DockerComposeContext`
+  - Implemented `with_prometheus()` method for context builder pattern
+  - Added conditional Prometheus service to `docker-compose.yml.tera` template
+  - Prometheus service uses bind mount: `./storage/prometheus/etc:/etc/prometheus:Z`
+  - Added 4 comprehensive unit tests for Prometheus service rendering
+  - All linters passing
+
 - ⏳ **Phase 5**: Release Command Implementation (pending)
 - ⏳ **Phase 6**: Ansible Playbook Integration (pending)
 - ⏳ **Phase 7**: Testing (pending)

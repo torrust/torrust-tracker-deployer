@@ -5,6 +5,8 @@
 
 use serde::Serialize;
 
+use crate::domain::prometheus::PrometheusConfig;
+
 /// Tracker port configuration
 #[derive(Debug, Clone)]
 pub struct TrackerPorts {
@@ -54,6 +56,9 @@ pub struct DockerComposeContext {
     pub http_tracker_ports: Vec<u16>,
     /// HTTP API port
     pub http_api_port: u16,
+    /// Prometheus configuration (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prometheus_config: Option<PrometheusConfig>,
 }
 
 impl DockerComposeContext {
@@ -86,6 +91,7 @@ impl DockerComposeContext {
             udp_tracker_ports: ports.udp_tracker_ports,
             http_tracker_ports: ports.http_tracker_ports,
             http_api_port: ports.http_api_port,
+            prometheus_config: None,
         }
     }
 
@@ -143,7 +149,19 @@ impl DockerComposeContext {
             udp_tracker_ports: ports.udp_tracker_ports,
             http_tracker_ports: ports.http_tracker_ports,
             http_api_port: ports.http_api_port,
+            prometheus_config: None,
         }
+    }
+
+    /// Add Prometheus configuration to the context
+    ///
+    /// # Arguments
+    ///
+    /// * `prometheus_config` - Prometheus configuration
+    #[must_use]
+    pub fn with_prometheus(mut self, prometheus_config: PrometheusConfig) -> Self {
+        self.prometheus_config = Some(prometheus_config);
+        self
     }
 
     /// Get the database configuration
@@ -168,6 +186,12 @@ impl DockerComposeContext {
     #[must_use]
     pub fn http_api_port(&self) -> u16 {
         self.http_api_port
+    }
+
+    /// Get the Prometheus configuration if present
+    #[must_use]
+    pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
+        self.prometheus_config.as_ref()
     }
 }
 
@@ -293,5 +317,63 @@ mod tests {
 
         let cloned = context.clone();
         assert_eq!(cloned.database().driver(), "mysql");
+    }
+
+    #[test]
+    fn it_should_not_include_prometheus_config_by_default() {
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let context = DockerComposeContext::new_sqlite(ports);
+
+        assert!(context.prometheus_config().is_none());
+    }
+
+    #[test]
+    fn it_should_include_prometheus_config_when_added() {
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let prometheus_config = PrometheusConfig {
+            scrape_interval: 30,
+        };
+        let context = DockerComposeContext::new_sqlite(ports).with_prometheus(prometheus_config);
+
+        assert!(context.prometheus_config().is_some());
+        assert_eq!(context.prometheus_config().unwrap().scrape_interval, 30);
+    }
+
+    #[test]
+    fn it_should_not_serialize_prometheus_config_when_absent() {
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let context = DockerComposeContext::new_sqlite(ports);
+
+        let serialized = serde_json::to_string(&context).unwrap();
+        assert!(!serialized.contains("prometheus_config"));
+    }
+
+    #[test]
+    fn it_should_serialize_prometheus_config_when_present() {
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let prometheus_config = PrometheusConfig {
+            scrape_interval: 20,
+        };
+        let context = DockerComposeContext::new_sqlite(ports).with_prometheus(prometheus_config);
+
+        let serialized = serde_json::to_string(&context).unwrap();
+        assert!(serialized.contains("prometheus_config"));
+        assert!(serialized.contains("\"scrape_interval\":20"));
     }
 }
