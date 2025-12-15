@@ -11,6 +11,7 @@ Welcome to the Torrust Tracker Deployer user guide! This guide will help you get
 - [Basic Workflows](#basic-workflows)
 - [Configuration](#configuration)
 - [Services](#services)
+- [Security](#security)
 - [Troubleshooting](#troubleshooting)
 - [Additional Resources](#additional-resources)
 
@@ -312,6 +313,19 @@ Services are configured in your environment JSON file. To enable a service, incl
 ```
 
 See individual service guides for detailed configuration options and verification steps.
+
+## Security
+
+**🔒 CRITICAL**: The deployer automatically configures firewall protection during the `configure` command to secure internal services (Prometheus, MySQL) while keeping tracker services publicly accessible.
+
+**For complete security information**, see the **[Security Guide](security.md)** which covers:
+
+- Automatic firewall configuration (UFW)
+- Why firewall protection is critical for production
+- SSH security best practices
+- Docker and network security
+- Production security checklist
+- Security incident response
 
 ### Logging Configuration
 
