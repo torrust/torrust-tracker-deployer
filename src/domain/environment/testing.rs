@@ -139,6 +139,7 @@ impl EnvironmentTestBuilder {
                 ssh_credentials,
                 ssh_port: 22,
                 tracker: crate::domain::tracker::TrackerConfig::default(),
+                prometheus: Some(crate::domain::prometheus::PrometheusConfig::default()),
             },
             internal_config: crate::domain::environment::InternalConfig {
                 data_dir: data_dir.clone(),
