@@ -78,7 +78,9 @@ use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::{
 };
 use torrust_tracker_deployer_lib::testing::e2e::tasks::container::cleanup_infrastructure::stop_test_infrastructure;
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configuration_validation::run_configuration_validation;
-use torrust_tracker_deployer_lib::testing::e2e::tasks::run_release_validation::run_release_validation;
+use torrust_tracker_deployer_lib::testing::e2e::tasks::run_release_validation::{
+    run_release_validation, ServiceValidation,
+};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_run_validation::run_run_validation;
 
 /// Environment name for this E2E test
@@ -284,7 +286,9 @@ async fn run_deployer_workflow(
     test_runner.release_software()?;
 
     // Validate the release (Docker Compose files deployed correctly)
-    run_release_validation(socket_addr, ssh_credentials)
+    // Note: E2E deployment environment has Prometheus enabled, so we validate it
+    let services = ServiceValidation { prometheus: true };
+    run_release_validation(socket_addr, ssh_credentials, Some(services))
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?;
 
