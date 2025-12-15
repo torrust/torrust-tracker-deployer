@@ -10,7 +10,10 @@ use super::errors::ReleaseCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
-    application::{CreateTrackerStorageStep, DeployTrackerConfigStep, InitTrackerDatabaseStep},
+    application::{
+        CreatePrometheusStorageStep, CreateTrackerStorageStep, DeployPrometheusConfigStep,
+        DeployTrackerConfigStep, InitTrackerDatabaseStep,
+    },
     rendering::{RenderPrometheusTemplatesStep, RenderTrackerTemplatesStep},
     DeployComposeFilesStep, RenderDockerComposeTemplatesStep,
 };
@@ -199,13 +202,19 @@ impl ReleaseCommandHandler {
         // Step 4: Deploy tracker configuration to remote
         self.deploy_tracker_config_to_remote(environment, &tracker_build_dir, instance_ip)?;
 
-        // Step 5: Render Prometheus configuration templates (if enabled)
+        // Step 5: Create Prometheus storage directories (if enabled)
+        Self::create_prometheus_storage(environment, instance_ip)?;
+
+        // Step 6: Render Prometheus configuration templates (if enabled)
         Self::render_prometheus_templates(environment)?;
 
-        // Step 6: Render Docker Compose templates
+        // Step 7: Deploy Prometheus configuration to remote (if enabled)
+        self.deploy_prometheus_config_to_remote(environment, instance_ip)?;
+
+        // Step 8: Render Docker Compose templates
         let compose_build_dir = self.render_docker_compose_templates(environment).await?;
 
-        // Step 7: Deploy compose files to remote
+        // Step 9: Deploy compose files to remote
         self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
@@ -354,6 +363,104 @@ impl ReleaseCommandHandler {
             command = "release",
             step = %current_step,
             "Prometheus configuration templates rendered successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Create Prometheus storage directories on the remote host (if enabled)
+    ///
+    /// This step is optional and only executes if Prometheus is configured in the environment.
+    /// If Prometheus is not configured, the step is skipped without error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::CreatePrometheusStorage`) if creation fails
+    #[allow(clippy::result_large_err)]
+    fn create_prometheus_storage(
+        environment: &Environment<Releasing>,
+        _instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::CreatePrometheusStorage;
+
+        // Check if Prometheus is configured
+        if environment.context().user_inputs.prometheus.is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "Prometheus not configured - skipping storage creation"
+            );
+            return Ok(());
+        }
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
+
+        CreatePrometheusStorageStep::new(ansible_client)
+            .execute()
+            .map_err(|e| {
+                (
+                    ReleaseCommandHandlerError::PrometheusStorageCreation(e.to_string()),
+                    current_step,
+                )
+            })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Prometheus storage directories created successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Deploy Prometheus configuration to the remote host via Ansible (if enabled)
+    ///
+    /// This step is optional and only executes if Prometheus is configured in the environment.
+    /// If Prometheus is not configured, the step is skipped without error.
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Releasing state
+    /// * `instance_ip` - The target instance IP address
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::DeployPrometheusConfigToRemote`) if deployment fails
+    #[allow(clippy::result_large_err, clippy::unused_self)]
+    fn deploy_prometheus_config_to_remote(
+        &self,
+        environment: &Environment<Releasing>,
+        _instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::DeployPrometheusConfigToRemote;
+
+        // Check if Prometheus is configured
+        if environment.context().user_inputs.prometheus.is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "Prometheus not configured - skipping config deployment"
+            );
+            return Ok(());
+        }
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
+
+        DeployPrometheusConfigStep::new(ansible_client)
+            .execute()
+            .map_err(|e| {
+                (
+                    ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                    current_step,
+                )
+            })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Prometheus configuration deployed successfully"
         );
 
         Ok(())

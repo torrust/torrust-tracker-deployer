@@ -51,7 +51,7 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
   - Added 4 comprehensive unit tests for Prometheus service rendering
   - All linters passing
 
-- ✅ **Phase 5**: Release Command Integration (commit: TBD)
+- ✅ **Phase 5**: Release Command Integration (commit: f20d45c)
 
   - **FIXED**: Moved Prometheus template rendering from docker-compose step to independent step in release handler
   - Created `RenderPrometheusTemplatesStep` to render Prometheus templates
@@ -63,8 +63,34 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
   - All linters passing, all tests passing (1507 tests)
   - **Architectural Principle**: Each service renders its templates independently in the release handler
 
-- ⏳ **Phase 6**: Ansible Deployment (pending)
-- ⏳ **Phase 6**: Ansible Playbook Integration (pending)
+- ✅ **Phase 6**: Ansible Deployment (commit: pending)
+
+  - Created Ansible playbooks:
+    - `templates/ansible/create-prometheus-storage.yml` - Creates `/opt/torrust/storage/prometheus/etc` directory
+    - `templates/ansible/deploy-prometheus-config.yml` - Deploys `prometheus.yml` configuration file with verification
+  - Created Rust application steps:
+    - `CreatePrometheusStorageStep` - Executes create-prometheus-storage playbook
+    - `DeployPrometheusConfigStep` - Executes deploy-prometheus-config playbook
+  - Registered playbooks in `AnsibleProjectGenerator` (16 total playbooks)
+  - Registered steps in `application/steps/application/mod.rs`
+  - Updated release handler with new methods:
+    - `create_prometheus_storage()` - Creates Prometheus storage directories (Step 5)
+    - `deploy_prometheus_config_to_remote()` - Deploys Prometheus config (Step 7)
+  - Added new `ReleaseStep` enum variants:
+    - `CreatePrometheusStorage`
+    - `DeployPrometheusConfigToRemote`
+  - Added error handling:
+    - `PrometheusStorageCreation` error variant with help text
+    - Proper trace formatting and error classification
+  - Updated workflow to 9 steps total:
+    - Step 5: Create Prometheus storage (if enabled)
+    - Step 6: Render Prometheus templates (if enabled)
+    - Step 7: Deploy Prometheus config (if enabled)
+    - Step 8: Render Docker Compose templates
+    - Step 9: Deploy compose files
+  - All linters passing, all tests passing (1507 tests)
+  - **Pattern**: Independent Prometheus deployment following tracker pattern
+
 - ⏳ **Phase 7**: Testing (pending)
 - ⏳ **Phase 8**: Documentation (pending)
 

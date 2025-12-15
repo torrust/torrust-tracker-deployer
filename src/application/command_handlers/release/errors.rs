@@ -48,6 +48,10 @@ pub enum ReleaseCommandHandlerError {
     #[error("Tracker database initialization failed: {0}")]
     TrackerDatabaseInit(String),
 
+    /// Prometheus storage directory creation failed
+    #[error("Prometheus storage creation failed: {0}")]
+    PrometheusStorageCreation(String),
+
     /// General deployment operation failed
     #[error("Deployment failed: {message}")]
     Deployment {
@@ -102,6 +106,11 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::TrackerDatabaseInit(message) => {
                 format!("ReleaseCommandHandlerError: Tracker database initialization failed - {message}")
             }
+            Self::PrometheusStorageCreation(message) => {
+                format!(
+                    "ReleaseCommandHandlerError: Prometheus storage creation failed - {message}"
+                )
+            }
             Self::Deployment { message, .. } | Self::DeploymentFailed { message, .. } => {
                 format!("ReleaseCommandHandlerError: Deployment failed - {message}")
             }
@@ -125,6 +134,7 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::TemplateRendering(_)
             | Self::TrackerStorageCreation(_)
             | Self::TrackerDatabaseInit(_)
+            | Self::PrometheusStorageCreation(_)
             | Self::ReleaseOperationFailed { .. } => None,
         }
     }
@@ -137,7 +147,8 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
             Self::TemplateRendering(_)
             | Self::TrackerStorageCreation(_)
-            | Self::TrackerDatabaseInit(_) => ErrorKind::TemplateRendering,
+            | Self::TrackerDatabaseInit(_)
+            | Self::PrometheusStorageCreation(_) => ErrorKind::TemplateRendering,
             Self::Deployment { .. } | Self::ReleaseOperationFailed { .. } => {
                 ErrorKind::InfrastructureOperation
             }
@@ -305,6 +316,30 @@ Common causes:
 - Storage directories don't exist (run CreateTrackerStorage step first)
 - Insufficient disk space on target instance
 - Permission denied on database directory
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::PrometheusStorageCreation(_) => {
+                "Prometheus Storage Creation Failed - Troubleshooting:
+
+1. Verify the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+2. Check that the instance has sufficient disk space:
+   df -h
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/create-prometheus-storage.yml
+
+4. Check Ansible execution permissions
+
+5. Review the error message above for specific details
+
+Common causes:
+- Insufficient disk space on target instance
+- Permission denied on target directories
 - Ansible playbook not found
 - Network connectivity issues
 
