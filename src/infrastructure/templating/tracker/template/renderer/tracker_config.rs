@@ -98,9 +98,11 @@ impl TrackerConfigRenderer {
         output_dir: &Path,
     ) -> Result<(), TrackerConfigRendererError> {
         // 1. Load template from template manager
-        let template_path = self
-            .template_manager
-            .get_template_path(&format!("{}/{}", Self::TRACKER_TEMPLATE_DIR, Self::TRACKER_TEMPLATE_FILE))?;
+        let template_path = self.template_manager.get_template_path(&format!(
+            "{}/{}",
+            Self::TRACKER_TEMPLATE_DIR,
+            Self::TRACKER_TEMPLATE_FILE
+        ))?;
 
         // 2. Read template content
         let template_content = std::fs::read_to_string(&template_path).map_err(|source| {

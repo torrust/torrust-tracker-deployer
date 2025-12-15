@@ -194,7 +194,11 @@ impl EnvRenderer {
     ///
     /// * `String` - The complete template path for env.tera
     fn build_template_path() -> String {
-        format!("{}/{}", Self::DOCKER_COMPOSE_TEMPLATE_DIR, Self::ENV_TEMPLATE_FILE)
+        format!(
+            "{}/{}",
+            Self::DOCKER_COMPOSE_TEMPLATE_DIR,
+            Self::ENV_TEMPLATE_FILE
+        )
     }
 }
 

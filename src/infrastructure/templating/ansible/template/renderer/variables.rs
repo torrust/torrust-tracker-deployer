@@ -195,7 +195,11 @@ impl VariablesRenderer {
     ///
     /// * `String` - The complete template path for variables.yml.tera
     fn build_template_path() -> String {
-        format!("{}/{}", Self::ANSIBLE_TEMPLATE_DIR, Self::VARIABLES_TEMPLATE_FILE)
+        format!(
+            "{}/{}",
+            Self::ANSIBLE_TEMPLATE_DIR,
+            Self::VARIABLES_TEMPLATE_FILE
+        )
     }
 }
 
