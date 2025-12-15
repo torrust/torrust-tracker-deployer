@@ -219,14 +219,15 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let mysql_context = DockerComposeContext::new_mysql(
-            "rootpass123".to_string(),
-            "tracker_db".to_string(),
-            "tracker_user".to_string(),
-            "userpass123".to_string(),
-            3306,
-            ports,
-        );
+        let mysql_context = DockerComposeContext::builder(ports)
+            .with_mysql(
+                "rootpass123".to_string(),
+                "tracker_db".to_string(),
+                "tracker_user".to_string(),
+                "userpass123".to_string(),
+                3306,
+            )
+            .build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();
@@ -307,7 +308,7 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let sqlite_context = DockerComposeContext::new_sqlite(ports);
+        let sqlite_context = DockerComposeContext::builder(ports).build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();
@@ -353,7 +354,9 @@ mod tests {
         let prometheus_config = PrometheusConfig {
             scrape_interval: 15,
         };
-        let context = DockerComposeContext::new_sqlite(ports).with_prometheus(prometheus_config);
+        let context = DockerComposeContext::builder(ports)
+            .with_prometheus(prometheus_config)
+            .build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();
@@ -421,7 +424,7 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_sqlite(ports);
+        let context = DockerComposeContext::builder(ports).build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();

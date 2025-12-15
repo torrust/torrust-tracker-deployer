@@ -212,7 +212,7 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        DockerComposeContext::new_sqlite(ports)
+        DockerComposeContext::builder(ports).build()
     }
 
     #[tokio::test]

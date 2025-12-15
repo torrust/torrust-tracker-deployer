@@ -152,10 +152,19 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         // Create contexts based on database configuration
         let database_config = &self.environment.context().user_inputs.tracker.core.database;
-        let (env_context, mut docker_compose_context) = match database_config {
+        let (env_context, docker_compose_context) = match database_config {
             DatabaseConfig::Sqlite { .. } => {
                 let env_context = EnvContext::new(admin_token);
-                let docker_compose_context = DockerComposeContext::new_sqlite(ports);
+
+                let mut builder = DockerComposeContext::builder(ports);
+
+                // Add Prometheus configuration if present
+                if let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus
+                {
+                    builder = builder.with_prometheus(prometheus_config.clone());
+                }
+
+                let docker_compose_context = builder.build();
                 (env_context, docker_compose_context)
             }
             DatabaseConfig::Mysql {
@@ -176,24 +185,25 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
                     password.clone(),
                 );
 
-                let docker_compose_context = DockerComposeContext::new_mysql(
+                let mut builder = DockerComposeContext::builder(ports).with_mysql(
                     root_password,
                     database_name.clone(),
                     username.clone(),
                     password.clone(),
                     *port,
-                    ports,
                 );
+
+                // Add Prometheus configuration if present
+                if let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus
+                {
+                    builder = builder.with_prometheus(prometheus_config.clone());
+                }
+
+                let docker_compose_context = builder.build();
 
                 (env_context, docker_compose_context)
             }
         };
-
-        // Add Prometheus configuration if present
-        if let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus {
-            docker_compose_context =
-                docker_compose_context.with_prometheus(prometheus_config.clone());
-        }
 
         let compose_build_dir = generator
             .render(&env_context, &docker_compose_context)
