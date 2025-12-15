@@ -41,6 +41,7 @@ Testcontain
 Testcontainers
 Testinfra
 Torrust
+Traefik
 VARCHAR
 addgroup
 adduser
@@ -238,8 +239,8 @@ tmpfiles
 tmpfs
 tmptu
 torrust
-tulpn
 tulnp
+tulpn
 turbofish
 tést
 undertested
