@@ -38,10 +38,16 @@ services:
     networks:
       - backend_network
     ports:
-      - 6868:6868/udp
-      - 6969:6969/udp
-      - 7070:7070
-      - 1212:1212
+      # UDP Tracker Ports (dynamically configured)
+{%- for port in udp_tracker_ports %}
+      - {{ port }}:{{ port }}/udp
+{%- endfor %}
+      # HTTP Tracker Ports (dynamically configured)
+{%- for port in http_tracker_ports %}
+      - {{ port }}:{{ port }}
+{%- endfor %}
+      # HTTP API Port (dynamically configured)
+      - {{ http_api_port }}:{{ http_api_port }}
     volumes:
       - ./storage/tracker/lib:/var/lib/torrust/tracker:Z
       - ./storage/tracker/log:/var/log/torrust/tracker:Z

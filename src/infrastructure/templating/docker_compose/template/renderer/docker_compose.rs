@@ -188,7 +188,9 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::DockerComposeContext;
+    use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
+        DockerComposeContext, TrackerPorts,
+    };
 
     #[test]
     fn it_should_create_renderer_with_template_manager() {
@@ -212,12 +214,18 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
         let mysql_context = DockerComposeContext::new_mysql(
             "rootpass123".to_string(),
             "tracker_db".to_string(),
             "tracker_user".to_string(),
             "userpass123".to_string(),
             3306,
+            ports,
         );
 
         let renderer = DockerComposeRenderer::new(template_manager);
@@ -294,7 +302,12 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let sqlite_context = DockerComposeContext::new_sqlite();
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let sqlite_context = DockerComposeContext::new_sqlite(ports);
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();

@@ -31,8 +31,10 @@ use tracing::{info, instrument};
 
 use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
-use crate::domain::tracker::DatabaseConfig;
-use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::DockerComposeContext;
+use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
+use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
+    DockerComposeContext, TrackerPorts,
+};
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
     DockerComposeProjectGenerator, DockerComposeProjectGeneratorError,
@@ -68,6 +70,30 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             template_manager,
             build_dir,
         }
+    }
+
+    /// Extract port numbers from tracker configuration
+    ///
+    /// Returns a tuple of (`udp_ports`, `http_ports`, `api_port`)
+    fn extract_tracker_ports(tracker_config: &TrackerConfig) -> (Vec<u16>, Vec<u16>, u16) {
+        // Extract UDP tracker ports
+        let udp_ports: Vec<u16> = tracker_config
+            .udp_trackers
+            .iter()
+            .map(|tracker| tracker.bind_address.port())
+            .collect();
+
+        // Extract HTTP tracker ports
+        let http_ports: Vec<u16> = tracker_config
+            .http_trackers
+            .iter()
+            .map(|tracker| tracker.bind_address.port())
+            .collect();
+
+        // Extract HTTP API port
+        let api_port = tracker_config.http_api.bind_address.port();
+
+        (udp_ports, http_ports, api_port)
     }
 
     /// Execute the template rendering step
@@ -113,12 +139,23 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             .admin_token
             .clone();
 
+        // Extract tracker ports from configuration
+        let tracker_config = &self.environment.context().user_inputs.tracker;
+        let (udp_tracker_ports, http_tracker_ports, http_api_port) =
+            Self::extract_tracker_ports(tracker_config);
+
+        let ports = TrackerPorts {
+            udp_tracker_ports,
+            http_tracker_ports,
+            http_api_port,
+        };
+
         // Create contexts based on database configuration
         let database_config = &self.environment.context().user_inputs.tracker.core.database;
         let (env_context, docker_compose_context) = match database_config {
             DatabaseConfig::Sqlite { .. } => {
                 let env_context = EnvContext::new(admin_token);
-                let docker_compose_context = DockerComposeContext::new_sqlite();
+                let docker_compose_context = DockerComposeContext::new_sqlite(ports);
                 (env_context, docker_compose_context)
             }
             DatabaseConfig::Mysql {
@@ -145,6 +182,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
                     username.clone(),
                     password.clone(),
                     *port,
+                    ports,
                 );
 
                 (env_context, docker_compose_context)
@@ -248,5 +286,25 @@ mod tests {
         // Verify it contains expected content from embedded template
         assert!(output_content.contains("torrust/tracker"));
         assert!(output_content.contains("./storage/tracker/lib:/var/lib/torrust/tracker"));
+
+        // Verify dynamic ports are rendered (default TrackerConfig has 6969 UDP, 7070 HTTP, 1212 API)
+        assert!(
+            output_content.contains("6969:6969/udp"),
+            "Should contain UDP tracker port 6969"
+        );
+        assert!(
+            output_content.contains("7070:7070"),
+            "Should contain HTTP tracker port 7070"
+        );
+        assert!(
+            output_content.contains("1212:1212"),
+            "Should contain HTTP API port 1212"
+        );
+
+        // Verify hardcoded ports are NOT present
+        assert!(
+            !output_content.contains("6868:6868"),
+            "Should not contain hardcoded UDP port 6868"
+        );
     }
 }

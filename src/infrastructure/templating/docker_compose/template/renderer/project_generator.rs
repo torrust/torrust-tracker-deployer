@@ -185,6 +185,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
+    use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::TrackerPorts;
     use crate::infrastructure::templating::docker_compose::DOCKER_COMPOSE_SUBFOLDER;
 
     /// Creates a `TemplateManager` that uses the embedded templates
@@ -205,7 +206,13 @@ mod tests {
 
     /// Helper function to create a test docker-compose context with `SQLite`
     fn create_test_docker_compose_context_sqlite() -> DockerComposeContext {
-        DockerComposeContext::new_sqlite()
+        // Use default test ports (matching TrackerConfig::default())
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        DockerComposeContext::new_sqlite(ports)
     }
 
     #[tokio::test]
