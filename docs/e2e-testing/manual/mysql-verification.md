@@ -1,6 +1,50 @@
-# Manual E2E Testing Guide for MySQL Support
+# Manual MySQL Service Verification
 
-This guide provides step-by-step instructions for manually testing the complete MySQL deployment workflow.
+This guide provides MySQL-specific verification steps for manual E2E testing. For the complete deployment workflow, see the [Manual E2E Testing Guide](README.md).
+
+## Overview
+
+This guide covers:
+
+- MySQL container health and connectivity
+- Database schema verification
+- Tracker-to-MySQL connection validation
+- MySQL-specific troubleshooting
+- Performance comparison with SQLite
+
+## Prerequisites
+
+Complete the standard deployment workflow first (see [Manual E2E Testing Guide](README.md)):
+
+1. ✅ Environment created with MySQL configuration
+2. ✅ Infrastructure provisioned
+3. ✅ Services configured
+4. ✅ Software released
+5. ✅ Services running
+
+**Your environment configuration must include MySQL**:
+
+```json
+{
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "mysql",
+        "database_name": "torrust_tracker"
+      }
+    }
+  },
+  "database": {
+    "driver": "mysql",
+    "host": "mysql",
+    "port": 3306,
+    "database_name": "torrust_tracker",
+    "username": "tracker_user",
+    "password": "tracker_password",
+    "root_password": "root_password"
+  }
+}
+```
 
 ## ⚠️ CRITICAL: Understanding File Locations
 
@@ -25,79 +69,212 @@ This guide provides step-by-step instructions for manually testing the complete 
 
 **NEVER confuse these two files!** The user creates configurations in `envs/`, and the application manages state in `data/`.
 
-## Test Environment
+## MySQL-Specific Verification
 
-- **Environment Name**: `manual-test-mysql`
-- **Database**: MySQL 8.0
-- **Provider**: LXD
-- **User Configuration File**: `envs/manual-test-mysql.json`
-- **Internal State Directory**: `data/manual-test-mysql/`
+This section provides detailed MySQL verification steps that should be performed after completing the standard deployment workflow.
 
-## Prerequisites
+### 1. Get the VM IP Address
 
-Before starting the test, ensure:
-
-1. LXD is installed and configured
-2. The `torrust-profile-manual-test-mysql` LXD profile exists (will be created automatically)
-3. All dependencies are installed: `cargo run --bin dependency-installer install`
-4. Pre-commit checks pass: `./scripts/pre-commit.sh`
-5. The environment configuration exists: `envs/manual-test-mysql.json`
-
-## Complete MySQL Deployment Workflow
-
-### Step 1: Create Environment
-
-Create the deployment environment from the MySQL configuration:
+Extract the instance IP from the environment state:
 
 ```bash
-cargo run -- create environment --env-file envs/manual-test-mysql.json
+export INSTANCE_IP=$(cat data/your-env/environment.json | jq -r '.Running.context.runtime_outputs.instance_ip')
+echo "VM IP: $INSTANCE_IP"
 ```
 
-**Expected Output**:
+### 2. Verify MySQL Container Health
+
+Check that the MySQL container is running and healthy:
+
+```bash
+# Check both containers are running
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "docker ps --format 'table {{.Names}}\t{{.Status}}'"
+```
+
+**Expected output:**
 
 ```text
-✓ Environment 'manual-test-mysql' created successfully
+NAMES     STATUS
+tracker   Up X seconds (healthy)
+mysql     Up X seconds (healthy)
 ```
 
-**Verification**:
+**Key verification points:**
+
+- ✅ MySQL container status shows `(healthy)`
+- ✅ Tracker container also shows `(healthy)` indicating it connected to MySQL successfully
+- ✅ Both containers have been up for some time (not restarting)
+
+### 3. Verify MySQL Database and Schema
+
+Check that the database was created and tables exist:
 
 ```bash
-# Check internal state file was created by the application
-ls -la data/manual-test-mysql/environment.json
-
-# Inspect internal state (Rust struct serialization) - shows current deployment state
-cat data/manual-test-mysql/environment.json | jq '.state.type'
-# Expected: "Created" (note: capitalized, this is the Rust enum variant name)
+# List all databases
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "docker exec mysql mysql -u tracker_user -p'tracker_password' -e 'SHOW DATABASES;'"
 ```
 
-**Note**: The state file in `data/` is the application's internal representation. Do NOT edit it manually.
-
-### Step 2: Provision Infrastructure
-
-Provision the LXD VM instance:
-
-```bash
-cargo run -- provision manual-test-mysql
-```
-
-**Expected Output**:
+**Expected databases:**
 
 ```text
-⏳ [1/3] Validating environment...
-  ✓ Environment name validated: manual-test-mysql (took 0ms)
-⏳ [2/3] Creating command handler...
-  ✓ Done (took 0ms)
-⏳ [3/3] Provisioning infrastructure...
-  ✓ Infrastructure provisioned (took 28.4s)
-✅ Environment 'manual-test-mysql' provisioned successfully
+Database
+information_schema
+performance_schema
+torrust_tracker        ← Your tracker database
 ```
 
-**Verification**:
+**Check tracker tables:**
 
 ```bash
-# Check instance is running
-lxc list | grep torrust-tracker-manual-test-mysql
+# List tables in tracker database
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "docker exec mysql mysql -u tracker_user -p'tracker_password' torrust_tracker -e 'SHOW TABLES;'"
+```
 
+**Expected tables:**
+
+```text
+Tables_in_torrust_tracker
+keys
+torrent_aggregate_metrics
+torrents
+whitelist
+```
+
+### 4. Verify Docker-to-MySQL Network Connectivity
+
+Test that the tracker container can reach MySQL over the Docker network:
+
+```bash
+# Ping MySQL from tracker container
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "docker exec tracker ping -c 2 mysql"
+```
+
+**Expected output:**
+
+```text
+PING mysql (172.18.0.2): 56 data bytes
+64 bytes from 172.18.0.2: seq=0 ttl=64 time=0.052 ms
+64 bytes from 172.18.0.2: seq=1 ttl=64 time=0.081 ms
+2 packets transmitted, 2 packets received, 0% packet loss
+```
+
+### 5. Verify Tracker Configuration
+
+Check that the tracker is configured to use MySQL:
+
+```bash
+# Check tracker configuration
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "docker exec tracker cat /etc/torrust/tracker/tracker.toml | grep -A 5 '\[core.database\]'"
+```
+
+**Expected output:**
+
+```toml
+[core.database]
+driver = "mysql"
+path = "mysql://tracker_user:tracker_password@mysql:3306/torrust_tracker"
+```
+
+**Key verification points:**
+
+- ✅ `driver = "mysql"` (not "sqlite3")
+- ✅ Connection string uses MySQL format
+- ✅ Hostname is `mysql` (Docker service name)
+- ✅ Port is `3306` (MySQL default)
+- ✅ Database name matches configuration
+
+### 6. Verify Tracker Startup (No Connection Errors)
+
+**IMPORTANT**: The docker-compose template includes `depends_on` with `condition: service_healthy` for the tracker service. This ensures the tracker waits for MySQL to be healthy before starting.
+
+Check tracker logs for clean startup:
+
+```bash
+# Check for database connection errors
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "docker logs tracker 2>&1 | grep -i 'database\|mysql\|error' | head -20"
+```
+
+**What to look for:**
+
+- ✅ **GOOD**: Clean startup with no "Connection refused" errors
+- ✅ **GOOD**: Configuration shows `"driver": "mysql"`
+- ❌ **BAD**: "Could not connect to address `mysql:3306': Connection refused"
+
+**Note**: With proper `depends_on` configuration, you should NOT see connection refused errors. The tracker waits for MySQL's healthcheck to pass before starting.
+
+### 7. Verify Environment Variables
+
+Check that MySQL credentials are properly configured in the environment file:
+
+```bash
+# Check .env file contains MySQL variables
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "cat /opt/torrust/.env | grep MYSQL"
+```
+
+**Expected variables:**
+
+```env
+MYSQL_ROOT_PASSWORD=root_password
+MYSQL_DATABASE=torrust_tracker
+MYSQL_USER=tracker_user
+MYSQL_PASSWORD=tracker_password
+```
+
+**Verify docker-compose.yml references:**
+
+```bash
+# Check docker-compose.yml uses environment variables
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "cat /opt/torrust/docker-compose.yml | grep -A 10 'mysql:'"
+```
+
+Should show environment variable references like `${MYSQL_ROOT_PASSWORD}`, not hardcoded values.
+
+### 8. Test Tracker Functionality with MySQL
+
+Make an announce request and verify stats are collected:
+
+```bash
+# Get initial stats
+INITIAL_STATS=$(curl -s -H "Authorization: Bearer MyAccessToken" \
+  http://$INSTANCE_IP:1212/api/v1/stats)
+echo "Initial stats: $INITIAL_STATS"
+
+# Make an announce request (from outside VM - more realistic)
+curl -H "X-Forwarded-For: 203.0.113.45" \
+  "http://$INSTANCE_IP:7070/announce?info_hash=%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C&peer_id=-qB00000000000000001&port=17548&uploaded=0&downloaded=0&left=0&event=started"
+
+# Get updated stats
+UPDATED_STATS=$(curl -s -H "Authorization: Bearer MyAccessToken" \
+  http://$INSTANCE_IP:1212/api/v1/stats)
+echo "Updated stats: $UPDATED_STATS"
+```
+
+**Expected behavior:**
+
+- ✅ Announce request returns HTTP 200 with tracker response
+- ✅ Stats counters increment (e.g., `tcp4_announces_handled`, `tcp4_connections_handled`)
+- ✅ MySQL connection remains stable (no errors in tracker logs)
+
+**Note**: The tracker uses in-memory storage for active torrents by default. Torrents are only persisted to MySQL in specific cases:
+
+- In private mode: all torrents are persisted
+- In public mode: only whitelisted torrents are persisted
+
+The key verification is that MySQL is accessible and the tracker functions correctly.
+
+## MySQL-Specific Troubleshooting
+
+### Common Verification Commands
+
+```bash
 # Check internal state transitioned to Provisioned
 cat data/manual-test-mysql/environment.json | jq 'keys | .[]'
 # Expected: "Provisioned" (this is the top-level key - Rust enum variant)
@@ -143,7 +320,7 @@ ssh -i fixtures/testing_rsa torrust@$INSTANCE_IP "docker ps"
 # Expected: Empty list (no containers running yet)
 ```
 
-### Step 4: Release Application
+## Step 4: Release Application
 
 Deploy tracker configuration and Docker Compose files:
 
@@ -394,238 +571,185 @@ cat data/manual-test-mysql/environment.json | jq 'keys | .[]'
 # Expected: "Destroyed" (top-level key)
 ```
 
-## Key Verification Points
+## MySQL-Specific Troubleshooting
 
-### MySQL Configuration in Templates
+This section covers common MySQL-specific issues. For general troubleshooting, see the [Manual E2E Testing Guide](README.md#troubleshooting-manual-tests).
 
-**1. Tracker Config (`tracker.toml`)**:
+### MySQL Container Not Healthy
 
-- Driver should be `"mysql"`
-- Path should be MySQL connection string format: `mysql://user:pass@host:port/database`
-
-**2. Docker Compose `.env` file**:
-
-- Should contain `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`
-- Values should match environment configuration
-
-**3. Docker Compose `docker-compose.yml`**:
-
-- MySQL service should use `${MYSQL_*}` environment variable references
-- NOT hardcoded values
-
-### Runtime Verification
-
-**1. Containers**:
-
-- Both `torrust-tracker` and `mysql` containers should be running
-- MySQL container should show `(healthy)` status
-
-**2. Database**:
-
-- MySQL database tables should be created
-- Tracker should be able to read/write to database
-
-**3. API**:
-
-- Tracker API should respond on port 1212
-- Stats endpoint should return valid JSON
-
-## Troubleshooting
-
-### MySQL container not healthy
+If the MySQL container fails to start or shows unhealthy status:
 
 ```bash
-# Check MySQL container logs
-INSTANCE_IP=$(cat data/manual-test-mysql/environment.json | jq -r '.Running.context.runtime_outputs.instance_ip')
-ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP "docker logs mysql"
+# Check MySQL container logs for errors
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "docker logs mysql 2>&1 | tail -50"
 
-# Verify MySQL service status
+# Check container status
 ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
   "docker ps --filter 'name=mysql' --format '{{.Names}}\t{{.Status}}'"
 ```
 
-### Tracker shows database connection errors
+**Common issues:**
+
+- **Port 3306 already in use**: Another MySQL instance running on host
+- **Permission denied**: Volume mount permissions incorrect
+- **Initialization failed**: Database name or credentials invalid
+
+### Tracker Connection Refused Errors
+
+If you see "Connection refused" errors when tracker tries to connect to MySQL:
+
+```bash
+# Check if MySQL healthcheck is properly configured
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "cat /opt/torrust/docker-compose.yml | grep -A 10 'mysql:' | grep healthcheck -A 5"
+```
+
+**Expected healthcheck configuration:**
+
+```yaml
+healthcheck:
+  test:
+    [
+      "CMD",
+      "mysqladmin",
+      "ping",
+      "-h",
+      "localhost",
+      "-u",
+      "root",
+      "-p$$MYSQL_ROOT_PASSWORD",
+    ]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+```
+
+**Verify tracker depends_on configuration:**
+
+```bash
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "cat /opt/torrust/docker-compose.yml | grep -A 5 'tracker:' | grep depends_on -A 3"
+```
+
+**Expected tracker depends_on:**
+
+```yaml
+depends_on:
+  mysql:
+    condition: service_healthy
+```
+
+### Database Connection Errors in Tracker Logs
 
 **Note**: You may see errors like "unable to open database file: mysql://..." in the tracker logs. This is a known issue being investigated. The tracker may still function correctly despite these errors.
 
+Check tracker logs for MySQL connection issues:
+
 ```bash
-# Check tracker logs
-INSTANCE_IP=$(cat data/manual-test-mysql/environment.json | jq -r '.Running.context.runtime_outputs.instance_ip')
+# Filter tracker logs for database/MySQL errors
 ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
-  "docker logs tracker 2>&1 | tail -50"
+  "docker logs tracker 2>&1 | grep -i 'database\|mysql\|r2d2\|connection' | tail -30"
+```
 
-# Verify tracker configuration inside container
+**Verify tracker can connect to MySQL:**
+
+```bash
+# Test MySQL connection from inside tracker container
 ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
-  "docker exec tracker cat /etc/torrust/tracker/tracker.toml | grep -A 3 'database'"
+  "docker exec tracker sh -c 'nc -zv mysql 3306'"
 
-# Check if MySQL database is accessible
+# Expected output:
+# mysql (172.18.0.2:3306) open
+```
+
+### Environment Variables Not Applied
+
+If MySQL credentials don't match configuration:
+
+```bash
+# Check .env file contains correct MySQL variables
 ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
-  "docker exec mysql mysql -u tracker_user -p'tracker_password' torrust_tracker -e 'SELECT 1;'"
-```
+  "cat /opt/torrust/.env | grep MYSQL"
 
-### Environment variables not applied
-
-```bash
-# Verify .env file exists and has MySQL variables
-INSTANCE_IP=$(cat data/manual-test-mysql/environment.json | jq -r '.Running.context.runtime_outputs.instance_ip')
-ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP "cat /opt/torrust/.env"
-
-# Check docker-compose.yml references variables correctly
+# Verify docker-compose.yml references variables (not hardcoded values)
 ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
-  "cat /opt/torrust/docker-compose.yml | grep -A 15 'mysql:'"
+  "cat /opt/torrust/docker-compose.yml | grep -A 15 'mysql:' | grep environment -A 5"
 ```
 
-## Debugging with Application Logs
+**Expected in docker-compose.yml:**
 
-If you encounter any issues during the workflow, the application maintains detailed logs that can help diagnose problems:
+```yaml
+environment:
+  - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+  - MYSQL_DATABASE=${MYSQL_DATABASE}
+  - MYSQL_USER=${MYSQL_USER}
+  - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+```
 
-### Log Location
+**NOT like this (hardcoded):**
 
-All application execution logs are stored in:
+```yaml
+environment:
+  - MYSQL_ROOT_PASSWORD=hardcoded_password # ❌ WRONG
+```
+
+### Tables Not Created
+
+If tracker tables don't exist in MySQL:
 
 ```bash
-data/logs/log.txt
+# Check if tracker has created tables
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+  "docker exec mysql mysql -u tracker_user -p'tracker_password' torrust_tracker -e 'SHOW TABLES;'"
 ```
 
-This file contains **all** operations performed by the deployer, including:
+**If tables are missing:**
 
-- Command execution traces with timestamps
-- State transitions (Created → Provisioned → Configured → Released → Running)
-- Ansible playbook executions with full command details
-- Template rendering operations
-- Error messages with context
-- Step-by-step progress through each command
+1. Check tracker logs for migration errors
+2. Verify tracker has correct database permissions
+3. Ensure tracker started successfully after MySQL was healthy
 
-### Viewing Logs
+## Comparison: MySQL vs SQLite
 
-**View recent operations**:
+### Performance Characteristics
 
-```bash
-# Last 100 lines
-tail -100 data/logs/log.txt
+**SQLite:**
 
-# Follow logs in real-time
-tail -f data/logs/log.txt
-```
+- ✅ Simpler setup (no separate container)
+- ✅ Faster for small-scale deployments
+- ✅ Lower memory footprint
+- ❌ Limited concurrency
+- ❌ Single file - no network access
 
-**Search for specific command**:
+**MySQL:**
 
-```bash
-# View all release command operations
-grep -A5 -B5 'release' data/logs/log.txt
+- ✅ Better concurrency for multiple clients
+- ✅ Network accessible (can query from other services)
+- ✅ Better for high-traffic deployments
+- ✅ Advanced features (replication, clustering)
+- ❌ More complex setup (requires container/service)
+- ❌ Higher memory usage
 
-# View provision operations
-grep -A5 -B5 'provision' data/logs/log.txt
+### When to Use MySQL
 
-# View Ansible playbook executions
-grep 'ansible-playbook' data/logs/log.txt
-```
+Choose MySQL when:
 
-**Check state transitions**:
+- **High concurrency**: Multiple clients accessing tracker simultaneously
+- **Network access**: Need to query database from external tools/services
+- **Production deployments**: Long-term stable deployments with scaling needs
+- **Replication needs**: Want database backup/replication features
 
-```bash
-# View all state transitions for your environment
-grep 'Environment state transition' data/logs/log.txt | grep manual-test-mysql
-```
+Choose SQLite when:
 
-**Find errors**:
-
-```bash
-# Search for ERROR level logs
-grep 'ERROR' data/logs/log.txt
-
-# Search for WARN level logs
-grep 'WARN' data/logs/log.txt
-```
-
-### Example: Debugging Release Command
-
-If the release command completes but files aren't on the VM:
-
-```bash
-# Check what actually happened during release
-grep -A10 'release_command' data/logs/log.txt | tail -50
-
-# Verify Ansible playbooks were executed
-grep 'deploy-tracker-config\|deploy-compose-files' data/logs/log.txt
-
-# Check for any Ansible errors
-grep -A5 'Ansible playbook.*failed' data/logs/log.txt
-```
-
-### Log Format
-
-Logs are structured with:
-
-- **Timestamp**: ISO 8601 format (e.g., `2025-12-14T11:52:16.232160Z`)
-- **Level**: INFO, WARN, ERROR
-- **Span**: Command and step context (e.g., `release_command:deploy_tracker_config`)
-- **Module**: Rust module path
-- **Message**: Human-readable description
-- **Fields**: Structured data (environment name, step name, status, etc.)
-
-**Example log entry**:
-
-```text
-2025-12-14T11:52:21.495109Z  INFO release_command: torrust_tracker_deployer_lib::application::command_handlers::release::handler:
-Tracker configuration deployed successfully command="release" step=Deploy Tracker Config to Remote command_type="release"
-environment=manual-test-mysql
-```
-
-### Common Issues in Logs
-
-1. **"Ansible playbook failed"**: Check the Ansible command that was executed and verify SSH connectivity
-2. **"Template rendering failed"**: Check template syntax and context data
-3. **"State persistence failed"**: Check file permissions in `data/` directory
-4. **"Instance IP not found"**: Environment wasn't provisioned correctly
-
-### Tips
-
-- The log file grows with each command execution
-- Consider searching for your environment name to filter relevant logs
-- Timestamps help correlate logs with command execution times
-- All Ansible playbook commands are logged with full paths and arguments
-
-## Success Criteria
-
-The MySQL implementation is successful if:
-
-1. ✅ All commands complete without errors
-2. ✅ Tracker config contains MySQL connection string (not SQLite path)
-3. ✅ `.env` file contains all MySQL credentials AND standardized `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER` variable
-4. ✅ `docker-compose.yml` uses `${MYSQL_*}` and `${TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER}` references (not hardcoded)
-5. ✅ Both containers (tracker + MySQL) start and run healthy
-6. ✅ Tracker API responds with valid JSON
-7. ✅ MySQL database tables are created
-8. ✅ No connection errors in tracker logs
-9. ✅ Application logs in `data/logs/log.txt` show successful state transitions
-
-## Comparison with SQLite
-
-For comparison, test the same workflow with SQLite configuration:
-
-```bash
-# Use existing SQLite config
-cargo run -- create environment --env-file data/e2e-deployment/environment.json
-cargo run -- provision e2e-deployment
-cargo run -- configure e2e-deployment
-cargo run -- release e2e-deployment
-cargo run -- run e2e-deployment
-cargo run -- test e2e-deployment
-cargo run -- destroy e2e-deployment
-```
-
-**Key Differences**:
-
-- SQLite: `driver = "sqlite3"`, `path = "/var/lib/torrust/tracker/database/sqlite3.db"`
-- MySQL: `driver = "mysql"`, `path = "mysql://user:pass@host:port/database"`
-- SQLite: No MySQL service in docker-compose
-- MySQL: MySQL service with healthcheck in docker-compose
+- **Development/testing**: Quick local testing
+- **Low traffic**: Personal or small-scale deployments
+- **Simplicity**: Prefer simpler setup without database container
+- **Single-instance**: No need for network database access
 
 ## Related Documentation
 
-- [Environment Configuration](../user-guide/configuration/environment.md)
-- [Release Command](../user-guide/commands/release.md)
-- [Run Command](../user-guide/commands/run.md)
-- [ADR: Database Configuration Structure in Templates](../decisions/database-configuration-structure-in-templates.md)
-- [ADR: Environment Variable Injection in Docker Compose](../decisions/environment-variable-injection-in-docker-compose.md)
+- [Manual E2E Testing Guide](README.md) - Complete deployment workflow
+- [Prometheus Verification Guide](prometheus-verification.md) - Metrics collection verification
+- [MySQL Configuration Schema](../../user-guide/README.md) - Configuration file format
+- [Troubleshooting Guide](../README.md) - General troubleshooting tips

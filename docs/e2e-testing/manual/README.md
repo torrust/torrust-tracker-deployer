@@ -6,6 +6,7 @@ This guide explains how to manually run a complete end-to-end test of the Torrus
 
 - [Prerequisites](#prerequisites)
 - [Complete Manual Test Workflow](#complete-manual-test-workflow)
+- [Service-Specific Verification](#service-specific-verification)
 - [Handling Interrupted Commands](#handling-interrupted-commands)
 - [State Recovery](#state-recovery)
 - [Troubleshooting Manual Tests](#troubleshooting-manual-tests)
@@ -399,6 +400,50 @@ lxc profile list | grep manual-test
 ls data/manual-test 2>/dev/null || echo "Cleaned up successfully"
 ```
 
+## Service-Specific Verification
+
+After deploying your environment, you may want to verify that specific services are working correctly. The following guides provide detailed verification steps for each supported service:
+
+### MySQL Database
+
+If your deployment includes MySQL as the database backend, see the [MySQL Verification Guide](mysql-verification.md) for detailed steps to:
+
+- Verify MySQL container health and connectivity
+- Check database tables and schema
+- Validate tracker-to-MySQL connectivity
+- Troubleshoot MySQL-specific issues
+- Compare MySQL behavior vs SQLite
+
+### Prometheus Metrics Collection
+
+If your deployment includes Prometheus for metrics collection (enabled by default), see the [Prometheus Verification Guide](prometheus-verification.md) for detailed steps to:
+
+- Verify Prometheus container is running
+- Check configuration file deployment
+- Validate target scraping (both `/api/v1/stats` and `/api/v1/metrics`)
+- Access Prometheus web UI
+- Query collected metrics
+- Troubleshoot Prometheus-specific issues
+
+### Basic Tracker Verification
+
+For basic tracker functionality without service-specific checks:
+
+```bash
+# Get the VM IP
+export INSTANCE_IP=$(cat data/manual-test/environment.json | jq -r '.Running.context.runtime_outputs.instance_ip')
+
+# Test HTTP tracker health endpoint
+curl http://$INSTANCE_IP:7070/health_check
+
+# Test HTTP API health endpoint
+curl http://$INSTANCE_IP:1212/api/health_check
+
+# Check tracker container logs
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null torrust@$INSTANCE_IP \
+  "docker logs tracker"
+```
+
 ## Handling Interrupted Commands
 
 Commands can be interrupted (Ctrl+C) during execution, leaving the environment in an intermediate state.
@@ -760,6 +805,117 @@ docker rm tracker
 exit
 cargo run -- run manual-test
 ```
+
+## Debugging with Application Logs
+
+If you encounter any issues during the workflow, the application maintains detailed logs that can help diagnose problems:
+
+### Log Location
+
+All application execution logs are stored in:
+
+```bash
+data/logs/log.txt
+```
+
+This file contains **all** operations performed by the deployer, including:
+
+- Command execution traces with timestamps
+- State transitions (Created → Provisioned → Configured → Released → Running)
+- Ansible playbook executions with full command details
+- Template rendering operations
+- Error messages with context
+- Step-by-step progress through each command
+
+### Viewing Logs
+
+**View recent operations**:
+
+```bash
+# Last 100 lines
+tail -100 data/logs/log.txt
+
+# Follow logs in real-time
+tail -f data/logs/log.txt
+```
+
+**Search for specific command**:
+
+```bash
+# View all release command operations
+grep -A5 -B5 'release' data/logs/log.txt
+
+# View provision operations
+grep -A5 -B5 'provision' data/logs/log.txt
+
+# View Ansible playbook executions
+grep 'ansible-playbook' data/logs/log.txt
+```
+
+**Check state transitions**:
+
+```bash
+# View all state transitions for your environment
+grep 'Environment state transition' data/logs/log.txt | grep manual-test
+```
+
+**Find errors**:
+
+```bash
+# Search for ERROR level logs
+grep 'ERROR' data/logs/log.txt
+
+# Search for WARN level logs
+grep 'WARN' data/logs/log.txt
+```
+
+### Example: Debugging Release Command
+
+If the release command completes but files aren't on the VM:
+
+```bash
+# Check what actually happened during release
+grep -A10 'release_command' data/logs/log.txt | tail -50
+
+# Verify Ansible playbooks were executed
+grep 'deploy-tracker-config\|deploy-compose-files' data/logs/log.txt
+
+# Check for any Ansible errors
+grep -A5 'Ansible playbook.*failed' data/logs/log.txt
+```
+
+### Log Format
+
+Logs are structured with:
+
+- **Timestamp**: ISO 8601 format (e.g., `2025-12-14T11:52:16.232160Z`)
+- **Level**: INFO, WARN, ERROR
+- **Span**: Command and step context (e.g., `release_command:deploy_tracker_config`)
+- **Module**: Rust module path
+- **Message**: Human-readable description
+- **Fields**: Structured data (environment name, step name, status, etc.)
+
+**Example log entry**:
+
+```text
+2025-12-14T11:52:21.495109Z  INFO release_command: torrust_tracker_deployer_lib::application::command_handlers::release::handler:
+Tracker configuration deployed successfully command="release" step=Deploy Tracker Config to Remote command_type="release"
+environment=manual-test
+```
+
+### Common Issues in Logs
+
+1. **"Ansible playbook failed"**: Check the Ansible command that was executed and verify SSH connectivity
+2. **"Template rendering failed"**: Check template syntax and context data
+3. **"State persistence failed"**: Check file permissions in `data/` directory
+4. **"Instance IP not found"**: Environment wasn't provisioned correctly
+
+### Tips
+
+- The log file grows with each command execution
+- Consider searching for your environment name to filter relevant logs
+- Timestamps help correlate logs with command execution times
+- All Ansible playbook commands are logged with full paths and arguments
 
 ## Cleanup Procedures
 
