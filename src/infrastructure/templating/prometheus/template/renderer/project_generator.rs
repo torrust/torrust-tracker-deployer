@@ -64,7 +64,7 @@ pub struct PrometheusProjectGenerator {
 
 impl PrometheusProjectGenerator {
     /// Default relative path for Prometheus configuration files
-    const PROMETHEUS_BUILD_PATH: &'static str = "storage/prometheus/etc";
+    const PROMETHEUS_BUILD_PATH: &'static str = "prometheus";
 
     /// Creates a new Prometheus project generator
     ///
@@ -225,10 +225,10 @@ scrape_configs:
             .render(&prometheus_config, &tracker_config)
             .expect("Failed to render templates");
 
-        let prometheus_dir = build_dir.join("storage/prometheus/etc");
+        let prometheus_dir = build_dir.join("prometheus");
         assert!(
             prometheus_dir.exists(),
-            "Prometheus build directory should be created"
+            "Prometheus directory should be created"
         );
         assert!(
             prometheus_dir.is_dir(),
@@ -251,7 +251,7 @@ scrape_configs:
             .render(&prometheus_config, &tracker_config)
             .expect("Failed to render templates");
 
-        let prometheus_yml_path = build_dir.join("storage/prometheus/etc/prometheus.yml");
+        let prometheus_yml_path = build_dir.join("prometheus/prometheus.yml");
         assert!(
             prometheus_yml_path.exists(),
             "prometheus.yml should be created"
@@ -283,7 +283,7 @@ scrape_configs:
             .render(&prometheus_config, &tracker_config)
             .expect("Failed to render templates");
 
-        let content = fs::read_to_string(build_dir.join("storage/prometheus/etc/prometheus.yml"))
+        let content = fs::read_to_string(build_dir.join("prometheus/prometheus.yml"))
             .expect("Failed to read file");
 
         assert!(content.contains("scrape_interval: 30s"));
@@ -305,7 +305,7 @@ scrape_configs:
             .render(&prometheus_config, &tracker_config)
             .expect("Failed to render templates");
 
-        let content = fs::read_to_string(build_dir.join("storage/prometheus/etc/prometheus.yml"))
+        let content = fs::read_to_string(build_dir.join("prometheus/prometheus.yml"))
             .expect("Failed to read file");
 
         assert!(content.contains("targets: [\"tracker:8080\"]"));
@@ -327,7 +327,7 @@ scrape_configs:
             .render(&prometheus_config, &tracker_config)
             .expect("Failed to render templates");
 
-        let content = fs::read_to_string(build_dir.join("storage/prometheus/etc/prometheus.yml"))
+        let content = fs::read_to_string(build_dir.join("prometheus/prometheus.yml"))
             .expect("Failed to read file");
 
         assert!(content.contains(r#"token: ["custom_admin_token_123"]"#));

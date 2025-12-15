@@ -19,7 +19,7 @@
   tasks:
     - name: Copy prometheus.yml to VM
       ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../storage/prometheus/etc/prometheus.yml"
+        src: "{{ playbook_dir }}/../prometheus/prometheus.yml"
         # Note: This is the host path. Inside the container, it's mounted to /etc/prometheus/
         dest: /opt/torrust/storage/prometheus/etc/prometheus.yml
         mode: "0644"

@@ -504,7 +504,7 @@ volumes:
 
 - name: Copy Prometheus configuration
   ansible.builtin.copy:
-    src: "{{ build_dir }}/storage/prometheus/etc/prometheus.yml"
+    src: "{{ build_dir }}/prometheus/prometheus.yml"
     dest: /opt/torrust/storage/prometheus/etc/prometheus.yml
     mode: "0644"
   when: prometheus_config is defined
@@ -569,7 +569,7 @@ volumes:
 **Why Phase 5**: Orchestrates both renderers (docker-compose + prometheus) created in previous phases.
 
 - [ ] Update `RenderTemplatesStep` to call Prometheus renderer when config present
-- [ ] Ensure Prometheus templates rendered to `build/{env}/storage/prometheus/etc/` directory
+- ✅ Ensure Prometheus templates rendered to `build/{env}/prometheus/` directory
 - [ ] Verify build directory structure includes Prometheus configuration
 - [ ] Test release command with Prometheus enabled and disabled
 

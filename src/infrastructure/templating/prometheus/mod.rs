@@ -15,5 +15,5 @@ pub use template::{
 
 /// Subdirectory name for Prometheus-related files within the build directory.
 ///
-/// Prometheus configuration files will be rendered to `build_dir/storage/prometheus/etc/`.
-pub const PROMETHEUS_SUBFOLDER: &str = "storage/prometheus/etc";
+/// Prometheus configuration files will be rendered to `build_dir/prometheus/`.
+pub const PROMETHEUS_SUBFOLDER: &str = "prometheus";
