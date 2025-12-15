@@ -317,34 +317,49 @@ ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
 
 ```bash
 # 1. Get initial stats from the API
-INITIAL_STATS=$(ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
-  "curl -s http://localhost:1212/api/v1/stats?token=MyAccessToken")
+INSTANCE_IP=$(cat data/manual-test-mysql/environment.json | jq -r '.Running.context.runtime_outputs.instance_ip')
+INITIAL_STATS=$(curl -s -H "Authorization: Bearer MyAccessToken" http://$INSTANCE_IP:1212/api/v1/stats)
 echo "Initial stats: $INITIAL_STATS"
 # Expected: JSON with torrents, seeders, leechers counts
 
 # 2. Make an announce request to increment stats
-ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
-  "curl -s 'http://localhost:7070/announce?info_hash=%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C&peer_id=-qB00000000000000001&port=17548&uploaded=0&downloaded=0&left=0&event=started'"
-# Expected: Tracker response (compact or full format)
+# Note: The tracker is configured for reverse proxy mode, so we need to send the X-Forwarded-For header
+# Making the request from outside the VM (from host) is more realistic and simulates a real client
+
+# From the host machine (outside VM):
+curl -H "X-Forwarded-For: 203.0.113.45" \
+  "http://$INSTANCE_IP:7070/announce?info_hash=%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C&peer_id=-qB00000000000000001&port=17548&uploaded=0&downloaded=0&left=0&event=started"
+# Expected: HTTP 200 OK with tracker response (compact or full format)
+
+# Alternative: Make request from inside VM (less realistic, but useful for testing)
+# ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
+#   "curl -s 'http://localhost:7070/announce?info_hash=%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C%3C&peer_id=-qB00000000000000001&port=17548&uploaded=0&downloaded=0&left=0&event=started'"
+# Note: This will fail with "Error resolving peer IP: missing or invalid the right most X-Forwarded-For IP"
 
 # 3. Get updated stats and compare
-UPDATED_STATS=$(ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
-  "curl -s http://localhost:1212/api/v1/stats?token=MyAccessToken")
+UPDATED_STATS=$(curl -s -H "Authorization: Bearer MyAccessToken" http://$INSTANCE_IP:1212/api/v1/stats)
 echo "Updated stats: $UPDATED_STATS"
-# Expected: Counter incremented (e.g., tcp4_announces_handled or connections_handled)
+# Expected: Counters incremented (e.g., tcp4_announces_handled, tcp4_connections_handled)
+# Example output showing successful announce:
+# {
+#   "torrents": 1,
+#   "seeders": 1,
+#   "tcp4_announces_handled": 1,
+#   "tcp4_connections_handled": 1,
+#   ...
+# }
 
-# 4. Query specific torrent via API
+# 4. Verify MySQL connection by checking database tables are accessible
 ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
-  "curl -s 'http://localhost:1212/api/v1/torrent/3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C?token=MyAccessToken'"
-# Expected: JSON with torrent info (seeders, leechers, peers)
-# If returns empty or error, tracker may not have persisted to database
+  "docker exec mysql mysql -u tracker_user -p'tracker_password' torrust_tracker -e 'SHOW TABLES;'"
+# Expected: List of tables (keys, torrent_aggregate_metrics, torrents, whitelist)
+# This confirms MySQL connectivity is working
 
-# 5. Verify data was written to MySQL
-ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@$INSTANCE_IP \
-  "docker exec mysql mysql -u tracker_user -p'tracker_password' torrust_tracker -e \
-    'SELECT HEX(info_hash), completed FROM torrust_torrents LIMIT 5;'"
-# Expected: Row(s) with the info_hash from announce request
-# If empty, tracker isn't writing to database successfully
+# Note: The tracker uses in-memory storage for active torrents by default.
+# Torrents are only persisted to MySQL in specific cases:
+# - In private mode: all torrents are persisted
+# - In public mode: only whitelisted torrents are persisted
+# The key verification is that MySQL is accessible and stats counters increase after announces.
 ```
 
 ### Step 6: Cleanup
