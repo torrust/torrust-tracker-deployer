@@ -99,6 +99,9 @@ impl VariablesRenderer {
     /// Output filename for the rendered variables file
     const VARIABLES_OUTPUT_FILE: &'static str = "variables.yml";
 
+    /// Directory path for Ansible templates
+    const ANSIBLE_TEMPLATE_DIR: &'static str = "ansible";
+
     /// Creates a new variables template renderer
     ///
     /// # Arguments
@@ -192,7 +195,7 @@ impl VariablesRenderer {
     ///
     /// * `String` - The complete template path for variables.yml.tera
     fn build_template_path() -> String {
-        format!("ansible/{}", Self::VARIABLES_TEMPLATE_FILE)
+        format!("{}/{}", Self::ANSIBLE_TEMPLATE_DIR, Self::VARIABLES_TEMPLATE_FILE)
     }
 }
 

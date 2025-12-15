@@ -49,7 +49,14 @@ pub struct PrometheusConfigRenderer {
 }
 
 impl PrometheusConfigRenderer {
-    const PROMETHEUS_TEMPLATE_PATH: &'static str = "prometheus/prometheus.yml.tera";
+    /// Template filename for the Prometheus Tera template
+    const PROMETHEUS_TEMPLATE_FILE: &'static str = "prometheus.yml.tera";
+
+    /// Output filename for the rendered Prometheus config file
+    const PROMETHEUS_OUTPUT_FILE: &'static str = "prometheus.yml";
+
+    /// Directory path for Prometheus templates
+    const PROMETHEUS_TEMPLATE_DIR: &'static str = "prometheus";
 
     /// Creates a new Prometheus config renderer
     ///
@@ -82,9 +89,11 @@ impl PrometheusConfigRenderer {
         output_dir: &Path,
     ) -> Result<(), PrometheusConfigRendererError> {
         // 1. Load template from template manager
-        let template_path = self
-            .template_manager
-            .get_template_path(Self::PROMETHEUS_TEMPLATE_PATH)?;
+        let template_path = self.template_manager.get_template_path(&format!(
+            "{}/{}",
+            Self::PROMETHEUS_TEMPLATE_DIR,
+            Self::PROMETHEUS_TEMPLATE_FILE
+        ))?;
 
         // 2. Read template content
         let template_content = std::fs::read_to_string(&template_path).map_err(|source| {
@@ -98,7 +107,7 @@ impl PrometheusConfigRenderer {
         let template = PrometheusTemplate::new(template_content, context.clone())?;
 
         // 4. Render to output file
-        let output_path = output_dir.join("prometheus.yml");
+        let output_path = output_dir.join(Self::PROMETHEUS_OUTPUT_FILE);
         template.render_to_file(&output_path)?;
 
         Ok(())

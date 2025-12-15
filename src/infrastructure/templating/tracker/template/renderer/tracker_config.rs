@@ -54,7 +54,14 @@ pub struct TrackerConfigRenderer {
 }
 
 impl TrackerConfigRenderer {
-    const TRACKER_TEMPLATE_PATH: &'static str = "tracker/tracker.toml.tera";
+    /// Template filename for the Tracker Tera template
+    const TRACKER_TEMPLATE_FILE: &'static str = "tracker.toml.tera";
+
+    /// Output filename for the rendered Tracker config file
+    const TRACKER_OUTPUT_FILE: &'static str = "tracker.toml";
+
+    /// Directory path for Tracker templates
+    const TRACKER_TEMPLATE_DIR: &'static str = "tracker";
 
     /// Creates a new tracker config renderer
     ///
@@ -93,7 +100,7 @@ impl TrackerConfigRenderer {
         // 1. Load template from template manager
         let template_path = self
             .template_manager
-            .get_template_path(Self::TRACKER_TEMPLATE_PATH)?;
+            .get_template_path(&format!("{}/{}", Self::TRACKER_TEMPLATE_DIR, Self::TRACKER_TEMPLATE_FILE))?;
 
         // 2. Read template content
         let template_content = std::fs::read_to_string(&template_path).map_err(|source| {
@@ -107,7 +114,7 @@ impl TrackerConfigRenderer {
         let template = TrackerTemplate::new(template_content, context.clone())?;
 
         // 4. Render to output file
-        let output_path = output_dir.join("tracker.toml");
+        let output_path = output_dir.join(Self::TRACKER_OUTPUT_FILE);
         template.render_to_file(&output_path)?;
 
         Ok(())
