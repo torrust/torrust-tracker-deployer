@@ -284,5 +284,25 @@ mod tests {
         // Verify it contains expected content from embedded template
         assert!(output_content.contains("torrust/tracker"));
         assert!(output_content.contains("./storage/tracker/lib:/var/lib/torrust/tracker"));
+
+        // Verify dynamic ports are rendered (default TrackerConfig has 6969 UDP, 7070 HTTP, 1212 API)
+        assert!(
+            output_content.contains("6969:6969/udp"),
+            "Should contain UDP tracker port 6969"
+        );
+        assert!(
+            output_content.contains("7070:7070"),
+            "Should contain HTTP tracker port 7070"
+        );
+        assert!(
+            output_content.contains("1212:1212"),
+            "Should contain HTTP API port 1212"
+        );
+
+        // Verify hardcoded ports are NOT present
+        assert!(
+            !output_content.contains("6868:6868"),
+            "Should not contain hardcoded UDP port 6868"
+        );
     }
 }
