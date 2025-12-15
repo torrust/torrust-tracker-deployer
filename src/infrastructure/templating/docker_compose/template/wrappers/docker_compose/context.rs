@@ -16,12 +16,8 @@ use crate::domain::prometheus::PrometheusConfig;
 pub struct DockerComposeContext {
     /// Database configuration
     pub database: DatabaseConfig,
-    /// UDP tracker ports
-    pub udp_tracker_ports: Vec<u16>,
-    /// HTTP tracker ports
-    pub http_tracker_ports: Vec<u16>,
-    /// HTTP API port
-    pub http_api_port: u16,
+    /// Tracker port configuration
+    pub ports: TrackerPorts,
     /// Prometheus configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prometheus_config: Option<PrometheusConfig>,
@@ -54,9 +50,7 @@ impl DockerComposeContext {
                 driver: "sqlite3".to_string(),
                 mysql: None,
             },
-            udp_tracker_ports: ports.udp_tracker_ports,
-            http_tracker_ports: ports.http_tracker_ports,
-            http_api_port: ports.http_api_port,
+            ports,
             prometheus_config: None,
         }
     }
@@ -112,9 +106,7 @@ impl DockerComposeContext {
                     port,
                 }),
             },
-            udp_tracker_ports: ports.udp_tracker_ports,
-            http_tracker_ports: ports.http_tracker_ports,
-            http_api_port: ports.http_api_port,
+            ports,
             prometheus_config: None,
         }
     }
@@ -136,22 +128,10 @@ impl DockerComposeContext {
         &self.database
     }
 
-    /// Get the UDP tracker ports
+    /// Get the tracker ports configuration
     #[must_use]
-    pub fn udp_tracker_ports(&self) -> &[u16] {
-        &self.udp_tracker_ports
-    }
-
-    /// Get the HTTP tracker ports
-    #[must_use]
-    pub fn http_tracker_ports(&self) -> &[u16] {
-        &self.http_tracker_ports
-    }
-
-    /// Get the HTTP API port
-    #[must_use]
-    pub fn http_api_port(&self) -> u16 {
-        self.http_api_port
+    pub fn ports(&self) -> &TrackerPorts {
+        &self.ports
     }
 
     /// Get the Prometheus configuration if present
@@ -162,7 +142,7 @@ impl DockerComposeContext {
 }
 
 /// Tracker port configuration
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct TrackerPorts {
     /// UDP tracker ports
     pub udp_tracker_ports: Vec<u16>,
@@ -226,9 +206,9 @@ mod tests {
 
         assert_eq!(context.database().driver(), "sqlite3");
         assert!(context.database().mysql().is_none());
-        assert_eq!(context.udp_tracker_ports(), &[6868, 6969]);
-        assert_eq!(context.http_tracker_ports(), &[7070]);
-        assert_eq!(context.http_api_port(), 1212);
+        assert_eq!(context.ports().udp_tracker_ports, vec![6868, 6969]);
+        assert_eq!(context.ports().http_tracker_ports, vec![7070]);
+        assert_eq!(context.ports().http_api_port, 1212);
     }
 
     #[test]
@@ -257,9 +237,9 @@ mod tests {
         assert_eq!(mysql.password, "pass456");
         assert_eq!(mysql.port, 3306);
 
-        assert_eq!(context.udp_tracker_ports(), &[6868, 6969]);
-        assert_eq!(context.http_tracker_ports(), &[7070]);
-        assert_eq!(context.http_api_port(), 1212);
+        assert_eq!(context.ports().udp_tracker_ports, vec![6868, 6969]);
+        assert_eq!(context.ports().http_tracker_ports, vec![7070]);
+        assert_eq!(context.ports().http_api_port, 1212);
     }
 
     #[test]

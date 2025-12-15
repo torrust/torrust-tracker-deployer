@@ -39,15 +39,15 @@ services:
       - backend_network
     ports:
       # UDP Tracker Ports (dynamically configured)
-{%- for port in udp_tracker_ports %}
+{%- for port in ports.udp_tracker_ports %}
       - {{ port }}:{{ port }}/udp
 {%- endfor %}
       # HTTP Tracker Ports (dynamically configured)
-{%- for port in http_tracker_ports %}
+{%- for port in ports.http_tracker_ports %}
       - {{ port }}:{{ port }}
 {%- endfor %}
       # HTTP API Port (dynamically configured)
-      - {{ http_api_port }}:{{ http_api_port }}
+      - {{ ports.http_api_port }}:{{ ports.http_api_port }}
     volumes:
       - ./storage/tracker/lib:/var/lib/torrust/tracker:Z
       - ./storage/tracker/log:/var/log/torrust/tracker:Z
