@@ -3,45 +3,11 @@
 //! This module defines the structure and validation for Docker Compose services
 //! that will be rendered into the docker-compose.yml file.
 
+// External crates
 use serde::Serialize;
 
+// Internal crate
 use crate::domain::prometheus::PrometheusConfig;
-
-/// Tracker port configuration
-#[derive(Debug, Clone)]
-pub struct TrackerPorts {
-    /// UDP tracker ports
-    pub udp_tracker_ports: Vec<u16>,
-    /// HTTP tracker ports
-    pub http_tracker_ports: Vec<u16>,
-    /// HTTP API port
-    pub http_api_port: u16,
-}
-
-/// Database configuration for docker-compose template
-#[derive(Serialize, Debug, Clone)]
-pub struct DatabaseConfig {
-    /// Database driver: "sqlite3" or "mysql"
-    pub driver: String,
-    /// MySQL-specific configuration (only present when driver == "mysql")
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mysql: Option<MysqlConfig>,
-}
-
-/// `MySQL`-specific configuration
-#[derive(Serialize, Debug, Clone)]
-pub struct MysqlConfig {
-    /// `MySQL` root password
-    pub root_password: String,
-    /// `MySQL` database name
-    pub database: String,
-    /// `MySQL` user
-    pub user: String,
-    /// `MySQL` password
-    pub password: String,
-    /// `MySQL` port
-    pub port: u16,
-}
 
 /// Context for rendering the docker-compose.yml template
 ///
@@ -195,6 +161,27 @@ impl DockerComposeContext {
     }
 }
 
+/// Tracker port configuration
+#[derive(Debug, Clone)]
+pub struct TrackerPorts {
+    /// UDP tracker ports
+    pub udp_tracker_ports: Vec<u16>,
+    /// HTTP tracker ports
+    pub http_tracker_ports: Vec<u16>,
+    /// HTTP API port
+    pub http_api_port: u16,
+}
+
+/// Database configuration for docker-compose template
+#[derive(Serialize, Debug, Clone)]
+pub struct DatabaseConfig {
+    /// Database driver: "sqlite3" or "mysql"
+    pub driver: String,
+    /// MySQL-specific configuration (only present when driver == "mysql")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mysql: Option<MysqlConfig>,
+}
+
 impl DatabaseConfig {
     /// Get the database driver name
     #[must_use]
@@ -207,6 +194,21 @@ impl DatabaseConfig {
     pub fn mysql(&self) -> Option<&MysqlConfig> {
         self.mysql.as_ref()
     }
+}
+
+/// `MySQL`-specific configuration
+#[derive(Serialize, Debug, Clone)]
+pub struct MysqlConfig {
+    /// `MySQL` root password
+    pub root_password: String,
+    /// `MySQL` database name
+    pub database: String,
+    /// `MySQL` user
+    pub user: String,
+    /// `MySQL` password
+    pub password: String,
+    /// `MySQL` port
+    pub port: u16,
 }
 
 #[cfg(test)]
