@@ -81,6 +81,7 @@ impl DockerComposeTemplate {
 
 #[cfg(test)]
 mod tests {
+    use super::super::context::TrackerPorts;
     use super::*;
 
     #[test]
@@ -98,7 +99,12 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let context = DockerComposeContext::new_sqlite(ports);
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
         assert_eq!(template.database().driver(), "sqlite3");
@@ -123,15 +129,18 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
         let context = DockerComposeContext::new_mysql(
             "root123".to_string(),
             "tracker".to_string(),
             "user".to_string(),
             "pass".to_string(),
             3306,
-            vec![6868, 6969],
-            vec![7070],
-            1212,
+            ports,
         );
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
@@ -153,7 +162,12 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let context = DockerComposeContext::new_sqlite(ports);
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
         // Create temp directory for output
@@ -176,7 +190,12 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let context = DockerComposeContext::new_sqlite(ports);
         let result = DockerComposeTemplate::new(&template_file, context);
 
         assert!(result.is_err());

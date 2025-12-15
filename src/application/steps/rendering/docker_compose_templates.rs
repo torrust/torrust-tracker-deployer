@@ -32,7 +32,9 @@ use tracing::{info, instrument};
 use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
 use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
-use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::DockerComposeContext;
+use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
+    DockerComposeContext, TrackerPorts,
+};
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
     DockerComposeProjectGenerator, DockerComposeProjectGeneratorError,
@@ -142,16 +144,18 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         let (udp_tracker_ports, http_tracker_ports, http_api_port) =
             Self::extract_tracker_ports(tracker_config);
 
+        let ports = TrackerPorts {
+            udp_tracker_ports,
+            http_tracker_ports,
+            http_api_port,
+        };
+
         // Create contexts based on database configuration
         let database_config = &self.environment.context().user_inputs.tracker.core.database;
         let (env_context, docker_compose_context) = match database_config {
             DatabaseConfig::Sqlite { .. } => {
                 let env_context = EnvContext::new(admin_token);
-                let docker_compose_context = DockerComposeContext::new_sqlite(
-                    udp_tracker_ports,
-                    http_tracker_ports,
-                    http_api_port,
-                );
+                let docker_compose_context = DockerComposeContext::new_sqlite(ports);
                 (env_context, docker_compose_context)
             }
             DatabaseConfig::Mysql {
@@ -178,9 +182,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
                     username.clone(),
                     password.clone(),
                     *port,
-                    udp_tracker_ports,
-                    http_tracker_ports,
-                    http_api_port,
+                    ports,
                 );
 
                 (env_context, docker_compose_context)
