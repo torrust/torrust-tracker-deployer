@@ -91,7 +91,8 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
   - All linters passing, all tests passing (1507 tests)
   - **Pattern**: Independent Prometheus deployment following tracker pattern
 
-- ⏳ **Phase 7**: Testing (pending)
+- ✅ **Phase 6**: Ansible Deployment (commit: 9c1b91a)
+- 🚧 **Phase 7**: Testing & Verification (in progress)
 - ⏳ **Phase 8**: Documentation (pending)
 
 ## 🏗️ Architecture Requirements
