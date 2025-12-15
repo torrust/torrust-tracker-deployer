@@ -31,6 +31,8 @@ use tracing::{info, instrument};
 
 use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
+use crate::domain::tracker::DatabaseConfig;
+use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::DockerComposeContext;
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
     DockerComposeProjectGenerator, DockerComposeProjectGeneratorError,
@@ -99,8 +101,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             "Rendering Docker Compose templates"
         );
 
-        let generator =
-            DockerComposeProjectGenerator::new(&self.build_dir, self.template_manager.clone());
+        let generator = DockerComposeProjectGenerator::new(&self.build_dir, &self.template_manager);
 
         // Extract admin token from environment config
         let admin_token = self
@@ -111,9 +112,48 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             .http_api
             .admin_token
             .clone();
-        let env_context = EnvContext::new(admin_token);
 
-        let compose_build_dir = generator.render(&env_context).await?;
+        // Create contexts based on database configuration
+        let database_config = &self.environment.context().user_inputs.tracker.core.database;
+        let (env_context, docker_compose_context) = match database_config {
+            DatabaseConfig::Sqlite { .. } => {
+                let env_context = EnvContext::new(admin_token);
+                let docker_compose_context = DockerComposeContext::new_sqlite();
+                (env_context, docker_compose_context)
+            }
+            DatabaseConfig::Mysql {
+                port,
+                database_name,
+                username,
+                password,
+                ..
+            } => {
+                // For MySQL, generate a secure root password (in production, this should be managed securely)
+                let root_password = format!("{password}_root");
+
+                let env_context = EnvContext::new_with_mysql(
+                    admin_token,
+                    root_password.clone(),
+                    database_name.clone(),
+                    username.clone(),
+                    password.clone(),
+                );
+
+                let docker_compose_context = DockerComposeContext::new_mysql(
+                    root_password,
+                    database_name.clone(),
+                    username.clone(),
+                    password.clone(),
+                    *port,
+                );
+
+                (env_context, docker_compose_context)
+            }
+        };
+
+        let compose_build_dir = generator
+            .render(&env_context, &docker_compose_context)
+            .await?;
 
         info!(
             step = "render_docker_compose_templates",

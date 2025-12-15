@@ -13,7 +13,7 @@ use crate::domain::tracker::{DatabaseConfig, TrackerCoreConfig};
 /// Database configuration section (application DTO)
 ///
 /// Mirrors the domain `DatabaseConfig` enum but at the application layer.
-/// Currently only `SQLite` is supported.
+/// Supports both `SQLite` and `MySQL` database backends.
 ///
 /// # Examples
 ///
@@ -21,6 +21,17 @@ use crate::domain::tracker::{DatabaseConfig, TrackerCoreConfig};
 /// {
 ///   "driver": "sqlite3",
 ///   "database_name": "tracker.db"
+/// }
+/// ```
+///
+/// ```json
+/// {
+///   "driver": "mysql",
+///   "host": "localhost",
+///   "port": 3306,
+///   "database_name": "tracker",
+///   "username": "tracker_user",
+///   "password": "secure_password"
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
@@ -31,6 +42,20 @@ pub enum DatabaseSection {
     Sqlite {
         /// Database file name
         database_name: String,
+    },
+    /// `MySQL` server-based database
+    #[serde(rename = "mysql")]
+    Mysql {
+        /// `MySQL` server host
+        host: String,
+        /// `MySQL` server port
+        port: u16,
+        /// Database name
+        database_name: String,
+        /// Database username
+        username: String,
+        /// Database password
+        password: String,
     },
 }
 
@@ -46,6 +71,19 @@ impl DatabaseSection {
         match self {
             Self::Sqlite { database_name } => Ok(DatabaseConfig::Sqlite {
                 database_name: database_name.clone(),
+            }),
+            Self::Mysql {
+                host,
+                port,
+                database_name,
+                username,
+                password,
+            } => Ok(DatabaseConfig::Mysql {
+                host: host.clone(),
+                port: *port,
+                database_name: database_name.clone(),
+                username: username.clone(),
+                password: password.clone(),
             }),
         }
     }
@@ -160,5 +198,84 @@ mod tests {
             }
         );
         assert!(section.private);
+    }
+
+    #[test]
+    fn it_should_convert_mysql_to_domain_config_when_transforming_tracker_core_section() {
+        let section = TrackerCoreSection {
+            database: DatabaseSection::Mysql {
+                host: "localhost".to_string(),
+                port: 3306,
+                database_name: "tracker".to_string(),
+                username: "tracker_user".to_string(),
+                password: "secure_password".to_string(),
+            },
+            private: false,
+        };
+
+        let config = section.to_tracker_core_config().unwrap();
+
+        assert_eq!(
+            config.database,
+            DatabaseConfig::Mysql {
+                host: "localhost".to_string(),
+                port: 3306,
+                database_name: "tracker".to_string(),
+                username: "tracker_user".to_string(),
+                password: "secure_password".to_string(),
+            }
+        );
+        assert!(!config.private);
+    }
+
+    #[test]
+    fn it_should_serialize_mysql_to_json_when_converting_core_section() {
+        let section = TrackerCoreSection {
+            database: DatabaseSection::Mysql {
+                host: "mysql".to_string(),
+                port: 3306,
+                database_name: "tracker".to_string(),
+                username: "tracker_user".to_string(),
+                password: "pass123".to_string(),
+            },
+            private: false,
+        };
+
+        let json = serde_json::to_string(&section).unwrap();
+        assert!(json.contains("\"driver\":\"mysql\""));
+        assert!(json.contains("\"host\":\"mysql\""));
+        assert!(json.contains("\"port\":3306"));
+        assert!(json.contains("\"database_name\":\"tracker\""));
+        assert!(json.contains("\"username\":\"tracker_user\""));
+        assert!(json.contains("\"password\":\"pass123\""));
+    }
+
+    #[test]
+    fn it_should_deserialize_mysql_from_json_when_parsing_core_section() {
+        let json = r#"{
+            "database": {
+                "driver": "mysql",
+                "host": "localhost",
+                "port": 3306,
+                "database_name": "tracker",
+                "username": "tracker_user",
+                "password": "secure_password"
+            },
+            "private": false
+        }"#;
+
+        let section: TrackerCoreSection = serde_json::from_str(json).unwrap();
+
+        assert_eq!(
+            section.database,
+            DatabaseSection::Mysql {
+                host: "localhost".to_string(),
+                port: 3306,
+                database_name: "tracker".to_string(),
+                username: "tracker_user".to_string(),
+                password: "secure_password".to_string(),
+            }
+        );
+        assert!(!section.private);
     }
 }

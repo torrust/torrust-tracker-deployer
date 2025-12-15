@@ -29,7 +29,7 @@
   ],
   "$defs": {
     "DatabaseSection": {
-      "description": "Database configuration section (application DTO)\n\nMirrors the domain `DatabaseConfig` enum but at the application layer.\nCurrently only `SQLite` is supported.\n\n# Examples\n\n```json\n{\n  \"driver\": \"sqlite3\",\n  \"database_name\": \"tracker.db\"\n}\n```",
+      "description": "Database configuration section (application DTO)\n\nMirrors the domain `DatabaseConfig` enum but at the application layer.\nSupports both `SQLite` and `MySQL` database backends.\n\n# Examples\n\n```json\n{\n  \"driver\": \"sqlite3\",\n  \"database_name\": \"tracker.db\"\n}\n```\n\n```json\n{\n  \"driver\": \"mysql\",\n  \"host\": \"localhost\",\n  \"port\": 3306,\n  \"database_name\": \"tracker\",\n  \"username\": \"tracker_user\",\n  \"password\": \"secure_password\"\n}\n```",
       "oneOf": [
         {
           "description": "`SQLite` file-based database",
@@ -47,6 +47,47 @@
           "required": [
             "driver",
             "database_name"
+          ]
+        },
+        {
+          "description": "`MySQL` server-based database",
+          "type": "object",
+          "properties": {
+            "database_name": {
+              "description": "Database name",
+              "type": "string"
+            },
+            "driver": {
+              "type": "string",
+              "const": "mysql"
+            },
+            "host": {
+              "description": "`MySQL` server host",
+              "type": "string"
+            },
+            "password": {
+              "description": "Database password",
+              "type": "string"
+            },
+            "port": {
+              "description": "`MySQL` server port",
+              "type": "integer",
+              "format": "uint16",
+              "maximum": 65535,
+              "minimum": 0
+            },
+            "username": {
+              "description": "Database username",
+              "type": "string"
+            }
+          },
+          "required": [
+            "driver",
+            "host",
+            "port",
+            "database_name",
+            "username",
+            "password"
           ]
         }
       ]

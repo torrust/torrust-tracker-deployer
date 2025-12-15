@@ -1,0 +1,90 @@
+# Docker Compose configuration for Torrust Tracker deployment
+
+# IMPORTANT: Environment Variable Injection Pattern
+# ================================================
+# All configuration values that may need to be changed during maintenance
+# should be injected via environment variables from the .env file, not
+# hardcoded in this docker-compose template.
+#
+# Pattern to follow:
+#   CORRECT:   - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+#   INCORRECT: - MYSQL_ROOT_PASSWORD=hardcoded_value
+#
+# Rationale:
+# - System administrators can modify .env values and restart services without
+#   regenerating templates
+# - Supports runtime configuration changes without redeployment
+# - Follows Docker Compose best practices for configuration management
+# - Separates template generation (deploy-time) from configuration (runtime)
+#
+# See ADR: docs/decisions/environment-variable-injection-in-docker-compose.md
+
+services:
+  tracker:
+    image: torrust/tracker:develop
+    container_name: tracker
+    tty: true
+    restart: unless-stopped
+{% if database.driver == "mysql" %}
+    depends_on:
+      mysql:
+        condition: service_healthy
+{% endif %}
+    environment:
+      - USER_ID=1000
+      - TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER=${TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER}
+      - TORRUST_TRACKER_CONFIG_TOML_PATH=${TORRUST_TRACKER_CONFIG_TOML_PATH}
+      - TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=${TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN}
+    networks:
+      - backend_network
+    ports:
+      - 6868:6868/udp
+      - 6969:6969/udp
+      - 7070:7070
+      - 1212:1212
+    volumes:
+      - ./storage/tracker/lib:/var/lib/torrust/tracker:Z
+      - ./storage/tracker/log:/var/log/torrust/tracker:Z
+      - ./storage/tracker/etc:/etc/torrust/tracker:Z
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+
+{% if database.driver == "mysql" %}
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    networks:
+      - backend_network
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+{% endif %}
+
+networks:
+  backend_network: {}
+
+{% if database.driver == "mysql" %}
+volumes:
+  mysql_data:
+    driver: local
+{% endif %}

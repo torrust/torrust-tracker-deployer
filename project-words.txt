@@ -140,6 +140,7 @@ mtorrust
 multiprocess
 myapp
 myenv
+mysqladmin
 nameof
 namespacing
 nanos
@@ -243,6 +244,7 @@ unrepresentable
 unsubscription
 usermod
 useroutput
+userpass
 userspace
 usize
 utmp
