@@ -205,7 +205,8 @@ mod tests {
 
     /// Helper function to create a test docker-compose context with `SQLite`
     fn create_test_docker_compose_context_sqlite() -> DockerComposeContext {
-        DockerComposeContext::new_sqlite()
+        // Use default test ports (matching TrackerConfig::default())
+        DockerComposeContext::new_sqlite(vec![6969], vec![7070], 1212)
     }
 
     #[tokio::test]

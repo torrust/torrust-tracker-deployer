@@ -98,7 +98,7 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let context = DockerComposeContext::new_sqlite();
+        let context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
         assert_eq!(template.database().driver(), "sqlite3");
@@ -129,6 +129,9 @@ services:
             "user".to_string(),
             "pass".to_string(),
             3306,
+            vec![6868, 6969],
+            vec![7070],
+            1212,
         );
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
@@ -150,7 +153,7 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let context = DockerComposeContext::new_sqlite();
+        let context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
         // Create temp directory for output
@@ -173,7 +176,7 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let context = DockerComposeContext::new_sqlite();
+        let context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
         let result = DockerComposeTemplate::new(&template_file, context);
 
         assert!(result.is_err());

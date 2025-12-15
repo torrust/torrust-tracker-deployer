@@ -218,6 +218,9 @@ mod tests {
             "tracker_user".to_string(),
             "userpass123".to_string(),
             3306,
+            vec![6868, 6969],
+            vec![7070],
+            1212,
         );
 
         let renderer = DockerComposeRenderer::new(template_manager);
@@ -294,7 +297,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let sqlite_context = DockerComposeContext::new_sqlite();
+        let sqlite_context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();

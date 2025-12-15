@@ -37,26 +37,45 @@ pub struct MysqlConfig {
 pub struct DockerComposeContext {
     /// Database configuration
     pub database: DatabaseConfig,
+    /// UDP tracker ports
+    pub udp_tracker_ports: Vec<u16>,
+    /// HTTP tracker ports
+    pub http_tracker_ports: Vec<u16>,
+    /// HTTP API port
+    pub http_api_port: u16,
 }
 
 impl DockerComposeContext {
     /// Creates a new `DockerComposeContext` with `SQLite` configuration (default)
+    ///
+    /// # Arguments
+    ///
+    /// * `udp_tracker_ports` - UDP tracker ports to expose
+    /// * `http_tracker_ports` - HTTP tracker ports to expose
+    /// * `http_api_port` - HTTP API port to expose
     ///
     /// # Examples
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::DockerComposeContext;
     ///
-    /// let context = DockerComposeContext::new_sqlite();
+    /// let context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
     /// assert_eq!(context.database().driver(), "sqlite3");
     /// ```
     #[must_use]
-    pub fn new_sqlite() -> Self {
+    pub fn new_sqlite(
+        udp_tracker_ports: Vec<u16>,
+        http_tracker_ports: Vec<u16>,
+        http_api_port: u16,
+    ) -> Self {
         Self {
             database: DatabaseConfig {
                 driver: "sqlite3".to_string(),
                 mysql: None,
             },
+            udp_tracker_ports,
+            http_tracker_ports,
+            http_api_port,
         }
     }
 
@@ -69,6 +88,9 @@ impl DockerComposeContext {
     /// * `user` - `MySQL` user
     /// * `password` - `MySQL` password
     /// * `port` - `MySQL` port
+    /// * `udp_tracker_ports` - UDP tracker ports to expose
+    /// * `http_tracker_ports` - HTTP tracker ports to expose
+    /// * `http_api_port` - HTTP API port to expose
     ///
     /// # Examples
     ///
@@ -81,6 +103,9 @@ impl DockerComposeContext {
     ///     "tracker_user".to_string(),
     ///     "user_pass".to_string(),
     ///     3306,
+    ///     vec![6868, 6969],
+    ///     vec![7070],
+    ///     1212,
     /// );
     /// assert_eq!(context.database().driver(), "mysql");
     /// ```
@@ -91,6 +116,9 @@ impl DockerComposeContext {
         user: String,
         password: String,
         port: u16,
+        udp_tracker_ports: Vec<u16>,
+        http_tracker_ports: Vec<u16>,
+        http_api_port: u16,
     ) -> Self {
         Self {
             database: DatabaseConfig {
@@ -103,6 +131,9 @@ impl DockerComposeContext {
                     port,
                 }),
             },
+            udp_tracker_ports,
+            http_tracker_ports,
+            http_api_port,
         }
     }
 
@@ -110,6 +141,24 @@ impl DockerComposeContext {
     #[must_use]
     pub fn database(&self) -> &DatabaseConfig {
         &self.database
+    }
+
+    /// Get the UDP tracker ports
+    #[must_use]
+    pub fn udp_tracker_ports(&self) -> &[u16] {
+        &self.udp_tracker_ports
+    }
+
+    /// Get the HTTP tracker ports
+    #[must_use]
+    pub fn http_tracker_ports(&self) -> &[u16] {
+        &self.http_tracker_ports
+    }
+
+    /// Get the HTTP API port
+    #[must_use]
+    pub fn http_api_port(&self) -> u16 {
+        self.http_api_port
     }
 }
 
@@ -133,10 +182,13 @@ mod tests {
 
     #[test]
     fn it_should_create_context_with_sqlite_configuration() {
-        let context = DockerComposeContext::new_sqlite();
+        let context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
 
         assert_eq!(context.database().driver(), "sqlite3");
         assert!(context.database().mysql().is_none());
+        assert_eq!(context.udp_tracker_ports(), &[6868, 6969]);
+        assert_eq!(context.http_tracker_ports(), &[7070]);
+        assert_eq!(context.http_api_port(), 1212);
     }
 
     #[test]
@@ -147,6 +199,9 @@ mod tests {
             "tracker_user".to_string(),
             "pass456".to_string(),
             3306,
+            vec![6868, 6969],
+            vec![7070],
+            1212,
         );
 
         assert_eq!(context.database().driver(), "mysql");
@@ -158,11 +213,15 @@ mod tests {
         assert_eq!(mysql.user, "tracker_user");
         assert_eq!(mysql.password, "pass456");
         assert_eq!(mysql.port, 3306);
+
+        assert_eq!(context.udp_tracker_ports(), &[6868, 6969]);
+        assert_eq!(context.http_tracker_ports(), &[7070]);
+        assert_eq!(context.http_api_port(), 1212);
     }
 
     #[test]
     fn it_should_be_serializable_with_sqlite() {
-        let context = DockerComposeContext::new_sqlite();
+        let context = DockerComposeContext::new_sqlite(vec![6868, 6969], vec![7070], 1212);
 
         let serialized = serde_json::to_string(&context).unwrap();
         assert!(serialized.contains("sqlite3"));
@@ -177,6 +236,9 @@ mod tests {
             "user".to_string(),
             "pass".to_string(),
             3306,
+            vec![6868, 6969],
+            vec![7070],
+            1212,
         );
 
         let serialized = serde_json::to_string(&context).unwrap();
@@ -196,6 +258,9 @@ mod tests {
             "user".to_string(),
             "pass".to_string(),
             3306,
+            vec![6868, 6969],
+            vec![7070],
+            1212,
         );
 
         let cloned = context.clone();
