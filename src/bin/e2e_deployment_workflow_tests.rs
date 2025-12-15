@@ -81,7 +81,9 @@ use torrust_tracker_deployer_lib::testing::e2e::tasks::run_configuration_validat
 use torrust_tracker_deployer_lib::testing::e2e::tasks::run_release_validation::{
     run_release_validation, ServiceValidation,
 };
-use torrust_tracker_deployer_lib::testing::e2e::tasks::run_run_validation::run_run_validation;
+use torrust_tracker_deployer_lib::testing::e2e::tasks::run_run_validation::{
+    run_run_validation, ServiceValidation as RunServiceValidation,
+};
 
 /// Environment name for this E2E test
 const ENVIRONMENT_NAME: &str = "e2e-deployment";
@@ -297,11 +299,14 @@ async fn run_deployer_workflow(
     test_runner.run_services()?;
 
     // Validate services are running using actual mapped ports from runtime environment
+    // Note: E2E deployment environment has Prometheus enabled, so we validate it
+    let run_services = RunServiceValidation { prometheus: true };
     run_run_validation(
         socket_addr,
         ssh_credentials,
         runtime_env.container_ports.http_api_port,
         vec![runtime_env.container_ports.http_tracker_port],
+        Some(run_services),
     )
     .await
     .map_err(|e| anyhow::anyhow!("{e}"))?;

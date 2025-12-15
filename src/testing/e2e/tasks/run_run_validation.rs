@@ -59,7 +59,19 @@ use tracing::info;
 use crate::adapters::ssh::SshConfig;
 use crate::adapters::ssh::SshCredentials;
 use crate::infrastructure::external_validators::RunningServicesValidator;
+use crate::infrastructure::remote_actions::validators::PrometheusValidator;
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
+
+/// Service validation configuration
+///
+/// Controls which optional service validations should be performed
+/// during run validation. This allows for flexible validation
+/// based on which services are enabled in the environment configuration.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ServiceValidation {
+    /// Whether to validate Prometheus is running and accessible
+    pub prometheus: bool,
+}
 
 /// Errors that can occur during run validation
 #[derive(Debug, Error)]
@@ -70,6 +82,16 @@ pub enum RunValidationError {
 Tip: Ensure Docker Compose services are started and healthy"
     )]
     RunningServicesValidationFailed {
+        #[source]
+        source: RemoteActionError,
+    },
+
+    /// Prometheus smoke test failed
+    #[error(
+        "Prometheus smoke test failed: {source}
+Tip: Ensure Prometheus container is running and accessible on port 9090"
+    )]
+    PrometheusValidationFailed {
         #[source]
         source: RemoteActionError,
     },
@@ -120,6 +142,35 @@ impl RunValidationError {
 
 For more information, see docs/e2e-testing/."
             }
+            Self::PrometheusValidationFailed { .. } => {
+                "Prometheus Smoke Test Failed - Detailed Troubleshooting:
+
+1. Check Prometheus container status:
+   - SSH to instance: ssh user@instance-ip
+   - Check container: cd /opt/torrust && docker compose ps
+   - View Prometheus logs: docker compose logs prometheus
+
+2. Verify Prometheus is accessible:
+   - Test from inside VM: curl http://localhost:9090
+   - Check if port 9090 is listening: ss -tlnp | grep 9090
+
+3. Common issues:
+   - Prometheus container failed to start (check logs)
+   - Port 9090 already in use by another process
+   - Prometheus configuration file has errors
+   - Insufficient memory for Prometheus
+
+4. Debug steps:
+   - Check Prometheus config: docker compose exec prometheus cat /etc/prometheus/prometheus.yml
+   - Restart Prometheus: docker compose restart prometheus
+   - Check scrape targets: curl http://localhost:9090/api/v1/targets | jq
+
+5. Re-deploy if needed:
+   - Re-run 'run' command: cargo run -- run <environment>
+   - Or manually: cd /opt/torrust && docker compose up -d prometheus
+
+For more information, see docs/e2e-testing/."
+            }
         }
     }
 }
@@ -135,6 +186,7 @@ For more information, see docs/e2e-testing/."
 /// * `ssh_credentials` - SSH credentials for connecting to the instance
 /// * `tracker_api_port` - Port for the tracker API health endpoint
 /// * `http_tracker_ports` - Ports for HTTP tracker health endpoints (can be empty)
+/// * `services` - Optional service validation configuration (defaults to no optional services)
 ///
 /// # Returns
 ///
@@ -146,24 +198,29 @@ For more information, see docs/e2e-testing/."
 /// - SSH connection cannot be established
 /// - Services are not running
 /// - Services are unhealthy
+/// - Optional service validation fails (when enabled)
 pub async fn run_run_validation(
     socket_addr: SocketAddr,
     ssh_credentials: &SshCredentials,
     tracker_api_port: u16,
     http_tracker_ports: Vec<u16>,
+    services: Option<ServiceValidation>,
 ) -> Result<(), RunValidationError> {
+    let services = services.unwrap_or_default();
+
     info!(
         socket_addr = %socket_addr,
         ssh_user = %ssh_credentials.ssh_username,
         tracker_api_port = tracker_api_port,
         http_tracker_ports = ?http_tracker_ports,
+        validate_prometheus = services.prometheus,
         "Running 'run' command validation tests"
     );
 
     let ip_addr = socket_addr.ip();
 
-    // Validate running services
-    validate_running_services(
+    // Validate externally accessible services (tracker API, HTTP tracker)
+    validate_external_services(
         ip_addr,
         ssh_credentials,
         socket_addr.port(),
@@ -171,6 +228,11 @@ pub async fn run_run_validation(
         http_tracker_ports,
     )
     .await?;
+
+    // Optionally validate Prometheus is running and accessible
+    if services.prometheus {
+        validate_prometheus(ip_addr, ssh_credentials, socket_addr.port()).await?;
+    }
 
     info!(
         socket_addr = %socket_addr,
@@ -181,19 +243,25 @@ pub async fn run_run_validation(
     Ok(())
 }
 
-/// Validate running services on a configured instance
+/// Validate externally accessible services on a configured instance
 ///
-/// This function validates that Docker Compose services are running and healthy
-/// on the target instance. It checks the status of services started by the `run`
-/// command and verifies they are operational.
-async fn validate_running_services(
+/// This function validates services that are exposed outside the VM and accessible
+/// without SSH (e.g., tracker API, HTTP tracker). These services have firewall rules
+/// allowing external access. It checks the status of services started by the `run`
+/// command and verifies they are operational by connecting from outside the VM.
+///
+/// # Note
+///
+/// Internal services like Prometheus (not exposed externally) are validated separately
+/// via SSH in `validate_prometheus()`.
+async fn validate_external_services(
     ip_addr: IpAddr,
     ssh_credentials: &SshCredentials,
     port: u16,
     tracker_api_port: u16,
     http_tracker_ports: Vec<u16>,
 ) -> Result<(), RunValidationError> {
-    info!("Validating running services");
+    info!("Validating externally accessible services (tracker API, HTTP tracker)");
 
     let ssh_config = SshConfig::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
 
@@ -203,6 +271,33 @@ async fn validate_running_services(
         .execute(&ip_addr)
         .await
         .map_err(|source| RunValidationError::RunningServicesValidationFailed { source })?;
+
+    Ok(())
+}
+
+/// Validate Prometheus is running and accessible via smoke test
+///
+/// This function performs a smoke test on Prometheus by connecting via SSH
+/// and executing a curl command to verify the web UI is accessible.
+///
+/// # Note
+///
+/// Prometheus runs on port 9090 inside the VM but is NOT exposed externally
+/// (blocked by firewall). Validation must be performed from inside the VM.
+async fn validate_prometheus(
+    ip_addr: IpAddr,
+    ssh_credentials: &SshCredentials,
+    port: u16,
+) -> Result<(), RunValidationError> {
+    info!("Validating Prometheus is running and accessible");
+
+    let ssh_config = SshConfig::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
+
+    let prometheus_validator = PrometheusValidator::new(ssh_config, None);
+    prometheus_validator
+        .execute(&ip_addr)
+        .await
+        .map_err(|source| RunValidationError::PrometheusValidationFailed { source })?;
 
     Ok(())
 }
