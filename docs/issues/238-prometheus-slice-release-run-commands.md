@@ -9,13 +9,13 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
 
 ## Goals
 
-- [ ] Add Prometheus service conditionally to docker-compose stack (only when present in environment config)
-- [ ] Create Prometheus configuration template with tracker metrics endpoints
-- [ ] Extend environment configuration schema to include Prometheus monitoring section
-- [ ] Configure service dependency - Prometheus depends on tracker service
-- [ ] Include Prometheus in generated environment templates by default (enabled by default)
-- [ ] Allow users to disable Prometheus by removing its configuration section
-- [ ] Deploy and verify Prometheus collects metrics from tracker
+- ✅ Add Prometheus service conditionally to docker-compose stack (only when present in environment config)
+- ✅ Create Prometheus configuration template with tracker metrics endpoints
+- ✅ Extend environment configuration schema to include Prometheus monitoring section
+- ✅ Configure service dependency - Prometheus depends on tracker service
+- ✅ Include Prometheus in generated environment templates by default (enabled by default)
+- ✅ Allow users to disable Prometheus by removing its configuration section
+- ✅ Deploy and verify Prometheus collects metrics from tracker
 
 ## Progress
 
@@ -125,7 +125,44 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
   - All linters passing, all E2E tests passing (1507+ tests)
   - **Architecture validated**: Independent service rendering pattern working correctly
 
-- ⏳ **Phase 8**: Documentation (in progress)
+- ✅ **Phase 8**: Documentation (commit: 2a820e2)
+
+  - Created ADR: `docs/decisions/prometheus-integration-pattern.md`
+    - Documents enabled-by-default with opt-out approach
+    - Explains independent template rendering pattern
+    - Documents ServiceValidation struct for extensible testing
+    - Lists alternatives considered and consequences
+  - Updated user guide: `docs/user-guide/README.md`
+    - Added Prometheus configuration section
+    - Documents prometheus.scrape_interval parameter
+    - Explains enabled-by-default behavior and opt-out pattern
+    - Instructions for accessing Prometheus UI (port 9090)
+    - Links to manual verification guide
+  - Added technical terms to project dictionary (Alertmanager, entr, flatlined, promtool, tulpn)
+  - All linters passing, all tests passing (1507+ tests)
+
+## Summary
+
+Issue [#238](https://github.com/torrust/torrust-tracker-deployer/issues/238) is **complete**. All 8 phases implemented:
+
+1. ✅ Template Structure & Data Flow Design
+2. ✅ Environment Configuration
+3. ✅ Prometheus Template Renderer
+4. ✅ Docker Compose Integration
+5. ✅ Release Command Integration
+6. ✅ Ansible Deployment
+7. ✅ Testing & Verification
+8. ✅ Documentation
+
+**Total Commits**: 8 (2ca0fa9, 92aab59, 731eaf4, 22790de, f20d45c, 9c1b91a, a257fcf, 2a820e2)
+
+Prometheus is now fully integrated with:
+
+- Metrics collection from both `/api/v1/stats` and `/api/v1/metrics` endpoints
+- Enabled by default with simple opt-out (remove config section)
+- Independent template rendering following DDD principles
+- Comprehensive E2E validation (automated + manual)
+- Complete documentation (ADR + user guide + manual verification)
 
 ## 🏗️ Architecture Requirements
 
@@ -141,22 +178,22 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
 
 ### Module Structure Requirements
 
-- [ ] Follow template system architecture (see [docs/technical/template-system-architecture.md](../technical/template-system-architecture.md))
-- [ ] Create new Prometheus template module following existing patterns (tracker, docker-compose)
-- [ ] Use Project Generator pattern for Prometheus templates
-- [ ] Register Prometheus configuration template in renderer
-- [ ] Use `.tera` extension for dynamic templates
-- [ ] Environment config drives Prometheus enablement
+- ✅ Follow template system architecture (see [docs/technical/template-system-architecture.md](../technical/template-system-architecture.md))
+- ✅ Create new Prometheus template module following existing patterns (tracker, docker-compose)
+- ✅ Use Project Generator pattern for Prometheus templates
+- ✅ Register Prometheus configuration template in renderer
+- ✅ Use `.tera` extension for dynamic templates
+- ✅ Environment config drives Prometheus enablement
 
 ### Architectural Constraints
 
-- [ ] Prometheus service is included by default in generated environment templates
-- [ ] Only included in docker-compose when Prometheus section present in environment config
-- [ ] Service can be disabled by removing the monitoring.prometheus section from config
-- [ ] Prometheus depends on tracker service (starts after tracker container starts, no health check)
-- [ ] Metrics API token and port read from tracker HTTP API configuration (`tracker.http_api.admin_token` and `tracker.http_api.bind_address`)
-- [ ] Prometheus configuration is dynamic (uses Tera templating)
-- [x] **Independent Template Rendering**: Each service renders its templates independently in the release handler
+- ✅ Prometheus service is included by default in generated environment templates
+- ✅ Only included in docker-compose when Prometheus section present in environment config
+- ✅ Service can be disabled by removing the monitoring.prometheus section from config
+- ✅ Prometheus depends on tracker service (starts after tracker container starts, no health check)
+- ✅ Metrics API token and port read from tracker HTTP API configuration (`tracker.http_api.admin_token` and `tracker.http_api.bind_address`)
+- ✅ Prometheus configuration is dynamic (uses Tera templating)
+- ✅ **Independent Template Rendering**: Each service renders its templates independently in the release handler
   - Prometheus templates rendered by dedicated `RenderPrometheusTemplatesStep` in release handler
   - Tracker templates rendered by dedicated `RenderTrackerTemplatesStep` in release handler
   - Docker Compose templates rendered by dedicated `RenderDockerComposeTemplatesStep` in release handler
