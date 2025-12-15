@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::env;
 use std::process::Command;
 use tracing::{error, info};
 
@@ -16,11 +17,16 @@ pub fn run_markdown_linter() -> Result<()> {
         install_npm_tool("markdownlint-cli")?;
     }
 
+    // Get the current working directory (should be repo root)
+    let repo_root = env::current_dir()?;
+    let config_path = repo_root.join(".markdownlint.json");
+
     // Run the linter
     info!(target: "markdown", "Scanning markdown files...");
 
     // Find all markdown files, excluding terraform and target directories
     let find_output = Command::new("find")
+        .current_dir(&repo_root)
         .args([
             ".",
             "-name",
@@ -44,13 +50,15 @@ pub fn run_markdown_linter() -> Result<()> {
     let files = String::from_utf8_lossy(&find_output.stdout);
     let file_list: Vec<&str> = files.lines().filter(|s| !s.is_empty()).collect();
 
-    if file_list.is_empty() {
-        info!(target: "markdown", "No markdown files found");
-        return Ok(());
-    }
-
     // Run markdownlint on all found files
     let mut cmd = Command::new("markdownlint");
+    cmd.current_dir(&repo_root);
+    cmd.arg("--config").arg(&config_path);
+    cmd.args(&file_list);
+    // Run markdownlint on all found files
+    let mut cmd = Command::new("markdownlint");
+    cmd.arg("--config").arg(".markdownlint.json");
+    cmd.current_dir("."); // Ensure we run from the repository root
     cmd.args(&file_list);
 
     let output = cmd.output()?;
