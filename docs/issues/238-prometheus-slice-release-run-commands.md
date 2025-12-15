@@ -92,21 +92,24 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
   - **Pattern**: Independent Prometheus deployment following tracker pattern
 
 - ✅ **Phase 6**: Ansible Deployment (commit: 9c1b91a)
-- ✅ **Phase 7**: Testing & Verification (commit: pending)
 
-  - Added E2E test validation for Prometheus configuration files
+- ✅ **Phase 7**: Testing & Verification (commit: a257fcf)
+
+  - Refactored validation with `ServiceValidation` struct for extensibility
+    - Replaces boolean parameter with flags struct for future services (Grafana, etc.)
+    - Supports selective validation based on enabled services
   - Created `PrometheusConfigValidator` to verify prometheus.yml deployment
-  - Created `ServiceValidation` struct for extensible service validation flags
-  - Added `run_release_validation()` function with optional service validation
-  - Updated e2e-deployment-workflow-tests to validate Prometheus files when enabled
+    - Validates file exists at `/opt/torrust/storage/prometheus/etc/prometheus.yml`
+    - Checks file permissions and ownership via SSH
+  - Updated e2e-deployment-workflow-tests to use ServiceValidation pattern
   - Created test environment configs:
     - `envs/e2e-deployment.json` - With Prometheus enabled (scrape_interval: 15)
     - `envs/e2e-deployment-no-prometheus.json` - Without Prometheus (disabled scenario)
   - E2E tests validate:
-    - Prometheus configuration file exists at `/opt/torrust/storage/prometheus/etc/prometheus.yml`
+    - Prometheus configuration file exists at correct path
     - Docker Compose files are deployed correctly
     - File permissions and ownership are correct
-  - Manual E2E testing verified (environment: manual-test-prometheus):
+  - Manual E2E testing completed (environment: manual-test-prometheus):
     - ✅ Prometheus container running (`docker ps` shows prom/prometheus:v3.0.1)
     - ✅ Prometheus scraping both tracker endpoints successfully
       - `/api/v1/stats` endpoint: health="up", scraping every 15s
@@ -114,10 +117,15 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
     - ✅ Prometheus UI accessible at `http://<vm-ip>:9090`
     - ✅ Tracker metrics available and being collected
     - ✅ Configuration file correctly deployed with admin token and port
-  - All linters passing, all E2E tests passing
-  - **Architecture validated**: Each service renders templates independently, Prometheus fully functional
+  - Created comprehensive manual testing documentation:
+    - `docs/e2e-testing/manual/prometheus-verification.md` (450+ lines)
+    - Documents 7 verification steps with exact commands and expected outputs
+    - Includes troubleshooting guide for common issues
+    - Provides success criteria checklist
+  - All linters passing, all E2E tests passing (1507+ tests)
+  - **Architecture validated**: Independent service rendering pattern working correctly
 
-- ⏳ **Phase 8**: Documentation (pending)
+- ⏳ **Phase 8**: Documentation (in progress)
 
 ## 🏗️ Architecture Requirements
 

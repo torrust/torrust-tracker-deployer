@@ -236,6 +236,9 @@ The environment configuration file is in JSON format:
     "public_key_path": "/path/to/public/key",
     "username": "ssh-username",
     "port": 22
+  },
+  "prometheus": {
+    "scrape_interval": 15
   }
 }
 ```
@@ -270,6 +273,56 @@ The environment configuration file is in JSON format:
 
 - SSH port number
 - Default: `22`
+
+**prometheus.scrape_interval** (optional):
+
+- Metrics collection interval in seconds
+- Default: `15` (included in generated templates)
+- Prometheus service enabled by default for monitoring
+- To disable: Remove the entire `prometheus` section from config
+
+### Monitoring with Prometheus
+
+The deployer includes Prometheus for metrics collection by default. Prometheus automatically scrapes metrics from the tracker's HTTP API endpoints.
+
+**Default Behavior**:
+
+- Prometheus is **enabled by default** in generated environment templates
+- Metrics collected from both `/api/v1/stats` and `/api/v1/metrics` endpoints
+- Accessible via web UI on port `9090`
+
+**Configuration**:
+
+```json
+{
+  "prometheus": {
+    "scrape_interval": 15
+  }
+}
+```
+
+**Disabling Prometheus**:
+
+To deploy without Prometheus monitoring, remove the entire `prometheus` section from your environment config:
+
+```json
+{
+  "environment": { "name": "my-env" },
+  "ssh_credentials": { ... }
+  // No prometheus section = monitoring disabled
+}
+```
+
+**Accessing Prometheus**:
+
+After deployment, access the Prometheus UI at `http://<vm-ip>:9090` where you can:
+
+- View current metrics from tracker endpoints
+- Query historical data
+- Check target health status
+- Explore available metrics
+
+See [Prometheus Verification Guide](../e2e-testing/manual/prometheus-verification.md) for detailed verification steps.
 
 ### Logging Configuration
 

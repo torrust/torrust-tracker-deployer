@@ -2,6 +2,7 @@ AAAAB
 AAAAC
 AAAAI
 AGENTS
+Alertmanager
 Ashburn
 Avalonia
 CIFS
@@ -86,6 +87,7 @@ ehthumbs
 elif
 endfor
 endraw
+entr
 epel
 eprint
 eprintln
@@ -93,6 +95,7 @@ equalto
 executability
 exfiltration
 exitcode
+flatlined
 frontends
 getent
 getopt
@@ -169,6 +172,7 @@ preconfigured
 preinstalls
 prereq
 println
+promtool
 publickey
 pytest
 readlink
@@ -234,6 +238,7 @@ tmpfiles
 tmpfs
 tmptu
 torrust
+tulpn
 tulnp
 turbofish
 tést
