@@ -17,6 +17,34 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
 - [ ] Allow users to disable Prometheus by removing its configuration section
 - [ ] Deploy and verify Prometheus collects metrics from tracker
 
+## Progress
+
+- ✅ **Phase 1**: Template Structure & Data Flow Design (commit: 2ca0fa9)
+
+  - Created `PrometheusContext` struct with `scrape_interval`, `api_token`, `api_port` fields
+  - Implemented module structure following existing patterns
+  - Added comprehensive unit tests (5 tests)
+  - Created `templates/prometheus/prometheus.yml.tera` template
+
+- ✅ **Phase 2**: Environment Configuration (commit: 92aab59)
+
+  - Created `PrometheusConfig` domain struct in `src/domain/prometheus/`
+  - Added optional `prometheus` field to `UserInputs` (enabled by default)
+  - Implemented comprehensive unit tests (5 tests)
+  - Updated all constructors and test fixtures
+
+- 🚧 **Phase 3**: Prometheus Template Renderer (in progress)
+
+  - Create `PrometheusProjectGenerator` implementation
+  - Integrate with template rendering system
+  - Wire up data flow: UserInputs → PrometheusContext → Template
+
+- ⏳ **Phase 4**: Docker Compose Integration (pending)
+- ⏳ **Phase 5**: Release Command Implementation (pending)
+- ⏳ **Phase 6**: Ansible Playbook Integration (pending)
+- ⏳ **Phase 7**: Testing (pending)
+- ⏳ **Phase 8**: Documentation (pending)
+
 ## 🏗️ Architecture Requirements
 
 **DDD Layers**: Infrastructure + Domain

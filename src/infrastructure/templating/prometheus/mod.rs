@@ -9,7 +9,7 @@
 
 pub mod template;
 
-pub use template::PrometheusContext;
+pub use template::{PrometheusContext, PrometheusProjectGenerator};
 
 /// Subdirectory name for Prometheus-related files within the build directory.
 ///
