@@ -48,16 +48,17 @@ Slices will be implemented sequentially, each delivering a working deployment:
   - Progressively expose configuration options to environment config
   - **Specification**: [docs/issues/220-tracker-slice-release-run-commands.md](220-tracker-slice-release-run-commands.md)
 
-- [ ] **3.2.3** MySQL slice - #232
+- [x] **3.2.3** MySQL slice - ✅ #232
 
   - Add MySQL service to docker-compose stack
   - Allow user to choose between SQLite and MySQL in environment config
   - **Specification**: [docs/issues/232-mysql-slice-release-run-commands.md](232-mysql-slice-release-run-commands.md)
 
-- [ ] **3.2.4** Prometheus slice
+- [ ] **3.2.4** Prometheus slice - #238
 
   - Add Prometheus service for metrics collection
   - Configure tracker metrics endpoint
+  - **Specification**: [docs/issues/238-prometheus-slice-release-run-commands.md](238-prometheus-slice-release-run-commands.md)
 
 - [ ] **3.2.5** Grafana slice
   - Add Grafana service for metrics visualization
