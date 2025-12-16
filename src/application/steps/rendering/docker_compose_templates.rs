@@ -33,7 +33,7 @@ use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
 use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-    DockerComposeContext, TrackerPorts,
+    DockerComposeContext, DockerComposeContextBuilder, TrackerPorts,
 };
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
@@ -72,30 +72,6 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         }
     }
 
-    /// Extract port numbers from tracker configuration
-    ///
-    /// Returns a tuple of (`udp_ports`, `http_ports`, `api_port`)
-    fn extract_tracker_ports(tracker_config: &TrackerConfig) -> (Vec<u16>, Vec<u16>, u16) {
-        // Extract UDP tracker ports
-        let udp_ports: Vec<u16> = tracker_config
-            .udp_trackers
-            .iter()
-            .map(|tracker| tracker.bind_address.port())
-            .collect();
-
-        // Extract HTTP tracker ports
-        let http_ports: Vec<u16> = tracker_config
-            .http_trackers
-            .iter()
-            .map(|tracker| tracker.bind_address.port())
-            .collect();
-
-        // Extract HTTP API port
-        let api_port = tracker_config.http_api.bind_address.port();
-
-        (udp_ports, http_ports, api_port)
-    }
-
     /// Execute the template rendering step
     ///
     /// This will render Docker Compose templates to the build directory.
@@ -129,81 +105,32 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         let generator = DockerComposeProjectGenerator::new(&self.build_dir, &self.template_manager);
 
-        // Extract admin token from environment config
-        let admin_token = self
-            .environment
-            .context()
-            .user_inputs
-            .tracker
-            .http_api
-            .admin_token
-            .clone();
-
-        // Extract tracker ports from configuration
-        let tracker_config = &self.environment.context().user_inputs.tracker;
-        let (udp_tracker_ports, http_tracker_ports, http_api_port) =
-            Self::extract_tracker_ports(tracker_config);
-
-        let ports = TrackerPorts {
-            udp_tracker_ports,
-            http_tracker_ports,
-            http_api_port,
-        };
+        let admin_token = self.extract_admin_token();
+        let ports = self.build_tracker_ports();
 
         // Create contexts based on database configuration
         let database_config = &self.environment.context().user_inputs.tracker.core.database;
-        let (env_context, docker_compose_context) = match database_config {
-            DatabaseConfig::Sqlite { .. } => {
-                let env_context = EnvContext::new(admin_token);
-
-                let mut builder = DockerComposeContext::builder(ports);
-
-                // Add Prometheus configuration if present
-                if let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus
-                {
-                    builder = builder.with_prometheus(prometheus_config.clone());
-                }
-
-                let docker_compose_context = builder.build();
-                (env_context, docker_compose_context)
-            }
+        let (env_context, builder) = match database_config {
+            DatabaseConfig::Sqlite { .. } => Self::create_sqlite_contexts(admin_token, ports),
             DatabaseConfig::Mysql {
                 port,
                 database_name,
                 username,
                 password,
                 ..
-            } => {
-                // For MySQL, generate a secure root password (in production, this should be managed securely)
-                let root_password = format!("{password}_root");
-
-                let env_context = EnvContext::new_with_mysql(
-                    admin_token,
-                    root_password.clone(),
-                    database_name.clone(),
-                    username.clone(),
-                    password.clone(),
-                );
-
-                let mut builder = DockerComposeContext::builder(ports).with_mysql(
-                    root_password,
-                    database_name.clone(),
-                    username.clone(),
-                    password.clone(),
-                    *port,
-                );
-
-                // Add Prometheus configuration if present
-                if let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus
-                {
-                    builder = builder.with_prometheus(prometheus_config.clone());
-                }
-
-                let docker_compose_context = builder.build();
-
-                (env_context, docker_compose_context)
-            }
+            } => Self::create_mysql_contexts(
+                admin_token,
+                ports,
+                *port,
+                database_name.clone(),
+                username.clone(),
+                password.clone(),
+            ),
         };
+
+        // Apply Prometheus configuration (independent of database choice)
+        let builder = self.apply_prometheus_config(builder);
+        let docker_compose_context = builder.build();
 
         let compose_build_dir = generator
             .render(&env_context, &docker_compose_context)
@@ -217,6 +144,100 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         );
 
         Ok(compose_build_dir)
+    }
+
+    fn extract_admin_token(&self) -> String {
+        self.environment
+            .context()
+            .user_inputs
+            .tracker
+            .http_api
+            .admin_token
+            .clone()
+    }
+
+    fn build_tracker_ports(&self) -> TrackerPorts {
+        let tracker_config = &self.environment.context().user_inputs.tracker;
+        let (udp_tracker_ports, http_tracker_ports, http_api_port) =
+            Self::extract_tracker_ports(tracker_config);
+
+        TrackerPorts {
+            udp_tracker_ports,
+            http_tracker_ports,
+            http_api_port,
+        }
+    }
+
+    fn create_sqlite_contexts(
+        admin_token: String,
+        ports: TrackerPorts,
+    ) -> (EnvContext, DockerComposeContextBuilder) {
+        let env_context = EnvContext::new(admin_token);
+        let builder = DockerComposeContext::builder(ports);
+
+        (env_context, builder)
+    }
+
+    fn create_mysql_contexts(
+        admin_token: String,
+        ports: TrackerPorts,
+        port: u16,
+        database_name: String,
+        username: String,
+        password: String,
+    ) -> (EnvContext, DockerComposeContextBuilder) {
+        // For MySQL, generate a secure root password (in production, this should be managed securely)
+        let root_password = format!("{password}_root");
+
+        let env_context = EnvContext::new_with_mysql(
+            admin_token,
+            root_password.clone(),
+            database_name.clone(),
+            username.clone(),
+            password.clone(),
+        );
+
+        let builder = DockerComposeContext::builder(ports).with_mysql(
+            root_password,
+            database_name,
+            username,
+            password,
+            port,
+        );
+
+        (env_context, builder)
+    }
+
+    fn apply_prometheus_config(
+        &self,
+        builder: DockerComposeContextBuilder,
+    ) -> DockerComposeContextBuilder {
+        if let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus {
+            builder.with_prometheus(prometheus_config.clone())
+        } else {
+            builder
+        }
+    }
+
+    fn extract_tracker_ports(tracker_config: &TrackerConfig) -> (Vec<u16>, Vec<u16>, u16) {
+        // Extract UDP tracker ports
+        let udp_ports: Vec<u16> = tracker_config
+            .udp_trackers
+            .iter()
+            .map(|tracker| tracker.bind_address.port())
+            .collect();
+
+        // Extract HTTP tracker ports
+        let http_ports: Vec<u16> = tracker_config
+            .http_trackers
+            .iter()
+            .map(|tracker| tracker.bind_address.port())
+            .collect();
+
+        // Extract HTTP API port
+        let api_port = tracker_config.http_api.bind_address.port();
+
+        (udp_ports, http_ports, api_port)
     }
 }
 
