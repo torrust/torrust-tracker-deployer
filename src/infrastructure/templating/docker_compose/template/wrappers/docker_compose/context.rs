@@ -56,7 +56,7 @@ impl DockerComposeContext {
     /// ```
     #[must_use]
     pub fn builder(ports: TrackerPorts) -> DockerComposeContextBuilder {
-        DockerComposeContextBuilder::new(ports)
+        DockerComposeContextBuilder::with_sqlite(ports)
     }
 
     /// Get the database configuration
@@ -149,7 +149,7 @@ pub struct DockerComposeContextBuilder {
 
 impl DockerComposeContextBuilder {
     /// Creates a new builder with default `SQLite` configuration
-    fn new(ports: TrackerPorts) -> Self {
+    fn with_sqlite(ports: TrackerPorts) -> Self {
         Self {
             ports,
             database: DatabaseConfig {
