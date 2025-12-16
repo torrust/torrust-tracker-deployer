@@ -94,10 +94,10 @@ When starting work on a new feature:
   - [x] **3.2.2** Torrust Tracker slice - [Issue #220](https://github.com/torrust/torrust-tracker-deployer/issues/220) ✅ Completed
     - Replace hello-world with Torrust Tracker service
     - Add tracker configuration template (start with hardcoded defaults, then progressively expose configuration options)
-  - [ ] **3.2.3** MySQL slice
+  - [x] **3.2.3** MySQL slice - [Issue #232](https://github.com/torrust/torrust-tracker-deployer/issues/232) ✅ Completed
     - Add MySQL service to docker-compose stack
     - Allow user to choose between SQLite and MySQL in environment config
-  - [ ] **3.2.4** Prometheus slice
+  - [x] **3.2.4** Prometheus slice - [Issue #238](https://github.com/torrust/torrust-tracker-deployer/issues/238) ✅ Completed
     - Add Prometheus service for metrics collection
   - [ ] **3.2.5** Grafana slice
     - Add Grafana service for metrics visualization
@@ -116,7 +116,7 @@ When starting work on a new feature:
 ### 5. Add extra console app commands
 
 - [ ] **5.1** `torrust-tracker-deployer status` - Check environment and service status
-- [ ] **5.2** `torrust-tracker-deployer test` - Run application tests
+- [x] **5.2** `torrust-tracker-deployer test` - Run application tests ✅ Completed
 - [ ] **5.3** `torrust-tracker-deployer list` - List environments or deployments
 
 **Note:** The test console subcommand is already partially implemented.
