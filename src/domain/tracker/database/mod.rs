@@ -19,6 +19,12 @@ mod sqlite;
 pub use mysql::MysqlConfig;
 pub use sqlite::SqliteConfig;
 
+/// `SQLite` driver name constant
+pub const DRIVER_SQLITE: &str = "sqlite3";
+
+/// `MySQL` driver name constant
+pub const DRIVER_MYSQL: &str = "mysql";
+
 /// Database configuration for Tracker
 ///
 /// Supports multiple database backends. Currently implemented:
@@ -71,8 +77,8 @@ impl DatabaseConfig {
     #[must_use]
     pub fn driver_name(&self) -> &str {
         match self {
-            Self::Sqlite(..) => "sqlite3",
-            Self::Mysql(..) => "mysql",
+            Self::Sqlite(..) => DRIVER_SQLITE,
+            Self::Mysql(..) => DRIVER_MYSQL,
         }
     }
 
