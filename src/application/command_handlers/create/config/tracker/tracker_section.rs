@@ -123,7 +123,7 @@ mod tests {
 
     use super::*;
     use crate::application::command_handlers::create::config::tracker::tracker_core_section::DatabaseSection;
-    use crate::domain::tracker::DatabaseConfig;
+    use crate::domain::tracker::{DatabaseConfig, SqliteConfig};
 
     #[test]
     fn it_should_convert_to_domain_config_when_transforming_tracker_section() {
@@ -150,9 +150,9 @@ mod tests {
 
         assert_eq!(
             config.core.database,
-            DatabaseConfig::Sqlite {
+            DatabaseConfig::Sqlite(SqliteConfig {
                 database_name: "tracker.db".to_string()
-            }
+            })
         );
         assert!(!config.core.private);
         assert_eq!(config.udp_trackers.len(), 1);

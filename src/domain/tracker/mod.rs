@@ -18,15 +18,15 @@
 //!
 //! ```rust
 //! use torrust_tracker_deployer_lib::domain::tracker::{
-//!     TrackerConfig, TrackerCoreConfig, DatabaseConfig,
+//!     TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig,
 //!     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig
 //! };
 //!
 //! let config = TrackerConfig {
 //!     core: TrackerCoreConfig {
-//!         database: DatabaseConfig::Sqlite {
+//!         database: DatabaseConfig::Sqlite(SqliteConfig {
 //!             database_name: "tracker.db".to_string(),
-//!         },
+//!         }),
 //!         private: false,
 //!     },
 //!     udp_trackers: vec![
@@ -48,4 +48,4 @@ mod database;
 pub use config::{
     HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
 };
-pub use database::DatabaseConfig;
+pub use database::{DatabaseConfig, MysqlConfig, SqliteConfig};

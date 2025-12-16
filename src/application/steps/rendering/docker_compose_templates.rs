@@ -111,20 +111,14 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         // Create contexts based on database configuration
         let database_config = self.environment.database_config();
         let (env_context, builder) = match database_config {
-            DatabaseConfig::Sqlite { .. } => Self::create_sqlite_contexts(admin_token, ports),
-            DatabaseConfig::Mysql {
-                port,
-                database_name,
-                username,
-                password,
-                ..
-            } => Self::create_mysql_contexts(
+            DatabaseConfig::Sqlite(..) => Self::create_sqlite_contexts(admin_token, ports),
+            DatabaseConfig::Mysql(mysql_config) => Self::create_mysql_contexts(
                 admin_token,
                 ports,
-                *port,
-                database_name.clone(),
-                username.clone(),
-                password.clone(),
+                mysql_config.port,
+                mysql_config.database_name.clone(),
+                mysql_config.username.clone(),
+                mysql_config.password.clone(),
             ),
         };
 

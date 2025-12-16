@@ -201,8 +201,8 @@ mod tests {
     #[test]
     fn it_should_render_tracker_toml_with_sqlite_database_path() {
         use crate::domain::environment::{
-            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig,
-            UdpTrackerConfig,
+            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig, TrackerConfig,
+            TrackerCoreConfig, UdpTrackerConfig,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
@@ -213,9 +213,9 @@ mod tests {
 
         let tracker_config = TrackerConfig {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite {
+                database: DatabaseConfig::Sqlite(SqliteConfig {
                     database_name: "tracker.db".to_string(),
-                },
+                }),
                 private: false,
             },
             udp_trackers: vec![UdpTrackerConfig {
@@ -244,8 +244,8 @@ mod tests {
     #[test]
     fn it_should_render_tracker_toml_with_mysql_connection_string() {
         use crate::domain::environment::{
-            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig,
-            UdpTrackerConfig,
+            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig, TrackerConfig,
+            TrackerCoreConfig, UdpTrackerConfig,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
@@ -256,13 +256,13 @@ mod tests {
 
         let tracker_config = TrackerConfig {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Mysql {
+                database: DatabaseConfig::Mysql(MysqlConfig {
                     host: "mysql".to_string(),
                     port: 3306,
                     database_name: "tracker_db".to_string(),
                     username: "tracker_user".to_string(),
                     password: "secure_pass".to_string(),
-                },
+                }),
                 private: false,
             },
             udp_trackers: vec![UdpTrackerConfig {

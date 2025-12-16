@@ -127,8 +127,8 @@ pub use user_inputs::UserInputs;
 
 // Re-export tracker types for convenience
 pub use crate::domain::tracker::{
-    DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig,
-    UdpTrackerConfig,
+    DatabaseConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig, SqliteConfig, TrackerConfig,
+    TrackerCoreConfig, UdpTrackerConfig,
 };
 
 // Re-export Prometheus types for convenience

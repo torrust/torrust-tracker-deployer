@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
-use crate::domain::tracker::{DatabaseConfig, TrackerCoreConfig};
+use crate::domain::tracker::{DatabaseConfig, MysqlConfig, SqliteConfig, TrackerCoreConfig};
 
 /// Database configuration section (application DTO)
 ///
@@ -69,22 +69,22 @@ impl DatabaseSection {
     /// future validation.
     pub fn to_database_config(&self) -> Result<DatabaseConfig, CreateConfigError> {
         match self {
-            Self::Sqlite { database_name } => Ok(DatabaseConfig::Sqlite {
+            Self::Sqlite { database_name } => Ok(DatabaseConfig::Sqlite(SqliteConfig {
                 database_name: database_name.clone(),
-            }),
+            })),
             Self::Mysql {
                 host,
                 port,
                 database_name,
                 username,
                 password,
-            } => Ok(DatabaseConfig::Mysql {
+            } => Ok(DatabaseConfig::Mysql(MysqlConfig {
                 host: host.clone(),
                 port: *port,
                 database_name: database_name.clone(),
                 username: username.clone(),
                 password: password.clone(),
-            }),
+            })),
         }
     }
 }
@@ -143,9 +143,9 @@ mod tests {
 
         assert_eq!(
             config.database,
-            DatabaseConfig::Sqlite {
+            DatabaseConfig::Sqlite(SqliteConfig {
                 database_name: "tracker.db".to_string()
-            }
+            })
         );
         assert!(!config.private);
     }
@@ -217,13 +217,13 @@ mod tests {
 
         assert_eq!(
             config.database,
-            DatabaseConfig::Mysql {
+            DatabaseConfig::Mysql(MysqlConfig {
                 host: "localhost".to_string(),
                 port: 3306,
                 database_name: "tracker".to_string(),
                 username: "tracker_user".to_string(),
                 password: "secure_password".to_string(),
-            }
+            })
         );
         assert!(!config.private);
     }
