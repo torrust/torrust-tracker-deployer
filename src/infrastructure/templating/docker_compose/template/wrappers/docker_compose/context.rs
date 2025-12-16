@@ -96,7 +96,7 @@ pub struct DatabaseConfig {
     pub driver: String,
     /// MySQL-specific configuration (only present when driver == "mysql")
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mysql: Option<MysqlConfig>,
+    pub mysql: Option<MysqlSetupConfig>,
 }
 
 impl DatabaseConfig {
@@ -106,23 +106,32 @@ impl DatabaseConfig {
         &self.driver
     }
 
-    /// Get the `MySQL` configuration if present
+    /// Get the `MySQL` setup configuration if present
     #[must_use]
-    pub fn mysql(&self) -> Option<&MysqlConfig> {
+    pub fn mysql(&self) -> Option<&MysqlSetupConfig> {
         self.mysql.as_ref()
     }
 }
 
-/// `MySQL`-specific configuration
+/// `MySQL` setup configuration for Docker Compose initialization
+///
+/// This configuration is used to set up a new `MySQL` database in Docker Compose.
+/// It includes the root password needed for database initialization, unlike the
+/// domain `MysqlConfig` which is used for connecting to an existing database.
+///
+/// Key differences from domain `MysqlConfig`:
+/// - Includes `root_password` for database initialization
+/// - Used for Docker Compose environment variable setup
+/// - Does not include `host` (always the service name in Docker Compose)
 #[derive(Serialize, Debug, Clone)]
-pub struct MysqlConfig {
-    /// `MySQL` root password
+pub struct MysqlSetupConfig {
+    /// `MySQL` root password for database initialization
     pub root_password: String,
-    /// `MySQL` database name
+    /// `MySQL` database name to create
     pub database: String,
-    /// `MySQL` user
+    /// `MySQL` user to create
     pub user: String,
-    /// `MySQL` password
+    /// `MySQL` password for the created user
     pub password: String,
     /// `MySQL` port
     pub port: u16,
@@ -155,10 +164,10 @@ impl DockerComposeContextBuilder {
     ///
     /// # Arguments
     ///
-    /// * `root_password` - `MySQL` root password
-    /// * `database` - `MySQL` database name
-    /// * `user` - `MySQL` user
-    /// * `password` - `MySQL` password
+    /// * `root_password` - `MySQL` root password for initialization
+    /// * `database` - `MySQL` database name to create
+    /// * `user` - `MySQL` user to create
+    /// * `password` - `MySQL` password for the created user
     /// * `port` - `MySQL` port
     #[must_use]
     pub fn with_mysql(
@@ -171,7 +180,7 @@ impl DockerComposeContextBuilder {
     ) -> Self {
         self.database = DatabaseConfig {
             driver: "mysql".to_string(),
-            mysql: Some(MysqlConfig {
+            mysql: Some(MysqlSetupConfig {
                 root_password,
                 database,
                 user,
