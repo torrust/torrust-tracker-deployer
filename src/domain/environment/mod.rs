@@ -131,6 +131,9 @@ pub use crate::domain::tracker::{
     UdpTrackerConfig,
 };
 
+// Re-export Prometheus types for convenience
+pub use crate::domain::prometheus::PrometheusConfig;
+
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::{InstanceName, ProfileName};
@@ -400,25 +403,49 @@ impl<S> Environment<S> {
     /// Returns the instance name for this environment
     #[must_use]
     pub fn instance_name(&self) -> &InstanceName {
-        &self.context.user_inputs.instance_name
+        self.context.instance_name()
     }
 
     /// Returns the provider configuration for this environment
     #[must_use]
     pub fn provider_config(&self) -> &ProviderConfig {
-        &self.context.user_inputs.provider_config
+        self.context.provider_config()
     }
 
     /// Returns the SSH credentials for this environment
     #[must_use]
     pub fn ssh_credentials(&self) -> &SshCredentials {
-        &self.context.user_inputs.ssh_credentials
+        self.context.ssh_credentials()
     }
 
     /// Returns the SSH port for this environment
     #[must_use]
     pub fn ssh_port(&self) -> u16 {
-        self.context.user_inputs.ssh_port
+        self.context.ssh_port()
+    }
+
+    /// Returns the database configuration for this environment
+    #[must_use]
+    pub fn database_config(&self) -> &DatabaseConfig {
+        self.context.database_config()
+    }
+
+    /// Returns the tracker configuration for this environment
+    #[must_use]
+    pub fn tracker_config(&self) -> &TrackerConfig {
+        self.context.tracker_config()
+    }
+
+    /// Returns the admin token for the HTTP API
+    #[must_use]
+    pub fn admin_token(&self) -> &str {
+        self.context.admin_token()
+    }
+
+    /// Returns the Prometheus configuration if enabled
+    #[must_use]
+    pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
+        self.context.prometheus_config()
     }
 
     /// Returns the SSH username for this environment
@@ -442,13 +469,13 @@ impl<S> Environment<S> {
     /// Returns the build directory for this environment
     #[must_use]
     pub fn build_dir(&self) -> &PathBuf {
-        &self.context.internal_config.build_dir
+        self.context.build_dir()
     }
 
     /// Returns the data directory for this environment
     #[must_use]
     pub fn data_dir(&self) -> &PathBuf {
-        &self.context.internal_config.data_dir
+        self.context.data_dir()
     }
 
     /// Returns the instance IP address if available
@@ -496,7 +523,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn instance_ip(&self) -> Option<IpAddr> {
-        self.context.runtime_outputs.instance_ip
+        self.context.instance_ip()
     }
 
     /// Returns the provision method for this environment
@@ -511,7 +538,7 @@ impl<S> Environment<S> {
     /// The provision method, if set.
     #[must_use]
     pub fn provision_method(&self) -> Option<ProvisionMethod> {
-        self.context.runtime_outputs.provision_method
+        self.context.provision_method()
     }
 
     /// Returns whether this environment's infrastructure is managed by this tool

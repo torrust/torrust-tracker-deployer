@@ -109,7 +109,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         let ports = self.build_tracker_ports();
 
         // Create contexts based on database configuration
-        let database_config = &self.environment.context().user_inputs.tracker.core.database;
+        let database_config = self.environment.database_config();
         let (env_context, builder) = match database_config {
             DatabaseConfig::Sqlite { .. } => Self::create_sqlite_contexts(admin_token, ports),
             DatabaseConfig::Mysql {
@@ -147,17 +147,11 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
     }
 
     fn extract_admin_token(&self) -> String {
-        self.environment
-            .context()
-            .user_inputs
-            .tracker
-            .http_api
-            .admin_token
-            .clone()
+        self.environment.admin_token().to_string()
     }
 
     fn build_tracker_ports(&self) -> TrackerPorts {
-        let tracker_config = &self.environment.context().user_inputs.tracker;
+        let tracker_config = self.environment.tracker_config();
         let (udp_tracker_ports, http_tracker_ports, http_api_port) =
             Self::extract_tracker_ports(tracker_config);
 
@@ -212,7 +206,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         &self,
         builder: DockerComposeContextBuilder,
     ) -> DockerComposeContextBuilder {
-        if let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus {
+        if let Some(prometheus_config) = self.environment.prometheus_config() {
             builder.with_prometheus(prometheus_config.clone())
         } else {
             builder
