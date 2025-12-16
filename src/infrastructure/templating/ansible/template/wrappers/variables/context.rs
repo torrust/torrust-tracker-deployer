@@ -177,14 +177,15 @@ mod tests {
     #[test]
     fn it_should_extract_tracker_ports_from_config() {
         use crate::domain::tracker::{
-            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig, TrackerCoreConfig,
+            UdpTrackerConfig,
         };
 
         let tracker_config = TrackerConfig {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite {
+                database: DatabaseConfig::Sqlite(SqliteConfig {
                     database_name: "tracker.db".to_string(),
-                },
+                }),
                 private: false,
             },
             udp_trackers: vec![
@@ -213,13 +214,15 @@ mod tests {
 
     #[test]
     fn it_should_handle_empty_tracker_lists() {
-        use crate::domain::tracker::{DatabaseConfig, HttpApiConfig, TrackerCoreConfig};
+        use crate::domain::tracker::{
+            DatabaseConfig, HttpApiConfig, SqliteConfig, TrackerCoreConfig,
+        };
 
         let tracker_config = TrackerConfig {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite {
+                database: DatabaseConfig::Sqlite(SqliteConfig {
                     database_name: "tracker.db".to_string(),
-                },
+                }),
                 private: true,
             },
             udp_trackers: vec![],
@@ -240,14 +243,15 @@ mod tests {
     #[test]
     fn it_should_skip_invalid_bind_addresses() {
         use crate::domain::tracker::{
-            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig, TrackerCoreConfig,
+            UdpTrackerConfig,
         };
 
         let tracker_config = TrackerConfig {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite {
+                database: DatabaseConfig::Sqlite(SqliteConfig {
                     database_name: "tracker.db".to_string(),
-                },
+                }),
                 private: false,
             },
             udp_trackers: vec![

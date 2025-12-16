@@ -33,7 +33,7 @@ use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
 use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-    DockerComposeContext, DockerComposeContextBuilder, TrackerPorts,
+    DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerPorts,
 };
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
@@ -111,20 +111,14 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         // Create contexts based on database configuration
         let database_config = self.environment.database_config();
         let (env_context, builder) = match database_config {
-            DatabaseConfig::Sqlite { .. } => Self::create_sqlite_contexts(admin_token, ports),
-            DatabaseConfig::Mysql {
-                port,
-                database_name,
-                username,
-                password,
-                ..
-            } => Self::create_mysql_contexts(
+            DatabaseConfig::Sqlite(..) => Self::create_sqlite_contexts(admin_token, ports),
+            DatabaseConfig::Mysql(mysql_config) => Self::create_mysql_contexts(
                 admin_token,
                 ports,
-                *port,
-                database_name.clone(),
-                username.clone(),
-                password.clone(),
+                mysql_config.port,
+                mysql_config.database_name.clone(),
+                mysql_config.username.clone(),
+                mysql_config.password.clone(),
             ),
         };
 
@@ -191,13 +185,15 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             password.clone(),
         );
 
-        let builder = DockerComposeContext::builder(ports).with_mysql(
+        let mysql_config = MysqlSetupConfig {
             root_password,
-            database_name,
-            username,
+            database: database_name,
+            user: username,
             password,
             port,
-        );
+        };
+
+        let builder = DockerComposeContext::builder(ports).with_mysql(mysql_config);
 
         (env_context, builder)
     }

@@ -7,7 +7,7 @@ use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 
-use super::DatabaseConfig;
+use super::{DatabaseConfig, SqliteConfig};
 
 /// Tracker deployment configuration
 ///
@@ -18,15 +18,15 @@ use super::DatabaseConfig;
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::domain::tracker::{
-///     TrackerConfig, TrackerCoreConfig, DatabaseConfig,
+///     TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig,
 ///     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig
 /// };
 ///
 /// let tracker_config = TrackerConfig {
 ///     core: TrackerCoreConfig {
-///         database: DatabaseConfig::Sqlite {
+///         database: DatabaseConfig::Sqlite(SqliteConfig {
 ///             database_name: "tracker.db".to_string(),
-///         },
+///         }),
 ///         private: false,
 ///     },
 ///     udp_trackers: vec![
@@ -116,9 +116,9 @@ impl Default for TrackerConfig {
     fn default() -> Self {
         Self {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite {
+                database: DatabaseConfig::Sqlite(SqliteConfig {
                     database_name: "tracker.db".to_string(),
-                },
+                }),
                 private: false,
             },
             udp_trackers: vec![UdpTrackerConfig {
@@ -158,9 +158,9 @@ mod tests {
     fn it_should_create_tracker_config() {
         let config = TrackerConfig {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite {
+                database: DatabaseConfig::Sqlite(SqliteConfig {
                     database_name: "tracker.db".to_string(),
-                },
+                }),
                 private: true,
             },
             udp_trackers: vec![UdpTrackerConfig {
@@ -185,9 +185,9 @@ mod tests {
     fn it_should_serialize_tracker_config() {
         let config = TrackerConfig {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite {
+                database: DatabaseConfig::Sqlite(SqliteConfig {
                     database_name: "test.db".to_string(),
-                },
+                }),
                 private: false,
             },
             udp_trackers: vec![],

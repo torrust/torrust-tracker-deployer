@@ -24,13 +24,13 @@ use crate::domain::environment::TrackerConfig;
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::infrastructure::templating::tracker::TrackerContext;
-/// use torrust_tracker_deployer_lib::domain::environment::{TrackerConfig, TrackerCoreConfig, DatabaseConfig, UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig};
+/// use torrust_tracker_deployer_lib::domain::environment::{TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig, UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig};
 ///
 /// let tracker_config = TrackerConfig {
 ///     core: TrackerCoreConfig {
-///         database: DatabaseConfig::Sqlite {
+///         database: DatabaseConfig::Sqlite(SqliteConfig {
 ///             database_name: "tracker.db".to_string(),
-///         },
+///         }),
 ///         private: true,
 ///     },
 ///     udp_trackers: vec![
@@ -112,20 +112,14 @@ impl TrackerContext {
 
         let (mysql_host, mysql_port, mysql_database, mysql_user, mysql_password) =
             match &config.core.database {
-                DatabaseConfig::Mysql {
-                    host,
-                    port,
-                    database_name,
-                    username,
-                    password,
-                } => (
-                    Some(host.clone()),
-                    Some(*port),
-                    Some(database_name.clone()),
-                    Some(username.clone()),
-                    Some(password.clone()),
+                DatabaseConfig::Mysql(mysql_config) => (
+                    Some(mysql_config.host.clone()),
+                    Some(mysql_config.port),
+                    Some(mysql_config.database_name.clone()),
+                    Some(mysql_config.username.clone()),
+                    Some(mysql_config.password.clone()),
                 ),
-                DatabaseConfig::Sqlite { .. } => (None, None, None, None, None),
+                DatabaseConfig::Sqlite(..) => (None, None, None, None, None),
             };
 
         Self {
@@ -200,16 +194,16 @@ impl Default for TrackerContext {
 mod tests {
     use super::*;
     use crate::domain::environment::{
-        DatabaseConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig,
-        UdpTrackerConfig,
+        DatabaseConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig, SqliteConfig, TrackerConfig,
+        TrackerCoreConfig, UdpTrackerConfig,
     };
 
     fn create_test_tracker_config() -> TrackerConfig {
         TrackerConfig {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite {
+                database: DatabaseConfig::Sqlite(SqliteConfig {
                     database_name: "test_tracker.db".to_string(),
-                },
+                }),
                 private: true,
             },
             udp_trackers: vec![
@@ -254,13 +248,13 @@ mod tests {
     fn it_should_create_context_from_mysql_tracker_config() {
         let config = TrackerConfig {
             core: TrackerCoreConfig {
-                database: DatabaseConfig::Mysql {
+                database: DatabaseConfig::Mysql(MysqlConfig {
                     host: "mysql".to_string(),
                     port: 3306,
                     database_name: "tracker_db".to_string(),
                     username: "tracker_user".to_string(),
                     password: "secure_pass".to_string(),
-                },
+                }),
                 private: false,
             },
             udp_trackers: vec![UdpTrackerConfig {
