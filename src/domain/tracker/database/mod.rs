@@ -2,8 +2,22 @@
 //!
 //! This module defines the database backend configuration options
 //! for the Torrust Tracker.
+//!
+//! # Module Structure
+//!
+//! - `sqlite` - `SQLite` database configuration
+//! - `mysql` - `MySQL` database configuration
+//!
+//! New database drivers can be added by creating a new module with
+//! the driver's configuration struct and adding a variant to `DatabaseConfig`.
 
 use serde::{Deserialize, Serialize};
+
+mod mysql;
+mod sqlite;
+
+pub use mysql::MysqlConfig;
+pub use sqlite::SqliteConfig;
 
 /// Database configuration for Tracker
 ///
@@ -39,29 +53,6 @@ pub enum DatabaseConfig {
     /// `MySQL` server-based database
     #[serde(rename = "mysql")]
     Mysql(MysqlConfig),
-}
-
-/// `SQLite` database configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct SqliteConfig {
-    /// Database file name (e.g., "tracker.db", "sqlite3.db")
-    /// Path is relative to the tracker's data directory
-    pub database_name: String,
-}
-
-/// `MySQL` database configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct MysqlConfig {
-    /// `MySQL` server host (e.g., "localhost", "mysql")
-    pub host: String,
-    /// `MySQL` server port (typically 3306)
-    pub port: u16,
-    /// Database name
-    pub database_name: String,
-    /// Database username
-    pub username: String,
-    /// Database password
-    pub password: String,
 }
 
 impl DatabaseConfig {
