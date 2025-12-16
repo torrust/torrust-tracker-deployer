@@ -10,6 +10,8 @@ Welcome to the Torrust Tracker Deployer user guide! This guide will help you get
 - [Available Commands](#available-commands)
 - [Basic Workflows](#basic-workflows)
 - [Configuration](#configuration)
+- [Services](#services)
+- [Security](#security)
 - [Troubleshooting](#troubleshooting)
 - [Additional Resources](#additional-resources)
 
@@ -270,6 +272,60 @@ The environment configuration file is in JSON format:
 
 - SSH port number
 - Default: `22`
+
+For service-specific configuration (Prometheus, MySQL, etc.), see the [Services](#services) section below.
+
+## Services
+
+The Torrust Tracker Deployer supports optional services that can be enabled in your deployment:
+
+### Available Services
+
+- **[Prometheus Monitoring](services/prometheus.md)** - Metrics collection and monitoring (enabled by default)
+  - Automatic metrics scraping from tracker API
+  - Web UI on port 9090
+  - Configurable scrape intervals
+  - Can be disabled by removing from configuration
+
+### Adding or Removing Services
+
+Services are configured in your environment JSON file. To enable a service, include its configuration section. To disable it, remove the section.
+
+**Example with Prometheus**:
+
+```json
+{
+  "environment": { "name": "my-env" },
+  "ssh_credentials": { ... },
+  "prometheus": {
+    "scrape_interval": 15
+  }
+}
+```
+
+**Example without Prometheus**:
+
+```json
+{
+  "environment": { "name": "my-env" },
+  "ssh_credentials": { ... }
+}
+```
+
+See individual service guides for detailed configuration options and verification steps.
+
+## Security
+
+**🔒 CRITICAL**: The deployer automatically configures firewall protection during the `configure` command to secure internal services (Prometheus, MySQL) while keeping tracker services publicly accessible.
+
+**For complete security information**, see the **[Security Guide](security.md)** which covers:
+
+- Automatic firewall configuration (UFW)
+- Why firewall protection is critical for production
+- SSH security best practices
+- Docker and network security
+- Production security checklist
+- Security incident response
 
 ### Logging Configuration
 

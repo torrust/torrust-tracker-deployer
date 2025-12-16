@@ -282,4 +282,82 @@ impl EnvironmentContext {
     pub fn tofu_templates_dir(&self) -> PathBuf {
         self.internal_config.tofu_templates_dir()
     }
+
+    /// Returns the environment name
+    #[must_use]
+    pub fn name(&self) -> &EnvironmentName {
+        &self.user_inputs.name
+    }
+
+    /// Returns the instance name
+    #[must_use]
+    pub fn instance_name(&self) -> &crate::domain::InstanceName {
+        &self.user_inputs.instance_name
+    }
+
+    /// Returns the provider configuration
+    #[must_use]
+    pub fn provider_config(&self) -> &ProviderConfig {
+        &self.user_inputs.provider_config
+    }
+
+    /// Returns the SSH credentials
+    #[must_use]
+    pub fn ssh_credentials(&self) -> &SshCredentials {
+        &self.user_inputs.ssh_credentials
+    }
+
+    /// Returns the SSH port
+    #[must_use]
+    pub fn ssh_port(&self) -> u16 {
+        self.user_inputs.ssh_port
+    }
+
+    /// Returns the database configuration
+    #[must_use]
+    pub fn database_config(&self) -> &crate::domain::tracker::DatabaseConfig {
+        &self.user_inputs.tracker.core.database
+    }
+
+    /// Returns the tracker configuration
+    #[must_use]
+    pub fn tracker_config(&self) -> &crate::domain::tracker::TrackerConfig {
+        &self.user_inputs.tracker
+    }
+
+    /// Returns the admin token
+    #[must_use]
+    pub fn admin_token(&self) -> &str {
+        &self.user_inputs.tracker.http_api.admin_token
+    }
+
+    /// Returns the Prometheus configuration if enabled
+    #[must_use]
+    pub fn prometheus_config(&self) -> Option<&crate::domain::prometheus::PrometheusConfig> {
+        self.user_inputs.prometheus.as_ref()
+    }
+
+    /// Returns the build directory
+    #[must_use]
+    pub fn build_dir(&self) -> &PathBuf {
+        &self.internal_config.build_dir
+    }
+
+    /// Returns the data directory
+    #[must_use]
+    pub fn data_dir(&self) -> &PathBuf {
+        &self.internal_config.data_dir
+    }
+
+    /// Returns the instance IP address if available
+    #[must_use]
+    pub fn instance_ip(&self) -> Option<std::net::IpAddr> {
+        self.runtime_outputs.instance_ip
+    }
+
+    /// Returns the provision method
+    #[must_use]
+    pub fn provision_method(&self) -> Option<crate::domain::environment::ProvisionMethod> {
+        self.runtime_outputs.provision_method
+    }
 }

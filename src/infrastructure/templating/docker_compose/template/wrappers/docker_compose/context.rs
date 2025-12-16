@@ -3,10 +3,83 @@
 //! This module defines the structure and validation for Docker Compose services
 //! that will be rendered into the docker-compose.yml file.
 
+// External crates
 use serde::Serialize;
 
+// Internal crate
+use crate::domain::prometheus::PrometheusConfig;
+
+/// Context for rendering the docker-compose.yml template
+///
+/// Contains all variables needed for the Docker Compose service configuration.
+#[derive(Serialize, Debug, Clone)]
+pub struct DockerComposeContext {
+    /// Database configuration
+    pub database: DatabaseConfig,
+    /// Tracker port configuration
+    pub ports: TrackerPorts,
+    /// Prometheus configuration (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prometheus_config: Option<PrometheusConfig>,
+}
+
+impl DockerComposeContext {
+    /// Creates a new builder for `DockerComposeContext`
+    ///
+    /// The builder starts with `SQLite` as the default database configuration.
+    /// Use `with_mysql()` to switch to `MySQL` configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `ports` - Tracker port configuration
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{DockerComposeContext, TrackerPorts};
+    ///
+    /// let ports = TrackerPorts {
+    ///     udp_tracker_ports: vec![6868, 6969],
+    ///     http_tracker_ports: vec![7070],
+    ///     http_api_port: 1212,
+    /// };
+    ///
+    /// // SQLite (default)
+    /// let context = DockerComposeContext::builder(ports.clone()).build();
+    /// assert_eq!(context.database().driver(), "sqlite3");
+    ///
+    /// // MySQL
+    /// let context = DockerComposeContext::builder(ports)
+    ///     .with_mysql("root_pass".to_string(), "db".to_string(), "user".to_string(), "pass".to_string(), 3306)
+    ///     .build();
+    /// assert_eq!(context.database().driver(), "mysql");
+    /// ```
+    #[must_use]
+    pub fn builder(ports: TrackerPorts) -> DockerComposeContextBuilder {
+        DockerComposeContextBuilder::new(ports)
+    }
+
+    /// Get the database configuration
+    #[must_use]
+    pub fn database(&self) -> &DatabaseConfig {
+        &self.database
+    }
+
+    /// Get the tracker ports configuration
+    #[must_use]
+    pub fn ports(&self) -> &TrackerPorts {
+        &self.ports
+    }
+
+    /// Get the Prometheus configuration if present
+    #[must_use]
+    pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
+        self.prometheus_config.as_ref()
+    }
+}
+
 /// Tracker port configuration
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct TrackerPorts {
     /// UDP tracker ports
     pub udp_tracker_ports: Vec<u16>,
@@ -26,6 +99,20 @@ pub struct DatabaseConfig {
     pub mysql: Option<MysqlConfig>,
 }
 
+impl DatabaseConfig {
+    /// Get the database driver name
+    #[must_use]
+    pub fn driver(&self) -> &str {
+        &self.driver
+    }
+
+    /// Get the `MySQL` configuration if present
+    #[must_use]
+    pub fn mysql(&self) -> Option<&MysqlConfig> {
+        self.mysql.as_ref()
+    }
+}
+
 /// `MySQL`-specific configuration
 #[derive(Serialize, Debug, Clone)]
 pub struct MysqlConfig {
@@ -41,55 +128,30 @@ pub struct MysqlConfig {
     pub port: u16,
 }
 
-/// Context for rendering the docker-compose.yml template
+/// Builder for `DockerComposeContext`
 ///
-/// Contains all variables needed for the Docker Compose service configuration.
-#[derive(Serialize, Debug, Clone)]
-pub struct DockerComposeContext {
-    /// Database configuration
-    pub database: DatabaseConfig,
-    /// UDP tracker ports
-    pub udp_tracker_ports: Vec<u16>,
-    /// HTTP tracker ports
-    pub http_tracker_ports: Vec<u16>,
-    /// HTTP API port
-    pub http_api_port: u16,
+/// Provides a fluent API for constructing Docker Compose contexts with optional features.
+/// Defaults to `SQLite` database configuration.
+pub struct DockerComposeContextBuilder {
+    ports: TrackerPorts,
+    database: DatabaseConfig,
+    prometheus_config: Option<PrometheusConfig>,
 }
 
-impl DockerComposeContext {
-    /// Creates a new `DockerComposeContext` with `SQLite` configuration (default)
-    ///
-    /// # Arguments
-    ///
-    /// * `ports` - Tracker port configuration
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{DockerComposeContext, TrackerPorts};
-    ///
-    /// let ports = TrackerPorts {
-    ///     udp_tracker_ports: vec![6868, 6969],
-    ///     http_tracker_ports: vec![7070],
-    ///     http_api_port: 1212,
-    /// };
-    /// let context = DockerComposeContext::new_sqlite(ports);
-    /// assert_eq!(context.database().driver(), "sqlite3");
-    /// ```
-    #[must_use]
-    pub fn new_sqlite(ports: TrackerPorts) -> Self {
+impl DockerComposeContextBuilder {
+    /// Creates a new builder with default `SQLite` configuration
+    fn new(ports: TrackerPorts) -> Self {
         Self {
+            ports,
             database: DatabaseConfig {
                 driver: "sqlite3".to_string(),
                 mysql: None,
             },
-            udp_tracker_ports: ports.udp_tracker_ports,
-            http_tracker_ports: ports.http_tracker_ports,
-            http_api_port: ports.http_api_port,
+            prometheus_config: None,
         }
     }
 
-    /// Creates a new `DockerComposeContext` with `MySQL` configuration
+    /// Switches to `MySQL` database configuration
     ///
     /// # Arguments
     ///
@@ -98,90 +160,47 @@ impl DockerComposeContext {
     /// * `user` - `MySQL` user
     /// * `password` - `MySQL` password
     /// * `port` - `MySQL` port
-    /// * `ports` - Tracker port configuration
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{DockerComposeContext, TrackerPorts};
-    ///
-    /// let ports = TrackerPorts {
-    ///     udp_tracker_ports: vec![6868, 6969],
-    ///     http_tracker_ports: vec![7070],
-    ///     http_api_port: 1212,
-    /// };
-    /// let context = DockerComposeContext::new_mysql(
-    ///     "root_pass".to_string(),
-    ///     "tracker_db".to_string(),
-    ///     "tracker_user".to_string(),
-    ///     "user_pass".to_string(),
-    ///     3306,
-    ///     ports,
-    /// );
-    /// assert_eq!(context.database().driver(), "mysql");
-    /// ```
     #[must_use]
-    pub fn new_mysql(
+    pub fn with_mysql(
+        mut self,
         root_password: String,
         database: String,
         user: String,
         password: String,
         port: u16,
-        ports: TrackerPorts,
     ) -> Self {
-        Self {
-            database: DatabaseConfig {
-                driver: "mysql".to_string(),
-                mysql: Some(MysqlConfig {
-                    root_password,
-                    database,
-                    user,
-                    password,
-                    port,
-                }),
-            },
-            udp_tracker_ports: ports.udp_tracker_ports,
-            http_tracker_ports: ports.http_tracker_ports,
-            http_api_port: ports.http_api_port,
+        self.database = DatabaseConfig {
+            driver: "mysql".to_string(),
+            mysql: Some(MysqlConfig {
+                root_password,
+                database,
+                user,
+                password,
+                port,
+            }),
+        };
+        self
+    }
+
+    /// Adds Prometheus configuration
+    ///
+    /// # Arguments
+    ///
+    /// * `prometheus_config` - Prometheus configuration
+    #[must_use]
+    pub fn with_prometheus(mut self, prometheus_config: PrometheusConfig) -> Self {
+        self.prometheus_config = Some(prometheus_config);
+        self
+    }
+
+    /// Builds the `DockerComposeContext`
+    #[must_use]
+    pub fn build(self) -> DockerComposeContext {
+        DockerComposeContext {
+            database: self.database,
+            ports: self.ports,
+            prometheus_config: self.prometheus_config,
         }
-    }
-
-    /// Get the database configuration
-    #[must_use]
-    pub fn database(&self) -> &DatabaseConfig {
-        &self.database
-    }
-
-    /// Get the UDP tracker ports
-    #[must_use]
-    pub fn udp_tracker_ports(&self) -> &[u16] {
-        &self.udp_tracker_ports
-    }
-
-    /// Get the HTTP tracker ports
-    #[must_use]
-    pub fn http_tracker_ports(&self) -> &[u16] {
-        &self.http_tracker_ports
-    }
-
-    /// Get the HTTP API port
-    #[must_use]
-    pub fn http_api_port(&self) -> u16 {
-        self.http_api_port
-    }
-}
-
-impl DatabaseConfig {
-    /// Get the database driver name
-    #[must_use]
-    pub fn driver(&self) -> &str {
-        &self.driver
-    }
-
-    /// Get the `MySQL` configuration if present
-    #[must_use]
-    pub fn mysql(&self) -> Option<&MysqlConfig> {
-        self.mysql.as_ref()
     }
 }
 
@@ -196,13 +215,13 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_sqlite(ports);
+        let context = DockerComposeContext::builder(ports).build();
 
         assert_eq!(context.database().driver(), "sqlite3");
         assert!(context.database().mysql().is_none());
-        assert_eq!(context.udp_tracker_ports(), &[6868, 6969]);
-        assert_eq!(context.http_tracker_ports(), &[7070]);
-        assert_eq!(context.http_api_port(), 1212);
+        assert_eq!(context.ports().udp_tracker_ports, vec![6868, 6969]);
+        assert_eq!(context.ports().http_tracker_ports, vec![7070]);
+        assert_eq!(context.ports().http_api_port, 1212);
     }
 
     #[test]
@@ -212,14 +231,15 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_mysql(
-            "root123".to_string(),
-            "tracker".to_string(),
-            "tracker_user".to_string(),
-            "pass456".to_string(),
-            3306,
-            ports,
-        );
+        let context = DockerComposeContext::builder(ports)
+            .with_mysql(
+                "root123".to_string(),
+                "tracker".to_string(),
+                "tracker_user".to_string(),
+                "pass456".to_string(),
+                3306,
+            )
+            .build();
 
         assert_eq!(context.database().driver(), "mysql");
         assert!(context.database().mysql().is_some());
@@ -231,9 +251,9 @@ mod tests {
         assert_eq!(mysql.password, "pass456");
         assert_eq!(mysql.port, 3306);
 
-        assert_eq!(context.udp_tracker_ports(), &[6868, 6969]);
-        assert_eq!(context.http_tracker_ports(), &[7070]);
-        assert_eq!(context.http_api_port(), 1212);
+        assert_eq!(context.ports().udp_tracker_ports, vec![6868, 6969]);
+        assert_eq!(context.ports().http_tracker_ports, vec![7070]);
+        assert_eq!(context.ports().http_api_port, 1212);
     }
 
     #[test]
@@ -243,7 +263,7 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_sqlite(ports);
+        let context = DockerComposeContext::builder(ports).build();
 
         let serialized = serde_json::to_string(&context).unwrap();
         assert!(serialized.contains("sqlite3"));
@@ -257,14 +277,15 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_mysql(
-            "root".to_string(),
-            "db".to_string(),
-            "user".to_string(),
-            "pass".to_string(),
-            3306,
-            ports,
-        );
+        let context = DockerComposeContext::builder(ports)
+            .with_mysql(
+                "root".to_string(),
+                "db".to_string(),
+                "user".to_string(),
+                "pass".to_string(),
+                3306,
+            )
+            .build();
 
         let serialized = serde_json::to_string(&context).unwrap();
         assert!(serialized.contains("mysql"));
@@ -274,7 +295,6 @@ mod tests {
         assert!(serialized.contains("pass"));
         assert!(serialized.contains("3306"));
     }
-
     #[test]
     fn it_should_be_cloneable() {
         let ports = TrackerPorts {
@@ -282,16 +302,78 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_mysql(
-            "root".to_string(),
-            "db".to_string(),
-            "user".to_string(),
-            "pass".to_string(),
-            3306,
-            ports,
-        );
+        let context = DockerComposeContext::builder(ports)
+            .with_mysql(
+                "root".to_string(),
+                "db".to_string(),
+                "user".to_string(),
+                "pass".to_string(),
+                3306,
+            )
+            .build();
 
         let cloned = context.clone();
         assert_eq!(cloned.database().driver(), "mysql");
+    }
+    #[test]
+    fn it_should_not_include_prometheus_config_by_default() {
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let context = DockerComposeContext::builder(ports).build();
+
+        assert!(context.prometheus_config().is_none());
+    }
+
+    #[test]
+    fn it_should_include_prometheus_config_when_added() {
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let prometheus_config = PrometheusConfig {
+            scrape_interval: 30,
+        };
+        let context = DockerComposeContext::builder(ports)
+            .with_prometheus(prometheus_config)
+            .build();
+
+        assert!(context.prometheus_config().is_some());
+        assert_eq!(context.prometheus_config().unwrap().scrape_interval, 30);
+    }
+
+    #[test]
+    fn it_should_not_serialize_prometheus_config_when_absent() {
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let context = DockerComposeContext::builder(ports).build();
+
+        let serialized = serde_json::to_string(&context).unwrap();
+        assert!(!serialized.contains("prometheus_config"));
+    }
+
+    #[test]
+    fn it_should_serialize_prometheus_config_when_present() {
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let prometheus_config = PrometheusConfig {
+            scrape_interval: 20,
+        };
+        let context = DockerComposeContext::builder(ports)
+            .with_prometheus(prometheus_config)
+            .build();
+
+        let serialized = serde_json::to_string(&context).unwrap();
+        assert!(serialized.contains("prometheus_config"));
+        assert!(serialized.contains("\"scrape_interval\":20"));
     }
 }

@@ -9,44 +9,210 @@ This task adds Prometheus as a metrics collection service for the Torrust Tracke
 
 ## Goals
 
-- [ ] Add Prometheus service conditionally to docker-compose stack (only when present in environment config)
-- [ ] Create Prometheus configuration template with tracker metrics endpoints
-- [ ] Extend environment configuration schema to include Prometheus monitoring section
-- [ ] Configure service dependency - Prometheus depends on tracker service
-- [ ] Include Prometheus in generated environment templates by default (enabled by default)
-- [ ] Allow users to disable Prometheus by removing its configuration section
-- [ ] Deploy and verify Prometheus collects metrics from tracker
+- ✅ Add Prometheus service conditionally to docker-compose stack (only when present in environment config)
+- ✅ Create Prometheus configuration template with tracker metrics endpoints
+- ✅ Extend environment configuration schema to include Prometheus monitoring section
+- ✅ Configure service dependency - Prometheus depends on tracker service
+- ✅ Include Prometheus in generated environment templates by default (enabled by default)
+- ✅ Allow users to disable Prometheus by removing its configuration section
+- ✅ Deploy and verify Prometheus collects metrics from tracker
+
+## Progress
+
+- ✅ **Phase 1**: Template Structure & Data Flow Design (commit: 2ca0fa9)
+
+  - Created `PrometheusContext` struct with `scrape_interval`, `api_token`, `api_port` fields
+  - Implemented module structure following existing patterns
+  - Added comprehensive unit tests (5 tests)
+  - Created `templates/prometheus/prometheus.yml.tera` template
+
+- ✅ **Phase 2**: Environment Configuration (commit: 92aab59)
+
+  - Created `PrometheusConfig` domain struct in `src/domain/prometheus/`
+  - Added optional `prometheus` field to `UserInputs` (enabled by default)
+  - Implemented comprehensive unit tests (5 tests)
+  - Updated all constructors and test fixtures
+
+- ✅ **Phase 3**: Prometheus Template Renderer (commit: 731eaf4)
+
+  - Created `PrometheusConfigRenderer` to load and render `prometheus.yml.tera`
+  - Implemented `PrometheusTemplate` wrapper for Tera integration
+  - Created `PrometheusProjectGenerator` to orchestrate rendering workflow
+  - Implemented context extraction from `PrometheusConfig` and `TrackerConfig`
+  - Added 12 comprehensive unit tests with full coverage
+  - All linters passing
+
+- ✅ **Phase 4**: Docker Compose Integration (commit: 22790de)
+
+  - Added `prometheus_config: Option<PrometheusConfig>` field to `DockerComposeContext`
+  - Implemented `with_prometheus()` method for context builder pattern
+  - Added conditional Prometheus service to `docker-compose.yml.tera` template
+  - Prometheus service uses bind mount: `./storage/prometheus/etc:/etc/prometheus:Z`
+  - Added 4 comprehensive unit tests for Prometheus service rendering
+  - All linters passing
+
+- ✅ **Phase 5**: Release Command Integration (commit: f20d45c)
+
+  - **FIXED**: Moved Prometheus template rendering from docker-compose step to independent step in release handler
+  - Created `RenderPrometheusTemplatesStep` to render Prometheus templates
+  - Added `render_prometheus_templates()` method to `ReleaseCommandHandler`
+  - Prometheus templates now rendered independently at Step 5 (after tracker templates, before docker-compose)
+  - Docker Compose step only adds Prometheus config to context (no template rendering)
+  - Added `RenderPrometheusTemplates` variant to `ReleaseStep` enum
+  - Extended `EnvironmentTestBuilder` with `with_prometheus_config()` method
+  - All linters passing, all tests passing (1507 tests)
+  - **Architectural Principle**: Each service renders its templates independently in the release handler
+
+- ✅ **Phase 6**: Ansible Deployment (commit: pending)
+
+  - Created Ansible playbooks:
+    - `templates/ansible/create-prometheus-storage.yml` - Creates `/opt/torrust/storage/prometheus/etc` directory
+    - `templates/ansible/deploy-prometheus-config.yml` - Deploys `prometheus.yml` configuration file with verification
+  - Created Rust application steps:
+    - `CreatePrometheusStorageStep` - Executes create-prometheus-storage playbook
+    - `DeployPrometheusConfigStep` - Executes deploy-prometheus-config playbook
+  - Registered playbooks in `AnsibleProjectGenerator` (16 total playbooks)
+  - Registered steps in `application/steps/application/mod.rs`
+  - Updated release handler with new methods:
+    - `create_prometheus_storage()` - Creates Prometheus storage directories (Step 5)
+    - `deploy_prometheus_config_to_remote()` - Deploys Prometheus config (Step 7)
+  - Added new `ReleaseStep` enum variants:
+    - `CreatePrometheusStorage`
+    - `DeployPrometheusConfigToRemote`
+  - Added error handling:
+    - `PrometheusStorageCreation` error variant with help text
+    - Proper trace formatting and error classification
+  - Updated workflow to 9 steps total:
+    - Step 5: Create Prometheus storage (if enabled)
+    - Step 6: Render Prometheus templates (if enabled)
+    - Step 7: Deploy Prometheus config (if enabled)
+    - Step 8: Render Docker Compose templates
+    - Step 9: Deploy compose files
+  - All linters passing, all tests passing (1507 tests)
+  - **Pattern**: Independent Prometheus deployment following tracker pattern
+
+- ✅ **Phase 6**: Ansible Deployment (commit: 9c1b91a)
+
+- ✅ **Phase 7**: Testing & Verification (commit: a257fcf)
+
+  - Refactored validation with `ServiceValidation` struct for extensibility
+    - Replaces boolean parameter with flags struct for future services (Grafana, etc.)
+    - Supports selective validation based on enabled services
+  - Created `PrometheusConfigValidator` to verify prometheus.yml deployment
+    - Validates file exists at `/opt/torrust/storage/prometheus/etc/prometheus.yml`
+    - Checks file permissions and ownership via SSH
+  - Updated e2e-deployment-workflow-tests to use ServiceValidation pattern
+  - Created test environment configs:
+    - `envs/e2e-deployment.json` - With Prometheus enabled (scrape_interval: 15)
+    - `envs/e2e-deployment-no-prometheus.json` - Without Prometheus (disabled scenario)
+  - E2E tests validate:
+    - Prometheus configuration file exists at correct path
+    - Docker Compose files are deployed correctly
+    - File permissions and ownership are correct
+  - Manual E2E testing completed (environment: manual-test-prometheus):
+    - ✅ Prometheus container running (`docker ps` shows prom/prometheus:v3.0.1)
+    - ✅ Prometheus scraping both tracker endpoints successfully
+      - `/api/v1/stats` endpoint: health="up", scraping every 15s
+      - `/api/v1/metrics` endpoint: health="up", scraping every 15s
+    - ✅ Prometheus UI accessible at `http://<vm-ip>:9090`
+    - ✅ Tracker metrics available and being collected
+    - ✅ Configuration file correctly deployed with admin token and port
+  - Created comprehensive manual testing documentation:
+    - `docs/e2e-testing/manual/prometheus-verification.md` (450+ lines)
+    - Documents 7 verification steps with exact commands and expected outputs
+    - Includes troubleshooting guide for common issues
+    - Provides success criteria checklist
+  - All linters passing, all E2E tests passing (1507+ tests)
+  - **Architecture validated**: Independent service rendering pattern working correctly
+
+- ✅ **Phase 8**: Documentation (commit: 2a820e2)
+
+  - Created ADR: `docs/decisions/prometheus-integration-pattern.md`
+    - Documents enabled-by-default with opt-out approach
+    - Explains independent template rendering pattern
+    - Documents ServiceValidation struct for extensible testing
+    - Lists alternatives considered and consequences
+  - Updated user guide: `docs/user-guide/README.md`
+    - Added Prometheus configuration section
+    - Documents prometheus.scrape_interval parameter
+    - Explains enabled-by-default behavior and opt-out pattern
+    - Instructions for accessing Prometheus UI (port 9090)
+    - Links to manual verification guide
+  - Added technical terms to project dictionary (Alertmanager, entr, flatlined, promtool, tulpn)
+  - All linters passing, all tests passing (1507+ tests)
+
+## Summary
+
+Issue [#238](https://github.com/torrust/torrust-tracker-deployer/issues/238) is **complete**. All 8 phases implemented:
+
+1. ✅ Template Structure & Data Flow Design
+2. ✅ Environment Configuration
+3. ✅ Prometheus Template Renderer
+4. ✅ Docker Compose Integration
+5. ✅ Release Command Integration
+6. ✅ Ansible Deployment
+7. ✅ Testing & Verification
+8. ✅ Documentation
+
+**Total Commits**: 8 (2ca0fa9, 92aab59, 731eaf4, 22790de, f20d45c, 9c1b91a, a257fcf, 2a820e2)
+
+Prometheus is now fully integrated with:
+
+- Metrics collection from both `/api/v1/stats` and `/api/v1/metrics` endpoints
+- Enabled by default with simple opt-out (remove config section)
+- Independent template rendering following DDD principles
+- Comprehensive E2E validation (automated + manual)
+- Complete documentation (ADR + user guide + manual verification)
 
 ## 🏗️ Architecture Requirements
 
 **DDD Layers**: Infrastructure + Domain
 **Module Paths**:
 
-- `src/infrastructure/templating/docker_compose/` - Docker Compose template rendering with Prometheus service
 - `src/infrastructure/templating/prometheus/` - Prometheus configuration template system (NEW)
-- `src/domain/config/environment/` - Environment configuration schema extensions
+- `src/infrastructure/templating/docker_compose/` - Docker Compose template rendering with Prometheus service
+- `src/domain/prometheus/` - Prometheus configuration domain types (NEW)
+- `src/application/command_handlers/create/config/prometheus/` - Prometheus config creation handlers (NEW)
 
 **Pattern**: Template System with Project Generator pattern + Configuration-driven service selection
 
 ### Module Structure Requirements
 
-- [ ] Follow template system architecture (see [docs/technical/template-system-architecture.md](../technical/template-system-architecture.md))
-- [ ] Create new Prometheus template module following existing patterns (tracker, docker-compose)
-- [ ] Use Project Generator pattern for Prometheus templates
-- [ ] Register Prometheus configuration template in renderer
-- [ ] Use `.tera` extension for dynamic templates
-- [ ] Environment config drives Prometheus enablement
+- ✅ Follow template system architecture (see [docs/technical/template-system-architecture.md](../technical/template-system-architecture.md))
+- ✅ Create new Prometheus template module following existing patterns (tracker, docker-compose)
+- ✅ Use Project Generator pattern for Prometheus templates
+- ✅ Register Prometheus configuration template in renderer
+- ✅ Use `.tera` extension for dynamic templates
+- ✅ Environment config drives Prometheus enablement
 
 ### Architectural Constraints
 
-- [ ] Prometheus service is included by default in generated environment templates
-- [ ] Only included in docker-compose when Prometheus section present in environment config
-- [ ] Service can be disabled by removing the monitoring.prometheus section from config
-- [ ] Prometheus depends on tracker service (starts after tracker container starts, no health check)
-- [ ] Metrics API token and port read from tracker HTTP API configuration (`tracker.http_api.admin_token` and `tracker.http_api.bind_address`)
-- [ ] Prometheus configuration is dynamic (uses Tera templating)
+- ✅ Prometheus service is included by default in generated environment templates
+- ✅ Only included in docker-compose when Prometheus section present in environment config
+- ✅ Service can be disabled by removing the monitoring.prometheus section from config
+- ✅ Prometheus depends on tracker service (starts after tracker container starts, no health check)
+- ✅ Metrics API token and port read from tracker HTTP API configuration (`tracker.http_api.admin_token` and `tracker.http_api.bind_address`)
+- ✅ Prometheus configuration is dynamic (uses Tera templating)
+- ✅ **Independent Template Rendering**: Each service renders its templates independently in the release handler
+  - Prometheus templates rendered by dedicated `RenderPrometheusTemplatesStep` in release handler
+  - Tracker templates rendered by dedicated `RenderTrackerTemplatesStep` in release handler
+  - Docker Compose templates rendered by dedicated `RenderDockerComposeTemplatesStep` in release handler
+  - **Rationale**: Docker Compose templates are NOT the "master" templates - they only define service orchestration
+  - **Source of Truth**: The environment configuration determines which services are enabled
+  - **Example**: MySQL service has docker-compose configuration but no separate config files (service-specific)
 
 ### Anti-Patterns to Avoid
+
+- ❌ Making Prometheus mandatory for all deployments
+- ❌ Hardcoding API tokens in templates
+- ❌ Starting Prometheus before tracker is ready
+- ❌ Duplicating tracker endpoint configuration
+- ❌ Mixing metrics collection logic with other services
+- ❌ **Rendering service templates from within docker-compose template rendering** (CRITICAL)
+
+  - Docker Compose step should ONLY render docker-compose files
+  - Each service's templates should be rendered independently in the release handler
+  - The handler orchestrates all template rendering steps based on environment config
 
 - ❌ Making Prometheus mandatory for all deployments
 - ❌ Hardcoding API tokens in templates
@@ -72,32 +238,30 @@ The implementation follows an **enabled-by-default, opt-out approach** where Pro
 
 ### Prometheus Service Enablement
 
-**Environment Configuration Addition**:
+**Environment Configuration Addition** (top-level, alongside `tracker`):
 
 ```json
 {
-  "deployment": {
-    "tracker": {
-      "monitoring": {
-        "prometheus": {
-          "scrape_interval": 15
-        }
-      }
-    }
+  "environment": { "name": "my-deployment" },
+  "provider": { ... },
+  "ssh_credentials": { ... },
+  "tracker": { ... },
+  "prometheus": {
+    "scrape_interval": 15
   }
 }
 ```
 
 **Default Behavior in Generated Templates**:
 
-- The `monitoring.prometheus` section is **included by default** when generating environment templates
+- The `prometheus` section is **included by default** when generating environment templates
 - If the section is **present** in the environment config → Prometheus service is included in docker-compose
 - If the section is **removed/absent** from the environment config → Prometheus service is NOT included
 
 **Service Detection**:
 
-- Presence of `monitoring.prometheus` section (regardless of content) → Service enabled
-- Absence of `monitoring.prometheus` section → Service disabled
+- Presence of `prometheus` section (regardless of content) → Service enabled
+- Absence of `prometheus` section → Service disabled
 
 **Configuration Model**: Uses `Option<PrometheusConfig>` in Rust domain model:
 
@@ -202,14 +366,18 @@ scrape_configs:
 
 ### Environment Configuration Schema Extensions
 
-**Add to Domain Layer** (`src/domain/config/environment/`):
+**Add to Domain Layer** (`src/domain/prometheus/`):
 
 ```rust
-// In tracker configuration
-pub struct TrackerMonitoring {
-    pub prometheus: Option<PrometheusConfig>,
-}
+// New file: src/domain/prometheus/mod.rs
+pub mod config;
+pub use config::PrometheusConfig;
 
+// New file: src/domain/prometheus/config.rs
+/// Prometheus metrics collection configuration
+///
+/// Configures how Prometheus scrapes metrics from the tracker.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PrometheusConfig {
     /// Scrape interval in seconds
     pub scrape_interval: u32,
@@ -222,33 +390,42 @@ impl Default for PrometheusConfig {
 }
 ```
 
+**Add to Environment User Inputs** (`src/domain/environment/user_inputs.rs` or similar):
+
+The environment's user inputs struct should have a top-level optional `prometheus` field:
+
+```rust
+pub struct UserInputs {
+    pub provider: ProviderConfig,
+    pub ssh_credentials: SshCredentials,
+    pub tracker: TrackerConfig,
+    /// Prometheus metrics collection (optional third-party service)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prometheus: Option<PrometheusConfig>,
+}
+```
+
 **JSON Schema Addition** (`schemas/environment-config.json`):
 
 ```json
 {
-  "deployment": {
-    "tracker": {
-      "monitoring": {
-        "prometheus": {
-          "type": "object",
-          "description": "Prometheus metrics collection service configuration. Remove this section to disable Prometheus.",
-          "properties": {
-            "scrape_interval": {
-              "type": "integer",
-              "description": "How often to scrape metrics from tracker (in seconds). Minimum 5s to avoid overwhelming the tracker.",
-              "default": 15,
-              "minimum": 5,
-              "maximum": 300
-            }
-          }
-        }
+  "prometheus": {
+    "type": "object",
+    "description": "Prometheus metrics collection service configuration. Remove this section to disable Prometheus.",
+    "properties": {
+      "scrape_interval": {
+        "type": "integer",
+        "description": "How often to scrape metrics from tracker (in seconds). Minimum 5s to avoid overwhelming the tracker.",
+        "default": 15,
+        "minimum": 5,
+        "maximum": 300
       }
     }
   }
 }
 ```
 
-**Template Generation**: When generating environment templates with `create environment --template`, include the `monitoring.prometheus` section by default.
+**Template Generation**: When generating environment templates with `create environment --template`, include the `prometheus` section by default at the top level (alongside `tracker`).
 
 ### Template File Organization
 
@@ -327,7 +504,7 @@ volumes:
 
 - name: Copy Prometheus configuration
   ansible.builtin.copy:
-    src: "{{ build_dir }}/storage/prometheus/etc/prometheus.yml"
+    src: "{{ build_dir }}/prometheus/prometheus.yml"
     dest: /opt/torrust/storage/prometheus/etc/prometheus.yml
     mode: "0644"
   when: prometheus_config is defined
@@ -335,7 +512,13 @@ volumes:
 
 ## Implementation Plan
 
-> **Important**: After completing each phase, run `./scripts/pre-commit.sh` to verify all checks pass, then commit your changes with a descriptive message following the [commit conventions](../contributing/commit-process.md). This ensures incremental progress is saved and issues are caught early.
+> **Important Workflow**: After completing each phase:
+>
+> 1. Run `./scripts/pre-commit.sh` to verify all checks pass
+> 2. Commit your changes with a descriptive message following the [commit conventions](../contributing/commit-process.md)
+> 3. **STOP and wait for feedback/approval before proceeding to the next phase**
+>
+> This ensures incremental progress is saved, issues are caught early, and each phase is reviewed before moving forward.
 
 ### Phase 1: Template Structure & Data Flow Design (1 hour)
 
@@ -345,13 +528,17 @@ volumes:
 - [ ] Create initial `prometheus.yml.tera` template with placeholder variables
 - [ ] Verify template variables match context struct fields
 
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 2.
+
 ### Phase 2: Environment Configuration (1-2 hours)
 
-- [ ] Extend domain `TrackerConfig` with `monitoring.prometheus: Option<PrometheusConfig>` field
-- [ ] Update JSON schema with Prometheus configuration (scrape_interval field)
-- [ ] Add Prometheus config to application layer conversion methods
-- [ ] Ensure generated templates include Prometheus section by default
+- [ ] Create new domain module `src/domain/prometheus/` with `PrometheusConfig` struct
+- [ ] Add `prometheus: Option<PrometheusConfig>` to environment's `UserInputs` struct (top-level, alongside tracker)
+- [ ] Update JSON schema with Prometheus configuration (top-level)
+- [ ] Ensure generated templates include Prometheus section by default (at top level)
 - [ ] Add unit tests for Prometheus configuration serialization/deserialization (with and without section)
+
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 3.
 
 ### Phase 3: Prometheus Template Renderer (2 hours)
 
@@ -363,6 +550,8 @@ volumes:
 - [ ] Register Prometheus templates in project generator
 - [ ] Add comprehensive unit tests for renderer (with different scrape intervals, tokens, ports)
 
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 4.
+
 ### Phase 4: Docker Compose Integration (2-3 hours)
 
 **Why Phase 4**: Now we can integrate with the existing Prometheus renderer from Phase 3.
@@ -373,14 +562,18 @@ volumes:
 - [ ] Update docker-compose template renderer to handle Prometheus context
 - [ ] Add unit tests for Prometheus service rendering (with and without Prometheus section)
 
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 5.
+
 ### Phase 5: Release Command Integration (1 hour)
 
 **Why Phase 5**: Orchestrates both renderers (docker-compose + prometheus) created in previous phases.
 
 - [ ] Update `RenderTemplatesStep` to call Prometheus renderer when config present
-- [ ] Ensure Prometheus templates rendered to `build/{env}/storage/prometheus/etc/` directory
+- ✅ Ensure Prometheus templates rendered to `build/{env}/prometheus/` directory
 - [ ] Verify build directory structure includes Prometheus configuration
 - [ ] Test release command with Prometheus enabled and disabled
+
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 6.
 
 ### Phase 6: Ansible Deployment (1 hour)
 
@@ -388,6 +581,8 @@ volumes:
 - [ ] Add conditional directory creation for Prometheus
 - [ ] Add conditional file copy for prometheus.yml
 - [ ] Test Ansible playbook with Prometheus enabled/disabled
+
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 7.
 
 ### Phase 7: Testing & Verification (2-3 hours)
 
@@ -399,6 +594,8 @@ volumes:
 - [ ] Verify Prometheus scrapes metrics from tracker endpoints
 - [ ] Update manual testing documentation
 
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit changes, and **WAIT FOR APPROVAL** before Phase 8.
+
 ### Phase 8: Documentation (1 hour)
 
 - [ ] Create ADR for Prometheus integration pattern
@@ -406,6 +603,8 @@ volumes:
 - [ ] Document Prometheus UI access and basic usage
 - [ ] Add Prometheus to architecture diagrams
 - [ ] Update AGENTS.md if needed
+
+**Checkpoint**: Run `./scripts/pre-commit.sh`, commit final changes, and mark issue as complete.
 
 **Total Estimated Time**: 13-17 hours
 

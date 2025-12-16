@@ -38,6 +38,12 @@ pub enum ReleaseStep {
     RenderTrackerTemplates,
     /// Deploying tracker configuration to the remote host via Ansible
     DeployTrackerConfigToRemote,
+    /// Creating Prometheus storage directories on remote host
+    CreatePrometheusStorage,
+    /// Rendering Prometheus configuration templates to the build directory
+    RenderPrometheusTemplates,
+    /// Deploying Prometheus configuration to the remote host via Ansible
+    DeployPrometheusConfigToRemote,
     /// Rendering Docker Compose templates to the build directory
     RenderDockerComposeTemplates,
     /// Deploying compose files to the remote host via Ansible
@@ -51,6 +57,9 @@ impl fmt::Display for ReleaseStep {
             Self::InitTrackerDatabase => "Initialize Tracker Database",
             Self::RenderTrackerTemplates => "Render Tracker Templates",
             Self::DeployTrackerConfigToRemote => "Deploy Tracker Config to Remote",
+            Self::CreatePrometheusStorage => "Create Prometheus Storage",
+            Self::RenderPrometheusTemplates => "Render Prometheus Templates",
+            Self::DeployPrometheusConfigToRemote => "Deploy Prometheus Config to Remote",
             Self::RenderDockerComposeTemplates => "Render Docker Compose Templates",
             Self::DeployComposeFilesToRemote => "Deploy Compose Files to Remote",
         };

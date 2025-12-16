@@ -219,14 +219,15 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let mysql_context = DockerComposeContext::new_mysql(
-            "rootpass123".to_string(),
-            "tracker_db".to_string(),
-            "tracker_user".to_string(),
-            "userpass123".to_string(),
-            3306,
-            ports,
-        );
+        let mysql_context = DockerComposeContext::builder(ports)
+            .with_mysql(
+                "rootpass123".to_string(),
+                "tracker_db".to_string(),
+                "tracker_user".to_string(),
+                "userpass123".to_string(),
+                3306,
+            )
+            .build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();
@@ -307,7 +308,7 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let sqlite_context = DockerComposeContext::new_sqlite(ports);
+        let sqlite_context = DockerComposeContext::builder(ports).build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();
@@ -335,6 +336,121 @@ mod tests {
         assert!(
             !content.contains("mysql_data:"),
             "Should not contain mysql_data volume"
+        );
+    }
+
+    #[test]
+    fn it_should_render_prometheus_service_when_config_is_present() {
+        use crate::domain::prometheus::PrometheusConfig;
+
+        let temp_dir = TempDir::new().unwrap();
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
+
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let prometheus_config = PrometheusConfig {
+            scrape_interval: 15,
+        };
+        let context = DockerComposeContext::builder(ports)
+            .with_prometheus(prometheus_config)
+            .build();
+
+        let renderer = DockerComposeRenderer::new(template_manager);
+        let output_dir = TempDir::new().unwrap();
+
+        let result = renderer.render(&context, output_dir.path());
+        assert!(
+            result.is_ok(),
+            "Rendering with Prometheus context should succeed"
+        );
+
+        let output_path = output_dir.path().join("docker-compose.yml");
+        let rendered_content = std::fs::read_to_string(&output_path)
+            .expect("Should be able to read rendered docker-compose.yml");
+
+        // Verify Prometheus service is present
+        assert!(
+            rendered_content.contains("prometheus:"),
+            "Rendered output should contain prometheus service"
+        );
+        assert!(
+            rendered_content.contains("image: prom/prometheus:v3.0.1"),
+            "Should use Prometheus v3.0.1 image"
+        );
+        assert!(
+            rendered_content.contains("container_name: prometheus"),
+            "Should set container name"
+        );
+
+        // Verify port mapping
+        assert!(
+            rendered_content.contains("9090:9090"),
+            "Should expose Prometheus port 9090"
+        );
+
+        // Verify volume mount
+        assert!(
+            rendered_content.contains("./storage/prometheus/etc:/etc/prometheus:Z"),
+            "Should mount Prometheus config directory"
+        );
+
+        // Verify service dependency
+        assert!(
+            rendered_content.contains("depends_on:"),
+            "Should have depends_on section"
+        );
+        assert!(
+            rendered_content.contains("- tracker"),
+            "Should depend on tracker"
+        );
+
+        // Verify network
+        assert!(
+            rendered_content.contains("- backend_network"),
+            "Should be on backend_network"
+        );
+    }
+
+    #[test]
+    fn it_should_not_render_prometheus_service_when_config_is_absent() {
+        let temp_dir = TempDir::new().unwrap();
+        let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
+
+        let ports = TrackerPorts {
+            udp_tracker_ports: vec![6868, 6969],
+            http_tracker_ports: vec![7070],
+            http_api_port: 1212,
+        };
+        let context = DockerComposeContext::builder(ports).build();
+
+        let renderer = DockerComposeRenderer::new(template_manager);
+        let output_dir = TempDir::new().unwrap();
+
+        let result = renderer.render(&context, output_dir.path());
+        assert!(
+            result.is_ok(),
+            "Rendering without Prometheus context should succeed"
+        );
+
+        let output_path = output_dir.path().join("docker-compose.yml");
+        let rendered_content = std::fs::read_to_string(&output_path)
+            .expect("Should be able to read rendered docker-compose.yml");
+
+        // Verify Prometheus service is NOT present
+        assert!(
+            !rendered_content.contains("image: prom/prometheus:v3.0.1"),
+            "Should not contain Prometheus service when config absent"
+        );
+        assert!(
+            !rendered_content.contains("container_name: prometheus"),
+            "Should not have prometheus container"
+        );
+        assert!(
+            !rendered_content.contains("./storage/prometheus/etc:/etc/prometheus:Z"),
+            "Should not have prometheus volume mount"
         );
     }
 }

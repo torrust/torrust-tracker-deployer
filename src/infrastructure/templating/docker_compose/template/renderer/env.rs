@@ -98,6 +98,9 @@ impl EnvRenderer {
     /// Output filename for the rendered .env file
     const ENV_OUTPUT_FILE: &'static str = ".env";
 
+    /// Directory path for Docker Compose templates
+    const DOCKER_COMPOSE_TEMPLATE_DIR: &'static str = "docker-compose";
+
     /// Creates a new .env template renderer
     ///
     /// # Arguments
@@ -191,7 +194,11 @@ impl EnvRenderer {
     ///
     /// * `String` - The complete template path for env.tera
     fn build_template_path() -> String {
-        format!("docker-compose/{}", Self::ENV_TEMPLATE_FILE)
+        format!(
+            "{}/{}",
+            Self::DOCKER_COMPOSE_TEMPLATE_DIR,
+            Self::ENV_TEMPLATE_FILE
+        )
     }
 }
 

@@ -22,6 +22,8 @@
 //!   - `template` - Template renderers for `OpenTofu` configuration files
 //! - `tracker` - Torrust Tracker configuration management
 //!   - `template` - Template renderers for Tracker configuration files
+//! - `prometheus` - Prometheus metrics collection configuration
+//!   - `template` - Template renderers for Prometheus configuration files
 //!
 //! ## Template Rendering
 //!
@@ -32,5 +34,6 @@
 
 pub mod ansible;
 pub mod docker_compose;
+pub mod prometheus;
 pub mod tofu;
 pub mod tracker;

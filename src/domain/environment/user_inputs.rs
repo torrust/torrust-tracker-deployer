@@ -20,6 +20,7 @@
 
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::EnvironmentName;
+use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::tracker::TrackerConfig;
 use crate::domain::InstanceName;
@@ -38,6 +39,7 @@ use serde::{Deserialize, Serialize};
 /// use torrust_tracker_deployer_lib::domain::provider::{ProviderConfig, LxdConfig};
 /// use torrust_tracker_deployer_lib::domain::environment::user_inputs::UserInputs;
 /// use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
+/// use torrust_tracker_deployer_lib::domain::prometheus::PrometheusConfig;
 /// use torrust_tracker_deployer_lib::shared::Username;
 /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 /// use std::path::PathBuf;
@@ -57,6 +59,7 @@ use serde::{Deserialize, Serialize};
 ///     ),
 ///     ssh_port: 22,
 ///     tracker: TrackerConfig::default(),
+///     prometheus: Some(PrometheusConfig::default()),
 /// };
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -79,6 +82,13 @@ pub struct UserInputs {
 
     /// Tracker deployment configuration
     pub tracker: TrackerConfig,
+
+    /// Prometheus metrics collection configuration (optional)
+    ///
+    /// When present, Prometheus service is enabled in the deployment.
+    /// When absent (`None`), Prometheus service is disabled.
+    /// Default: `Some(PrometheusConfig::default())` in generated templates.
+    pub prometheus: Option<PrometheusConfig>,
 }
 
 impl UserInputs {
@@ -145,6 +155,7 @@ impl UserInputs {
             ssh_credentials,
             ssh_port,
             tracker: TrackerConfig::default(),
+            prometheus: Some(PrometheusConfig::default()),
         }
     }
 
@@ -169,6 +180,7 @@ impl UserInputs {
             ssh_credentials,
             ssh_port,
             tracker,
+            prometheus: Some(PrometheusConfig::default()),
         }
     }
 

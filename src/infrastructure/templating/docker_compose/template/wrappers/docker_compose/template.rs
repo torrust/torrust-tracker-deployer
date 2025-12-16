@@ -104,7 +104,7 @@ services:
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_sqlite(ports);
+        let context = DockerComposeContext::builder(ports).build();
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
         assert_eq!(template.database().driver(), "sqlite3");
@@ -134,14 +134,15 @@ services:
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_mysql(
-            "root123".to_string(),
-            "tracker".to_string(),
-            "user".to_string(),
-            "pass".to_string(),
-            3306,
-            ports,
-        );
+        let context = DockerComposeContext::builder(ports)
+            .with_mysql(
+                "root123".to_string(),
+                "tracker".to_string(),
+                "user".to_string(),
+                "pass".to_string(),
+                3306,
+            )
+            .build();
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
         assert_eq!(template.database().driver(), "mysql");
@@ -161,15 +162,15 @@ services:
 ";
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
-
         let ports = TrackerPorts {
             udp_tracker_ports: vec![6868, 6969],
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_sqlite(ports);
+        let context = DockerComposeContext::builder(ports).build();
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
+        // Create temp directory for output
         // Create temp directory for output
         let temp_dir = TempDir::new().unwrap();
         let output_path = temp_dir.path().join("docker-compose.yml");
@@ -195,7 +196,7 @@ services:
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let context = DockerComposeContext::new_sqlite(ports);
+        let context = DockerComposeContext::builder(ports).build();
         let result = DockerComposeTemplate::new(&template_file, context);
 
         assert!(result.is_err());

@@ -307,6 +307,8 @@ impl AnsibleProjectGenerator {
             "create-tracker-storage.yml",
             "init-tracker-database.yml",
             "deploy-tracker-config.yml",
+            "create-prometheus-storage.yml",
+            "deploy-prometheus-config.yml",
             "deploy-compose-files.yml",
             "run-compose-services.yml",
         ] {
@@ -316,7 +318,7 @@ impl AnsibleProjectGenerator {
 
         tracing::debug!(
             "Successfully copied {} static template files",
-            14 // ansible.cfg + 13 playbooks
+            16 // ansible.cfg + 15 playbooks
         );
 
         Ok(())

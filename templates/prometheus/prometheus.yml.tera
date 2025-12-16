@@ -1,0 +1,26 @@
+# Prometheus Configuration for Torrust Tracker Metrics Collection
+#
+# This configuration defines how Prometheus scrapes metrics from the Torrust Tracker.
+# It collects both aggregate statistics and detailed operational metrics.
+
+global:
+  scrape_interval: {{ scrape_interval }}s  # How often to scrape metrics from targets
+
+scrape_configs:
+  # Tracker Statistics - Aggregate metrics about tracker state
+  - job_name: "tracker_stats"
+    metrics_path: "/api/v1/stats"
+    params:
+      token: ["{{ api_token }}"]
+      format: ["prometheus"]
+    static_configs:
+      - targets: ["tracker:{{ api_port }}"]
+
+  # Tracker Metrics - Detailed operational metrics
+  - job_name: "tracker_metrics"
+    metrics_path: "/api/v1/metrics"
+    params:
+      token: ["{{ api_token }}"]
+      format: ["prometheus"]
+    static_configs:
+      - targets: ["tracker:{{ api_port }}"]

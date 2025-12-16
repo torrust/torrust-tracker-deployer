@@ -2,6 +2,7 @@ AAAAB
 AAAAC
 AAAAI
 AGENTS
+Alertmanager
 Ashburn
 Avalonia
 CIFS
@@ -40,6 +41,7 @@ Testcontain
 Testcontainers
 Testinfra
 Torrust
+Traefik
 VARCHAR
 addgroup
 adduser
@@ -86,6 +88,7 @@ ehthumbs
 elif
 endfor
 endraw
+entr
 epel
 eprint
 eprintln
@@ -93,6 +96,7 @@ equalto
 executability
 exfiltration
 exitcode
+flatlined
 frontends
 getent
 getopt
@@ -169,6 +173,7 @@ preconfigured
 preinstalls
 prereq
 println
+promtool
 publickey
 pytest
 readlink
@@ -235,6 +240,7 @@ tmpfs
 tmptu
 torrust
 tulnp
+tulpn
 turbofish
 tést
 undertested

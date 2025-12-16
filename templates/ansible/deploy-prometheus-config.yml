@@ -1,0 +1,41 @@
+---
+# Deploy Prometheus Configuration
+#
+# This playbook deploys the prometheus.yml configuration file to the remote host.
+# The configuration file is copied from the local build directory to the Prometheus
+# configuration directory on the remote instance.
+#
+# Requirements:
+# - Prometheus storage directories must exist (created by create-prometheus-storage.yml)
+# - Build directory must contain rendered prometheus.yml
+#
+# Variables:
+# - ansible_user: The SSH user for the remote host (set automatically)
+
+- name: Deploy Prometheus configuration
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Copy prometheus.yml to VM
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../prometheus/prometheus.yml"
+        # Note: This is the host path. Inside the container, it's mounted to /etc/prometheus/
+        dest: /opt/torrust/storage/prometheus/etc/prometheus.yml
+        mode: "0644"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Verify Prometheus configuration file exists
+      ansible.builtin.stat:
+        path: /opt/torrust/storage/prometheus/etc/prometheus.yml
+      register: prometheus_config
+
+    - name: Assert Prometheus configuration was deployed
+      ansible.builtin.assert:
+        that:
+          - prometheus_config.stat.exists
+          - prometheus_config.stat.isreg
+          - prometheus_config.stat.pw_name == ansible_user
+        fail_msg: "Prometheus configuration file was not deployed properly"
+        success_msg: "Prometheus configuration deployed successfully"
