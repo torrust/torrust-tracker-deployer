@@ -189,7 +189,7 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-        DockerComposeContext, TrackerPorts,
+        DockerComposeContext, MysqlSetupConfig, TrackerPorts,
     };
 
     #[test]
@@ -219,14 +219,15 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
+        let mysql_config = MysqlSetupConfig {
+            root_password: "rootpass123".to_string(),
+            database: "tracker_db".to_string(),
+            user: "tracker_user".to_string(),
+            password: "userpass123".to_string(),
+            port: 3306,
+        };
         let mysql_context = DockerComposeContext::builder(ports)
-            .with_mysql(
-                "rootpass123".to_string(),
-                "tracker_db".to_string(),
-                "tracker_user".to_string(),
-                "userpass123".to_string(),
-                3306,
-            )
+            .with_mysql(mysql_config)
             .build();
 
         let renderer = DockerComposeRenderer::new(template_manager);

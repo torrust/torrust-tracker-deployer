@@ -33,7 +33,7 @@ use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
 use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-    DockerComposeContext, DockerComposeContextBuilder, TrackerPorts,
+    DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerPorts,
 };
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
@@ -185,13 +185,15 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             password.clone(),
         );
 
-        let builder = DockerComposeContext::builder(ports).with_mysql(
+        let mysql_config = MysqlSetupConfig {
             root_password,
-            database_name,
-            username,
+            database: database_name,
+            user: username,
             password,
             port,
-        );
+        };
+
+        let builder = DockerComposeContext::builder(ports).with_mysql(mysql_config);
 
         (env_context, builder)
     }

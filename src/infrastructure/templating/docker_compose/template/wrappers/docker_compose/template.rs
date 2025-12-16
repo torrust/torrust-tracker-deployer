@@ -81,7 +81,7 @@ impl DockerComposeTemplate {
 
 #[cfg(test)]
 mod tests {
-    use super::super::context::TrackerPorts;
+    use super::super::context::{MysqlSetupConfig, TrackerPorts};
     use super::*;
 
     #[test]
@@ -134,14 +134,15 @@ services:
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
+        let mysql_config = MysqlSetupConfig {
+            root_password: "root123".to_string(),
+            database: "tracker".to_string(),
+            user: "user".to_string(),
+            password: "pass".to_string(),
+            port: 3306,
+        };
         let context = DockerComposeContext::builder(ports)
-            .with_mysql(
-                "root123".to_string(),
-                "tracker".to_string(),
-                "user".to_string(),
-                "pass".to_string(),
-                3306,
-            )
+            .with_mysql(mysql_config)
             .build();
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
