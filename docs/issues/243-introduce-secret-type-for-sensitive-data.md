@@ -1,6 +1,6 @@
 # Introduce Secret Type for Sensitive Data
 
-**Issue**: #TBD
+**Issue**: #243
 **Related**: [ADR: Secrecy Crate for Sensitive Data](../decisions/secrecy-crate-for-sensitive-data.md)
 
 ## Overview
