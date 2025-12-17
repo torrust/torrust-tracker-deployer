@@ -30,7 +30,6 @@ RAII
 RUSTDOCFLAGS
 Repomix
 Rustdoc
-runnability
 SCRIPTDIR
 Scriptability
 Silverlight
@@ -44,6 +43,7 @@ Testinfra
 Torrust
 Traefik
 VARCHAR
+Zeroize
 addgroup
 adduser
 appender
@@ -121,6 +121,7 @@ keypair
 keyrings
 larstobi
 leechers
+libc
 lifecycles
 lineinfile
 listenfd
@@ -136,10 +137,12 @@ mgmt
 millis
 mkdir
 mktemp
+mlock
 mlockfile
 mockall
 mocksecret
 momentjs
+mprotect
 mpsc
 mtorrust
 multiprocess
@@ -191,6 +194,7 @@ rpcinterface
 rstest
 runbooks
 runcmd
+runnability
 rustc
 rustflags
 rustls
@@ -260,6 +264,7 @@ viewmodel
 webservers
 writeln
 youruser
+zeroize
 Émojis
 значение
 ключ

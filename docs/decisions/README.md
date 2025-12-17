@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                                  | Summary                                                                                    |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ✅ Accepted   | 2025-12-17 | [Secrecy Crate for Sensitive Data Handling](./secrecy-crate-for-sensitive-data.md)                        | Use secrecy crate for type-safe secret handling with memory zeroing                        |
 | ✅ Accepted   | 2025-12-14 | [Database Configuration Structure in Templates](./database-configuration-structure-in-templates.md)       | Expose structured database fields in templates rather than pre-resolved connection strings |
 | ✅ Accepted   | 2025-12-13 | [Environment Variable Injection in Docker Compose](./environment-variable-injection-in-docker-compose.md) | Use .env file injection instead of hardcoded values for runtime configuration changes      |
 | ✅ Accepted   | 2025-12-11 | [Cloud-Init SSH Port Configuration with Reboot](./cloud-init-ssh-port-reboot.md)                          | Use cloud-init with reboot pattern to configure custom SSH ports during VM provisioning    |
