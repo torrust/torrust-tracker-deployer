@@ -115,7 +115,7 @@ When starting work on a new feature:
 
 ### 5. Add extra console app commands
 
-- [ ] **5.1** `torrust-tracker-deployer show` - Display environment information and current state
+- [ ] **5.1** `torrust-tracker-deployer show` - Display environment information and current state - [Issue #241](https://github.com/torrust/torrust-tracker-deployer/issues/241)
 - [x] **5.2** `torrust-tracker-deployer test` - Run application tests ✅ Completed
 - [ ] **5.3** `torrust-tracker-deployer list` - List environments or deployments
 

@@ -30,6 +30,7 @@ RAII
 RUSTDOCFLAGS
 Repomix
 Rustdoc
+runnability
 SCRIPTDIR
 Scriptability
 Silverlight
