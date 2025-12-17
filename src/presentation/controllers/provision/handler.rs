@@ -13,6 +13,9 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Provisioned;
 use crate::domain::environment::Environment;
+use crate::presentation::views::commands::provision::connection_details::{
+    ConnectionDetailsData, ConnectionDetailsView,
+};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -131,6 +134,8 @@ impl ProvisionCommandController {
 
         self.complete_workflow(environment_name)?;
 
+        self.display_connection_details(&provisioned)?;
+
         Ok(provisioned)
     }
 
@@ -213,6 +218,51 @@ impl ProvisionCommandController {
     fn complete_workflow(&mut self, name: &str) -> Result<(), ProvisionSubcommandError> {
         self.progress
             .complete(&format!("Environment '{name}' provisioned successfully"))?;
+        Ok(())
+    }
+
+    /// Display connection details after successful provisioning
+    ///
+    /// Orchestrates a functional pipeline to display SSH connection information:
+    /// `Environment<Provisioned>` → `ConnectionDetailsData` → `String` → stdout
+    ///
+    /// The output is written to stdout (not stderr) as it represents the final
+    /// command result rather than progress information.
+    ///
+    /// # MVC Architecture
+    ///
+    /// Following the MVC pattern with functional composition:
+    /// - Model: `Environment<Provisioned>` (domain model)
+    /// - DTO: `ConnectionDetailsData::from()` (data transformation)
+    /// - View: `ConnectionDetailsView::render()` (formatting)
+    /// - Controller (this method): Orchestrates the pipeline
+    /// - Output: `ProgressReporter::result()` (routing to stdout)
+    ///
+    /// # Arguments
+    ///
+    /// * `provisioned` - The provisioned environment containing connection details
+    ///
+    /// # Missing IP Handling
+    ///
+    /// If the instance IP is missing (which should not happen after successful
+    /// provisioning), the view displays a warning but does not cause an error.
+    /// This is intentional - the controller's responsibility is to display
+    /// information, not to validate state (that's the domain/application layer's job).
+    ///
+    /// # Errors
+    ///
+    /// Returns `ProvisionSubcommandError` if the `ProgressReporter` encounters
+    /// a mutex error while writing to stdout.
+    #[allow(clippy::result_large_err)]
+    fn display_connection_details(
+        &mut self,
+        provisioned: &Environment<Provisioned>,
+    ) -> Result<(), ProvisionSubcommandError> {
+        // Pipeline: Environment<Provisioned> → DTO → render → output to stdout
+        self.progress.result(&ConnectionDetailsView::render(
+            &ConnectionDetailsData::from(provisioned),
+        ))?;
+
         Ok(())
     }
 }

@@ -92,5 +92,8 @@ mod verbosity;
 // Progress indicators module (moved from presentation root for clear ownership)
 pub mod progress;
 
+// Command-specific views (organized by command)
+pub mod commands;
+
 // Testing utilities module (public for use in tests across the codebase)
 pub mod testing;
