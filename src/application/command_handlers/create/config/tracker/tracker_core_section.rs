@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
 use crate::domain::tracker::{DatabaseConfig, MysqlConfig, SqliteConfig, TrackerCoreConfig};
+use crate::shared::{Password, PlainPassword};
 
 /// Database configuration section (application DTO)
 ///
@@ -54,8 +55,11 @@ pub enum DatabaseSection {
         database_name: String,
         /// Database username
         username: String,
-        /// Database password
-        password: String,
+        /// Database password (plain text during DTO serialization/deserialization)
+        ///
+        /// Uses `PlainPassword` type alias to explicitly mark this as a temporarily visible secret.
+        /// Converted to secure `Password` type in `to_database_config()` at the DTO-to-domain boundary.
+        password: PlainPassword,
     },
 }
 
@@ -83,7 +87,7 @@ impl DatabaseSection {
                 port: *port,
                 database_name: database_name.clone(),
                 username: username.clone(),
-                password: password.clone(),
+                password: Password::from(password.as_str()),
             })),
         }
     }
@@ -222,7 +226,7 @@ mod tests {
                 port: 3306,
                 database_name: "tracker".to_string(),
                 username: "tracker_user".to_string(),
-                password: "secure_password".to_string(),
+                password: Password::from("secure_password"),
             })
         );
         assert!(!config.private);

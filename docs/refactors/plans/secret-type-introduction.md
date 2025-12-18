@@ -2,9 +2,11 @@
 
 ## 📋 Overview
 
-Introduce the `secrecy` crate's `Secret<T>` type to replace primitive `String` types for sensitive data throughout the codebase. This refactoring enhances security by clearly identifying secret values, preventing accidental exposure through logging or debugging, and ensuring secrets are securely wiped from memory when dropped.
+Introduce wrapper types based on the `secrecy` crate's `SecretString` to replace primitive `String` types for sensitive data throughout the codebase. This refactoring enhances security by clearly identifying secret values, preventing accidental exposure through logging or debugging, and ensuring secrets are securely wiped from memory when dropped.
 
-**Decision**: After evaluating custom implementation vs industry-standard solutions, we chose the `secrecy` crate (see [ADR](../../decisions/secrecy-crate-for-sensitive-data.md)).
+**Decision**: After evaluating custom implementation vs industry-standard solutions, we chose to use `secrecy::SecretString` as the foundation with thin wrapper types (see [ADR](../../decisions/secrecy-crate-for-sensitive-data.md)).
+
+**Implementation Note**: `SecretString` (which is `SecretBox<str>`) provides debug redaction and memory zeroing but cannot implement `Serialize` (requires `SerializableSecret` trait which `str` doesn't implement due to orphan rules). Our wrapper types (`ApiToken`, `Password`) add serialization support needed for config file generation in this deployment tool.
 
 **Target Files:**
 
@@ -20,12 +22,12 @@ Introduce the `secrecy` crate's `Secret<T>` type to replace primitive `String` t
 
 **Scope:**
 
-- Add `secrecy` crate dependency to project
-- Create `src/shared/secret.rs` module (re-exports and type aliases)
-- Implement `SerializableSecret` marker trait for `String`
-- Replace all `String` fields containing secrets with `Secret<String>` type
-- Update all tests to use `Secret::new()` and `expose_secret()`
-- Verify debug output redacts secrets
+- Add `secrecy` crate dependency to project (with `serde` feature)
+- Create `src/shared/secret.rs` module with `ApiToken` and `Password` wrappers around `SecretString`
+- Wrappers add: serialization support, PartialEq/Eq for testing, domain-specific types
+- Replace all `String` fields containing secrets with `ApiToken`/`Password` types
+- Update all tests to use `ApiToken::from()` / `Password::from()` and `.expose_secret()`
+- Verify debug output redacts secrets (provided by `SecretString`)
 - Document decision in ADR (already completed)
 - Update AI agent instructions
 

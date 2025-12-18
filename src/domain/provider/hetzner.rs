@@ -6,6 +6,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::shared::ApiToken;
+
 /// Hetzner-specific configuration (Domain Type)
 ///
 /// Hetzner is used for production deployments. It provides cost-effective
@@ -18,9 +20,10 @@ use serde::{Deserialize, Serialize};
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::domain::provider::HetznerConfig;
+/// use torrust_tracker_deployer_lib::shared::secrets::ApiToken;
 ///
 /// let config = HetznerConfig {
-///     api_token: "your-api-token".to_string(),
+///     api_token: ApiToken::from("your-api-token"),
 ///     server_type: "cx22".to_string(),
 ///     location: "nbg1".to_string(),
 ///     image: "ubuntu-24.04".to_string(),
@@ -30,9 +33,8 @@ use serde::{Deserialize, Serialize};
 pub struct HetznerConfig {
     /// Hetzner API token for authentication.
     ///
-    /// This should be kept secure and not committed to version control.
-    /// Note: Future improvement could use a validated `ApiToken` type.
-    pub api_token: String,
+    /// This value is kept secure and not exposed in debug output.
+    pub api_token: ApiToken,
 
     /// Hetzner server type (e.g., "cx22", "cx32", "cpx11").
     ///
@@ -55,11 +57,12 @@ pub struct HetznerConfig {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     fn create_hetzner_config() -> HetznerConfig {
         HetznerConfig {
-            api_token: "test-token".to_string(),
+            api_token: ApiToken::from("test-token"),
             server_type: "cx22".to_string(),
             location: "nbg1".to_string(),
             image: "ubuntu-24.04".to_string(),
@@ -69,12 +72,12 @@ mod tests {
     #[test]
     fn it_should_store_all_fields_when_created() {
         let config = HetznerConfig {
-            api_token: "token123".to_string(),
+            api_token: ApiToken::from("token123"),
             server_type: "cx32".to_string(),
             location: "fsn1".to_string(),
             image: "ubuntu-22.04".to_string(),
         };
-        assert_eq!(config.api_token, "token123");
+        assert_eq!(config.api_token.expose_secret(), "token123");
         assert_eq!(config.server_type, "cx32");
         assert_eq!(config.location, "fsn1");
         assert_eq!(config.image, "ubuntu-22.04");
@@ -96,7 +99,7 @@ mod tests {
         let json = r#"{"api_token":"token","server_type":"cx22","location":"nbg1","image":"ubuntu-24.04"}"#;
         let config: HetznerConfig = serde_json::from_str(json).unwrap();
 
-        assert_eq!(config.api_token, "token");
+        assert_eq!(config.api_token.expose_secret(), "token");
         assert_eq!(config.server_type, "cx22");
         assert_eq!(config.location, "nbg1");
         assert_eq!(config.image, "ubuntu-24.04");
@@ -118,5 +121,8 @@ mod tests {
         assert!(debug.contains("server_type"));
         assert!(debug.contains("location"));
         assert!(debug.contains("image"));
+        // API token should be redacted in debug output
+        assert!(debug.contains("[REDACTED]"));
+        assert!(!debug.contains("test-token"));
     }
 }

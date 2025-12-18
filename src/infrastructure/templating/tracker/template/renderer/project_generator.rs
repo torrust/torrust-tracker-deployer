@@ -147,6 +147,7 @@ mod tests {
     use std::fs;
 
     use super::*;
+    use crate::shared::Password;
 
     #[test]
     fn it_should_create_tracker_build_directory() {
@@ -261,7 +262,7 @@ mod tests {
                     port: 3306,
                     database_name: "tracker_db".to_string(),
                     username: "tracker_user".to_string(),
-                    password: "secure_pass".to_string(),
+                    password: Password::from("secure_pass"),
                 }),
                 private: false,
             },

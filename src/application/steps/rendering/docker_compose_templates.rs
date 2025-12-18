@@ -39,6 +39,7 @@ use crate::infrastructure::templating::docker_compose::template::wrappers::env::
 use crate::infrastructure::templating::docker_compose::{
     DockerComposeProjectGenerator, DockerComposeProjectGeneratorError,
 };
+use crate::shared::PlainPassword;
 
 /// Step that renders Docker Compose templates to the build directory
 ///
@@ -118,7 +119,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
                 mysql_config.port,
                 mysql_config.database_name.clone(),
                 mysql_config.username.clone(),
-                mysql_config.password.clone(),
+                mysql_config.password.expose_secret().to_string(),
             ),
         };
 
@@ -172,7 +173,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         port: u16,
         database_name: String,
         username: String,
-        password: String,
+        password: PlainPassword,
     ) -> (EnvContext, DockerComposeContextBuilder) {
         // For MySQL, generate a secure root password (in production, this should be managed securely)
         let root_password = format!("{password}_root");

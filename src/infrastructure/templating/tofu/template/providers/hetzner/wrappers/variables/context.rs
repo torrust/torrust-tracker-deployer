@@ -36,6 +36,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::domain::InstanceName;
+use crate::shared::ApiToken;
 
 /// Errors that can occur when building the Hetzner variables context
 #[derive(Error, Debug)]
@@ -73,8 +74,8 @@ pub enum VariablesContextError {
 pub struct VariablesContext {
     /// The name of the server instance to be created
     pub instance_name: InstanceName,
-    /// Hetzner Cloud API token for authentication (sensitive)
-    pub hcloud_api_token: String,
+    /// Hetzner Cloud API token for authentication (redacted in debug output)
+    pub hcloud_api_token: ApiToken,
     /// Hetzner server type (e.g., cx22, cx32, cpx11)
     pub server_type: String,
     /// Datacenter location (e.g., nbg1, fsn1, hel1)
@@ -92,7 +93,7 @@ pub struct VariablesContext {
 #[derive(Debug, Default)]
 pub struct VariablesContextBuilder {
     instance_name: Option<InstanceName>,
-    hcloud_api_token: Option<String>,
+    hcloud_api_token: Option<ApiToken>,
     server_type: Option<String>,
     server_location: Option<String>,
     server_image: Option<String>,
@@ -124,7 +125,7 @@ impl VariablesContextBuilder {
     /// * `hcloud_api_token` - The API token for Hetzner Cloud authentication
     #[must_use]
     pub fn with_hcloud_api_token(mut self, hcloud_api_token: String) -> Self {
-        self.hcloud_api_token = Some(hcloud_api_token);
+        self.hcloud_api_token = Some(ApiToken::from(hcloud_api_token));
         self
     }
 
@@ -245,7 +246,7 @@ mod tests {
         let context = create_valid_builder().build().unwrap();
 
         assert_eq!(context.instance_name.as_str(), "test-vm");
-        assert_eq!(context.hcloud_api_token, "test-token");
+        assert_eq!(context.hcloud_api_token.expose_secret(), "test-token");
         assert_eq!(context.server_type, "cx22");
         assert_eq!(context.server_location, "nbg1");
         assert_eq!(context.server_image, "ubuntu-24.04");
@@ -374,7 +375,10 @@ mod tests {
             context.instance_name.as_str(),
             cloned.instance_name.as_str()
         );
-        assert_eq!(context.hcloud_api_token, cloned.hcloud_api_token);
+        assert_eq!(
+            context.hcloud_api_token.expose_secret(),
+            cloned.hcloud_api_token.expose_secret()
+        );
     }
 
     #[test]
@@ -384,5 +388,8 @@ mod tests {
 
         assert!(debug.contains("VariablesContext"));
         assert!(debug.contains("instance_name"));
+        // API token should be redacted in debug output
+        assert!(debug.contains("[REDACTED]"));
+        assert!(!debug.contains("test-token"));
     }
 }

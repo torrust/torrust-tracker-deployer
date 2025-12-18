@@ -257,7 +257,7 @@ mod tests {
     use super::*;
     use crate::domain::provider::LxdConfig;
     use crate::domain::ProfileName;
-    use crate::shared::Username;
+    use crate::shared::{ApiToken, Username};
     use std::path::PathBuf;
 
     fn create_test_ssh_credentials() -> SshCredentials {
@@ -310,7 +310,7 @@ mod tests {
 
         let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
         let provider_config = ProviderConfig::Hetzner(HetznerConfig {
-            api_token: "test-token".to_string(),
+            api_token: ApiToken::from("test-token"),
             server_type: "cx22".to_string(),
             location: "nbg1".to_string(),
             image: "ubuntu-24.04".to_string(),
@@ -323,7 +323,7 @@ mod tests {
         assert!(user_inputs.provider_config().as_lxd().is_none());
 
         let hetzner_config = user_inputs.provider_config().as_hetzner().unwrap();
-        assert_eq!(hetzner_config.api_token, "test-token");
+        assert_eq!(hetzner_config.api_token.expose_secret(), "test-token");
         assert_eq!(hetzner_config.server_type, "cx22");
         assert_eq!(hetzner_config.location, "nbg1");
         assert_eq!(hetzner_config.image, "ubuntu-24.04");

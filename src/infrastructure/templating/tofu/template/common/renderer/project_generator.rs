@@ -532,7 +532,7 @@ impl TofuProjectGenerator {
         // Build Hetzner context for template rendering
         let context = HetznerVariablesContextBuilder::new()
             .with_instance_name(self.instance_name.clone())
-            .with_hcloud_api_token(hetzner_config.api_token.clone())
+            .with_hcloud_api_token(hetzner_config.api_token.expose_secret().to_string())
             .with_server_type(hetzner_config.server_type.clone())
             .with_server_location(hetzner_config.location.clone())
             .with_server_image(hetzner_config.image.clone())
