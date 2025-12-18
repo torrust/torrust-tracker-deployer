@@ -5,11 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
 use crate::domain::tracker::HttpApiConfig;
+use crate::shared::secrets::PlainApiToken;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct HttpApiSection {
     pub bind_address: String,
-    pub admin_token: String,
+    pub admin_token: PlainApiToken,
 }
 
 impl HttpApiSection {
@@ -38,7 +39,7 @@ impl HttpApiSection {
         // Domain type now uses SocketAddr (Step 0.7 completed)
         Ok(HttpApiConfig {
             bind_address,
-            admin_token: self.admin_token.clone(),
+            admin_token: self.admin_token.clone().into(),
         })
     }
 }
@@ -62,7 +63,7 @@ mod tests {
             config.bind_address,
             "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
         );
-        assert_eq!(config.admin_token, "MyAccessToken");
+        assert_eq!(config.admin_token.expose_secret(), "MyAccessToken");
     }
 
     #[test]

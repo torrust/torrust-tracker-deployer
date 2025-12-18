@@ -106,6 +106,7 @@ impl DatabaseConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::Password;
 
     #[test]
     fn it_should_create_sqlite_database_config() {
@@ -143,12 +144,14 @@ mod tests {
 
     #[test]
     fn it_should_create_mysql_database_config() {
+        use crate::shared::Password;
+
         let config = DatabaseConfig::Mysql(MysqlConfig {
             host: "localhost".to_string(),
             port: 3306,
             database_name: "tracker".to_string(),
             username: "tracker_user".to_string(),
-            password: "secure_password".to_string(),
+            password: Password::from("secure_password"),
         });
 
         assert_eq!(config.driver_name(), "mysql");
@@ -157,12 +160,14 @@ mod tests {
 
     #[test]
     fn it_should_serialize_mysql_config() {
+        use crate::shared::Password;
+
         let config = DatabaseConfig::Mysql(MysqlConfig {
             host: "mysql".to_string(),
             port: 3306,
             database_name: "tracker".to_string(),
             username: "tracker_user".to_string(),
-            password: "pass123".to_string(),
+            password: Password::from("pass123"),
         });
 
         let json = serde_json::to_value(&config).unwrap();
@@ -194,7 +199,7 @@ mod tests {
                 assert_eq!(mysql_config.port, 3306);
                 assert_eq!(mysql_config.database_name, "tracker");
                 assert_eq!(mysql_config.username, "tracker_user");
-                assert_eq!(mysql_config.password, "secure_password");
+                assert_eq!(mysql_config.password, Password::from("secure_password"));
             }
             DatabaseConfig::Sqlite(..) => panic!("Expected Mysql variant"),
         }

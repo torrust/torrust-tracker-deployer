@@ -46,6 +46,7 @@ use serde::{Deserialize, Serialize};
 use crate::application::command_handlers::create::config::CreateConfigError;
 use crate::domain::provider::{HetznerConfig, LxdConfig, Provider, ProviderConfig};
 use crate::domain::ProfileName;
+use crate::shared::ApiToken;
 
 /// Provider-specific configuration section
 ///
@@ -147,7 +148,7 @@ impl ProviderSection {
             Self::Hetzner(hetzner) => {
                 // Note: Future improvement could add validation for these fields
                 Ok(ProviderConfig::Hetzner(HetznerConfig {
-                    api_token: hetzner.api_token,
+                    api_token: ApiToken::from(hetzner.api_token),
                     server_type: hetzner.server_type,
                     location: hetzner.location,
                     image: hetzner.image,
@@ -266,7 +267,7 @@ mod tests {
         assert_eq!(config.provider_name(), "hetzner");
 
         let hetzner = config.as_hetzner().unwrap();
-        assert_eq!(hetzner.api_token, "test-token");
+        assert_eq!(hetzner.api_token.expose_secret(), "test-token");
         assert_eq!(hetzner.server_type, "cx22");
         assert_eq!(hetzner.location, "nbg1");
         assert_eq!(hetzner.image, "ubuntu-24.04");

@@ -7,6 +7,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::shared::PlainApiToken;
+
 /// Hetzner-specific configuration section
 ///
 /// Uses raw `String` fields for JSON deserialization. Convert to domain
@@ -26,8 +28,11 @@ use serde::{Deserialize, Serialize};
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct HetznerProviderSection {
-    /// Hetzner API token (raw string).
-    pub api_token: String,
+    /// Hetzner API token in plain text format (DTO layer).
+    ///
+    /// This uses [`PlainApiToken`] to mark it as a transparent secret during
+    /// deserialization. Convert to domain `ApiToken` at the DTO-to-domain boundary.
+    pub api_token: PlainApiToken,
 
     /// Hetzner server type (e.g., "cx22", "cx32", "cpx11").
     pub server_type: String,

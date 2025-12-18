@@ -5,7 +5,13 @@
 
 ## Overview
 
-Replace all primitive `String` types used for sensitive data (API tokens, passwords, database credentials) with the industry-standard `secrecy` crate's `Secret<String>` type. This enhances security by preventing accidental exposure through logging/debug output and enabling automatic memory zeroing.
+Replace all primitive `String` types used for sensitive data (API tokens, passwords, database credentials) with wrapper types based on the industry-standard `secrecy` crate's `SecretString` type. This enhances security by preventing accidental exposure through logging/debug output and enabling automatic memory zeroing.
+
+**Implementation Approach**: We use `secrecy::SecretString` as the foundation (which is a type alias for `SecretBox<str>`) and wrap it in domain-specific types (`ApiToken`, `Password`) that add:
+
+- Serialization support (secrecy intentionally doesn't serialize secrets by default)
+- PartialEq/Eq for config comparison in tests
+- Domain-specific type safety
 
 ## Refactor Plan
 
@@ -20,9 +26,9 @@ The plan includes:
 
 ## Goals
 
-- [ ] Replace 16 string-based secret fields with `Secret<String>` type
-- [ ] Prevent accidental secret exposure in logs and debug output
-- [ ] Enable secure memory zeroing for sensitive data
+- [ ] Replace 16 string-based secret fields with `ApiToken`/`Password` wrapper types
+- [ ] Leverage `SecretString` for automatic debug redaction and memory zeroing
+- [ ] Add serialization support for config file generation (deployment tool needs this)
 - [ ] Update documentation with secret handling guidelines
 
 ## Acceptance Criteria
@@ -35,7 +41,8 @@ The plan includes:
 
 **Task-Specific Criteria**:
 
-- [ ] All 16 secret fields converted to `Secret<String>` (tracked in refactor plan)
+- [ ] All 16 secret fields converted to `ApiToken`/`Password` types (tracked in refactor plan)
+- [ ] Wrapper types use `SecretString` internally for debug redaction and memory zeroing
 - [ ] No secrets appear in debug/display output
 - [ ] All unit tests pass with updated secret types
 - [ ] All E2E tests pass with secret handling

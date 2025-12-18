@@ -118,6 +118,7 @@ impl ProviderConfig {
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::provider::{ProviderConfig, LxdConfig, HetznerConfig};
     /// use torrust_tracker_deployer_lib::domain::ProfileName;
+    /// use torrust_tracker_deployer_lib::shared::secrets::ApiToken;
     ///
     /// let lxd_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new("test").unwrap(),
@@ -125,7 +126,7 @@ impl ProviderConfig {
     /// assert!(lxd_config.as_lxd().is_some());
     ///
     /// let hetzner_config = ProviderConfig::Hetzner(HetznerConfig {
-    ///     api_token: "token".to_string(),
+    ///     api_token: ApiToken::from("token"),
     ///     server_type: "cx22".to_string(),
     ///     location: "nbg1".to_string(),
     ///     image: "ubuntu-24.04".to_string(),
@@ -167,8 +168,10 @@ mod tests {
     }
 
     fn create_hetzner_config() -> ProviderConfig {
+        use crate::shared::ApiToken;
+
         ProviderConfig::Hetzner(HetznerConfig {
-            api_token: "test-token".to_string(),
+            api_token: ApiToken::from("test-token"),
             server_type: "cx22".to_string(),
             location: "nbg1".to_string(),
             image: "ubuntu-24.04".to_string(),
@@ -242,7 +245,7 @@ mod tests {
 
         assert_eq!(config.provider(), Provider::Hetzner);
         let hetzner = config.as_hetzner().unwrap();
-        assert_eq!(hetzner.api_token, "token");
+        assert_eq!(hetzner.api_token.expose_secret(), "token");
         assert_eq!(hetzner.server_type, "cx22");
         assert_eq!(hetzner.location, "nbg1");
         assert_eq!(hetzner.image, "ubuntu-24.04");

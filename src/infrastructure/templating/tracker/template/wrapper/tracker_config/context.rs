@@ -42,7 +42,7 @@ use crate::domain::environment::TrackerConfig;
 ///     ],
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
-///         admin_token: "MyToken".to_string(),
+///         admin_token: "MyToken".to_string().into(),
 ///     },
 /// };
 /// let context = TrackerContext::from_config(&tracker_config);
@@ -117,7 +117,7 @@ impl TrackerContext {
                     Some(mysql_config.port),
                     Some(mysql_config.database_name.clone()),
                     Some(mysql_config.username.clone()),
-                    Some(mysql_config.password.clone()),
+                    Some(mysql_config.password.expose_secret().to_string()),
                 ),
                 DatabaseConfig::Sqlite(..) => (None, None, None, None, None),
             };
@@ -197,6 +197,7 @@ mod tests {
         DatabaseConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig, SqliteConfig, TrackerConfig,
         TrackerCoreConfig, UdpTrackerConfig,
     };
+    use crate::shared::Password;
 
     fn create_test_tracker_config() -> TrackerConfig {
         TrackerConfig {
@@ -219,7 +220,7 @@ mod tests {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_admin_token".to_string(),
+                admin_token: "test_admin_token".to_string().into(),
             },
         }
     }
@@ -253,7 +254,7 @@ mod tests {
                     port: 3306,
                     database_name: "tracker_db".to_string(),
                     username: "tracker_user".to_string(),
-                    password: "secure_pass".to_string(),
+                    password: Password::from("secure_pass"),
                 }),
                 private: false,
             },
@@ -265,7 +266,7 @@ mod tests {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_token".to_string(),
+                admin_token: "test_token".to_string().into(),
             },
         };
 

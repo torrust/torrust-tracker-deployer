@@ -8,6 +8,7 @@ use std::net::SocketAddr;
 use serde::{Deserialize, Serialize};
 
 use super::{DatabaseConfig, SqliteConfig};
+use crate::shared::ApiToken;
 
 /// Tracker deployment configuration
 ///
@@ -37,7 +38,7 @@ use super::{DatabaseConfig, SqliteConfig};
 ///     ],
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
-///         admin_token: "MyAccessToken".to_string(),
+///         admin_token: "MyAccessToken".to_string().into(),
 ///     },
 /// };
 /// ```
@@ -99,7 +100,7 @@ pub struct HttpApiConfig {
     pub bind_address: SocketAddr,
 
     /// Admin access token for HTTP API authentication
-    pub admin_token: String,
+    pub admin_token: ApiToken,
 }
 
 impl Default for TrackerConfig {
@@ -129,7 +130,7 @@ impl Default for TrackerConfig {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().expect("valid address"),
-                admin_token: "MyAccessToken".to_string(),
+                admin_token: "MyAccessToken".to_string().into(),
             },
         }
     }
@@ -171,7 +172,7 @@ mod tests {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_token".to_string(),
+                admin_token: "test_token".to_string().into(),
             },
         };
 
@@ -194,7 +195,7 @@ mod tests {
             http_trackers: vec![],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "token123".to_string(),
+                admin_token: "token123".to_string().into(),
             },
         };
 
@@ -233,6 +234,6 @@ mod tests {
             config.http_api.bind_address,
             "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
         );
-        assert_eq!(config.http_api.admin_token, "MyAccessToken");
+        assert_eq!(config.http_api.admin_token.expose_secret(), "MyAccessToken");
     }
 }

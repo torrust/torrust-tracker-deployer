@@ -66,7 +66,7 @@
               "type": "string"
             },
             "password": {
-              "description": "Database password",
+              "description": "Database password (plain text during DTO serialization/deserialization)\n\nUses `PlainPassword` type alias to explicitly mark this as a temporarily visible secret.\nConverted to secure `Password` type in `to_database_config()` at the DTO-to-domain boundary.",
               "type": "string"
             },
             "port": {
@@ -118,7 +118,7 @@
       "type": "object",
       "properties": {
         "api_token": {
-          "description": "Hetzner API token (raw string).",
+          "description": "Hetzner API token in plain text format (DTO layer).\n\nThis uses [`PlainApiToken`] to mark it as a transparent secret during\ndeserialization. Convert to domain `ApiToken` at the DTO-to-domain boundary.",
           "type": "string"
         },
         "image": {

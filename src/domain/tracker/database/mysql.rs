@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::shared::Password;
+
 /// `MySQL` database configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MysqlConfig {
@@ -13,12 +15,13 @@ pub struct MysqlConfig {
     pub database_name: String,
     /// Database username
     pub username: String,
-    /// Database password
-    pub password: String,
+    /// Database password (redacted in debug output)
+    pub password: Password,
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -28,14 +31,14 @@ mod tests {
             port: 3306,
             database_name: "tracker".to_string(),
             username: "tracker_user".to_string(),
-            password: "secure_password".to_string(),
+            password: Password::from("secure_password"),
         };
 
         assert_eq!(config.host, "localhost");
         assert_eq!(config.port, 3306);
         assert_eq!(config.database_name, "tracker");
         assert_eq!(config.username, "tracker_user");
-        assert_eq!(config.password, "secure_password");
+        assert_eq!(config.password.expose_secret(), "secure_password");
     }
 
     #[test]
@@ -45,7 +48,7 @@ mod tests {
             port: 3306,
             database_name: "tracker".to_string(),
             username: "tracker_user".to_string(),
-            password: "pass123".to_string(),
+            password: Password::from("pass123"),
         };
 
         let json = serde_json::to_value(&config).unwrap();
@@ -71,6 +74,6 @@ mod tests {
         assert_eq!(config.port, 3306);
         assert_eq!(config.database_name, "tracker");
         assert_eq!(config.username, "tracker_user");
-        assert_eq!(config.password, "secure_password");
+        assert_eq!(config.password.expose_secret(), "secure_password");
     }
 }

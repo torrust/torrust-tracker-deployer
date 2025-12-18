@@ -147,6 +147,7 @@ mod tests {
     use std::fs;
 
     use super::*;
+    use crate::shared::Password;
 
     #[test]
     fn it_should_create_tracker_build_directory() {
@@ -226,7 +227,7 @@ mod tests {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_token".to_string(),
+                admin_token: "test_token".to_string().into(),
             },
         };
 
@@ -261,7 +262,7 @@ mod tests {
                     port: 3306,
                     database_name: "tracker_db".to_string(),
                     username: "tracker_user".to_string(),
-                    password: "secure_pass".to_string(),
+                    password: Password::from("secure_pass"),
                 }),
                 private: false,
             },
@@ -273,7 +274,7 @@ mod tests {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_token".to_string(),
+                admin_token: "test_token".to_string().into(),
             },
         };
 
