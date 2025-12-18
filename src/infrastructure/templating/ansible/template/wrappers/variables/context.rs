@@ -201,7 +201,7 @@ mod tests {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "MyAccessToken".to_string(),
+                admin_token: "MyAccessToken".to_string().into(),
             },
         };
 
@@ -229,7 +229,7 @@ mod tests {
             http_trackers: vec![],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "Token123".to_string(),
+                admin_token: "Token123".to_string().into(),
             },
         };
 
@@ -267,7 +267,7 @@ mod tests {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "Token".to_string(),
+                admin_token: "Token".to_string().into(),
             },
         };
 

@@ -2,6 +2,8 @@
 
 use std::path::PathBuf;
 
+use crate::shared::secrets::PlainPassword;
+
 use super::constants::{
     CONTAINER_STARTUP_WAIT_SECS, DEFAULT_TEST_PASSWORD, DEFAULT_TEST_USERNAME, DOCKERFILE_DIR,
     MOCK_SSH_PORT, SSH_SERVER_IMAGE_NAME, SSH_SERVER_IMAGE_TAG,
@@ -40,7 +42,7 @@ pub struct SshServerConfig {
     pub username: String,
 
     /// Test password configured in the SSH server
-    pub password: String,
+    pub password: PlainPassword,
 
     /// Container startup wait time in seconds
     pub startup_wait_secs: u64,
@@ -119,7 +121,7 @@ pub struct SshServerConfigBuilder {
     image_name: Option<String>,
     image_tag: Option<String>,
     username: Option<String>,
-    password: Option<String>,
+    password: Option<PlainPassword>,
     startup_wait_secs: Option<u64>,
     dockerfile_dir: Option<PathBuf>,
     mock_port: Option<u16>,
@@ -149,7 +151,7 @@ impl SshServerConfigBuilder {
 
     /// Set the test password
     #[must_use]
-    pub fn password(mut self, password: impl Into<String>) -> Self {
+    pub fn password(mut self, password: impl Into<PlainPassword>) -> Self {
         self.password = Some(password.into());
         self
     }

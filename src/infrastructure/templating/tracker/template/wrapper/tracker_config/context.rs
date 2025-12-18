@@ -42,7 +42,7 @@ use crate::domain::environment::TrackerConfig;
 ///     ],
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
-///         admin_token: "MyToken".to_string(),
+///         admin_token: "MyToken".to_string().into(),
 ///     },
 /// };
 /// let context = TrackerContext::from_config(&tracker_config);
@@ -220,7 +220,7 @@ mod tests {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_admin_token".to_string(),
+                admin_token: "test_admin_token".to_string().into(),
             },
         }
     }
@@ -266,7 +266,7 @@ mod tests {
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_token".to_string(),
+                admin_token: "test_token".to_string().into(),
             },
         };
 

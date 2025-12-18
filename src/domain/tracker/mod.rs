@@ -37,7 +37,7 @@
 //!     ],
 //!     http_api: HttpApiConfig {
 //!         bind_address: "0.0.0.0:1212".parse().unwrap(),
-//!         admin_token: "MyToken".to_string(),
+//!         admin_token: "MyToken".to_string().into(),
 //!     },
 //! };
 //! ```

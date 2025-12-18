@@ -328,7 +328,11 @@ impl EnvironmentContext {
     /// Returns the admin token
     #[must_use]
     pub fn admin_token(&self) -> &str {
-        &self.user_inputs.tracker.http_api.admin_token
+        self.user_inputs
+            .tracker
+            .http_api
+            .admin_token
+            .expose_secret()
     }
 
     /// Returns the Prometheus configuration if enabled
