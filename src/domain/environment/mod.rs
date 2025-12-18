@@ -896,7 +896,10 @@ impl<S> Environment<S> {
 mod tests {
     use super::*;
     use crate::adapters::ssh::SshCredentials;
+    use crate::domain::grafana::GrafanaConfig;
+    use crate::domain::prometheus::PrometheusConfig;
     use crate::domain::provider::{LxdConfig, ProviderConfig};
+    use crate::domain::tracker::TrackerConfig;
     use crate::domain::EnvironmentName;
     use std::path::Path;
     use tempfile::TempDir;
@@ -1042,8 +1045,9 @@ mod tests {
                     provider_config,
                     ssh_credentials,
                     ssh_port: 22,
-                    tracker: crate::domain::tracker::TrackerConfig::default(),
-                    prometheus: Some(crate::domain::prometheus::PrometheusConfig::default()),
+                    tracker: TrackerConfig::default(),
+                    prometheus: Some(PrometheusConfig::default()),
+                    grafana: Some(GrafanaConfig::default()),
                 },
                 internal_config: InternalConfig {
                     data_dir: data_dir.clone(),
