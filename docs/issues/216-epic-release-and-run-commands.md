@@ -60,9 +60,11 @@ Slices will be implemented sequentially, each delivering a working deployment:
   - Configure tracker metrics endpoint
   - **Specification**: [docs/issues/238-prometheus-slice-release-run-commands.md](238-prometheus-slice-release-run-commands.md)
 
-- [ ] **3.2.5** Grafana slice
+- [ ] **3.2.5** Grafana slice - #246
+
   - Add Grafana service for metrics visualization
   - Include basic dashboard configuration
+  - **Specification**: [docs/issues/246-grafana-slice-release-run-commands.md](246-grafana-slice-release-run-commands.md)
 
 (Individual task issues will be created and linked as work progresses)
 
