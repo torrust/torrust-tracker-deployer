@@ -97,6 +97,10 @@ pub enum CreateConfigError {
         #[source]
         source: std::io::Error,
     },
+
+    /// Grafana requires Prometheus to be enabled
+    #[error("Grafana requires Prometheus to be enabled")]
+    GrafanaRequiresPrometheus,
 }
 
 impl CreateConfigError {
@@ -366,6 +370,31 @@ impl CreateConfigError {
                  3. Ensure the file is not open in another application\n\
                  4. Check if antivirus software is blocking file creation"
             }
+            Self::GrafanaRequiresPrometheus => {
+                "Grafana requires Prometheus to be enabled.\n\
+                 \n\
+                 Grafana is a visualization tool that displays metrics collected by Prometheus.\n\
+                 It cannot function without Prometheus as its data source.\n\
+                 \n\
+                 Current configuration issue:\n\
+                 - Grafana section is present in your configuration\n\
+                 - Prometheus section is absent or disabled\n\
+                 \n\
+                 Fix (choose one):\n\
+                 \n\
+                 Option 1 - Enable Prometheus:\n\
+                 Add a prometheus section to your environment configuration:\n\
+                 \n\
+                 \"prometheus\": {\n\
+                   \"scrape_interval\": 15\n\
+                 }\n\
+                 \n\
+                 Option 2 - Disable Grafana:\n\
+                 Remove the grafana section from your environment configuration\n\
+                 \n\
+                 Note: Prometheus can run independently without Grafana, but Grafana\n\
+                 requires Prometheus to be enabled."
+            }
         }
     }
 }
@@ -507,5 +536,17 @@ mod tests {
         assert!(error.to_string().contains("/test/file.json"));
         assert!(error.help().contains("permissions"));
         assert!(error.help().contains("disk space"));
+    }
+
+    #[test]
+    fn it_should_return_error_when_grafana_requires_prometheus() {
+        let error = CreateConfigError::GrafanaRequiresPrometheus;
+
+        assert!(error.to_string().contains("Grafana requires Prometheus"));
+        assert!(error.help().contains("Grafana section is present"));
+        assert!(error.help().contains("Prometheus section is absent"));
+        assert!(error.help().contains("Add a prometheus section"));
+        assert!(error.help().contains("Remove the grafana section"));
+        assert!(error.help().contains("scrape_interval"));
     }
 }
