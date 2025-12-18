@@ -36,9 +36,9 @@ Introduce wrapper types based on the `secrecy` crate's `SecretString` to replace
 **Total Active Proposals**: 10
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 7
+**Completed**: 9
 **In Progress**: 0
-**Not Started**: 3
+**Not Started**: 1
 
 ### Phase Summary
 
@@ -46,7 +46,7 @@ Introduce wrapper types based on the `secrecy` crate's `SecretString` to replace
 - **Phase 1 - Provider Secrets (High Impact, Medium Effort)**: ✅ 2/2 completed (100%)
 - **Phase 2 - Database Secrets (High Impact, Medium Effort)**: ✅ 2/2 completed (100%)
 - **Phase 3 - Documentation and Guidance (High Impact, Low Effort)**: ✅ 2/2 completed (100%) - ADR and AGENTS.md completed
-- **Phase 4 - Future Enhancements (Low Impact, Medium Effort)**: ⏳ 0/3 completed (0%)
+- **Phase 4 - Future Enhancements (Low Impact, Medium Effort)**: ✅ 2/3 completed (67%) - Proposals #9 and #10 verified
 
 ### Discarded Proposals
 
@@ -913,7 +913,7 @@ Build in debug mode and verify trace messages appear. Build in release mode and 
 
 ### Proposal #9: Add `expose_str()` Convenience Method
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed (Already Implemented)  
 **Impact**: 🟢 Low  
 **Effort**: 🔵 Low  
 **Priority**: P4  
@@ -980,7 +980,7 @@ Test that method returns correct `&str` reference.
 
 ### Proposal #10: Verify JSON Schema Support for `Secret`
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Verified  
 **Impact**: 🟢 Low  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P4  
