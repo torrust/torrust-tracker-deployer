@@ -54,7 +54,7 @@ Slices will be implemented sequentially, each delivering a working deployment:
   - Allow user to choose between SQLite and MySQL in environment config
   - **Specification**: [docs/issues/232-mysql-slice-release-run-commands.md](232-mysql-slice-release-run-commands.md)
 
-- [ ] **3.2.4** Prometheus slice - #238
+- [x] **3.2.4** Prometheus slice - ✅ #238
 
   - Add Prometheus service for metrics collection
   - Configure tracker metrics endpoint
