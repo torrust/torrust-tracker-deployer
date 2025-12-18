@@ -36,16 +36,16 @@ Introduce wrapper types based on the `secrecy` crate's `SecretString` to replace
 **Total Active Proposals**: 10
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 1
+**Completed**: 7
 **In Progress**: 0
-**Not Started**: 9
+**Not Started**: 3
 
 ### Phase Summary
 
-- **Phase 0 - Core Setup (High Impact, Low Effort)**: ⏳ 0/2 completed (0%)
-- **Phase 1 - Provider Secrets (High Impact, Medium Effort)**: ⏳ 0/2 completed (0%)
-- **Phase 2 - Database Secrets (High Impact, Medium Effort)**: ⏳ 0/2 completed (0%)
-- **Phase 3 - Documentation and Guidance (High Impact, Low Effort)**: ✅ 1/2 completed (50%) - ADR completed
+- **Phase 0 - Core Setup (High Impact, Low Effort)**: ✅ 2/2 completed (100%)
+- **Phase 1 - Provider Secrets (High Impact, Medium Effort)**: ✅ 2/2 completed (100%)
+- **Phase 2 - Database Secrets (High Impact, Medium Effort)**: ✅ 2/2 completed (100%)
+- **Phase 3 - Documentation and Guidance (High Impact, Low Effort)**: ✅ 2/2 completed (100%) - ADR and AGENTS.md completed
 - **Phase 4 - Future Enhancements (Low Impact, Medium Effort)**: ⏳ 0/3 completed (0%)
 
 ### Discarded Proposals
@@ -162,7 +162,7 @@ This phase creates the foundational `Secret` type that will be used throughout t
 
 ### Proposal #0: Add `secrecy` Crate and Setup Module
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0  
@@ -333,7 +333,7 @@ Unit tests should verify:
 
 ### Proposal #1: Export Secret Types from `src/shared/mod.rs`
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P0  
@@ -395,7 +395,7 @@ Replace `String` with `Secret` types in provider configurations. Hetzner API tok
 
 ### Proposal #2: Replace Hetzner API Token with `ApiToken`
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P1  
@@ -494,7 +494,7 @@ Run existing tests and ensure:
 
 ### Proposal #3: Update Provider Config Enum
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢 Medium  
 **Effort**: 🔵 Low  
 **Priority**: P1  
@@ -558,7 +558,7 @@ Replace database password strings with `Password` type.
 
 ### Proposal #4: Replace MySQL Password with `Password` Type
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵🔵 Medium  
 **Priority**: P2  
@@ -657,7 +657,7 @@ Run existing tests and ensure:
 
 ### Proposal #5: Update Database Config Enum
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢 Medium  
 **Effort**: 🔵 Low  
 **Priority**: P2  
@@ -766,7 +766,7 @@ The ADR documents:
 
 ### Proposal #7: Update AGENTS.md with Secret Handling Rule
 
-**Status**: ⏳ Not Started  
+**Status**: ✅ Completed  
 **Impact**: 🟢🟢🟢 High  
 **Effort**: 🔵 Low  
 **Priority**: P3  

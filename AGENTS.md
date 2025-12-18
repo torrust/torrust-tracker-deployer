@@ -148,6 +148,8 @@ These principles should guide all development decisions, code reviews, and featu
 
 17. **When writing unit tests** (CRITICAL for test quality): Read [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) and follow the behavior-driven naming convention. **NEVER use the `test_` prefix** for test function names. Always use the `it_should_{expected_behavior}_when_{condition}` or `it_should_{expected_behavior}_given_{state}` pattern. This ensures tests clearly document the behavior being validated and the conditions under which it occurs. Example: `it_should_return_error_when_username_is_invalid()` instead of `test_invalid_username()`. Test names should follow the three-part structure (What-When-Then) and be descriptive enough that the test's purpose is clear without reading the code.
 
+18. **When handling sensitive data (secrets)** (CRITICAL for security): Read [`docs/contributing/secret-handling.md`](docs/contributing/secret-handling.md) for the complete guide. **NEVER use `String` for sensitive data like API tokens, passwords, private keys, or database credentials**. Always use wrapper types from `src/shared/secrets/`: `ApiToken` for API tokens, `Password` for passwords, and their plain type aliases (`PlainApiToken`/`PlainPassword`) at DTO boundaries. Call `.expose_secret()` only when the actual value is needed. See the [ADR](docs/decisions/secrecy-crate-for-sensitive-data.md) for architectural rationale.
+
 ## 🧪 Build & Test
 
 - **Setup Dependencies**: `cargo run --bin dependency-installer install` (sets up required development tools)
