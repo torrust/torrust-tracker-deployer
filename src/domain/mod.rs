@@ -14,6 +14,7 @@
 //! - `template` - Core template domain models and business logic
 
 pub mod environment;
+pub mod grafana;
 pub mod instance_name;
 pub mod profile_name;
 pub mod prometheus;
