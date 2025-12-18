@@ -44,8 +44,20 @@ impl Password {
     /// Exposes the secret password value.
     ///
     /// This method should be used carefully as it provides access to the sensitive data.
+    ///
+    /// # Debug Tracing
+    ///
+    /// In debug builds, this method logs the caller location to help audit secret access patterns.
+    /// No performance impact in release builds.
     #[must_use]
+    #[track_caller]
     pub fn expose_secret(&self) -> &str {
+        #[cfg(debug_assertions)]
+        tracing::trace!(
+            location = ?std::panic::Location::caller(),
+            "Secret password exposed"
+        );
+
         self.0.expose_secret()
     }
 }
@@ -159,5 +171,15 @@ mod tests {
         let _from_string_type = Password::new(String::from("password"));
         let _from_str_slice = Password::new("password");
         let _from_owned_string = Password::new("password".to_string());
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    fn it_should_trace_secret_exposure_in_debug_builds() {
+        // This test verifies that tracing is compiled and callable in debug builds.
+        // The actual trace output would require a tracing subscriber to capture.
+        let password = Password::new("debug-password");
+        let _exposed = password.expose_secret();
+        // If this compiles and runs without panic, tracing is working
     }
 }

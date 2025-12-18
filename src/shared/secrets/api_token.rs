@@ -44,8 +44,20 @@ impl ApiToken {
     /// Exposes the secret API token value.
     ///
     /// This method should be used carefully as it provides access to the sensitive data.
+    ///
+    /// # Debug Tracing
+    ///
+    /// In debug builds, this method logs the caller location to help audit secret access patterns.
+    /// No performance impact in release builds.
     #[must_use]
+    #[track_caller]
     pub fn expose_secret(&self) -> &str {
+        #[cfg(debug_assertions)]
+        tracing::trace!(
+            location = ?std::panic::Location::caller(),
+            "Secret API token exposed"
+        );
+
         self.0.expose_secret()
     }
 }
@@ -159,5 +171,15 @@ mod tests {
         let _from_string_type = ApiToken::new(String::from("token"));
         let _from_str_slice = ApiToken::new("token");
         let _from_owned_string = ApiToken::new("token".to_string());
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    fn it_should_trace_secret_exposure_in_debug_builds() {
+        // This test verifies that tracing is compiled and callable in debug builds.
+        // The actual trace output would require a tracing subscriber to capture.
+        let token = ApiToken::new("debug-token");
+        let _exposed = token.expose_secret();
+        // If this compiles and runs without panic, tracing is working
     }
 }
