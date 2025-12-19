@@ -507,37 +507,37 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
 
 1. **Domain Layer** (`src/domain/grafana/`):
 
-   - [ ] Create `src/domain/grafana/mod.rs` module
-   - [ ] Create `src/domain/grafana/config.rs` with `GrafanaConfig` struct
-   - [ ] Add `admin_user` and `admin_password` fields (both String)
-   - [ ] Implement `Default` trait with default values ("admin"/"admin")
-   - [ ] Add `Serialize`, `Deserialize`, `Debug`, `Clone`, `PartialEq` derives
-   - [ ] Add comprehensive unit tests (5+ tests covering defaults, serialization, deserialization)
+   - [x] Create `src/domain/grafana/mod.rs` module
+   - [x] Create `src/domain/grafana/config.rs` with `GrafanaConfig` struct
+   - [x] Add `admin_user` and `admin_password` fields (both String)
+   - [x] Implement `Default` trait with default values ("admin"/"admin")
+   - [x] Add `Serialize`, `Deserialize`, `Debug`, `Clone`, `PartialEq` derives
+   - [x] Add comprehensive unit tests (5+ tests covering defaults, serialization, deserialization)
 
 2. **Environment User Inputs Extension**:
 
-   - [ ] Add `grafana: Option<GrafanaConfig>` field to `UserInputs` struct
-   - [ ] Add `#[serde(skip_serializing_if = "Option::is_none")]` attribute
-   - [ ] Update all constructors and test fixtures to include `grafana` field
-   - [ ] Update JSON schema (`schemas/environment-config.json`) with Grafana section
+   - [x] Add `grafana: Option<GrafanaConfig>` field to `UserInputs` struct
+   - [x] Add `#[serde(skip_serializing_if = "Option::is_none")]` attribute
+   - [x] Update all constructors and test fixtures to include `grafana` field
+   - [x] Update JSON schema (`schemas/environment-config.json`) with Grafana section
 
 3. **Validation Logic** (`src/application/command_handlers/create/config/validation/`):
 
-   - [ ] Create validation module if it doesn't exist
-   - [ ] Implement `validate_grafana_prometheus_dependency()` function
-   - [ ] Add `ConfigError::GrafanaRequiresPrometheus` error variant
-   - [ ] Add comprehensive error help text with fix instructions
-   - [ ] Write unit tests for all validation scenarios:
-     - [ ] Both enabled (valid)
-     - [ ] Both disabled (valid)
-     - [ ] Only Prometheus enabled (valid)
-     - [ ] Only Grafana enabled (invalid - should error)
-   - [ ] Integrate validation call in environment creation handler
-   - [ ] Run linters and tests
+   - [x] Create validation module if it doesn't exist
+   - [x] Implement `validate_grafana_prometheus_dependency()` function
+   - [x] Add `ConfigError::GrafanaRequiresPrometheus` error variant
+   - [x] Add comprehensive error help text with fix instructions
+   - [x] Write unit tests for all validation scenarios:
+     - [x] Both enabled (valid)
+     - [x] Both disabled (valid)
+     - [x] Only Prometheus enabled (valid)
+     - [x] Only Grafana enabled (invalid - should error)
+   - [x] Integrate validation call in environment creation handler
+   - [x] Run linters and tests
 
 4. **Testing**:
-   - [ ] Run `cargo test` - all tests should pass
-   - [ ] Run `cargo run --bin linter all` - all linters should pass
+   - [x] Run `cargo test` - all tests should pass
+   - [x] Run `cargo run --bin linter all` - all linters should pass
 
 ### Phase 2: Docker Compose Integration
 
@@ -547,26 +547,26 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
 
 1. **Docker Compose Context** (`src/infrastructure/templating/docker_compose/template/wrappers/compose/context.rs`):
 
-   - [ ] Add `grafana_config: Option<GrafanaConfig>` field to `DockerComposeContext`
-   - [ ] Implement `with_grafana()` method for context builder pattern
-   - [ ] Add unit tests for Grafana context inclusion
+   - [x] Add `grafana_config: Option<GrafanaConfig>` field to `DockerComposeContext`
+   - [x] Implement `with_grafana()` method for context builder pattern
+   - [x] Add unit tests for Grafana context inclusion
 
 2. **Environment Variables Context** (`src/infrastructure/templating/docker_compose/template/wrappers/env/context.rs`):
 
-   - [ ] Add optional Grafana fields to `EnvContext` struct:
+   - [x] Add optional Grafana fields to `EnvContext` struct:
      - `grafana_admin_user: Option<String>`
      - `grafana_admin_password: Option<String>` (plain String for template rendering)
-   - [ ] Implement `new_with_grafana()` constructor method
-   - [ ] Constructor must call `.expose_secret()` on `Password` to extract plaintext for template
-   - [ ] Add getters for Grafana fields
-   - [ ] Add unit tests for environment variable generation
+   - [x] Implement `new_with_grafana()` constructor method
+   - [x] Constructor must call `.expose_secret()` on `Password` to extract plaintext for template
+   - [x] Add getters for Grafana fields
+   - [x] Add unit tests for environment variable generation
 
    **Security Note**: The `admin_password` is stored as plain `String` in the context because Tera templates need the plaintext value. The `Password` wrapper is only used in the domain model and configuration. Call `.expose_secret()` when constructing the context from `GrafanaConfig`.
 
 3. **Docker Compose Template** (`templates/docker-compose/docker-compose.yml.tera`):
 
-   - [ ] Add conditional Grafana service block with `{% if grafana_config %}`
-   - [ ] Configure Grafana service:
+   - [x] Add conditional Grafana service block with `{% if grafana_config %}`
+   - [x] Configure Grafana service:
      - Image: `grafana/grafana:11.4.0`
      - Container name: `grafana`
      - Restart policy: `unless-stopped`
@@ -576,20 +576,20 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
      - Volume: `grafana_data:/var/lib/grafana`
      - Logging configuration (10m max-size, 10 max-file)
      - Depends on: `prometheus`
-   - [ ] Add conditional volume declaration for `grafana_data`
+   - [x] Add conditional volume declaration for `grafana_data`
 
 4. **Environment Template** (`templates/docker-compose/.env.tera`):
 
-   - [ ] Add conditional Grafana section with `{% if grafana_config %}`
-   - [ ] Add environment variables:
+   - [x] Add conditional Grafana section with `{% if grafana_config %}`
+   - [x] Add environment variables:
      - `GF_SECURITY_ADMIN_USER='{{ grafana_admin_user }}'`
      - `GF_SECURITY_ADMIN_PASSWORD='{{ grafana_admin_password }}'`
 
 5. **Release Command Integration** (`src/application/command_handlers/release/`):
 
-   - [ ] Update docker-compose rendering step to include Grafana context
-   - [ ] Pass Grafana config to `DockerComposeContext::with_grafana()` when present
-   - [ ] Pass Grafana credentials to `EnvContext` when present
+   - [x] Update docker-compose rendering step to include Grafana context
+   - [x] Pass Grafana config to `DockerComposeContext::with_grafana()` when present
+   - [x] Pass Grafana credentials to `EnvContext` when present
 
 6. **Firewall Configuration** (NEW):
 

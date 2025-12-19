@@ -134,6 +134,9 @@ pub use crate::domain::tracker::{
 // Re-export Prometheus types for convenience
 pub use crate::domain::prometheus::PrometheusConfig;
 
+// Re-export Grafana types for convenience
+pub use crate::domain::grafana::GrafanaConfig;
+
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::{InstanceName, ProfileName};
@@ -446,6 +449,12 @@ impl<S> Environment<S> {
     #[must_use]
     pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
         self.context.prometheus_config()
+    }
+
+    /// Returns the Grafana configuration if enabled
+    #[must_use]
+    pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
+        self.context.grafana_config()
     }
 
     /// Returns the SSH username for this environment

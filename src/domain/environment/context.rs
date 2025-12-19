@@ -37,6 +37,8 @@
 
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::{EnvironmentName, InternalConfig, RuntimeOutputs, UserInputs};
+use crate::domain::grafana::GrafanaConfig;
+use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::ProviderConfig;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -337,8 +339,14 @@ impl EnvironmentContext {
 
     /// Returns the Prometheus configuration if enabled
     #[must_use]
-    pub fn prometheus_config(&self) -> Option<&crate::domain::prometheus::PrometheusConfig> {
+    pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
         self.user_inputs.prometheus.as_ref()
+    }
+
+    /// Returns the Grafana configuration if enabled
+    #[must_use]
+    pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
+        self.user_inputs.grafana.as_ref()
     }
 
     /// Returns the build directory

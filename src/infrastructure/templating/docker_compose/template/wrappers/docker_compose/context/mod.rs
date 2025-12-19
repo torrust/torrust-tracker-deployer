@@ -7,6 +7,7 @@
 use serde::Serialize;
 
 // Internal crate
+use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 
 // Submodules
@@ -31,6 +32,9 @@ pub struct DockerComposeContext {
     /// Prometheus configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prometheus_config: Option<PrometheusConfig>,
+    /// Grafana configuration (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub grafana_config: Option<GrafanaConfig>,
 }
 
 impl DockerComposeContext {
@@ -92,6 +96,12 @@ impl DockerComposeContext {
     #[must_use]
     pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
         self.prometheus_config.as_ref()
+    }
+
+    /// Get the Grafana configuration if present
+    #[must_use]
+    pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
+        self.grafana_config.as_ref()
     }
 }
 

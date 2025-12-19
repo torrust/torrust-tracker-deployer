@@ -77,6 +77,29 @@ services:
       - tracker
 {% endif %}
 
+{% if grafana_config %}
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    tty: true
+    restart: unless-stopped
+    networks:
+      - backend_network
+    ports:
+      - "3100:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+    depends_on:
+      - prometheus
+{% endif %}
+
 {% if database.driver == "mysql" %}
   mysql:
     image: mysql:8.0
@@ -109,8 +132,14 @@ services:
 networks:
   backend_network: {}
 
-{% if database.driver == "mysql" %}
+{% if database.driver == "mysql" or grafana_config %}
 volumes:
+{%- if database.driver == "mysql" %}
   mysql_data:
     driver: local
+{%- endif %}
+{%- if grafana_config %}
+  grafana_data:
+    driver: local
+{%- endif %}
 {% endif %}

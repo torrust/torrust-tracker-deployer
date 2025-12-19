@@ -6,6 +6,7 @@
 use super::*;
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::grafana::GrafanaConfig;
+use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::{LxdConfig, ProviderConfig};
 use crate::domain::tracker::TrackerConfig;
 use crate::domain::EnvironmentName;
@@ -39,7 +40,7 @@ pub struct EnvironmentTestBuilder {
     ssh_key_name: String,
     ssh_username: String,
     temp_dir: TempDir,
-    prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
+    prometheus_config: Option<PrometheusConfig>,
 }
 
 impl EnvironmentTestBuilder {
@@ -55,7 +56,7 @@ impl EnvironmentTestBuilder {
             ssh_key_name: "test_key".to_string(),
             ssh_username: "torrust".to_string(),
             temp_dir: TempDir::new().expect("Failed to create temp directory"),
-            prometheus_config: Some(crate::domain::prometheus::PrometheusConfig::default()),
+            prometheus_config: Some(PrometheusConfig::default()),
         }
     }
 
@@ -82,10 +83,7 @@ impl EnvironmentTestBuilder {
 
     /// Sets the Prometheus configuration
     #[must_use]
-    pub fn with_prometheus_config(
-        mut self,
-        config: Option<crate::domain::prometheus::PrometheusConfig>,
-    ) -> Self {
+    pub fn with_prometheus_config(mut self, config: Option<PrometheusConfig>) -> Self {
         self.prometheus_config = config;
         self
     }
