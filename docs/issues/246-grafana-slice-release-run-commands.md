@@ -626,9 +626,10 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
 
 1. **E2E Test Configuration**:
 
-   - [ ] Create test environment config with Grafana enabled: `envs/e2e-deployment-with-grafana.json`
-   - [ ] Create test environment config without Grafana: `envs/e2e-deployment-no-grafana.json` (already exists)
-   - [ ] Create test environment config to test validation error: `envs/e2e-deployment-grafana-no-prometheus.json`
+   - [x] Create test environment config with Grafana enabled: `envs/e2e-deployment-with-grafana.json`
+   - [x] ~~Create test environment config without Grafana: `envs/e2e-deployment-no-grafana.json`~~ (already exists as `e2e-deployment-no-prometheus.json`)
+   - [x] Create test environment config to test validation error: `envs/e2e-deployment-grafana-no-prometheus.json`
+   - [x] Verify validation error works correctly (tested - clear error message with fix instructions)
 
 2. **E2E Validation Extension** (`tests/e2e/validators/`):
 
