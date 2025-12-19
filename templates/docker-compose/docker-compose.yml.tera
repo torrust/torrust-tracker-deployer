@@ -65,8 +65,9 @@ services:
     restart: unless-stopped
     networks:
       - backend_network
-    ports:
-      - "9090:9090"
+    # Port 9090 NOT exposed to host - internal service only
+    # Grafana accesses Prometheus via Docker network: http://prometheus:9090
+    # For debugging, use: docker exec -it prometheus wget -qO- http://localhost:9090/metrics
     volumes:
       - ./storage/prometheus/etc:/etc/prometheus:Z
     logging:

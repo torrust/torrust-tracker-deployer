@@ -385,10 +385,10 @@ mod tests {
             "Should set container name"
         );
 
-        // Verify port mapping
+        // Verify port is NOT exposed (internal service only)
         assert!(
-            rendered_content.contains("9090:9090"),
-            "Should expose Prometheus port 9090"
+            !rendered_content.contains("ports:") || !rendered_content.contains("9090:9090"),
+            "Prometheus port 9090 should NOT be exposed to host (internal service only, accessed via Docker network)"
         );
 
         // Verify volume mount
