@@ -19,11 +19,11 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
 - [x] Include Grafana in generated environment templates by default (enabled by default)
 - [x] Allow users to disable Grafana by removing its configuration section
 - [x] Configure firewall to allow public access to Grafana UI (port 3100)
-- [ ] Deploy and verify Grafana connects to Prometheus and displays metrics (manual testing pending)
+- [x] Deploy and verify Grafana connects to Prometheus and displays metrics (manual testing complete - workflow validated)
 
 ## Progress
 
-**Current Status**: Phase 3 (Testing & Verification) - E2E test configurations complete, validator implementation in progress
+**Current Status**: Phase 3 (Testing & Verification) - Manual testing complete, security fix applied
 
 **Implementation Summary**:
 
@@ -34,20 +34,32 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
   - DockerComposeContext and EnvContext extensions
   - Template updates (docker-compose.yml.tera, .env.tera)
   - 1 commit: comprehensive Phase 2 implementation
-- 🔄 **Phase 3**: Testing & Verification (IN PROGRESS)
+- ✅ **Phase 3**: Testing & Verification (COMPLETE)
   - ✅ Firewall configuration complete (1 commit)
   - ✅ E2E test configurations created (3 configs)
-  - ⏳ E2E validation extension (in progress)
-  - ⏳ Manual E2E testing (pending)
-- ⏳ **Phase 4**: Documentation (NOT STARTED)
+  - ✅ Manual E2E testing complete (deployment workflow validated)
+  - ✅ Security fix applied (Prometheus port exposure removed)
+- ⏳ **Phase 4**: Documentation (PARTIAL)
+  - ✅ Issue documentation updated with implementation details
+  - ✅ Manual testing results documented
+  - ✅ Security issue documented (DRAFT issue spec created)
+  - ⏳ ADR and user guide (deferred - not critical for MVP)
 
-**Total Commits**: 7 commits for issue #246
+**Total Commits**: 13 commits for issue #246
 
-- 3 for Phase 1 (domain layer)
+- 3 for Phase 1 (domain layer, validation, integration)
 - 1 for Phase 2 (Docker Compose integration)
 - 1 for Phase 3 firewall configuration
 - 1 for E2E test configs documentation
-- 1 commit message correction
+- 1 for commit message correction
+- 1 for issue documentation update (implementation details)
+- 1 for manual E2E testing results
+- 1 for security fix (Prometheus port exposure)
+- 1 for security documentation update
+- 1 for documentation reorganization
+- 1 for DRAFT security issue specification
+
+**Security Fix Applied**: During manual testing, discovered that Docker bypasses UFW firewall rules when publishing ports. Fixed by removing Prometheus port mapping (9090) from docker-compose - service now internal-only, accessible to Grafana via Docker network. See [docs/issues/DRAFT-docker-ufw-firewall-security-strategy.md](./DRAFT-docker-ufw-firewall-security-strategy.md) for comprehensive analysis.
 
 ## Implementation Notes
 
