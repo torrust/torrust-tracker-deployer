@@ -189,6 +189,33 @@ The complete deployment workflow works correctly:
 3. ✅ **Step-level conditionals** - Grafana firewall step only runs when Grafana is enabled
 4. ✅ **Enabled-by-default pattern** - Grafana included in default templates (can be removed)
 
+### Security Issue Discovered & Fixed
+
+**Issue**: During manual testing, Prometheus was discovered to be accessible at `http://10.140.190.35:9090` despite UFW firewall being configured with default deny incoming policy.
+
+**Root Cause**: Docker bypasses UFW firewall rules when publishing ports with `0.0.0.0:9090:9090` binding. Docker manipulates iptables directly, taking precedence over UFW rules.
+
+**Fix Applied** (commit 8323def):
+
+- **Removed** Prometheus port mapping (`ports: - "9090:9090"`) from docker-compose template
+- Prometheus is now truly internal-only (not accessible from external network)
+- Grafana continues to access Prometheus via Docker internal network (`http://prometheus:9090`)
+- Updated tests to verify port is NOT exposed (security expectation)
+
+**Security Impact**:
+
+- ❌ **Before**: Prometheus UI accessible externally (security vulnerability)
+- ✅ **After**: Prometheus UI NOT accessible externally (internal-only as intended)
+- ✅ **Grafana**: Unchanged (uses Docker network, not host ports)
+
+**Verification Method**:
+
+- Before fix: `curl http://10.140.190.35:9090` → HTTP 405 (accessible)
+- After fix: `curl http://10.140.190.35:9090` → Connection refused (not accessible)
+- Grafana still works: Accesses Prometheus via Docker network name resolution
+
+This issue existed since Prometheus slice implementation but was not detected until Grafana integration revealed the exposure during manual testing.
+
 ### Next Steps
 
 **For Complete Phase 3 Verification**:
