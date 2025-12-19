@@ -101,6 +101,10 @@ pub enum CreateConfigError {
     /// Grafana requires Prometheus to be enabled
     #[error("Grafana requires Prometheus to be enabled")]
     GrafanaRequiresPrometheus,
+
+    /// Invalid Prometheus configuration
+    #[error("Invalid Prometheus configuration: {0}")]
+    InvalidPrometheusConfig(String),
 }
 
 impl CreateConfigError {
@@ -386,7 +390,7 @@ impl CreateConfigError {
                  Add a prometheus section to your environment configuration:\n\
                  \n\
                  \"prometheus\": {\n\
-                   \"scrape_interval\": 15\n\
+                   \"scrape_interval_in_secs\": 15\n\
                  }\n\
                  \n\
                  Option 2 - Disable Grafana:\n\
@@ -394,6 +398,31 @@ impl CreateConfigError {
                  \n\
                  Note: Prometheus can run independently without Grafana, but Grafana\n\
                  requires Prometheus to be enabled."
+            }
+            Self::InvalidPrometheusConfig(_) => {
+                "Invalid Prometheus configuration.\n\
+                 \n\
+                 Prometheus scrape_interval must be a positive integer representing seconds.\n\
+                 \n\
+                 Requirements:\n\
+                 - Must be greater than 0\n\
+                 - Represents the interval in seconds between metric collections\n\
+                 \n\
+                 Common values:\n\
+                 - 15 (default, recommended for most use cases)\n\
+                 - 10 (high-frequency monitoring)\n\
+                 - 30 (lower resource usage)\n\
+                 - 60 (minimal monitoring overhead)\n\
+                 \n\
+                 Fix:\n\
+                 Update the scrape_interval_in_secs in your configuration:\n\
+                 \n\
+                 \"prometheus\": {\n\
+                   \"scrape_interval_in_secs\": 15\n\
+                 }\n\
+                 \n\
+                 Note: The template automatically adds the 's' suffix (e.g., 15 becomes '15s'),\n\
+                 so you only need to specify the numeric value."
             }
         }
     }

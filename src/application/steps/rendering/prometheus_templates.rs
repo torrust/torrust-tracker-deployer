@@ -195,9 +195,9 @@ mod tests {
 
         // Build environment with Prometheus config
         let (environment, _, _, _temp_dir) = EnvironmentTestBuilder::new()
-            .with_prometheus_config(Some(PrometheusConfig {
-                scrape_interval: 30,
-            }))
+            .with_prometheus_config(Some(PrometheusConfig::new(
+                std::num::NonZeroU32::new(30).expect("30 is non-zero"),
+            )))
             .build_with_custom_paths();
         let environment = Arc::new(environment);
 

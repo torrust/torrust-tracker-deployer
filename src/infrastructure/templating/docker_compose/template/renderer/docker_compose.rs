@@ -352,9 +352,8 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let prometheus_config = PrometheusConfig {
-            scrape_interval: 15,
-        };
+        let prometheus_config =
+            PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
         let context = DockerComposeContext::builder(ports)
             .with_prometheus(prometheus_config)
             .build();

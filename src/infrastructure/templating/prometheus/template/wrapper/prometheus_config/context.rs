@@ -15,7 +15,7 @@ use serde::Serialize;
 /// use torrust_tracker_deployer_lib::infrastructure::templating::prometheus::PrometheusContext;
 ///
 /// let context = PrometheusContext {
-///     scrape_interval: 15,
+///     scrape_interval: "15s".to_string(),
 ///     api_token: "MyAccessToken".to_string(),
 ///     api_port: 1212,
 /// };
@@ -25,17 +25,16 @@ use serde::Serialize;
 ///
 /// Environment Config (`tracker.http_api`) → Application Layer → `PrometheusContext`
 ///
-/// - `scrape_interval`: From `prometheus.scrape_interval` (default: 15 seconds)
+/// - `scrape_interval`: From `prometheus.scrape_interval` (e.g., "15s", "30s", "1m")
 /// - `api_token`: From `tracker.http_api.admin_token`
 /// - `api_port`: Parsed from `tracker.http_api.bind_address` (e.g., 1212 from "0.0.0.0:1212")
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct PrometheusContext {
-    /// How often to scrape metrics from tracker (in seconds)
+    /// How often to scrape metrics from tracker (e.g., "15s", "30s", "1m")
     ///
-    /// Default: 15 seconds
-    /// Minimum: 5 seconds (to avoid overwhelming the tracker)
-    /// Maximum: 300 seconds (5 minutes)
-    pub scrape_interval: u32,
+    /// Default: "15s"
+    /// Examples: "5s" (minimum to avoid overwhelming), "5m" (maximum reasonable interval)
+    pub scrape_interval: String,
 
     /// Tracker HTTP API admin token for authentication
     ///
@@ -58,7 +57,7 @@ impl PrometheusContext {
     ///
     /// # Arguments
     ///
-    /// * `scrape_interval` - How often to scrape metrics (in seconds)
+    /// * `scrape_interval` - How often to scrape metrics (e.g., "15s", "30s", "1m")
     /// * `api_token` - Tracker HTTP API admin token
     /// * `api_port` - Tracker HTTP API port
     ///
@@ -67,10 +66,10 @@ impl PrometheusContext {
     /// ```rust
     /// use torrust_tracker_deployer_lib::infrastructure::templating::prometheus::PrometheusContext;
     ///
-    /// let context = PrometheusContext::new(15, "MyToken".to_string(), 1212);
+    /// let context = PrometheusContext::new("15s".to_string(), "MyToken".to_string(), 1212);
     /// ```
     #[must_use]
-    pub fn new(scrape_interval: u32, api_token: String, api_port: u16) -> Self {
+    pub fn new(scrape_interval: String, api_token: String, api_port: u16) -> Self {
         Self {
             scrape_interval,
             api_token,
@@ -82,7 +81,7 @@ impl PrometheusContext {
 impl Default for PrometheusContext {
     fn default() -> Self {
         Self {
-            scrape_interval: 15,
+            scrape_interval: "15s".to_string(),
             api_token: String::new(),
             api_port: 1212,
         }
@@ -95,9 +94,9 @@ mod tests {
 
     #[test]
     fn it_should_create_prometheus_context() {
-        let context = PrometheusContext::new(15, "test_token".to_string(), 1212);
+        let context = PrometheusContext::new("15s".to_string(), "test_token".to_string(), 1212);
 
-        assert_eq!(context.scrape_interval, 15);
+        assert_eq!(context.scrape_interval, "15s");
         assert_eq!(context.api_token, "test_token");
         assert_eq!(context.api_port, 1212);
     }
@@ -106,34 +105,34 @@ mod tests {
     fn it_should_create_default_context() {
         let context = PrometheusContext::default();
 
-        assert_eq!(context.scrape_interval, 15);
+        assert_eq!(context.scrape_interval, "15s");
         assert_eq!(context.api_token, "");
         assert_eq!(context.api_port, 1212);
     }
 
     #[test]
     fn it_should_serialize_to_json() {
-        let context = PrometheusContext::new(30, "admin_token".to_string(), 8080);
+        let context = PrometheusContext::new("30s".to_string(), "admin_token".to_string(), 8080);
 
         let json = serde_json::to_value(&context).unwrap();
-        assert_eq!(json["scrape_interval"], 30);
+        assert_eq!(json["scrape_interval"], "30s");
         assert_eq!(json["api_token"], "admin_token");
         assert_eq!(json["api_port"], 8080);
     }
 
     #[test]
     fn it_should_support_different_scrape_intervals() {
-        let fast_scrape = PrometheusContext::new(5, "token".to_string(), 1212);
-        let slow_scrape = PrometheusContext::new(300, "token".to_string(), 1212);
+        let fast_scrape = PrometheusContext::new("5s".to_string(), "token".to_string(), 1212);
+        let slow_scrape = PrometheusContext::new("5m".to_string(), "token".to_string(), 1212);
 
-        assert_eq!(fast_scrape.scrape_interval, 5);
-        assert_eq!(slow_scrape.scrape_interval, 300);
+        assert_eq!(fast_scrape.scrape_interval, "5s");
+        assert_eq!(slow_scrape.scrape_interval, "5m");
     }
 
     #[test]
     fn it_should_support_different_ports() {
-        let default_port = PrometheusContext::new(15, "token".to_string(), 1212);
-        let custom_port = PrometheusContext::new(15, "token".to_string(), 8080);
+        let default_port = PrometheusContext::new("15s".to_string(), "token".to_string(), 1212);
+        let custom_port = PrometheusContext::new("15s".to_string(), "token".to_string(), 8080);
 
         assert_eq!(default_port.api_port, 1212);
         assert_eq!(custom_port.api_port, 8080);

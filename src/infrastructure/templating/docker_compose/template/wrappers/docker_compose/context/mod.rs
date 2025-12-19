@@ -230,15 +230,20 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let prometheus_config = PrometheusConfig {
-            scrape_interval: 30,
-        };
+        let prometheus_config =
+            PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
         let context = DockerComposeContext::builder(ports)
             .with_prometheus(prometheus_config)
             .build();
 
         assert!(context.prometheus_config().is_some());
-        assert_eq!(context.prometheus_config().unwrap().scrape_interval, 30);
+        assert_eq!(
+            context
+                .prometheus_config()
+                .unwrap()
+                .scrape_interval_in_secs(),
+            30
+        );
     }
 
     #[test]
@@ -261,15 +266,14 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let prometheus_config = PrometheusConfig {
-            scrape_interval: 20,
-        };
+        let prometheus_config =
+            PrometheusConfig::new(std::num::NonZeroU32::new(20).expect("20 is non-zero"));
         let context = DockerComposeContext::builder(ports)
             .with_prometheus(prometheus_config)
             .build();
 
         let serialized = serde_json::to_string(&context).unwrap();
         assert!(serialized.contains("prometheus_config"));
-        assert!(serialized.contains("\"scrape_interval\":20"));
+        assert!(serialized.contains("\"scrape_interval_in_secs\":20"));
     }
 }

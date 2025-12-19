@@ -74,6 +74,8 @@ use super::errors::CreateCommandHandlerError;
 ///         profile_name: "lxd-dev".to_string(),
 ///     }),
 ///     TrackerSection::default(),
+///     None, // prometheus
+///     None, // grafana
 /// );
 ///
 /// // Execute command with working directory
@@ -189,6 +191,8 @@ impl CreateCommandHandler {
     ///         profile_name: "lxd-staging".to_string(),
     ///     }),
     ///     TrackerSection::default(),
+    ///     None, // prometheus
+    ///     None, // grafana
     /// );
     ///
     /// let working_dir = std::path::Path::new(".");
@@ -217,6 +221,8 @@ impl CreateCommandHandler {
             ssh_credentials,
             ssh_port,
             tracker_config,
+            _prometheus_config,
+            _grafana_config,
         ) = config
             .to_environment_params()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;

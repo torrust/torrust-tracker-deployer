@@ -8,11 +8,15 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::ssh::SshCredentials;
+use crate::domain::grafana::GrafanaConfig;
+use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::tracker::TrackerConfig;
 use crate::domain::{EnvironmentName, InstanceName};
 
 use super::errors::CreateConfigError;
+use super::grafana::GrafanaSection;
+use super::prometheus::PrometheusSection;
 use super::provider::{HetznerProviderSection, LxdProviderSection, ProviderSection};
 use super::ssh_credentials_config::SshCredentialsConfig;
 use super::tracker::TrackerSection;
@@ -64,6 +68,13 @@ use super::tracker::TrackerSection;
 ///             "bind_address": "0.0.0.0:1212",
 ///             "admin_token": "MyAccessToken"
 ///         }
+///     },
+///     "prometheus": {
+///         "scrape_interval_in_secs": 15
+///     },
+///     "grafana": {
+///         "admin_user": "admin",
+///         "admin_password": "admin"
 ///     }
 /// }"#;
 ///
@@ -89,6 +100,25 @@ pub struct EnvironmentCreationConfig {
     /// Uses `TrackerSection` for JSON parsing with String primitives.
     /// Converted to domain `TrackerConfig` via `to_environment_params()`.
     pub tracker: TrackerSection,
+
+    /// Prometheus monitoring configuration (optional)
+    ///
+    /// When present, Prometheus will be deployed to monitor the tracker.
+    /// Uses `PrometheusSection` for JSON parsing with String primitives.
+    /// Converted to domain `PrometheusConfig` via `to_environment_params()`.
+    #[serde(default)]
+    pub prometheus: Option<PrometheusSection>,
+
+    /// Grafana dashboard configuration (optional)
+    ///
+    /// When present, Grafana will be deployed for visualization.
+    /// **Requires Prometheus to be configured** - Grafana depends on
+    /// Prometheus as its data source.
+    ///
+    /// Uses `GrafanaSection` for JSON parsing with String primitives.
+    /// Converted to domain `GrafanaConfig` via `to_environment_params()`.
+    #[serde(default)]
+    pub grafana: Option<GrafanaSection>,
 }
 
 /// Environment-specific configuration section
@@ -144,6 +174,8 @@ impl EnvironmentCreationConfig {
     ///         profile_name: "torrust-profile-dev".to_string(),
     ///     }),
     ///     TrackerSection::default(),
+    ///     None,
+    ///     None,
     /// );
     /// ```
     #[must_use]
@@ -152,12 +184,16 @@ impl EnvironmentCreationConfig {
         ssh_credentials: SshCredentialsConfig,
         provider: ProviderSection,
         tracker: TrackerSection,
+        prometheus: Option<PrometheusSection>,
+        grafana: Option<GrafanaSection>,
     ) -> Self {
         Self {
             environment,
             ssh_credentials,
             provider,
             tracker,
+            prometheus,
+            grafana,
         }
     }
 
@@ -168,8 +204,7 @@ impl EnvironmentCreationConfig {
     ///
     /// # Returns
     ///
-    /// Returns a tuple of `(EnvironmentName, InstanceName, ProviderConfig, SshCredentials, u16)`
-    /// that matches the signature of `Environment::new()`.
+    /// Returns a tuple of domain types.
     ///
     /// # Validation
     ///
@@ -178,6 +213,7 @@ impl EnvironmentCreationConfig {
     /// - Provider config must be valid (e.g., valid profile name for LXD)
     /// - SSH username must follow Linux username requirements (see `Username`)
     /// - SSH key files must exist and be accessible
+    /// - Grafana requires Prometheus (dependency validation)
     ///
     /// # Instance Name Auto-Generation
     ///
@@ -193,6 +229,7 @@ impl EnvironmentCreationConfig {
     /// - SSH username is invalid
     /// - SSH private key file does not exist
     /// - SSH public key file does not exist
+    /// - Grafana is configured but Prometheus is not (dependency violation)
     ///
     /// # Examples
     ///
@@ -219,14 +256,17 @@ impl EnvironmentCreationConfig {
     ///         profile_name: "torrust-profile-dev".to_string(),
     ///     }),
     ///     TrackerSection::default(),
+    ///     None,
+    ///     None,
     /// );
     ///
-    /// let (name, instance_name, provider_config, credentials, port, tracker) = config.to_environment_params()?;
+    /// let result = config.to_environment_params()?;
     ///
     /// // Instance name auto-generated from environment name
-    /// assert_eq!(instance_name.as_str(), "torrust-tracker-vm-dev");
+    /// assert_eq!(result.1.as_str(), "torrust-tracker-vm-dev");
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
+    #[allow(clippy::type_complexity)]
     pub fn to_environment_params(
         self,
     ) -> Result<
@@ -237,6 +277,8 @@ impl EnvironmentCreationConfig {
             SshCredentials,
             u16,
             TrackerConfig,
+            Option<PrometheusConfig>,
+            Option<GrafanaConfig>,
         ),
         CreateConfigError,
     > {
@@ -266,6 +308,22 @@ impl EnvironmentCreationConfig {
         // Convert TrackerSection (DTO) to domain TrackerConfig (validates bind addresses, etc.)
         let tracker_config = self.tracker.to_tracker_config()?;
 
+        // Convert Prometheus and Grafana sections to domain types
+        let prometheus_config = self
+            .prometheus
+            .map(|section| section.to_prometheus_config())
+            .transpose()?;
+
+        let grafana_config = self
+            .grafana
+            .map(|section| section.to_grafana_config())
+            .transpose()?;
+
+        // Validate Grafana-Prometheus dependency
+        if grafana_config.is_some() && prometheus_config.is_none() {
+            return Err(CreateConfigError::GrafanaRequiresPrometheus);
+        }
+
         Ok((
             environment_name,
             instance_name,
@@ -273,6 +331,8 @@ impl EnvironmentCreationConfig {
             ssh_credentials,
             ssh_port,
             tracker_config,
+            prometheus_config,
+            grafana_config,
         ))
     }
 
@@ -358,6 +418,8 @@ impl EnvironmentCreationConfig {
                     admin_token: "MyAccessToken".to_string(),
                 },
             },
+            prometheus: Some(PrometheusSection::default()),
+            grafana: Some(GrafanaSection::default()),
         }
     }
 
@@ -461,6 +523,8 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         assert_eq!(config.environment.name, "dev");
@@ -602,6 +666,8 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-staging"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let json = serde_json::to_string(&config).unwrap();
@@ -626,12 +692,23 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let result = config.to_environment_params();
         assert!(result.is_ok(), "Expected successful conversion");
 
-        let (name, instance_name, provider_config, credentials, port, _tracker) = result.unwrap();
+        let (
+            name,
+            instance_name,
+            provider_config,
+            credentials,
+            port,
+            _tracker,
+            _prometheus,
+            _grafana,
+        ) = result.unwrap();
 
         assert_eq!(name.as_str(), "dev");
         assert_eq!(instance_name.as_str(), "torrust-tracker-vm-dev"); // Auto-generated
@@ -656,13 +733,23 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-prod"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let result = config.to_environment_params();
         assert!(result.is_ok(), "Expected successful conversion");
 
-        let (name, instance_name, _provider_config, _credentials, _port, _tracker) =
-            result.unwrap();
+        let (
+            name,
+            instance_name,
+            _provider_config,
+            _credentials,
+            _port,
+            _tracker,
+            _prometheus,
+            _grafana,
+        ) = result.unwrap();
 
         assert_eq!(name.as_str(), "prod");
         assert_eq!(instance_name.as_str(), "my-custom-instance"); // Custom provided
@@ -684,6 +771,8 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -713,6 +802,8 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -745,6 +836,8 @@ mod tests {
                 profile_name: "invalid-".to_string(), // ends with dash - invalid
             }),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -779,6 +872,8 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -812,6 +907,8 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -845,6 +942,8 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -876,10 +975,20 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-test-env"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
-        let (name, _instance_name, provider_config, credentials, port, _tracker) =
-            config.to_environment_params().unwrap();
+        let (
+            name,
+            _instance_name,
+            provider_config,
+            credentials,
+            port,
+            _tracker,
+            _prometheus,
+            _grafana,
+        ) = config.to_environment_params().unwrap();
         let environment = Environment::new(name.clone(), provider_config, credentials, port);
 
         assert_eq!(environment.name().as_str(), "test-env");
@@ -904,6 +1013,8 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         let json = serde_json::to_string_pretty(&original).unwrap();
@@ -992,6 +1103,8 @@ mod tests {
             ),
             default_lxd_provider("test-profile"),
             TrackerSection::default(),
+            None,
+            None,
         );
 
         // Both should serialize to same structure (different values)

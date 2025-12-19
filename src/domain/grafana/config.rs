@@ -11,7 +11,7 @@ use crate::shared::secrets::Password;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GrafanaConfig {
     /// Grafana admin username
-    pub admin_user: String,
+    admin_user: String,
 
     /// Grafana admin password (should be changed in production)
     ///
@@ -19,7 +19,39 @@ pub struct GrafanaConfig {
     /// - Automatic redaction in debug output (shows `[REDACTED]`)
     /// - Memory zeroing when the value is dropped
     /// - Explicit `.expose_secret()` calls required to access plaintext
-    pub admin_password: Password,
+    admin_password: Password,
+}
+
+impl GrafanaConfig {
+    /// Creates a new Grafana configuration
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::grafana::GrafanaConfig;
+    ///
+    /// let config = GrafanaConfig::new("admin".to_string(), "password".to_string());
+    /// assert_eq!(config.admin_user(), "admin");
+    /// ```
+    #[must_use]
+    pub fn new(admin_user: String, admin_password: String) -> Self {
+        Self {
+            admin_user,
+            admin_password: Password::new(admin_password),
+        }
+    }
+
+    /// Returns the admin username
+    #[must_use]
+    pub fn admin_user(&self) -> &str {
+        &self.admin_user
+    }
+
+    /// Returns the admin password
+    #[must_use]
+    pub fn admin_password(&self) -> &Password {
+        &self.admin_password
+    }
 }
 
 impl Default for GrafanaConfig {
