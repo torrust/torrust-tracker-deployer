@@ -25,6 +25,7 @@ use thiserror::Error;
 use tracing::{info, instrument};
 
 use crate::adapters::ssh::credentials::SshCredentials;
+use crate::domain::grafana::GrafanaConfig;
 use crate::domain::tracker::TrackerConfig;
 use crate::infrastructure::templating::ansible::template::renderer::AnsibleProjectGeneratorError;
 use crate::infrastructure::templating::ansible::template::wrappers::inventory::{
@@ -87,6 +88,7 @@ pub struct RenderAnsibleTemplatesStep {
     ssh_credentials: SshCredentials,
     ssh_socket_addr: SocketAddr,
     tracker_config: TrackerConfig,
+    grafana_config: Option<GrafanaConfig>,
 }
 
 impl RenderAnsibleTemplatesStep {
@@ -96,12 +98,14 @@ impl RenderAnsibleTemplatesStep {
         ssh_credentials: SshCredentials,
         ssh_socket_addr: SocketAddr,
         tracker_config: TrackerConfig,
+        grafana_config: Option<GrafanaConfig>,
     ) -> Self {
         Self {
             ansible_project_generator,
             ssh_credentials,
             ssh_socket_addr,
             tracker_config,
+            grafana_config,
         }
     }
 
@@ -127,7 +131,11 @@ impl RenderAnsibleTemplatesStep {
 
         // Use the configuration renderer to handle all template rendering
         self.ansible_project_generator
-            .render(&inventory_context, Some(&self.tracker_config))
+            .render(
+                &inventory_context,
+                Some(&self.tracker_config),
+                self.grafana_config.as_ref(),
+            )
             .await?;
 
         info!(

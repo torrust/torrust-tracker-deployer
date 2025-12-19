@@ -47,7 +47,7 @@ mod tests {
 
     /// Helper function to create a `AnsibleVariablesContext` with the given SSH port
     fn create_variables_context(ssh_port: u16) -> AnsibleVariablesContext {
-        AnsibleVariablesContext::new(ssh_port, None).unwrap()
+        AnsibleVariablesContext::new(ssh_port, None, None).unwrap()
     }
 
     /// Helper function to create a minimal valid variables template file

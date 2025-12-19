@@ -51,6 +51,8 @@ pub enum ConfigureStep {
     ConfigureFirewall,
     /// Configuring Tracker firewall rules
     ConfigureTrackerFirewall,
+    /// Configuring Grafana firewall rules
+    ConfigureGrafanaFirewall,
 }
 
 /// Error state - Application configuration failed

@@ -24,7 +24,7 @@
 //! let template_manager = Arc::new(TemplateManager::new("/path/to/templates"));
 //! let renderer = VariablesRenderer::new(template_manager);
 //!
-//! let variables_context = AnsibleVariablesContext::new(22, None)?;
+//! let variables_context = AnsibleVariablesContext::new(22, None, None)?;
 //! renderer.render(&variables_context, temp_dir.path())?;
 //! # Ok(())
 //! # }
@@ -211,7 +211,7 @@ mod tests {
 
     /// Helper function to create a test variables context
     fn create_test_variables_context() -> AnsibleVariablesContext {
-        AnsibleVariablesContext::new(22, None).expect("Failed to create variables context")
+        AnsibleVariablesContext::new(22, None, None).expect("Failed to create variables context")
     }
 
     /// Helper function to create a test template directory with variables.yml.tera
@@ -307,8 +307,8 @@ ssh_port: {{ ssh_port }}
         let renderer = VariablesRenderer::new(template_manager);
 
         // Use custom SSH port
-        let variables_context =
-            AnsibleVariablesContext::new(2222, None).expect("Failed to create variables context");
+        let variables_context = AnsibleVariablesContext::new(2222, None, None)
+            .expect("Failed to create variables context");
 
         let result = renderer.render(&variables_context, &output_dir);
 

@@ -1,0 +1,34 @@
+---
+# Configure Grafana-specific firewall rules
+#
+# This playbook configures UFW to allow external access to Grafana UI (port 3100).
+# It only executes when Grafana is enabled in the deployment configuration.
+#
+# Requirements:
+# - UFW must be installed and enabled (done by configure-firewall.yml)
+# - Variables must be defined in variables.yml (loaded via vars_files)
+#
+# Variables:
+# - grafana_enabled: Whether Grafana is enabled (boolean)
+
+- name: Configure Grafana Firewall Rules
+  hosts: all
+  become: true
+  vars_files:
+    - variables.yml
+
+  tasks:
+    - name: Allow Grafana UI port through firewall (port 3100)
+      community.general.ufw:
+        rule: allow
+        port: "3100"
+        proto: tcp
+        comment: "Grafana UI"
+      # Note: Grafana port is always 3100, no need to check variable
+      # This task runs unconditionally if the playbook is executed
+      notify: Reload UFW
+
+  handlers:
+    - name: Reload UFW
+      community.general.ufw:
+        state: reloaded

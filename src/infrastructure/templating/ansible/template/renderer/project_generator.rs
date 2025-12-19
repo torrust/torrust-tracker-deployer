@@ -154,6 +154,7 @@ impl AnsibleProjectGenerator {
     ///
     /// * `inventory_context` - Runtime context for inventory template rendering (IP, SSH keys)
     /// * `tracker_config` - Optional tracker configuration for firewall port extraction
+    /// * `grafana_config` - Optional Grafana configuration for conditional firewall setup
     ///
     /// # Returns
     ///
@@ -171,6 +172,7 @@ impl AnsibleProjectGenerator {
         &self,
         inventory_context: &InventoryContext,
         tracker_config: Option<&crate::domain::tracker::TrackerConfig>,
+        grafana_config: Option<&crate::domain::grafana::GrafanaConfig>,
     ) -> Result<(), AnsibleProjectGeneratorError> {
         tracing::info!(
             template_type = "ansible",
@@ -186,7 +188,8 @@ impl AnsibleProjectGenerator {
             .map_err(|source| AnsibleProjectGeneratorError::InventoryRenderingFailed { source })?;
 
         // Render dynamic variables template with system configuration using collaborator
-        let variables_context = Self::create_variables_context(inventory_context, tracker_config)?;
+        let variables_context =
+            Self::create_variables_context(inventory_context, tracker_config, grafana_config)?;
         self.variables_renderer
             .render(&variables_context, &build_ansible_dir)
             .map_err(|source| AnsibleProjectGeneratorError::VariablesRenderingFailed { source })?;
@@ -304,6 +307,7 @@ impl AnsibleProjectGenerator {
             "configure-security-updates.yml",
             "configure-firewall.yml",
             "configure-tracker-firewall.yml",
+            "configure-grafana-firewall.yml",
             "create-tracker-storage.yml",
             "init-tracker-database.yml",
             "deploy-tracker-config.yml",
@@ -318,7 +322,7 @@ impl AnsibleProjectGenerator {
 
         tracing::debug!(
             "Successfully copied {} static template files",
-            16 // ansible.cfg + 15 playbooks
+            17 // ansible.cfg + 16 playbooks
         );
 
         Ok(())
@@ -396,6 +400,7 @@ impl AnsibleProjectGenerator {
     fn create_variables_context(
         inventory_context: &InventoryContext,
         tracker_config: Option<&crate::domain::tracker::TrackerConfig>,
+        grafana_config: Option<&crate::domain::grafana::GrafanaConfig>,
     ) -> Result<
         crate::infrastructure::templating::ansible::template::wrappers::variables::AnsibleVariablesContext,
         AnsibleProjectGeneratorError,
@@ -403,12 +408,15 @@ impl AnsibleProjectGenerator {
         use crate::infrastructure::templating::ansible::template::wrappers::variables::AnsibleVariablesContext;
 
         // Extract SSH port from inventory context and create variables context with tracker config
-        AnsibleVariablesContext::new(inventory_context.ansible_port(), tracker_config).map_err(
-            |e| AnsibleProjectGeneratorError::ContextCreationFailed {
-                context_type: "AnsibleVariables".to_string(),
-                message: format!("Failed to create variables context: {e}"),
-            },
+        AnsibleVariablesContext::new(
+            inventory_context.ansible_port(),
+            tracker_config,
+            grafana_config,
         )
+        .map_err(|e| AnsibleProjectGeneratorError::ContextCreationFailed {
+            context_type: "AnsibleVariables".to_string(),
+            message: format!("Failed to create variables context: {e}"),
+        })
     }
 }
 

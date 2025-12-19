@@ -593,30 +593,30 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
 
 6. **Firewall Configuration** (NEW):
 
-   - [ ] Create Ansible playbook: `templates/ansible/configure-grafana-firewall.yml.tera`
-   - [ ] Add `grafana_enabled` variable to Ansible variables template
-   - [ ] Register playbook in `ProjectGenerator` (see `templates.md` for static template registration)
-   - [ ] Create `ConfigureGrafanaFirewallStep` in `src/application/steps/configure_grafana_firewall.rs`:
+   - [x] Create Ansible playbook: `templates/ansible/configure-grafana-firewall.yml`
+   - [x] ~~Add `grafana_enabled` variable to Ansible variables template~~ (NOT NEEDED - conditional at step level)
+   - [x] Register playbook in `ProjectGenerator` (see `templates.md` for static template registration)
+   - [x] Create `ConfigureGrafanaFirewallStep` in `src/application/steps/system/configure_grafana_firewall.rs`:
      - Implement `Step` trait with `execute()` method
      - Execute `configure-grafana-firewall.yml` playbook via Ansible client
      - Return appropriate error on failure
-   - [ ] Add `ConfigureGrafanaFirewall` variant to `ConfigureStep` enum in `src/domain/environment/state.rs`
-   - [ ] Integrate step in `ConfigureCommandHandler::execute_configuration_with_tracking()`:
+   - [x] Add `ConfigureGrafanaFirewall` variant to `ConfigureStep` enum in `src/domain/environment/state/configure_failed.rs`
+   - [x] Integrate step in `ConfigureCommandHandler::execute_configuration_with_tracking()`:
      - Add after `ConfigureTrackerFirewall` step
      - Check `skip_firewall` flag (respect `TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER`)
      - Skip with info log if firewall configuration is disabled
-     - Execute `ConfigureGrafanaFirewallStep` otherwise
-   - [ ] Add unit tests for `ConfigureGrafanaFirewallStep`
+     - Execute `ConfigureGrafanaFirewallStep` only when Grafana is enabled
+   - [x] Add unit tests for `ConfigureGrafanaFirewallStep`
 
 7. **Testing**:
-   - [ ] Add unit tests for Grafana service rendering in docker-compose template
-   - [ ] Test conditional rendering (with/without Grafana)
-   - [ ] Test environment variable generation
-   - [ ] Test volume declaration
-   - [ ] Test firewall configuration playbook rendering
-   - [ ] Test `ConfigureGrafanaFirewallStep` execution
-   - [ ] Run `cargo test` - all tests should pass (1500+ tests)
-   - [ ] Run `cargo run --bin linter all` - all linters should pass
+   - [x] Add unit tests for Grafana service rendering in docker-compose template
+   - [x] Test conditional rendering (with/without Grafana)
+   - [x] Test environment variable generation
+   - [x] Test volume declaration
+   - [x] Test firewall configuration playbook rendering
+   - [x] Test `ConfigureGrafanaFirewallStep` execution
+   - [x] Run `cargo test` - all tests should pass (1555 tests)
+   - [x] Run `cargo run --bin linter all` - all linters should pass
 
 ### Phase 3: Testing & Verification
 

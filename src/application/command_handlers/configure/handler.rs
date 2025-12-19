@@ -8,8 +8,8 @@ use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
-    ConfigureFirewallStep, ConfigureSecurityUpdatesStep, ConfigureTrackerFirewallStep,
-    InstallDockerComposeStep, InstallDockerStep,
+    ConfigureFirewallStep, ConfigureGrafanaFirewallStep, ConfigureSecurityUpdatesStep,
+    ConfigureTrackerFirewallStep, InstallDockerComposeStep, InstallDockerStep,
 };
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
@@ -216,6 +216,34 @@ impl ConfigureCommandHandler {
             ConfigureTrackerFirewallStep::new(Arc::clone(&ansible_client))
                 .execute()
                 .map_err(|e| (e.into(), current_step))?;
+        }
+
+        let current_step = ConfigureStep::ConfigureGrafanaFirewall;
+        // Configure Grafana-specific firewall rules (conditional on Grafana configuration)
+        // Only execute if Grafana is configured in the environment
+        if skip_firewall {
+            info!(
+                command = "configure",
+                step = "configure_grafana_firewall",
+                status = "skipped",
+                "Skipping Grafana firewall configuration due to TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER"
+            );
+        } else if environment.context().user_inputs.grafana.is_some() {
+            info!(
+                command = "configure",
+                step = "configure_grafana_firewall",
+                "Configuring Grafana firewall (Grafana enabled)"
+            );
+            ConfigureGrafanaFirewallStep::new(Arc::clone(&ansible_client))
+                .execute()
+                .map_err(|e| (e.into(), current_step))?;
+        } else {
+            info!(
+                command = "configure",
+                step = "configure_grafana_firewall",
+                status = "skipped",
+                "Skipping Grafana firewall configuration (Grafana disabled)"
+            );
         }
 
         // Transition to Configured state
