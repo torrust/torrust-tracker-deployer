@@ -11,23 +11,70 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
 
 ## Goals
 
-- [ ] Add Grafana service conditionally to docker-compose stack (only when present in environment config)
-- [ ] Validate that Prometheus is enabled when Grafana is requested (dependency check)
-- [ ] Create Grafana configuration section in environment schema
-- [ ] Extend environment configuration schema to include Grafana monitoring section
-- [ ] Configure service dependency - Grafana depends on Prometheus service
-- [ ] Include Grafana in generated environment templates by default (enabled by default)
-- [ ] Allow users to disable Grafana by removing its configuration section
-- [ ] Deploy and verify Grafana connects to Prometheus and displays metrics
+- [x] Add Grafana service conditionally to docker-compose stack (only when present in environment config)
+- [x] Validate that Prometheus is enabled when Grafana is requested (dependency check)
+- [x] Create Grafana configuration section in environment schema
+- [x] Extend environment configuration schema to include Grafana monitoring section
+- [x] Configure service dependency - Grafana depends on Prometheus service
+- [x] Include Grafana in generated environment templates by default (enabled by default)
+- [x] Allow users to disable Grafana by removing its configuration section
+- [x] Configure firewall to allow public access to Grafana UI (port 3100)
+- [ ] Deploy and verify Grafana connects to Prometheus and displays metrics (manual testing pending)
 
 ## Progress
 
-_This section will be updated as implementation progresses._
+**Current Status**: Phase 3 (Testing & Verification) - E2E test configurations complete, validator implementation in progress
 
-- [ ] **Phase 1**: Environment Configuration & Validation
-- [ ] **Phase 2**: Docker Compose Integration
-- [ ] **Phase 3**: Testing & Verification
-- [ ] **Phase 4**: Documentation
+**Implementation Summary**:
+
+- ✅ **Phase 1**: Environment Configuration & Validation (COMPLETE)
+  - Domain models, validation logic, error handling
+  - 3 commits: domain layer, validation, integration
+- ✅ **Phase 2**: Docker Compose Integration (COMPLETE)
+  - DockerComposeContext and EnvContext extensions
+  - Template updates (docker-compose.yml.tera, .env.tera)
+  - 1 commit: comprehensive Phase 2 implementation
+- 🔄 **Phase 3**: Testing & Verification (IN PROGRESS)
+  - ✅ Firewall configuration complete (1 commit)
+  - ✅ E2E test configurations created (3 configs)
+  - ⏳ E2E validation extension (in progress)
+  - ⏳ Manual E2E testing (pending)
+- ⏳ **Phase 4**: Documentation (NOT STARTED)
+
+**Total Commits**: 7 commits for issue #246
+
+- 3 for Phase 1 (domain layer)
+- 1 for Phase 2 (Docker Compose integration)
+- 1 for Phase 3 firewall configuration
+- 1 for E2E test configs documentation
+- 1 commit message correction
+
+## Implementation Notes
+
+**Key Architectural Decisions Made During Implementation** (may differ from original plan):
+
+1. **Static Playbook vs Dynamic Template**:
+
+   - **Plan**: `configure-grafana-firewall.yml.tera` (dynamic Tera template)
+   - **Actual**: `configure-grafana-firewall.yml` (static YAML playbook)
+   - **Rationale**: Only 2 Ansible templates are dynamic (.tera): `inventory.yml.tera` and `variables.yml.tera`. All playbooks are static and load variables via `vars_files: [variables.yml]` directive. This follows the centralized variables pattern documented in `templates/ansible/README.md`.
+
+2. **Step-Level Conditional Execution**:
+
+   - **Plan**: Add `grafana_enabled: bool` variable to `variables.yml.tera` for task-level conditionals
+   - **Actual**: No `grafana_enabled` variable; conditional execution happens at step level in handler
+   - **Rationale**: Grafana has a fixed port (3100), unlike tracker which has variable ports. Simpler to check `environment.context().user_inputs.grafana.is_some()` in the configure handler than pass boolean through templates. The playbook runs unconditionally when executed; the decision to execute happens in `ConfigureCommandHandler`.
+
+3. **Module Locations**:
+
+   - **Plan**: Generic reference to `src/domain/environment/state.rs` for enum variant
+   - **Actual**: `src/domain/environment/state/configure_failed.rs` contains the `ConfigureStep::ConfigureGrafanaFirewall` variant
+   - **Note**: The state module is organized into separate files per state type (configure_failed.rs, release_failed.rs, etc.)
+
+4. **Firewall Pattern**:
+   - **Prometheus**: Port 9090 is NOT exposed publicly through firewall (internal service only)
+   - **Grafana**: Port 3100 IS exposed publicly through UFW (user-facing UI)
+   - **Rationale**: Prometheus is an internal metrics collection service. Grafana is the user-facing visualization layer that accesses Prometheus internally.
 
 ## 🏗️ Architecture Requirements
 
@@ -37,8 +84,8 @@ _This section will be updated as implementation progresses._
 - `src/infrastructure/templating/docker_compose/` - Docker Compose template rendering with Grafana service
 - `src/domain/grafana/` - Grafana configuration domain types (NEW)
 - `src/application/command_handlers/create/config/validation/` - Grafana-Prometheus dependency validation (NEW)
-- `src/application/steps/configure_grafana_firewall.rs` - Grafana firewall configuration step (NEW)
-- `src/domain/environment/state.rs` - Add `ConfigureGrafanaFirewall` variant to `ConfigureStep` enum (NEW)
+- `src/application/steps/system/configure_grafana_firewall.rs` - Grafana firewall configuration step (NEW)
+- `src/domain/environment/state/configure_failed.rs` - Add `ConfigureGrafanaFirewall` variant to `ConfigureStep` enum (NEW)
 
 **Pattern**: Configuration-driven service selection with dependency validation
 
@@ -239,18 +286,20 @@ fn validate_grafana_dependency(
 
 **Grafana UI Port Exposure**: Port 3100 must be opened in the firewall to allow public access to the Grafana web interface.
 
-**Ansible Playbook**: `templates/ansible/configure-grafana-firewall.yml` (NEW)
+**Ansible Playbook**: `templates/ansible/configure-grafana-firewall.yml` (NEW - static playbook, not .tera)
+
+**Implementation Note**: Unlike the original plan which suggested a `.tera` dynamic template, the actual implementation uses a **static `.yml` playbook** that loads variables via `vars_files`. This follows the centralized variables pattern used by other Ansible playbooks in the project.
 
 ```yaml
 ---
 # Configure Grafana-specific firewall rules
-# Opens port 3100 for Grafana UI access (conditionally, only when Grafana is enabled)
 
 - name: Configure Grafana Firewall Rules
   hosts: all
   become: true
   vars_files:
-    - "{{ playbook_dir }}/group_vars/all/variables.yml"
+    - variables.yml # Loads centralized variables
+
   tasks:
     - name: Allow Grafana UI port through firewall (port 3100)
       community.general.ufw:
@@ -258,7 +307,8 @@ fn validate_grafana_dependency(
         port: "3100"
         proto: tcp
         comment: "Grafana UI"
-      when: grafana_enabled | default(false) | bool
+      # Note: Unconditional execution when playbook runs
+      # Conditional execution happens at step level (don't run if Grafana disabled)
       notify: Reload UFW
 
   handlers:
@@ -267,22 +317,32 @@ fn validate_grafana_dependency(
         state: reloaded
 ```
 
-**Variables in `group_vars/all/variables.yml`**:
+**Variables in `variables.yml.tera`**:
 
-```yaml
-# Grafana Configuration (conditional)
-grafana_enabled: {{ 'true' if grafana_config else 'false' }}
-```
+**NO grafana_enabled variable needed** - The original plan included a `grafana_enabled` variable, but this was removed because:
 
-**Template Location**: `templates/ansible/configure-grafana-firewall.yml.tera` (uses Tera to inject variables)
+1. Grafana port is fixed (3100), unlike tracker's variable ports
+2. Conditional execution happens at the **step level** (don't execute playbook if Grafana disabled)
+3. Playbook unconditionally opens port 3100 when executed - decision to run happens in configure command handler
+4. Simpler pattern: check `environment.context().user_inputs.grafana.is_some()` in handler
+
+**Template Location**: `templates/ansible/configure-grafana-firewall.yml` (static, registered in `ProjectGenerator::copy_static_templates()`)
 
 **Execution**: During `configure` command, after `ConfigureTrackerFirewall` step
 
 **Conditional Behavior**:
 
-- If Grafana is **enabled** in environment config → Port 3100 opened in firewall
-- If Grafana is **disabled** (section removed) → Playbook tasks skipped (no port opened)
-- If `TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER=true` → Entire firewall configuration skipped
+- **Step-Level Conditional Execution** (actual implementation):
+
+  - If Grafana is **enabled** in environment config → `ConfigureGrafanaFirewallStep` executes playbook → Port 3100 opened
+  - If Grafana is **disabled** (section absent) → Step skipped entirely (check: `environment.context().user_inputs.grafana.is_some()`)
+  - If `TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER=true` → All firewall steps skipped (including Grafana)
+
+- **Rationale for Step-Level Approach**:
+  - Grafana port is fixed (3100), unlike tracker's variable ports that need task-level conditionals
+  - Simpler to check Grafana presence at step level than pass boolean variable through templates
+  - Follows same pattern as Prometheus (which has no public firewall exposure at all)
+  - Playbook unconditionally opens port 3100 when executed - clean and predictable
 
 **Security Note**: This public exposure is **temporary** until HTTPS support with reverse proxy is implemented (roadmap task 6). Once a reverse proxy (like nginx) is added with HTTPS, this public port exposure will be removed, and Grafana will only be accessible through the proxy.
 
@@ -292,9 +352,11 @@ grafana_enabled: {{ 'true' if grafana_config else 'false' }}
 2. Then, individual service ports are opened conditionally based on enabled services:
    - SSH port (always, custom or default)
    - Tracker ports (if tracker configured)
-   - Prometheus port (if Prometheus enabled)
-   - Grafana port (if Grafana enabled)
+   - **Prometheus port**: NOT exposed (internal service, no public firewall rule)
+   - Grafana port (if Grafana enabled) - port 3100 for UI access
    - Future services...
+
+**Note**: Prometheus (port 9090) is intentionally NOT exposed through the firewall as it's an internal service. Only Grafana (which provides the user-facing UI) has public firewall access.
 
 ### Environment Configuration Schema Extensions
 
