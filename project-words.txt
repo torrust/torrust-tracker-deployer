@@ -48,8 +48,11 @@ VARCHAR
 Zeroize
 addgroup
 adduser
+BBDBE
 bencoded
 completei
+downloadedi
+filesd
 incompletei
 intervali
 peerslee
@@ -261,6 +264,7 @@ tulnp
 tulpn
 turbofish
 tést
+ulpn
 undertested
 unergonomic
 unittests
