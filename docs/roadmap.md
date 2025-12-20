@@ -99,7 +99,7 @@ When starting work on a new feature:
     - Allow user to choose between SQLite and MySQL in environment config
   - [x] **3.2.4** Prometheus slice - [Issue #238](https://github.com/torrust/torrust-tracker-deployer/issues/238) ✅ Completed
     - Add Prometheus service for metrics collection
-  - [ ] **3.2.5** Grafana slice
+  - [x] **3.2.5** Grafana slice - [Issue #246](https://github.com/torrust/torrust-tracker-deployer/issues/246) ✅ Completed
     - Add Grafana service for metrics visualization
 
   **Notes:**
