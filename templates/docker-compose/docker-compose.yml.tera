@@ -71,6 +71,12 @@ services:
     # Host can access for validation via: curl http://localhost:9090
     volumes:
       - ./storage/prometheus/etc:/etc/prometheus:Z
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     logging:
       options:
         max-size: "10m"
@@ -94,12 +100,23 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     logging:
       options:
         max-size: "10m"
         max-file: "10"
     depends_on:
-      - prometheus
+{% if prometheus_config %}
+      prometheus:
+        condition: service_healthy
+{% else %}
+      - tracker
+{% endif %}
 {% endif %}
 
 {% if database.driver == "mysql" %}
