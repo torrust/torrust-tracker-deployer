@@ -37,6 +37,8 @@
 
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::{EnvironmentName, InternalConfig, RuntimeOutputs, UserInputs};
+use crate::domain::grafana::GrafanaConfig;
+use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::ProviderConfig;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -186,15 +188,18 @@ impl EnvironmentContext {
     /// Creates a new environment context with custom tracker configuration
     ///
     /// This creates absolute paths for data and build directories by using the
-    /// provided working directory as the base, and allows specifying a custom
-    /// tracker configuration instead of using the default.
+    /// provided working directory as the base, and allows specifying custom
+    /// tracker, prometheus, and grafana configurations.
     #[must_use]
+    #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
     pub fn with_working_dir_and_tracker(
         name: &EnvironmentName,
         provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
         tracker_config: crate::domain::tracker::TrackerConfig,
+        prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
+        grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
         working_dir: &std::path::Path,
     ) -> Self {
         Self {
@@ -204,6 +209,8 @@ impl EnvironmentContext {
                 ssh_credentials,
                 ssh_port,
                 tracker_config,
+                prometheus_config,
+                grafana_config,
             ),
             internal_config: InternalConfig::with_working_dir(name, working_dir),
             runtime_outputs: RuntimeOutputs {
@@ -337,8 +344,14 @@ impl EnvironmentContext {
 
     /// Returns the Prometheus configuration if enabled
     #[must_use]
-    pub fn prometheus_config(&self) -> Option<&crate::domain::prometheus::PrometheusConfig> {
+    pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
         self.user_inputs.prometheus.as_ref()
+    }
+
+    /// Returns the Grafana configuration if enabled
+    #[must_use]
+    pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
+        self.user_inputs.grafana.as_ref()
     }
 
     /// Returns the build directory

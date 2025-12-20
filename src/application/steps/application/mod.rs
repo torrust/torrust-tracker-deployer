@@ -11,6 +11,7 @@
 //! - `deploy_tracker_config` - Deploys tracker.toml configuration file to remote host
 //! - `create_prometheus_storage` - Creates Prometheus storage directory structure on remote host
 //! - `deploy_prometheus_config` - Deploys prometheus.yml configuration file to remote host
+//! - `deploy_grafana_provisioning` - Deploys Grafana provisioning files (datasources/dashboards) to remote host
 //! - `deploy_compose_files` - Deploys Docker Compose files to remote host via Ansible
 //! - `start_services` - Starts Docker Compose services via Ansible
 //! - `run` - Legacy run step (placeholder)
@@ -31,6 +32,7 @@
 pub mod create_prometheus_storage;
 pub mod create_tracker_storage;
 pub mod deploy_compose_files;
+pub mod deploy_grafana_provisioning;
 pub mod deploy_prometheus_config;
 pub mod deploy_tracker_config;
 pub mod init_tracker_database;
@@ -40,6 +42,7 @@ pub mod start_services;
 pub use create_prometheus_storage::CreatePrometheusStorageStep;
 pub use create_tracker_storage::CreateTrackerStorageStep;
 pub use deploy_compose_files::{DeployComposeFilesStep, DeployComposeFilesStepError};
+pub use deploy_grafana_provisioning::DeployGrafanaProvisioningStep;
 pub use deploy_prometheus_config::DeployPrometheusConfigStep;
 pub use deploy_tracker_config::{DeployTrackerConfigStep, DeployTrackerConfigStepError};
 pub use init_tracker_database::InitTrackerDatabaseStep;

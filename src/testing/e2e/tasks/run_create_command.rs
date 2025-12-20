@@ -100,6 +100,8 @@ pub fn run_create_command(
             profile_name: format!("lxd-{environment_name}"),
         }),
         TrackerSection::default(),
+        None,
+        None,
     );
 
     // Execute the command

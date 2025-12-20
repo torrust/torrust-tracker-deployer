@@ -26,13 +26,16 @@ use super::errors::CreateSchemaCommandHandlerError;
 /// ```rust
 /// use torrust_tracker_deployer_lib::application::command_handlers::create::schema::CreateSchemaCommandHandler;
 /// use std::path::PathBuf;
+/// use tempfile::TempDir;
 ///
 /// // Generate to stdout
 /// let schema = CreateSchemaCommandHandler::execute(None)?;
 /// println!("{}", schema);
 ///
-/// // Generate to file
-/// CreateSchemaCommandHandler::execute(Some(PathBuf::from("schema.json")))?;
+/// // Generate to file (use temp directory to avoid leaving artifacts)
+/// let temp_dir = TempDir::new()?;
+/// let schema_path = temp_dir.path().join("schema.json");
+/// CreateSchemaCommandHandler::execute(Some(schema_path))?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub struct CreateSchemaCommandHandler;
@@ -62,13 +65,16 @@ impl CreateSchemaCommandHandler {
     /// ```rust
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::schema::CreateSchemaCommandHandler;
     /// use std::path::PathBuf;
+    /// use tempfile::TempDir;
     ///
     /// // Output to stdout (caller prints the returned string)
     /// let schema = CreateSchemaCommandHandler::execute(None)?;
     /// println!("{}", schema);
     ///
-    /// // Output to file
-    /// let schema = CreateSchemaCommandHandler::execute(Some(PathBuf::from("./schema.json")))?;
+    /// // Output to file (use temp directory to avoid leaving artifacts)
+    /// let temp_dir = TempDir::new()?;
+    /// let schema_path = temp_dir.path().join("schema.json");
+    /// let schema = CreateSchemaCommandHandler::execute(Some(schema_path))?;
     /// // File is written, schema string also returned for confirmation
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```

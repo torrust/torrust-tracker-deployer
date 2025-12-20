@@ -106,6 +106,13 @@ impl E2eConfigEnvironment {
                     "bind_address": format!("0.0.0.0:{}", self.tracker_ports.http_api_port),
                     "admin_token": "MyAccessToken"
                 }
+            },
+            "prometheus": {
+                "scrape_interval_in_secs": 15
+            },
+            "grafana": {
+                "admin_user": "admin",
+                "admin_password": "e2e-test-password"
             }
         })
         .to_string()

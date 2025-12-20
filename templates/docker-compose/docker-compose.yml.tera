@@ -66,15 +66,58 @@ services:
     networks:
       - backend_network
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"  # Localhost only - not exposed to external network
+    # Grafana accesses Prometheus via Docker network: http://prometheus:9090
+    # Host can access for validation via: curl http://localhost:9090
     volumes:
       - ./storage/prometheus/etc:/etc/prometheus:Z
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     logging:
       options:
         max-size: "10m"
         max-file: "10"
     depends_on:
       - tracker
+{% endif %}
+
+{% if grafana_config %}
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    tty: true
+    restart: unless-stopped
+    networks:
+      - backend_network
+    ports:
+      - "3100:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./storage/grafana/provisioning:/etc/grafana/provisioning:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+    depends_on:
+{% if prometheus_config %}
+      prometheus:
+        condition: service_healthy
+{% else %}
+      - tracker
+{% endif %}
 {% endif %}
 
 {% if database.driver == "mysql" %}
@@ -109,8 +152,14 @@ services:
 networks:
   backend_network: {}
 
-{% if database.driver == "mysql" %}
+{% if database.driver == "mysql" or grafana_config %}
 volumes:
+{%- if database.driver == "mysql" %}
   mysql_data:
     driver: local
+{%- endif %}
+{%- if grafana_config %}
+  grafana_data:
+    driver: local
+{%- endif %}
 {% endif %}

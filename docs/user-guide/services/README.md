@@ -15,9 +15,17 @@ The services documentation provides comprehensive guides for each optional servi
 ## Available Services
 
 - **[Prometheus Monitoring](prometheus.md)** - Metrics collection and monitoring service
+
   - Automatic metrics scraping from tracker API endpoints
   - Web UI for querying and visualizing metrics
   - Configurable scrape intervals
+  - Enabled by default, can be disabled
+
+- **[Grafana Visualization](grafana.md)** - Metrics visualization and dashboards
+  - Web-based dashboard interface for visualizing Prometheus metrics
+  - Configurable admin credentials
+  - Auto-import of tracker dashboards (planned)
+  - Requires Prometheus to be enabled
   - Enabled by default, can be disabled
 
 ## Service Organization
@@ -88,7 +96,6 @@ As the deployer evolves, additional optional services may be added to this direc
 - Reverse proxy services (Nginx, Traefik)
 - Logging aggregation (Loki, Elasticsearch)
 - Alerting services (Alertmanager)
-- Visualization services (Grafana)
 
 ## Related Documentation
 

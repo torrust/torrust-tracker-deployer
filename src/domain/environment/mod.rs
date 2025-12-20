@@ -134,6 +134,9 @@ pub use crate::domain::tracker::{
 // Re-export Prometheus types for convenience
 pub use crate::domain::prometheus::PrometheusConfig;
 
+// Re-export Grafana types for convenience
+pub use crate::domain::grafana::GrafanaConfig;
+
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::{InstanceName, ProfileName};
@@ -284,16 +287,19 @@ impl Environment {
     /// Creates a new environment in Created state with custom tracker configuration
     ///
     /// This creates absolute paths for data and build directories by using the
-    /// provided working directory as the base, and allows specifying a custom
-    /// tracker configuration instead of using the default.
+    /// provided working directory as the base, and allows specifying custom
+    /// tracker, prometheus, and grafana configurations.
     #[must_use]
     #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
+    #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
     pub fn with_working_dir_and_tracker(
         name: EnvironmentName,
         provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
         tracker_config: TrackerConfig,
+        prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
+        grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
         working_dir: &std::path::Path,
     ) -> Environment<Created> {
         let context = EnvironmentContext::with_working_dir_and_tracker(
@@ -302,6 +308,8 @@ impl Environment {
             ssh_credentials,
             ssh_port,
             tracker_config,
+            prometheus_config,
+            grafana_config,
             working_dir,
         );
 
@@ -446,6 +454,12 @@ impl<S> Environment<S> {
     #[must_use]
     pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
         self.context.prometheus_config()
+    }
+
+    /// Returns the Grafana configuration if enabled
+    #[must_use]
+    pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
+        self.context.grafana_config()
     }
 
     /// Returns the SSH username for this environment
@@ -896,7 +910,10 @@ impl<S> Environment<S> {
 mod tests {
     use super::*;
     use crate::adapters::ssh::SshCredentials;
+    use crate::domain::grafana::GrafanaConfig;
+    use crate::domain::prometheus::PrometheusConfig;
     use crate::domain::provider::{LxdConfig, ProviderConfig};
+    use crate::domain::tracker::TrackerConfig;
     use crate::domain::EnvironmentName;
     use std::path::Path;
     use tempfile::TempDir;
@@ -1042,8 +1059,9 @@ mod tests {
                     provider_config,
                     ssh_credentials,
                     ssh_port: 22,
-                    tracker: crate::domain::tracker::TrackerConfig::default(),
-                    prometheus: Some(crate::domain::prometheus::PrometheusConfig::default()),
+                    tracker: TrackerConfig::default(),
+                    prometheus: Some(PrometheusConfig::default()),
+                    grafana: Some(GrafanaConfig::default()),
                 },
                 internal_config: InternalConfig {
                     data_dir: data_dir.clone(),

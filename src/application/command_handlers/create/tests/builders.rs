@@ -271,6 +271,8 @@ pub fn create_valid_test_config(temp_dir: &TempDir, env_name: &str) -> Environme
             profile_name: format!("lxd-{env_name}"),
         }),
         TrackerSection::default(),
+        None,
+        None,
     )
 }
 

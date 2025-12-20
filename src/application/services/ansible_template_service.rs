@@ -153,6 +153,7 @@ impl AnsibleTemplateService {
             user_inputs.ssh_credentials.clone(),
             ssh_socket_addr,
             user_inputs.tracker.clone(),
+            user_inputs.grafana.clone(),
         )
         .execute()
         .await

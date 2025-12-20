@@ -352,9 +352,8 @@ mod tests {
             http_tracker_ports: vec![7070],
             http_api_port: 1212,
         };
-        let prometheus_config = PrometheusConfig {
-            scrape_interval: 15,
-        };
+        let prometheus_config =
+            PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
         let context = DockerComposeContext::builder(ports)
             .with_prometheus(prometheus_config)
             .build();
@@ -386,10 +385,10 @@ mod tests {
             "Should set container name"
         );
 
-        // Verify port mapping
+        // Verify port is bound to localhost only (not exposed to external network)
         assert!(
-            rendered_content.contains("9090:9090"),
-            "Should expose Prometheus port 9090"
+            rendered_content.contains("127.0.0.1:9090:9090"),
+            "Prometheus port 9090 should be bound to localhost only (not exposed to external network)"
         );
 
         // Verify volume mount

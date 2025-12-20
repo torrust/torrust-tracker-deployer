@@ -1,12 +1,36 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "EnvironmentCreationConfig",
-  "description": "Configuration for creating a deployment environment\n\nThis is the top-level configuration object that contains all information\nneeded to create a new deployment environment. It deserializes from JSON\nconfiguration and provides type-safe conversion to domain parameters.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::{\n    EnvironmentCreationConfig, EnvironmentSection, ProviderSection, LxdProviderSection\n};\n\nlet json = r#\"{\n    \"environment\": {\n        \"name\": \"dev\"\n    },\n    \"ssh_credentials\": {\n        \"private_key_path\": \"fixtures/testing_rsa\",\n        \"public_key_path\": \"fixtures/testing_rsa.pub\"\n    },\n    \"provider\": {\n        \"provider\": \"lxd\",\n        \"profile_name\": \"torrust-profile-dev\"\n    },\n    \"tracker\": {\n        \"core\": {\n            \"database\": {\n                \"driver\": \"sqlite3\",\n                \"database_name\": \"tracker.db\"\n            },\n            \"private\": false\n        },\n        \"udp_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:6969\"\n            }\n        ],\n        \"http_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:7070\"\n            }\n        ],\n        \"http_api\": {\n            \"bind_address\": \"0.0.0.0:1212\",\n            \"admin_token\": \"MyAccessToken\"\n        }\n    }\n}\"#;\n\nlet config: EnvironmentCreationConfig = serde_json::from_str(json)?;\n# Ok::<(), Box<dyn std::error::Error>>(())\n```",
+  "description": "Configuration for creating a deployment environment\n\nThis is the top-level configuration object that contains all information\nneeded to create a new deployment environment. It deserializes from JSON\nconfiguration and provides type-safe conversion to domain parameters.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::{\n    EnvironmentCreationConfig, EnvironmentSection, ProviderSection, LxdProviderSection\n};\n\nlet json = r#\"{\n    \"environment\": {\n        \"name\": \"dev\"\n    },\n    \"ssh_credentials\": {\n        \"private_key_path\": \"fixtures/testing_rsa\",\n        \"public_key_path\": \"fixtures/testing_rsa.pub\"\n    },\n    \"provider\": {\n        \"provider\": \"lxd\",\n        \"profile_name\": \"torrust-profile-dev\"\n    },\n    \"tracker\": {\n        \"core\": {\n            \"database\": {\n                \"driver\": \"sqlite3\",\n                \"database_name\": \"tracker.db\"\n            },\n            \"private\": false\n        },\n        \"udp_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:6969\"\n            }\n        ],\n        \"http_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:7070\"\n            }\n        ],\n        \"http_api\": {\n            \"bind_address\": \"0.0.0.0:1212\",\n            \"admin_token\": \"MyAccessToken\"\n        }\n    },\n    \"prometheus\": {\n        \"scrape_interval_in_secs\": 15\n    },\n    \"grafana\": {\n        \"admin_user\": \"admin\",\n        \"admin_password\": \"admin\"\n    }\n}\"#;\n\nlet config: EnvironmentCreationConfig = serde_json::from_str(json)?;\n# Ok::<(), Box<dyn std::error::Error>>(())\n```",
   "type": "object",
   "properties": {
     "environment": {
       "description": "Environment-specific settings",
       "$ref": "#/$defs/EnvironmentSection"
+    },
+    "grafana": {
+      "description": "Grafana dashboard configuration (optional)\n\nWhen present, Grafana will be deployed for visualization.\n**Requires Prometheus to be configured** - Grafana depends on\nPrometheus as its data source.\n\nUses `GrafanaSection` for JSON parsing with String primitives.\nConverted to domain `GrafanaConfig` via `to_environment_params()`.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GrafanaSection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "prometheus": {
+      "description": "Prometheus monitoring configuration (optional)\n\nWhen present, Prometheus will be deployed to monitor the tracker.\nUses `PrometheusSection` for JSON parsing with String primitives.\nConverted to domain `PrometheusConfig` via `to_environment_params()`.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PrometheusSection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "provider": {
       "description": "Provider-specific configuration (LXD, Hetzner, etc.)\n\nUses `ProviderSection` for JSON parsing with raw primitives.\nConverted to domain `ProviderConfig` via `to_environment_params()`.",
@@ -66,7 +90,7 @@
               "type": "string"
             },
             "password": {
-              "description": "Database password",
+              "description": "Database password (plain text during DTO serialization/deserialization)\n\nUses `PlainPassword` type alias to explicitly mark this as a temporarily visible secret.\nConverted to secure `Password` type in `to_database_config()` at the DTO-to-domain boundary.",
               "type": "string"
             },
             "port": {
@@ -113,12 +137,30 @@
         "name"
       ]
     },
+    "GrafanaSection": {
+      "description": "Grafana configuration section (DTO)\n\nThis is a DTO that deserializes from JSON strings and validates\nwhen converting to the domain `GrafanaConfig`.\n\n# Security\n\nThe `admin_password` field uses `PlainPassword` type alias for string at\nDTO boundaries. It will be converted to `Password` (secrecy-wrapped) in\nthe domain layer.\n\n# Examples\n\n```json\n{\n    \"admin_user\": \"admin\",\n    \"admin_password\": \"admin\"\n}\n```",
+      "type": "object",
+      "properties": {
+        "admin_password": {
+          "description": "Grafana admin password (plain string at DTO boundary)\n\nThis will be converted to `Password` type in the domain layer\nto prevent accidental exposure in logs or debug output.",
+          "type": "string"
+        },
+        "admin_user": {
+          "description": "Grafana admin username",
+          "type": "string"
+        }
+      },
+      "required": [
+        "admin_user",
+        "admin_password"
+      ]
+    },
     "HetznerProviderSection": {
       "description": "Hetzner-specific configuration section\n\nUses raw `String` fields for JSON deserialization. Convert to domain\n`HetznerConfig` via `ProviderSection::to_provider_config()`.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::HetznerProviderSection;\n\nlet section = HetznerProviderSection {\n    api_token: \"your-api-token\".to_string(),\n    server_type: \"cx22\".to_string(),\n    location: \"nbg1\".to_string(),\n    image: \"ubuntu-24.04\".to_string(),\n};\n```",
       "type": "object",
       "properties": {
         "api_token": {
-          "description": "Hetzner API token (raw string).",
+          "description": "Hetzner API token in plain text format (DTO layer).\n\nThis uses [`PlainApiToken`] to mark it as a transparent secret during\ndeserialization. Convert to domain `ApiToken` at the DTO-to-domain boundary.",
           "type": "string"
         },
         "image": {
@@ -178,6 +220,21 @@
       },
       "required": [
         "profile_name"
+      ]
+    },
+    "PrometheusSection": {
+      "description": "Prometheus configuration section (DTO)\n\nThis is a simple DTO that deserializes from JSON numbers and validates\nwhen converting to the domain `PrometheusConfig`.\n\n# Examples\n\n```json\n{\n    \"scrape_interval_in_secs\": 15\n}\n```",
+      "type": "object",
+      "properties": {
+        "scrape_interval_in_secs": {
+          "description": "Interval for Prometheus to scrape metrics from targets (in seconds)\n\nMust be greater than 0. The Prometheus template adds the 's' suffix.\nExamples: 15 (15 seconds), 30 (30 seconds), 60 (1 minute)",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "scrape_interval_in_secs"
       ]
     },
     "ProviderSection": {

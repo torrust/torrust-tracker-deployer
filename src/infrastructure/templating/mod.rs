@@ -24,6 +24,8 @@
 //!   - `template` - Template renderers for Tracker configuration files
 //! - `prometheus` - Prometheus metrics collection configuration
 //!   - `template` - Template renderers for Prometheus configuration files
+//! - `grafana` - Grafana metrics visualization configuration
+//!   - `template` - Template renderers for Grafana provisioning files
 //!
 //! ## Template Rendering
 //!
@@ -34,6 +36,7 @@
 
 pub mod ansible;
 pub mod docker_compose;
+pub mod grafana;
 pub mod prometheus;
 pub mod tofu;
 pub mod tracker;

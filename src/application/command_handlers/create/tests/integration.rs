@@ -141,6 +141,8 @@ fn it_should_fail_with_invalid_environment_name() {
             profile_name: "test-profile".to_string(),
         }),
         TrackerSection::default(),
+        None,
+        None,
     );
 
     // Act
@@ -190,6 +192,8 @@ fn it_should_fail_when_ssh_private_key_not_found() {
             profile_name: "test-profile".to_string(),
         }),
         TrackerSection::default(),
+        None,
+        None,
     );
 
     // Act

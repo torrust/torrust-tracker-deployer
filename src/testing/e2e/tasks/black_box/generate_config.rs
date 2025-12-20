@@ -229,6 +229,9 @@ pub fn create_test_environment_config(environment_name: &str) -> String {
                 "bind_address": "0.0.0.0:1212",
                 "admin_token": "MyAccessToken"
             }
+        },
+        "prometheus": {
+            "scrape_interval_in_secs": 15
         }
     })
     .to_string()

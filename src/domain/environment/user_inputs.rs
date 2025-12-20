@@ -20,6 +20,7 @@
 
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::EnvironmentName;
+use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::tracker::TrackerConfig;
@@ -40,6 +41,7 @@ use serde::{Deserialize, Serialize};
 /// use torrust_tracker_deployer_lib::domain::environment::user_inputs::UserInputs;
 /// use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
 /// use torrust_tracker_deployer_lib::domain::prometheus::PrometheusConfig;
+/// use torrust_tracker_deployer_lib::domain::grafana::GrafanaConfig;
 /// use torrust_tracker_deployer_lib::shared::Username;
 /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 /// use std::path::PathBuf;
@@ -60,6 +62,7 @@ use serde::{Deserialize, Serialize};
 ///     ssh_port: 22,
 ///     tracker: TrackerConfig::default(),
 ///     prometheus: Some(PrometheusConfig::default()),
+///     grafana: Some(GrafanaConfig::default()),
 /// };
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -89,6 +92,14 @@ pub struct UserInputs {
     /// When absent (`None`), Prometheus service is disabled.
     /// Default: `Some(PrometheusConfig::default())` in generated templates.
     pub prometheus: Option<PrometheusConfig>,
+
+    /// Grafana visualization and dashboard configuration (optional)
+    ///
+    /// When present, Grafana service is enabled in the deployment.
+    /// When absent (`None`), Grafana service is disabled.
+    /// Requires Prometheus to be enabled - dependency validated at configuration time.
+    /// Default: `Some(GrafanaConfig::default())` in generated templates.
+    pub grafana: Option<GrafanaConfig>,
 }
 
 impl UserInputs {
@@ -156,13 +167,14 @@ impl UserInputs {
             ssh_port,
             tracker: TrackerConfig::default(),
             prometheus: Some(PrometheusConfig::default()),
+            grafana: Some(GrafanaConfig::default()),
         }
     }
 
     /// Creates a new `UserInputs` with custom tracker configuration
     ///
-    /// This is similar to `new` but allows specifying a custom tracker
-    /// configuration instead of using the default.
+    /// This is similar to `new` but allows specifying custom tracker,
+    /// prometheus, and grafana configurations instead of using defaults.
     #[must_use]
     pub fn with_tracker(
         name: &EnvironmentName,
@@ -170,6 +182,8 @@ impl UserInputs {
         ssh_credentials: SshCredentials,
         ssh_port: u16,
         tracker: TrackerConfig,
+        prometheus: Option<PrometheusConfig>,
+        grafana: Option<GrafanaConfig>,
     ) -> Self {
         let instance_name = Self::generate_instance_name(name);
 
@@ -180,7 +194,8 @@ impl UserInputs {
             ssh_credentials,
             ssh_port,
             tracker,
-            prometheus: Some(PrometheusConfig::default()),
+            prometheus,
+            grafana,
         }
     }
 

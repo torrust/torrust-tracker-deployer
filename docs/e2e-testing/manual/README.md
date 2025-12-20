@@ -404,6 +404,17 @@ ls data/manual-test 2>/dev/null || echo "Cleaned up successfully"
 
 After deploying your environment, you may want to verify that specific services are working correctly. The following guides provide detailed verification steps for each supported service:
 
+### Torrust Tracker
+
+The tracker is the core service deployed by this tool. See the [Tracker Verification Guide](tracker-verification.md) for detailed steps to:
+
+- Test HTTP tracker announce and scrape endpoints
+- Test UDP tracker functionality (overview and tooling)
+- Verify tracker REST API endpoints
+- Check health endpoints
+- Troubleshoot tracker-specific issues
+- Monitor tracker logs and performance
+
 ### MySQL Database
 
 If your deployment includes MySQL as the database backend, see the [MySQL Verification Guide](mysql-verification.md) for detailed steps to:
@@ -425,9 +436,19 @@ If your deployment includes Prometheus for metrics collection (enabled by defaul
 - Query collected metrics
 - Troubleshoot Prometheus-specific issues
 
+### Grafana Dashboards
+
+If your deployment includes Grafana for metrics visualization, see the [Grafana Verification Guide](grafana-verification.md) for detailed steps to:
+
+- Verify Grafana container health and connectivity
+- Check dashboard and datasource provisioning
+- Validate Prometheus datasource connection
+- Test end-to-end data flow (Tracker → Prometheus → Grafana)
+- Troubleshoot Grafana-specific issues
+
 ### Basic Tracker Verification
 
-For basic tracker functionality without service-specific checks:
+For quick basic tracker functionality checks without the detailed guide:
 
 ```bash
 # Get the VM IP

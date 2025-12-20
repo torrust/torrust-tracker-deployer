@@ -11,10 +11,12 @@ use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
     application::{
-        CreatePrometheusStorageStep, CreateTrackerStorageStep, DeployPrometheusConfigStep,
-        DeployTrackerConfigStep, InitTrackerDatabaseStep,
+        CreatePrometheusStorageStep, CreateTrackerStorageStep, DeployGrafanaProvisioningStep,
+        DeployPrometheusConfigStep, DeployTrackerConfigStep, InitTrackerDatabaseStep,
     },
-    rendering::{RenderPrometheusTemplatesStep, RenderTrackerTemplatesStep},
+    rendering::{
+        RenderGrafanaTemplatesStep, RenderPrometheusTemplatesStep, RenderTrackerTemplatesStep,
+    },
     DeployComposeFilesStep, RenderDockerComposeTemplatesStep,
 };
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
@@ -211,10 +213,16 @@ impl ReleaseCommandHandler {
         // Step 7: Deploy Prometheus configuration to remote (if enabled)
         self.deploy_prometheus_config_to_remote(environment, instance_ip)?;
 
-        // Step 8: Render Docker Compose templates
+        // Step 8: Render Grafana provisioning templates (if enabled)
+        Self::render_grafana_templates(environment)?;
+
+        // Step 9: Deploy Grafana provisioning to remote (if enabled)
+        self.deploy_grafana_provisioning_to_remote(environment, instance_ip)?;
+
+        // Step 10: Render Docker Compose templates
         let compose_build_dir = self.render_docker_compose_templates(environment).await?;
 
-        // Step 9: Deploy compose files to remote
+        // Step 11: Deploy compose files to remote
         self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
@@ -461,6 +469,123 @@ impl ReleaseCommandHandler {
             command = "release",
             step = %current_step,
             "Prometheus configuration deployed successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Render Grafana provisioning templates (if enabled)
+    ///
+    /// This step is optional and only executes if Grafana is configured in the environment.
+    /// If Grafana is not configured, the step is skipped without error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::RenderGrafanaTemplates`) if rendering fails
+    #[allow(clippy::result_large_err)]
+    fn render_grafana_templates(
+        environment: &Environment<Releasing>,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::RenderGrafanaTemplates;
+
+        // Check if Grafana is configured
+        if environment.context().user_inputs.grafana.is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "Grafana not configured - skipping provisioning template rendering"
+            );
+            return Ok(());
+        }
+
+        // Check if Prometheus is configured (required for datasource)
+        if environment.context().user_inputs.prometheus.is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "Prometheus not configured - skipping Grafana provisioning (datasource requires Prometheus)"
+            );
+            return Ok(());
+        }
+
+        let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+        let step = RenderGrafanaTemplatesStep::new(
+            Arc::new(environment.clone()),
+            template_manager,
+            environment.build_dir().clone(),
+        );
+
+        step.execute().map_err(|e| {
+            (
+                ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                current_step,
+            )
+        })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Grafana provisioning templates rendered successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Deploy Grafana provisioning configuration to the remote host (if enabled)
+    ///
+    /// This step is optional and only executes if Grafana is configured in the environment.
+    /// If Grafana is not configured, the step is skipped without error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::DeployGrafanaProvisioning`) if deployment fails
+    #[allow(clippy::result_large_err, clippy::unused_self)]
+    fn deploy_grafana_provisioning_to_remote(
+        &self,
+        environment: &Environment<Releasing>,
+        _instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::DeployGrafanaProvisioning;
+
+        // Check if Grafana is configured
+        if environment.context().user_inputs.grafana.is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "Grafana not configured - skipping provisioning deployment"
+            );
+            return Ok(());
+        }
+
+        // Check if Prometheus is configured (required for datasource)
+        if environment.context().user_inputs.prometheus.is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "Prometheus not configured - skipping Grafana provisioning deployment"
+            );
+            return Ok(());
+        }
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
+
+        DeployGrafanaProvisioningStep::new(ansible_client)
+            .execute()
+            .map_err(|e| {
+                (
+                    ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                    current_step,
+                )
+            })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Grafana provisioning configuration deployed successfully"
         );
 
         Ok(())

@@ -1,6 +1,7 @@
 //! Builder for `DockerComposeContext`
 
 // Internal crate
+use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
@@ -14,6 +15,7 @@ pub struct DockerComposeContextBuilder {
     ports: TrackerPorts,
     database: DatabaseConfig,
     prometheus_config: Option<PrometheusConfig>,
+    grafana_config: Option<GrafanaConfig>,
 }
 
 impl DockerComposeContextBuilder {
@@ -26,6 +28,7 @@ impl DockerComposeContextBuilder {
                 mysql: None,
             },
             prometheus_config: None,
+            grafana_config: None,
         }
     }
 
@@ -54,6 +57,17 @@ impl DockerComposeContextBuilder {
         self
     }
 
+    /// Adds Grafana configuration
+    ///
+    /// # Arguments
+    ///
+    /// * `grafana_config` - Grafana configuration
+    #[must_use]
+    pub fn with_grafana(mut self, grafana_config: GrafanaConfig) -> Self {
+        self.grafana_config = Some(grafana_config);
+        self
+    }
+
     /// Builds the `DockerComposeContext`
     #[must_use]
     pub fn build(self) -> DockerComposeContext {
@@ -61,6 +75,7 @@ impl DockerComposeContextBuilder {
             database: self.database,
             ports: self.ports,
             prometheus_config: self.prometheus_config,
+            grafana_config: self.grafana_config,
         }
     }
 }

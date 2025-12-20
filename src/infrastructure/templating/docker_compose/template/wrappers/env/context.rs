@@ -37,6 +37,18 @@ pub struct MySqlServiceConfig {
     pub password: String,
 }
 
+/// Configuration for the Grafana service
+///
+/// Contains environment variables for the Grafana container.
+/// Only included when Grafana is enabled.
+#[derive(Serialize, Debug, Clone)]
+pub struct GrafanaServiceConfig {
+    /// Grafana admin user
+    pub admin_user: String,
+    /// Grafana admin password (exposed from secrecy wrapper)
+    pub admin_password: String,
+}
+
 /// Context for rendering the .env template
 ///
 /// Contains all variables needed for the Docker Compose environment configuration,
@@ -48,6 +60,9 @@ pub struct EnvContext {
     /// `MySQL` service configuration (only present when `MySQL` driver is configured)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mysql: Option<MySqlServiceConfig>,
+    /// Grafana service configuration (only present when Grafana is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub grafana: Option<GrafanaServiceConfig>,
 }
 
 impl EnvContext {
@@ -75,6 +90,7 @@ impl EnvContext {
                 database_driver: "sqlite3".to_string(),
             },
             mysql: None,
+            grafana: None,
         }
     }
 
@@ -122,6 +138,7 @@ impl EnvContext {
                 user: mysql_user,
                 password: mysql_password,
             }),
+            grafana: None,
         }
     }
 
@@ -135,6 +152,35 @@ impl EnvContext {
     #[must_use]
     pub fn database_driver(&self) -> &str {
         &self.tracker.database_driver
+    }
+
+    /// Adds Grafana configuration
+    ///
+    /// Exposes the admin password from the secrecy wrapper for template rendering.
+    ///
+    /// # Arguments
+    ///
+    /// * `admin_user` - Grafana admin username
+    /// * `admin_password` - Grafana admin password (plain String, already exposed)
+    #[must_use]
+    pub fn with_grafana(mut self, admin_user: String, admin_password: String) -> Self {
+        self.grafana = Some(GrafanaServiceConfig {
+            admin_user,
+            admin_password,
+        });
+        self
+    }
+
+    /// Get the Grafana admin user (if configured)
+    #[must_use]
+    pub fn grafana_admin_user(&self) -> Option<&str> {
+        self.grafana.as_ref().map(|g| g.admin_user.as_str())
+    }
+
+    /// Get the Grafana admin password (if configured)
+    #[must_use]
+    pub fn grafana_admin_password(&self) -> Option<&str> {
+        self.grafana.as_ref().map(|g| g.admin_password.as_str())
     }
 
     /// Get the `MySQL` root password (if configured)

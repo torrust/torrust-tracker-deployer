@@ -125,7 +125,13 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         // Apply Prometheus configuration (independent of database choice)
         let builder = self.apply_prometheus_config(builder);
+
+        // Apply Grafana configuration (independent of database choice)
+        let builder = self.apply_grafana_config(builder);
         let docker_compose_context = builder.build();
+
+        // Apply Grafana credentials to env context
+        let env_context = self.apply_grafana_env_context(env_context);
 
         let compose_build_dir = generator
             .render(&env_context, &docker_compose_context)
@@ -207,6 +213,28 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             builder.with_prometheus(prometheus_config.clone())
         } else {
             builder
+        }
+    }
+
+    fn apply_grafana_config(
+        &self,
+        builder: DockerComposeContextBuilder,
+    ) -> DockerComposeContextBuilder {
+        if let Some(grafana_config) = self.environment.grafana_config() {
+            builder.with_grafana(grafana_config.clone())
+        } else {
+            builder
+        }
+    }
+
+    fn apply_grafana_env_context(&self, env_context: EnvContext) -> EnvContext {
+        if let Some(grafana_config) = self.environment.grafana_config() {
+            env_context.with_grafana(
+                grafana_config.admin_user().to_string(),
+                grafana_config.admin_password().expose_secret().to_string(),
+            )
+        } else {
+            env_context
         }
     }
 

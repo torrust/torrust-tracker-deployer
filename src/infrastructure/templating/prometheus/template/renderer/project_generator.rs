@@ -145,14 +145,14 @@ impl PrometheusProjectGenerator {
     /// # Returns
     ///
     /// A `PrometheusContext` with:
-    /// - `scrape_interval`: From `prometheus_config.scrape_interval`
+    /// - `scrape_interval`: From `prometheus_config.scrape_interval_in_secs`
     /// - `api_token`: From `tracker_config.http_api.admin_token`
     /// - `api_port`: Parsed from `tracker_config.http_api.bind_address`
     fn build_context(
         prometheus_config: &PrometheusConfig,
         tracker_config: &TrackerConfig,
     ) -> PrometheusContext {
-        let scrape_interval = prometheus_config.scrape_interval;
+        let scrape_interval = prometheus_config.scrape_interval_in_secs().to_string();
         let api_token = tracker_config
             .http_api
             .admin_token
@@ -278,9 +278,8 @@ scrape_configs:
         let template_manager = create_test_template_manager();
         let generator = PrometheusProjectGenerator::new(&build_dir, template_manager);
 
-        let prometheus_config = PrometheusConfig {
-            scrape_interval: 30,
-        };
+        let prometheus_config =
+            PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
         let tracker_config = create_test_tracker_config();
 
         generator

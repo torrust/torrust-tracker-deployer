@@ -57,6 +57,8 @@
 //!         profile_name: "lxd-production".to_string(),
 //!     }),
 //!     TrackerSection::default(),
+//!     None, // prometheus
+//!     None, // grafana
 //! );
 //!
 //! // Execute command with working directory

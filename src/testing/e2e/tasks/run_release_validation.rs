@@ -32,6 +32,8 @@ use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
 pub struct ServiceValidation {
     /// Whether to validate Prometheus configuration files
     pub prometheus: bool,
+    /// Whether to validate Grafana configuration (no separate config files needed)
+    pub grafana: bool,
 }
 
 /// Default deployment directory for Docker Compose files
@@ -299,6 +301,7 @@ pub async fn run_release_validation(
         socket_addr = %socket_addr,
         ssh_user = %ssh_credentials.ssh_username,
         validate_prometheus = services.prometheus,
+        validate_grafana = services.grafana,
         "Running release validation tests"
     );
 

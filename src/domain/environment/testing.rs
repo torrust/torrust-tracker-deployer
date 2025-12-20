@@ -5,7 +5,10 @@
 
 use super::*;
 use crate::adapters::ssh::SshCredentials;
+use crate::domain::grafana::GrafanaConfig;
+use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::{LxdConfig, ProviderConfig};
+use crate::domain::tracker::TrackerConfig;
 use crate::domain::EnvironmentName;
 use crate::shared::Username;
 use std::path::{Path, PathBuf};
@@ -37,7 +40,7 @@ pub struct EnvironmentTestBuilder {
     ssh_key_name: String,
     ssh_username: String,
     temp_dir: TempDir,
-    prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
+    prometheus_config: Option<PrometheusConfig>,
 }
 
 impl EnvironmentTestBuilder {
@@ -53,7 +56,7 @@ impl EnvironmentTestBuilder {
             ssh_key_name: "test_key".to_string(),
             ssh_username: "torrust".to_string(),
             temp_dir: TempDir::new().expect("Failed to create temp directory"),
-            prometheus_config: Some(crate::domain::prometheus::PrometheusConfig::default()),
+            prometheus_config: Some(PrometheusConfig::default()),
         }
     }
 
@@ -80,10 +83,7 @@ impl EnvironmentTestBuilder {
 
     /// Sets the Prometheus configuration
     #[must_use]
-    pub fn with_prometheus_config(
-        mut self,
-        config: Option<crate::domain::prometheus::PrometheusConfig>,
-    ) -> Self {
+    pub fn with_prometheus_config(mut self, config: Option<PrometheusConfig>) -> Self {
         self.prometheus_config = config;
         self
     }
@@ -144,16 +144,17 @@ impl EnvironmentTestBuilder {
         let provider_config = ProviderConfig::Lxd(LxdConfig { profile_name });
 
         let context = EnvironmentContext {
-            user_inputs: crate::domain::environment::UserInputs {
+            user_inputs: UserInputs {
                 name: env_name,
                 instance_name,
                 provider_config,
                 ssh_credentials,
                 ssh_port: 22,
-                tracker: crate::domain::tracker::TrackerConfig::default(),
+                tracker: TrackerConfig::default(),
                 prometheus: self.prometheus_config,
+                grafana: Some(GrafanaConfig::default()),
             },
-            internal_config: crate::domain::environment::InternalConfig {
+            internal_config: InternalConfig {
                 data_dir: data_dir.clone(),
                 build_dir: build_dir.clone(),
             },

@@ -13,6 +13,8 @@ EAAAADAQABAAABAQC
 EPEL
 Falkenstein
 Gossman
+Grafana
+Grafonnet
 Graça
 Herberto
 Hillsboro
@@ -46,6 +48,14 @@ VARCHAR
 Zeroize
 addgroup
 adduser
+BBDBE
+bencoded
+completei
+downloadedi
+filesd
+incompletei
+intervali
+peerslee
 appender
 appendonly
 architecting
@@ -75,7 +85,9 @@ customuser
 dearmor
 debootstrap
 debuginfo
+deogmiudufm
 derefs
+devpass
 distro
 distutils
 doctest
@@ -99,6 +111,7 @@ exfiltration
 exitcode
 flatlined
 frontends
+fswc
 getent
 getopt
 handleable
@@ -119,7 +132,9 @@ keepalive
 keygen
 keypair
 keyrings
+kutca
 larstobi
+leecher
 leechers
 libc
 lifecycles
@@ -236,6 +251,7 @@ testuser
 tfstate
 tfvars
 thiserror
+timepicker
 tlnp
 tlsv
 tmpbwr
@@ -248,6 +264,7 @@ tulnp
 tulpn
 turbofish
 tést
+ulpn
 undertested
 unergonomic
 unittests
@@ -263,6 +280,7 @@ vbqajnc
 viewmodel
 webservers
 writeln
+wrongpassword
 youruser
 zeroize
 Émojis

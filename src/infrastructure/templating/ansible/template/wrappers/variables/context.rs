@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use serde::Serialize;
 use thiserror::Error;
 
+use crate::domain::grafana::GrafanaConfig;
 use crate::domain::tracker::TrackerConfig;
 
 /// Errors that can occur when creating an `AnsibleVariablesContext`
@@ -33,6 +34,10 @@ pub struct AnsibleVariablesContext {
     /// Tracker HTTP API port
     #[serde(skip_serializing_if = "Option::is_none")]
     tracker_api_port: Option<u16>,
+
+    /// Grafana configuration (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    grafana_config: Option<GrafanaConfig>,
 }
 
 impl AnsibleVariablesContext {
@@ -44,6 +49,7 @@ impl AnsibleVariablesContext {
     pub fn new(
         ssh_port: u16,
         tracker_config: Option<&TrackerConfig>,
+        grafana_config: Option<&GrafanaConfig>,
     ) -> Result<Self, AnsibleVariablesContextError> {
         // Validate SSH port using existing validation
         crate::infrastructure::templating::ansible::template::wrappers::inventory::context::AnsiblePort::new(ssh_port)?;
@@ -56,6 +62,7 @@ impl AnsibleVariablesContext {
             tracker_udp_ports,
             tracker_http_ports,
             tracker_api_port,
+            grafana_config: grafana_config.cloned(),
         })
     }
 
@@ -125,7 +132,7 @@ mod tests {
 
     #[test]
     fn it_should_create_context_with_valid_ssh_port() {
-        let context = AnsibleVariablesContext::new(22, None).unwrap();
+        let context = AnsibleVariablesContext::new(22, None, None).unwrap();
         assert_eq!(context.ssh_port(), 22);
         assert!(context.tracker_udp_ports().is_empty());
         assert!(context.tracker_http_ports().is_empty());
@@ -134,19 +141,19 @@ mod tests {
 
     #[test]
     fn it_should_create_context_with_custom_ssh_port() {
-        let context = AnsibleVariablesContext::new(2222, None).unwrap();
+        let context = AnsibleVariablesContext::new(2222, None, None).unwrap();
         assert_eq!(context.ssh_port(), 2222);
     }
 
     #[test]
     fn it_should_create_context_with_high_port() {
-        let context = AnsibleVariablesContext::new(65535, None).unwrap();
+        let context = AnsibleVariablesContext::new(65535, None, None).unwrap();
         assert_eq!(context.ssh_port(), 65535);
     }
 
     #[test]
     fn it_should_fail_with_port_zero() {
-        let result = AnsibleVariablesContext::new(0, None);
+        let result = AnsibleVariablesContext::new(0, None, None);
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Invalid SSH port"));
@@ -154,21 +161,21 @@ mod tests {
 
     #[test]
     fn it_should_implement_clone() {
-        let context1 = AnsibleVariablesContext::new(22, None).unwrap();
+        let context1 = AnsibleVariablesContext::new(22, None, None).unwrap();
         let context2 = context1.clone();
         assert_eq!(context1.ssh_port(), context2.ssh_port());
     }
 
     #[test]
     fn it_should_serialize_to_json() {
-        let context = AnsibleVariablesContext::new(8022, None).unwrap();
+        let context = AnsibleVariablesContext::new(8022, None, None).unwrap();
         let json = serde_json::to_string(&context).unwrap();
         assert!(json.contains("\"ssh_port\":8022"));
     }
 
     #[test]
     fn it_should_display_error_message_correctly() {
-        let error = AnsibleVariablesContext::new(0, None).unwrap_err();
+        let error = AnsibleVariablesContext::new(0, None, None).unwrap_err();
         let error_msg = format!("{error}");
         assert!(error_msg.contains("Invalid SSH port"));
         assert!(error_msg.contains("Invalid port number: 0"));
@@ -205,7 +212,7 @@ mod tests {
             },
         };
 
-        let context = AnsibleVariablesContext::new(22, Some(&tracker_config)).unwrap();
+        let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
 
         assert_eq!(context.tracker_udp_ports(), &[6868, 6969]);
         assert_eq!(context.tracker_http_ports(), &[7070]);
@@ -233,7 +240,7 @@ mod tests {
             },
         };
 
-        let context = AnsibleVariablesContext::new(22, Some(&tracker_config)).unwrap();
+        let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
 
         assert!(context.tracker_udp_ports().is_empty());
         assert!(context.tracker_http_ports().is_empty());
@@ -271,7 +278,7 @@ mod tests {
             },
         };
 
-        let context = AnsibleVariablesContext::new(22, Some(&tracker_config)).unwrap();
+        let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
 
         // All valid ports should be extracted (domain now enforces valid SocketAddr)
         assert_eq!(context.tracker_udp_ports(), &[6868, 6969]);
