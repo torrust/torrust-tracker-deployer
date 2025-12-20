@@ -17,7 +17,7 @@ This document tracks extension tasks for the Grafana service that were identifie
 
 ### Task 1: Add Prometheus Docker Health Check
 
-**Status**: ⏳ Pending
+**Status**: ✅ Completed
 **Priority**: Medium (improves deployment reliability)
 
 #### Problem Statement
@@ -69,10 +69,10 @@ prometheus:
 
 ### Task 2: Add Grafana Docker Health Check
 
-**Status**: ⏳ Pending
+**Status**: ✅ Completed
 **Priority**: High (improves deployment reliability and reduces E2E retry logic)
 
-**Status**: ⏳ Pending
+**Status**: ✅ Completed
 **Priority**: High (improves deployment reliability and reduces E2E retry logic)
 
 #### Problem Statement
@@ -129,7 +129,7 @@ grafana:
 
 ### Task 3: Automatically Configure Prometheus Datasource in Grafana
 
-**Status**: ⏳ Pending
+**Status**: ✅ Completed
 **Priority**: High (eliminates manual configuration, core automation goal)
 
 ```yaml

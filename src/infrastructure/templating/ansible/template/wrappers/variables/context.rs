@@ -34,6 +34,10 @@ pub struct AnsibleVariablesContext {
     /// Tracker HTTP API port
     #[serde(skip_serializing_if = "Option::is_none")]
     tracker_api_port: Option<u16>,
+
+    /// Grafana configuration (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    grafana_config: Option<GrafanaConfig>,
 }
 
 impl AnsibleVariablesContext {
@@ -45,7 +49,7 @@ impl AnsibleVariablesContext {
     pub fn new(
         ssh_port: u16,
         tracker_config: Option<&TrackerConfig>,
-        _grafana_config: Option<&GrafanaConfig>,
+        grafana_config: Option<&GrafanaConfig>,
     ) -> Result<Self, AnsibleVariablesContextError> {
         // Validate SSH port using existing validation
         crate::infrastructure::templating::ansible::template::wrappers::inventory::context::AnsiblePort::new(ssh_port)?;
@@ -58,6 +62,7 @@ impl AnsibleVariablesContext {
             tracker_udp_ports,
             tracker_http_ports,
             tracker_api_port,
+            grafana_config: grafana_config.cloned(),
         })
     }
 

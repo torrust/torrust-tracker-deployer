@@ -44,6 +44,10 @@ pub enum ReleaseStep {
     RenderPrometheusTemplates,
     /// Deploying Prometheus configuration to the remote host via Ansible
     DeployPrometheusConfigToRemote,
+    /// Rendering Grafana provisioning templates to the build directory
+    RenderGrafanaTemplates,
+    /// Deploying Grafana provisioning configuration to the remote host via Ansible
+    DeployGrafanaProvisioning,
     /// Rendering Docker Compose templates to the build directory
     RenderDockerComposeTemplates,
     /// Deploying compose files to the remote host via Ansible
@@ -60,6 +64,8 @@ impl fmt::Display for ReleaseStep {
             Self::CreatePrometheusStorage => "Create Prometheus Storage",
             Self::RenderPrometheusTemplates => "Render Prometheus Templates",
             Self::DeployPrometheusConfigToRemote => "Deploy Prometheus Config to Remote",
+            Self::RenderGrafanaTemplates => "Render Grafana Templates",
+            Self::DeployGrafanaProvisioning => "Deploy Grafana Provisioning",
             Self::RenderDockerComposeTemplates => "Render Docker Compose Templates",
             Self::DeployComposeFilesToRemote => "Deploy Compose Files to Remote",
         };

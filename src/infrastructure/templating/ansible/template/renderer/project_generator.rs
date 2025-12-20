@@ -312,6 +312,7 @@ impl AnsibleProjectGenerator {
             "deploy-tracker-config.yml",
             "create-prometheus-storage.yml",
             "deploy-prometheus-config.yml",
+            "deploy-grafana-provisioning.yml",
             "deploy-compose-files.yml",
             "run-compose-services.yml",
         ] {

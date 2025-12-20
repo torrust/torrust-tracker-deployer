@@ -9,6 +9,12 @@
 # System Configuration
 ssh_port: {{ ssh_port }}
 
+# Deployment Directory
+deploy_dir: /opt/torrust
+
+# Service Enablement Flags
+grafana_enabled: {{ grafana_config is defined }}
+
 # Tracker Firewall Configuration
 {% if tracker_udp_ports is defined and tracker_udp_ports | length > 0 -%}
 tracker_udp_ports:
