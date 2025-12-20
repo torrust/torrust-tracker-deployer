@@ -221,8 +221,8 @@ impl CreateCommandHandler {
             ssh_credentials,
             ssh_port,
             tracker_config,
-            _prometheus_config,
-            _grafana_config,
+            prometheus_config,
+            grafana_config,
         ) = config
             .to_environment_params()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
@@ -243,6 +243,8 @@ impl CreateCommandHandler {
             ssh_credentials,
             ssh_port,
             tracker_config,
+            prometheus_config,
+            grafana_config,
             working_dir,
         );
 

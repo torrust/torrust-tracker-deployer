@@ -173,8 +173,8 @@ impl UserInputs {
 
     /// Creates a new `UserInputs` with custom tracker configuration
     ///
-    /// This is similar to `new` but allows specifying a custom tracker
-    /// configuration instead of using the default.
+    /// This is similar to `new` but allows specifying custom tracker,
+    /// prometheus, and grafana configurations instead of using defaults.
     #[must_use]
     pub fn with_tracker(
         name: &EnvironmentName,
@@ -182,6 +182,8 @@ impl UserInputs {
         ssh_credentials: SshCredentials,
         ssh_port: u16,
         tracker: TrackerConfig,
+        prometheus: Option<PrometheusConfig>,
+        grafana: Option<GrafanaConfig>,
     ) -> Self {
         let instance_name = Self::generate_instance_name(name);
 
@@ -192,8 +194,8 @@ impl UserInputs {
             ssh_credentials,
             ssh_port,
             tracker,
-            prometheus: Some(PrometheusConfig::default()),
-            grafana: Some(GrafanaConfig::default()),
+            prometheus,
+            grafana,
         }
     }
 

@@ -33,19 +33,20 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
   - DockerComposeContext and EnvContext extensions
   - Template updates (docker-compose.yml.tera, .env.tera)
   - 1 commit: comprehensive Phase 2 implementation
-- ✅ **Phase 3**: Testing & Verification (IN PROGRESS - Task 3 active)
+- ✅ **Phase 3**: Testing & Verification (COMPLETE)
   - ✅ Task 1: E2E test configurations created (3 configs)
-  - ✅ Task 2: E2E validation extension for Grafana (GrafanaValidator implemented)
-  - ⏳ Task 3: E2E test updates (in progress)
-  - ⏳ Task 4: Manual E2E testing (pending)
-  - ⏳ Task 5: Final verification (pending)
-- ⏳ **Phase 4**: Documentation (PARTIAL)
+  - ✅ Task 2: E2E validation extension for Grafana (GrafanaValidator implemented with 14 unit tests)
+  - ✅ Task 3: E2E test updates (validation structure integrated)
+  - ✅ Task 4: Manual E2E testing (complete - full deployment verified, password bug fixed)
+  - ✅ Task 5: Final verification (all pre-commit checks passing)
+- ✅ **Phase 4**: Documentation (COMPLETE)
   - ✅ Issue documentation updated with implementation details
-  - ✅ Manual testing results documented
+  - ✅ Manual verification guide created (docs/e2e-testing/manual/grafana-verification.md)
   - ✅ Security issue documented (DRAFT issue spec created)
+  - ✅ Password bug fixed and documented
   - ⏳ ADR and user guide (deferred - not critical for MVP)
 
-**Total Commits**: 14 commits for issue #246
+**Total Commits**: 16 commits for issue #246
 
 - 3 for Phase 1 (domain layer, validation, integration)
 - 1 for Phase 2 (Docker Compose integration)
@@ -59,6 +60,10 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
 - 1 for DRAFT security issue specification
 - 1 for firewall configuration removal
 - 1 for Grafana E2E validation (Phase 3 Task 2)
+- 1 for Phase 3 Task 2 & 3 completion update
+- 1 for password bug fix (Grafana credentials propagation)
+
+**Password Bug Fixed**: During manual testing, discovered that Grafana admin password wasn't being passed from environment config to the deployed service. Root cause: `UserInputs::with_tracker()` was using hardcoded defaults instead of configured values. Fixed by updating the constructor chain (`UserInputs` → `EnvironmentContext` → `Environment`) to accept and pass through optional Prometheus/Grafana configs. Verified that password now correctly propagates from config file → environment state → .env file → Grafana container.
 
 **Security Fix Applied**: During manual testing, discovered that Docker bypasses UFW firewall rules when publishing ports. Fixed by removing Prometheus port mapping (9090) from docker-compose - service now internal-only, accessible to Grafana via Docker network. See [docs/issues/DRAFT-docker-ufw-firewall-security-strategy.md](./DRAFT-docker-ufw-firewall-security-strategy.md) for comprehensive analysis.
 
@@ -660,36 +665,41 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
 
 4. **Manual E2E Testing**:
 
-   - [ ] Create manual test environment: `envs/manual-test-grafana.json`
-   - [ ] Run full deployment workflow:
-     - [ ] `create environment --env-file envs/manual-test-grafana.json`
-     - [ ] `provision`
-     - [ ] `configure`
-     - [ ] `release`
-     - [ ] `run`
-   - [ ] Verify Grafana deployment:
-     - [ ] Check Grafana container running: `docker ps`
-     - [ ] **Verify external access**:
-       - [ ] Access Grafana UI from local machine: `http://<vm-ip>:3100`
-       - [ ] Verify UI loads successfully (Grafana login page appears)
-       - [ ] **Note**: Port is accessible due to Docker bypassing UFW (no firewall config needed)
-     - [ ] Login with admin credentials
-     - [ ] Add Prometheus datasource manually:
+   - [x] Create manual test environment: `envs/manual-test-grafana.json`
+   - [x] Run full deployment workflow:
+     - [x] `create environment --env-file envs/manual-test-grafana.json`
+     - [x] `provision`
+     - [x] `configure`
+     - [x] `release`
+     - [x] `run`
+   - [x] Verify Grafana deployment:
+     - [x] Check Grafana container running: `docker ps`
+     - [x] **Verify external access**:
+       - [x] Access Grafana UI from local machine: `http://<vm-ip>:3100`
+       - [x] Verify UI loads successfully (Grafana login page appears)
+       - [x] **Note**: Port is accessible due to Docker bypassing UFW (no firewall config needed)
+     - [x] Login with admin credentials
+     - [x] Add Prometheus datasource manually:
        - URL: `http://prometheus:9090`
        - Access: "Server (default)"
-     - [ ] Verify Prometheus connection works ("Save & Test" button)
-     - [ ] Import basic dashboard (optional)
-   - [ ] Test dependency validation:
-     - [ ] Create config with Grafana but without Prometheus
-     - [ ] Verify environment creation fails with clear error message
-     - [ ] Verify error suggests fixing by adding Prometheus or removing Grafana
-   - [ ] Document manual testing steps in `docs/e2e-testing/manual/grafana-verification.md`
+     - [x] Verify Prometheus connection works ("Save & Test" button)
+     - [x] Import basic dashboard (optional)
+   - [x] Test dependency validation:
+     - [x] Create config with Grafana but without Prometheus
+     - [x] Verify environment creation fails with clear error message
+     - [x] Verify error suggests fixing by adding Prometheus or removing Grafana
+   - [x] Document manual testing steps in `docs/e2e-testing/manual/grafana-verification.md`
+   - [x] **Bug Fix**: Discovered and fixed password propagation bug:
+     - **Issue**: Configured Grafana password wasn't being used (defaulted to "admin")
+     - **Root Cause**: `UserInputs::with_tracker()` was using hardcoded defaults
+     - **Fix**: Updated constructor chain to accept and pass through optional Prometheus/Grafana configs
+     - **Verification**: Password now correctly propagates from config → state → .env → container
 
 5. **Final Verification**:
-   - [ ] Run all linters: `cargo run --bin linter all`
-   - [ ] Run all unit tests: `cargo test`
-   - [ ] Run E2E tests: `cargo run --bin e2e-deployment-workflow-tests`
-   - [ ] Verify pre-commit checks pass: `./scripts/pre-commit.sh`
+   - [x] Run all linters: `cargo run --bin linter all`
+   - [x] Run all unit tests: `cargo test`
+   - [x] Run E2E tests: `cargo run --bin e2e-deployment-workflow-tests`
+   - [x] Verify pre-commit checks pass: `./scripts/pre-commit.sh`
 
 ### Phase 4: Documentation
 
@@ -718,12 +728,13 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
 
 3. **Create Manual Verification Guide** (`docs/e2e-testing/manual/grafana-verification.md`):
 
-   - [ ] Document step-by-step Grafana verification process
-   - [ ] Include exact commands and expected outputs
-   - [ ] Add screenshots or ASCII diagrams for key steps (optional)
-   - [ ] Document how to add Prometheus datasource
-   - [ ] Document troubleshooting steps for common issues
-   - [ ] Provide success criteria checklist
+   - [x] Document step-by-step Grafana verification process
+   - [x] Include exact commands and expected outputs
+   - [x] Add screenshots or ASCII diagrams for key steps (optional)
+   - [x] Document how to add Prometheus datasource
+   - [x] Document troubleshooting steps for common issues
+   - [x] Provide success criteria checklist
+   - [x] Document password bug and fix in troubleshooting section
 
 4. **Update Project Dictionary** (`project-words.txt`):
 

@@ -188,8 +188,8 @@ impl EnvironmentContext {
     /// Creates a new environment context with custom tracker configuration
     ///
     /// This creates absolute paths for data and build directories by using the
-    /// provided working directory as the base, and allows specifying a custom
-    /// tracker configuration instead of using the default.
+    /// provided working directory as the base, and allows specifying custom
+    /// tracker, prometheus, and grafana configurations.
     #[must_use]
     pub fn with_working_dir_and_tracker(
         name: &EnvironmentName,
@@ -197,6 +197,8 @@ impl EnvironmentContext {
         ssh_credentials: SshCredentials,
         ssh_port: u16,
         tracker_config: crate::domain::tracker::TrackerConfig,
+        prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
+        grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
         working_dir: &std::path::Path,
     ) -> Self {
         Self {
@@ -206,6 +208,8 @@ impl EnvironmentContext {
                 ssh_credentials,
                 ssh_port,
                 tracker_config,
+                prometheus_config,
+                grafana_config,
             ),
             internal_config: InternalConfig::with_working_dir(name, working_dir),
             runtime_outputs: RuntimeOutputs {
