@@ -223,13 +223,14 @@
       ]
     },
     "PrometheusSection": {
-      "description": "Prometheus configuration section (DTO)\n\nThis is a simple DTO that deserializes from JSON integers and validates\nwhen converting to the domain `PrometheusConfig`.\n\n# Examples\n\n```json\n{\n    \"scrape_interval_in_secs\": 15\n}\n```",
+      "description": "Prometheus configuration section (DTO)\n\nThis is a simple DTO that deserializes from JSON numbers and validates\nwhen converting to the domain `PrometheusConfig`.\n\n# Examples\n\n```json\n{\n    \"scrape_interval_in_secs\": 15\n}\n```",
       "type": "object",
       "properties": {
         "scrape_interval_in_secs": {
-          "description": "Interval in seconds for Prometheus to scrape metrics from targets\n\nMust be greater than 0.\nThe template automatically appends 's' suffix to create formats like '15s'.\nExamples: 15 (becomes \"15s\"), 30 (becomes \"30s\"), 60 (becomes \"60s\")",
+          "description": "Interval for Prometheus to scrape metrics from targets (in seconds)\n\nMust be greater than 0. The Prometheus template adds the 's' suffix.\nExamples: 15 (15 seconds), 30 (30 seconds), 60 (1 minute)",
           "type": "integer",
-          "minimum": 1
+          "format": "uint32",
+          "minimum": 0
         }
       },
       "required": [

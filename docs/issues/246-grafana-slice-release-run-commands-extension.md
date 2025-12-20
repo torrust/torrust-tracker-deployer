@@ -206,7 +206,7 @@ prometheus:
 
 ### Task 2: Automatically Configure Grafana (Datasource + Dashboards)
 
-**Status**: ⏳ Pending
+**Status**: ✅ Completed
 **Priority**: High (eliminates manual configuration, core automation goal)
 
 #### Problem Statement
@@ -298,10 +298,10 @@ grafana:
 
 ### Task 4: Preload Grafana Dashboards
 
-**Status**: ⏳ Pending
+**Status**: ✅ Completed
 **Priority**: High (completes full automation, provides immediate value)
 
-**Status**: ⏳ Pending
+**Status**: ✅ Completed
 **Priority**: High (completes full automation, provides immediate value)
 
 #### Problem Statement

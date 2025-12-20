@@ -34,7 +34,6 @@ use crate::domain::template::TemplateManager;
 use crate::infrastructure::templating::grafana::template::renderer::{
     GrafanaProjectGenerator, GrafanaProjectGeneratorError,
 };
-use crate::infrastructure::templating::grafana::template::GrafanaContext;
 
 /// Step that renders Grafana provisioning templates to the build directory
 ///
@@ -126,9 +125,8 @@ impl<S> RenderGrafanaTemplatesStep<S> {
         let generator =
             GrafanaProjectGenerator::new(&self.build_dir, self.template_manager.clone());
 
-        // Build context from Prometheus config
-        let context = GrafanaContext::new(prometheus_config.scrape_interval_in_secs());
-        generator.render(&context)?;
+        // Render all Grafana provisioning files (datasource + dashboards)
+        generator.render(prometheus_config)?;
 
         let grafana_build_dir = self.build_dir.join("grafana/provisioning");
 

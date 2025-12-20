@@ -1,41 +1,31 @@
 # Manual Grafana Service Verification
 
-This guide provides step-by-step instructions for manually verifying that the Grafana visualization service is correctly deployed, configured, and connected to Prometheus for displaying Torrust Tracker metrics.
+This guide provides Grafana-specific verification steps for manual E2E testing. For the complete deployment workflow, see the [Manual E2E Testing Guide](README.md).
+
+## Overview
+
+This guide covers:
+
+- Grafana container health and connectivity
+- Dashboard and datasource provisioning verification
+- Prometheus datasource connection validation
+- End-to-end data flow testing (Tracker → Prometheus → Grafana)
+- Grafana-specific troubleshooting
 
 ## Prerequisites
 
-- A deployed environment with both Prometheus and Grafana enabled
-- SSH access to the target instance
-- The tracker and Prometheus services must be running
-- Basic knowledge of Docker and Grafana
+Complete the standard deployment workflow first (see [Manual E2E Testing Guide](README.md)):
 
-## Environment Setup
+1. ✅ Environment created with Prometheus and Grafana configuration
+2. ✅ Infrastructure provisioned
+3. ✅ Services configured
+4. ✅ Software released
+5. ✅ Services running
 
-This guide assumes you have completed the full deployment workflow:
-
-```bash
-# 1. Create environment with Prometheus and Grafana enabled
-cargo run -- create environment --env-file envs/your-config.json
-
-# 2. Provision infrastructure
-cargo run -- provision your-env
-
-# 3. Configure services
-cargo run -- configure your-env
-
-# 4. Release software
-cargo run -- release your-env
-
-# 5. Run services
-cargo run -- run your-env
-```
-
-Your environment configuration should include both `prometheus` and `grafana` sections:
+**Your environment configuration must include both Prometheus and Grafana**:
 
 ```json
 {
-  "environment": { "name": "your-env" },
-  "tracker": { ... },
   "prometheus": {
     "scrape_interval_in_secs": 15
   },
@@ -48,27 +38,17 @@ Your environment configuration should include both `prometheus` and `grafana` se
 
 **Note:** Grafana requires Prometheus to be configured. The environment creation will fail if you try to enable Grafana without Prometheus.
 
-## Getting the VM IP Address
+## Grafana-Specific Verification
 
-First, get the IP address of your deployed VM:
+This section provides detailed Grafana verification steps that should be performed after completing the standard deployment workflow.
 
-### For LXD VMs
+### Get the VM IP Address
+
+Extract the instance IP from the environment state (see [main guide](README.md#step-3-provision-infrastructure) for details):
 
 ```bash
-# List all LXD instances
-lxc list
-
-# Find your instance (e.g., torrust-tracker-vm-your-env)
-# Look for the IP address in the enp5s0 interface column
+cat data/<env-name>/environment.json | jq -r '.Running.context.runtime_outputs.instance_ip'
 ```
-
-Example output:
-
-```text
-| torrust-tracker-vm-your-env | RUNNING | 10.140.190.167 (enp5s0) | ... | VIRTUAL-MACHINE |
-```
-
-The VM IP in this example is `10.140.190.167`.
 
 ## Verification Steps
 
@@ -213,22 +193,103 @@ docker exec -it <grafana_container_id> wget -q -O - http://prometheus:9090/api/v
 - ✅ Prometheus IS accessible from Grafana container via service name
 - ✅ Docker network allows inter-container communication
 
-### 5. Verify Prometheus Datasource Configuration
+### 5. Verify Grafana Provisioning Files Are Deployed
 
-Check the Prometheus datasource configuration in Grafana. Since datasources are configured through Grafana provisioning (via the Docker Compose deployment), we can verify they exist:
+Check that the Grafana provisioning files (datasource and dashboards) were correctly deployed to the VM:
+
+```bash
+# SSH into the VM
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP>
+
+# Check datasource provisioning file
+cat /opt/torrust/storage/grafana/provisioning/datasources/prometheus.yml
+```
+
+**Expected output:**
+
+```yaml
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: "15s"
+      httpMethod: POST
+```
+
+**Key verification points:**
+
+- ✅ File exists at the correct path
+- ✅ `uid: prometheus` is set (critical for dashboard compatibility)
+- ✅ URL is `http://prometheus:9090` (Docker service name)
+- ✅ `timeInterval` matches your configured scrape interval
+
+**Check dashboard provider configuration:**
+
+```bash
+# Check dashboard provider file
+cat /opt/torrust/storage/grafana/provisioning/dashboards/torrust.yml
+```
+
+**Expected output:**
+
+```yaml
+apiVersion: 1
+
+providers:
+  - name: "Torrust Dashboards"
+    orgId: 1
+    folder: "Torrust Tracker"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/torrust
+      foldersFromFilesStructure: false
+```
+
+**Check dashboard JSON files:**
+
+```bash
+# List dashboard files
+ls -lh /opt/torrust/storage/grafana/provisioning/dashboards/torrust/
+
+# Verify datasource UID in dashboards
+grep -c '"uid": "prometheus"' /opt/torrust/storage/grafana/provisioning/dashboards/torrust/*.json
+```
+
+**Expected output:**
+
+```text
+/opt/torrust/storage/grafana/provisioning/dashboards/torrust/metrics.json:20
+/opt/torrust/storage/grafana/provisioning/dashboards/torrust/stats.json:20
+```
+
+This shows that both dashboard files contain 20 references to the `prometheus` datasource UID (one for each panel).
+
+### 6. Verify Prometheus Datasource in Grafana API
+
+Check the Prometheus datasource configuration via Grafana API:
 
 ```bash
 # List configured datasources
 curl -u admin:SecurePassword123! http://<VM_IP>:3100/api/datasources
 ```
 
-**Expected output (if datasource was pre-configured):**
+**Expected output:**
 
 ```json
 [
   {
     "id": 1,
-    "uid": "prometheus-ds",
+    "uid": "prometheus",
     "orgId": 1,
     "name": "Prometheus",
     "type": "prometheus",
@@ -240,54 +301,27 @@ curl -u admin:SecurePassword123! http://<VM_IP>:3100/api/datasources
     "database": "",
     "basicAuth": false,
     "isDefault": true,
-    "jsonData": {},
+    "jsonData": {
+      "httpMethod": "POST",
+      "timeInterval": "15s"
+    },
     "readOnly": false
   }
 ]
 ```
 
-**If datasource doesn't exist, add it via API:**
-
-```bash
-# Create Prometheus datasource
-curl -X POST \
-  -H "Content-Type: application/json" \
-  -u admin:SecurePassword123! \
-  http://<VM_IP>:3100/api/datasources \
-  -d '{
-    "name": "Prometheus",
-    "type": "prometheus",
-    "url": "http://prometheus:9090",
-    "access": "proxy",
-    "isDefault": true
-  }'
-```
-
-**Expected output:**
-
-```json
-{
-  "datasource": {
-    "id": 1,
-    "uid": "...",
-    "orgId": 1,
-    "name": "Prometheus",
-    "type": "prometheus"
-  },
-  "id": 1,
-  "message": "Datasource added",
-  "name": "Prometheus"
-}
-```
-
 **Key verification points:**
 
+- ✅ Datasource `uid` is `"prometheus"` (must match dashboard references)
 - ✅ Datasource type is `"prometheus"`
 - ✅ URL is `"http://prometheus:9090"` (using Docker service name)
 - ✅ Access mode is `"proxy"` (requests go through Grafana backend)
 - ✅ Datasource is set as default (`"isDefault": true`)
+- ✅ `jsonData` contains `timeInterval` matching your configuration
 
-### 6. Test Datasource Connection and Query Metrics
+**⚠️ Critical:** The datasource `uid` must be `"prometheus"` to match the dashboard configurations. If you see a different UID (like `"ce6lwx047kutca"` from an old deployment), the dashboards will fail to load with "Datasource was not found" errors.
+
+### 7. Test Datasource Connection and Query Metrics
 
 Test that Grafana can successfully query metrics from Prometheus:
 
@@ -340,6 +374,192 @@ curl -u admin:SecurePassword123! \
 - ✅ Both `tracker_metrics` and `tracker_stats` targets show `"1"` (up)
 - ✅ Tracker-specific metrics return valid data
 - ✅ Timestamps are recent (within last few seconds)
+
+### 8. Verify End-to-End Data Flow (Tracker → Prometheus → Grafana)
+
+Now verify that data flows correctly from the tracker through Prometheus to Grafana by generating actual tracker activity:
+
+#### Step 8.1: Generate Tracker Activity
+
+Make HTTP announce requests to the tracker to generate metrics:
+
+```bash
+# SSH into the VM
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP>
+
+# Send a single HTTP announce request
+curl -s -H 'X-Forwarded-For: 203.0.113.195' \
+  'http://localhost:7070/announce?info_hash=%3C%A6%7F%CB%3C%0B%DE%85%91%1C%82%16%7B%ED%15S%83%00%22%15&peer_id=-qB00000000000000001&port=17548&uploaded=0&downloaded=0&left=0&event=started'
+```
+
+**Expected response (bencoded):**
+
+```text
+d8:completei1e10:incompletei0e8:intervali300e12:min intervali300e5:peerslee
+```
+
+This indicates a successful announce (1 complete peer, 0 incomplete, empty peers list).
+
+**Generate multiple requests for better visualization:**
+
+```bash
+# Send 10 announce requests with different peer IDs
+for i in {1..10}; do
+  curl -s -H "X-Forwarded-For: 203.0.113.$((RANDOM % 255))" \
+    "http://localhost:7070/announce?info_hash=%3C%A6%7F%CB%3C%0B%DE%85%91%1C%82%16%7B%ED%15S%83%00%22%15&peer_id=-qB0000000000000000$i&port=17548&uploaded=0&downloaded=0&left=0&event=started" \
+    > /dev/null
+done
+echo "Sent 10 announce requests"
+```
+
+#### Step 8.2: Verify Tracker Metrics API
+
+Check that the tracker is exposing the metrics:
+
+```bash
+# Query tracker metrics endpoint (JSON format)
+curl -s 'http://localhost:1212/api/v1/metrics?token=MyAccessToken' | head -100
+```
+
+**Expected output (truncated):**
+
+```json
+{
+  "metrics": [
+    {
+      "type": "counter",
+      "name": "http_tracker_core_requests_received_total",
+      "samples": [
+        {
+          "value": 10,
+          "labels": [
+            { "name": "request_kind", "value": "announce" },
+            { "name": "server_binding_protocol", "value": "http" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "gauge",
+      "name": "swarm_coordination_registry_torrents_total",
+      "samples": [{ "value": 1.0 }]
+    },
+    {
+      "type": "gauge",
+      "name": "swarm_coordination_registry_peer_connections_total",
+      "samples": [
+        {
+          "value": 10.0,
+          "labels": [{ "name": "peer_role", "value": "seeder" }]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Key metrics to verify:**
+
+- `http_tracker_core_requests_received_total`: Should show 10 requests
+- `swarm_coordination_registry_torrents_total`: Should show 1 torrent
+- `swarm_coordination_registry_peer_connections_total`: Should show 10 seeders
+
+#### Step 8.3: Verify Prometheus Has Scraped the Data
+
+Query Prometheus directly to confirm it's collecting the tracker metrics:
+
+```bash
+# Query HTTP requests metric
+curl -s 'http://localhost:9090/api/v1/query?query=http_tracker_core_requests_received_total' | jq .
+
+# Query torrents metric
+curl -s 'http://localhost:9090/api/v1/query?query=swarm_coordination_registry_torrents_total' | jq .
+
+# Query seeders metric
+curl -s 'http://localhost:9090/api/v1/query?query=swarm_coordination_registry_peer_connections_total' | jq '.data.result[] | select(.metric.peer_role=="seeder")'
+```
+
+**Expected outputs:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "result": [
+      {
+        "metric": {
+          "__name__": "http_tracker_core_requests_received_total",
+          "instance": "tracker:1212",
+          "job": "tracker_metrics",
+          "request_kind": "announce"
+        },
+        "value": [1766259745.624, "10"]
+      }
+    ]
+  }
+}
+```
+
+**Key verification points:**
+
+- ✅ Status is `"success"`
+- ✅ Metric values match what the tracker API reports
+- ✅ `job` label shows `"tracker_metrics"` or `"tracker_stats"`
+- ✅ Timestamp is recent (within last scrape interval)
+
+#### Step 8.4: Verify Grafana Dashboards Display the Data
+
+Finally, verify that the Grafana dashboards can display the data:
+
+**Via Browser:**
+
+1. Open Grafana: `http://<VM_IP>:3100/`
+2. Login with your credentials (admin / SecurePassword123!)
+3. Navigate to Dashboards → Browse
+4. Open the "Torrust Tracker" folder
+5. Open "Torrust Tracker - Metrics" or "Torrust Tracker - Stats" dashboard
+
+**Expected results in dashboards:**
+
+- **Torrents panel**: Should show `1`
+- **Seeders panel**: Should show `10`
+- **HTTP requests graphs**: Should show activity over time
+- **No "Datasource not found" errors**
+
+**Via API (alternative):**
+
+```bash
+# Query via Grafana datasource proxy
+curl -u admin:SecurePassword123! \
+  "http://<VM_IP>:3100/api/datasources/proxy/1/api/v1/query?query=swarm_coordination_registry_torrents_total{job=\"tracker_metrics\"}" | jq .
+```
+
+**Expected output:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "result": [
+      {
+        "metric": {
+          "__name__": "swarm_coordination_registry_torrents_total",
+          "instance": "tracker:1212",
+          "job": "tracker_metrics"
+        },
+        "value": [1766259767.583, "1"]
+      }
+    ]
+  }
+}
+```
+
+**Key verification points:**
+
+- ✅ Grafana can query Prometheus through the datasource proxy
+- ✅ Data is flowing from tracker → Prometheus → Grafana
+- ✅ Dashboard panels display actual values (not "N/A" or errors)
+- ✅ Graphs show historical data (if enough time has passed for multiple scrapes)
 
 ## Troubleshooting
 
@@ -463,6 +683,100 @@ docker network inspect <network_name>
 3. Test network: `docker exec <grafana_container_id> ping prometheus`
 4. Wait a few seconds for Prometheus to initialize after container start
 
+### Dashboards Show "Datasource Not Found" Error
+
+**Symptoms:**
+
+- Dashboards load but all panels show error: "Datasource [UID] was not found"
+- Example error: "Datasource ce6lwx047kutca was not found"
+- All dashboard panels are empty with red error messages
+
+**Root cause:**
+
+The dashboard JSON files contain hardcoded datasource UIDs that don't match the provisioned datasource UID. This typically happens if:
+
+- Dashboard files were copied from another installation (like torrust-demo)
+- Datasource was recreated with a different UID
+- Dashboard files weren't updated when datasource UID changed
+
+**Diagnosis:**
+
+```bash
+# SSH into the VM
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP>
+
+# Check what UID the dashboards are using
+grep '"uid":' /opt/torrust/storage/grafana/provisioning/dashboards/torrust/*.json | head -5
+
+# Check what UID the datasource actually has
+cat /opt/torrust/storage/grafana/provisioning/datasources/prometheus.yml | grep uid
+```
+
+**Example mismatch:**
+
+```bash
+# Dashboard expects:
+"uid": "ce6lwx047kutca"  # ❌ Wrong - from old demo installation
+
+# But datasource has:
+uid: prometheus  # ✅ Correct - what we provisioned
+```
+
+**Solution:**
+
+The datasource template and dashboard files must use matching UIDs. The correct configuration is:
+
+1. **Datasource template** (`templates/grafana/provisioning/datasources/prometheus.yml.tera`):
+
+   ```yaml
+   datasources:
+     - name: Prometheus
+       uid: prometheus # ← Fixed UID
+   ```
+
+2. **Dashboard JSON files** must reference the same UID:
+
+   ```json
+   {
+     "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"  # ← Must match datasource
+     }
+   }
+   ```
+
+**If you encounter this issue:**
+
+1. Verify the template source has the correct UID
+2. Destroy and recreate the environment with updated templates
+3. Check the deployed files match: `grep -c '"uid": "prometheus"' /opt/torrust/storage/grafana/provisioning/dashboards/torrust/*.json`
+4. Should show 20 matches per dashboard file (one per panel)
+
+**Prevention:**
+
+- Always use `uid: prometheus` in the datasource template
+- When importing dashboards from external sources, update all datasource UID references
+- Validate dashboard UIDs match datasource UID before deployment
+
+### Dashboards Show Placeholder Domain
+
+**Symptoms:**
+
+- Dashboard descriptions reference `tracker.example.com`
+- URLs in dashboard descriptions don't match your actual deployment
+
+**Expected behavior:**
+
+This is intentional. The dashboards use `tracker.example.com` as a generic placeholder to indicate where metrics are collected from. Users should understand this is a placeholder and replace it with their actual tracker domain or IP address when customizing dashboards.
+
+**If you need to customize:**
+
+The placeholder domain appears only in dashboard **descriptions** (not in actual queries). To customize:
+
+1. Export the dashboard JSON from Grafana UI
+2. Search and replace `tracker.example.com` with your domain
+3. Re-import the customized dashboard
+
 ## Testing Checklist
 
 Use this checklist when verifying a Grafana deployment:
@@ -511,22 +825,15 @@ For a complete verification, you can also test through the Grafana web UI:
 
 ## Next Steps
 
-After successful verification:
+After successful Grafana verification:
 
-1. **Create Dashboards**: Design custom dashboards for your metrics
-2. **Configure Alerts**: Set up alerting for important metrics
-3. **Backup Grafana Data**: Export dashboards and datasource configurations
-4. **Document Custom Queries**: Save useful PromQL queries for your team
+1. **Explore Dashboards**: Review the pre-loaded Torrust tracker dashboards
+2. **Customize Dashboards**: Modify existing dashboards or create new ones for your specific needs
+3. **Configure Alerts**: Set up alerting rules for important metrics (requires Alertmanager)
+4. **Backup Grafana Data**: Export customized dashboards for version control
+5. **Continue Testing**: Return to the [Manual E2E Testing Guide](README.md) for cleanup or additional verification
 
-## Future Automation
-
-**Note:** The manual datasource configuration via API (shown in Step 5) could be automated in a future iteration by:
-
-1. Creating a Grafana provisioning configuration file in the templates
-2. Adding it to the Docker Compose volume mounts
-3. Letting Grafana auto-configure datasources on startup
-
-This would eliminate the need for manual API calls to create the datasource.
+For troubleshooting common issues during manual testing, see the [Troubleshooting section](README.md#troubleshooting-manual-tests) in the main guide.
 
 ## References
 
