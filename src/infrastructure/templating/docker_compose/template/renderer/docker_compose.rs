@@ -385,10 +385,10 @@ mod tests {
             "Should set container name"
         );
 
-        // Verify port is NOT exposed (internal service only)
+        // Verify port is bound to localhost only (not exposed to external network)
         assert!(
-            !rendered_content.contains("ports:") || !rendered_content.contains("9090:9090"),
-            "Prometheus port 9090 should NOT be exposed to host (internal service only, accessed via Docker network)"
+            rendered_content.contains("127.0.0.1:9090:9090"),
+            "Prometheus port 9090 should be bound to localhost only (not exposed to external network)"
         );
 
         // Verify volume mount
