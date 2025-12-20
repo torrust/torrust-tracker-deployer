@@ -191,6 +191,7 @@ impl EnvironmentContext {
     /// provided working directory as the base, and allows specifying custom
     /// tracker, prometheus, and grafana configurations.
     #[must_use]
+    #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
     pub fn with_working_dir_and_tracker(
         name: &EnvironmentName,
         provider_config: ProviderConfig,

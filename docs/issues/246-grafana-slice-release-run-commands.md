@@ -738,12 +738,13 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
 
 4. **Update Project Dictionary** (`project-words.txt`):
 
-   - [ ] Add Grafana-related technical terms
+   - [x] Add Grafana-related technical terms
 
 5. **Final Documentation Review**:
-   - [ ] Run markdown linter: `cargo run --bin linter markdown`
-   - [ ] Verify all links work
-   - [ ] Review for clarity and completeness
+   - [x] Run markdown linter: `cargo run --bin linter markdown`
+   - [x] Run all linters: `cargo run --bin linter all`
+   - [x] Verify all links work
+   - [x] Review for clarity and completeness
 
 ## Acceptance Criteria
 

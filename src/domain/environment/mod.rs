@@ -291,6 +291,7 @@ impl Environment {
     /// tracker, prometheus, and grafana configurations.
     #[must_use]
     #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
+    #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
     pub fn with_working_dir_and_tracker(
         name: EnvironmentName,
         provider_config: ProviderConfig,
