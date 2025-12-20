@@ -18,12 +18,11 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
 - [x] Configure service dependency - Grafana depends on Prometheus service
 - [x] Include Grafana in generated environment templates by default (enabled by default)
 - [x] Allow users to disable Grafana by removing its configuration section
-- [x] Configure firewall to allow public access to Grafana UI (port 3100)
 - [x] Deploy and verify Grafana connects to Prometheus and displays metrics (manual testing complete - workflow validated)
 
 ## Progress
 
-**Current Status**: Phase 3 (Testing & Verification) - Manual testing complete, security fix applied
+**Current Status**: Phase 3 (Testing & Verification) - Manual testing complete, security fix applied, firewall configuration removed
 
 **Implementation Summary**:
 
@@ -35,10 +34,10 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
   - Template updates (docker-compose.yml.tera, .env.tera)
   - 1 commit: comprehensive Phase 2 implementation
 - ✅ **Phase 3**: Testing & Verification (COMPLETE)
-  - ✅ Firewall configuration complete (1 commit)
   - ✅ E2E test configurations created (3 configs)
   - ✅ Manual E2E testing complete (deployment workflow validated)
   - ✅ Security fix applied (Prometheus port exposure removed)
+  - ✅ Firewall configuration removed (Docker bypasses UFW - see DRAFT security issue)
 - ⏳ **Phase 4**: Documentation (PARTIAL)
   - ✅ Issue documentation updated with implementation details
   - ✅ Manual testing results documented
@@ -49,7 +48,6 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
 
 - 3 for Phase 1 (domain layer, validation, integration)
 - 1 for Phase 2 (Docker Compose integration)
-- 1 for Phase 3 firewall configuration
 - 1 for E2E test configs documentation
 - 1 for commit message correction
 - 1 for issue documentation update (implementation details)
@@ -58,6 +56,7 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
 - 1 for security documentation update
 - 1 for documentation reorganization
 - 1 for DRAFT security issue specification
+- 1 for firewall configuration removal
 
 **Security Fix Applied**: During manual testing, discovered that Docker bypasses UFW firewall rules when publishing ports. Fixed by removing Prometheus port mapping (9090) from docker-compose - service now internal-only, accessible to Grafana via Docker network. See [docs/issues/DRAFT-docker-ufw-firewall-security-strategy.md](./DRAFT-docker-ufw-firewall-security-strategy.md) for comprehensive analysis.
 
@@ -65,28 +64,50 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
 
 **Key Architectural Decisions Made During Implementation** (may differ from original plan):
 
-1. **Static Playbook vs Dynamic Template**:
+1. **Static Playbook vs Dynamic Template** (REMOVED - see decision 3):
 
-   - **Plan**: `configure-grafana-firewall.yml.tera` (dynamic Tera template)
-   - **Actual**: `configure-grafana-firewall.yml` (static YAML playbook)
-   - **Rationale**: Only 2 Ansible templates are dynamic (.tera): `inventory.yml.tera` and `variables.yml.tera`. All playbooks are static and load variables via `vars_files: [variables.yml]` directive. This follows the centralized variables pattern documented in `templates/ansible/README.md`.
+   - **Original Plan**: `configure-grafana-firewall.yml.tera` (dynamic Tera template) or `configure-grafana-firewall.yml` (static playbook)
+   - **Final Decision**: NO firewall configuration for Grafana
+   - **Rationale**: Docker bypasses UFW firewall rules when publishing ports (see decision 3)
 
-2. **Step-Level Conditional Execution**:
+2. **Step-Level Conditional Execution** (OBSOLETE - firewall step removed):
 
-   - **Plan**: Add `grafana_enabled: bool` variable to `variables.yml.tera` for task-level conditionals
-   - **Actual**: No `grafana_enabled` variable; conditional execution happens at step level in handler
-   - **Rationale**: Grafana has a fixed port (3100), unlike tracker which has variable ports. Simpler to check `environment.context().user_inputs.grafana.is_some()` in the configure handler than pass boolean through templates. The playbook runs unconditionally when executed; the decision to execute happens in `ConfigureCommandHandler`.
+   - **Original Approach**: Execute firewall configuration step conditionally based on Grafana presence
+   - **Final Decision**: Firewall configuration step removed entirely
+   - **Rationale**: Cannot secure published Docker ports with UFW (see decision 3)
 
-3. **Module Locations**:
+3. **Firewall Configuration Removal** (NEW - critical security decision):
+
+   - **Discovery**: During manual testing, discovered that Docker bypasses UFW firewall when publishing ports
+   - **Impact**: Opening port 3100 in UFW provides false sense of security - port is accessible regardless
+   - **Decision**: Remove Grafana firewall configuration entirely (playbook, step, code)
+   - **Files Removed**:
+     - `templates/ansible/configure-grafana-firewall.yml` (Ansible playbook)
+     - `src/application/steps/system/configure_grafana_firewall.rs` (step implementation)
+     - References in `project_generator.rs`, `handler.rs`, `configure_failed.rs`
+   - **Documentation**: See [docs/issues/DRAFT-docker-ufw-firewall-security-strategy.md](./DRAFT-docker-ufw-firewall-security-strategy.md)
+   - **Rationale**:
+     - Docker modifies iptables directly, bypassing UFW rules
+     - Published ports (docker-compose `ports:` directive) are always accessible
+     - UFW configuration is misleading and provides no actual security
+     - Proper solution requires reverse proxy with TLS (roadmap task 6)
+
+4. **Module Locations**:
 
    - **Plan**: Generic reference to `src/domain/environment/state.rs` for enum variant
-   - **Actual**: `src/domain/environment/state/configure_failed.rs` contains the `ConfigureStep::ConfigureGrafanaFirewall` variant
+   - **Actual**: `src/domain/environment/state/configure_failed.rs` contains the `ConfigureStep` enum
    - **Note**: The state module is organized into separate files per state type (configure_failed.rs, release_failed.rs, etc.)
+   - **Update**: `ConfigureStep::ConfigureGrafanaFirewall` variant was added then removed (no longer present)
 
-4. **Firewall Pattern**:
-   - **Prometheus**: Port 9090 is NOT exposed publicly through firewall (internal service only)
-   - **Grafana**: Port 3100 IS exposed publicly through UFW (user-facing UI)
-   - **Rationale**: Prometheus is an internal metrics collection service. Grafana is the user-facing visualization layer that accesses Prometheus internally.
+5. **Port Exposure Pattern** (CHANGED - security discovery):
+   - **Original Pattern**:
+     - Prometheus: Port 9090 NOT exposed (internal service)
+     - Grafana: Port 3100 IS exposed + firewall rule
+   - **Current Pattern**:
+     - Prometheus: Port 9090 NOT exposed (internal service)
+     - Grafana: Port 3100 IS exposed via docker-compose (no firewall config needed)
+     - Both accessible only through published Docker ports (UFW bypass)
+   - **Security Note**: Public exposure is temporary until HTTPS/reverse proxy (roadmap task 6)
 
 ## 🏗️ Architecture Requirements
 
@@ -96,8 +117,6 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
 - `src/infrastructure/templating/docker_compose/` - Docker Compose template rendering with Grafana service
 - `src/domain/grafana/` - Grafana configuration domain types (NEW)
 - `src/application/command_handlers/create/config/validation/` - Grafana-Prometheus dependency validation (NEW)
-- `src/application/steps/system/configure_grafana_firewall.rs` - Grafana firewall configuration step (NEW)
-- `src/domain/environment/state/configure_failed.rs` - Add `ConfigureGrafanaFirewall` variant to `ConfigureStep` enum (NEW)
 
 **Pattern**: Configuration-driven service selection with dependency validation
 
@@ -124,11 +143,6 @@ This task adds Grafana as a metrics visualization service for the Torrust Tracke
   - Grafana is configured entirely through environment variables and docker-compose settings
   - Dashboards can be added later through the UI or mounted as optional files
   - **Rationale**: Grafana has sensible defaults and the Prometheus datasource can be configured through environment variables
-- ✅ **Firewall Configuration**: Grafana UI port (3100) is exposed publicly through firewall during `configure` command
-  - Firewall rules added conditionally (only when Grafana is enabled in environment config)
-  - Port exposure is **temporary** until HTTPS/reverse proxy support is added (roadmap task 6)
-  - When proxy is implemented, public port exposure will be removed
-  - **Pattern**: Similar to tracker firewall configuration - opens port only if service enabled
 
 ### Anti-Patterns to Avoid
 
@@ -294,81 +308,14 @@ fn validate_grafana_dependency(
 - **Depends on**: `prometheus` service (simple dependency, no health check)
 - **Rationale**: Grafana will start after Prometheus container starts. Grafana UI will be accessible even if Prometheus is temporarily unavailable.
 
-### Firewall Configuration
+**Port Exposure and Security Note**:
 
-**Grafana UI Port Exposure**: Port 3100 must be opened in the firewall to allow public access to the Grafana web interface.
-
-**Ansible Playbook**: `templates/ansible/configure-grafana-firewall.yml` (NEW - static playbook, not .tera)
-
-**Implementation Note**: Unlike the original plan which suggested a `.tera` dynamic template, the actual implementation uses a **static `.yml` playbook** that loads variables via `vars_files`. This follows the centralized variables pattern used by other Ansible playbooks in the project.
-
-```yaml
----
-# Configure Grafana-specific firewall rules
-
-- name: Configure Grafana Firewall Rules
-  hosts: all
-  become: true
-  vars_files:
-    - variables.yml # Loads centralized variables
-
-  tasks:
-    - name: Allow Grafana UI port through firewall (port 3100)
-      community.general.ufw:
-        rule: allow
-        port: "3100"
-        proto: tcp
-        comment: "Grafana UI"
-      # Note: Unconditional execution when playbook runs
-      # Conditional execution happens at step level (don't run if Grafana disabled)
-      notify: Reload UFW
-
-  handlers:
-    - name: Reload UFW
-      community.general.ufw:
-        state: reloaded
-```
-
-**Variables in `variables.yml.tera`**:
-
-**NO grafana_enabled variable needed** - The original plan included a `grafana_enabled` variable, but this was removed because:
-
-1. Grafana port is fixed (3100), unlike tracker's variable ports
-2. Conditional execution happens at the **step level** (don't execute playbook if Grafana disabled)
-3. Playbook unconditionally opens port 3100 when executed - decision to run happens in configure command handler
-4. Simpler pattern: check `environment.context().user_inputs.grafana.is_some()` in handler
-
-**Template Location**: `templates/ansible/configure-grafana-firewall.yml` (static, registered in `ProjectGenerator::copy_static_templates()`)
-
-**Execution**: During `configure` command, after `ConfigureTrackerFirewall` step
-
-**Conditional Behavior**:
-
-- **Step-Level Conditional Execution** (actual implementation):
-
-  - If Grafana is **enabled** in environment config → `ConfigureGrafanaFirewallStep` executes playbook → Port 3100 opened
-  - If Grafana is **disabled** (section absent) → Step skipped entirely (check: `environment.context().user_inputs.grafana.is_some()`)
-  - If `TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER=true` → All firewall steps skipped (including Grafana)
-
-- **Rationale for Step-Level Approach**:
-  - Grafana port is fixed (3100), unlike tracker's variable ports that need task-level conditionals
-  - Simpler to check Grafana presence at step level than pass boolean variable through templates
-  - Follows same pattern as Prometheus (which has no public firewall exposure at all)
-  - Playbook unconditionally opens port 3100 when executed - clean and predictable
-
-**Security Note**: This public exposure is **temporary** until HTTPS support with reverse proxy is implemented (roadmap task 6). Once a reverse proxy (like nginx) is added with HTTPS, this public port exposure will be removed, and Grafana will only be accessible through the proxy.
-
-**Firewall Configuration Pattern**:
-
-1. First, UFW closes all ports except SSH (which may be a custom port)
-2. Then, individual service ports are opened conditionally based on enabled services:
-   - SSH port (always, custom or default)
-   - Tracker ports (if tracker configured)
-   - **Prometheus port**: NOT exposed (internal service, no public firewall rule)
-   - Grafana port (if Grafana enabled) - port 3100 for UI access
-   - Future services...
-
-**Note**: Prometheus (port 9090) is intentionally NOT exposed through the firewall as it's an internal service. Only Grafana (which provides the user-facing UI) has public firewall access.
+- Grafana UI is exposed on port 3100 via docker-compose `ports:` directive
+- **Docker Bypasses UFW**: Docker published ports bypass UFW firewall rules entirely (see [docs/issues/DRAFT-docker-ufw-firewall-security-strategy.md](./DRAFT-docker-ufw-firewall-security-strategy.md))
+- **No Firewall Configuration**: UFW rules provide no actual security for Docker published ports
+- **Current Security Posture**: Port 3100 is accessible from any network that can reach the host
+- **Future Security**: Proper security requires reverse proxy with TLS termination (roadmap task 6)
+- **Temporary Exposure**: This public exposure is acceptable for MVP/testing environments until reverse proxy is implemented
 
 ### Environment Configuration Schema Extensions
 
@@ -665,30 +612,11 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
    - [x] Pass Grafana config to `DockerComposeContext::with_grafana()` when present
    - [x] Pass Grafana credentials to `EnvContext` when present
 
-6. **Firewall Configuration** (NEW):
-
-   - [x] Create Ansible playbook: `templates/ansible/configure-grafana-firewall.yml`
-   - [x] ~~Add `grafana_enabled` variable to Ansible variables template~~ (NOT NEEDED - conditional at step level)
-   - [x] Register playbook in `ProjectGenerator` (see `templates.md` for static template registration)
-   - [x] Create `ConfigureGrafanaFirewallStep` in `src/application/steps/system/configure_grafana_firewall.rs`:
-     - Implement `Step` trait with `execute()` method
-     - Execute `configure-grafana-firewall.yml` playbook via Ansible client
-     - Return appropriate error on failure
-   - [x] Add `ConfigureGrafanaFirewall` variant to `ConfigureStep` enum in `src/domain/environment/state/configure_failed.rs`
-   - [x] Integrate step in `ConfigureCommandHandler::execute_configuration_with_tracking()`:
-     - Add after `ConfigureTrackerFirewall` step
-     - Check `skip_firewall` flag (respect `TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER`)
-     - Skip with info log if firewall configuration is disabled
-     - Execute `ConfigureGrafanaFirewallStep` only when Grafana is enabled
-   - [x] Add unit tests for `ConfigureGrafanaFirewallStep`
-
-7. **Testing**:
+6. **Testing**:
    - [x] Add unit tests for Grafana service rendering in docker-compose template
    - [x] Test conditional rendering (with/without Grafana)
    - [x] Test environment variable generation
    - [x] Test volume declaration
-   - [x] Test firewall configuration playbook rendering
-   - [x] Test `ConfigureGrafanaFirewallStep` execution
    - [x] Run `cargo test` - all tests should pass (1555 tests)
    - [x] Run `cargo run --bin linter all` - all linters should pass
 
@@ -712,8 +640,6 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
      - [ ] Check Grafana container is running (`docker ps`)
      - [ ] Verify Grafana UI is accessible (curl http://localhost:3100)
      - [ ] Verify admin credentials work (login test)
-     - [ ] **Firewall Verification**: Check port 3100 is open in UFW (`sudo ufw status`)
-     - [ ] **Firewall Verification**: Verify external access to Grafana UI (curl from test machine)
    - [ ] Update `run_release_validation()` to include Grafana checks when enabled
 
 3. **E2E Test Updates**:
@@ -736,14 +662,10 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
      - [ ] `run`
    - [ ] Verify Grafana deployment:
      - [ ] Check Grafana container running: `docker ps`
-     - [ ] **Verify firewall configuration**:
-       - [ ] SSH to VM: `ssh user@<vm-ip>`
-       - [ ] Check UFW status: `sudo ufw status`
-       - [ ] Verify port 3100 is allowed: Look for "3100/tcp" with "ALLOW" in UFW output
-       - [ ] Exit SSH
      - [ ] **Verify external access**:
        - [ ] Access Grafana UI from local machine: `http://<vm-ip>:3100`
        - [ ] Verify UI loads successfully (Grafana login page appears)
+       - [ ] **Note**: Port is accessible due to Docker bypassing UFW (no firewall config needed)
      - [ ] Login with admin credentials
      - [ ] Add Prometheus datasource manually:
        - URL: `http://prometheus:9090`
@@ -817,10 +739,8 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
 - [ ] Grafana can connect to Prometheus service for metrics visualization
 - [ ] Named volume `grafana_data` is created and persists across container restarts
 - [ ] Service dependencies correctly enforced (Grafana starts after Prometheus)
-- [ ] **Firewall**: Port 3100 is opened in UFW when Grafana is enabled during `configure` command
-- [ ] **Firewall**: Port 3100 is NOT opened when Grafana is disabled (section removed from config)
-- [ ] **Firewall**: Grafana UI is accessible externally from host machine (public internet access)
-- [ ] **Firewall**: Firewall configuration skipped when `TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER=true`
+- [ ] **Port Exposure**: Port 3100 is accessible externally via docker-compose published port (Docker bypasses UFW)
+- [ ] **Security**: Port exposure documented with security implications and future mitigation plan
 
 ### Validation Requirements
 

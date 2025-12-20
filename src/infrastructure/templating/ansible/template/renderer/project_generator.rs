@@ -307,7 +307,6 @@ impl AnsibleProjectGenerator {
             "configure-security-updates.yml",
             "configure-firewall.yml",
             "configure-tracker-firewall.yml",
-            "configure-grafana-firewall.yml",
             "create-tracker-storage.yml",
             "init-tracker-database.yml",
             "deploy-tracker-config.yml",

@@ -39,8 +39,8 @@ pub use rendering::{
 };
 pub use software::{InstallDockerComposeStep, InstallDockerStep};
 pub use system::{
-    ConfigureFirewallStep, ConfigureGrafanaFirewallStep, ConfigureSecurityUpdatesStep,
-    ConfigureTrackerFirewallStep, WaitForCloudInitStep,
+    ConfigureFirewallStep, ConfigureSecurityUpdatesStep, ConfigureTrackerFirewallStep,
+    WaitForCloudInitStep,
 };
 pub use validation::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
