@@ -50,6 +50,12 @@ Extract the instance IP from the environment state (see [main guide](README.md#s
 cat data/<env-name>/environment.json | jq -r '.Running.context.runtime_outputs.instance_ip'
 ```
 
+> **💡 Tip**: A `show` command is planned (issue [#241](https://github.com/torrust/torrust-tracker-deployer/issues/241)) that will display environment information including the IP address in a more user-friendly format. Once implemented, you'll be able to use:
+>
+> ```bash
+> cargo run -- show <env-name>
+> ```
+
 ## Verification Steps
 
 ### 1. Verify Grafana Container is Running
