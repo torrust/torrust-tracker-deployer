@@ -289,7 +289,11 @@ async fn run_deployer_workflow(
 
     // Validate the release (Docker Compose files deployed correctly)
     // Note: E2E deployment environment has Prometheus enabled, so we validate it
-    let services = ServiceValidation { prometheus: true };
+    // Grafana is not enabled in the basic E2E test, so grafana: false
+    let services = ServiceValidation {
+        prometheus: true,
+        grafana: false,
+    };
     run_release_validation(socket_addr, ssh_credentials, Some(services))
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -300,7 +304,11 @@ async fn run_deployer_workflow(
 
     // Validate services are running using actual mapped ports from runtime environment
     // Note: E2E deployment environment has Prometheus enabled, so we validate it
-    let run_services = RunServiceValidation { prometheus: true };
+    // Grafana is not enabled in the basic E2E test, so grafana: false
+    let run_services = RunServiceValidation {
+        prometheus: true,
+        grafana: false,
+    };
     run_run_validation(
         socket_addr,
         ssh_credentials,

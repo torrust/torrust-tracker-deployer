@@ -59,7 +59,7 @@ use tracing::info;
 use crate::adapters::ssh::SshConfig;
 use crate::adapters::ssh::SshCredentials;
 use crate::infrastructure::external_validators::RunningServicesValidator;
-use crate::infrastructure::remote_actions::validators::PrometheusValidator;
+use crate::infrastructure::remote_actions::validators::{GrafanaValidator, PrometheusValidator};
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
 
 /// Service validation configuration
@@ -71,6 +71,8 @@ use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
 pub struct ServiceValidation {
     /// Whether to validate Prometheus is running and accessible
     pub prometheus: bool,
+    /// Whether to validate Grafana is running and accessible
+    pub grafana: bool,
 }
 
 /// Errors that can occur during run validation
@@ -92,6 +94,16 @@ Tip: Ensure Docker Compose services are started and healthy"
 Tip: Ensure Prometheus container is running and accessible on port 9090"
     )]
     PrometheusValidationFailed {
+        #[source]
+        source: RemoteActionError,
+    },
+
+    /// Grafana smoke test failed
+    #[error(
+        "Grafana smoke test failed: {source}
+Tip: Ensure Grafana container is running and accessible on port 3100"
+    )]
+    GrafanaValidationFailed {
         #[source]
         source: RemoteActionError,
     },
@@ -166,8 +178,39 @@ For more information, see docs/e2e-testing/."
    - Check scrape targets: curl http://localhost:9090/api/v1/targets | jq
 
 5. Re-deploy if needed:
-   - Re-run 'run' command: cargo run -- run <environment>
-   - Or manually: cd /opt/torrust && docker compose up -d prometheus
+   - Release command: cargo run -- release <environment>
+   - Run command: cargo run -- run <environment>
+
+For more information, see docs/e2e-testing/."
+            }
+            Self::GrafanaValidationFailed { .. } => {
+                "Grafana Smoke Test Failed - Detailed Troubleshooting:
+
+1. Check Grafana container status:
+   - SSH to instance: ssh user@instance-ip
+   - Check container: cd /opt/torrust && docker compose ps
+   - View Grafana logs: docker compose logs grafana
+
+2. Verify Grafana is accessible:
+   - Test from inside VM: curl http://localhost:3100
+   - Check if port 3100 is listening: ss -tlnp | grep 3100
+
+3. Common issues:
+   - Grafana container failed to start (check logs)
+   - Port 3100 already in use by another process
+   - Invalid admin credentials in environment variables
+   - Insufficient memory for Grafana
+   - Grafana depends on Prometheus but Prometheus not running
+
+4. Debug steps:
+   - Check environment variables: docker compose exec grafana env | grep GF_
+   - Restart Grafana: docker compose restart grafana
+   - Access Grafana UI: http://<vm-ip>:3100 (from your browser)
+   - Check datasources: curl http://localhost:3100/api/datasources | jq
+
+5. Re-deploy if needed:
+   - Release command: cargo run -- release <environment>
+   - Run command: cargo run -- run <environment>
 
 For more information, see docs/e2e-testing/."
             }
@@ -214,6 +257,7 @@ pub async fn run_run_validation(
         tracker_api_port = tracker_api_port,
         http_tracker_ports = ?http_tracker_ports,
         validate_prometheus = services.prometheus,
+        validate_grafana = services.grafana,
         "Running 'run' command validation tests"
     );
 
@@ -232,6 +276,10 @@ pub async fn run_run_validation(
     // Optionally validate Prometheus is running and accessible
     if services.prometheus {
         validate_prometheus(ip_addr, ssh_credentials, socket_addr.port()).await?;
+    }
+    // Optionally validate Grafana is running and accessible
+    if services.grafana {
+        validate_grafana(ip_addr, ssh_credentials, socket_addr.port()).await?;
     }
 
     info!(
@@ -298,6 +346,35 @@ async fn validate_prometheus(
         .execute(&ip_addr)
         .await
         .map_err(|source| RunValidationError::PrometheusValidationFailed { source })?;
+
+    Ok(())
+}
+
+/// Validate Grafana is running and accessible via smoke test
+///
+/// This function performs a smoke test on Grafana by connecting via SSH
+/// and executing a curl command to verify the web UI is accessible.
+///
+/// # Note
+///
+/// Grafana runs on port 3000 inside the container but is exposed on port 3100
+/// on the host via docker-compose port mapping. Docker published ports bypass
+/// UFW firewall, so Grafana is accessible externally. However, for consistency
+/// with other validators, we test from inside the VM via SSH.
+async fn validate_grafana(
+    ip_addr: IpAddr,
+    ssh_credentials: &SshCredentials,
+    port: u16,
+) -> Result<(), RunValidationError> {
+    info!("Validating Grafana is running and accessible");
+
+    let ssh_config = SshConfig::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
+
+    let grafana_validator = GrafanaValidator::new(ssh_config, None);
+    grafana_validator
+        .execute(&ip_addr)
+        .await
+        .map_err(|source| RunValidationError::GrafanaValidationFailed { source })?;
 
     Ok(())
 }
