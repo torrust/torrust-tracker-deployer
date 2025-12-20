@@ -282,10 +282,20 @@ The Torrust Tracker Deployer supports optional services that can be enabled in y
 ### Available Services
 
 - **[Prometheus Monitoring](services/prometheus.md)** - Metrics collection and monitoring (enabled by default)
+
   - Automatic metrics scraping from tracker API
   - Web UI on port 9090
   - Configurable scrape intervals
   - Can be disabled by removing from configuration
+
+- **[Grafana Visualization](services/grafana.md)** - Metrics visualization and dashboards (enabled by default)
+  - Web UI on port 3100 for dashboard access
+  - Requires Prometheus to be enabled
+  - Configurable admin credentials
+  - Pre-built tracker dashboards available for import
+  - Can be disabled by removing from configuration
+
+For detailed configuration, setup instructions, and troubleshooting, see the individual service guides linked above.
 
 ### Adding or Removing Services
 

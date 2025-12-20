@@ -709,22 +709,22 @@ fn create_environment_from_config(config: UserInputs) -> Result<Environment, Con
 
 1. **Create ADR** (`docs/decisions/grafana-integration-pattern.md`):
 
-   - [ ] Document enabled-by-default approach (consistent with Prometheus)
-   - [ ] Explain Grafana-Prometheus dependency and validation
-   - [ ] Document why no separate config files (uses defaults + env vars)
-   - [ ] List alternatives considered (opt-in, mandatory, separate provisioning)
-   - [ ] Document consequences for users and maintainers
+   - [x] Document enabled-by-default approach (consistent with Prometheus)
+   - [x] Explain Grafana-Prometheus dependency and validation
+   - [x] Document why no separate config files (uses defaults + env vars)
+   - [x] List alternatives considered (opt-in, mandatory, separate provisioning)
+   - [x] Document consequences for users and maintainers
 
 2. **Update User Guide** (`docs/user-guide/README.md`):
 
-   - [ ] Add Grafana configuration section
-   - [ ] Document `grafana.admin_user` and `grafana.admin_password` parameters
-   - [ ] Explain enabled-by-default behavior and opt-out pattern
-   - [ ] Document Prometheus dependency requirement
-   - [ ] Instructions for accessing Grafana UI (port 3100)
-   - [ ] Instructions for adding Prometheus datasource
-   - [ ] Link to manual verification guide
-   - [ ] Add security warning about changing default password
+   - [x] Add Grafana configuration section
+   - [x] Document `grafana.admin_user` and `grafana.admin_password` parameters
+   - [x] Explain enabled-by-default behavior and opt-out pattern
+   - [x] Document Prometheus dependency requirement
+   - [x] Instructions for accessing Grafana UI (port 3100)
+   - [x] Instructions for adding Prometheus datasource
+   - [x] Link to manual verification guide
+   - [x] Add security warning about changing default password
 
 3. **Create Manual Verification Guide** (`docs/e2e-testing/manual/grafana-verification.md`):
 

@@ -76,6 +76,7 @@ customuser
 dearmor
 debootstrap
 debuginfo
+devpass
 derefs
 distro
 distutils

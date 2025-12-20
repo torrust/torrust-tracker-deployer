@@ -59,7 +59,8 @@
 //! extended as needed.
 
 use std::net::IpAddr;
-use tracing::{info, instrument};
+use std::time::Duration;
+use tracing::{info, instrument, warn};
 
 use crate::adapters::ssh::SshClient;
 use crate::adapters::ssh::SshConfig;
@@ -67,6 +68,12 @@ use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
 
 /// Default Grafana external port (exposed by docker-compose)
 const DEFAULT_GRAFANA_PORT: u16 = 3100;
+
+/// Maximum retry attempts for Grafana startup
+const MAX_RETRIES: u32 = 30;
+
+/// Delay between retry attempts (in seconds)
+const RETRY_DELAY_SECS: u64 = 2;
 
 /// Action that validates Grafana is running and accessible
 pub struct GrafanaValidator {
@@ -109,43 +116,57 @@ impl RemoteAction for GrafanaValidator {
         info!(
             action = "grafana_smoke_test",
             grafana_port = self.grafana_port,
-            "Running Grafana smoke test"
+            "Running Grafana smoke test with retry logic (Grafana may take time to start)"
         );
 
-        // Perform smoke test: curl Grafana homepage and check for success
-        // Using -f flag to make curl fail on HTTP errors (4xx, 5xx)
-        // Using -s flag for silent mode (no progress bar)
-        // Using -o /dev/null to discard response body (we only care about status code)
-        let command = format!(
-            "curl -f -s -o /dev/null http://localhost:{} && echo 'success'",
-            self.grafana_port
-        );
+        // Retry logic: Grafana container may take some time to fully start
+        // We retry for up to 60 seconds (30 attempts * 2 seconds)
+        for attempt in 1..=MAX_RETRIES {
+            // Perform smoke test: curl Grafana homepage and check for success
+            // Using -f flag to make curl fail on HTTP errors (4xx, 5xx)
+            // Using -s flag for silent mode (no progress bar)
+            // Using -o /dev/null to discard response body (we only care about status code)
+            let command = format!(
+                "curl -f -s -o /dev/null http://localhost:{} && echo 'success'",
+                self.grafana_port
+            );
 
-        let output = self.ssh_client.execute(&command).map_err(|source| {
-            RemoteActionError::SshCommandFailed {
-                action_name: self.name().to_string(),
-                source,
+            match self.ssh_client.execute(&command) {
+                Ok(output) if output.trim().contains("success") => {
+                    info!(
+                        action = "grafana_smoke_test",
+                        status = "success",
+                        attempt = attempt,
+                        "Grafana is running and responding to HTTP requests"
+                    );
+                    return Ok(());
+                }
+                Ok(_) | Err(_) => {
+                    if attempt < MAX_RETRIES {
+                        warn!(
+                            action = "grafana_smoke_test",
+                            attempt = attempt,
+                            max_retries = MAX_RETRIES,
+                            retry_delay_secs = RETRY_DELAY_SECS,
+                            "Grafana not ready yet, retrying..."
+                        );
+                        std::thread::sleep(Duration::from_secs(RETRY_DELAY_SECS));
+                    }
+                }
             }
-        })?;
-
-        if !output.trim().contains("success") {
-            return Err(RemoteActionError::ValidationFailed {
-                action_name: self.name().to_string(),
-                message: format!(
-                    "Grafana smoke test failed. Grafana may not be running or accessible on port {}. \
-                     Check that 'docker compose ps' shows Grafana container as running.",
-                    self.grafana_port
-                ),
-            });
         }
 
-        info!(
-            action = "grafana_smoke_test",
-            status = "success",
-            "Grafana is running and responding to HTTP requests"
-        );
-
-        Ok(())
+        // All retries exhausted
+        Err(RemoteActionError::ValidationFailed {
+            action_name: self.name().to_string(),
+            message: format!(
+                "Grafana smoke test failed after {} retries. Grafana may not be running or accessible on port {}. \
+                 Check that 'docker compose ps' shows Grafana container as running and healthy. \
+                 Grafana can take 30-60 seconds to fully start.",
+                MAX_RETRIES,
+                self.grafana_port
+            ),
+        })
     }
 }
 
