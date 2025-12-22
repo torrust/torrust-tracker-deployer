@@ -12,7 +12,7 @@ Files follow the format: `{issue-number}-{description}.md`
 
 **Examples**:
 
-- `248-network-segmentation-test-results.md` - Manual E2E testing for Docker network segmentation (issue #248)
+- `XXX-feature-name-test-results.md` - Manual E2E testing documentation for issue #XXX
 
 ## When to Create Manual Test Documentation
 
@@ -43,7 +43,7 @@ Manual test documentation typically includes:
 Manual test documentation should be linked from the main issue specification file in `docs/issues/`:
 
 ```markdown
-- [x] **Test results documented**: See [manual test results](manual-tests/248-network-segmentation-test-results.md)
+- [x] **Test results documented**: See [manual test results](manual-tests/XXX-feature-name-test-results.md)
 ```
 
 ## Cleanup
