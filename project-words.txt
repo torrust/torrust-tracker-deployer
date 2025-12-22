@@ -3,6 +3,7 @@ AAAAC
 AAAAI
 AGENTS
 Alertmanager
+aquasecurity
 Ashburn
 Avalonia
 CIFS
@@ -219,6 +220,8 @@ rustc
 rustflags
 rustls
 rustup
+sarif
+SARIF
 schemars
 secureboot
 selectattr
