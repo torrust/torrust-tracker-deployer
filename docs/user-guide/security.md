@@ -8,96 +8,218 @@ Security is a critical aspect of production deployments. The Torrust Tracker Dep
 
 ## Firewall Configuration
 
+### Layered Security Approach
+
+**CRITICAL**: The deployer uses a **layered security approach** combining UFW firewall and Docker networking to protect your deployment. Understanding how these layers work together is essential for secure deployments.
+
+#### Security Architecture
+
+The deployer implements security at two levels:
+
+1. **Instance-Level Security (UFW)** - Protects the VM itself
+
+   - Denies all incoming traffic by default
+   - Allows only SSH access for administration
+   - **Does NOT control Docker container ports** (Docker bypasses UFW)
+
+2. **Service-Level Security (Docker)** - Controls service exposure
+   - Public services have explicit port bindings (Tracker, Grafana)
+   - Internal services have NO port bindings (MySQL)
+   - Localhost-only services bind to `127.0.0.1` (Prometheus)
+   - Docker network segmentation isolates service communication
+
+#### Why UFW Cannot Protect Docker Ports
+
+**Important**: Docker manipulates iptables directly and **bypasses UFW rules** for published container ports. This is documented behavior (see [Docker documentation](https://docs.docker.com/engine/network/packet-filtering-firewalls/)).
+
+```yaml
+# This port binding BYPASSES UFW firewall rules
+services:
+  mysql:
+    ports:
+      - "3306:3306" # ⚠️ PUBLICLY ACCESSIBLE despite UFW rules!
+```
+
+Docker routes container traffic in the NAT table, meaning packets are diverted before reaching the INPUT and OUTPUT chains that UFW uses. Therefore:
+
+- ✅ UFW protects the VM and SSH access
+- ❌ UFW **does not** protect Docker-published ports
+- ✅ Docker port bindings control service exposure
+
 ### Automatic Firewall Setup
 
-**CRITICAL**: The `configure` command automatically configures UFW (Uncomplicated Firewall) on virtual machines to protect internal services from unauthorized external access.
-
-During the `configure` step, the deployer:
+During the `configure` command, the deployer:
 
 1. **Installs UFW** - Ensures the firewall is available
 2. **Sets restrictive policies** - Denies all incoming traffic by default
 3. **Allows SSH access** - Preserves SSH connectivity (configured port)
-4. **Allows tracker services** - Opens only necessary tracker ports:
-   - UDP tracker ports (configured in environment)
-   - HTTP tracker ports (configured in environment)
-   - HTTP API port (configured in environment)
-5. **Enables the firewall** - Activates rules to protect the system
+4. **Enables the firewall** - Activates rules to protect SSH access
 
-### Why Firewall Configuration Matters
+**Note**: UFW only controls SSH access. Application ports are controlled by Docker port bindings in the docker-compose configuration.
 
-The Docker Compose configuration (`templates/docker-compose/docker-compose.yml.tera`) exposes several service ports that should **NOT** be publicly accessible:
+###Service Exposure Strategy
 
-**Exposed Ports in Docker Compose**:
+### Service Exposure Strategy
+
+The Docker Compose configuration (`templates/docker-compose/docker-compose.yml.tera`) controls which services are accessible from the internet through **explicit port bindings**:
+
+**Service Exposure Levels**:
 
 ```yaml
 services:
-  # Tracker - Public ports (UDP/HTTP tracker, HTTP API)
+  # ✅ PUBLIC SERVICES - Explicit port bindings
   tracker:
     ports:
-      - "6969:6969/udp" # ✅ Public - UDP tracker
-      - "7070:7070" # ✅ Public - HTTP tracker
-      - "1212:1212" # ✅ Public - HTTP API
+      - "6969:6969/udp" # Public - UDP tracker
+      - "7070:7070" # Public - HTTP tracker
+      - "1212:1212" # Public - REST API
 
-  # Prometheus - INTERNAL ONLY
+  grafana:
+    ports:
+      - "3100:3000" # Public - Monitoring UI (authenticated)
+
+  # 🔒 LOCALHOST-ONLY SERVICES - Bound to 127.0.0.1
   prometheus:
     ports:
-      - "9090:9090" # ⚠️ INTERNAL - Metrics UI
+      - "127.0.0.1:9090:9090" # Accessible only from VM host
 
-  # MySQL - INTERNAL ONLY
+  # 🔒 INTERNAL-ONLY SERVICES - No port bindings
   mysql:
-    ports:
-      - "3306:3306" # ⚠️ INTERNAL - Database
+    # No ports section - completely internal
+    # Accessed via Docker network: mysql:3306
 ```
 
-**Without firewall protection**, services like Prometheus (port 9090) and MySQL (port 3306) would be accessible from the internet, potentially exposing:
+**Security Properties**:
 
-- **Prometheus** - Internal metrics, performance data, system topology
-- **MySQL** - Database access (even with authentication, this is a security risk)
+- **Public Services** - Have `ports:` section binding to `0.0.0.0` (accessible externally)
+- **Localhost Services** - Bind to `127.0.0.1` (accessible only from VM host via SSH)
+- **Internal Services** - No port bindings (accessible only via Docker internal networks)
 
-**With firewall protection** (UFW configured by `configure` command):
+### Network Segmentation
 
-- ✅ **Tracker ports** - Accessible externally (UDP tracker, HTTP tracker, HTTP API)
-- 🔒 **Prometheus port** - Blocked from external access
-- 🔒 **MySQL port** - Blocked from external access
-- ✅ **SSH access** - Preserved for administration
+The deployer implements **three isolated Docker networks** for defense-in-depth security:
+
+```yaml
+networks:
+  database_network: # Tracker ↔ MySQL only
+  metrics_network: # Tracker ↔ Prometheus only
+  visualization_network: # Prometheus ↔ Grafana only
+
+services:
+  tracker:
+    networks:
+      - database_network # Can access MySQL
+      - metrics_network # Can be scraped by Prometheus
+
+  mysql:
+    networks:
+      - database_network # Isolated - only Tracker can access
+
+  prometheus:
+    networks:
+      - metrics_network # Can scrape Tracker metrics
+      - visualization_network # Can be queried by Grafana
+
+  grafana:
+    networks:
+      - visualization_network # Can query Prometheus only
+```
+
+**Security Benefits**:
+
+1. **Reduced Attack Surface**: MySQL accessible from 1 service (Tracker) instead of 3 services
+2. **Lateral Movement Prevention**: Compromised Grafana cannot access MySQL or Tracker
+3. **Principle of Least Privilege**: Services can only communicate where necessary
+4. **Compliance**: Aligns with PCI DSS, NIST 800-53, CIS Docker Benchmark
+
+### Security Comparison
+
+**Without proper configuration** ⚠️:
+
+```yaml
+# INSECURE - All services on one network with public port bindings
+services:
+  mysql:
+    ports:
+      - "3306:3306" # ⚠️ MySQL publicly accessible!
+    networks:
+      - backend_network
+```
+
+- ❌ Internal services exposed to internet
+- ❌ All services can communicate (no segmentation)
+- ❌ Docker bypasses UFW firewall rules
+- ❌ High attack surface
+
+**With deployer configuration** ✅:
+
+```yaml
+# SECURE - Network segmentation + no public port bindings
+services:
+  mysql:
+    # No ports section - internal only
+    networks:
+      - database_network # Only Tracker can access
+```
+
+- ✅ Internal services not publicly accessible
+- ✅ Network segmentation limits lateral movement
+- ✅ UFW protects SSH access
+- ✅ Reduced attack surface
 
 ### E2E Testing vs Production
 
 **E2E Testing (Docker Containers)**:
 
-- Uses Docker containers instead of VMs for faster test execution
-- Firewall **NOT** configured inside containers (containers provide isolation)
-- Services exposed for testing purposes
-- ⚠️ **NOT suitable for production use**
+- Uses Docker containers for faster test execution
+- Firewall **not configured** inside containers (container isolation sufficient)
+- Services may be exposed for testing purposes
+- ⚠️ **NOT production-grade security**
 
 **Production Deployments (Virtual Machines)**:
 
 - Uses real VMs (LXD, cloud providers)
-- Firewall **automatically configured** by `configure` command
-- Only tracker services exposed externally
-- ✅ **Production-ready security posture**
+- UFW **configured automatically** for SSH protection
+- Docker port bindings control service exposure
+- Network segmentation isolates services
+- ✅ **Production-ready security**
 
 ### Firewall Rules Applied
 
-The deployer configures these firewall rules during the `configure` step:
+The deployer configures these UFW firewall rules during `configure`:
 
 ```bash
-# SSH Access (required for management)
+# SSH Access (required for administration)
 ufw allow <ssh-port>/tcp
 
-# UDP Tracker Ports (configured in environment)
-ufw allow <udp-port>/udp
-
-# HTTP Tracker Ports (configured in environment)
-ufw allow <http-port>/tcp
-
-# HTTP API Port (configured in environment)
-ufw allow <api-port>/tcp
-
 # Default policies
-ufw default deny incoming   # Block everything else
+ufw default deny incoming   # Block all incoming traffic
 ufw default allow outgoing  # Allow outbound connections
+ufw enable                  # Activate firewall
 ```
+
+**Note**: Application ports (Tracker, Grafana, Prometheus, MySQL) are **not** managed by UFW. They are controlled by Docker port bindings in the docker-compose.yml configuration.
+
+### Security Best Practices
+
+**DO**:
+
+- ✅ Use the deployer's default docker-compose template (network segmentation included)
+- ✅ Review port bindings before deploying (`build/{env}/docker-compose/docker-compose.yml`)
+- ✅ Keep internal services without port bindings (MySQL)
+- ✅ Use `127.0.0.1` bindings for localhost-only access (Prometheus)
+- ✅ Apply security updates to the VM regularly
+- ✅ Use strong SSH keys and disable password authentication
+- ✅ Monitor logs for suspicious activity
+
+**DON'T**:
+
+- ❌ Add port bindings to internal services (e.g., `3306:3306` for MySQL)
+- ❌ Disable UFW firewall on production VMs
+- ❌ Remove network segmentation from docker-compose.yml
+- ❌ Assume UFW protects Docker-published ports
+- ❌ Expose Prometheus/MySQL publicly
+- ❌ Use default passwords for services
 
 ### Verifying Firewall Configuration
 
