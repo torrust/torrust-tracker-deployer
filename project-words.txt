@@ -170,6 +170,7 @@ nanos
 newgrp
 newtype
 newtypes
+nftables
 nistp
 nocapture
 noconfirm
