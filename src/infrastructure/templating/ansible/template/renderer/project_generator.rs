@@ -306,7 +306,6 @@ impl AnsibleProjectGenerator {
             "wait-cloud-init.yml",
             "configure-security-updates.yml",
             "configure-firewall.yml",
-            "configure-tracker-firewall.yml",
             "create-tracker-storage.yml",
             "init-tracker-database.yml",
             "deploy-tracker-config.yml",

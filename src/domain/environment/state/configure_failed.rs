@@ -47,10 +47,8 @@ pub enum ConfigureStep {
     InstallDockerCompose,
     /// Configuring automatic security updates
     ConfigureSecurityUpdates,
-    /// Configuring UFW firewall
+    /// Configuring UFW firewall (SSH access only)
     ConfigureFirewall,
-    /// Configuring Tracker firewall rules
-    ConfigureTrackerFirewall,
 }
 
 /// Error state - Application configuration failed
