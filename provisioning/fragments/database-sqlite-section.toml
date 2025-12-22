@@ -1,0 +1,24 @@
+name = "sqlite_fragment"
+
+[[elements]]
+name = "sqlite_header"
+type = "section_header"
+title = "💾 SQLite Database Configuration"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "sqlite_database_name"
+type = "text"
+prompt = "Database filename"
+placeholder = "tracker.db"
+default = "tracker.db"
+required = true
+help = "Name of the SQLite database file (will be created in the tracker data directory)"
+nickel_path = [
+    "tracker",
+    "core",
+    "database",
+    "database_name",
+]
+nickel_alias = "sqlite_database_name"

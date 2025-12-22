@@ -1,0 +1,64 @@
+name = "tracker_fragment"
+
+[[elements]]
+name = "tracker_header"
+type = "section_header"
+title = "🚀 Torrust Tracker Configuration"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "tracker_private_mode"
+type = "confirm"
+prompt = "Enable private tracker mode?"
+default = "false"
+help = "Private tracker: only registered users. Public tracker: anyone can use."
+nickel_path = ["tracker", "core", "private"]
+
+[[elements]]
+name = "udp_trackers"
+type = "repeatinggroup"
+prompt = "UDP Tracker Listeners"
+help = "Configure UDP tracker bind addresses. Standard BitTorrent port is 6969."
+required = false
+fragment = "fragments/udp_trackers_item.toml"
+min_items = 0
+max_items = "${constraint.tracker.udp.max_items}"
+default_items = 1
+unique = true
+nickel_path = ["tracker", "udp_trackers"]
+order = 2
+
+[[elements]]
+name = "http_trackers"
+type = "repeatinggroup"
+prompt = "HTTP Tracker Listeners"
+help = "Configure HTTP tracker bind addresses. Standard port is 7070."
+required = false
+fragment = "fragments/http_trackers_item.toml"
+min_items = 0
+max_items = "${constraint.tracker.http.max_items}"
+default_items = 1
+unique = true
+nickel_path = ["tracker", "http_trackers"]
+order = 3
+
+[[elements]]
+name = "http_api_bind_address"
+type = "text"
+prompt = "HTTP API bind address"
+placeholder = "0.0.0.0:1212"
+default = "0.0.0.0:1212"
+required = true
+help = "Address and port for HTTP API. Format: IP:PORT (e.g., 0.0.0.0:1212)"
+nickel_path = ["tracker", "http_api", "bind_address"]
+order = 4
+
+[[elements]]
+name = "http_api_admin_token"
+type = "password"
+prompt = "HTTP API admin token"
+required = true
+help = "Secret token for admin API access. Keep this secure!"
+nickel_path = ["tracker", "http_api", "admin_token"]
+order = 5

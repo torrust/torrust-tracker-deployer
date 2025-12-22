@@ -1,0 +1,86 @@
+name = "mysql_fragment"
+
+[[elements]]
+name = "mysql_header"
+type = "section_header"
+title = "💾 MySQL Database Configuration"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "mysql_host"
+type = "text"
+prompt = "MySQL host"
+placeholder = "localhost"
+default = "localhost"
+required = true
+help = "MySQL server hostname or IP address"
+nickel_path = [
+    "tracker",
+    "core",
+    "database",
+    "mysql_host",
+]
+nickel_alias = "mysql_host"
+
+[[elements]]
+name = "mysql_port"
+type = "text"
+prompt = "MySQL port"
+placeholder = "3306"
+default = "3306"
+required = true
+help = "MySQL server port (default 3306). Must be between 1-65535."
+nickel_path = [
+    "tracker",
+    "core",
+    "database",
+    "mysql_port",
+]
+nickel_alias = "mysql_port"
+
+[[elements]]
+name = "mysql_database_name"
+type = "text"
+prompt = "Database name"
+placeholder = "torrust_tracker"
+default = "torrust_tracker"
+required = true
+help = "Name of the MySQL database"
+nickel_path = [
+    "tracker",
+    "core",
+    "database",
+    "database_name",
+]
+nickel_alias = "mysql_database_name"
+
+[[elements]]
+name = "mysql_username"
+type = "text"
+prompt = "Database username"
+placeholder = "tracker_user"
+default = "tracker_user"
+required = true
+help = "MySQL username for authentication"
+nickel_path = [
+    "tracker",
+    "core",
+    "database",
+    "mysql_username",
+]
+nickel_alias = "mysql_username"
+
+[[elements]]
+name = "mysql_password"
+type = "password"
+prompt = "Database password"
+required = true
+help = "MySQL password for authentication"
+nickel_path = [
+    "tracker",
+    "core",
+    "database",
+    "mysql_password",
+]
+nickel_alias = "mysql_password"

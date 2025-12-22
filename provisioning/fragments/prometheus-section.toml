@@ -1,0 +1,32 @@
+name = "prometheus_fragment"
+
+[[elements]]
+name = "prometheus_header"
+type = "section_header"
+title = "📊 Prometheus Configuration"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "prometheus_bind_address"
+type = "text"
+prompt = "Prometheus bind address"
+placeholder = "0.0.0.0:9090"
+default = "0.0.0.0:9090"
+help = "Address and port for Prometheus. Format: IP:PORT (e.g., 0.0.0.0:9090)"
+nickel_path = [
+    "prometheus",
+    "bind_address",
+]
+
+[[elements]]
+name = "prometheus_scrape_interval"
+type = "text"
+prompt = "Scrape interval (seconds)"
+placeholder = "15"
+default = "15"
+help = "How often Prometheus should scrape metrics (in seconds). Default: 15 seconds."
+nickel_path = [
+    "prometheus",
+    "scrape_interval",
+]

@@ -1,0 +1,192 @@
+# Torrust Tracker Environment Configuration
+# Generated from config-form.toml
+
+# ============================================================================
+# IMPORTS: Schemas, Defaults, Validators
+# ============================================================================
+
+let schemas_env = import "../schemas/environment.ncl" in
+let schemas_ssh = import "../schemas/ssh.ncl" in
+let schemas_provider = import "../schemas/provider.ncl" in
+let schemas_tracker = import "../schemas/tracker.ncl" in
+let schemas_features = import "../schemas/features.ncl" in
+
+let defaults_env = import "../defaults/environment.ncl" in
+let defaults_ssh = import "../defaults/ssh.ncl" in
+let defaults_provider = import "../defaults/provider.ncl" in
+let defaults_tracker = import "../defaults/tracker.ncl" in
+let defaults_features = import "../defaults/features.ncl" in
+
+let validators = import "../validators/environment.ncl" in
+let validators_instance = import "../validators/instance.ncl" in
+let validators_username = import "../validators/username.ncl" in
+let validators_common = import "../validators/common.ncl" in
+let validators_network = import "../validators/network.ncl" in
+let validators_tracker = import "../validators/tracker.ncl" in
+
+let constraints = import "../constraints.toml" in
+
+# ============================================================================
+# USER CONFIGURATION
+# ============================================================================
+
+let user_config = {
+  # ========================================================================
+  # ENVIRONMENT IDENTIFICATION
+  # ========================================================================
+  environment = {
+    {%- if environment_name %}
+    name = validators.ValidEnvironmentName "{{ environment_name }}",
+    {%- endif %}
+    {%- if instance_name %}
+    instance_name = validators_instance.ValidInstanceName "{{ instance_name }}",
+    {%- endif %}
+  },
+
+  # ========================================================================
+  # INFRASTRUCTURE PROVIDER
+  # ========================================================================
+  {%- if provider %}
+  provider = {
+    provider = "{{ provider }}",
+    {%- if provider == "lxd" and lxd_profile_name %}
+    profile_name = "{{ lxd_profile_name }}",
+    {%- elif provider == "hetzner" %}
+    {%- if hetzner_api_token %}
+    api_token = "{{ hetzner_api_token }}",
+    {%- endif %}
+    {%- if hetzner_server_type %}
+    server_type = "{{ hetzner_server_type }}",
+    {%- endif %}
+    {%- if hetzner_location %}
+    location = "{{ hetzner_location }}",
+    {%- endif %}
+    {%- if hetzner_image %}
+    image = "{{ hetzner_image }}",
+    {%- endif %}
+    {%- endif %}
+  },
+  {%- endif %}
+
+  # ========================================================================
+  # SSH CREDENTIALS
+  # ========================================================================
+  {%- if ssh_private_key_path or ssh_username or ssh_port %}
+  ssh_credentials = {
+    {%- if ssh_private_key_path %}
+    private_key_path = "{{ ssh_private_key_path }}",
+    {%- endif %}
+    {%- if ssh_public_key_path %}
+    public_key_path = "{{ ssh_public_key_path }}",
+    {%- endif %}
+    {%- if ssh_username %}
+    username = validators_username.ValidUsername "{{ ssh_username }}",
+    {%- endif %}
+    {%- if ssh_port %}
+    port = validators_common.ValidPort {{ ssh_port }},
+    {%- endif %}
+  },
+  {%- endif %}
+
+  # ========================================================================
+  # DATABASE CONFIGURATION
+  # ========================================================================
+  {%- if database_driver %}
+  tracker = {
+    core = {
+      {%- if tracker_private_mode %}
+      private = {{ tracker_private_mode | lower }},
+      {%- else %}
+      private = false,
+      {%- endif %}
+      database = {
+        driver = "{{ database_driver }}",
+        {%- if database_driver == "sqlite3" and sqlite_database_name %}
+        database_name = "{{ sqlite_database_name }}",
+        {%- elif database_driver == "mysql" %}
+        database_name = "{{ mysql_database_name }}",
+        {%- if mysql_host %}
+        host = "{{ mysql_host }}",
+        {%- endif %}
+        {%- if mysql_port %}
+        port = {{ mysql_port }},
+        {%- endif %}
+        {%- if mysql_username %}
+        username = "{{ mysql_username }}",
+        {%- endif %}
+        {%- if mysql_password %}
+        password = "{{ mysql_password }}",
+        {%- endif %}
+        {%- endif %}
+      },
+    },
+    {%- if udp_tracker_bind_address %}
+    # UDP Tracker Listeners (validated: unique addresses, 1-4 items)
+    udp_trackers = validators_tracker.ValidTrackerArrayFull
+      [
+        {
+          bind_address = validators_network.ValidBindAddress "{{ udp_tracker_bind_address }}",
+        },
+      ]
+      constraints.udp.min_items
+      constraints.udp.max_items,
+    {%- endif %}
+    {%- if http_tracker_bind_address %}
+    # HTTP Tracker Listeners (validated: unique addresses, 1-4 items)
+    http_trackers = validators_tracker.ValidTrackerArrayFull
+      [
+        {
+          bind_address = validators_network.ValidBindAddress "{{ http_tracker_bind_address }}",
+        },
+      ]
+      constraints.http.min_items
+      constraints.http.max_items,
+    {%- endif %}
+    {%- if http_api_bind_address %}
+    http_api = {
+      bind_address = validators_network.ValidBindAddress "{{ http_api_bind_address }}",
+      {%- if http_api_admin_token %}
+      admin_token = "{{ http_api_admin_token }}",
+      {%- endif %}
+    },
+    {%- endif %}
+  },
+  {%- endif %}
+
+  # ========================================================================
+  # MONITORING FEATURES
+  # ========================================================================
+  {%- if enable_prometheus or enable_grafana %}
+  features = {
+    {%- if enable_prometheus %}
+    prometheus = {
+      enabled = {{ enable_prometheus | lower }},
+      {%- if prometheus_bind_address %}
+      bind_address = "{{ prometheus_bind_address }}",
+      {%- endif %}
+      {%- if prometheus_scrape_interval %}
+      scrape_interval = {{ prometheus_scrape_interval }},
+      {%- endif %}
+    },
+    {%- endif %}
+    {%- if enable_grafana %}
+    grafana = {
+      enabled = {{ enable_grafana | lower }},
+      {%- if grafana_bind_address %}
+      bind_address = "{{ grafana_bind_address }}",
+      {%- endif %}
+      {%- if grafana_admin_password %}
+      admin_password = "{{ grafana_admin_password }}",
+      {%- endif %}
+    },
+    {%- endif %}
+  },
+  {%- endif %}
+} in
+
+# ============================================================================
+# MERGE DEFAULTS + USER CONFIG
+# ============================================================================
+
+#defaults_env & defaults_ssh & defaults_provider & defaults_tracker & defaults_features & user_config
+user_config

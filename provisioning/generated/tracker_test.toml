@@ -1,0 +1,46 @@
+name = "torrust_tracker_config"
+description = "Torrust Tracker Configuration"
+display_mode = "complete"
+
+[[elements]]
+[elements.Field]
+name = "private"
+type = "confirm"
+prompt = "Enable private tracker mode?"
+default = "false"
+help = "Private tracker: only registered users. Public tracker: anyone can use."
+options = []
+required = true
+order = 0
+nickel_path = ["core", "private"]
+nickel_alias = "private"
+
+[[elements]]
+[elements.Field]
+name = "udp_trackers"
+type = "repeatinggroup"
+prompt = "UDP Tracker Listeners"
+help = "Configure UDP tracker listeners. Standard BitTorrent port is 6969."
+options = []
+required = false
+order = 1
+nickel_path = ["udp_trackers"]
+fragment = "fragments/udp_trackers_item.toml"
+min_items = 0
+max_items = 10
+default_items = 1
+
+[[elements]]
+[elements.Field]
+name = "http_trackers"
+type = "repeatinggroup"
+prompt = "HTTP Tracker Listeners"
+help = "Configure HTTP tracker listeners. Standard port is 7070."
+options = []
+required = false
+order = 2
+nickel_path = ["http_trackers"]
+fragment = "fragments/http_trackers_item.toml"
+min_items = 0
+max_items = 10
+default_items = 1

@@ -1,0 +1,14 @@
+name = "udp_trackers_item"
+description = "UDP Tracker configuration"
+display_mode = "complete"
+
+[[elements]]
+name = "bind_address"
+type = "text"
+prompt = "UDP Bind Address"
+placeholder = "0.0.0.0:6969"
+default = "0.0.0.0:6969"
+help = "Address and port for UDP tracker (e.g., 0.0.0.0:6969)"
+required = true
+nickel_path = ["bind_address"]
+order = 0

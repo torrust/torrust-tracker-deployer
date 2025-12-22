@@ -1,0 +1,79 @@
+name = "generated_schema_main"
+display_mode = "complete"
+
+[[elements]]
+
+[elements.Field]
+name = "database_database_name"
+type = "text"
+prompt = "Core-database-database Name"
+options = []
+required = true
+order = 0
+nickel_path = [
+    "core",
+    "database",
+    "database_name",
+]
+nickel_alias = "database_database_name"
+
+[[elements]]
+
+[elements.Field]
+name = "database_driver"
+type = "text"
+prompt = "Core-database-driver"
+options = []
+required = true
+order = 1
+nickel_path = [
+    "core",
+    "database",
+    "driver",
+]
+nickel_alias = "database_driver"
+
+[[elements]]
+
+[elements.Field]
+name = "private"
+type = "confirm"
+prompt = "Core-private"
+options = []
+required = true
+order = 2
+nickel_path = [
+    "core",
+    "private",
+]
+nickel_alias = "private"
+
+[[elements]]
+
+[elements.Field]
+name = "http_trackers"
+type = "repeatinggroup"
+prompt = "http_trackers"
+options = []
+required = true
+order = 3
+nickel_path = ["http_trackers"]
+fragment = "fragments/http_trackers_item.toml"
+min_items = 1
+max_items = 10
+default_items = 1
+
+[[elements]]
+
+[elements.Field]
+name = "udp_trackers"
+type = "repeatinggroup"
+prompt = "udp_trackers"
+options = []
+required = true
+order = 4
+nickel_path = ["udp_trackers"]
+fragment = "fragments/udp_trackers_item.toml"
+min_items = 1
+max_items = 10
+default_items = 1

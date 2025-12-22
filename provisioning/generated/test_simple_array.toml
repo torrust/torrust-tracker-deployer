@@ -1,0 +1,13 @@
+name = "simple_array_test"
+description = "Test simple de arrays"
+
+[[fields]]
+name = "items"
+type = "repeatinggroup"
+prompt = "Items de prueba"
+help = "Añade múltiples items"
+required = false
+fragment = "fragments/simple_item.toml"
+min_items = 0
+max_items = 5
+default_items = 0

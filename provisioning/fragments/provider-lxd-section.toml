@@ -1,0 +1,20 @@
+name = "lxd_provider_fragment"
+
+[[elements]]
+name = "lxd_header"
+type = "section_header"
+title = "☁️  LXD Provider Configuration"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "lxd_profile_name"
+type = "text"
+prompt = "LXD profile name"
+placeholder = "torrust-profile-dev"
+required = true
+help = "Name of the LXD profile to use for VMs. 1-63 chars, ASCII letters/numbers/dashes only."
+nickel_path = [
+    "provider",
+    "profile_name",
+]

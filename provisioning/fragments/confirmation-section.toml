@@ -1,0 +1,13 @@
+name = "confirmation_fragment"
+
+[[elements]]
+name = "confirmation_header"
+type = "section_header"
+title = "✅ Review & Confirm"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "confirmation_info"
+type = "section"
+content = "Your configuration has been collected. Review the summary above to ensure all settings are correct. Click Enter or confirm to proceed with validation and generation."

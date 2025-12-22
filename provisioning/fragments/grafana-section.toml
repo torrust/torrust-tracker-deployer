@@ -1,0 +1,31 @@
+name = "grafana_fragment"
+
+[[elements]]
+name = "grafana_header"
+type = "section_header"
+title = "📈 Grafana Configuration"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "grafana_bind_address"
+type = "text"
+prompt = "Grafana bind address"
+placeholder = "0.0.0.0:3000"
+default = "0.0.0.0:3000"
+help = "Address and port for Grafana. Format: IP:PORT (e.g., 0.0.0.0:3000)"
+nickel_path = [
+    "grafana",
+    "bind_address",
+]
+
+[[elements]]
+name = "grafana_admin_password"
+type = "password"
+prompt = "Grafana admin password"
+required = true
+help = "Admin password for Grafana access. Keep this secure!"
+nickel_path = [
+    "grafana",
+    "admin_password",
+]

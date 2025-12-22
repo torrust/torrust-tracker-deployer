@@ -1,0 +1,31 @@
+# Traducciones al español (formato TOML alternativo)
+
+[forms.registration]
+title = "Registro de Usuario"
+description = "Crear una nueva cuenta de usuario"
+username-label = "Nombre de usuario"
+username-prompt = "Por favor, ingrese su nombre de usuario"
+username-placeholder = "usuario123"
+email-label = "Correo electrónico"
+email-prompt = "Por favor, ingrese su correo electrónico"
+email-placeholder = "usuario@ejemplo.com"
+
+[forms.registration.roles]
+admin = "Administrador"
+user = "Usuario Regular"
+guest = "Invitado"
+developer = "Desarrollador"
+
+[forms.employee-onboarding]
+title = "Incorporación de Empleado"
+description = "Complete su proceso de incorporación"
+welcome = "¡Bienvenido al equipo!"
+full-name-prompt = "¿Cuál es su nombre completo?"
+department-prompt = "¿A cuál departamento se está uniendo?"
+start-date-prompt = "¿Cuál es su fecha de inicio?"
+
+[forms.feedback]
+title = "Formulario de Retroalimentación"
+overall-satisfaction-prompt = "¿Cuán satisfecho está con nuestro servicio?"
+improvement-prompt = "¿Qué podríamos mejorar?"
+contact-prompt = "¿Podemos contactarlo con preguntas de seguimiento?"

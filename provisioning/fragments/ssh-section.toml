@@ -1,0 +1,56 @@
+name = "ssh_fragment"
+
+[[elements]]
+name = "ssh_header"
+type = "section_header"
+title = "🔐 SSH Credentials"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "ssh_private_key_path"
+type = "text"
+prompt = "Private key path"
+placeholder = "~/.ssh/id_rsa"
+required = true
+help = "Absolute or relative path to SSH private key file"
+nickel_path = [
+    "ssh_credentials",
+    "private_key_path",
+]
+
+[[elements]]
+name = "ssh_public_key_path"
+type = "text"
+prompt = "Public key path"
+placeholder = "~/.ssh/id_rsa.pub"
+required = true
+help = "Absolute or relative path to SSH public key file"
+nickel_path = [
+    "ssh_credentials",
+    "public_key_path",
+]
+
+[[elements]]
+name = "ssh_username"
+type = "text"
+prompt = "SSH username"
+placeholder = "torrust"
+default = "torrust"
+help = "Linux username for SSH access. Defaults to 'torrust'. Must be 1-32 characters, starting with letter or underscore."
+nickel_path = [
+    "ssh_credentials",
+    "username",
+]
+
+[[elements]]
+name = "ssh_port"
+type = "text"
+prompt = "SSH port"
+placeholder = "22"
+default = "22"
+help = "SSH port number (default 22). Must be between 1-65535."
+nickel_path = [
+    "ssh_credentials",
+    "port",
+]

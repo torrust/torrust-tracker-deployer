@@ -1,0 +1,14 @@
+name = "http_trackers_item"
+description = "Array element definition for http_trackers_item"
+display_mode = "complete"
+
+[[elements]]
+
+[elements.Field]
+name = "bind_address"
+type = "text"
+prompt = "Bind Address"
+options = []
+required = true
+order = 0
+nickel_path = ["bind_address"]

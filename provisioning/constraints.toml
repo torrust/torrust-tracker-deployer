@@ -1,0 +1,18 @@
+# Validation Constraints
+# Single source of truth for min_items, max_items, unique across ALL layers
+#
+# MUST be kept synchronized with:
+# - provisioning/fragments/tracker-section.toml (Form definitions - constraint interpolation)
+# - provisioning/validators/tracker.ncl (Nickel validators - imports this file)
+# - provisioning/values/config.ncl (Example config - imports this file)
+# - provisioning/templates/values-template.ncl.j2 (Template - imports this file)
+
+[tracker.udp]
+min_items = 1
+max_items = 4
+unique = true
+
+[tracker.http]
+min_items = 1
+max_items = 4
+unique = true

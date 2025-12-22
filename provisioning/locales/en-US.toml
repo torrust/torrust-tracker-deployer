@@ -1,0 +1,31 @@
+# English translations (alternative TOML format)
+
+[forms.registration]
+title = "User Registration"
+description = "Create a new user account"
+username-label = "Username"
+username-prompt = "Please enter a username"
+username-placeholder = "user123"
+email-label = "Email Address"
+email-prompt = "Please enter your email address"
+email-placeholder = "user@example.com"
+
+[forms.registration.roles]
+admin = "Administrator"
+user = "Regular User"
+guest = "Guest"
+developer = "Developer"
+
+[forms.employee-onboarding]
+title = "Employee Onboarding"
+description = "Complete your onboarding process"
+welcome = "Welcome to the team!"
+full-name-prompt = "What is your full name?"
+department-prompt = "Which department are you joining?"
+start-date-prompt = "What is your start date?"
+
+[forms.feedback]
+title = "Feedback Form"
+overall-satisfaction-prompt = "How satisfied are you with our service?"
+improvement-prompt = "What could we improve?"
+contact-prompt = "Can we contact you with follow-up questions?"

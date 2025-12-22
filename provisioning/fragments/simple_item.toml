@@ -1,0 +1,9 @@
+name = "simple_item"
+description = "Simple item"
+
+[[fields]]
+name = "name"
+type = "text"
+prompt = "Item name"
+placeholder = "Enter item name"
+required = true

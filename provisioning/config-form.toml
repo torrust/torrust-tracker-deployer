@@ -1,0 +1,114 @@
+name = "Torrust Tracker Environment Configuration"
+description = "Interactive wizard for environment setup"
+display_mode = "complete"
+
+[[elements]]
+name = "environment_group"
+type = "group"
+includes = ["fragments/environment-section.toml"]
+
+[[elements]]
+name = "provider_header"
+type = "section_header"
+title = "☁️  Infrastructure Provider"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "provider"
+type = "select"
+prompt = "Infrastructure provider"
+options = [
+    { value = "lxd", label = "LXD - Linux Container Deployment" },
+    { value = "hetzner", label = "Hetzner Cloud - VPS Hosting" },
+]
+default = "lxd"
+required = true
+
+[[elements]]
+name = "lxd_group"
+type = "group"
+when = "provider == lxd"
+includes = ["fragments/provider-lxd-section.toml"]
+
+[[elements]]
+name = "hetzner_group"
+type = "group"
+when = "provider == hetzner"
+includes = ["fragments/provider-hetzner-section.toml"]
+
+[[elements]]
+name = "ssh_group"
+type = "group"
+includes = ["fragments/ssh-section.toml"]
+
+[[elements]]
+name = "database_header"
+type = "section_header"
+title = "💾 Database Configuration"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "database_driver"
+type = "select"
+prompt = "Database type"
+options = [
+    { value = "sqlite3", label = "SQLite3 - Embedded Database" },
+    { value = "mysql", label = "MySQL - Remote Database Server" },
+]
+default = "sqlite3"
+required = true
+
+[[elements]]
+name = "sqlite_group"
+type = "group"
+when = "database_driver == sqlite3"
+includes = ["fragments/database-sqlite-section.toml"]
+
+[[elements]]
+name = "mysql_group"
+type = "group"
+when = "database_driver == mysql"
+includes = ["fragments/database-mysql-section.toml"]
+
+[[elements]]
+name = "tracker_group"
+type = "group"
+includes = ["fragments/tracker-section.toml"]
+
+[[elements]]
+name = "features_header"
+type = "section_header"
+title = "⚙️  Optional Features"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "enable_prometheus"
+type = "confirm"
+prompt = "Enable Prometheus monitoring?"
+default = "false"
+
+[[elements]]
+name = "enable_grafana"
+type = "confirm"
+prompt = "Enable Grafana visualization?"
+default = "false"
+
+[[elements]]
+name = "prometheus_group"
+type = "group"
+when = "enable_prometheus == true"
+includes = ["fragments/prometheus-section.toml"]
+
+[[elements]]
+name = "grafana_group"
+type = "group"
+when = "enable_grafana == true"
+includes = ["fragments/grafana-section.toml"]
+
+[[elements]]
+name = "confirmation_group"
+type = "group"
+includes = ["fragments/confirmation-section.toml"]

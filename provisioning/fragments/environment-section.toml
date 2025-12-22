@@ -1,0 +1,31 @@
+name = "environment_fragment"
+
+[[elements]]
+name = "environment_header"
+type = "section_header"
+title = "🏗️  Environment Identification"
+border_top = true
+border_bottom = true
+
+[[elements]]
+name = "environment_name"
+type = "text"
+prompt = "Environment name"
+placeholder = "dev, staging, production, e2e-test"
+required = true
+help = "Lowercase letters, numbers, dashes. Cannot start with number or dash. Examples: dev, staging, e2e-config"
+nickel_path = [
+    "environment",
+    "name",
+]
+
+[[elements]]
+name = "instance_name"
+type = "text"
+prompt = "Instance/VM name (optional)"
+placeholder = "Leave empty for auto-generation: torrust-tracker-vm-{env-name}"
+help = "1-63 chars, ASCII letters/numbers/dashes, no leading digit/dash, no trailing dash. Will be auto-generated if omitted."
+nickel_path = [
+    "environment",
+    "instance_name",
+]
