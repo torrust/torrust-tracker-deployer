@@ -1,11 +1,26 @@
 ---
 # Configure UFW Firewall with Safe SSH Access
+#
+# IMPORTANT SECURITY NOTE:
+# =======================
+# This playbook ONLY configures SSH firewall rules. Application service ports
+# (tracker, grafana, prometheus, etc.) are NOT controlled by UFW because Docker
+# bypasses UFW rules when publishing container ports.
+#
+# Docker Security Model:
+# - Docker manipulates iptables NAT table directly, bypassing UFW's INPUT/OUTPUT chains
+# - Service exposure is controlled via docker-compose port bindings, not UFW
+# - Internal services (MySQL, Prometheus) have NO port bindings - Docker network only
+# - Public services (Tracker, Grafana) have explicit port bindings in docker-compose
+#
+# For details, see ADR: docs/decisions/docker-ufw-firewall-security-strategy.md
+#
 # This playbook configures UFW with restrictive policies while preserving SSH access.
 # CRITICAL: SSH access is allowed BEFORE enabling firewall to prevent lockout.
 #
 # Variables are loaded from variables.yml for centralized management.
 
-- name: Configure UFW firewall safely
+- name: Configure UFW firewall safely (SSH access only)
   hosts: all
   become: yes
   gather_facts: yes

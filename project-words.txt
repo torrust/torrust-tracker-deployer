@@ -89,6 +89,7 @@ deogmiudufm
 derefs
 devpass
 distro
+distroless
 distutils
 doctest
 doctests
@@ -154,6 +155,7 @@ mkdir
 mktemp
 mlock
 mlockfile
+moby
 mockall
 mocksecret
 momentjs
@@ -167,11 +169,13 @@ mysqladmin
 nameof
 namespacing
 nanos
+netfilter
 newgrp
 newtype
 newtypes
 nftables
 nistp
+nmap
 nocapture
 noconfirm
 nodaemon
@@ -284,6 +288,9 @@ writeln
 wrongpassword
 youruser
 zeroize
+HIDS
+OSSEC
+Wazuh
 Émojis
 значение
 ключ

@@ -8,8 +8,8 @@ use super::errors::ConfigureCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
-    ConfigureFirewallStep, ConfigureSecurityUpdatesStep, ConfigureTrackerFirewallStep,
-    InstallDockerComposeStep, InstallDockerStep,
+    ConfigureFirewallStep, ConfigureSecurityUpdatesStep, InstallDockerComposeStep,
+    InstallDockerStep,
 };
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
@@ -198,22 +198,6 @@ impl ConfigureCommandHandler {
             );
         } else {
             ConfigureFirewallStep::new(Arc::clone(&ansible_client))
-                .execute()
-                .map_err(|e| (e.into(), current_step))?;
-        }
-
-        let current_step = ConfigureStep::ConfigureTrackerFirewall;
-        // Configure tracker-specific firewall rules (conditional on tracker configuration)
-        // If no tracker ports are configured in variables.yml, playbook tasks will be skipped
-        if skip_firewall {
-            info!(
-                command = "configure",
-                step = "configure_tracker_firewall",
-                status = "skipped",
-                "Skipping Tracker firewall configuration due to TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER"
-            );
-        } else {
-            ConfigureTrackerFirewallStep::new(Arc::clone(&ansible_client))
                 .execute()
                 .map_err(|e| (e.into(), current_step))?;
         }
