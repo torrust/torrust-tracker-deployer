@@ -276,41 +276,214 @@ services:
 
 ## Implementation Plan
 
-### Phase 1: Research and Analysis (estimated: 2-3 hours)
+### Phase 1: Research and Analysis (estimated: 2-3 hours) ✅ **COMPLETED**
 
-- [ ] **Review prior work**: Examine how this was handled in the Torrust Tracker Live Demo project
-- [ ] **Review Docker official documentation**: Read [Docker Packet filtering and firewalls](https://docs.docker.com/engine/network/packet-filtering-firewalls/) - especially the "Docker and ufw" section which explicitly documents the incompatibility and explains how Docker routes container traffic in the NAT table, bypassing ufw's INPUT/OUTPUT chains
-- [ ] Study Docker networking security model and isolation guarantees
-- [ ] Review Docker iptables integration and UFW interaction mechanisms
-- [ ] Research how other projects handle this (Kubernetes, Docker Swarm, Compose-based deployments)
-- [ ] Analyze the torrust-demo#72 issue for related lessons learned
-- [ ] Review security best practices for Docker production deployments
-- [ ] Investigate alternative firewall strategies and their trade-offs
-- [ ] Document threat model for proposed strategy
-- [ ] Analyze attack vectors and security boundaries
-- [ ] Compare with provider-specific firewall integration complexity
-- [ ] Evaluate trade-offs: simplicity vs security vs portability
+- [x] **Review prior work**: Examine how this was handled in the Torrust Tracker Live Demo project
+- [x] **Review Docker official documentation**: Read [Docker Packet filtering and firewalls](https://docs.docker.com/engine/network/packet-filtering-firewalls/) - especially the "Docker and ufw" section which explicitly documents the incompatibility and explains how Docker routes container traffic in the NAT table, bypassing ufw's INPUT/OUTPUT chains
+- [x] Study Docker networking security model and isolation guarantees
+- [x] Review Docker iptables integration and UFW interaction mechanisms
+- [x] Research how other projects handle this (Kubernetes, Docker Swarm, Compose-based deployments)
+- [x] Analyze the torrust-demo#72 issue for related lessons learned
+- [x] Review security best practices for Docker production deployments
+- [x] Investigate alternative firewall strategies and their trade-offs
+- [x] Document threat model for proposed strategy
+- [x] Analyze attack vectors and security boundaries
+- [x] Compare with provider-specific firewall integration complexity
+- [x] Evaluate trade-offs: simplicity vs security vs portability
+- [x] Document findings in ADR: `docs/decisions/docker-ufw-firewall-security-strategy.md`
+- [x] Create network segmentation analysis: `docs/analysis/security/docker-network-segmentation-analysis.md`
 
-### Phase 2: Design and Documentation (estimated: 2-3 hours)
+### Phase 2: Design and Documentation (estimated: 2-3 hours) 🚧 **IN PROGRESS**
 
-- [ ] Create comprehensive ADR for firewall security strategy in `docs/decisions/`
+- [x] Create comprehensive ADR for firewall security strategy in `docs/decisions/`
+- [x] Add research findings to ADR with Docker official documentation references
+- [x] Add security analysis section (threat model, compliance, monitoring, recovery)
 - [ ] Define explicit rules for which services should have port bindings
 - [ ] Document operational procedures (monitoring, incident response)
 - [ ] Design validation/linting strategy for docker-compose security
 - [ ] Create security testing strategy for E2E tests
 - [ ] Update architecture documentation with security patterns
 
-### Phase 3: Template Implementation (estimated: 3-4 hours)
+### Phase 3: Template Implementation (estimated: 6-8 hours)
 
-- [ ] **Remove obsolete firewall configuration**: Delete `templates/ansible/configure-tracker-firewall.yml` - no longer needed since Docker bypasses UFW
-- [ ] **Remove tracker firewall step**: Delete or refactor `src/application/steps/system/configure_tracker_firewall.rs` - tracker ports don't need UFW rules
-- [ ] **Remove playbook registration**: Remove `configure-tracker-firewall.yml` from `src/infrastructure/templating/ansible/template/renderer/project_generator.rs`
-- [ ] Update `templates/ansible/configure-firewall.yml` to clarify it only manages SSH access (not application ports)
-- [ ] Review and update all `templates/docker-compose/*.yml.tera` files
-- [ ] Remove unnecessary port bindings from internal services
-- [ ] Add explicit comments documenting public vs internal services
-- [ ] Ensure consistent network configuration across all services
-- [ ] Validate all existing docker-compose configurations
+This phase is split into two critical subtasks that implement the layered security strategy.
+
+#### Subtask 3.1: Remove Obsolete UFW Firewall Configuration (estimated: 2-3 hours)
+
+Since Docker bypasses UFW rules for published container ports, we no longer need UFW rules for application ports. UFW should only manage SSH access.
+
+**Files to Delete**:
+
+- [ ] **Delete firewall configuration playbook**: `templates/ansible/configure-tracker-firewall.yml` - obsolete since Docker bypasses UFW
+- [ ] **Delete firewall configuration step**: `src/application/steps/system/configure_tracker_firewall.rs` - tracker ports don't need UFW rules
+
+**Files to Modify**:
+
+- [ ] **Remove playbook registration**: Remove `configure-tracker-firewall.yml` from `src/infrastructure/templating/ansible/template/renderer/project_generator.rs` (in `copy_static_templates` method)
+- [ ] **Update base firewall playbook**: Update `templates/ansible/configure-firewall.yml` to clarify it only manages SSH access (not application ports) - add comments explaining Docker bypasses UFW
+
+**Validation**:
+
+- [ ] Compile code and verify no broken references to deleted files
+- [ ] Run unit tests: `cargo test`
+- [ ] Run linters: `./scripts/pre-commit.sh`
+
+#### Subtask 3.2: Implement Docker Network Segmentation (estimated: 4-5 hours) 🔴 CRITICAL
+
+Implement Option A (Three-Network Segmentation) as documented in [`docs/analysis/security/docker-network-segmentation-analysis.md`](../analysis/security/docker-network-segmentation-analysis.md).
+
+**Security Rationale**:
+
+- Reduces MySQL attack vectors from 3 services to 1 service (Tracker only)
+- Prevents Grafana (public, authenticated) from accessing Prometheus (unauthenticated)
+- Prevents Grafana/Prometheus from accessing MySQL without credentials
+- Isolates compromised services - limits lateral movement
+
+**Implementation**:
+
+- [ ] **Update docker-compose template**: Modify `templates/docker-compose/docker-compose.yml.tera`
+  - Replace single `backend_network` with three networks: `database_network`, `metrics_network`, `visualization_network`
+  - Configure Tracker to use: `database_network` + `metrics_network`
+  - Configure MySQL to use: `database_network` only
+  - Configure Prometheus to use: `metrics_network` + `visualization_network`
+  - Configure Grafana to use: `visualization_network` only
+- [ ] **Add security comments**: Document each service's network membership and rationale
+- [ ] **Update network definitions**: Define three isolated networks in networks section
+
+**Expected Network Topology**:
+
+```yaml
+networks:
+  database_network: # Tracker ↔ MySQL
+  metrics_network: # Tracker ↔ Prometheus
+  visualization_network: # Prometheus ↔ Grafana
+
+services:
+  tracker:
+    networks:
+      - metrics_network
+      - database_network # Only if MySQL enabled
+
+  mysql:
+    networks:
+      - database_network
+
+  prometheus:
+    networks:
+      - metrics_network
+      - visualization_network
+
+  grafana:
+    networks:
+      - visualization_network
+```
+
+**Manual E2E Testing (MANDATORY)** 🔴:
+
+This is the most critical validation step. Deploy a full stack and manually verify each communication path:
+
+1. **Test Tracker → MySQL Connection**:
+
+   ```bash
+   # Deploy environment with MySQL
+   cargo run -- create environment --env-file envs/test-network-segmentation.json
+   cargo run -- provision-infrastructure test-network-segmentation
+   cargo run -- install test-network-segmentation
+   cargo run -- configure test-network-segmentation
+   cargo run -- release test-network-segmentation
+   cargo run -- run test-network-segmentation
+
+   # SSH into VM and verify tracker can persist data
+   ssh -i ~/.ssh/testing_rsa root@<vm-ip>
+   docker logs tracker 2>&1 | grep -i mysql
+   docker exec tracker cat /var/log/torrust/tracker/torrust.log | grep -i "database"
+
+   # Verify MySQL has tracker data
+   docker exec mysql mysql -u root -p<password> -e "USE torrust_tracker; SHOW TABLES;"
+   ```
+
+2. **Test Prometheus → Tracker Metrics Scraping**:
+
+   ```bash
+   # Verify Prometheus can scrape tracker metrics
+   ssh -i ~/.ssh/testing_rsa root@<vm-ip>
+   docker logs prometheus 2>&1 | grep -i "tracker"
+
+   # From Docker host, verify Prometheus has tracker metrics
+   curl http://localhost:9090/api/v1/query?query=up
+   curl http://localhost:9090/api/v1/query?query=torrust_tracker_requests_total
+
+   # Should show tracker endpoint as "up"
+   ```
+
+3. **Test Grafana → Prometheus Connection**:
+
+   ```bash
+   # Access Grafana UI from external network
+   curl http://<vm-ip>:3100
+   # Login to Grafana (admin/admin)
+   # Navigate to Data Sources → Prometheus
+   # Verify "Data source is working" message
+
+   # From SSH, verify Grafana can query Prometheus
+   docker exec grafana wget -O- http://prometheus:9090/api/v1/query?query=up
+   ```
+
+4. **Test Negative Cases (Security Validation)** 🔐:
+
+   ```bash
+   # These MUST fail - network segmentation working correctly
+
+   # Grafana CANNOT reach MySQL
+   docker exec grafana ping -c 1 mysql
+   # Expected: "ping: unknown host" or "network unreachable"
+
+   docker exec grafana telnet mysql 3306
+   # Expected: Connection refused or timeout
+
+   # Grafana CANNOT reach Tracker directly
+   docker exec grafana curl -m 5 http://tracker:1212/metrics
+   # Expected: Timeout or connection refused
+
+   # Prometheus CANNOT reach MySQL
+   docker exec prometheus ping -c 1 mysql
+   # Expected: "ping: unknown host" or "network unreachable"
+
+   docker exec prometheus telnet mysql 3306
+   # Expected: Connection refused or timeout
+   ```
+
+5. **Document Test Results**:
+
+   ```bash
+   # Create test results document
+   echo "# Network Segmentation Test Results - $(date)" > docs/e2e-testing/network-segmentation-test-results.md
+   # Document all test outcomes (success/failure)
+   # Include screenshots of Grafana dashboards showing data
+   # Include docker network inspect outputs
+   ```
+
+**Rollback Plan**:
+
+If network segmentation breaks functionality:
+
+1. Revert docker-compose template to single `backend_network`
+2. Re-generate templates: `cargo run -- create templates test-network-segmentation`
+3. Re-deploy: `cargo run -- release test-network-segmentation && cargo run -- run test-network-segmentation`
+
+**Validation Checklist**:
+
+- [ ] Tracker logs show successful MySQL connections
+- [ ] MySQL database contains tracker tables and data
+- [ ] Prometheus successfully scrapes tracker metrics endpoint
+- [ ] Prometheus `/targets` page shows tracker as "UP"
+- [ ] Grafana can query Prometheus datasource
+- [ ] Grafana dashboards display tracker metrics
+- [ ] **Negative test**: Grafana CANNOT ping MySQL (network isolation working)
+- [ ] **Negative test**: Grafana CANNOT curl Tracker (network isolation working)
+- [ ] **Negative test**: Prometheus CANNOT ping MySQL (network isolation working)
+- [ ] All services healthy: `docker ps` shows all containers "Up"
+- [ ] No error logs in any container
 
 ### Phase 4: Validation and Testing (estimated: 2-3 hours)
 
@@ -356,13 +529,30 @@ services:
 
 **Implementation**:
 
-- [ ] All docker-compose templates updated with security strategy
-- [ ] UFW firewall configuration updated as needed
-- [ ] Internal services have NO port bindings
-- [ ] Public services have EXPLICIT port bindings with comments
-- [ ] All services use Docker networks for inter-service communication
+- [ ] Obsolete UFW firewall configuration removed (playbook, step, registration)
+- [ ] Base firewall playbook updated with clarifying comments
+- [ ] Docker network segmentation implemented (three isolated networks)
+- [ ] All docker-compose templates updated with network segmentation
+- [ ] Internal services have correct network assignments
+- [ ] Security comments document network topology and rationale
+- [ ] Internal services have NO external port bindings (MySQL)
+- [ ] Localhost-only services use `127.0.0.1` binding (Prometheus)
+- [ ] Public services have EXPLICIT port bindings with comments (Tracker, Grafana)
 
-**Testing**:
+**Manual E2E Testing (Network Segmentation)** 🔴:
+
+- [ ] **Positive Test**: Tracker successfully connects to MySQL and persists data
+- [ ] **Positive Test**: Prometheus successfully scrapes metrics from Tracker
+- [ ] **Positive Test**: Grafana successfully queries data from Prometheus
+- [ ] **Positive Test**: Grafana dashboards display tracker metrics correctly
+- [ ] **Negative Test**: Grafana CANNOT reach MySQL (network isolation verified)
+- [ ] **Negative Test**: Grafana CANNOT reach Tracker directly (network isolation verified)
+- [ ] **Negative Test**: Prometheus CANNOT reach MySQL (network isolation verified)
+- [ ] All service containers are healthy (`docker ps` shows "Up")
+- [ ] No error logs related to network connectivity
+- [ ] Test results documented in `docs/e2e-testing/network-segmentation-test-results.md`
+
+**Automated Testing**:
 
 - [ ] E2E tests verify internal services are NOT externally accessible
 - [ ] E2E tests verify public services ARE externally accessible
