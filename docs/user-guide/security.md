@@ -57,8 +57,6 @@ During the `configure` command, the deployer:
 
 **Note**: UFW only controls SSH access. Application ports are controlled by Docker port bindings in the docker-compose configuration.
 
-###Service Exposure Strategy
-
 ### Service Exposure Strategy
 
 The Docker Compose configuration (`templates/docker-compose/docker-compose.yml.tera`) controls which services are accessible from the internet through **explicit port bindings**:
