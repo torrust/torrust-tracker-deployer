@@ -36,7 +36,12 @@ services:
       - TORRUST_TRACKER_CONFIG_TOML_PATH=${TORRUST_TRACKER_CONFIG_TOML_PATH}
       - TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=${TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN}
     networks:
-      - backend_network
+{% if prometheus_config %}
+      - metrics_network  # Prometheus scrapes metrics from tracker
+{% endif %}
+{% if database.driver == "mysql" %}
+      - database_network  # Tracker connects to MySQL
+{% endif %}
     ports:
       # UDP Tracker Ports (dynamically configured)
 {%- for port in ports.udp_tracker_ports %}
@@ -64,7 +69,10 @@ services:
     tty: true
     restart: unless-stopped
     networks:
-      - backend_network
+      - metrics_network  # Scrapes metrics from tracker
+{% if grafana_config %}
+      - visualization_network  # Grafana queries Prometheus
+{% endif %}
     ports:
       - "127.0.0.1:9090:9090"  # Localhost only - not exposed to external network
     # Grafana accesses Prometheus via Docker network: http://prometheus:9090
@@ -92,7 +100,7 @@ services:
     tty: true
     restart: unless-stopped
     networks:
-      - backend_network
+      - visualization_network  # Queries Prometheus data source
     ports:
       - "3100:3000"
     environment:
@@ -131,7 +139,7 @@ services:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     networks:
-      - backend_network
+      - database_network  # Only accessible by tracker
     ports:
       - "3306:3306"
     volumes:
@@ -149,8 +157,46 @@ services:
         max-file: "10"
 {% endif %}
 
+# SECURITY: Three-Network Segmentation (Defense in Depth)
+# =========================================================
+# Network isolation prevents lateral movement between services and reduces attack surface.
+# Each service is placed in the minimum networks required for its function.
+#
+# Network Topology:
+#   database_network: Tracker ↔ MySQL
+#     - Only tracker can access MySQL (reduces attack vectors from 3 services to 1)
+#     - Prometheus/Grafana cannot access database even if compromised
+#
+#   metrics_network: Tracker ↔ Prometheus
+#     - Prometheus scrapes metrics from tracker
+#     - Grafana cannot directly access tracker metrics
+#
+#   visualization_network: Prometheus ↔ Grafana
+#     - Grafana queries Prometheus as data source
+#     - Grafana cannot access tracker or MySQL directly
+#
+# Security Benefits:
+#   1. MySQL isolation: Only tracker has database access (least privilege)
+#   2. Metrics isolation: Grafana must query through Prometheus (no direct tracker access)
+#   3. Lateral movement prevention: Compromised service cannot access unrelated services
+#   4. Defense in depth: Network segmentation + authentication + Docker port bindings + UFW
+#
+# See ADR: docs/decisions/docker-ufw-firewall-security-strategy.md
+# See Analysis: docs/analysis/security/docker-network-segmentation-analysis.md
+
 networks:
-  backend_network: {}
+{% if database.driver == "mysql" %}
+  database_network:
+    driver: bridge
+{% endif %}
+{% if prometheus_config %}
+  metrics_network:
+    driver: bridge
+{% endif %}
+{% if grafana_config %}
+  visualization_network:
+    driver: bridge
+{% endif %}
 
 {% if database.driver == "mysql" or grafana_config %}
 volumes:

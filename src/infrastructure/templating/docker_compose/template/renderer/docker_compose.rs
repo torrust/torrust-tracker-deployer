@@ -407,10 +407,10 @@ mod tests {
             "Should depend on tracker"
         );
 
-        // Verify network
+        // Verify network segmentation (security enhancement)
         assert!(
-            rendered_content.contains("- backend_network"),
-            "Should be on backend_network"
+            rendered_content.contains("- metrics_network"),
+            "Should be on metrics_network for tracker ↔ Prometheus communication"
         );
     }
 

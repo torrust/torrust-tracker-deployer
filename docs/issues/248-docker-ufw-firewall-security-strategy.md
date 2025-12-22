@@ -308,27 +308,27 @@ services:
 
 This phase is split into two critical subtasks that implement the layered security strategy.
 
-#### Subtask 3.1: Remove Obsolete UFW Firewall Configuration (estimated: 2-3 hours)
+#### Subtask 3.1: Remove Obsolete UFW Firewall Configuration (estimated: 2-3 hours) ✅ **COMPLETED**
 
 Since Docker bypasses UFW rules for published container ports, we no longer need UFW rules for application ports. UFW should only manage SSH access.
 
 **Files to Delete**:
 
-- [ ] **Delete firewall configuration playbook**: `templates/ansible/configure-tracker-firewall.yml` - obsolete since Docker bypasses UFW
-- [ ] **Delete firewall configuration step**: `src/application/steps/system/configure_tracker_firewall.rs` - tracker ports don't need UFW rules
+- [x] **Delete firewall configuration playbook**: `templates/ansible/configure-tracker-firewall.yml` - obsolete since Docker bypasses UFW
+- [x] **Delete firewall configuration step**: `src/application/steps/system/configure_tracker_firewall.rs` - tracker ports don't need UFW rules
 
 **Files to Modify**:
 
-- [ ] **Remove playbook registration**: Remove `configure-tracker-firewall.yml` from `src/infrastructure/templating/ansible/template/renderer/project_generator.rs` (in `copy_static_templates` method)
-- [ ] **Update base firewall playbook**: Update `templates/ansible/configure-firewall.yml` to clarify it only manages SSH access (not application ports) - add comments explaining Docker bypasses UFW
+- [x] **Remove playbook registration**: Remove `configure-tracker-firewall.yml` from `src/infrastructure/templating/ansible/template/renderer/project_generator.rs` (in `copy_static_templates` method)
+- [x] **Update base firewall playbook**: Update `templates/ansible/configure-firewall.yml` to clarify it only manages SSH access (not application ports) - add comments explaining Docker bypasses UFW
 
 **Validation**:
 
-- [ ] Compile code and verify no broken references to deleted files
-- [ ] Run unit tests: `cargo test`
-- [ ] Run linters: `./scripts/pre-commit.sh`
+- [x] Compile code and verify no broken references to deleted files
+- [x] Run unit tests: `cargo test`
+- [x] Run linters: `./scripts/pre-commit.sh`
 
-#### Subtask 3.2: Implement Docker Network Segmentation (estimated: 4-5 hours) 🔴 CRITICAL
+#### Subtask 3.2: Implement Docker Network Segmentation (estimated: 4-5 hours) ✅ **COMPLETED**
 
 Implement Option A (Three-Network Segmentation) as documented in [`docs/analysis/security/docker-network-segmentation-analysis.md`](../analysis/security/docker-network-segmentation-analysis.md).
 
@@ -341,14 +341,15 @@ Implement Option A (Three-Network Segmentation) as documented in [`docs/analysis
 
 **Implementation**:
 
-- [ ] **Update docker-compose template**: Modify `templates/docker-compose/docker-compose.yml.tera`
+- [x] **Update docker-compose template**: Modify `templates/docker-compose/docker-compose.yml.tera`
   - Replace single `backend_network` with three networks: `database_network`, `metrics_network`, `visualization_network`
   - Configure Tracker to use: `database_network` + `metrics_network`
   - Configure MySQL to use: `database_network` only
   - Configure Prometheus to use: `metrics_network` + `visualization_network`
   - Configure Grafana to use: `visualization_network` only
-- [ ] **Add security comments**: Document each service's network membership and rationale
-- [ ] **Update network definitions**: Define three isolated networks in networks section
+- [x] **Add security comments**: Document each service's network membership and rationale
+- [x] **Update network definitions**: Define three isolated networks in networks section
+- [x] **Update tests**: Fix test assertions to check for new network names
 
 **Expected Network Topology**:
 
