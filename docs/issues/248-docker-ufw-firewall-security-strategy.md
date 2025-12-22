@@ -379,7 +379,7 @@ services:
       - visualization_network
 ```
 
-**Manual E2E Testing (MANDATORY)** 🔴:
+**Manual E2E Testing (MANDATORY)** ✅:
 
 This is the most critical validation step. Deploy a full stack and manually verify each communication path:
 
@@ -474,17 +474,18 @@ If network segmentation breaks functionality:
 
 **Validation Checklist**:
 
-- [ ] Tracker logs show successful MySQL connections
-- [ ] MySQL database contains tracker tables and data
-- [ ] Prometheus successfully scrapes tracker metrics endpoint
-- [ ] Prometheus `/targets` page shows tracker as "UP"
-- [ ] Grafana can query Prometheus datasource
-- [ ] Grafana dashboards display tracker metrics
-- [ ] **Negative test**: Grafana CANNOT ping MySQL (network isolation working)
-- [ ] **Negative test**: Grafana CANNOT curl Tracker (network isolation working)
-- [ ] **Negative test**: Prometheus CANNOT ping MySQL (network isolation working)
-- [ ] All services healthy: `docker ps` shows all containers "Up"
-- [ ] No error logs in any container
+- [x] Tracker logs show successful MySQL connections
+- [x] MySQL database contains tracker tables and data
+- [x] Prometheus successfully scrapes tracker metrics endpoint
+- [x] Prometheus `/targets` page shows tracker as "UP"
+- [x] Grafana can query Prometheus datasource
+- [x] Grafana dashboards display tracker metrics
+- [x] **Negative test**: Grafana CANNOT ping MySQL (network isolation working)
+- [x] **Negative test**: Grafana CANNOT curl Tracker (network isolation working)
+- [x] **Negative test**: Prometheus CANNOT ping MySQL (network isolation working)
+- [x] All services healthy: `docker ps` shows all containers "Up"
+- [x] No error logs in any container
+- [x] **Test results documented**: See [manual test results](manual-tests/248-network-segmentation-test-results.md)
 
 ### Phase 4: Validation and Testing (estimated: 2-3 hours)
 

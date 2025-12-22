@@ -218,6 +218,25 @@ mv docs/issues/scaffolding-for-main-app-epic.md \
 - Keep descriptive but concise
 - Match branch naming convention
 
+**Manual Test Documentation** (Optional):
+
+If your issue requires extensive manual E2E testing, you can document test results in:
+
+```bash
+docs/issues/manual-tests/{issue-number}-{description}.md
+```
+
+Example:
+
+- `docs/issues/manual-tests/248-network-segmentation-test-results.md`
+
+This extra documentation:
+
+- Provides detailed test results for complex implementations
+- Can include test commands, expected outputs, screenshots, and verification steps
+- Should be linked from the main issue specification file
+- Will be deleted when the issue is cleaned up (see [Cleanup Process](#cleanup-process))
+
 ### Step 6: Update GitHub Task Issue
 
 Update the task issue with the correct file link:
@@ -504,29 +523,49 @@ Over time, as issues are completed and closed on GitHub, the `docs/issues/` fold
    - `CLOSED` - Issue has been completed (remove the file)
    - `NOT_FOUND` - Issue doesn't exist (remove the file)
 
-3. **Remove Closed Issue Files**:
+3. **Check for Manual Test Documentation**:
+
+   Some issues may have additional manual testing documentation in `docs/issues/manual-tests/`:
 
    ```bash
-   # Remove specific closed issue files
+   # Check if manual test documentation exists for closed issues
+   ls docs/issues/manual-tests/
+
+   # Manual test files follow format: {issue-number}-{description}.md
+   # Example: 248-network-segmentation-test-results.md
+   ```
+
+4. **Remove Closed Issue Files and Manual Tests**:
+
+   ```bash
+   # Remove specific closed issue specification files
    cd docs/issues/
    rm -f 21-fix-e2e-infrastructure-preservation.md \
          22-rename-app-commands-to-command-handlers.md \
          23-add-clap-subcommand-configuration.md \
          24-add-user-documentation.md
+
+   # Remove associated manual test documentation (if exists)
+   cd manual-tests/
+   rm -f 21-*.md 22-*.md 23-*.md 24-*.md
+
+   # Or remove specific files if you know the names
+   rm -f 248-network-segmentation-test-results.md
    ```
 
-4. **Verify Remaining Files**:
+5. **Verify Remaining Files**:
 
    ```bash
    ls docs/issues/
+   ls docs/issues/manual-tests/
    ```
 
-   Only open issues and template files should remain.
+   Only open issues, their associated manual tests, and template files should remain.
 
-5. **Commit the Changes**:
+6. **Commit the Changes**:
 
    ```bash
-   # Stage the deletions
+   # Stage the deletions (both issue specs and manual tests)
    git add docs/issues/
 
    # Commit with descriptive message
@@ -537,6 +576,8 @@ Over time, as issues are completed and closed on GitHub, the `docs/issues/` fold
    - #22: rename-app-commands-to-command-handlers
    - #23: add-clap-subcommand-configuration
    - #24: add-user-documentation
+
+   Also removed associated manual test documentation from docs/issues/manual-tests/.
 
    All these issues have been closed on GitHub and no longer need
    local documentation files.
@@ -550,6 +591,7 @@ Over time, as issues are completed and closed on GitHub, the `docs/issues/` fold
 ### Important Notes
 
 - **Keep Template Files**: Never delete `EPIC-TEMPLATE.md`, `GITHUB-ISSUE-TEMPLATE.md`, or `SPECIFICATION-TEMPLATE.md`
+- **Manual Test Documentation**: Check `docs/issues/manual-tests/` for issue-specific test results (format: `{issue-number}-*.md`) and remove them along with the issue specification
 - **Verify Before Deleting**: Always double-check issue status before removing files
 - **Document Removals**: Use descriptive commit messages listing which issues were removed
 - **Team Communication**: Consider notifying the team before large cleanup operations
