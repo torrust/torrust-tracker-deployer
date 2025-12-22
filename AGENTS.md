@@ -216,6 +216,7 @@ The project has comprehensive documentation organized in the [`docs/`](docs/) di
 | ------------------------- | ---------------------------------------------------------------------------------------- |
 | Start using the deployer  | [`docs/user-guide/README.md`](docs/user-guide/README.md)                                 |
 | Contribute code           | [`docs/contributing/README.md`](docs/contributing/README.md)                             |
+| Create a new issue        | [`docs/contributing/roadmap-issues.md`](docs/contributing/roadmap-issues.md)             |
 | Understand architecture   | [`docs/codebase-architecture.md`](docs/codebase-architecture.md)                         |
 | Add code to correct layer | [`docs/contributing/ddd-layer-placement.md`](docs/contributing/ddd-layer-placement.md)   |
 | Run E2E tests             | [`docs/e2e-testing/README.md`](docs/e2e-testing/README.md)                               |
