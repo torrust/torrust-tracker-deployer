@@ -50,6 +50,7 @@ jobs:
           format: "table"
           severity: "HIGH,CRITICAL"
           exit-code: "0" # Don't fail here, just display
+          scanners: "vuln" # Only vulnerabilities, skip secrets (test containers have legitimate SSH keys)
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
@@ -59,6 +60,7 @@ jobs:
           output: "trivy-results-${{ matrix.image.name }}.sarif"
           severity: "HIGH,CRITICAL"
           exit-code: "1"
+          scanners: "vuln" # Only vulnerabilities, skip secrets (test containers have legitimate SSH keys)
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
