@@ -44,7 +44,7 @@ jobs:
             .
 
       - name: Display vulnerabilities (table format)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
           format: "table"
@@ -52,7 +52,7 @@ jobs:
           exit-code: "0" # Don't fail here, just display
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
           format: "sarif"
@@ -83,7 +83,7 @@ jobs:
           - prom/prometheus:v3.0.1
     steps:
       - name: Display vulnerabilities (table format)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: ${{ matrix.image }}
           format: "table"
@@ -91,7 +91,7 @@ jobs:
           exit-code: "0" # Don't fail here, just display
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: ${{ matrix.image }}
           format: "sarif"
