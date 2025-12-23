@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                                  | Summary                                                                                    |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ✅ Accepted   | 2025-12-23 | [Docker Security Scan Exit Code Zero](./docker-security-scan-exit-code-zero.md)                           | Use exit-code 0 for security scanning - Trivy detects, GitHub Security decides, CI green   |
 | ✅ Accepted   | 2025-12-20 | [Grafana Integration Pattern](./grafana-integration-pattern.md)                                           | Enable Grafana by default with hard Prometheus dependency and environment variable config  |
 | ✅ Accepted   | 2025-12-17 | [Secrecy Crate for Sensitive Data Handling](./secrecy-crate-for-sensitive-data.md)                        | Use secrecy crate for type-safe secret handling with memory zeroing                        |
 | ✅ Accepted   | 2025-12-14 | [Database Configuration Structure in Templates](./database-configuration-structure-in-templates.md)       | Expose structured database fields in templates rather than pre-resolved connection strings |
