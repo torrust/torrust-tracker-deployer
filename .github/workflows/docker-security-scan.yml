@@ -137,7 +137,24 @@ jobs:
           merge-multiple: false
 
       - name: Upload SARIF files to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: "."
-          category: "docker-security-scan"
+        run: |
+          # Upload each SARIF file with a unique category
+          find . -name "*.sarif" -type f | while read -r sarif_file; do
+            # Extract image name from directory path for category
+            category=$(basename $(dirname "$sarif_file") | sed 's/^sarif-//' | sed 's/-[0-9]*$//')
+            echo "Uploading $sarif_file with category: docker-$category"
+            
+            # Use gh CLI to upload SARIF (simpler than action in loop)
+            cat "$sarif_file" | gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              /repos/${{ github.repository }}/code-scanning/sarifs \
+              -f sarif=@- \
+              -f ref="${{ github.ref }}" \
+              -f commit_sha="${{ github.sha }}" \
+              -f checkout_uri="${{ github.server_url }}/${{ github.repository }}" \
+              -f category="docker-$category" || echo "Failed to upload $sarif_file"
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
