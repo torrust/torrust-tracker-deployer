@@ -471,6 +471,7 @@ This shows real-time progress and detailed error information.
 - **[Command Reference](commands/README.md)** - Detailed documentation for all commands
 - **[Logging Guide](logging.md)** - Logging configuration and best practices
 - **[Template Customization](template-customization.md)** - Advanced configuration options
+- **[Advanced: Manual Commands](advanced-manual-commands.md)** - Manual OpenTofu and Ansible commands (advanced users)
 
 ### Development Documentation
 

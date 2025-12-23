@@ -237,86 +237,7 @@ cargo run --bin e2e-complete-workflow-tests -- --help
 > - **[Quick Start Guide](docs/user-guide/quick-start.md)** - Complete workflow walkthrough
 > - **[Commands Reference](docs/user-guide/commands/)** - Detailed guide for each command _(coming soon)_
 > - **[Console Commands](docs/console-commands.md)** - Technical reference
-
-<details>
-<summary>📋 <strong>Reference: Manual OpenTofu and Ansible Commands (Advanced)</strong></summary>
-
-> **Note:** The CLI commands above are the recommended way to manage deployments. This section is for advanced users who want to execute OpenTofu and Ansible commands directly.
-
-If you want to experiment with OpenTofu and Ansible commands directly using the generated templates:
-
-#### 1️⃣ Generate Resolved Templates
-
-```bash
-# Run E2E tests but keep the infrastructure for manual experimentation
-cargo run --bin e2e-complete-workflow-tests -- --keep
-
-# This creates resolved templates (no variables) in build/ directories
-# ✅ Verified: Creates build/e2e-complete/tofu/lxd/ and build/e2e-complete/ansible/
-```
-
-#### 2️⃣ Navigate to Generated Templates
-
-```bash
-# Navigate to the specific environment's resolved OpenTofu templates
-cd build/e2e-complete/tofu/lxd/
-
-# Or navigate to resolved Ansible templates
-cd build/e2e-complete/ansible/
-
-# Other available environments:
-# cd build/e2e-infrastructure/tofu/lxd/
-# cd build/e2e-infrastructure/ansible/
-# cd build/e2e-deployment/ansible/
-```
-
-#### 3️⃣ Execute Commands Manually
-
-```bash
-# From build/e2e-complete/tofu/lxd/ - Execute OpenTofu commands
-tofu plan -var-file=variables.tfvars    # ✅ Verified: Works with resolved templates
-tofu validate                           # Validate configuration
-tofu output -json                       # View current outputs
-# Note: tofu apply already executed during E2E test
-
-# From build/e2e-complete/ansible/ - Execute Ansible commands
-ansible-playbook --list-hosts -i inventory.yml wait-cloud-init.yml  # ✅ Verified: Works
-ansible-playbook -i inventory.yml wait-cloud-init.yml              # Run playbook
-ansible-playbook -i inventory.yml install-docker.yml               # Install Docker
-```
-
-#### 4️⃣ Connect to the Instance
-
-```bash
-# Connect to the running LXD instance directly
-lxc exec torrust-tracker-vm-e2e-complete -- /bin/bash
-
-# Or via SSH (IP may vary, check tofu output)
-ssh -i fixtures/testing_rsa torrust@$(cd build/e2e-complete/tofu/lxd && tofu output -json | jq -r '.instance_info.value.ip_address')
-```
-
-#### 5️⃣ Destroy Infrastructure
-
-```bash
-# ✅ Verified: Destroy the infrastructure when done experimenting
-cd build/e2e-complete/tofu/lxd/
-tofu destroy -var-file=variables.tfvars -auto-approve
-
-# ✅ Verified: This removes both the VM instance and the LXD profile
-# Alternative: Use LXD commands directly
-# lxc delete torrust-tracker-vm-e2e-complete --force
-# lxc profile delete torrust-profile-e2e-complete
-```
-
-> **⚠️ Important:** Currently there's no application command to destroy infrastructure manually. You must use either:
->
-> 1. **OpenTofu destroy** (recommended) - Uses resolved templates in `build/` directories
-> 2. **LXD commands** - Direct LXD resource management
-> 3. **Re-run E2E tests** - Automatically destroys and recreates infrastructure
->
-> **📖 For comprehensive LXD commands and examples, see [LXD documentation](docs/tech-stack/lxd.md)**
-
-</details>
+> - **[Advanced: Manual Commands](docs/user-guide/advanced-manual-commands.md)** - Manual OpenTofu and Ansible commands (advanced users only)
 
 ## 🎭 Infrastructure Workflow
 
@@ -365,88 +286,88 @@ This project follows a structured development roadmap to evolve from the current
 ## 📁 Repository Structure
 
 ```text
-├── .github/                  # CI/CD workflows and GitHub configuration
-│   └── workflows/           # GitHub Actions workflow files
-├── build/                   # 📁 Generated runtime configs (git-ignored)
-│   ├── e2e-complete/        # E2E complete workflow test runtime files
-│   ├── e2e-deployment/      # E2E deployment test runtime files
-│   ├── e2e-infrastructure/  # E2E infrastructure test runtime files
-│   └── manual-test-*/       # Manual test environment runtime files
-├── data/                    # Environment-specific data and configurations
-│   ├── e2e-complete/        # E2E complete workflow test environment data
-│   ├── e2e-deployment/      # E2E deployment test environment data
-│   ├── e2e-infrastructure/  # E2E infrastructure test environment data
-│   ├── manual-test-*/       # Manual test environment data
-│   └── logs/                # Application logs
-├── docker/                  # Docker-related configurations
-│   └── provisioned-instance/ # Docker setup for provisioned instances
-├── docs/                    # 📖 Detailed documentation
-│   ├── tech-stack/          # Technology-specific documentation
-│   │   ├── opentofu.md      # OpenTofu installation and usage
-│   │   ├── ansible.md       # Ansible installation and usage
-│   │   └── lxd.md          # LXD virtual machines
-│   ├── user-guide/          # User documentation
-│   │   ├── commands/        # Command reference documentation
-│   │   └── providers/       # Provider-specific guides (LXD, Hetzner)
-│   ├── decisions/           # Architecture Decision Records (ADRs)
-│   ├── contributing/        # Contributing guidelines and conventions
-│   │   ├── README.md        # Main contributing guide
-│   │   ├── branching.md     # Git branching conventions
-│   │   ├── commit-process.md # Commit process and pre-commit checks
-│   │   ├── error-handling.md # Error handling principles
+├── .github/                       # CI/CD workflows and GitHub configuration
+│   └── workflows/                 # GitHub Actions workflow files
+├── build/                         # 📁 Generated runtime configs (git-ignored)
+│   ├── e2e-complete/              # E2E complete workflow test runtime files
+│   ├── e2e-deployment/            # E2E deployment test runtime files
+│   ├── e2e-infrastructure/        # E2E infrastructure test runtime files
+│   └── manual-test-*/             # Manual test environment runtime files
+├── data/                          # Environment-specific data and configurations
+│   ├── e2e-complete/              # E2E complete workflow test environment data
+│   ├── e2e-deployment/            # E2E deployment test environment data
+│   ├── e2e-infrastructure/        # E2E infrastructure test environment data
+│   ├── manual-test-*/             # Manual test environment data
+│   └── logs/                      # Application logs
+├── docker/                        # Docker-related configurations
+│   └── provisioned-instance/      # Docker setup for provisioned instances
+├── docs/                          # 📖 Detailed documentation
+│   ├── tech-stack/                # Technology-specific documentation
+│   │   ├── opentofu.md            # OpenTofu installation and usage
+│   │   ├── ansible.md             # Ansible installation and usage
+│   │   └── lxd.md                 # LXD virtual machines
+│   ├── user-guide/                # User documentation
+│   │   ├── commands/              # Command reference documentation
+│   │   └── providers/             # Provider-specific guides (LXD, Hetzner)
+│   ├── decisions/                 # Architecture Decision Records (ADRs)
+│   ├── contributing/              # Contributing guidelines and conventions
+│   │   ├── README.md              # Main contributing guide
+│   │   ├── branching.md           # Git branching conventions
+│   │   ├── commit-process.md      # Commit process and pre-commit checks
+│   │   ├── error-handling.md      # Error handling principles
 │   │   ├── module-organization.md # Module organization conventions
-│   │   └── testing/         # Testing conventions and guides
-│   ├── features/            # Feature specifications and documentation
-│   ├── research/            # Research and analysis documents
-│   └── *.md                 # Various documentation files
-├── envs/                    # 📁 User environment configurations (git-ignored)
-│   └── *.json              # Environment configuration files for CLI
-├── fixtures/                # Test fixtures and sample data
-│   ├── testing_rsa*         # SSH key pair for testing
-│   └── tofu/               # OpenTofu test fixtures
-├── packages/                # Rust workspace packages
-│   ├── dependency-installer/  # Dependency detection and installation
-│   └── linting/            # Linting utilities package
-│       └── src/            # Linting implementation source code
-├── scripts/                 # Development and utility scripts
-│   └── setup/              # Installation scripts for dependencies
-├── src/                     # 🦀 Main Rust application source code (DDD Architecture)
-│   ├── main.rs             # Main application binary entry point
-│   ├── lib.rs              # Library root module
-│   ├── container.rs        # Dependency injection container
-│   ├── logging.rs          # Logging configuration
-│   ├── bin/                # Binary executables
-│   │   ├── linter.rs       # Unified linting command interface
-│   │   └── e2e*.rs         # End-to-end testing binaries
-│   ├── application/        # Application layer (use cases, commands)
-│   ├── domain/             # Domain layer (business logic, entities)
-│   │   └── provider/       # Provider types (LXD, Hetzner)
-│   ├── infrastructure/     # Infrastructure layer (external systems)
-│   ├── presentation/       # Presentation layer (CLI interface)
-│   ├── adapters/           # External tool adapters (OpenTofu, Ansible, SSH, LXD)
-│   ├── shared/             # Shared utilities and common code
-│   ├── testing/            # Testing utilities and mocks
-│   ├── config/             # Configuration handling
-│   ├── bootstrap/          # Application bootstrapping
-│   └── e2e/                # End-to-end testing infrastructure
-├── templates/               # 📁 Template configurations (git-tracked)
-│   ├── tofu/               # 🏗️ OpenTofu/Terraform templates
-│   │   ├── lxd/            # LXD VM template configuration
-│   │   └── hetzner/        # Hetzner Cloud template configuration
-│   └── ansible/            # 🤖 Ansible playbook templates
-├── tests/                  # Integration and system tests
-├── target/                 # 🦀 Rust build artifacts (git-ignored)
-├── Cargo.toml             # Rust workspace configuration
-├── Cargo.lock             # Rust dependency lock file
-├── cspell.json            # Spell checking configuration
-├── project-words.txt      # Custom dictionary for spell checking
-├── .markdownlint.json     # Markdown linting configuration
-├── .prettierignore        # Prettier ignore rules (for Tera templates)
-├── .taplo.toml            # TOML formatting configuration
-├── .yamllint-ci.yml       # YAML linting configuration for CI
-├── README.md              # This file - project overview
-├── LICENSE                # Project license
-└── .gitignore             # Git ignore rules
+│   │   └── testing/               # Testing conventions and guides
+│   ├── features/                  # Feature specifications and documentation
+│   ├── research/                  # Research and analysis documents
+│   └── *.md                       # Various documentation files
+├── envs/                          # 📁 User environment configurations (git-ignored)
+│   └── *.json                     # Environment configuration files for CLI
+├── fixtures/                      # Test fixtures and sample data
+│   ├── testing_rsa*               # SSH key pair for testing
+│   └── tofu/                      # OpenTofu test fixtures
+├── packages/                      # Rust workspace packages
+│   ├── dependency-installer/      # Dependency detection and installation
+│   └── linting/                   # Linting utilities package
+│       └── src/                   # Linting implementation source code
+├── scripts/                       # Development and utility scripts
+│   └── setup/                     # Installation scripts for dependencies
+├── src/                           # 🦀 Main Rust application source code (DDD Architecture)
+│   ├── main.rs                    # Main application binary entry point
+│   ├── lib.rs                     # Library root module
+│   ├── container.rs               # Dependency injection container
+│   ├── logging.rs                 # Logging configuration
+│   ├── bin/                       # Binary executables
+│   │   ├── linter.rs              # Unified linting command interface
+│   │   └── e2e*.rs                # End-to-end testing binaries
+│   ├── application/               # Application layer (use cases, commands)
+│   ├── domain/                    # Domain layer (business logic, entities)
+│   │   └── provider/              # Provider types (LXD, Hetzner)
+│   ├── infrastructure/            # Infrastructure layer (external systems)
+│   ├── presentation/              # Presentation layer (CLI interface)
+│   ├── adapters/                  # External tool adapters (OpenTofu, Ansible, SSH, LXD)
+│   ├── shared/                    # Shared utilities and common code
+│   ├── testing/                   # Testing utilities and mocks
+│   ├── config/                    # Configuration handling
+│   ├── bootstrap/                 # Application bootstrapping
+│   └── e2e/                       # End-to-end testing infrastructure
+├── templates/                     # 📁 Template configurations (git-tracked)
+│   ├── tofu/                      # 🏗️ OpenTofu/Terraform templates
+│   │   ├── lxd/                   # LXD VM template configuration
+│   │   └── hetzner/               # Hetzner Cloud template configuration
+│   └── ansible/                   # 🤖 Ansible playbook templates
+├── tests/                         # Integration and system tests
+├── target/                        # 🦀 Rust build artifacts (git-ignored)
+├── Cargo.toml                     # Rust workspace configuration
+├── Cargo.lock                     # Rust dependency lock file
+├── cspell.json                    # Spell checking configuration
+├── project-words.txt              # Custom dictionary for spell checking
+├── .markdownlint.json             # Markdown linting configuration
+├── .prettierignore                # Prettier ignore rules (for Tera templates)
+├── .taplo.toml                    # TOML formatting configuration
+├── .yamllint-ci.yml               # YAML linting configuration for CI
+├── README.md                      # This file - project overview
+├── LICENSE                        # Project license
+└── .gitignore                     # Git ignore rules
 ```
 
 ## 📚 Documentation
