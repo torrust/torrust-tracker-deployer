@@ -113,6 +113,16 @@ This philosophy is summarized as: **"Trivy detects, GitHub Security decides, CI 
 - Results in "multiple SARIF runs with same category" error
 - Cannot distinguish alerts between different images
 
+## Viewing Security Results
+
+Security scan results are uploaded to GitHub's Security tab, but the default view filters by `is:open branch:main`. This means:
+
+- **Pull Request Results**: Must use filter `pr:NUMBER is:open` (e.g., `/security/code-scanning?query=pr:256+is:open`)
+- **Branch Results**: Must use filter `is:open branch:BRANCH-NAME` for non-main branches
+- **Main Branch Results**: Visible in default view after merging to main
+
+Results uploaded from PR branches are not visible in the default Security tab view because the default filter excludes them. This is GitHub's standard behavior for code scanning across all analysis tools.
+
 ## Related Decisions
 
 - [GitHub Actions Workflow Structure](https://github.com/torrust/torrust-tracker-deployer/pull/256) - How the three-job structure enables this philosophy

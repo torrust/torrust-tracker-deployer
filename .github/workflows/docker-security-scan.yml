@@ -162,6 +162,13 @@ jobs:
       # Upload each SARIF file with CodeQL Action using unique categories.
       # The category parameter enables proper alert tracking per image.
       # Must use CodeQL Action (not gh API) - API doesn't support category field.
+      #
+      # VIEWING RESULTS:
+      # - For pull requests: /security/code-scanning?query=pr:NUMBER+is:open
+      # - For branches: /security/code-scanning?query=is:open+branch:BRANCH-NAME
+      # - For main branch: /security/code-scanning?query=is:open+branch:main (default view)
+      # The default Security tab filters by "is:open branch:main" which only shows
+      # alerts from the main branch, not from PR branches.
       - name: Upload project provisioned-instance SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@v4
