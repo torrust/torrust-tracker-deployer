@@ -1,0 +1,89 @@
+name: Docker Security Scan
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "docker/**"
+      - "templates/docker-compose/**"
+      - ".github/workflows/docker-security-scan.yml"
+  pull_request:
+    paths:
+      - "docker/**"
+      - "templates/docker-compose/**"
+      - ".github/workflows/docker-security-scan.yml"
+  schedule:
+    - cron: "0 6 * * *" # Daily at 6 AM UTC
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  scan-project-images:
+    name: Scan Project-Built Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - dockerfile: docker/provisioned-instance/Dockerfile
+            context: docker/provisioned-instance
+            name: provisioned-instance
+          - dockerfile: docker/ssh-server/Dockerfile
+            context: docker/ssh-server
+            name: ssh-server
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t torrust-tracker-deployer/${{ matrix.image.name }}:latest \
+            -f ${{ matrix.image.dockerfile }} \
+            ${{ matrix.image.context }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
+          format: "sarif"
+          output: "trivy-results-${{ matrix.image.name }}.sarif"
+          severity: "HIGH,CRITICAL"
+          exit-code: "1"
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results-${{ matrix.image.name }}.sarif"
+
+  scan-third-party-images:
+    name: Scan Third-Party Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # NOTE: These images must match the ones used in templates/docker-compose/docker-compose.yml.tera
+        # TODO: Automate image detection from docker-compose templates - see https://github.com/torrust/torrust-tracker-deployer/issues/252
+        image:
+          - torrust/tracker:develop
+          - mysql:8.0
+          - grafana/grafana:11.4.0
+          - prom/prometheus:v3.0.1
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.image }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "HIGH,CRITICAL"
+          exit-code: "1"
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
