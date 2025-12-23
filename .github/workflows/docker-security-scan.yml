@@ -106,11 +106,15 @@ jobs:
           exit-code: "1"
           scanners: "vuln" # Focus on CVEs, not secrets
 
+      - name: Sanitize image name for artifact
+        id: sanitize
+        run: echo "name=$(echo '${{ matrix.image }}' | tr '/:' '-')" >> $GITHUB_OUTPUT
+
       - name: Upload SARIF artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sarif-third-party-${{ matrix.image }}
+          name: sarif-third-party-${{ steps.sanitize.outputs.name }}
           path: "trivy-results.sarif"
           retention-days: 30
 
