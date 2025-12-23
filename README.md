@@ -179,14 +179,14 @@ cargo run --bin e2e-infrastructure-lifecycle-tests -- --keep
 cargo run --bin e2e-complete-workflow-tests -- --templates-dir ./custom/templates
 
 # See all available options
-cargo run --bin e2e-tests-full -- --help
+cargo run --bin e2e-complete-workflow-tests -- --help
 ```
 
 > **⚠️ Important Notes:**
 >
 > - E2E tests create **hardcoded environments** with predefined configurations
 > - Use `--keep` flag to inspect generated `data/` and `build/` directories after tests
-> - `e2e-tests-full` can **only run locally** due to connectivity issues in GitHub runners
+> - `e2e-complete-workflow-tests` can **only run locally** due to connectivity issues in GitHub runners
 > - To see final OpenTofu and Ansible templates, check `build/` directories after running with `--keep`
 
 ### 📖 Manual Deployment Steps
@@ -249,37 +249,37 @@ If you want to experiment with OpenTofu and Ansible commands directly using the 
 
 ```bash
 # Run E2E tests but keep the infrastructure for manual experimentation
-cargo run --bin e2e-tests-full -- --keep
+cargo run --bin e2e-complete-workflow-tests -- --keep
 
 # This creates resolved templates (no variables) in build/ directories
-# ✅ Verified: Creates build/e2e-full/tofu/lxd/ and build/e2e-full/ansible/
+# ✅ Verified: Creates build/e2e-complete/tofu/lxd/ and build/e2e-complete/ansible/
 ```
 
 #### 2️⃣ Navigate to Generated Templates
 
 ```bash
 # Navigate to the specific environment's resolved OpenTofu templates
-cd build/e2e-full/tofu/lxd/
+cd build/e2e-complete/tofu/lxd/
 
 # Or navigate to resolved Ansible templates
-cd build/e2e-full/ansible/
+cd build/e2e-complete/ansible/
 
 # Other available environments:
-# cd build/e2e-provision/tofu/lxd/
-# cd build/e2e-provision/ansible/
-# cd build/e2e-config/ansible/   # (config tests don't create tofu resources)
+# cd build/e2e-infrastructure/tofu/lxd/
+# cd build/e2e-infrastructure/ansible/
+# cd build/e2e-deployment/ansible/
 ```
 
 #### 3️⃣ Execute Commands Manually
 
 ```bash
-# From build/e2e-full/tofu/lxd/ - Execute OpenTofu commands
+# From build/e2e-complete/tofu/lxd/ - Execute OpenTofu commands
 tofu plan -var-file=variables.tfvars    # ✅ Verified: Works with resolved templates
 tofu validate                           # Validate configuration
 tofu output -json                       # View current outputs
 # Note: tofu apply already executed during E2E test
 
-# From build/e2e-full/ansible/ - Execute Ansible commands
+# From build/e2e-complete/ansible/ - Execute Ansible commands
 ansible-playbook --list-hosts -i inventory.yml wait-cloud-init.yml  # ✅ Verified: Works
 ansible-playbook -i inventory.yml wait-cloud-init.yml              # Run playbook
 ansible-playbook -i inventory.yml install-docker.yml               # Install Docker
@@ -289,23 +289,23 @@ ansible-playbook -i inventory.yml install-docker.yml               # Install Doc
 
 ```bash
 # Connect to the running LXD instance directly
-lxc exec torrust-tracker-vm-e2e-full -- /bin/bash
+lxc exec torrust-tracker-vm-e2e-complete -- /bin/bash
 
 # Or via SSH (IP may vary, check tofu output)
-ssh -i fixtures/testing_rsa torrust@$(cd build/e2e-full/tofu/lxd && tofu output -json | jq -r '.instance_info.value.ip_address')
+ssh -i fixtures/testing_rsa torrust@$(cd build/e2e-complete/tofu/lxd && tofu output -json | jq -r '.instance_info.value.ip_address')
 ```
 
 #### 5️⃣ Destroy Infrastructure
 
 ```bash
 # ✅ Verified: Destroy the infrastructure when done experimenting
-cd build/e2e-full/tofu/lxd/
+cd build/e2e-complete/tofu/lxd/
 tofu destroy -var-file=variables.tfvars -auto-approve
 
 # ✅ Verified: This removes both the VM instance and the LXD profile
 # Alternative: Use LXD commands directly
-# lxc delete torrust-tracker-vm-e2e-full --force
-# lxc profile delete torrust-profile-e2e-full
+# lxc delete torrust-tracker-vm-e2e-complete --force
+# lxc profile delete torrust-profile-e2e-complete
 ```
 
 > **⚠️ Important:** Currently there's no application command to destroy infrastructure manually. You must use either:
@@ -338,11 +338,11 @@ The repository includes comprehensive GitHub Actions workflows for CI testing:
 
 - **`.github/workflows/linting.yml`** - **Code Quality** - Runs all linters (markdown, YAML, TOML, Rust, shell scripts)
 - **`.github/workflows/testing.yml`** - **Unit Tests** - Runs Rust unit tests and basic validation
-- **`.github/workflows/test-e2e-config.yml`** - **E2E Config Tests** - Tests configuration generation and validation
-- **`.github/workflows/test-e2e-provision.yml`** - **E2E Provision Tests** - Tests infrastructure provisioning workflows
+- **`.github/workflows/test-e2e-infrastructure.yml`** - **E2E Infrastructure Tests** - Tests infrastructure provisioning and destruction
+- **`.github/workflows/test-e2e-deployment.yml`** - **E2E Deployment Tests** - Tests software installation, configuration, release, and run workflows
 - **`.github/workflows/test-lxd-provision.yml`** - **LXD Provisioning** - Tests LXD VM provisioning specifically
 
-> **Note:** The full E2E tests (`e2e-tests-full`) can only be executed locally due to connectivity issues documented in [`docs/github-actions-issues/`](docs/github-actions-issues/).
+> **Note:** The complete E2E workflow tests (`e2e-complete-workflow-tests`) can only be executed locally due to connectivity issues documented in [`docs/e2e-testing/`](docs/e2e-testing/).
 
 ## 🗺️ Roadmap
 
@@ -368,13 +368,15 @@ This project follows a structured development roadmap to evolve from the current
 ├── .github/                  # CI/CD workflows and GitHub configuration
 │   └── workflows/           # GitHub Actions workflow files
 ├── build/                   # 📁 Generated runtime configs (git-ignored)
-│   ├── e2e-config/          # E2E config test runtime files
-│   ├── e2e-full/            # E2E full test runtime files
-│   └── e2e-provision/       # E2E provision test runtime files
+│   ├── e2e-complete/        # E2E complete workflow test runtime files
+│   ├── e2e-deployment/      # E2E deployment test runtime files
+│   ├── e2e-infrastructure/  # E2E infrastructure test runtime files
+│   └── manual-test-*/       # Manual test environment runtime files
 ├── data/                    # Environment-specific data and configurations
-│   ├── e2e-config/          # E2E config test environment data
-│   ├── e2e-full/            # E2E full test environment data
-│   ├── e2e-provision/       # E2E provision test environment data
+│   ├── e2e-complete/        # E2E complete workflow test environment data
+│   ├── e2e-deployment/      # E2E deployment test environment data
+│   ├── e2e-infrastructure/  # E2E infrastructure test environment data
+│   ├── manual-test-*/       # Manual test environment data
 │   └── logs/                # Application logs
 ├── docker/                  # Docker-related configurations
 │   └── provisioned-instance/ # Docker setup for provisioned instances
@@ -397,7 +399,8 @@ This project follows a structured development roadmap to evolve from the current
 │   ├── features/            # Feature specifications and documentation
 │   ├── research/            # Research and analysis documents
 │   └── *.md                 # Various documentation files
-├── examples/                # Example configurations and usage
+├── envs/                    # 📁 User environment configurations (git-ignored)
+│   └── *.json              # Environment configuration files for CLI
 ├── fixtures/                # Test fixtures and sample data
 │   ├── testing_rsa*         # SSH key pair for testing
 │   └── tofu/               # OpenTofu test fixtures
