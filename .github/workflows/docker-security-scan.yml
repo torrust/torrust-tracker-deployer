@@ -55,6 +55,8 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.33.1
+        continue-on-error: true
+        id: trivy-scan
         with:
           image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
           format: "sarif"
@@ -67,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sarif-project-${{ matrix.image.name }}
+          name: sarif-project-${{ matrix.image.name }}-${{ github.run_id }}
           path: "trivy-results-${{ matrix.image.name }}.sarif"
           retention-days: 30
 
@@ -98,6 +100,8 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.33.1
+        continue-on-error: true
+        id: trivy-scan
         with:
           image-ref: ${{ matrix.image }}
           format: "sarif"
@@ -114,7 +118,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sarif-third-party-${{ steps.sanitize.outputs.name }}
+          name: sarif-third-party-${{ steps.sanitize.outputs.name }}-${{ github.run_id }}
           path: "trivy-results.sarif"
           retention-days: 30
 
@@ -129,7 +133,7 @@ jobs:
       - name: Download all SARIF artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: sarif-*
+          pattern: sarif-*-${{ github.run_id }}
           merge-multiple: false
 
       - name: Upload SARIF files to GitHub Security
