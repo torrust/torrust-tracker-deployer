@@ -159,22 +159,53 @@ jobs:
         with:
           pattern: sarif-*-${{ github.run_id }}
 
-      # We use gh CLI because it’s easier to loop
-      # and assign stable categories per image
-      - name: Upload SARIF files
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          find . -name "*.sarif" -type f | while read -r sarif; do
-            category=$(basename "$(dirname "$sarif")" | sed 's/^sarif-//' | sed 's/-[0-9]*$//')
-            echo "Uploading $sarif as docker-$category"
+      # Upload each SARIF file with CodeQL Action using unique categories.
+      # The category parameter enables proper alert tracking per image.
+      # Must use CodeQL Action (not gh API) - API doesn't support category field.
+      - name: Upload project provisioned-instance SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-project-provisioned-instance-${{ github.run_id }}/trivy-provisioned-instance.sarif
+          category: docker-project-provisioned-instance
+        continue-on-error: true
 
-            gh api \
-              --method POST \
-              -H "Accept: application/vnd.github+json" \
-              /repos/${{ github.repository }}/code-scanning/sarifs \
-              -f sarif=@-"$sarif" \
-              -f ref="${{ github.ref }}" \
-              -f commit_sha="${{ github.sha }}" \
-              -f category="docker-$category" || echo "Upload failed for $sarif"
-          done
+      - name: Upload project ssh-server SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-project-ssh-server-${{ github.run_id }}/trivy-ssh-server.sarif
+          category: docker-project-ssh-server
+        continue-on-error: true
+
+      - name: Upload third-party mysql SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-third-party-mysql-8.0-${{ github.run_id }}/trivy.sarif
+          category: docker-third-party-mysql-8.0
+        continue-on-error: true
+
+      - name: Upload third-party tracker SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-third-party-torrust-tracker-develop-${{ github.run_id }}/trivy.sarif
+          category: docker-third-party-torrust-tracker-develop
+        continue-on-error: true
+
+      - name: Upload third-party grafana SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-third-party-grafana-grafana-11.4.0-${{ github.run_id }}/trivy.sarif
+          category: docker-third-party-grafana-grafana-11.4.0
+        continue-on-error: true
+
+      - name: Upload third-party prometheus SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-third-party-prom-prometheus-v3.0.1-${{ github.run_id }}/trivy.sarif
+          category: docker-third-party-prom-prometheus-v3.0.1
+        continue-on-error: true
