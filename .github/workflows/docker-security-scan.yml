@@ -41,10 +41,10 @@ jobs:
         run: |
           docker build -t torrust-tracker-deployer/${{ matrix.image.name }}:latest \
             -f ${{ matrix.image.dockerfile }} \
-            ${{ matrix.image.context }}
+            .
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
           format: "sarif"
@@ -53,7 +53,7 @@ jobs:
           exit-code: "1"
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: "trivy-results-${{ matrix.image.name }}.sarif"
@@ -74,7 +74,7 @@ jobs:
           - prom/prometheus:v3.0.1
     steps:
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ matrix.image }}
           format: "sarif"
@@ -83,7 +83,7 @@ jobs:
           exit-code: "1"
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: "trivy-results.sarif"
