@@ -43,6 +43,14 @@ jobs:
             -f ${{ matrix.image.dockerfile }} \
             .
 
+      - name: Display vulnerabilities (table format)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
+          format: "table"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0" # Don't fail here, just display
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -73,6 +81,14 @@ jobs:
           - grafana/grafana:11.4.0
           - prom/prometheus:v3.0.1
     steps:
+      - name: Display vulnerabilities (table format)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ matrix.image }}
+          format: "table"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0" # Don't fail here, just display
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
         with:
