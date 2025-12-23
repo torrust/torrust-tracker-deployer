@@ -147,7 +147,7 @@ docs/
 **Examples**:
 
 - `templates/tofu/lxd/README.md` - How to use the LXD OpenTofu configuration
-- `templates/ansible/README.md` - How to use the Ansible playbooks
+- `docs/contributing/templates/ansible.md` - How to use the Ansible playbooks
 
 ## 🎯 Guidelines for Contributors
 

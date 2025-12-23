@@ -439,7 +439,7 @@ lxc profile delete <profile_name>
 - **[OpenTofu Documentation](https://opentofu.org/docs/)** - Official OpenTofu documentation
 - **[Ansible Documentation](https://docs.ansible.com/)** - Official Ansible documentation
 - **[LXD Documentation](https://documentation.ubuntu.com/lxd/)** - LXD reference
-- **[Project Template System](../contributing/templates.md)** - Internal template documentation
+- **[Project Template System](../contributing/templates/)** - Internal template documentation
 - **[LXD Technology Guide](../tech-stack/lxd.md)** - Comprehensive LXD commands and examples
 
 ## See Also

@@ -2,7 +2,7 @@
 
 This document explains the correct syntax for defining variables in Tera templates used in the Torrust Tracker Deployer project.
 
-> **See Also**: For architectural details about how the template system works, see [Template System Architecture](../technical/template-system-architecture.md).
+> **See Also**: For architectural details about how the template system works, see [Template System Architecture](template-system-architecture.md).
 
 ## 📝 Correct Variable Syntax
 
@@ -185,7 +185,7 @@ async fn copy_static_templates(
 
 **Why This is Required:**
 
-- The template system uses a **two-phase approach** (see `docs/technical/template-system-architecture.md`)
+- The template system uses a **two-phase approach** (see [Template System Architecture](template-system-architecture.md))
 - **Phase 1**: Static file copying - requires explicit registration
 - **Phase 2**: Dynamic rendering - automatic for `.tera` files
 - Without registration, your playbook **will not be copied** to the build directory
@@ -344,6 +344,6 @@ Otherwise, use the centralized variables pattern for simplicity.
 
 ### Related Documentation
 
-- **Architecture**: [`docs/technical/template-system-architecture.md`](../technical/template-system-architecture.md) - Understanding the two-phase template system
+- **Architecture**: [Template System Architecture](template-system-architecture.md) - Understanding the two-phase template system
 - **Tera Syntax**: This document (above) - When you DO need dynamic templates with variables
 - **Testing**: [`docs/e2e-testing/`](../e2e-testing/) - How to run E2E tests to validate your changes

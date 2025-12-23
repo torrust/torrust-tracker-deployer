@@ -43,7 +43,7 @@ Verify contributors followed these project conventions:
 
 ### Templates (if applicable)
 
-- [ ] **Tera templates use correct syntax**: `{{ variable }}` not `{ { variable } }` (see [templates.md](./templates.md))
+- [ ] **Tera templates use correct syntax**: `{{ variable }}` not `{ { variable } }` (see [templates/tera.md](./templates/tera.md))
 - [ ] **Static Ansible playbooks** (without `.tera` extension) are registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs`
 
 ## 🚩 Quick Red Flags
@@ -174,7 +174,7 @@ If you notice patterns that should be added to this guide, please:
 - [Branching Conventions](./branching.md) - Branch naming rules
 - [Commit Process](./commit-process.md) - Commit message format
 - [Testing Guide](./testing/) - Testing conventions and patterns
-- [Templates Guide](./templates.md) - Working with Tera templates
+- [Templates Guide](./templates/) - Working with Tera templates
 - [Known Issues](./known-issues.md) - Expected behaviors and workarounds
 
 ### Development Principles

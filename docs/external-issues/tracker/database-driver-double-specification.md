@@ -213,5 +213,5 @@ fi
 ## Related Documentation
 
 - **Our Environment Variable Injection**: [`docs/decisions/environment-variable-injection-in-docker-compose.md`](../../decisions/environment-variable-injection-in-docker-compose.md)
-- **Template System**: [`docs/technical/template-system-architecture.md`](../../technical/template-system-architecture.md)
+- **Template System**: [`docs/contributing/templates/template-system-architecture.md`](../../contributing/templates/template-system-architecture.md)
 - **Output Handling**: [`docs/contributing/output-handling.md`](../../contributing/output-handling.md)

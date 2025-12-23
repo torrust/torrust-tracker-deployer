@@ -539,7 +539,7 @@ jobs:
 - Show command specification: `docs/issues/241-implement-environment-show-command.md`
 - Codebase architecture: `docs/codebase-architecture.md`
 - DDD layer placement: `docs/contributing/ddd-layer-placement.md`
-- Template system: `docs/technical/template-system-architecture.md`
+- Template system: `docs/contributing/templates/template-system-architecture.md`
 - Docker Compose template: `templates/docker-compose/docker-compose.yml.tera`
 
 ## Notes

@@ -121,9 +121,9 @@ These principles should guide all development decisions, code reviews, and featu
    - Git clients: GitHub Desktop, GitKraken, etc.
    - CI/CD: Any automated commits or merges
 
-6. **Before working with Tera templates**: Read [`docs/contributing/templates.md`](docs/contributing/templates.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
+6. **Before working with Tera templates**: Read [`docs/contributing/templates/tera.md`](docs/contributing/templates/tera.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
 
-7. **When adding new Ansible playbooks**: Read [`docs/contributing/templates.md`](docs/contributing/templates.md) for the complete guide. **CRITICAL**: Static playbooks (without `.tera` extension) must be registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs` in the `copy_static_templates` method, otherwise they won't be copied to the build directory and Ansible will fail with "playbook not found" error.
+7. **When adding new Ansible playbooks**: Read [`docs/contributing/templates/tera.md`](docs/contributing/templates/tera.md) for the complete guide. **CRITICAL**: Static playbooks (without `.tera` extension) must be registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs` in the `copy_static_templates` method, otherwise they won't be copied to the build directory and Ansible will fail with "playbook not found" error.
 
 8. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
 
@@ -144,7 +144,7 @@ These principles should guide all development decisions, code reviews, and featu
 
 15. **When creating new environment variables**: Read [`docs/contributing/environment-variables-naming.md`](docs/contributing/environment-variables-naming.md) for comprehensive guidance on naming conventions (condition-based vs action-based), decision frameworks, and best practices. Also review [`docs/decisions/environment-variable-prefix.md`](docs/decisions/environment-variable-prefix.md) to ensure all project environment variables use the `TORRUST_TD_` prefix for proper namespacing and avoiding conflicts with system or user variables.
 
-16. **When adding new templates**: Read [`docs/technical/template-system-architecture.md`](docs/technical/template-system-architecture.md) to understand the Project Generator pattern. The `templates/` directory contains source templates. Dynamic templates (`.tera`) are automatically processed, but static files must be explicitly registered in their respective `ProjectGenerator` to be copied to the build directory.
+16. **When adding new templates**: Read [`docs/contributing/templates/template-system-architecture.md`](docs/contributing/templates/template-system-architecture.md) to understand the Project Generator pattern. The `templates/` directory contains source templates. Dynamic templates (`.tera`) are automatically processed, but static files must be explicitly registered in their respective `ProjectGenerator` to be copied to the build directory.
 
 17. **When writing unit tests** (CRITICAL for test quality): Read [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) and follow the behavior-driven naming convention. **NEVER use the `test_` prefix** for test function names. Always use the `it_should_{expected_behavior}_when_{condition}` or `it_should_{expected_behavior}_given_{state}` pattern. This ensures tests clearly document the behavior being validated and the conditions under which it occurs. Example: `it_should_return_error_when_username_is_invalid()` instead of `test_invalid_username()`. Test names should follow the three-part structure (What-When-Then) and be descriptive enough that the test's purpose is clear without reading the code.
 
@@ -224,7 +224,7 @@ The project has comprehensive documentation organized in the [`docs/`](docs/) di
 | Understand a decision     | [`docs/decisions/README.md`](docs/decisions/README.md)                                   |
 | Plan a new feature        | [`docs/features/README.md`](docs/features/README.md)                                     |
 | Fix external tool issues  | [`docs/external-issues/README.md`](docs/external-issues/README.md)                       |
-| Work with templates       | [`docs/contributing/templates.md`](docs/contributing/templates.md)                       |
+| Work with templates       | [`docs/contributing/templates/`](docs/contributing/templates/)                           |
 | Handle errors properly    | [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md)             |
 | Handle output properly    | [`docs/contributing/output-handling.md`](docs/contributing/output-handling.md)           |
 | Organize Rust modules     | [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md)   |

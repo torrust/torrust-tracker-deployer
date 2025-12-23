@@ -2,7 +2,7 @@
 
 Technical documentation for contributors working with the template rendering system.
 
-> **See Also**: For practical guidance on working with templates, see [Tera Template Variable Syntax](../contributing/templates.md).
+> **See Also**: For practical guidance on working with templates, see [Tera Template Variable Syntax](tera.md).
 
 ## 🏗️ System Overview
 
@@ -45,7 +45,7 @@ The system operates through two levels of indirection to balance portability wit
 - **Examples**: Infrastructure definitions, Ansible playbooks (`install-docker.yml`, `configure-security-updates.yml`)
 - **Use Case**: Configuration files that don't need variable substitution
 - **Registration**: **Must be explicitly registered** in the template renderer's copy list
-- **Guide**: See [`docs/contributing/templates.md`](../contributing/templates.md#-adding-new-ansible-playbooks) for adding new static Ansible playbooks
+- **Guide**: See [Tera Template Variable Syntax - Adding New Ansible Playbooks](tera.md#-adding-new-ansible-playbooks) for adding new static Ansible playbooks
 
 ### Dynamic Templates (Tera)
 

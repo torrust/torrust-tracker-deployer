@@ -15,7 +15,7 @@ Welcome to the Torrust Tracker Deployer documentation! This index helps you quic
 | Handle errors properly               | [`contributing/error-handling.md`](contributing/error-handling.md) - Explicit enums, actionable messages                 |
 | Handle output properly               | [`contributing/output-handling.md`](contributing/output-handling.md) - **CRITICAL** UserOutput, never `println!`         |
 | Organize Rust code                   | [`contributing/module-organization.md`](contributing/module-organization.md) - **CRITICAL** import conventions           |
-| Work with templates                  | [`contributing/templates.md`](contributing/templates.md) - **CRITICAL** Tera syntax, registration                        |
+| Work with templates                  | [`contributing/templates/`](contributing/templates/) - **CRITICAL** Tera syntax, registration                            |
 | Write unit tests                     | [`contributing/testing/unit-testing.md`](contributing/testing/unit-testing.md) - Naming conventions (no `test_` prefix!) |
 | Run E2E tests                        | [`e2e-testing/README.md`](e2e-testing/README.md) - Quick start, test suites                                              |
 | Understand a past decision           | [`decisions/README.md`](decisions/README.md) - 30+ ADRs indexed                                                          |
@@ -83,7 +83,7 @@ docs/
 | Understand a decision     | [`decisions/README.md`](decisions/README.md)                                   |
 | Plan a new feature        | [`features/README.md`](features/README.md)                                     |
 | Fix external tool issues  | [`external-issues/README.md`](external-issues/README.md)                       |
-| Work with templates       | [`contributing/templates.md`](contributing/templates.md)                       |
+| Work with templates       | [`contributing/templates/`](contributing/templates/)                           |
 | Handle errors properly    | [`contributing/error-handling.md`](contributing/error-handling.md)             |
 | Handle output properly    | [`contributing/output-handling.md`](contributing/output-handling.md)           |
 | Organize Rust modules     | [`contributing/module-organization.md`](contributing/module-organization.md)   |
@@ -120,7 +120,7 @@ Essential guides: DDD layer placement, module organization, error handling, temp
 - [`contributing/README.md`](contributing/README.md) - Quick reference guide to all contribution documentation
 - [`contributing/ddd-layer-placement.md`](contributing/ddd-layer-placement.md) - **CRITICAL**: Rules for placing code in correct DDD layers
 - [`contributing/module-organization.md`](contributing/module-organization.md) - **CRITICAL**: Module organization and Rust import patterns
-- [`contributing/templates.md`](contributing/templates.md) - **CRITICAL**: Tera template syntax and registration
+- [`contributing/templates/`](contributing/templates/) - **CRITICAL**: Tera template syntax and registration
 - [`contributing/output-handling.md`](contributing/output-handling.md) - **CRITICAL**: Output handling with UserOutput (never `println!`)
 - [`contributing/error-handling.md`](contributing/error-handling.md) - Error handling principles
 - [`contributing/commit-process.md`](contributing/commit-process.md) - Commit process and pre-commit checks
@@ -212,7 +212,7 @@ Ansible, LXD, OpenTofu, SSH keys - installation, setup, and usage
 <details>
 <summary><strong>🔧 Technical Deep Dives (2 documents) (Click to Expand)</strong></summary>
 
-- [`technical/template-system-architecture.md`](technical/template-system-architecture.md) - **CRITICAL**: Template system architecture and Project Generator pattern
+- [`contributing/templates/template-system-architecture.md`](contributing/templates/template-system-architecture.md) - **CRITICAL**: Template system architecture and Project Generator pattern
 - [`technical/type-erasure-pattern.md`](technical/type-erasure-pattern.md) - Type erasure pattern for Environment states
 
 </details>
