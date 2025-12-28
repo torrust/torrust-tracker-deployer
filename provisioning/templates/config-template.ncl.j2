@@ -128,8 +128,8 @@ let user_config = {
           bind_address = validators_network.ValidBindAddress "{{ udp_tracker_bind_address }}",
         },
       ]
-      constraints.udp.min_items
-      constraints.udp.max_items,
+      constraints.tracker.udp.min_items
+      constraints.tracker.udp.max_items,
     {%- endif %}
     {%- if http_tracker_bind_address %}
     # HTTP Tracker Listeners (validated: unique addresses, 1-4 items)
@@ -139,8 +139,8 @@ let user_config = {
           bind_address = validators_network.ValidBindAddress "{{ http_tracker_bind_address }}",
         },
       ]
-      constraints.http.min_items
-      constraints.http.max_items,
+      constraints.tracker.http.min_items
+      constraints.tracker.http.max_items,
     {%- endif %}
     {%- if http_api_bind_address %}
     http_api = {

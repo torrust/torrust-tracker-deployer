@@ -1,11 +1,14 @@
 name = "Torrust Tracker Environment Configuration"
 description = "Interactive wizard for environment setup"
 display_mode = "complete"
+locales_path = ""
+templates_path = "templates"
+fallback_locale = "en-US"
 
 [[elements]]
 name = "environment_group"
 type = "group"
-includes = ["fragments/environment-section.toml"]
+includes = [ "fragments/environment-section.toml" ]
 
 [[elements]]
 name = "provider_header"
@@ -19,28 +22,29 @@ name = "provider"
 type = "select"
 prompt = "Infrastructure provider"
 options = [
-    { value = "lxd", label = "LXD - Linux Container Deployment" },
-    { value = "hetzner", label = "Hetzner Cloud - VPS Hosting" },
+  { value = "lxd", label = "LXD - Linux Container Deployment" },
+  { value = "hetzner", label = "Hetzner Cloud - VPS Hosting" },
 ]
 default = "lxd"
 required = true
+nickel_path = [ "provider", "provider" ]
 
 [[elements]]
 name = "lxd_group"
 type = "group"
 when = "provider == lxd"
-includes = ["fragments/provider-lxd-section.toml"]
+includes = [ "fragments/provider-lxd-section.toml" ]
 
 [[elements]]
 name = "hetzner_group"
 type = "group"
 when = "provider == hetzner"
-includes = ["fragments/provider-hetzner-section.toml"]
+includes = [ "fragments/provider-hetzner-section.toml" ]
 
 [[elements]]
 name = "ssh_group"
 type = "group"
-includes = ["fragments/ssh-section.toml"]
+includes = [ "fragments/ssh-section.toml" ]
 
 [[elements]]
 name = "database_header"
@@ -54,28 +58,29 @@ name = "database_driver"
 type = "select"
 prompt = "Database type"
 options = [
-    { value = "sqlite3", label = "SQLite3 - Embedded Database" },
-    { value = "mysql", label = "MySQL - Remote Database Server" },
+  { value = "sqlite3", label = "SQLite3 - Embedded Database" },
+  { value = "mysql", label = "MySQL - Remote Database Server" },
 ]
 default = "sqlite3"
 required = true
+nickel_path = [ "tracker", "core", "database", "driver" ]
 
 [[elements]]
 name = "sqlite_group"
 type = "group"
 when = "database_driver == sqlite3"
-includes = ["fragments/database-sqlite-section.toml"]
+includes = [ "fragments/database-sqlite-section.toml" ]
 
 [[elements]]
 name = "mysql_group"
 type = "group"
 when = "database_driver == mysql"
-includes = ["fragments/database-mysql-section.toml"]
+includes = [ "fragments/database-mysql-section.toml" ]
 
 [[elements]]
 name = "tracker_group"
 type = "group"
-includes = ["fragments/tracker-section.toml"]
+includes = [ "fragments/tracker-section.toml" ]
 
 [[elements]]
 name = "features_header"
@@ -89,26 +94,28 @@ name = "enable_prometheus"
 type = "confirm"
 prompt = "Enable Prometheus monitoring?"
 default = "false"
+nickel_path = [ "features", "prometheus", "enabled" ]
 
 [[elements]]
 name = "enable_grafana"
 type = "confirm"
 prompt = "Enable Grafana visualization?"
 default = "false"
+nickel_path = [ "features", "grafana", "enabled" ]
 
 [[elements]]
 name = "prometheus_group"
 type = "group"
 when = "enable_prometheus == true"
-includes = ["fragments/prometheus-section.toml"]
+includes = [ "fragments/prometheus-section.toml" ]
 
 [[elements]]
 name = "grafana_group"
 type = "group"
 when = "enable_grafana == true"
-includes = ["fragments/grafana-section.toml"]
+includes = [ "fragments/grafana-section.toml" ]
 
 [[elements]]
 name = "confirmation_group"
 type = "group"
-includes = ["fragments/confirmation-section.toml"]
+includes = [ "fragments/confirmation-section.toml" ]

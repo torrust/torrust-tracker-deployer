@@ -10,5 +10,5 @@ placeholder = "0.0.0.0:7070"
 default = "0.0.0.0:7070"
 help = "Address and port for HTTP tracker (e.g., 0.0.0.0:7070)"
 required = true
-nickel_path = ["bind_address"]
+nickel_path = [ "bind_address" ]
 order = 0

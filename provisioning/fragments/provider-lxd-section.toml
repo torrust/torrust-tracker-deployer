@@ -15,6 +15,6 @@ placeholder = "torrust-profile-dev"
 required = true
 help = "Name of the LXD profile to use for VMs. 1-63 chars, ASCII letters/numbers/dashes only."
 nickel_path = [
-    "provider",
-    "profile_name",
+  "provider",
+  "profile_name",
 ]

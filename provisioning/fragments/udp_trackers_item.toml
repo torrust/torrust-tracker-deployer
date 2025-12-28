@@ -10,5 +10,5 @@ placeholder = "0.0.0.0:6969"
 default = "0.0.0.0:6969"
 help = "Address and port for UDP tracker (e.g., 0.0.0.0:6969)"
 required = true
-nickel_path = ["bind_address"]
+nickel_path = [ "bind_address" ]
 order = 0

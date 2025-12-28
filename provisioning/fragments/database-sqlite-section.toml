@@ -16,9 +16,9 @@ default = "tracker.db"
 required = true
 help = "Name of the SQLite database file (will be created in the tracker data directory)"
 nickel_path = [
-    "tracker",
-    "core",
-    "database",
-    "database_name",
+  "tracker",
+  "core",
+  "database",
+  "database_name",
 ]
 nickel_alias = "sqlite_database_name"

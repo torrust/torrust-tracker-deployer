@@ -15,8 +15,8 @@ placeholder = "0.0.0.0:9090"
 default = "0.0.0.0:9090"
 help = "Address and port for Prometheus. Format: IP:PORT (e.g., 0.0.0.0:9090)"
 nickel_path = [
-    "prometheus",
-    "bind_address",
+  "prometheus",
+  "bind_address",
 ]
 
 [[elements]]
@@ -27,6 +27,6 @@ placeholder = "15"
 default = "15"
 help = "How often Prometheus should scrape metrics (in seconds). Default: 15 seconds."
 nickel_path = [
-    "prometheus",
-    "scrape_interval",
+  "prometheus",
+  "scrape_interval",
 ]

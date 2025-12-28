@@ -5,7 +5,7 @@
 # - provisioning/fragments/tracker-section.toml (Form definitions - constraint interpolation)
 # - provisioning/validators/tracker.ncl (Nickel validators - imports this file)
 # - provisioning/values/config.ncl (Example config - imports this file)
-# - provisioning/templates/values-template.ncl.j2 (Template - imports this file)
+# - provisioning/templates/config-template.ncl.j2 (Template - imports this file)
 
 [tracker.udp]
 min_items = 1

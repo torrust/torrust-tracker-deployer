@@ -18,21 +18,41 @@ cargo run --bin dependency-installer install
 
 ### Option A: Interactive Wizard (Recommended)
 
-Automated workflow with validation:
+**NEW: Nickel-roundtrip Workflow** (preserves validators):
+
+```bash
+# Bash variant (web backend, default)
+./provisioning/scripts/configure.sh [cli|tui|web]
+
+# Nushell variant
+nu ./provisioning/scripts/configure.nu [cli|tui|web]
+```
+
+Backend options:
+
+- `cli` - Command-line interface (simple prompts)
+- `tui` - Terminal UI (interactive panels, requires `cargo install typedialog --features tui`)
+- `web` - Web server (browser-based, **default**)
+
+**What happens:**
+
+1. ✅ Launches TypeDialog with selected backend
+2. ✅ Interactive form collects your configuration
+3. ✅ Renders Nickel with validators preserved using config-template.ncl.j2
+4. ✅ Validates with Nickel typecheck
+5. ✅ Saves to `provisioning/values/config.ncl`
+
+**Output file:**
+
+- `provisioning/values/config.ncl` - Nickel source (editable, validated, with validators)
+
+**Legacy: JSON Workflow** (deprecated):
 
 ```bash
 ./provisioning/scripts/config.sh
 ```
 
-**What happens:**
-1. ✅ Interactive TypeDialog form collects your configuration
-2. ✅ Converts responses to Nickel configuration file
-3. ✅ Validates all rules with Nickel validators
-4. ✅ Exports final JSON to `envs/your-env-name.json`
-
-**Output files:**
-- `provisioning/values/your-env-name.ncl` - Nickel source (editable, validated)
-- `envs/your-env-name.json` - Final configuration (passed to Rust CLI)
+Uses the older JSON-based workflow without nickel-roundtrip integration.
 
 ### Option B: Manual JSON Edit
 
@@ -74,28 +94,33 @@ cargo run --bin torrust-tracker-deployer -- create environment --env-file envs/m
 When you run the interactive wizard, you'll configure:
 
 ### 1. **Environment Identification**
+
 - Environment name (e.g., `dev`, `staging`, `production`)
 - Optional instance/VM name (auto-generated if blank)
 
 ### 2. **Infrastructure Provider**
+
 - **LXD** (local container):
   - Profile name for LXD configuration
 - **Hetzner Cloud** (remote VM):
   - API token, server type, location, OS image
 
 ### 3. **SSH Credentials**
+
 - Private key path (e.g., `~/.ssh/id_rsa`)
 - Public key path
 - SSH username (default: `torrust`)
 - SSH port (default: 22)
 
 ### 4. **Database**
+
 - **SQLite** (local file):
   - Database filename (default: `tracker.db`)
 - **MySQL** (remote/local server):
   - Host, port, database name, username, password
 
 ### 5. **Tracker Configuration**
+
 - Private mode (yes/no)
 - UDP tracker bind address (e.g., `0.0.0.0:6969`)
 - HTTP tracker bind address (e.g., `0.0.0.0:7070`)
@@ -103,10 +128,12 @@ When you run the interactive wizard, you'll configure:
 - Admin API token (secret string)
 
 ### 6. **Optional Features**
+
 - **Prometheus** monitoring (enable/disable + config)
 - **Grafana** visualization (enable/disable + config)
 
 ### 7. **Review & Confirm**
+
 - Summary before generation
 
 ---
@@ -115,7 +142,7 @@ When you run the interactive wizard, you'll configure:
 
 ### After Wizard Completes
 
-```
+```text
 ✅ Configuration Generation Complete!
 
 Generated files:
@@ -136,9 +163,9 @@ Next steps:
 
 ```bash
 # 1. Run wizard (select LXD provider)
-./provisioning/scripts/config.sh
+./provisioning/scripts/configure.sh
 
-# 2. Follow prompts → generates envs/my-env.json
+# 2. Follow prompts → generates provisioning/values/config.ncl
 
 # 3. Create environment
 cargo run --bin torrust-tracker-deployer -- create environment --env-file envs/my-env.json
@@ -154,7 +181,7 @@ cargo run --bin torrust-tracker-deployer -- destroy my-env
 
 ```bash
 # 1. Run wizard (select Hetzner provider)
-./provisioning/scripts/config.sh
+./provisioning/scripts/configure.sh
 # → Enter API token, server type (cx22/cx32), location (fsn1/nbg1), image
 
 # 2. Generates envs/prod.json with Hetzner config
@@ -170,9 +197,9 @@ cargo run --bin torrust-tracker-deployer -- provision prod
 
 ```bash
 # Same project, different configurations
-./provisioning/scripts/config.sh  # → creates dev.json
-./provisioning/scripts/config.sh  # → creates staging.json
-./provisioning/scripts/config.sh  # → creates prod.json
+./provisioning/scripts/configure.sh  # → creates dev config.ncl
+./provisioning/scripts/configure.sh  # → creates staging config.ncl
+./provisioning/scripts/configure.sh  # → creates prod config.ncl
 
 # Manage independently
 cargo run --bin torrust-tracker-deployer -- create environment --env-file envs/dev.json
@@ -187,12 +214,15 @@ cargo run --bin torrust-tracker-deployer -- create environment --env-file envs/p
 ### Wizard Validation Errors
 
 **Error**: "Environment name cannot start with number"
+
 - **Fix**: Use name like `dev-1` instead of `1-dev`
 
 **Error**: "Port must be 1-65535"
+
 - **Fix**: Use valid port range (1-65535), port 0 not allowed
 
 **Error**: "Bind address must be IP:PORT format"
+
 - **Fix**: Use format like `0.0.0.0:6969` or `127.0.0.1:8080`
 
 ### Nickel Validation Fails
@@ -223,7 +253,7 @@ nickel export --format json provisioning/values/my-env.ncl
 
 ### Structure
 
-```
+```text
 provisioning/
 ├── config-form.toml               # Interactive wizard form
 ├── fragments/                      # Modular form sections
@@ -245,11 +275,16 @@ provisioning/
 │   ├── environment.ncl
 │   ├── username.ncl
 │   └── ...
+├── templates/
+│   └── config-template.ncl.j2      # Nickel template for roundtrip
 ├── values/                         # Generated configs (gitignored)
 │   ├── config.ncl
 │   └── your-env.ncl
 └── scripts/
-    ├── config.sh                   # Main wizard (bash)
+    ├── configure.sh                # nickel-roundtrip wizard (bash, recommended)
+    ├── configure.nu                # nickel-roundtrip wizard (nushell, recommended)
+    ├── config.sh                   # legacy JSON wizard (bash)
+    ├── config.nu                   # legacy JSON wizard (nushell)
     ├── json-to-nickel.nu           # JSON → Nickel (Nushell)
     ├── nickel-to-json.nu           # Nickel → JSON (Nushell)
     └── validate-nickel.nu          # Validation (Nushell)
@@ -341,12 +376,14 @@ See `docs/user-guide/commands/` for detailed command documentation.
 ## Tips & Best Practices
 
 ✅ **DO:**
+
 - Use meaningful environment names (`staging`, `production`, not `test123`)
 - Store SSH keys with restricted permissions (`chmod 600`)
 - Use environment variables for sensitive tokens
 - Review generated JSON before deployment
 
 ❌ **DON'T:**
+
 - Commit `envs/` directory to version control (contains secrets!)
 - Use port 0 (reserved for system)
 - Mix providers in same environment
@@ -357,6 +394,7 @@ See `docs/user-guide/commands/` for detailed command documentation.
 ## Support
 
 For issues or questions:
+
 - Check `provisioning/README.md` for detailed documentation
 - Review `provisioning/values/config.ncl` for advanced examples
 - Read `docs/user-guide/` for CLI commands

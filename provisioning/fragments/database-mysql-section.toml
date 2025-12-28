@@ -16,10 +16,10 @@ default = "localhost"
 required = true
 help = "MySQL server hostname or IP address"
 nickel_path = [
-    "tracker",
-    "core",
-    "database",
-    "mysql_host",
+  "tracker",
+  "core",
+  "database",
+  "mysql_host",
 ]
 nickel_alias = "mysql_host"
 
@@ -32,10 +32,10 @@ default = "3306"
 required = true
 help = "MySQL server port (default 3306). Must be between 1-65535."
 nickel_path = [
-    "tracker",
-    "core",
-    "database",
-    "mysql_port",
+  "tracker",
+  "core",
+  "database",
+  "mysql_port",
 ]
 nickel_alias = "mysql_port"
 
@@ -48,10 +48,10 @@ default = "torrust_tracker"
 required = true
 help = "Name of the MySQL database"
 nickel_path = [
-    "tracker",
-    "core",
-    "database",
-    "database_name",
+  "tracker",
+  "core",
+  "database",
+  "database_name",
 ]
 nickel_alias = "mysql_database_name"
 
@@ -64,10 +64,10 @@ default = "tracker_user"
 required = true
 help = "MySQL username for authentication"
 nickel_path = [
-    "tracker",
-    "core",
-    "database",
-    "mysql_username",
+  "tracker",
+  "core",
+  "database",
+  "mysql_username",
 ]
 nickel_alias = "mysql_username"
 
@@ -78,9 +78,9 @@ prompt = "Database password"
 required = true
 help = "MySQL password for authentication"
 nickel_path = [
-    "tracker",
-    "core",
-    "database",
-    "mysql_password",
+  "tracker",
+  "core",
+  "database",
+  "mysql_password",
 ]
 nickel_alias = "mysql_password"

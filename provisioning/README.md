@@ -4,19 +4,51 @@ Interactive configuration system for deploying Torrust Tracker environments usin
 
 ## 🚀 Quick Start
 
-### Option A: Interactive Wizard (Recommended for Users)
+### Option A: Interactive Configuration Wizard (Recommended)
 
-**Bash variant** (with jq):
+**NEW: Nickel-based Configuration** (preserves validators, recommended):
+
+**Bash variant**:
+
+```bash
+./provisioning/scripts/configure.sh [cli|tui|web]
+```
+
+**Nushell variant**:
+
+```bash
+nu ./provisioning/scripts/configure.nu [cli|tui|web]
+```
+
+Backend options:
+
+- `cli` - Command-line interface (simple prompts)
+- `tui` - Terminal UI (interactive panels, requires `cargo install typedialog --features tui`)
+- `web` - Web server (browser-based, default, requires `cargo install typedialog --features web`)
+
+These scripts will:
+
+1. Launch interactive TypeDialog form
+2. Render Nickel configuration with validators preserved
+3. Validate with Nickel typecheck
+4. Save to `provisioning/values/config.ncl`
+
+**Legacy: JSON-based Workflow** (deprecated):
+
+**Bash variant**:
+
 ```bash
 ./provisioning/scripts/config.sh
 ```
 
-**Nushell variant** (native JSON handling, no external deps):
+**Nushell variant**:
+
 ```bash
 ./provisioning/scripts/config.nu
 ```
 
 Both scripts will:
+
 1. Launch interactive TypeDialog form
 2. Validate configuration with Nickel
 3. Generate JSON in `envs/{env-name}.json`
@@ -52,7 +84,7 @@ cargo run --bin torrust-tracker-deployer -- create environment --env-file envs/m
 
 ## 📁 Directory Organization
 
-```
+```text
 provisioning/
 ├── README.md                          # This file
 ├── config-form.toml                   # Main TypeDialog form (modular)
@@ -127,8 +159,10 @@ provisioning/
 │
 └── scripts/                           # Orchestration & rendering scripts (bash + nushell)
     # Configuration Wizard Scripts
-    ├── config.sh                      # Bash: main wizard orchestrator
-    ├── config.nu                      # Nushell: main wizard orchestrator
+    ├── configure.sh                   # Bash: nickel-roundtrip wizard (recommended)
+    ├── configure.nu                   # Nushell: nickel-roundtrip wizard (recommended)
+    ├── config.sh                      # Bash: legacy JSON workflow wizard
+    ├── config.nu                      # Nushell: legacy JSON workflow wizard
     ├── json-to-nickel.sh              # Bash: TypeDialog JSON → Nickel
     ├── json-to-nickel.nu              # Nushell: TypeDialog JSON → Nickel
     ├── nickel-to-json.sh              # Bash: Nickel → JSON export
@@ -154,6 +188,7 @@ provisioning/
 ## 🔧 Dependencies
 
 ### Required (Configuration Wizard)
+
 - **TypeDialog**: Interactive form system
   - Install: `cargo install typedialog`
   - Or: Clone from `/Users/Akasha/Development/typedialog`
@@ -162,6 +197,7 @@ provisioning/
   - Install: `cargo install nickel-lang-cli`
 
 ### Required (Template Rendering)
+
 - **yq**: YAML processor (for YAML conversion)
   - macOS: `brew install yq`
   - Linux: `apt-get install yq` or from source
@@ -170,11 +206,13 @@ provisioning/
   - Usually pre-installed, or: `brew install jq` / `apt-get install jq`
 
 ### Optional
+
 - **Nushell 0.109+**: For Nushell script variants (better JSON handling)
   - Install: `cargo install nu`
   - NOT required if using Bash variants only
 
 **Verification**:
+
 ```bash
 # Automated check via dependency installer
 cargo run --bin dependency-installer -- check
@@ -301,6 +339,7 @@ bash ./provisioning/scripts/nickel-render-yaml.sh \
 ```
 
 **Alternative: Use Nushell scripts** (if available):
+
 ```bash
 nu ./provisioning/scripts/nickel-render-yaml.nu provisioning/templates/prometheus/config.ncl build/prometheus/prometheus.yml
 ```
@@ -312,30 +351,36 @@ All templates use the same configuration from `provisioning/values/config.ncl`.
 ## 🎯 Configuration Sections
 
 ### Environment Identification
+
 - **Name** (required): lowercase, no leading numbers, dashes allowed
 - **Instance Name** (optional): auto-generated as `torrust-tracker-vm-{env-name}` if omitted
 
 ### Infrastructure Provider
+
 - **LXD** (local/cloud): Profile name
 - **Hetzner** (cloud): API token, server type, location, image
 
 ### SSH Credentials
+
 - **Private Key Path**: Path to SSH private key
 - **Public Key Path**: Path to SSH public key
 - **Username** (default: "torrust"): Linux username
 - **Port** (default: 22): SSH port
 
 ### Database Configuration
+
 - **SQLite**: Database filename
 - **MySQL**: Host, port, database name, username, password
 
 ### Tracker Configuration
+
 - **Privacy Mode**: true (private tracker) | false (public)
 - **UDP Tracker**: Bind address (e.g., "0.0.0.0:6969")
 - **HTTP Tracker**: Bind address (e.g., "0.0.0.0:7070")
 - **HTTP API**: Bind address (e.g., "0.0.0.0:1212"), admin token
 
 ### Optional Features
+
 - **Prometheus**: Enable/disable, bind address, scrape interval
 - **Grafana**: Enable/disable, bind address, admin password
 
@@ -361,7 +406,7 @@ The new Nickel template system generates deployment configuration files from a s
 
 ### How Templates Work
 
-```
+```text
 ┌──────────────────────────────────────────────┐
 │  provisioning/values/config.ncl              │
 │  (Your configuration + imports)              │
@@ -410,6 +455,7 @@ bash nickel-render.sh <template.ncl> <format> <output>
 ### Configuration Source
 
 All templates import from `provisioning/values/config.ncl`:
+
 - User-specific configuration
 - Environment name, provider, SSH credentials
 - Tracker ports, database settings
@@ -426,7 +472,9 @@ See `templates/README.md` for detailed template documentation.
 For **tracker arrays** (UDP/HTTP), constraints are defined in ONE place and automatically used everywhere:
 
 ### 1. Constraint Definition (Single Source of Truth)
+
 **File**: `constraints/constraints.toml`
+
 ```toml
 [tracker.udp]
 min_items = 1
@@ -435,7 +483,9 @@ unique = true
 ```
 
 ### 2. Form Uses Constraint Interpolation
+
 **File**: `fragments/tracker-section.toml`
+
 ```toml
 [[elements]]
 name = "udp_trackers"
@@ -448,7 +498,9 @@ unique = true
 Form parser automatically resolves `${constraint.tracker.udp.max_items}` to the value in constraints.toml.
 
 ### 3. Nickel Files Import Constraints Directly
+
 **File**: `values/config.ncl`
+
 ```nickel
 let constraints = import "../constraints.toml" in
 
@@ -467,6 +519,7 @@ udp_trackers = validators_tracker.ValidTrackerArrayFull
 | Nickel | `min_items = 1` | Validates during config evaluation |
 
 **Why the difference?**
+
 - Form: Provides UI flexibility for testing/exploration
 - Nickel: Enforces production safety (at least 1 tracker required)
 
@@ -475,6 +528,7 @@ udp_trackers = validators_tracker.ValidTrackerArrayFull
 ## ✅ Validation Rules (All Layers)
 
 All validations are coordinated across:
+
 1. **Form layer** (TypeDialog) - User input restrictions
 2. **Constraint layer** (Nickel) - Centralized limits
 3. **Validator layer** (Nickel) - Business logic checks
@@ -482,29 +536,34 @@ All validations are coordinated across:
 5. **Rust layer** - Final validation before execution
 
 ### Tracker Arrays
+
 - **Min items**: 1 (at least one UDP/HTTP tracker required)
 - **Max items**: 4 (maximum 4 listeners of each type)
 - **Uniqueness**: All `bind_address` values must be unique
 - **Format**: Each address validated as `IP:PORT`
 
 ### EnvironmentName (mirrors `src/domain/environment/name.rs`)
+
 - Lowercase only (a-z, 0-9, -)
 - Cannot start with number or dash
 - Cannot end with dash
 - No consecutive dashes
 
 ### InstanceName (mirrors `src/domain/instance_name.rs`, LXD naming)
+
 - 1-63 characters
 - ASCII letters, numbers, dashes only
 - Cannot start with digit or dash
 - Cannot end with dash
 
 ### Username (mirrors `src/shared/username.rs`, Linux system)
+
 - 1-32 characters
 - Must start with letter or underscore
 - Can contain letters, digits, underscores, hyphens
 
 ### Network Addresses
+
 - Format: `IP:PORT`
 - Port range: 1-65535 (port 0 not allowed per project ADR)
 
@@ -513,6 +572,7 @@ All validations are coordinated across:
 ## 🐛 Troubleshooting
 
 ### Error: "TypeDialog not found"
+
 ```bash
 # Install TypeDialog
 cargo install typedialog
@@ -522,6 +582,7 @@ export PATH="/Users/Akasha/Development/typedialog/target/release:$PATH"
 ```
 
 ### Error: "Nickel validation failed"
+
 - Review error message for specific rule violation
 - Common issues:
   - Environment name has uppercase letters
@@ -530,17 +591,20 @@ export PATH="/Users/Akasha/Development/typedialog/target/release:$PATH"
   - Invalid characters in fields
 
 ### Error: "JSON export failed"
+
 - Verify Nickel file syntax with: `nickel eval provisioning/values/{env}.ncl`
 - Check that all required fields are present
 - Validate against schema
 
 ### Scripts not executable
+
 ```bash
 chmod +x provisioning/scripts/*.sh
 chmod +x provisioning/scripts/*.nu
 ```
 
 ### Nushell version mismatch
+
 - Minimum required: Nushell 0.109+
 - Check version: `nu --version`
 - Update: `cargo install nu --locked`
@@ -551,7 +615,7 @@ chmod +x provisioning/scripts/*.nu
 
 The provisioning system validates and merges configuration in **7 layers**:
 
-```
+```text
 Form (TypeDialog)
     ↓ Constraint Interpolation: ${constraint.tracker.udp.max_items}
     ↓
@@ -582,12 +646,14 @@ Rust Validation (Final layer)
 **File**: `constraints/constraints.toml`
 
 Centralizes validation limits used by:
+
 - **Form** (`fragments/tracker-section.toml`) - via constraint interpolation `${constraint.tracker.udp.max_items}`
 - **Nickel** (`validators/tracker.ncl`, `values/config.ncl`) - via direct import
 
-**Usage Example: Changing Max Trackers from 4 to 6**
+#### Usage Example: Changing Max Trackers from 4 to 6
 
-#### Step 1: Edit constraints.toml (ONLY place you need to change)
+##### Step 1: Edit constraints.toml (ONLY place you need to change)
+
 ```toml
 [tracker.udp]
 min_items = 1
@@ -595,8 +661,10 @@ max_items = 6         # ← Changed from 4 to 6
 unique = true
 ```
 
-#### Step 2: Form automatically gets new limit
+##### Step 2: Form automatically gets new limit
+
 **File**: `fragments/tracker-section.toml` (NO CHANGES NEEDED!)
+
 ```toml
 [[elements]]
 name = "udp_trackers"
@@ -610,8 +678,10 @@ nickel_path = ["tracker", "udp_trackers"]
 
 When form loads, form parser sees `"${constraint.tracker.udp.max_items}"` and replaces it with `6` from constraints.toml
 
-#### Step 3: Nickel validators automatically use new limit
+##### Step 3: Nickel validators automatically use new limit
+
 **File**: `values/config.ncl` (NO CHANGES NEEDED!)
+
 ```nickel
 # Line 31: Import constraints (already there)
 let constraints = import "../constraints.toml" in
@@ -632,8 +702,9 @@ udp_trackers = validators_tracker.ValidTrackerArrayFull
 
 No changes needed - Nickel automatically imports and uses the new values!
 
-#### Data Flow Diagram:
-```
+##### Data Flow Diagram
+
+```text
 ┌─────────────────────────────────────────────┐
 │   constraints/constraints.toml              │
 │   [tracker.udp] max_items = 6    ← Edit here
@@ -657,13 +728,15 @@ No changes needed - Nickel automatically imports and uses the new values!
 └──────────────────┘  └──────────────────┘
 ```
 
-#### Result:
+##### Result
+
 ✅ Form allows up to 6 UDP trackers
 ✅ Nickel validators enforce max 6
 ✅ Only ONE file edited: `constraints/constraints.toml`
 ✅ All three layers auto-sync automatically
 
 **Verify the change works**:
+
 ```bash
 # 1. Form parser loads and resolves interpolation
 just build::default && cargo test -p typedialog-core test_constraint_interpolation
@@ -685,11 +758,13 @@ See `constraints/README.md` for detailed constraint testing and troubleshooting.
 **File**: `validators/tracker.ncl`
 
 Enforces constraints using functions:
+
 - `ValidTrackerArrayFull(array, min, max)` - Combined check
 - `ValidUniqueBindAddresses(array)` - Duplicate detection
 - `ValidTrackerArrayLength(array, min, max)` - Size bounds
 
 Used in `values/config.ncl`:
+
 ```nickel
 http_trackers = validators_tracker.ValidTrackerArrayFull
   [{ bind_address = "0.0.0.0:7070" }]
@@ -706,12 +781,14 @@ See `validators/README.md` for details.
 Provides fallback values when user doesn't specify.
 
 **Merge Strategy for Tracker**:
+
 - `core` - Merges with defaults (inherit fields)
 - `udp_trackers` - Can reference OR replace
 - `http_trackers` - Can reference OR replace
 - `http_api` - **NO default** (always user-provided for security)
 
 Example:
+
 ```nickel
 tracker = {
   core = defaults_tracker.tracker.core & { private = false },
@@ -726,11 +803,13 @@ See `defaults/README.md` for details.
 ### Key Decision: http_api is Required
 
 In `schemas/tracker.ncl`, `http_api` is **NOT optional**:
+
 ```nickel
 http_api | TrackerApi,  # Required, not optional
 ```
 
 **Reason**: Security
+
 - Admin token must never have a default
 - Every environment must explicitly set credentials
 - No risk of accidental defaults in production
@@ -762,7 +841,7 @@ See individual subdirectories for detailed documentation:
 
 ## 🔄 Workflow Diagram
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │  User Input Decision                    │
 └────────────┬──────────────┬─────────────┘
@@ -815,6 +894,7 @@ See individual subdirectories for detailed documentation:
 ### Configuration System
 
 When modifying the configuration:
+
 - Update relevant TypeDialog fragments in `fragments/`
 - Keep Nickel validators synchronized with Rust domain types
 - Update defaults for new fields in `defaults/`
@@ -825,6 +905,7 @@ When modifying the configuration:
 ### Nickel Templates
 
 When creating or modifying templates:
+
 - Follow `.claude/guidelines/nickel/NICKEL_GUIDELINES.md`
 - Templates must import from `provisioning/values/config.ncl`
 - Each template must handle its output format correctly
@@ -839,18 +920,21 @@ When creating or modifying templates:
 For issues or questions:
 
 ### Configuration Issues
+
 1. Check troubleshooting section above
 2. Review generated JSON structure: `cat envs/{env-name}.json | jq .`
 3. Validate Nickel manually: `nickel eval provisioning/values/{env}.ncl`
 4. Check constraint synchronization: `cat constraints/constraints.toml | grep -A 3 tracker`
 
 ### Template Issues
+
 1. Verify Nickel evaluation: `nickel export --format json provisioning/templates/{type}/config.ncl`
 2. Check rendering script exists: `ls provisioning/scripts/nickel-render-*.sh`
 3. Test rendering manually: `bash provisioning/scripts/nickel-render-yaml.sh <template> <output>`
 4. Review output file: `cat <output>`
 
 ### Further Help
+
 - Project documentation: `docs/user-guide/`
 - ADR on Nickel architecture: `docs/decisions/nickel-cli-driven-template-system.md`
 - ProjectGenerator integration: `docs/technical/nickel-projectgenerator-integration.md`

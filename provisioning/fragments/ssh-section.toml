@@ -15,8 +15,8 @@ placeholder = "~/.ssh/id_rsa"
 required = true
 help = "Absolute or relative path to SSH private key file"
 nickel_path = [
-    "ssh_credentials",
-    "private_key_path",
+  "ssh_credentials",
+  "private_key_path",
 ]
 
 [[elements]]
@@ -27,8 +27,8 @@ placeholder = "~/.ssh/id_rsa.pub"
 required = true
 help = "Absolute or relative path to SSH public key file"
 nickel_path = [
-    "ssh_credentials",
-    "public_key_path",
+  "ssh_credentials",
+  "public_key_path",
 ]
 
 [[elements]]
@@ -39,8 +39,8 @@ placeholder = "torrust"
 default = "torrust"
 help = "Linux username for SSH access. Defaults to 'torrust'. Must be 1-32 characters, starting with letter or underscore."
 nickel_path = [
-    "ssh_credentials",
-    "username",
+  "ssh_credentials",
+  "username",
 ]
 
 [[elements]]
@@ -51,6 +51,6 @@ placeholder = "22"
 default = "22"
 help = "SSH port number (default 22). Must be between 1-65535."
 nickel_path = [
-    "ssh_credentials",
-    "port",
+  "ssh_credentials",
+  "port",
 ]

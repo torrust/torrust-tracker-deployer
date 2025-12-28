@@ -138,4 +138,4 @@ nickel eval /tmp/test_overflow.ncl
 - **Form**: `provisioning/fragments/tracker-section.toml` (uses interpolation)
 - **Validators**: `provisioning/validators/tracker.ncl` (imports from constraints.toml)
 - **Example config**: `provisioning/values/config.ncl` (imports from constraints.toml)
-- **Template**: `provisioning/templates/values-template.ncl.j2` (imports from constraints.toml)
+- **Template**: `provisioning/templates/config-template.ncl.j2` (imports from constraints.toml)

@@ -14,8 +14,8 @@ prompt = "Hetzner API token"
 required = true
 help = "Your Hetzner Cloud API token for authentication"
 nickel_path = [
-    "provider",
-    "hetzner_api_token",
+  "provider",
+  "hetzner_api_token",
 ]
 
 [[elements]]
@@ -23,25 +23,25 @@ name = "hetzner_server_type"
 type = "select"
 prompt = "Server type"
 options = [
-    { value = "cx11", label = "CX11 - 1 vCPU, 1 GB RAM" },
-    { value = "cx21", label = "CX21 - 2 vCPU, 4 GB RAM" },
-    { value = "cx31", label = "CX31 - 2 vCPU, 8 GB RAM" },
-    { value = "cx41", label = "CX41 - 4 vCPU, 16 GB RAM" },
-    { value = "cx51", label = "CX51 - 8 vCPU, 32 GB RAM" },
-    { value = "cpx11", label = "CPX11 - 2 vCPU (dedicated), 4 GB RAM" },
-    { value = "cpx21", label = "CPX21 - 4 vCPU (dedicated), 8 GB RAM" },
-    { value = "cpx31", label = "CPX31 - 8 vCPU (dedicated), 16 GB RAM" },
-    { value = "cx22", label = "CX22 - 2 vCPU, 4 GB RAM" },
-    { value = "cx32", label = "CX32 - 2 vCPU, 8 GB RAM" },
-    { value = "cx42", label = "CX42 - 4 vCPU, 16 GB RAM" },
-    { value = "cx52", label = "CX52 - 8 vCPU, 32 GB RAM" },
+  { value = "cx11", label = "CX11 - 1 vCPU, 1 GB RAM" },
+  { value = "cx21", label = "CX21 - 2 vCPU, 4 GB RAM" },
+  { value = "cx31", label = "CX31 - 2 vCPU, 8 GB RAM" },
+  { value = "cx41", label = "CX41 - 4 vCPU, 16 GB RAM" },
+  { value = "cx51", label = "CX51 - 8 vCPU, 32 GB RAM" },
+  { value = "cpx11", label = "CPX11 - 2 vCPU (dedicated), 4 GB RAM" },
+  { value = "cpx21", label = "CPX21 - 4 vCPU (dedicated), 8 GB RAM" },
+  { value = "cpx31", label = "CPX31 - 8 vCPU (dedicated), 16 GB RAM" },
+  { value = "cx22", label = "CX22 - 2 vCPU, 4 GB RAM" },
+  { value = "cx32", label = "CX32 - 2 vCPU, 8 GB RAM" },
+  { value = "cx42", label = "CX42 - 4 vCPU, 16 GB RAM" },
+  { value = "cx52", label = "CX52 - 8 vCPU, 32 GB RAM" },
 ]
 default = "cx22"
 required = true
 help = "Hetzner Cloud server instance type"
 nickel_path = [
-    "provider",
-    "hetzner_server_type",
+  "provider",
+  "hetzner_server_type",
 ]
 
 [[elements]]
@@ -49,23 +49,23 @@ name = "hetzner_location"
 type = "select"
 prompt = "Datacenter location"
 options = [
-    { value = "fsn1", label = "FSN1 - Frankfurt, Germany" },
-    { value = "fsn1-dc14", label = "FSN1-DC14 - Frankfurt 14, Germany" },
-    { value = "nbg1", label = "NBG1 - Nuremberg, Germany" },
-    { value = "nbg1-dc3", label = "NBG1-DC3 - Nuremberg 3, Germany" },
-    { value = "hel1", label = "HEL1 - Helsinki, Finland" },
-    { value = "hel1-dc8", label = "HEL1-DC8 - Helsinki 8, Finland" },
-    { value = "ash", label = "ASH - Ashburn, Virginia USA" },
-    { value = "ash-dc1", label = "ASH-DC1 - Ashburn 1, Virginia USA" },
-    { value = "hil", label = "HIL - Hildesheim, Germany" },
-    { value = "hil-dc1", label = "HIL-DC1 - Hildesheim 1, Germany" },
+  { value = "fsn1", label = "FSN1 - Frankfurt, Germany" },
+  { value = "fsn1-dc14", label = "FSN1-DC14 - Frankfurt 14, Germany" },
+  { value = "nbg1", label = "NBG1 - Nuremberg, Germany" },
+  { value = "nbg1-dc3", label = "NBG1-DC3 - Nuremberg 3, Germany" },
+  { value = "hel1", label = "HEL1 - Helsinki, Finland" },
+  { value = "hel1-dc8", label = "HEL1-DC8 - Helsinki 8, Finland" },
+  { value = "ash", label = "ASH - Ashburn, Virginia USA" },
+  { value = "ash-dc1", label = "ASH-DC1 - Ashburn 1, Virginia USA" },
+  { value = "hil", label = "HIL - Hildesheim, Germany" },
+  { value = "hil-dc1", label = "HIL-DC1 - Hildesheim 1, Germany" },
 ]
 default = "nbg1"
 required = true
 help = "Hetzner datacenter location"
 nickel_path = [
-    "provider",
-    "hetzner_location",
+  "provider",
+  "hetzner_location",
 ]
 
 [[elements]]
@@ -73,17 +73,17 @@ name = "hetzner_image"
 type = "select"
 prompt = "Operating system image"
 options = [
-    { value = "ubuntu-24.04", label = "Ubuntu 24.04 LTS (Latest)" },
-    { value = "ubuntu-22.04", label = "Ubuntu 22.04 LTS" },
-    { value = "ubuntu-20.04", label = "Ubuntu 20.04 LTS" },
-    { value = "debian-12", label = "Debian 12 (Bookworm)" },
-    { value = "debian-11", label = "Debian 11 (Bullseye)" },
-    { value = "debian-10", label = "Debian 10 (Buster)" },
+  { value = "ubuntu-24.04", label = "Ubuntu 24.04 LTS (Latest)" },
+  { value = "ubuntu-22.04", label = "Ubuntu 22.04 LTS" },
+  { value = "ubuntu-20.04", label = "Ubuntu 20.04 LTS" },
+  { value = "debian-12", label = "Debian 12 (Bookworm)" },
+  { value = "debian-11", label = "Debian 11 (Bullseye)" },
+  { value = "debian-10", label = "Debian 10 (Buster)" },
 ]
 default = "ubuntu-24.04"
 required = true
 help = "OS image to use for the server"
 nickel_path = [
-    "provider",
-    "hetzner_image",
+  "provider",
+  "hetzner_image",
 ]

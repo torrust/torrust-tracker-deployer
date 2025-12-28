@@ -7,13 +7,13 @@ display_mode = "complete"
 name = "database_database_name"
 type = "text"
 prompt = "Core-database-database Name"
-options = []
+options = [  ]
 required = true
 order = 0
 nickel_path = [
-    "core",
-    "database",
-    "database_name",
+  "core",
+  "database",
+  "database_name",
 ]
 nickel_alias = "database_database_name"
 
@@ -23,13 +23,13 @@ nickel_alias = "database_database_name"
 name = "database_driver"
 type = "text"
 prompt = "Core-database-driver"
-options = []
+options = [  ]
 required = true
 order = 1
 nickel_path = [
-    "core",
-    "database",
-    "driver",
+  "core",
+  "database",
+  "driver",
 ]
 nickel_alias = "database_driver"
 
@@ -39,12 +39,12 @@ nickel_alias = "database_driver"
 name = "private"
 type = "confirm"
 prompt = "Core-private"
-options = []
+options = [  ]
 required = true
 order = 2
 nickel_path = [
-    "core",
-    "private",
+  "core",
+  "private",
 ]
 nickel_alias = "private"
 
@@ -54,10 +54,10 @@ nickel_alias = "private"
 name = "http_trackers"
 type = "repeatinggroup"
 prompt = "http_trackers"
-options = []
+options = [  ]
 required = true
 order = 3
-nickel_path = ["http_trackers"]
+nickel_path = [ "http_trackers" ]
 fragment = "fragments/http_trackers_item.toml"
 min_items = 1
 max_items = 10
@@ -69,10 +69,10 @@ default_items = 1
 name = "udp_trackers"
 type = "repeatinggroup"
 prompt = "udp_trackers"
-options = []
+options = [  ]
 required = true
 order = 4
-nickel_path = ["udp_trackers"]
+nickel_path = [ "udp_trackers" ]
 fragment = "fragments/udp_trackers_item.toml"
 min_items = 1
 max_items = 10
