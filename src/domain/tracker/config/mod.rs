@@ -248,38 +248,91 @@ impl TrackerConfig {
         let mut bindings: HashMap<BindingAddress, Vec<String>> = HashMap::new();
 
         // Add UDP trackers
-        for (i, udp) in self.udp_trackers.iter().enumerate() {
-            let binding = BindingAddress::new(udp.bind_address, Protocol::Udp);
-            bindings
-                .entry(binding)
-                .or_default()
-                .push(format!("UDP Tracker #{}", i + 1));
-        }
+        Self::register_trackers(
+            &mut bindings,
+            &self.udp_trackers,
+            Protocol::Udp,
+            "UDP Tracker",
+        );
 
         // Add HTTP trackers
-        for (i, http) in self.http_trackers.iter().enumerate() {
-            let binding = BindingAddress::new(http.bind_address, Protocol::Tcp);
-            bindings
-                .entry(binding)
-                .or_default()
-                .push(format!("HTTP Tracker #{}", i + 1));
-        }
+        Self::register_trackers(
+            &mut bindings,
+            &self.http_trackers,
+            Protocol::Tcp,
+            "HTTP Tracker",
+        );
 
         // Add HTTP API
-        let api_binding = BindingAddress::new(self.http_api.bind_address, Protocol::Tcp);
-        bindings
-            .entry(api_binding)
-            .or_default()
-            .push("HTTP API".to_string());
+        Self::register_binding(
+            &mut bindings,
+            self.http_api.bind_address,
+            Protocol::Tcp,
+            "HTTP API",
+        );
 
         // Add Health Check API
-        let health_binding = BindingAddress::new(self.health_check_api.bind_address, Protocol::Tcp);
-        bindings
-            .entry(health_binding)
-            .or_default()
-            .push("Health Check API".to_string());
+        Self::register_binding(
+            &mut bindings,
+            self.health_check_api.bind_address,
+            Protocol::Tcp,
+            "Health Check API",
+        );
 
         bindings
+    }
+
+    /// Registers multiple tracker instances in the bindings map
+    ///
+    /// Creates numbered service names for each tracker instance (e.g., "UDP Tracker #1").
+    fn register_trackers<T>(
+        bindings: &mut HashMap<BindingAddress, Vec<String>>,
+        trackers: &[T],
+        protocol: Protocol,
+        service_name: &str,
+    ) where
+        T: HasBindAddress,
+    {
+        for (i, tracker) in trackers.iter().enumerate() {
+            let service_label = format!("{service_name} #{}", i + 1);
+            Self::register_binding(bindings, tracker.bind_address(), protocol, &service_label);
+        }
+    }
+
+    /// Registers a single binding in the bindings map
+    ///
+    /// Associates the given service name with the socket address and protocol.
+    fn register_binding(
+        bindings: &mut HashMap<BindingAddress, Vec<String>>,
+        address: SocketAddr,
+        protocol: Protocol,
+        service_name: &str,
+    ) {
+        let binding = BindingAddress::new(address, protocol);
+        bindings
+            .entry(binding)
+            .or_default()
+            .push(service_name.to_string());
+    }
+}
+
+/// Trait for types that have a bind address
+///
+/// Used for generic tracker registration in validation logic.
+trait HasBindAddress {
+    /// Returns the socket address this service binds to
+    fn bind_address(&self) -> SocketAddr;
+}
+
+impl HasBindAddress for UdpTrackerConfig {
+    fn bind_address(&self) -> SocketAddr {
+        self.bind_address
+    }
+}
+
+impl HasBindAddress for HttpTrackerConfig {
+    fn bind_address(&self) -> SocketAddr {
+        self.bind_address
     }
 }
 
