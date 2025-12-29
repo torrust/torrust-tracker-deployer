@@ -116,6 +116,77 @@ nano envs/manual-test.json
 
 </details>
 
+**Using MySQL Instead of SQLite**:
+
+The default template uses SQLite (`driver: "sqlite3"`), which is suitable for testing and small deployments. To use MySQL instead, you need to provide additional database configuration fields:
+
+<details>
+<summary>Click to expand MySQL configuration example</summary>
+
+```json
+{
+  "environment": {
+    "name": "manual-test-mysql",
+    "instance_name": null
+  },
+  "ssh_credentials": {
+    "private_key_path": "fixtures/testing_rsa",
+    "public_key_path": "fixtures/testing_rsa.pub",
+    "username": "torrust",
+    "port": 22
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-manual-test-mysql"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "mysql",
+        "host": "mysql",
+        "port": 3306,
+        "database_name": "torrust_tracker",
+        "username": "tracker_user",
+        "password": "tracker_password"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "MyAccessToken"
+    }
+  }
+}
+```
+
+</details>
+
+**Required MySQL Fields**:
+
+When `driver` is set to `"mysql"`, you must provide:
+
+- `host` - MySQL hostname (use `"mysql"` for Docker Compose service name)
+- `port` - MySQL port (typically `3306`)
+- `database_name` - Name of the database to create
+- `username` - MySQL user for tracker connection
+- `password` - Password for the MySQL user
+
+These credentials are used to:
+
+1. Configure the MySQL Docker container (via docker-compose.yml)
+2. Configure the tracker to connect to MySQL
+3. Initialize the database schema
+
 > **💡 Tip**: Always use `create template` to generate configuration files. This ensures you get the latest schema and prevents issues with outdated examples in documentation.
 
 ### Step 2: Create Environment

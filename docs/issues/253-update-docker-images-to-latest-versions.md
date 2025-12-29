@@ -41,11 +41,11 @@ Update Docker images in the docker-compose template to their latest stable versi
 
 ### Docker Images Analysis (December 23, 2025)
 
-| Image             | Current Version | Recommended Version | Support EOL  | Status                                  | Security           |
-| ----------------- | --------------- | ------------------- | ------------ | --------------------------------------- | ------------------ |
-| `prom/prometheus` | v3.0.1          | v3.8.1              | Jan 9, 2026  | ⚠️ 7 versions behind, 6-week support    | ✅ 0 HIGH/CRITICAL |
-| `grafana/grafana` | 11.4.0          | 11.5.0              | Apr 28, 2026 | ⚠️ 1 version behind, bi-monthly release | ✅ 0 HIGH/CRITICAL |
-| `mysql`           | 8.0 (generic)   | 8.4 (LTS)           | Apr 30, 2032 | ⚠️ Update to explicit LTS version       | ✅ 0 HIGH/CRITICAL |
+| Image             | Current Version | Recommended Version | Support EOL  | Status                              | Security           |
+| ----------------- | --------------- | ------------------- | ------------ | ----------------------------------- | ------------------ |
+| `prom/prometheus` | v3.0.1          | v3.5.0 (LTS)        | Jul 31, 2026 | ⚠️ Update to LTS for 1-year support | ✅ 0 HIGH/CRITICAL |
+| `grafana/grafana` | 11.4.0          | 12.3.1              | Feb 24, 2026 | ⚠️ Update to latest major version   | ✅ 0 HIGH/CRITICAL |
+| `mysql`           | 8.0 (generic)   | 8.4 (LTS)           | Apr 30, 2032 | ⚠️ Update to explicit LTS version   | ✅ 0 HIGH/CRITICAL |
 
 **Support Lifecycle Notes**:
 
@@ -65,7 +65,7 @@ All current images show **zero HIGH or CRITICAL vulnerabilities**:
 Total: 0 (HIGH: 0, CRITICAL: 0)
 ```
 
-**Prometheus v3.8.1** (latest):
+**Prometheus v3.5.0** (LTS):
 
 ```text
 2025-12-23T13:45:26.983Z        WARN    OS is not detected and vulnerabilities in OS packages are not detected.
@@ -87,7 +87,7 @@ grafana/grafana:11.4.0 (alpine 3.20.3)
 Total: 0 (HIGH: 0, CRITICAL: 0)
 ```
 
-**Grafana 11.5.0** (newer):
+**Grafana 12.3.1** (latest major):
 
 ```text
 2025-12-23T13:45:39.635Z        WARN    This OS version is not on the EOL list: alpine 3.20
@@ -96,7 +96,7 @@ Total: 0 (HIGH: 0, CRITICAL: 0)
 2025-12-23T13:45:39.635Z        WARN    This OS version is no longer supported by the distribution: alpine 3.20.3
 2025-12-23T13:45:39.635Z        WARN    The vulnerability detection may be insufficient because security updates are not provided
 
-grafana/grafana:11.5.0 (alpine 3.20.3)
+grafana/grafana:12.3.1 (alpine 3.20.3)
 ======================================
 Total: 0 (HIGH: 0, CRITICAL: 0)
 ```
@@ -139,7 +139,7 @@ Total: 0 (HIGH: 0, CRITICAL: 0)
 
 **Lifecycle-Aware Recommendations**:
 
-1. **Prometheus v3.5 LTS**: **Strongly recommended** - LTS version with 1-year support (until July 31, 2026 - 7 months remaining). Avoid non-LTS versions like v3.8.1 with only 6-week support windows.
+1. **Prometheus v3.5.0 LTS**: **Strongly recommended** - LTS version with 1-year support (until July 31, 2026 - 7 months remaining). Avoid non-LTS versions like v3.8.1 with only 6-week support windows.
 2. **Grafana 12.3.1**: **Recommended** - Latest major version (12.x series) with active development. Supported until Feb 24, 2026 (2 months). Grafana follows bi-monthly release cycle.
 3. **MySQL 8.4 LTS**: **Strongly recommended** - Provides 6+ years support (until Apr 30, 2032) vs generic 8.0 tag approaching EOL (Apr 2026). Avoid MySQL 9.x innovation releases (short 3-4 month lifecycles).
 
@@ -342,7 +342,6 @@ trivy image --severity HIGH,CRITICAL <image-name>
 ### [Date]
 
 [Previous scan results]
-```
 
 ## Implementation Plan
 
@@ -356,7 +355,7 @@ trivy image --severity HIGH,CRITICAL <image-name>
 
 ### Phase 1: Update Prometheus (estimated: 30 minutes)
 
-- [ ] Update `templates/docker-compose/docker-compose.yml.tera` - Change Prometheus image from `v3.0.1` to `v3.8.1`
+- [ ] Update `templates/docker-compose/docker-compose.yml.tera` - Change Prometheus image from `v3.0.1` to `v3.5.0`
 - [ ] Regenerate docker-compose template for testing environment
 - [ ] Run E2E tests to verify Prometheus functionality
 - [ ] Verify Prometheus health checks pass
@@ -364,7 +363,7 @@ trivy image --severity HIGH,CRITICAL <image-name>
 
 ### Phase 2: Update Grafana (estimated: 30 minutes)
 
-- [ ] Update `templates/docker-compose/docker-compose.yml.tera` - Change Grafana image from `11.4.0` to `11.5.0`
+- [ ] Update `templates/docker-compose/docker-compose.yml.tera` - Change Grafana image from `11.4.0` to `12.3.1`
 - [ ] Regenerate docker-compose template for testing environment
 - [ ] Run E2E tests to verify Grafana functionality
 - [ ] Verify Grafana health checks pass
@@ -385,7 +384,7 @@ trivy image --severity HIGH,CRITICAL <image-name>
 
 - [ ] Create `docs/security/` directory (if not exists)
 - [ ] Create `docs/security/docker-image-security-scans.md` with scan template structure
-- [ ] Document Trivy scan results for all updated images (Prometheus v3.8.1, Grafana 11.5.0, MySQL 8.4)
+- [ ] Document Trivy scan results for all updated images (Prometheus v3.5.0, Grafana 12.3.1, MySQL 8.4)
 - [ ] Run Trivy scans with updated images and capture output
 - [ ] Add scan date, command used, and full output for each image
 - [ ] Update README or contributing guide to reference security scan documentation
@@ -414,8 +413,8 @@ trivy image --severity HIGH,CRITICAL <image-name>
 
 - [ ] Comment added in docker-compose template about pinning Tracker to v4.0.0
 - [ ] Separate follow-up issue created for Tracker version update
-- [ ] Prometheus image updated to v3.8.1 in `templates/docker-compose/docker-compose.yml.tera`
-- [ ] Grafana image updated to 11.5.0 in `templates/docker-compose/docker-compose.yml.tera`
+- [ ] Prometheus image updated to v3.5.0 in `templates/docker-compose/docker-compose.yml.tera`
+- [ ] Grafana image updated to 12.3.1 in `templates/docker-compose/docker-compose.yml.tera`
 - [ ] MySQL updated to explicit LTS version 8.4 (not generic 8.0, not innovation 9.x)
 - [ ] All E2E tests pass with updated images
 - [ ] Health checks pass for all services (Prometheus, Grafana, MySQL)
@@ -425,8 +424,8 @@ trivy image --severity HIGH,CRITICAL <image-name>
 **Security Documentation Criteria**:
 
 - [ ] `docs/security/docker-image-security-scans.md` created with scan results
-- [ ] Trivy scan output documented for Prometheus v3.8.1
-- [ ] Trivy scan output documented for Grafana 11.5.0
+- [ ] Trivy scan output documented for Prometheus v3.5.0
+- [ ] Trivy scan output documented for Grafana 12.3.1
 - [ ] Trivy scan output documented for MySQL 8.4
 - [ ] Scan date and Trivy version recorded
 - [ ] Documentation includes reference to issue [#250](https://github.com/torrust/torrust-tracker-deployer/issues/250)
