@@ -1,0 +1,218 @@
+name: Docker Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "docker/**"
+      - "templates/docker-compose/**"
+      - ".github/workflows/docker-security-scan.yml"
+
+  pull_request:
+    paths:
+      - "docker/**"
+      - "templates/docker-compose/**"
+      - ".github/workflows/docker-security-scan.yml"
+
+  # Scheduled scans are important because new CVEs appear
+  # even if the code or images didn’t change
+  schedule:
+    - cron: "0 6 * * *" # Daily at 6 AM UTC
+
+  workflow_dispatch:
+
+jobs:
+  scan-project-images:
+    name: Scan Project-Built Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - dockerfile: docker/provisioned-instance/Dockerfile
+            context: docker/provisioned-instance
+            name: provisioned-instance
+          - dockerfile: docker/ssh-server/Dockerfile
+            context: docker/ssh-server
+            name: ssh-server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Build images locally so Trivy scans exactly
+      # what this repository produces
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t torrust-tracker-deployer/${{ matrix.image.name }}:latest \
+            -f ${{ matrix.image.dockerfile }} \
+            .
+
+      # Human-readable output in logs
+      # This NEVER fails the job; it’s only for visibility
+      - name: Display vulnerabilities (table format)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
+          format: "table"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0"
+
+      # SARIF generation for GitHub Code Scanning
+      #
+      # IMPORTANT:
+      # - exit-code MUST be 0
+      # - Trivy sometimes exits with 1 even when no vulns exist
+      # - GitHub Security UI is responsible for enforcement
+      - name: Generate SARIF (Code Scanning)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
+          format: "sarif"
+          output: "trivy-${{ matrix.image.name }}.sarif"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0"
+          scanners: "vuln"
+
+      - name: Upload SARIF artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sarif-project-${{ matrix.image.name }}-${{ github.run_id }}
+          path: trivy-${{ matrix.image.name }}.sarif
+          retention-days: 30
+
+  scan-third-party-images:
+    name: Scan Third-Party Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # These must match docker-compose templates
+        # in templates/docker-compose/docker-compose.yml.tera
+        image:
+          - torrust/tracker:develop
+          - mysql:8.0
+          - grafana/grafana:11.4.0
+          - prom/prometheus:v3.0.1
+
+    steps:
+      - name: Display vulnerabilities (table format)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ matrix.image }}
+          format: "table"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0"
+
+      # Third-party images should NEVER block CI.
+      # We only report findings to GitHub Security.
+      - name: Generate SARIF (Code Scanning)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ matrix.image }}
+          format: "sarif"
+          output: "trivy.sarif"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0"
+          scanners: "vuln"
+
+      # Needed to produce stable artifact names
+      - name: Sanitize image name
+        id: sanitize
+        run: |
+          echo "name=$(echo '${{ matrix.image }}' | tr '/:' '-')" >> "$GITHUB_OUTPUT"
+
+      - name: Upload SARIF artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sarif-third-party-${{ steps.sanitize.outputs.name }}-${{ github.run_id }}
+          path: trivy.sarif
+          retention-days: 30
+
+  upload-sarif-results:
+    name: Upload SARIF Results to GitHub Security
+    runs-on: ubuntu-latest
+    needs:
+      - scan-project-images
+      - scan-third-party-images
+
+    # Always run so we don’t lose security visibility
+    if: always()
+
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Download all SARIF artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sarif-*-${{ github.run_id }}
+
+      # Upload each SARIF file with CodeQL Action using unique categories.
+      # The category parameter enables proper alert tracking per image.
+      # Must use CodeQL Action (not gh API) - API doesn't support category field.
+      #
+      # VIEWING RESULTS:
+      # - For pull requests: /security/code-scanning?query=pr:NUMBER+is:open
+      # - For branches: /security/code-scanning?query=is:open+branch:BRANCH-NAME
+      # - For main branch: /security/code-scanning?query=is:open+branch:main (default view)
+      # The default Security tab filters by "is:open branch:main" which only shows
+      # alerts from the main branch, not from PR branches.
+      - name: Upload project provisioned-instance SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-project-provisioned-instance-${{ github.run_id }}/trivy-provisioned-instance.sarif
+          category: docker-project-provisioned-instance
+        continue-on-error: true
+
+      - name: Upload project ssh-server SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-project-ssh-server-${{ github.run_id }}/trivy-ssh-server.sarif
+          category: docker-project-ssh-server
+        continue-on-error: true
+
+      - name: Upload third-party mysql SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-third-party-mysql-8.0-${{ github.run_id }}/trivy.sarif
+          category: docker-third-party-mysql-8.0
+        continue-on-error: true
+
+      - name: Upload third-party tracker SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-third-party-torrust-tracker-develop-${{ github.run_id }}/trivy.sarif
+          category: docker-third-party-torrust-tracker-develop
+        continue-on-error: true
+
+      - name: Upload third-party grafana SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-third-party-grafana-grafana-11.4.0-${{ github.run_id }}/trivy.sarif
+          category: docker-third-party-grafana-grafana-11.4.0
+        continue-on-error: true
+
+      - name: Upload third-party prometheus SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-third-party-prom-prometheus-v3.0.1-${{ github.run_id }}/trivy.sarif
+          category: docker-third-party-prom-prometheus-v3.0.1
+        continue-on-error: true
