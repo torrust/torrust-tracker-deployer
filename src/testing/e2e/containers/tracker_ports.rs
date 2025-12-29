@@ -105,6 +105,9 @@ impl E2eConfigEnvironment {
                 "http_api": {
                     "bind_address": format!("0.0.0.0:{}", self.tracker_ports.http_api_port),
                     "admin_token": "MyAccessToken"
+                },
+                "health_check_api": {
+                    "bind_address": "127.0.0.1:1313"
                 }
             },
             "prometheus": {

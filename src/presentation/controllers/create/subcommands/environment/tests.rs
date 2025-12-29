@@ -64,6 +64,9 @@ async fn it_should_create_environment_from_valid_config() {
             "http_api": {{
                 "bind_address": "0.0.0.0:1212",
                 "admin_token": "MyAccessToken"
+            }},
+            "health_check_api": {{
+                "bind_address": "127.0.0.1:1313"
             }}
         }}
     }}"#
@@ -185,6 +188,9 @@ async fn it_should_return_error_for_duplicate_environment() {
             "http_api": {{
                 "bind_address": "0.0.0.0:1212",
                 "admin_token": "MyAccessToken"
+            }},
+            "health_check_api": {{
+                "bind_address": "127.0.0.1:1313"
             }}
         }}
     }}"#
@@ -266,6 +272,9 @@ async fn it_should_create_environment_in_custom_working_dir() {
             "http_api": {{
                 "bind_address": "0.0.0.0:1212",
                 "admin_token": "MyAccessToken"
+            }},
+            "health_check_api": {{
+                "bind_address": "127.0.0.1:1313"
             }}
         }}
     }}"#

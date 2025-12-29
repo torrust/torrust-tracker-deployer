@@ -67,6 +67,9 @@ use super::tracker::TrackerSection;
 ///         "http_api": {
 ///             "bind_address": "0.0.0.0:1212",
 ///             "admin_token": "MyAccessToken"
+///         },
+///         "health_check_api": {
+///             "bind_address": "127.0.0.1:1313"
 ///         }
 ///     },
 ///     "prometheus": {
@@ -417,6 +420,7 @@ impl EnvironmentCreationConfig {
                     bind_address: "0.0.0.0:1212".to_string(),
                     admin_token: "MyAccessToken".to_string(),
                 },
+                health_check_api: super::tracker::HealthCheckApiSection::default(),
             },
             prometheus: Some(PrometheusSection::default()),
             grafana: Some(GrafanaSection::default()),
@@ -572,6 +576,9 @@ mod tests {
                 "http_api": {
                     "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
+                },
+                "health_check_api": {
+                    "bind_address": "127.0.0.1:1313"
                 }
             }
         }"#;
@@ -633,6 +640,9 @@ mod tests {
                 "http_api": {
                     "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
+                },
+                "health_check_api": {
+                    "bind_address": "127.0.0.1:1313"
                 }
             }
         }"#;

@@ -5,8 +5,9 @@
 //!
 //! # Module Structure
 //!
-//! - `config` - Main `TrackerConfig` and component configurations
-//! - `database` - Database configuration (`SQLite`, `MySQL`)
+//! - `config` - Main `TrackerConfig` and component configurations (includes database)
+//! - `binding_address` - Socket binding address with protocol information
+//! - `protocol` - Network protocol types (UDP, TCP)
 //!
 //! # Layer Separation
 //!
@@ -19,7 +20,7 @@
 //! ```rust
 //! use torrust_tracker_deployer_lib::domain::tracker::{
 //!     TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig,
-//!     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig
+//!     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig
 //! };
 //!
 //! let config = TrackerConfig {
@@ -39,13 +40,19 @@
 //!         bind_address: "0.0.0.0:1212".parse().unwrap(),
 //!         admin_token: "MyToken".to_string().into(),
 //!     },
+//!     health_check_api: HealthCheckApiConfig {
+//!         bind_address: "127.0.0.1:1313".parse().unwrap(),
+//!     },
 //! };
 //! ```
 
+mod binding_address;
 mod config;
-mod database;
+mod protocol;
 
+pub use binding_address::BindingAddress;
 pub use config::{
-    HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+    DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig,
+    SqliteConfig, TrackerConfig, TrackerConfigError, TrackerCoreConfig, UdpTrackerConfig,
 };
-pub use database::{DatabaseConfig, MysqlConfig, SqliteConfig};
+pub use protocol::{Protocol, ProtocolParseError};

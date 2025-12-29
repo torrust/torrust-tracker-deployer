@@ -185,6 +185,9 @@ pub fn create_valid_config(path: &Path, env_name: &str) -> PathBuf {
         "http_api": {{
             "bind_address": "0.0.0.0:1212",
             "admin_token": "MyAccessToken"
+        }},
+        "health_check_api": {{
+            "bind_address": "127.0.0.1:1313"
         }}
     }}
 }}"#
@@ -301,6 +304,9 @@ pub fn create_config_with_invalid_name(path: &Path) -> PathBuf {
         "http_api": {{
             "bind_address": "0.0.0.0:1212",
             "admin_token": "MyAccessToken"
+        }},
+        "health_check_api": {{
+            "bind_address": "127.0.0.1:1313"
         }}
     }}
 }}"#
@@ -374,6 +380,9 @@ pub fn create_config_with_missing_keys(path: &Path) -> PathBuf {
         "http_api": {
             "bind_address": "0.0.0.0:1212",
             "admin_token": "MyAccessToken"
+        },
+        "health_check_api": {
+            "bind_address": "127.0.0.1:1313"
         }
     }
 }"#;

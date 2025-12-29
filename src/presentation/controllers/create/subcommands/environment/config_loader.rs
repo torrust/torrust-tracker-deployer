@@ -150,6 +150,9 @@ mod tests {
                 "http_api": {{
                     "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
+                }},
+                "health_check_api": {{
+                    "bind_address": "127.0.0.1:1313"
                 }}
             }}
         }}"#
@@ -262,6 +265,9 @@ mod tests {
                 "http_api": {{
                     "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
+                }},
+                "health_check_api": {{
+                    "bind_address": "127.0.0.1:1313"
                 }}
             }}
         }}"#
@@ -319,6 +325,9 @@ mod tests {
                 "http_api": {
                     "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
+                },
+                "health_check_api": {
+                    "bind_address": "127.0.0.1:1313"
                 }
             }
         }"#;
@@ -381,6 +390,9 @@ mod tests {
                 "http_api": {{
                     "bind_address": "0.0.0.0:1212",
                     "admin_token": "MyAccessToken"
+                }},
+                "health_check_api": {{
+                    "bind_address": "127.0.0.1:1313"
                 }}
             }}
         }}"#

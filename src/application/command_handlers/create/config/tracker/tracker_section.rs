@@ -6,9 +6,14 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::{HttpApiSection, HttpTrackerSection, TrackerCoreSection, UdpTrackerSection};
+use super::{
+    HealthCheckApiSection, HttpApiSection, HttpTrackerSection, TrackerCoreSection,
+    UdpTrackerSection,
+};
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
-use crate::domain::tracker::{HttpApiConfig, HttpTrackerConfig, TrackerConfig, UdpTrackerConfig};
+use crate::domain::tracker::{
+    HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, UdpTrackerConfig,
+};
 
 /// Tracker configuration section (application DTO)
 ///
@@ -35,6 +40,9 @@ use crate::domain::tracker::{HttpApiConfig, HttpTrackerConfig, TrackerConfig, Ud
 ///   "http_api": {
 ///     "bind_address": "0.0.0.0:1212",
 ///     "admin_token": "MyAccessToken"
+///   },
+///   "health_check_api": {
+///     "bind_address": "127.0.0.1:1313"
 ///   }
 /// }
 /// ```
@@ -48,6 +56,8 @@ pub struct TrackerSection {
     pub http_trackers: Vec<HttpTrackerSection>,
     /// HTTP API configuration
     pub http_api: HttpApiSection,
+    /// Health Check API configuration
+    pub health_check_api: HealthCheckApiSection,
 }
 
 impl TrackerSection {
@@ -58,6 +68,7 @@ impl TrackerSection {
     /// Returns error if any of the nested sections fail validation:
     /// - Invalid bind address formats
     /// - Invalid database configuration
+    /// - Socket address conflicts (multiple services on same IP:Port:Protocol)
     pub fn to_tracker_config(&self) -> Result<TrackerConfig, CreateConfigError> {
         let core = self.core.to_tracker_core_config()?;
 
@@ -75,12 +86,21 @@ impl TrackerSection {
 
         let http_api: HttpApiConfig = self.http_api.to_http_api_config()?;
 
-        Ok(TrackerConfig {
+        let health_check_api: HealthCheckApiConfig =
+            self.health_check_api.to_health_check_api_config()?;
+
+        let config = TrackerConfig {
             core,
             udp_trackers: udp_trackers?,
             http_trackers: http_trackers?,
             http_api,
-        })
+            health_check_api,
+        };
+
+        // Validate socket address uniqueness
+        config.validate().map_err(CreateConfigError::from)?;
+
+        Ok(config)
     }
 }
 
@@ -113,6 +133,7 @@ impl Default for TrackerSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
             },
+            health_check_api: HealthCheckApiSection::default(),
         }
     }
 }
@@ -144,6 +165,7 @@ mod tests {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
             },
+            health_check_api: HealthCheckApiSection::default(),
         };
 
         let config = section.to_tracker_config().unwrap();
@@ -192,6 +214,7 @@ mod tests {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
             },
+            health_check_api: HealthCheckApiSection::default(),
         };
 
         let config = section.to_tracker_config().unwrap();
@@ -217,6 +240,7 @@ mod tests {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
             },
+            health_check_api: HealthCheckApiSection::default(),
         };
 
         let result = section.to_tracker_config();
@@ -247,6 +271,7 @@ mod tests {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
             },
+            health_check_api: HealthCheckApiSection::default(),
         };
 
         let json = serde_json::to_string(&section).unwrap();
@@ -275,6 +300,9 @@ mod tests {
             "http_api": {
                 "bind_address": "0.0.0.0:1212",
                 "admin_token": "MyAccessToken"
+            },
+            "health_check_api": {
+                "bind_address": "127.0.0.1:1313"
             }
         }"#;
 
@@ -283,5 +311,61 @@ mod tests {
         assert!(section.core.private);
         assert_eq!(section.udp_trackers.len(), 1);
         assert_eq!(section.http_trackers.len(), 1);
+    }
+
+    #[test]
+    fn it_should_reject_configuration_with_duplicate_socket_addresses() {
+        // HTTP tracker and API on same port (TCP protocol conflict)
+        let section = TrackerSection {
+            core: TrackerCoreSection {
+                database: DatabaseSection::Sqlite {
+                    database_name: "tracker.db".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![],
+            http_trackers: vec![HttpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+            }],
+            http_api: HttpApiSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+                admin_token: "token".to_string(),
+            },
+            health_check_api: HealthCheckApiSection::default(),
+        };
+
+        let result = section.to_tracker_config();
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::TrackerConfigValidation(_)
+        ));
+    }
+
+    #[test]
+    fn it_should_accept_udp_and_tcp_on_same_port() {
+        // UDP and TCP can share the same port (different protocol spaces)
+        let section = TrackerSection {
+            core: TrackerCoreSection {
+                database: DatabaseSection::Sqlite {
+                    database_name: "tracker.db".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![UdpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+            }],
+            http_trackers: vec![HttpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+            }],
+            http_api: HttpApiSection {
+                bind_address: "0.0.0.0:1212".to_string(),
+                admin_token: "token".to_string(),
+            },
+            health_check_api: HealthCheckApiSection::default(),
+        };
+
+        let result = section.to_tracker_config();
+        assert!(result.is_ok());
     }
 }

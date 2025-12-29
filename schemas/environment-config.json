@@ -155,6 +155,17 @@
         "admin_password"
       ]
     },
+    "HealthCheckApiSection": {
+      "type": "object",
+      "properties": {
+        "bind_address": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bind_address"
+      ]
+    },
     "HetznerProviderSection": {
       "description": "Hetzner-specific configuration section\n\nUses raw `String` fields for JSON deserialization. Convert to domain\n`HetznerConfig` via `ProviderSection::to_provider_config()`.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::HetznerProviderSection;\n\nlet section = HetznerProviderSection {\n    api_token: \"your-api-token\".to_string(),\n    server_type: \"cx22\".to_string(),\n    location: \"nbg1\".to_string(),\n    image: \"ubuntu-24.04\".to_string(),\n};\n```",
       "type": "object",
@@ -320,12 +331,16 @@
       ]
     },
     "TrackerSection": {
-      "description": "Tracker configuration section (application DTO)\n\nAggregates all tracker configuration sections: core, UDP trackers,\nHTTP trackers, and HTTP API.\n\n# Examples\n\n```json\n{\n  \"core\": {\n    \"database\": {\n      \"driver\": \"sqlite3\",\n      \"database_name\": \"tracker.db\"\n    },\n    \"private\": false\n  },\n  \"udp_trackers\": [\n    { \"bind_address\": \"0.0.0.0:6969\" }\n  ],\n  \"http_trackers\": [\n    { \"bind_address\": \"0.0.0.0:7070\" }\n  ],\n  \"http_api\": {\n    \"bind_address\": \"0.0.0.0:1212\",\n    \"admin_token\": \"MyAccessToken\"\n  }\n}\n```",
+      "description": "Tracker configuration section (application DTO)\n\nAggregates all tracker configuration sections: core, UDP trackers,\nHTTP trackers, and HTTP API.\n\n# Examples\n\n```json\n{\n  \"core\": {\n    \"database\": {\n      \"driver\": \"sqlite3\",\n      \"database_name\": \"tracker.db\"\n    },\n    \"private\": false\n  },\n  \"udp_trackers\": [\n    { \"bind_address\": \"0.0.0.0:6969\" }\n  ],\n  \"http_trackers\": [\n    { \"bind_address\": \"0.0.0.0:7070\" }\n  ],\n  \"http_api\": {\n    \"bind_address\": \"0.0.0.0:1212\",\n    \"admin_token\": \"MyAccessToken\"\n  },\n  \"health_check_api\": {\n    \"bind_address\": \"127.0.0.1:1313\"\n  }\n}\n```",
       "type": "object",
       "properties": {
         "core": {
           "description": "Core tracker configuration (database, privacy mode)",
           "$ref": "#/$defs/TrackerCoreSection"
+        },
+        "health_check_api": {
+          "description": "Health Check API configuration",
+          "$ref": "#/$defs/HealthCheckApiSection"
         },
         "http_api": {
           "description": "HTTP API configuration",
@@ -350,7 +365,8 @@
         "core",
         "udp_trackers",
         "http_trackers",
-        "http_api"
+        "http_api",
+        "health_check_api"
       ]
     },
     "UdpTrackerSection": {

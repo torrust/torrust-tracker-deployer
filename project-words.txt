@@ -303,3 +303,5 @@ zeroize
 ключ
 конфиг
 файл
+Datagram
+connectionless

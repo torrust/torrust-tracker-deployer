@@ -7,6 +7,7 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
+use crate::domain::tracker::TrackerConfigError;
 use crate::domain::EnvironmentNameError;
 use crate::domain::ProfileNameError;
 use crate::shared::UsernameError;
@@ -105,6 +106,10 @@ pub enum CreateConfigError {
     /// Invalid Prometheus configuration
     #[error("Invalid Prometheus configuration: {0}")]
     InvalidPrometheusConfig(String),
+
+    /// Tracker configuration validation failed
+    #[error("Tracker configuration validation failed: {0}")]
+    TrackerConfigValidation(#[from] TrackerConfigError),
 }
 
 impl CreateConfigError {
@@ -423,6 +428,27 @@ impl CreateConfigError {
                  \n\
                  Note: The template automatically adds the 's' suffix (e.g., 15 becomes '15s'),\n\
                  so you only need to specify the numeric value."
+            }
+            Self::TrackerConfigValidation(_) => {
+                "Tracker configuration validation failed.\n\
+                 \n\
+                 This error indicates a problem with the tracker service configuration,\n\
+                 typically related to socket address (IP:Port:Protocol) conflicts.\n\
+                 \n\
+                 The error message above provides specific details about:\n\
+                 - Which services are in conflict\n\
+                 - The conflicting socket addresses\n\
+                 - Why the configuration is invalid\n\
+                 \n\
+                 Common issues:\n\
+                 1. Multiple services on same TCP port (HTTP tracker + API)\n\
+                 2. Duplicate UDP tracker ports\n\
+                 3. Duplicate HTTP tracker ports\n\
+                 \n\
+                 Note: UDP and TCP can share the same port (different protocols),\n\
+                 but this is not recommended for clarity.\n\
+                 \n\
+                 Related: docs/external-issues/tracker/udp-tcp-port-sharing-allowed.md"
             }
         }
     }
