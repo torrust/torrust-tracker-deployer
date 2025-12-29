@@ -210,7 +210,28 @@ impl TrackerConfig {
     /// assert!(config.validate().is_ok());
     /// ```
     pub fn validate(&self) -> Result<(), TrackerConfigError> {
-        // Collect all binding addresses with their service names
+        let bindings = self.collect_bindings();
+
+        // Check for duplicates
+        for (binding, services) in bindings {
+            if services.len() > 1 {
+                return Err(TrackerConfigError::DuplicateSocketAddress {
+                    address: *binding.socket(),
+                    protocol: binding.protocol(),
+                    services,
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Collects all binding addresses with their service names
+    ///
+    /// Creates a map of binding addresses (socket + protocol) to service names.
+    /// This allows identifying which services are attempting to bind to the same
+    /// socket address with the same protocol.
+    fn collect_bindings(&self) -> HashMap<BindingAddress, Vec<String>> {
         let mut bindings: HashMap<BindingAddress, Vec<String>> = HashMap::new();
 
         // Add UDP trackers
@@ -245,18 +266,7 @@ impl TrackerConfig {
             .or_default()
             .push("Health Check API".to_string());
 
-        // Check for duplicates
-        for (binding, services) in bindings {
-            if services.len() > 1 {
-                return Err(TrackerConfigError::DuplicateSocketAddress {
-                    address: *binding.socket(),
-                    protocol: binding.protocol(),
-                    services,
-                });
-            }
-        }
-
-        Ok(())
+        bindings
     }
 }
 
