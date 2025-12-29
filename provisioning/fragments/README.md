@@ -7,6 +7,7 @@ Modular, reusable TypeDialog form components for interactive environment configu
 Each fragment represents a logical section of the configuration form. The main form (`../config-form.toml`) loads these fragments conditionally based on user selections.
 
 **Benefits of fragments**:
+
 - ✅ **Modularity**: Each section is independent
 - ✅ **Reusability**: Fragments can be used in multiple forms
 - ✅ **Testability**: Each fragment can be validated independently
@@ -26,6 +27,7 @@ includes = ["fragments/provider-lxd-section.toml"]
 ```
 
 **How it works**:
+
 1. TypeDialog reads main form (`config-form.toml`)
 2. When a `group` item has `includes`, the fragment file is loaded
 3. The `when` condition determines if the fragment appears
@@ -34,46 +36,58 @@ includes = ["fragments/provider-lxd-section.toml"]
 ## 📁 Fragment Files
 
 ### 1. **environment-section.toml**
+
 Collects environment identification information.
 
 **Fields**:
+
 - `environment_name` (required): Lowercase with dashes allowed
 - `instance_name` (optional): Auto-generated if omitted
 
 ### 2. **provider-lxd-section.toml**
+
 LXD-specific provider configuration (conditional: appears when `provider == lxd`).
 
 **Fields**:
+
 - `lxd_profile_name` (required): Name of LXD profile
 
 ### 3. **provider-hetzner-section.toml**
+
 Hetzner Cloud-specific provider configuration (conditional: appears when `provider == hetzner`).
 
 **Fields**:
+
 - `hetzner_api_token` (required): Hetzner API authentication token
 - `hetzner_server_type` (required): Server instance type (cx22, cx32, etc)
 - `hetzner_location` (required): Datacenter location (fsn1, nbg1, etc)
 - `hetzner_image` (required): OS image (ubuntu-24.04, debian-12, etc)
 
 ### 4. **ssh-section.toml**
+
 SSH credentials for remote access.
 
 **Fields**:
+
 - `ssh_private_key_path` (required): Path to SSH private key
 - `ssh_public_key_path` (required): Path to SSH public key
 - `ssh_username` (default: "torrust"): Linux username
 - `ssh_port` (default: 22): SSH port
 
 ### 5. **database-sqlite-section.toml**
+
 SQLite database configuration (conditional: appears when `database_driver == sqlite3`).
 
 **Fields**:
+
 - `sqlite_database_name` (default: "tracker.db"): Database filename
 
 ### 6. **database-mysql-section.toml**
+
 MySQL database configuration (conditional: appears when `database_driver == mysql`).
 
 **Fields**:
+
 - `mysql_host` (default: "localhost"): MySQL server host
 - `mysql_port` (default: 3306): MySQL server port
 - `mysql_database_name` (default: "torrust_tracker"): Database name
@@ -81,9 +95,11 @@ MySQL database configuration (conditional: appears when `database_driver == mysq
 - `mysql_password` (required): Database password
 
 ### 7. **tracker-section.toml**
+
 Tracker core configuration (always included).
 
 **Fields**:
+
 - `tracker_private_mode` (default: false): Enable private tracker mode
 - `udp_trackers` (repeatinggroup): Array of UDP tracker listeners
 - `http_trackers` (repeatinggroup): Array of HTTP tracker listeners
@@ -91,32 +107,41 @@ Tracker core configuration (always included).
 - `http_api_admin_token` (required): Admin API token
 
 ### 7a. **udp_trackers_item.toml**
+
 Fragment defining structure for each UDP tracker array element.
 
 **Fields**:
+
 - `bind_address` (default: "0.0.0.0:6969"): UDP tracker bind address
 
 ### 7b. **http_trackers_item.toml**
+
 Fragment defining structure for each HTTP tracker array element.
 
 **Fields**:
+
 - `bind_address` (default: "0.0.0.0:7070"): HTTP tracker bind address
 
 ### 8. **prometheus-section.toml**
+
 Prometheus monitoring configuration (conditional: appears when `enable_prometheus == true`).
 
 **Fields**:
+
 - `prometheus_bind_address` (default: "0.0.0.0:9090"): Prometheus bind address
 - `prometheus_scrape_interval` (default: 15): Scrape interval in seconds
 
 ### 9. **grafana-section.toml**
+
 Grafana visualization configuration (conditional: appears when `enable_grafana == true`).
 
 **Fields**:
+
 - `grafana_bind_address` (default: "0.0.0.0:3000"): Grafana bind address
 - `grafana_admin_password` (required): Grafana admin password
 
 ### 10. **confirmation-section.toml**
+
 Review and confirm configuration (always included, shown last).
 
 **Purpose**: Display summary and let user confirm before validation and export.
@@ -191,18 +216,21 @@ order = 6
 ### RepeatingGroup Field Type
 
 The `repeatinggroup` field type allows users to add/edit/delete multiple items of the same structure (array of records). This is useful for configuration like:
+
 - Multiple listeners (UDP/HTTP trackers)
 - Multiple database connections
 - Multiple API endpoints
 - Lists of servers, users, etc.
 
 **Key attributes**:
+
 - `fragment`: Path to fragment file defining the structure of each array element
 - `min_items`: Minimum required items (0 = optional array)
 - `max_items`: Maximum allowed items
 - `default_items`: Initial number of items to display
 
 **Fragment structure** (`udp_trackers_item.toml`):
+
 ```toml
 name = "udp_trackers_item"
 description = "UDP Tracker configuration"
@@ -219,12 +247,14 @@ order = 0
 ```
 
 **Backend behavior**:
+
 - **CLI**: Interactive menu with Add/Edit/Delete/Continue options
 - **TUI**: Split-pane UI with item list and edit form
 - **Web**: HTML cards with modal overlay for add/edit operations
 
 **Nickel integration**:
 Arrays automatically map to `Array(Record)` types in Nickel schemas:
+
 ```nickel
 {
   TrackerUdp = { bind_address | String },
@@ -308,6 +338,7 @@ To create a new fragment:
 ## ✅ Validation
 
 Fragments are automatically validated by:
+
 1. **TypeDialog**: Field types, required fields, options
 2. **Nickel**: Business logic rules (EnvironmentName, InstanceName, ports, etc)
 3. **Rust**: Final validation before creating environment
@@ -331,7 +362,7 @@ typedialog run provisioning/fragments/environment-section.toml --preset '{"envir
 
 ## 🔄 Workflow: Fragment → Form Integration
 
-```
+```text
 Fragment (.toml)
     ↓
 TypeDialog reads & validates TOML syntax
@@ -354,10 +385,12 @@ Rust receives final JSON with all validations passed
 ## 📚 Related Documentation
 
 ### Examples
+
 - **Fragments with Arrays**: [`examples/05-fragments/array-trackers.toml`](../../examples/05-fragments/array-trackers.toml)
 - **Nickel Arrays**: [`examples/07-nickel-generation/arrays-schema.ncl`](../../examples/07-nickel-generation/arrays-schema.ncl)
 
 ### Provisioning
+
 - Main form design: `../config-form.toml`
 - Validation rules: `../validators/README.md`
 - Form orchestration: `../scripts/config.sh`

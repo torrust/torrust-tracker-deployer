@@ -5,6 +5,7 @@ User-editable Nickel configuration files for environment setup.
 ## 📋 Overview
 
 This directory contains user-provided environment configurations in **Nickel format**. Files here are:
+
 - **User-created or wizard-generated** (not committed to version control)
 - **Configuration values** combined with schemas and defaults
 - **Validated** with Nickel validators before export
@@ -15,18 +16,22 @@ This directory contains user-provided environment configurations in **Nickel for
 ## 📝 File Organization
 
 ### `.gitignore`
+
 Ignores all `.ncl` files except `config.ncl` and `README.md`.
 
 This prevents committing sensitive configurations like:
+
 - SSH key paths
 - Database credentials
 - API tokens
 - Provider tokens
 
 ### `config.ncl`
+
 Fully documented example configuration showing all possible fields and options.
 
 This file is:
+
 - ✅ Committed to version control (for reference)
 - ✅ Heavily commented with explanations
 - ✅ Shows both required and optional fields
@@ -36,9 +41,11 @@ This file is:
 ## 🔄 Configuration Lifecycle
 
 ### Step 1: Generate Configuration
+
 Choose one of these methods:
 
 **Method A: Interactive Wizard** (Recommended)
+
 ```bash
 ./provisioning/scripts/config.sh
 # or
@@ -47,13 +54,15 @@ Choose one of these methods:
 # Generated: provisioning/values/{env-name}.ncl
 ```
 
-**Method B: Copy Example**
+#### Method B: Copy Example
+
 ```bash
 cp provisioning/values/config.ncl provisioning/values/my-env.ncl
 vim provisioning/values/my-env.ncl
 ```
 
-**Method C: Manual Creation**
+#### Method C: Manual Creation
+
 ```bash
 cat > provisioning/values/my-env.ncl <<'EOF'
 let schemas = import "../schemas/environment.ncl" in
@@ -72,6 +81,7 @@ EOF
 ```
 
 ### Step 2: Validate Configuration
+
 ```bash
 ./provisioning/scripts/validate-nickel.sh provisioning/values/my-env.ncl
 
@@ -82,6 +92,7 @@ nickel eval provisioning/values/my-env.ncl
 If validation fails, error messages will indicate what needs to be fixed.
 
 ### Step 3: Export to JSON
+
 ```bash
 ./provisioning/scripts/nickel-to-json.sh \
   provisioning/values/my-env.ncl \
@@ -91,6 +102,7 @@ If validation fails, error messages will indicate what needs to be fixed.
 ```
 
 ### Step 4: Create Environment
+
 ```bash
 cargo run --bin torrust-tracker-deployer -- create environment --env-file envs/my-env.json
 ```
@@ -163,7 +175,8 @@ Nickel cannot merge arrays with different lengths or values. The tracker configu
 
 ### Example: Gradual Customization
 
-**Scenario 1: Use all defaults except override HTTP port**
+#### Scenario 1: Use all defaults except override HTTP port
+
 ```nickel
 tracker = {
   core = defaults_tracker.tracker.core & { /* any overrides */ },
@@ -176,7 +189,8 @@ tracker = {
 }
 ```
 
-**Scenario 2: Use defaults for most, override UDP port too**
+#### Scenario 2: Use defaults for most, override UDP port too
+
 ```nickel
 tracker = {
   core = defaults_tracker.tracker.core & { private = true },  # Merge to override private
@@ -189,7 +203,8 @@ tracker = {
 }
 ```
 
-**Scenario 3: Explicit everything (no defaults reference)**
+#### Scenario 3: Explicit everything (no defaults reference)
+
 ```nickel
 tracker = {
   core = {
@@ -210,6 +225,7 @@ All three are valid. Choose based on your needs.
 ## 🎯 Configuration Sections
 
 ### Environment
+
 ```nickel
 environment = {
   name = validators.ValidEnvironmentName "dev",
@@ -218,6 +234,7 @@ environment = {
 ```
 
 ### Provider (LXD)
+
 ```nickel
 provider = {
   provider = "lxd",
@@ -226,6 +243,7 @@ provider = {
 ```
 
 ### Provider (Hetzner)
+
 ```nickel
 provider = {
   provider = "hetzner",
@@ -237,6 +255,7 @@ provider = {
 ```
 
 ### SSH Credentials
+
 ```nickel
 ssh_credentials = {
   private_key_path = "~/.ssh/id_rsa",
@@ -247,6 +266,7 @@ ssh_credentials = {
 ```
 
 ### Database (SQLite)
+
 ```nickel
 tracker = {
   core = {
@@ -261,6 +281,7 @@ tracker = {
 ```
 
 ### Database (MySQL)
+
 ```nickel
 tracker = {
   core = {
@@ -290,11 +311,13 @@ tracker = {
 | `http_api` | Must provide explicitly | **Required** (no default) |
 
 **Key Points**:
+
 - `core` can omit fields to inherit defaults (e.g., `private`, `database`)
 - Arrays (`udp_trackers`, `http_trackers`) must be completely replaced if overriding (Nickel doesn't merge arrays)
 - `http_api` has **no default** and must always be provided (security: admin token is sensitive)
 
 **Example with defaults inheritance**:
+
 ```nickel
 tracker = {
   # Merge with defaults - inherit private=false, database defaults
@@ -324,6 +347,7 @@ tracker = {
 ```
 
 **Example without defaults (all fields explicit)**:
+
 ```nickel
 tracker = {
   core = {
@@ -347,6 +371,7 @@ tracker = {
 ```
 
 ### Features (Optional)
+
 ```nickel
 features = {
   prometheus = {
@@ -365,6 +390,7 @@ features = {
 Before exporting to JSON, verify:
 
 ### Environment & Infrastructure
+
 - ✅ Environment name is lowercase, no spaces, no special chars
 - ✅ Instance name (if provided) follows LXD naming rules
 - ✅ Provider is either "lxd" or "hetzner"
@@ -372,6 +398,7 @@ Before exporting to JSON, verify:
 - ✅ SSH port is between 1-65535
 
 ### Tracker Configuration
+
 - ✅ **`tracker` section is always present** (required)
 - ✅ **`http_api` is always provided** (required, no default):
   - `bind_address` - valid IP:PORT format
@@ -382,11 +409,13 @@ Before exporting to JSON, verify:
 - ✅ If MySQL: database credentials are correct
 
 ### Features & Integrations
+
 - ✅ If Hetzner: API token is provided
 - ✅ If Prometheus/Grafana enabled: configuration is complete
 - ✅ All required fields are present (no missing imports)
 
 ### Common Issues
+
 - ❌ **Missing `http_api`** - Schema requires this field; always provide `bind_address` and `admin_token`
 - ❌ **Port 0** - Invalid; use port > 1024 (non-privileged)
 - ❌ **Forgetting tracker merge** - If using defaults, ensure final merge includes: `defaults_env & defaults_ssh & defaults_provider & defaults_features & user_config`
@@ -416,6 +445,7 @@ cat /tmp/test.json | jq .
 ## 🔒 Security Considerations
 
 **NEVER commit** to version control:
+
 - SSH private key paths that are actual paths
 - Database passwords
 - API tokens (Hetzner, etc)
@@ -423,6 +453,7 @@ cat /tmp/test.json | jq .
 - Any sensitive credentials
 
 **Protection**:
+
 - `.gitignore` prevents accidental commits of `*.ncl`
 - Only `config.ncl` and `README.md` are safe to commit
 - Use environment variables or `.env` files for secrets in development
@@ -431,6 +462,7 @@ cat /tmp/test.json | jq .
 ## 📝 Creating a New Configuration
 
 ### Quick Start
+
 ```bash
 # 1. Run wizard
 ./provisioning/scripts/config.sh
@@ -450,6 +482,7 @@ cargo run --bin torrust-tracker-deployer -- \
 ```
 
 ### Manual Edit
+
 ```bash
 # 1. Copy example
 cp provisioning/values/config.ncl provisioning/values/dev.ncl

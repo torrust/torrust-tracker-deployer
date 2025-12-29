@@ -6,7 +6,7 @@ This directory contains Nickel configuration templates for generating deployment
 
 The Nickel template system replaces the previous Tera-based templating approach with a **CLI-driven architecture**:
 
-```
+```text
 Nickel Template (.ncl)
     ↓ (nickel export --format json)
     ↓
@@ -20,7 +20,7 @@ Target Format (YAML, TOML, HCL, ENV)
 
 ### Templates Directory Structure
 
-```
+```text
 provisioning/templates/
 ├── README.md                    # This file
 ├── prometheus/
@@ -47,6 +47,7 @@ provisioning/templates/
 Located in `provisioning/scripts/`, these scripts handle template evaluation and format conversion:
 
 #### Nushell Scripts (.nu)
+
 - **`nickel-render.nu`** - Generic Nickel renderer supporting all formats
 - **`nickel-render-yaml.nu`** - Specialized YAML renderer (uses yq)
 - **`nickel-render-toml.nu`** - Specialized TOML renderer
@@ -54,6 +55,7 @@ Located in `provisioning/scripts/`, these scripts handle template evaluation and
 - **`nickel-render-env.nu`** - Specialized ENV renderer (KEY=VALUE format)
 
 #### Bash Scripts (.sh) - Alternative
+
 - **`nickel-render.sh`** - Generic Nickel renderer (Bash version)
 - **`nickel-render-yaml.sh`** - Specialized YAML renderer
 - **`nickel-render-toml.sh`** - Specialized TOML renderer
@@ -133,6 +135,7 @@ bash ./provisioning/scripts/nickel-render-yaml.sh \
 ## Dependencies
 
 ### Required
+
 - **nickel** - Nickel language CLI
 - **yq** - YAML processor
 - **jq** - JSON processor

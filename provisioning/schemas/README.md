@@ -7,6 +7,7 @@ Type contracts and data structures for environment configuration.
 Schemas define the **shape** and **structure** of configuration data. Each schema mirrors a section from the JSON configuration format.
 
 **What schemas do**:
+
 - ✅ Define expected types for all fields
 - ✅ Enforce structure contracts
 - ✅ Enable gradual typing in Nickel
@@ -17,16 +18,20 @@ Schemas define the **shape** and **structure** of configuration data. Each schem
 ## 📁 Schema Files
 
 ### environment.ncl
+
 Environment identification schema.
 
 **Type**: Record with fields
+
 - `name`: String (EnvironmentName - validated by validators)
 - `instance_name`: Optional String (InstanceName - validated by validators)
 
 ### provider.ncl
+
 Provider configuration schema (discriminated union).
 
 **Types**:
+
 - `LxdConfig`: LXD provider
   - `provider`: Literal string "lxd"
   - `profile_name`: String (validated as InstanceName)
@@ -39,18 +44,22 @@ Provider configuration schema (discriminated union).
   - `image`: String (e.g., "ubuntu-24.04")
 
 ### ssh.ncl
+
 SSH credentials schema.
 
 **Type**: Record with fields
+
 - `private_key_path`: String (path to private key)
 - `public_key_path`: String (path to public key)
 - `username`: String (validated as Username)
 - `port`: Number (validated as ValidPort: 1-65535)
 
 ### database.ncl
+
 Database configuration schema (discriminated union).
 
 **Types**:
+
 - `SqliteConfig`: SQLite file-based
   - `driver`: Literal string "sqlite3"
   - `database_name`: String
@@ -64,9 +73,11 @@ Database configuration schema (discriminated union).
   - `password`: String
 
 ### tracker.ncl
+
 Tracker configuration schema.
 
 **Type**: Record with fields
+
 - `core`: Record
   - `private`: Boolean
   - `database`: DatabaseConfig (SQLite | MySQL)
@@ -79,9 +90,11 @@ Tracker configuration schema.
   - `admin_token`: String
 
 ### features.ncl
+
 Optional features schema.
 
 **Type**: Record with fields
+
 - `prometheus`: Record
   - `enabled`: Boolean
   - `bind_address`: Optional String (validated as ValidBindAddress)
@@ -94,6 +107,7 @@ Optional features schema.
 ## 🎯 Nickel Schema Patterns
 
 ### Simple Field
+
 ```nickel
 {
   name = "field_name" : String,
@@ -102,6 +116,7 @@ Optional features schema.
 ```
 
 ### Optional Field
+
 ```nickel
 {
   optional_field | default = "default_value" : String,
@@ -109,6 +124,7 @@ Optional features schema.
 ```
 
 ### Discriminated Union (OneOf)
+
 ```nickel
 let Provider = [
   | {
@@ -128,6 +144,7 @@ Provider
 ```
 
 ### Record with Metadata
+
 ```nickel
 {
   | doc "User SSH credentials"
@@ -164,11 +181,13 @@ let Features = import "features.ncl" in
 Schemas define structure, validators define rules:
 
 **Schema responsibility**: "Is this the right type?"
+
 - Is `port` a Number?
 - Is `provider` one of: "lxd" | "hetzner"?
 - Are all required fields present?
 
 **Validator responsibility**: "Is this value acceptable?"
+
 - Is port between 1-65535?
 - Is EnvironmentName lowercase with no leading numbers?
 - Does SSH key file exist?

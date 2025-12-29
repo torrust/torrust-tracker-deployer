@@ -26,7 +26,7 @@ We will **replace Tera templates with Nickel configuration language** using a **
 
 ### Architecture: Three-Stage Pipeline
 
-```
+```text
 Nickel Template (.ncl)
     ↓ (nickel export --format json)
     ↓
@@ -102,6 +102,7 @@ export def nickel_to_yaml [template: path, output: path]: nothing {
 **Rejected**: Custom Rust code to wrap Nickel evaluation
 
 **Rationale**:
+
 - Nickel CLI is proven and well-maintained
 - Unnecessary Rust code adds maintenance burden
 - Shell scripts are simpler and more transparent
@@ -110,7 +111,7 @@ export def nickel_to_yaml [template: path, output: path]: nothing {
 
 ### Template Organization
 
-```
+```text
 provisioning/templates/
 ├── prometheus/config.ncl              # Prometheus YAML
 ├── tracker/config.ncl                 # Tracker TOML
@@ -131,23 +132,27 @@ provisioning/templates/
 Each format has specialized renderers:
 
 **YAML Conversion** (via yq):
+
 ```bash
 nickel export --format json template.ncl | yq -P . > output.yml
 ```
 
 **HCL Conversion** (custom jq builder):
+
 ```bash
 nickel export --format json template.ncl | jq -r 'to_entries[] |
   "\(.key) = \(.value | @json)"' > output.tfvars
 ```
 
 **ENV Conversion** (custom jq builder):
+
 ```bash
 nickel export --format json template.ncl | jq -r 'to_entries[] |
   "\(.key)=\(.value)"' > output.env
 ```
 
 **TOML Conversion** (custom jq builder):
+
 ```bash
 nickel export --format json template.ncl | jq -r 'to_entries[] |
   "\(.key) = \(.value | @json)"' > output.toml
@@ -175,26 +180,31 @@ Three-layer validation ensures configuration correctness:
 ### Positive
 
 **Simplicity**:
+
 - No custom Rust infrastructure needed
 - Shell scripts are transparent and composable
 - Fewer dependencies to maintain
 
 **Type Safety**:
+
 - Nickel schemas provide compile-time checks
 - Validators enforce constraints at evaluation time
 - Structured error messages on validation failure
 
 **No Delimiter Conflicts**:
+
 - Nickel syntax doesn't conflict with Ansible/Jinja2/Kubernetes
 - Template readability improved (no `{% raw %}` blocks needed)
 - Easier to embed in other formats
 
 **Standards-Based**:
+
 - Uses standard CLI tools (jq, yq, nickel)
 - Follows Unix philosophy
 - Scripts can be called from any language or tool
 
 **Better Error Messages**:
+
 - Nickel provides context-aware error reporting
 - Validators give specific constraint violation messages
 - JSON structure makes errors debuggable
@@ -202,19 +212,23 @@ Three-layer validation ensures configuration correctness:
 ### Negative
 
 **Learning Curve**:
+
 - Team must learn Nickel language (different from Jinja2)
 - Different pattern for composing configurations
 
 **Potential Duplication**:
+
 - Some configuration repeated if not factored into shared modules
 - Requires discipline to keep templates DRY
 
 **Format Conversion Complexity**:
+
 - Custom jq/Nu code needed for non-standard formats
 - TOML conversion has limitations with nested structures
 - Requires testing for each format
 
 **Gradual Integration**:
+
 - Cannot immediately remove all Tera templates
 - Dual maintenance period during transition
 - Existing Rust code expecting Tera must be adapted
@@ -222,21 +236,25 @@ Three-layer validation ensures configuration correctness:
 ### Mitigation Strategies
 
 **Documentation**:
+
 - Comprehensive template examples
 - Guidelines for creating new templates
 - Architecture decision record (this document)
 
 **Validation**:
+
 - Extensive E2E tests ensure generated configs work
 - Format-specific validators catch conversion errors
 - Pre-commit checks validate Nickel syntax
 
 **Code Review**:
+
 - Review template changes for proper structure
 - Ensure validators are applied to constrained fields
 - Check for DRY principle in schema/validator definitions
 
 **Gradual Transition**:
+
 - Keep existing Tera code until Nickel replaces all use cases
 - Run both systems in parallel during transition
 - Incremental migration per template type
@@ -246,6 +264,7 @@ Three-layer validation ensures configuration correctness:
 ### 1. Continue with Tera
 
 **Rejected**: Doesn't solve core problems:
+
 - Delimiter conflicts remain
 - No type safety mechanism
 - Tight Rust coupling continues
@@ -254,6 +273,7 @@ Three-layer validation ensures configuration correctness:
 ### 2. Rust Library Wrapper Around Nickel
 
 Example (rejected):
+
 ```rust
 struct NickelTemplateRenderer {
     template_path: PathBuf,
@@ -268,6 +288,7 @@ impl NickelTemplateRenderer {
 ```
 
 **Rejected Reasons**:
+
 - Unnecessary abstraction layer
 - Adds maintenance burden
 - Hides CLI availability
@@ -275,6 +296,7 @@ impl NickelTemplateRenderer {
 - Reduces transparency
 
 **Rationale for CLI-first approach**:
+
 - Nickel CLI is the proven tool
 - Keep infrastructure simple
 - Let shell scripts handle orchestration
@@ -283,6 +305,7 @@ impl NickelTemplateRenderer {
 ### 3. KCL (Kyverno Configuration Language)
 
 **Rejected**:
+
 - Primarily designed for Kubernetes validation
 - Less suitable for multi-format configuration generation
 - Smaller ecosystem than Nickel
@@ -291,6 +314,7 @@ impl NickelTemplateRenderer {
 ### 4. CUE Language
 
 **Rejected**:
+
 - Complex syntax, steeper learning curve
 - Less familiar to team
 - Overkill for our configuration needs
@@ -304,6 +328,7 @@ impl NickelTemplateRenderer {
 ## Implementation Status
 
 **Completed**:
+
 - 9 Nickel templates created and tested
 - Nushell rendering scripts (5 variants: generic, yaml, toml, hcl, env)
 - Bash fallback scripts for portability
@@ -312,10 +337,12 @@ impl NickelTemplateRenderer {
 - Validation at Nickel evaluation time
 
 **Partially Complete**:
+
 - TOML conversion works for simple structures (tracker template needs refinement for complex nested arrays)
 - Rust integration pending (can call scripts via `Command::new("nu")` or `Command::new("bash")`)
 
 **Future**:
+
 - Incremental Rust integration for ProjectGenerator (minimal, script-calling only)
 - Migration away from Tera templates as Nickel coverage expands
 - Performance profiling and optimization if needed

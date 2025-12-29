@@ -7,12 +7,14 @@ Default configuration values for Torrust Tracker environments.
 Default values provide sensible out-of-the-box configuration for deployment environments. Users can override any default by providing explicit values.
 
 **How defaults work in Nickel**:
+
 ```nickel
 # Defaults first, then user config
 defaults & user_config
 ```
 
 This record merge pattern:
+
 1. Starts with defaults
 2. User values override defaults where provided
 3. Unspecified fields get defaults
@@ -20,22 +22,28 @@ This record merge pattern:
 ## 📁 Default Files
 
 ### environment.ncl
+
 Environment defaults (minimal).
 
 **Defaults**:
+
 - `instance_name`: Optional, auto-generated if omitted
 
 ### ssh.ncl
+
 SSH connection defaults (standard conventions).
 
 **Defaults**:
+
 - `port`: 22 (standard SSH port)
 - `username`: "torrust" (project convention)
 
 ### tracker.ncl
+
 Tracker service defaults (standard ports and settings).
 
 **Defaults**:
+
 - UDP tracker: `0.0.0.0:6969`
 - HTTP tracker: `0.0.0.0:7070`
 - Private mode: false (public tracker)
@@ -43,6 +51,7 @@ Tracker service defaults (standard ports and settings).
 - SQLite filename: "tracker.db"
 
 **Required (No Default)**:
+
 - HTTP API: `bind_address` and `admin_token` must be provided by user
 
 **Merge Strategy for Tracker**:
@@ -57,11 +66,13 @@ The tracker configuration uses **selective referencing** rather than full merge:
 | `http_api` | **Required** | No default exists; user must always provide `bind_address` and `admin_token` |
 
 **Why `http_api` has no default**:
+
 - API admin token is security-sensitive (should never have a default)
 - Each environment needs explicit configuration
 - Schema enforces this by marking `http_api` as required (not optional)
 
 **Example merge in user config**:
+
 ```nickel
 tracker = {
   # Merge: inherit defaults for private mode and database
@@ -83,9 +94,11 @@ tracker = {
 ```
 
 ### features.ncl
+
 Optional features defaults (disabled by default).
 
 **Defaults**:
+
 - Prometheus: disabled
 - Grafana: disabled
 
@@ -118,6 +131,7 @@ Optional features defaults (disabled by default).
 ### Minimal Configuration (All Defaults)
 
 User provides only:
+
 ```nickel
 {
   environment = {
@@ -162,6 +176,7 @@ User provides only:
 ### Custom Configuration (Overriding Defaults)
 
 User provides overrides:
+
 ```nickel
 {
   environment = {
@@ -220,7 +235,7 @@ User provides overrides:
 
 ## 🔄 Defaults Workflow
 
-```
+```text
 1. TypeDialog Form
    ↓
 2. JSON Output (only user-provided fields)
@@ -243,6 +258,7 @@ User provides overrides:
 ## ✅ Defaults Philosophy
 
 ### What Should Have Defaults
+
 - ✅ SSH port (standard is 22)
 - ✅ SSH username (project convention)
 - ✅ Tracker bind addresses (standard ports)
@@ -250,6 +266,7 @@ User provides overrides:
 - ✅ Database choice (SQLite is simplest)
 
 ### What Should NOT Have Defaults
+
 - ❌ Environment name (required user choice)
 - ❌ SSH key paths (environment-specific)
 - ❌ Provider configuration (must be explicit)

@@ -9,6 +9,7 @@ Validators enforce **content rules** for configuration values. Each validator re
 **Key principle**: Nickel validators must match Rust validators **exactly**.
 
 **Validation hierarchy**:
+
 1. **TypeDialog**: Syntax validation (field types, required fields)
 2. **Nickel validators**: Business logic rules (format, ranges, constraints)
 3. **Rust**: Final validation before environment creation
@@ -16,17 +17,21 @@ Validators enforce **content rules** for configuration values. Each validator re
 ## 📁 Validator Files
 
 ### common.ncl
+
 Common utilities and helpers used by all validators.
 
 **Validators**:
+
 - `ValidPort(port)`: Port range validation (1-65535, rejects 0)
 - `NonEmptyString(s)`: Non-empty string check
 - `ValidBindAddress(addr)`: Network address format validation (IP:PORT)
 
 ### environment.ncl
+
 EnvironmentName validation (mirrors `src/domain/environment/name.rs`).
 
 **Validation rules**:
+
 - ✅ Non-empty
 - ✅ Lowercase only (a-z, 0-9, -)
 - ✅ Cannot start with digit
@@ -39,9 +44,11 @@ EnvironmentName validation (mirrors `src/domain/environment/name.rs`).
 **Rust reference**: `src/domain/environment/name.rs`
 
 ### instance.ncl
+
 InstanceName validation (mirrors `src/domain/instance_name.rs`).
 
 **Validation rules**:
+
 - ✅ Non-empty
 - ✅ 1-63 characters maximum
 - ✅ ASCII letters, numbers, dashes only
@@ -53,9 +60,11 @@ InstanceName validation (mirrors `src/domain/instance_name.rs`).
 **Rust reference**: `src/domain/instance_name.rs`
 
 ### username.ncl
+
 Username validation (mirrors `src/shared/username.rs`).
 
 **Validation rules**:
+
 - ✅ Non-empty
 - ✅ 1-32 characters maximum
 - ✅ Must start with letter (a-z, A-Z) or underscore (_)
@@ -65,25 +74,31 @@ Username validation (mirrors `src/shared/username.rs`).
 **Rust reference**: `src/shared/username.rs`
 
 ### network.ncl
+
 Network address validators.
 
 **Validators**:
+
 - `ValidBindAddress(addr)`: IP:PORT format
   - Pattern: `\d+\.\d+\.\d+\.\d+:\d+`
   - Validates port range via `ValidPort`
 - `ValidPort(port)`: Port range 1-65535 (rejects 0)
 
 ### paths.ncl
+
 Path validators for SSH keys and configuration files.
 
 **Validators**:
+
 - `ValidPath(p)`: Non-empty path string
 - `ValidSshKeyPath(p)`: SSH key path format (no validation of file existence at validation time)
 
 ### tracker.ncl
+
 Tracker array validators for UDP and HTTP listener configurations.
 
 **Validators**:
+
 - `ValidUniqueBindAddresses(listeners)`: Ensures all bind_address values in array are unique
   - Rejects arrays with duplicate addresses
   - Used for both UDP and HTTP tracker arrays
@@ -96,6 +111,7 @@ Tracker array validators for UDP and HTTP listener configurations.
   - Recommended for production use
 
 **Usage in config**:
+
 ```nickel
 udp_trackers = validators_tracker.ValidTrackerArrayFull
   [
@@ -107,6 +123,7 @@ udp_trackers = validators_tracker.ValidTrackerArrayFull
 ```
 
 **Validation rules**:
+
 - ✅ All `bind_address` values must be unique (no duplicates)
 - ✅ Array length between 1 and 4 (configurable)
 - ✅ Each address validated with `ValidBindAddress` before validator
@@ -161,7 +178,7 @@ ValidEnvironmentName
 
 ## 🔄 Validation Workflow
 
-```
+```text
 User Input (JSON from TypeDialog)
     ↓
 json-to-nickel.sh reads JSON
@@ -185,16 +202,19 @@ Rust EnvironmentCreationConfig (final validation)
 ### Critical Alignment Points
 
 **EnvironmentName** (must match exactly):
+
 - Rust: `src/domain/environment/name.rs`
 - Nickel: `provisioning/validators/environment.ncl`
 - Validation: Lowercase, no numbers at start, no leading/trailing/consecutive dashes
 
 **InstanceName** (must match exactly):
+
 - Rust: `src/domain/instance_name.rs`
 - Nickel: `provisioning/validators/instance.ncl`
 - Validation: 1-63 chars, no leading digit/dash, no trailing dash
 
 **Username** (must match exactly):
+
 - Rust: `src/shared/username.rs`
 - Nickel: `provisioning/validators/username.ncl`
 - Validation: 1-32 chars, starts with letter or underscore
@@ -304,19 +324,22 @@ ValidName
 ## 🎯 Error Message Standards
 
 Error messages should:
+
 - ✅ Be clear about what failed
 - ✅ State the constraint that was violated
 - ✅ Show what was attempted (for debugging)
 - ✅ Suggest how to fix (when applicable)
 
 **Good error message**:
-```
+
+```text
 "Environment name 'Dev-Prod' is invalid: contains uppercase letters.
 Must be lowercase only. Examples: dev, staging, production, e2e-config"
 ```
 
 **Bad error message**:
-```
+
+```text
 "Invalid input"
 ```
 
