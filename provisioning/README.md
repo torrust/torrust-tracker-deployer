@@ -1,6 +1,6 @@
 # Torrust Tracker Environment Configuration Wizard
 
-Interactive configuration system for deploying Torrust Tracker environments using **TypeDialog** (UI) + **Nickel** (validation) + **JSON** (execution).
+Interactive configuration system for deploying Torrust Tracker environments using **TypeDialog** + **Nickel** (validation) + **JSON** (execution).
 
 ## 🚀 Quick Start
 
