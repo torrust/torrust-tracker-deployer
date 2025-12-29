@@ -7,8 +7,19 @@ use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 
+mod core;
+mod health_check_api;
+mod http;
+mod http_api;
+mod udp;
+
+pub use core::TrackerCoreConfig;
+pub use health_check_api::HealthCheckApiConfig;
+pub use http::HttpTrackerConfig;
+pub use http_api::HttpApiConfig;
+pub use udp::UdpTrackerConfig;
+
 use super::{DatabaseConfig, SqliteConfig};
-use crate::shared::ApiToken;
 
 /// Tracker deployment configuration
 ///
@@ -63,68 +74,6 @@ pub struct TrackerConfig {
     pub health_check_api: HealthCheckApiConfig,
 }
 
-/// Core tracker configuration options
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TrackerCoreConfig {
-    /// Database configuration (`SQLite`, `MySQL`, etc.)
-    pub database: DatabaseConfig,
-
-    /// Tracker mode: true for private tracker, false for public
-    pub private: bool,
-}
-
-/// UDP tracker bind configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct UdpTrackerConfig {
-    /// Bind address (e.g., "0.0.0.0:6868")
-    #[serde(
-        serialize_with = "serialize_socket_addr",
-        deserialize_with = "deserialize_socket_addr"
-    )]
-    pub bind_address: SocketAddr,
-}
-
-/// HTTP tracker bind configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct HttpTrackerConfig {
-    /// Bind address (e.g., "0.0.0.0:7070")
-    #[serde(
-        serialize_with = "serialize_socket_addr",
-        deserialize_with = "deserialize_socket_addr"
-    )]
-    pub bind_address: SocketAddr,
-}
-
-/// HTTP API configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct HttpApiConfig {
-    /// Bind address (e.g., "0.0.0.0:1212")
-    #[serde(
-        serialize_with = "serialize_socket_addr",
-        deserialize_with = "deserialize_socket_addr"
-    )]
-    pub bind_address: SocketAddr,
-
-    /// Admin access token for HTTP API authentication
-    pub admin_token: ApiToken,
-}
-
-/// Health Check API configuration
-///
-/// The Health Check API is a minimal HTTP endpoint used by Docker and container
-/// orchestration tools to verify service health. It's separate from the main HTTP API.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct HealthCheckApiConfig {
-    /// Bind address (e.g., "127.0.0.1:1313")
-    ///
-    /// Conventionally uses port 1313, though this is configurable
-    #[serde(
-        serialize_with = "serialize_socket_addr",
-        deserialize_with = "deserialize_socket_addr"
-    )]
-    pub bind_address: SocketAddr,
-}
-
 impl Default for TrackerConfig {
     /// Returns a default tracker configuration suitable for development and testing
     ///
@@ -161,14 +110,14 @@ impl Default for TrackerConfig {
     }
 }
 
-fn serialize_socket_addr<S>(addr: &SocketAddr, serializer: S) -> Result<S::Ok, S::Error>
+pub(crate) fn serialize_socket_addr<S>(addr: &SocketAddr, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
     serializer.serialize_str(&addr.to_string())
 }
 
-fn deserialize_socket_addr<'de, D>(deserializer: D) -> Result<SocketAddr, D::Error>
+pub(crate) fn deserialize_socket_addr<'de, D>(deserializer: D) -> Result<SocketAddr, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
