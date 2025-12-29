@@ -22,29 +22,69 @@ Complete the standard deployment workflow first (see [Manual E2E Testing Guide](
 4. ✅ Software released
 5. ✅ Services running
 
-**Your environment configuration must include MySQL**:
+**Your environment configuration must include MySQL database configuration**:
 
 ```json
 {
+  "environment": {
+    "name": "manual-test-mysql",
+    "instance_name": null
+  },
+  "ssh_credentials": {
+    "private_key_path": "fixtures/testing_rsa",
+    "public_key_path": "fixtures/testing_rsa.pub",
+    "username": "torrust",
+    "port": 22
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-manual-test-mysql"
+  },
   "tracker": {
     "core": {
       "database": {
         "driver": "mysql",
-        "database_name": "torrust_tracker"
+        "host": "mysql",
+        "port": 3306,
+        "database_name": "torrust_tracker",
+        "username": "tracker_user",
+        "password": "tracker_password"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
       }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "MyAccessToken"
     }
   },
-  "database": {
-    "driver": "mysql",
-    "host": "mysql",
-    "port": 3306,
-    "database_name": "torrust_tracker",
-    "username": "tracker_user",
-    "password": "tracker_password",
-    "root_password": "root_password"
+  "prometheus": {
+    "scrape_interval_in_secs": 15
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "admin"
   }
 }
 ```
+
+**Required MySQL fields** (under `tracker.core.database`):
+
+- `driver`: Must be `"mysql"`
+- `host`: MySQL hostname (`"mysql"` for Docker Compose service name)
+- `port`: MySQL port (typically `3306`)
+- `database_name`: Name of the database to create
+- `username`: MySQL user for tracker connection
+- `password`: Password for the MySQL user
 
 ## ⚠️ CRITICAL: Understanding File Locations
 
