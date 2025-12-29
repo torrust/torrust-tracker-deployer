@@ -342,7 +342,6 @@ trivy image --severity HIGH,CRITICAL <image-name>
 ### [Date]
 
 [Previous scan results]
-```
 
 ## Implementation Plan
 

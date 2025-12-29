@@ -92,7 +92,7 @@ services:
     image: torrust/tracker:develop
 {% if database.driver == "mysql" %}
   mysql:
-    image: mysql:8.0
+    image: mysql:8.4
 {% endif %}
 "#;
 
@@ -120,7 +120,7 @@ services:
     image: torrust/tracker:develop
 {% if database.driver == "mysql" %}
   mysql:
-    image: mysql:8.0
+    image: mysql:8.4
     environment:
       - MYSQL_ROOT_PASSWORD={{ database.mysql.root_password }}
 {% endif %}

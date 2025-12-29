@@ -249,8 +249,8 @@ mod tests {
             "Rendered output should contain mysql service"
         );
         assert!(
-            content.contains("image: mysql:8.0"),
-            "Should use MySQL 8.0 image"
+            content.contains("image: mysql:8.4"),
+            "Should use MySQL 8.4 image"
         );
 
         // Verify MySQL environment variables use environment variable references
@@ -327,7 +327,7 @@ mod tests {
 
         // Verify MySQL service is NOT present
         assert!(
-            !content.contains("image: mysql:8.0"),
+            !content.contains("image: mysql:8.4"),
             "Should not contain MySQL service"
         );
         assert!(
@@ -377,8 +377,8 @@ mod tests {
             "Rendered output should contain prometheus service"
         );
         assert!(
-            rendered_content.contains("image: prom/prometheus:v3.0.1"),
-            "Should use Prometheus v3.0.1 image"
+            rendered_content.contains("image: prom/prometheus:v3.5.0"),
+            "Should use Prometheus v3.5.0 image"
         );
         assert!(
             rendered_content.contains("container_name: prometheus"),
@@ -441,7 +441,7 @@ mod tests {
 
         // Verify Prometheus service is NOT present
         assert!(
-            !rendered_content.contains("image: prom/prometheus:v3.0.1"),
+            !rendered_content.contains("image: prom/prometheus:v3.5.0"),
             "Should not contain Prometheus service when config absent"
         );
         assert!(
