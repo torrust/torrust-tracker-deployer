@@ -184,8 +184,8 @@ mod tests {
     #[test]
     fn it_should_extract_tracker_ports_from_config() {
         use crate::domain::tracker::{
-            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig, TrackerCoreConfig,
-            UdpTrackerConfig,
+            DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig,
+            TrackerCoreConfig, UdpTrackerConfig,
         };
 
         let tracker_config = TrackerConfig {
@@ -210,6 +210,9 @@ mod tests {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "MyAccessToken".to_string().into(),
             },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
+            },
         };
 
         let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
@@ -222,7 +225,7 @@ mod tests {
     #[test]
     fn it_should_handle_empty_tracker_lists() {
         use crate::domain::tracker::{
-            DatabaseConfig, HttpApiConfig, SqliteConfig, TrackerCoreConfig,
+            DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, SqliteConfig, TrackerCoreConfig,
         };
 
         let tracker_config = TrackerConfig {
@@ -238,6 +241,9 @@ mod tests {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "Token123".to_string().into(),
             },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
+            },
         };
 
         let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
@@ -250,8 +256,8 @@ mod tests {
     #[test]
     fn it_should_skip_invalid_bind_addresses() {
         use crate::domain::tracker::{
-            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig, TrackerCoreConfig,
-            UdpTrackerConfig,
+            DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig,
+            TrackerCoreConfig, UdpTrackerConfig,
         };
 
         let tracker_config = TrackerConfig {
@@ -275,6 +281,9 @@ mod tests {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "Token".to_string().into(),
+            },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
             },
         };
 

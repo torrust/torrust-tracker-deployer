@@ -20,7 +20,7 @@ use crate::shared::ApiToken;
 /// ```rust
 /// use torrust_tracker_deployer_lib::domain::tracker::{
 ///     TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig,
-///     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig
+///     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig
 /// };
 ///
 /// let tracker_config = TrackerConfig {
@@ -40,6 +40,9 @@ use crate::shared::ApiToken;
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
 ///         admin_token: "MyAccessToken".to_string().into(),
 ///     },
+///     health_check_api: HealthCheckApiConfig {
+///         bind_address: "127.0.0.1:1313".parse().unwrap(),
+///     },
 /// };
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -55,6 +58,9 @@ pub struct TrackerConfig {
 
     /// HTTP API configuration
     pub http_api: HttpApiConfig,
+
+    /// Health Check API configuration
+    pub health_check_api: HealthCheckApiConfig,
 }
 
 /// Core tracker configuration options
@@ -103,6 +109,22 @@ pub struct HttpApiConfig {
     pub admin_token: ApiToken,
 }
 
+/// Health Check API configuration
+///
+/// The Health Check API is a minimal HTTP endpoint used by Docker and container
+/// orchestration tools to verify service health. It's separate from the main HTTP API.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct HealthCheckApiConfig {
+    /// Bind address (e.g., "127.0.0.1:1313")
+    ///
+    /// Conventionally uses port 1313, though this is configurable
+    #[serde(
+        serialize_with = "serialize_socket_addr",
+        deserialize_with = "deserialize_socket_addr"
+    )]
+    pub bind_address: SocketAddr,
+}
+
 impl Default for TrackerConfig {
     /// Returns a default tracker configuration suitable for development and testing
     ///
@@ -131,6 +153,9 @@ impl Default for TrackerConfig {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().expect("valid address"),
                 admin_token: "MyAccessToken".to_string().into(),
+            },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().expect("valid address"),
             },
         }
     }
@@ -174,6 +199,9 @@ mod tests {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_token".to_string().into(),
             },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
+            },
         };
 
         assert_eq!(config.core.database.database_name(), "tracker.db");
@@ -196,6 +224,9 @@ mod tests {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "token123".to_string().into(),
+            },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
             },
         };
 

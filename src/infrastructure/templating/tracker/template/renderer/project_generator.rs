@@ -202,8 +202,8 @@ mod tests {
     #[test]
     fn it_should_render_tracker_toml_with_sqlite_database_path() {
         use crate::domain::environment::{
-            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig, TrackerConfig,
-            TrackerCoreConfig, UdpTrackerConfig,
+            DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig,
+            TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
@@ -229,6 +229,9 @@ mod tests {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_token".to_string().into(),
             },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
+            },
         };
 
         generator
@@ -245,8 +248,8 @@ mod tests {
     #[test]
     fn it_should_render_tracker_toml_with_mysql_connection_string() {
         use crate::domain::environment::{
-            DatabaseConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig, TrackerConfig,
-            TrackerCoreConfig, UdpTrackerConfig,
+            DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig,
+            TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
@@ -275,6 +278,9 @@ mod tests {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_token".to_string().into(),
+            },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
             },
         };
 

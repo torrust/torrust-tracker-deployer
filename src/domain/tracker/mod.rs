@@ -19,7 +19,7 @@
 //! ```rust
 //! use torrust_tracker_deployer_lib::domain::tracker::{
 //!     TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig,
-//!     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig
+//!     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig
 //! };
 //!
 //! let config = TrackerConfig {
@@ -39,6 +39,9 @@
 //!         bind_address: "0.0.0.0:1212".parse().unwrap(),
 //!         admin_token: "MyToken".to_string().into(),
 //!     },
+//!     health_check_api: HealthCheckApiConfig {
+//!         bind_address: "127.0.0.1:1313".parse().unwrap(),
+//!     },
 //! };
 //! ```
 
@@ -46,6 +49,7 @@ mod config;
 mod database;
 
 pub use config::{
-    HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+    HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig,
+    UdpTrackerConfig,
 };
 pub use database::{DatabaseConfig, MysqlConfig, SqliteConfig};

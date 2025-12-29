@@ -24,7 +24,7 @@ use crate::domain::environment::TrackerConfig;
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::infrastructure::templating::tracker::TrackerContext;
-/// use torrust_tracker_deployer_lib::domain::environment::{TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig, UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig};
+/// use torrust_tracker_deployer_lib::domain::environment::{TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig, UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig};
 ///
 /// let tracker_config = TrackerConfig {
 ///     core: TrackerCoreConfig {
@@ -43,6 +43,9 @@ use crate::domain::environment::TrackerConfig;
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
 ///         admin_token: "MyToken".to_string().into(),
+///     },
+///     health_check_api: HealthCheckApiConfig {
+///         bind_address: "127.0.0.1:1313".parse().unwrap(),
 ///     },
 /// };
 /// let context = TrackerContext::from_config(&tracker_config);
@@ -194,8 +197,8 @@ impl Default for TrackerContext {
 mod tests {
     use super::*;
     use crate::domain::environment::{
-        DatabaseConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig, SqliteConfig, TrackerConfig,
-        TrackerCoreConfig, UdpTrackerConfig,
+        DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig,
+        SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
     };
     use crate::shared::Password;
 
@@ -221,6 +224,9 @@ mod tests {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_admin_token".to_string().into(),
+            },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
             },
         }
     }
@@ -267,6 +273,9 @@ mod tests {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_token".to_string().into(),
+            },
+            health_check_api: HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
             },
         };
 
