@@ -211,8 +211,21 @@ impl TrackerConfig {
     /// ```
     pub fn validate(&self) -> Result<(), TrackerConfigError> {
         let bindings = self.collect_bindings();
+        Self::check_for_conflicts(bindings)
+    }
 
-        // Check for duplicates
+    /// Checks for socket address conflicts in the collected bindings
+    ///
+    /// Examines the binding map to find any addresses that have multiple
+    /// services attempting to use them with the same protocol.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TrackerConfigError::DuplicateSocketAddress` if any binding
+    /// address is shared by multiple services.
+    fn check_for_conflicts(
+        bindings: HashMap<BindingAddress, Vec<String>>,
+    ) -> Result<(), TrackerConfigError> {
         for (binding, services) in bindings {
             if services.len() > 1 {
                 return Err(TrackerConfigError::DuplicateSocketAddress {
