@@ -3,9 +3,13 @@
 //! This module contains the main tracker configuration and component types
 //! used for deploying the Torrust Tracker.
 
+use std::collections::HashMap;
+use std::fmt;
 use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
+
+use super::{BindingAddress, Protocol};
 
 mod core;
 mod health_check_api;
@@ -70,6 +74,190 @@ pub struct TrackerConfig {
 
     /// Health Check API configuration
     pub health_check_api: HealthCheckApiConfig,
+}
+
+/// Error type for tracker configuration validation failures
+#[derive(Debug, Clone, PartialEq)]
+pub enum TrackerConfigError {
+    /// Multiple services attempting to bind to the same socket address
+    DuplicateSocketAddress {
+        /// The conflicting socket address
+        address: SocketAddr,
+        /// The protocol (UDP or TCP)
+        protocol: Protocol,
+        /// Names of services attempting to bind to this address
+        services: Vec<String>,
+    },
+}
+
+impl fmt::Display for TrackerConfigError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DuplicateSocketAddress {
+                address,
+                protocol,
+                services,
+            } => {
+                let services_list = services
+                    .iter()
+                    .map(|s| format!("'{s}'"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(
+                    f,
+                    "Socket address conflict: {services_list} cannot bind to {address} ({protocol})\n\
+                    Tip: Assign different port numbers to each service"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for TrackerConfigError {}
+
+impl TrackerConfigError {
+    /// Get detailed troubleshooting guidance for this error
+    ///
+    /// This method provides comprehensive troubleshooting steps that can be
+    /// displayed to users when they need more help resolving the error.
+    #[must_use]
+    pub fn help(&self) -> String {
+        match self {
+            Self::DuplicateSocketAddress {
+                address,
+                protocol,
+                services,
+            } => {
+                use std::fmt::Write;
+
+                let mut help =
+                    String::from("Socket Address Conflict - Detailed Troubleshooting:\n\n");
+
+                help.push_str("Conflicting services:\n");
+                for service in services {
+                    let _ = writeln!(help, "  - {service}: {address} ({protocol})");
+                }
+                help.push('\n');
+
+                help.push_str("Why this fails:\n");
+                let _ = write!(
+                    help,
+                    "Two services using the same protocol ({protocol}) cannot bind to the same\n\
+                    IP address and port number. The second service will fail with\n\
+                    \"Address already in use\" error.\n\n"
+                );
+
+                help.push_str("How to fix:\n");
+                help.push_str(
+                    "1. Assign different port numbers to each service\n\
+                    2. Or configure only one service to use this address\n\n",
+                );
+
+                help.push_str("Note:\n");
+                help.push_str(
+                    "Services using different protocols (UDP vs TCP) CAN share the same port.\n\
+                    See: docs/external-issues/tracker/udp-tcp-port-sharing-allowed.md\n",
+                );
+
+                help
+            }
+        }
+    }
+}
+
+impl TrackerConfig {
+    /// Validates the tracker configuration for socket address conflicts
+    ///
+    /// Checks that no two services using the same protocol attempt to bind
+    /// to the same socket address (IP + port). Services using different
+    /// protocols (UDP vs TCP) can share the same port number.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TrackerConfigError::DuplicateSocketAddress` if multiple services
+    /// using the same protocol attempt to bind to the same socket address.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::tracker::{
+    ///     TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig,
+    ///     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig
+    /// };
+    ///
+    /// let config = TrackerConfig {
+    ///     core: TrackerCoreConfig {
+    ///         database: DatabaseConfig::Sqlite(SqliteConfig {
+    ///             database_name: "tracker.db".to_string(),
+    ///         }),
+    ///         private: false,
+    ///     },
+    ///     udp_trackers: vec![
+    ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
+    ///     ],
+    ///     http_trackers: vec![
+    ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap() },
+    ///     ],
+    ///     http_api: HttpApiConfig {
+    ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
+    ///         admin_token: "MyAccessToken".to_string().into(),
+    ///     },
+    ///     health_check_api: HealthCheckApiConfig {
+    ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
+    ///     },
+    /// };
+    ///
+    /// assert!(config.validate().is_ok());
+    /// ```
+    pub fn validate(&self) -> Result<(), TrackerConfigError> {
+        // Collect all binding addresses with their service names
+        let mut bindings: HashMap<BindingAddress, Vec<String>> = HashMap::new();
+
+        // Add UDP trackers
+        for (i, udp) in self.udp_trackers.iter().enumerate() {
+            let binding = BindingAddress::new(udp.bind_address, Protocol::Udp);
+            bindings
+                .entry(binding)
+                .or_default()
+                .push(format!("UDP Tracker #{}", i + 1));
+        }
+
+        // Add HTTP trackers
+        for (i, http) in self.http_trackers.iter().enumerate() {
+            let binding = BindingAddress::new(http.bind_address, Protocol::Tcp);
+            bindings
+                .entry(binding)
+                .or_default()
+                .push(format!("HTTP Tracker #{}", i + 1));
+        }
+
+        // Add HTTP API
+        let api_binding = BindingAddress::new(self.http_api.bind_address, Protocol::Tcp);
+        bindings
+            .entry(api_binding)
+            .or_default()
+            .push("HTTP API".to_string());
+
+        // Add Health Check API
+        let health_binding = BindingAddress::new(self.health_check_api.bind_address, Protocol::Tcp);
+        bindings
+            .entry(health_binding)
+            .or_default()
+            .push("Health Check API".to_string());
+
+        // Check for duplicates
+        for (binding, services) in bindings {
+            if services.len() > 1 {
+                return Err(TrackerConfigError::DuplicateSocketAddress {
+                    address: *binding.socket(),
+                    protocol: binding.protocol(),
+                    services,
+                });
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl Default for TrackerConfig {
@@ -213,5 +401,310 @@ mod tests {
             "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
         );
         assert_eq!(config.http_api.admin_token.expose_secret(), "MyAccessToken");
+    }
+
+    mod validation {
+        use super::*;
+
+        #[test]
+        fn it_should_accept_valid_configuration_with_unique_addresses() {
+            let config = TrackerConfig {
+                core: TrackerCoreConfig {
+                    database: DatabaseConfig::Sqlite(SqliteConfig {
+                        database_name: "tracker.db".to_string(),
+                    }),
+                    private: false,
+                },
+                udp_trackers: vec![UdpTrackerConfig {
+                    bind_address: "0.0.0.0:6969".parse().unwrap(),
+                }],
+                http_trackers: vec![HttpTrackerConfig {
+                    bind_address: "0.0.0.0:7070".parse().unwrap(),
+                }],
+                http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:1212".parse().unwrap(),
+                    admin_token: "token".to_string().into(),
+                },
+                health_check_api: HealthCheckApiConfig {
+                    bind_address: "127.0.0.1:1313".parse().unwrap(),
+                },
+            };
+
+            assert!(config.validate().is_ok());
+        }
+
+        #[test]
+        fn it_should_reject_duplicate_udp_tracker_ports() {
+            let config = TrackerConfig {
+                core: TrackerCoreConfig {
+                    database: DatabaseConfig::Sqlite(SqliteConfig {
+                        database_name: "tracker.db".to_string(),
+                    }),
+                    private: false,
+                },
+                udp_trackers: vec![
+                    UdpTrackerConfig {
+                        bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    },
+                    UdpTrackerConfig {
+                        bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    },
+                ],
+                http_trackers: vec![],
+                http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:1212".parse().unwrap(),
+                    admin_token: "token".to_string().into(),
+                },
+                health_check_api: HealthCheckApiConfig {
+                    bind_address: "127.0.0.1:1313".parse().unwrap(),
+                },
+            };
+
+            let result = config.validate();
+            assert!(result.is_err());
+
+            if let Err(TrackerConfigError::DuplicateSocketAddress {
+                address,
+                protocol,
+                services,
+            }) = result
+            {
+                assert_eq!(address, "0.0.0.0:7070".parse::<SocketAddr>().unwrap());
+                assert_eq!(protocol, Protocol::Udp);
+                assert_eq!(services.len(), 2);
+                assert!(services.contains(&"UDP Tracker #1".to_string()));
+                assert!(services.contains(&"UDP Tracker #2".to_string()));
+            } else {
+                panic!("Expected DuplicateSocketAddress error");
+            }
+        }
+
+        #[test]
+        fn it_should_reject_duplicate_http_tracker_ports() {
+            let config = TrackerConfig {
+                core: TrackerCoreConfig {
+                    database: DatabaseConfig::Sqlite(SqliteConfig {
+                        database_name: "tracker.db".to_string(),
+                    }),
+                    private: false,
+                },
+                udp_trackers: vec![],
+                http_trackers: vec![
+                    HttpTrackerConfig {
+                        bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    },
+                    HttpTrackerConfig {
+                        bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    },
+                ],
+                http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:1212".parse().unwrap(),
+                    admin_token: "token".to_string().into(),
+                },
+                health_check_api: HealthCheckApiConfig {
+                    bind_address: "127.0.0.1:1313".parse().unwrap(),
+                },
+            };
+
+            let result = config.validate();
+            assert!(result.is_err());
+
+            if let Err(TrackerConfigError::DuplicateSocketAddress {
+                address,
+                protocol,
+                services,
+            }) = result
+            {
+                assert_eq!(address, "0.0.0.0:7070".parse::<SocketAddr>().unwrap());
+                assert_eq!(protocol, Protocol::Tcp);
+                assert_eq!(services.len(), 2);
+            } else {
+                panic!("Expected DuplicateSocketAddress error");
+            }
+        }
+
+        #[test]
+        fn it_should_reject_http_tracker_and_api_conflict() {
+            let config = TrackerConfig {
+                core: TrackerCoreConfig {
+                    database: DatabaseConfig::Sqlite(SqliteConfig {
+                        database_name: "tracker.db".to_string(),
+                    }),
+                    private: false,
+                },
+                udp_trackers: vec![],
+                http_trackers: vec![HttpTrackerConfig {
+                    bind_address: "0.0.0.0:7070".parse().unwrap(),
+                }],
+                http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    admin_token: "token".to_string().into(),
+                },
+                health_check_api: HealthCheckApiConfig {
+                    bind_address: "127.0.0.1:1313".parse().unwrap(),
+                },
+            };
+
+            let result = config.validate();
+            assert!(result.is_err());
+
+            if let Err(TrackerConfigError::DuplicateSocketAddress {
+                address,
+                protocol,
+                services,
+            }) = result
+            {
+                assert_eq!(address, "0.0.0.0:7070".parse::<SocketAddr>().unwrap());
+                assert_eq!(protocol, Protocol::Tcp);
+                assert_eq!(services.len(), 2);
+                assert!(services.contains(&"HTTP Tracker #1".to_string()));
+                assert!(services.contains(&"HTTP API".to_string()));
+            } else {
+                panic!("Expected DuplicateSocketAddress error");
+            }
+        }
+
+        #[test]
+        fn it_should_reject_http_tracker_and_health_check_api_conflict() {
+            let config = TrackerConfig {
+                core: TrackerCoreConfig {
+                    database: DatabaseConfig::Sqlite(SqliteConfig {
+                        database_name: "tracker.db".to_string(),
+                    }),
+                    private: false,
+                },
+                udp_trackers: vec![],
+                http_trackers: vec![HttpTrackerConfig {
+                    bind_address: "0.0.0.0:1313".parse().unwrap(),
+                }],
+                http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:1212".parse().unwrap(),
+                    admin_token: "token".to_string().into(),
+                },
+                health_check_api: HealthCheckApiConfig {
+                    bind_address: "0.0.0.0:1313".parse().unwrap(),
+                },
+            };
+
+            let result = config.validate();
+            assert!(result.is_err());
+
+            if let Err(TrackerConfigError::DuplicateSocketAddress {
+                address,
+                protocol,
+                services,
+            }) = result
+            {
+                assert_eq!(address, "0.0.0.0:1313".parse::<SocketAddr>().unwrap());
+                assert_eq!(protocol, Protocol::Tcp);
+                assert_eq!(services.len(), 2);
+                assert!(services.contains(&"HTTP Tracker #1".to_string()));
+                assert!(services.contains(&"Health Check API".to_string()));
+            } else {
+                panic!("Expected DuplicateSocketAddress error");
+            }
+        }
+
+        #[test]
+        fn it_should_allow_udp_and_http_on_same_port() {
+            // This is valid because UDP and TCP use separate port spaces
+            let config = TrackerConfig {
+                core: TrackerCoreConfig {
+                    database: DatabaseConfig::Sqlite(SqliteConfig {
+                        database_name: "tracker.db".to_string(),
+                    }),
+                    private: false,
+                },
+                udp_trackers: vec![UdpTrackerConfig {
+                    bind_address: "0.0.0.0:7070".parse().unwrap(),
+                }],
+                http_trackers: vec![HttpTrackerConfig {
+                    bind_address: "0.0.0.0:7070".parse().unwrap(),
+                }],
+                http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:1212".parse().unwrap(),
+                    admin_token: "token".to_string().into(),
+                },
+                health_check_api: HealthCheckApiConfig {
+                    bind_address: "127.0.0.1:1313".parse().unwrap(),
+                },
+            };
+
+            assert!(config.validate().is_ok());
+        }
+
+        #[test]
+        fn it_should_allow_same_port_different_ips() {
+            let config = TrackerConfig {
+                core: TrackerCoreConfig {
+                    database: DatabaseConfig::Sqlite(SqliteConfig {
+                        database_name: "tracker.db".to_string(),
+                    }),
+                    private: false,
+                },
+                udp_trackers: vec![],
+                http_trackers: vec![
+                    HttpTrackerConfig {
+                        bind_address: "192.168.1.10:7070".parse().unwrap(),
+                    },
+                    HttpTrackerConfig {
+                        bind_address: "192.168.1.20:7070".parse().unwrap(),
+                    },
+                ],
+                http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:1212".parse().unwrap(),
+                    admin_token: "token".to_string().into(),
+                },
+                health_check_api: HealthCheckApiConfig {
+                    bind_address: "127.0.0.1:1313".parse().unwrap(),
+                },
+            };
+
+            assert!(config.validate().is_ok());
+        }
+
+        #[test]
+        fn it_should_provide_clear_error_message_with_fix_instructions() {
+            let config = TrackerConfig {
+                core: TrackerCoreConfig {
+                    database: DatabaseConfig::Sqlite(SqliteConfig {
+                        database_name: "tracker.db".to_string(),
+                    }),
+                    private: false,
+                },
+                udp_trackers: vec![],
+                http_trackers: vec![HttpTrackerConfig {
+                    bind_address: "0.0.0.0:7070".parse().unwrap(),
+                }],
+                http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    admin_token: "token".to_string().into(),
+                },
+                health_check_api: HealthCheckApiConfig {
+                    bind_address: "127.0.0.1:1313".parse().unwrap(),
+                },
+            };
+
+            let error = config.validate().unwrap_err();
+            let error_message = error.to_string();
+
+            // Verify brief error message contains essential information
+            assert!(error_message.contains("Socket address conflict"));
+            assert!(error_message.contains("'HTTP Tracker #1'"));
+            assert!(error_message.contains("'HTTP API'"));
+            assert!(error_message.contains("0.0.0.0:7070"));
+            assert!(error_message.contains("TCP"));
+            assert!(error_message.contains("Tip: Assign different port numbers"));
+
+            // Verify detailed help contains comprehensive troubleshooting
+            let help = error.help();
+            assert!(help.contains("Socket Address Conflict - Detailed Troubleshooting"));
+            assert!(help.contains("Conflicting services:"));
+            assert!(help.contains("HTTP Tracker #1"));
+            assert!(help.contains("HTTP API"));
+            assert!(help.contains("Why this fails:"));
+            assert!(help.contains("How to fix:"));
+            assert!(help.contains("docs/external-issues/tracker/udp-tcp-port-sharing-allowed.md"));
+        }
     }
 }

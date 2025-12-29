@@ -68,6 +68,7 @@ impl TrackerSection {
     /// Returns error if any of the nested sections fail validation:
     /// - Invalid bind address formats
     /// - Invalid database configuration
+    /// - Socket address conflicts (multiple services on same IP:Port:Protocol)
     pub fn to_tracker_config(&self) -> Result<TrackerConfig, CreateConfigError> {
         let core = self.core.to_tracker_core_config()?;
 
@@ -88,13 +89,18 @@ impl TrackerSection {
         let health_check_api: HealthCheckApiConfig =
             self.health_check_api.to_health_check_api_config()?;
 
-        Ok(TrackerConfig {
+        let config = TrackerConfig {
             core,
             udp_trackers: udp_trackers?,
             http_trackers: http_trackers?,
             http_api,
             health_check_api,
-        })
+        };
+
+        // Validate socket address uniqueness
+        config.validate().map_err(CreateConfigError::from)?;
+
+        Ok(config)
     }
 }
 
@@ -305,5 +311,61 @@ mod tests {
         assert!(section.core.private);
         assert_eq!(section.udp_trackers.len(), 1);
         assert_eq!(section.http_trackers.len(), 1);
+    }
+
+    #[test]
+    fn it_should_reject_configuration_with_duplicate_socket_addresses() {
+        // HTTP tracker and API on same port (TCP protocol conflict)
+        let section = TrackerSection {
+            core: TrackerCoreSection {
+                database: DatabaseSection::Sqlite {
+                    database_name: "tracker.db".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![],
+            http_trackers: vec![HttpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+            }],
+            http_api: HttpApiSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+                admin_token: "token".to_string(),
+            },
+            health_check_api: HealthCheckApiSection::default(),
+        };
+
+        let result = section.to_tracker_config();
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::TrackerConfigValidation(_)
+        ));
+    }
+
+    #[test]
+    fn it_should_accept_udp_and_tcp_on_same_port() {
+        // UDP and TCP can share the same port (different protocol spaces)
+        let section = TrackerSection {
+            core: TrackerCoreSection {
+                database: DatabaseSection::Sqlite {
+                    database_name: "tracker.db".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![UdpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+            }],
+            http_trackers: vec![HttpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+            }],
+            http_api: HttpApiSection {
+                bind_address: "0.0.0.0:1212".to_string(),
+                admin_token: "token".to_string(),
+            },
+            health_check_api: HealthCheckApiSection::default(),
+        };
+
+        let result = section.to_tracker_config();
+        assert!(result.is_ok());
     }
 }

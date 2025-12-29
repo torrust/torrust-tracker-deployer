@@ -6,6 +6,8 @@
 //! # Module Structure
 //!
 //! - `config` - Main `TrackerConfig` and component configurations (includes database)
+//! - `binding_address` - Socket binding address with protocol information
+//! - `protocol` - Network protocol types (UDP, TCP)
 //!
 //! # Layer Separation
 //!
@@ -44,9 +46,13 @@
 //! };
 //! ```
 
+mod binding_address;
 mod config;
+mod protocol;
 
+pub use binding_address::BindingAddress;
 pub use config::{
     DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig,
-    SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+    SqliteConfig, TrackerConfig, TrackerConfigError, TrackerCoreConfig, UdpTrackerConfig,
 };
+pub use protocol::{Protocol, ProtocolParseError};
