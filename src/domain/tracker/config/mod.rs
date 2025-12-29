@@ -13,13 +13,11 @@ mod http;
 mod http_api;
 mod udp;
 
-pub use core::TrackerCoreConfig;
+pub use core::{DatabaseConfig, MysqlConfig, SqliteConfig, TrackerCoreConfig};
 pub use health_check_api::HealthCheckApiConfig;
 pub use http::HttpTrackerConfig;
 pub use http_api::HttpApiConfig;
 pub use udp::UdpTrackerConfig;
-
-use super::{DatabaseConfig, SqliteConfig};
 
 /// Tracker deployment configuration
 ///

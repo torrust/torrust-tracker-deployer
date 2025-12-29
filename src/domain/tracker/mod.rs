@@ -5,8 +5,7 @@
 //!
 //! # Module Structure
 //!
-//! - `config` - Main `TrackerConfig` and component configurations
-//! - `database` - Database configuration (`SQLite`, `MySQL`)
+//! - `config` - Main `TrackerConfig` and component configurations (includes database)
 //!
 //! # Layer Separation
 //!
@@ -46,10 +45,8 @@
 //! ```
 
 mod config;
-mod database;
 
 pub use config::{
-    HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, TrackerConfig, TrackerCoreConfig,
-    UdpTrackerConfig,
+    DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig,
+    SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
 };
-pub use database::{DatabaseConfig, MysqlConfig, SqliteConfig};

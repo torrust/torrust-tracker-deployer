@@ -2,7 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::tracker::DatabaseConfig;
+mod database;
+
+pub use database::{DatabaseConfig, MysqlConfig, SqliteConfig};
 
 /// Core tracker configuration options
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -17,7 +19,6 @@ pub struct TrackerCoreConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::tracker::{DatabaseConfig, SqliteConfig};
 
     #[test]
     fn it_should_create_core_config() {
