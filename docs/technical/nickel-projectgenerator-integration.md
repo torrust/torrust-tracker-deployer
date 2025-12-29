@@ -8,7 +8,7 @@ This document describes how to integrate the new Nickel-based template system in
 
 ### Three-Layer Project Generator Pattern
 
-```
+```text
 Domain (Config structs)
     ↓
 Context Builder (PrometheusContext, TrackerContext, etc.)
@@ -57,7 +57,7 @@ Create a new `NickelProjectGenerator` trait and implementations **alongside** ex
 
 #### New Module Structure
 
-```
+```text
 src/infrastructure/templating/
 ├── nickel/                          # NEW: Nickel-based rendering
 │   ├── mod.rs
@@ -419,6 +419,7 @@ impl ProjectGenerator {
 ### 1. Script Availability
 
 The Nickel rendering scripts must be in `provisioning/scripts/`:
+
 - `nickel-render-yaml.sh`
 - `nickel-render-toml.sh`
 - `nickel-render-hcl.sh`
@@ -430,6 +431,7 @@ Check existence and provide helpful error messages if missing.
 ### 2. Template Path Resolution
 
 Templates are in `provisioning/templates/` relative to project root:
+
 ```rust
 let template_path = ProjectRoot::path()
     .join("provisioning/templates/prometheus/config.ncl");
@@ -440,7 +442,8 @@ Ensure paths work both in development and when crate is used as a dependency.
 ### 3. Error Handling Strategy
 
 Nickel rendering errors should be clear:
-```
+
+```text
 Error: Nickel template evaluation failed for prometheus/config.ncl:
   Reason: Failed to import ../values/config.ncl: File not found
 
@@ -450,6 +453,7 @@ Error: Nickel template evaluation failed for prometheus/config.ncl:
 ### 4. Context vs Nickel Values
 
 **Tera approach** (existing):
+
 ```rust
 let context = PrometheusContext {
     scrape_interval: "30s".to_string(),
@@ -460,6 +464,7 @@ renderer.render(&context)?;
 ```
 
 **Nickel approach** (new):
+
 ```rust
 // No explicit context needed - Nickel imports from:
 // - provisioning/values/config.ncl (user configuration)
@@ -474,17 +479,20 @@ The configuration comes from Nickel's import system, not passed as Rust struct.
 ### 5. Gradual Migration Path
 
 **Option A: Parallel Systems** (recommended)
+
 - Both Tera and Nickel implementations coexist
 - Each template type migrates independently
 - No breaking changes to existing code
 - Transition over multiple releases
 
-**Option B: Progressive Replacement**
+#### Option B: Progressive Replacement
+
 - Start with simple templates (Prometheus)
 - Graduate to complex ones (Tracker)
 - Remove Tera when all templates migrated
 
-**Option C: Feature Flag**
+#### Option C: Feature Flag
+
 - Add `nickel-templates` Cargo feature
 - Enable/disable per use case
 - Production uses Tera, new deployments use Nickel
@@ -579,6 +587,7 @@ pub fn render_nickel_template(
 ```
 
 Then use it in ProjectGenerator:
+
 ```rust
 pub fn render_prometheus_nickel(&self) -> Result<(), NickelRenderError> {
     render_nickel_template(
@@ -594,6 +603,7 @@ pub fn render_prometheus_nickel(&self) -> Result<(), NickelRenderError> {
 ### Unit Tests
 
 Test script execution and error handling:
+
 ```rust
 #[test]
 fn it_should_execute_nickel_render_script() {
@@ -610,6 +620,7 @@ fn it_should_handle_missing_script() {
 ### Integration Tests
 
 Test actual Nickel rendering:
+
 ```rust
 #[test]
 fn it_should_render_prometheus_identically_to_tera() {
@@ -622,6 +633,7 @@ fn it_should_render_prometheus_identically_to_tera() {
 ### E2E Tests
 
 Test generated configs work in deployment:
+
 ```rust
 #[tokio::test]
 async fn it_should_deploy_with_nickel_generated_config() {
@@ -634,6 +646,7 @@ async fn it_should_deploy_with_nickel_generated_config() {
 ## Summary
 
 This integration approach:
+
 - ✅ **Non-breaking**: Nickel templates work alongside Tera
 - ✅ **Gradual**: Migrate one template type at a time
 - ✅ **Simple**: Leverages existing shell scripts
