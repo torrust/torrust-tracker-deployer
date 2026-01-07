@@ -135,8 +135,8 @@ When starting work on a new feature:
 ### 8. Add levels of verbosity
 
 - [ ] **8.1** Add levels of verbosity as described in the UX research
-
-**Note:** See [`docs/research/UX/`](./research/UX/) for detailed UX research.
+  - Implement `-v`, `-vv`, `-vvv` flags for user-facing output
+  - See [`docs/research/UX/`](https://github.com/torrust/torrust-tracker-deployer/tree/main/docs/research/UX) for detailed UX research
 
 ---
 
