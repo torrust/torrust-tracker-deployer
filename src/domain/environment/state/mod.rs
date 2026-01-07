@@ -43,7 +43,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::domain::environment::runtime_outputs::ProvisionMethod;
+use crate::domain::environment::runtime_outputs::{ProvisionMethod, ServiceEndpoints};
 
 // State modules
 mod common;
@@ -493,6 +493,20 @@ impl AnyEnvironmentState {
     #[must_use]
     pub fn provision_method(&self) -> Option<ProvisionMethod> {
         self.context().runtime_outputs.provision_method
+    }
+
+    /// Get the service endpoints if available, regardless of current state
+    ///
+    /// This method provides access to the service endpoints without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(&ServiceEndpoints)` if services have been started and URLs are available
+    /// - `None` if services haven't been started yet or URLs weren't recorded
+    #[must_use]
+    pub fn service_endpoints(&self) -> Option<&ServiceEndpoints> {
+        self.context().runtime_outputs.service_endpoints.as_ref()
     }
 
     /// Check if this environment was registered from existing infrastructure

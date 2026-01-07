@@ -142,8 +142,14 @@ impl ShowCommandHandler {
 
             // Add service info for Released/Running states
             if Self::should_show_services(any_env.state_name()) {
-                let tracker_config = any_env.tracker_config();
-                let services = ServiceInfo::from_tracker_config(tracker_config, instance_ip);
+                // Try to use stored service endpoints first, fall back to computing from config
+                let services = if let Some(endpoints) = any_env.service_endpoints() {
+                    ServiceInfo::from_service_endpoints(endpoints)
+                } else {
+                    // Backward compatibility: compute from tracker config
+                    let tracker_config = any_env.tracker_config();
+                    ServiceInfo::from_tracker_config(tracker_config, instance_ip)
+                };
                 info = info.with_services(services);
             }
         }

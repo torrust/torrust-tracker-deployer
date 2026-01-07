@@ -10,6 +10,7 @@ use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::application::StartServicesStep;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
+use crate::domain::environment::runtime_outputs::ServiceEndpoints;
 use crate::domain::environment::state::{RunFailureContext, RunStep};
 use crate::domain::environment::{Environment, Released, Running};
 use crate::domain::EnvironmentName;
@@ -148,6 +149,7 @@ impl RunCommandHandler {
     ///
     /// This method orchestrates the complete run workflow:
     /// 1. Start Docker Compose services on the remote host
+    /// 2. Build service endpoints for display
     ///
     /// If an error occurs, it returns both the error and the step that was being
     /// executed, enabling accurate failure context generation.
@@ -169,7 +171,14 @@ impl RunCommandHandler {
         // Step 1: Start Docker Compose services
         self.start_services(environment, instance_ip)?;
 
-        let running = environment.clone().start_running();
+        // Build service endpoints from tracker config and instance IP
+        let service_endpoints =
+            ServiceEndpoints::from_tracker_config(environment.tracker_config(), instance_ip);
+
+        // Transition to running state with service endpoints
+        let running = environment
+            .clone()
+            .start_running_with_endpoints(service_endpoints);
 
         Ok(running)
     }

@@ -197,6 +197,39 @@ impl ServiceInfo {
 
         Self::new(udp_trackers, http_trackers, api_endpoint, health_check_url)
     }
+
+    /// Build `ServiceInfo` from stored `ServiceEndpoints`
+    ///
+    /// This method extracts service URLs from the runtime outputs
+    /// that were stored when services were started.
+    #[must_use]
+    pub fn from_service_endpoints(
+        endpoints: &crate::domain::environment::runtime_outputs::ServiceEndpoints,
+    ) -> Self {
+        let udp_trackers = endpoints
+            .udp_trackers
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+
+        let http_trackers = endpoints
+            .http_trackers
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+
+        let api_endpoint = endpoints
+            .api_endpoint
+            .as_ref()
+            .map_or_else(String::new, ToString::to_string);
+
+        let health_check_url = endpoints
+            .health_check_url
+            .as_ref()
+            .map_or_else(String::new, ToString::to_string);
+
+        Self::new(udp_trackers, http_trackers, api_endpoint, health_check_url)
+    }
 }
 
 #[cfg(test)]

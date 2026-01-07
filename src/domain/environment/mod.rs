@@ -1127,6 +1127,7 @@ mod tests {
                 runtime_outputs: RuntimeOutputs {
                     instance_ip: None,
                     provision_method: None,
+                    service_endpoints: None,
                 },
                 created_at: chrono::Utc::now(),
             };

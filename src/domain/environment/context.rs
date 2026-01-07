@@ -204,6 +204,7 @@ impl EnvironmentContext {
             runtime_outputs: RuntimeOutputs {
                 instance_ip: None,
                 provision_method: None,
+                service_endpoints: None,
             },
         }
     }
@@ -241,6 +242,7 @@ impl EnvironmentContext {
             runtime_outputs: RuntimeOutputs {
                 instance_ip: None,
                 provision_method: None,
+                service_endpoints: None,
             },
         }
     }

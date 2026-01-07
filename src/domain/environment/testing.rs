@@ -169,6 +169,7 @@ impl EnvironmentTestBuilder {
             runtime_outputs: crate::domain::environment::RuntimeOutputs {
                 instance_ip: None,
                 provision_method: None,
+                service_endpoints: None,
             },
         };
 
