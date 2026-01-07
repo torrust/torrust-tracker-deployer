@@ -8,6 +8,8 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
+use crate::application::command_handlers::show::info::EnvironmentInfo;
+use crate::application::command_handlers::show::{ShowCommandHandler, ShowCommandHandlerError};
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::presentation::views::progress::ProgressReporter;
@@ -54,16 +56,16 @@ impl ShowStep {
 /// ## Responsibilities
 ///
 /// - Validate environment name format
-/// - Load environment from repository
+/// - Delegate to application layer for data extraction
 /// - Display state-aware information to the user
 /// - Provide next-step guidance based on current state
 ///
 /// ## Architecture
 ///
 /// This controller implements the Presentation Layer pattern, handling
-/// user interaction while delegating data access to the repository.
+/// user interaction while delegating business logic to the application layer.
 pub struct ShowCommandController {
-    repository: Arc<dyn EnvironmentRepository>,
+    handler: ShowCommandHandler,
     user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     progress: ProgressReporter,
 }
@@ -80,10 +82,11 @@ impl ShowCommandController {
         repository: Arc<dyn EnvironmentRepository + Send + Sync>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
+        let handler = ShowCommandHandler::new(repository);
         let progress = ProgressReporter::new(Arc::clone(&user_output), ShowStep::count());
 
         Self {
-            repository,
+            handler,
             user_output,
             progress,
         }
@@ -93,7 +96,7 @@ impl ShowCommandController {
     ///
     /// This method orchestrates the three-step workflow:
     /// 1. Validate environment name
-    /// 2. Load environment from repository
+    /// 2. Load environment and extract info via application layer
     /// 3. Display information to user
     ///
     /// # Arguments
@@ -107,11 +110,11 @@ impl ShowCommandController {
         // Step 1: Validate environment name
         let env_name = self.validate_environment_name(environment_name)?;
 
-        // Step 2: Load environment
-        let any_env = self.load_environment(&env_name)?;
+        // Step 2: Load environment via application layer
+        let env_info = self.load_environment(&env_name)?;
 
         // Step 3: Display information
-        self.display_information(&any_env)?;
+        self.display_information(&env_info)?;
 
         Ok(())
     }
@@ -137,95 +140,81 @@ impl ShowCommandController {
         Ok(env_name)
     }
 
-    /// Step 2: Load environment from repository
+    /// Step 2: Load environment via application layer
     fn load_environment(
         &mut self,
         env_name: &EnvironmentName,
-    ) -> Result<crate::domain::environment::state::AnyEnvironmentState, ShowSubcommandError> {
+    ) -> Result<EnvironmentInfo, ShowSubcommandError> {
         self.progress
             .start_step(ShowStep::LoadEnvironment.description())?;
 
-        let any_env = self
-            .repository
-            .load(env_name)
-            .map_err(|e| ShowSubcommandError::LoadError {
-                name: env_name.to_string(),
-                message: e.to_string(),
-            })?
-            .ok_or_else(|| ShowSubcommandError::EnvironmentNotFound {
-                name: env_name.to_string(),
-            })?;
+        let env_info = self
+            .handler
+            .execute(env_name)
+            .map_err(|e| Self::map_handler_error(e, env_name))?;
 
         self.progress
             .complete_step(Some(&format!("Environment loaded: {env_name}")))?;
 
-        Ok(any_env)
+        Ok(env_info)
+    }
+
+    /// Map application layer errors to presentation errors
+    fn map_handler_error(
+        error: ShowCommandHandlerError,
+        env_name: &EnvironmentName,
+    ) -> ShowSubcommandError {
+        match error {
+            ShowCommandHandlerError::EnvironmentNotFound { .. } => {
+                ShowSubcommandError::EnvironmentNotFound {
+                    name: env_name.to_string(),
+                }
+            }
+            ShowCommandHandlerError::LoadError(e) => ShowSubcommandError::LoadError {
+                name: env_name.to_string(),
+                message: e.to_string(),
+            },
+        }
     }
 
     /// Step 3: Display environment information
     fn display_information(
         &mut self,
-        any_env: &crate::domain::environment::state::AnyEnvironmentState,
+        env_info: &EnvironmentInfo,
     ) -> Result<(), ShowSubcommandError> {
         self.progress
             .start_step(ShowStep::DisplayInformation.description())?;
 
-        // Display basic information
         let output = self.user_output.lock();
         let mut output = output.borrow_mut();
 
+        // Display basic information
         output.blank_line();
-        output.result(&format!("Environment: {}", any_env.name()));
-        output.result(&format!("State: {}", Self::format_state_name(any_env)));
-        output.result(&format!("Provider: {}", any_env.provider_name()));
+        output.result(&format!("Environment: {}", env_info.name));
+        output.result(&format!("State: {}", env_info.state));
+        output.result(&format!("Provider: {}", env_info.provider));
+
+        // Display infrastructure details if available
+        if let Some(ref infra) = env_info.infrastructure {
+            output.blank_line();
+            output.result("Infrastructure:");
+            output.result(&format!("  Instance IP: {}", infra.instance_ip));
+            output.result(&format!("  SSH Port: {}", infra.ssh_port));
+            output.result(&format!("  SSH User: {}", infra.ssh_user));
+            output.result(&format!("  SSH Key: {}", infra.ssh_key_path));
+            output.blank_line();
+            output.result("Connection:");
+            output.result(&format!("  {}", infra.ssh_command()));
+        }
 
         // Display next step guidance
         output.blank_line();
-        output.result(&Self::get_next_step_guidance(any_env));
+        output.result(&env_info.next_step);
 
         drop(output);
 
         self.progress.complete_step(Some("Information displayed"))?;
 
         Ok(())
-    }
-
-    /// Format the state name in a user-friendly way
-    fn format_state_name(
-        any_env: &crate::domain::environment::state::AnyEnvironmentState,
-    ) -> String {
-        // Capitalize first letter of state name
-        let state_name = any_env.state_name();
-        let mut chars = state_name.chars();
-        match chars.next() {
-            None => String::new(),
-            Some(first) => first.to_uppercase().chain(chars).collect(),
-        }
-    }
-
-    /// Get next step guidance based on the current state
-    fn get_next_step_guidance(
-        any_env: &crate::domain::environment::state::AnyEnvironmentState,
-    ) -> String {
-        match any_env.state_name() {
-            "created" => {
-                "The environment configuration is ready. Run 'provision' to create infrastructure."
-                    .to_string()
-            }
-            "provisioned" => "Next step: Run 'configure' to set up the system.".to_string(),
-            "configured" => {
-                "Next step: Run 'release' to deploy application files.".to_string()
-            }
-            "released" => "Next step: Run 'run' to start the services.".to_string(),
-            "running" => "Status: ✓ All services running".to_string(),
-            "destroyed" => "The environment has been destroyed.".to_string(),
-            state if state.ends_with("_failed") => {
-                "The environment is in a failed state. Check error details and retry or destroy the environment.".to_string()
-            }
-            state if state.ends_with("ing") => {
-                format!("The environment is currently in a transitional state ({state}). Wait for the operation to complete.")
-            }
-            _ => "Check environment state and take appropriate action.".to_string(),
-        }
     }
 }
