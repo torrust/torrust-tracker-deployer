@@ -117,7 +117,7 @@ When starting work on a new feature:
 
 - [x] **5.1** `torrust-tracker-deployer show` - Display environment information and current state - [Issue #241](https://github.com/torrust/torrust-tracker-deployer/issues/241) ✅ Completed
 - [x] **5.2** `torrust-tracker-deployer test` - Run application tests ✅ Completed
-- [ ] **5.3** `torrust-tracker-deployer list` - List environments or deployments
+- [ ] **5.3** `torrust-tracker-deployer list` - List environments or deployments - [Issue #260](https://github.com/torrust/torrust-tracker-deployer/issues/260)
 
 **Note:** The test console subcommand is already partially implemented. The `show` command displays stored environment data (read-only, no remote verification). A future `status` command may be added for service health checks.
 
