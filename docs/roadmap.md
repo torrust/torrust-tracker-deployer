@@ -55,7 +55,6 @@ When starting work on a new feature:
   - Implementation should call the existing TestCommandHandler business logic
   - Handle user input, validation, and output presentation
   - Enables verification of deployment state via CLI (cloud-init, Docker, Docker Compose)
-- [ ] **1.9** Add levels of verbosity as described in the UX research
 
 **Note:** See [`docs/research/UX/`](./research/UX/) for detailed UX research that will be useful to implement the features in this section.
 
@@ -132,6 +131,12 @@ When starting work on a new feature:
 - [ ] **7.1** Implement database backups for MySQL
 - [ ] **7.2** Implement configuration backups
 - [ ] **7.3** Create recovery procedures documentation
+
+### 8. Add levels of verbosity
+
+- [ ] **8.1** Add levels of verbosity as described in the UX research
+
+**Note:** See [`docs/research/UX/`](./research/UX/) for detailed UX research.
 
 ---
 
