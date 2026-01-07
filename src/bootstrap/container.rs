@@ -17,6 +17,7 @@ use crate::presentation::controllers::create::subcommands::environment::CreateEn
 use crate::presentation::controllers::create::subcommands::schema::CreateSchemaCommandController;
 use crate::presentation::controllers::create::subcommands::template::CreateTemplateCommandController;
 use crate::presentation::controllers::destroy::DestroyCommandController;
+use crate::presentation::controllers::list::ListCommandController;
 use crate::presentation::controllers::provision::ProvisionCommandController;
 use crate::presentation::controllers::register::RegisterCommandController;
 use crate::presentation::controllers::release::ReleaseCommandController;
@@ -51,6 +52,7 @@ pub struct Container {
     repository_factory: Arc<RepositoryFactory>,
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
+    data_directory: Arc<Path>,
 }
 
 impl Container {
@@ -89,6 +91,7 @@ impl Container {
 
         // Create repository once for the entire application
         let data_dir = working_dir.join("data");
+        let data_directory: Arc<Path> = Arc::from(data_dir.as_path());
         let repository = repository_factory.create(data_dir);
 
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
@@ -98,6 +101,7 @@ impl Container {
             repository_factory,
             repository,
             clock,
+            data_directory,
         }
     }
 
@@ -256,6 +260,25 @@ impl Container {
     #[must_use]
     pub fn create_show_controller(&self) -> ShowCommandController {
         ShowCommandController::new(self.repository(), self.user_output())
+    }
+
+    /// Create a new `ListCommandController`
+    #[must_use]
+    pub fn create_list_controller(&self) -> ListCommandController {
+        ListCommandController::new(
+            self.repository_factory(),
+            self.data_directory(),
+            self.user_output(),
+        )
+    }
+
+    /// Get shared reference to data directory path
+    ///
+    /// Returns an `Arc<Path>` pointing to the data directory where
+    /// environment state files are stored.
+    #[must_use]
+    pub fn data_directory(&self) -> Arc<Path> {
+        Arc::clone(&self.data_directory)
     }
 }
 

@@ -203,8 +203,26 @@ pub enum Commands {
         /// The environment name must match an existing environment.
         environment: String,
     },
-}
 
+    /// List all environments in the deployment workspace
+    ///
+    /// This command provides a quick overview of all environments with their
+    /// names, states, and providers. It scans the local data directory and
+    /// does not make any network calls.
+    ///
+    /// The output includes:
+    /// - Environment name
+    /// - Current state (Created, Provisioned, Configured, Released, Running, Destroyed)
+    /// - Provider (LXD, Hetzner Cloud)
+    /// - Creation timestamp
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// torrust-tracker-deployer list
+    /// ```
+    List,
+}
 /// Actions available for the create command
 #[derive(Debug, Subcommand)]
 pub enum CreateAction {

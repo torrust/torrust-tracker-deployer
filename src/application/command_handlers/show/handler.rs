@@ -117,7 +117,7 @@ impl ShowCommandHandler {
     fn extract_info(any_env: &AnyEnvironmentState) -> EnvironmentInfo {
         let name = any_env.name().to_string();
         let state = Self::format_state_name(any_env.state_name());
-        let provider = Self::format_provider_name(any_env.provider_name());
+        let provider = any_env.provider_display_name().to_string();
         let created_at = any_env.created_at();
         let next_step = Self::get_next_step_guidance(any_env.state_name());
 
@@ -184,15 +184,6 @@ impl ShowCommandHandler {
             .join(" ")
     }
 
-    /// Format provider name for display
-    fn format_provider_name(provider_name: &str) -> String {
-        match provider_name {
-            "lxd" => "LXD".to_string(),
-            "hetzner" => "Hetzner Cloud".to_string(),
-            other => Self::format_state_name(other),
-        }
-    }
-
     /// Get next step guidance based on current state
     fn get_next_step_guidance(state_name: &str) -> String {
         match state_name {
@@ -253,28 +244,6 @@ mod tests {
                 ShowCommandHandler::format_state_name("configure_failed"),
                 "Configure Failed"
             );
-        }
-    }
-
-    mod format_provider_name {
-        use super::*;
-
-        #[test]
-        fn it_should_format_lxd() {
-            assert_eq!(ShowCommandHandler::format_provider_name("lxd"), "LXD");
-        }
-
-        #[test]
-        fn it_should_format_hetzner() {
-            assert_eq!(
-                ShowCommandHandler::format_provider_name("hetzner"),
-                "Hetzner Cloud"
-            );
-        }
-
-        #[test]
-        fn it_should_format_unknown_provider() {
-            assert_eq!(ShowCommandHandler::format_provider_name("aws"), "Aws");
         }
     }
 

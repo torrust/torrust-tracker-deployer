@@ -254,6 +254,7 @@ pub mod configure;
 pub mod constants;
 pub mod create;
 pub mod destroy;
+pub mod list;
 pub mod provision;
 pub mod register;
 pub mod release;

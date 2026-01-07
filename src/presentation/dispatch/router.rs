@@ -179,5 +179,9 @@ pub async fn route_command(
                 .execute(&environment)?;
             Ok(())
         }
+        Commands::List => {
+            context.container().create_list_controller().execute()?;
+            Ok(())
+        }
     }
 }

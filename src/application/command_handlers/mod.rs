@@ -12,6 +12,7 @@
 //! - `configure` - Infrastructure configuration and software installation
 //! - `create` - Environment creation and initialization
 //! - `destroy` - Infrastructure destruction and teardown
+//! - `list` - List all environments in the workspace (read-only)
 //! - `provision` - Infrastructure provisioning using `OpenTofu`
 //! - `register` - Register existing instances as alternative to provisioning
 //! - `release` - Software release to target instances
@@ -26,6 +27,7 @@ pub mod common;
 pub mod configure;
 pub mod create;
 pub mod destroy;
+pub mod list;
 pub mod provision;
 pub mod register;
 pub mod release;
@@ -36,6 +38,7 @@ pub mod test;
 pub use configure::ConfigureCommandHandler;
 pub use create::CreateCommandHandler;
 pub use destroy::DestroyCommandHandler;
+pub use list::ListCommandHandler;
 pub use provision::ProvisionCommandHandler;
 pub use register::RegisterCommandHandler;
 pub use release::ReleaseCommandHandler;
