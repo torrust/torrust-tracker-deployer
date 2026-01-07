@@ -172,5 +172,12 @@ pub async fn route_command(
                 .await?;
             Ok(())
         }
+        Commands::Show { environment } => {
+            context
+                .container()
+                .create_show_controller()
+                .execute(&environment)?;
+            Ok(())
+        }
     }
 }

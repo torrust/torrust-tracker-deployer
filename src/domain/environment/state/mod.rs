@@ -427,6 +427,19 @@ impl AnyEnvironmentState {
         self.context().user_inputs.ssh_port
     }
 
+    /// Get the provider name regardless of current state
+    ///
+    /// This method provides access to the provider name without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// A static string representing the provider name (e.g., "lxd", "hetzner").
+    #[must_use]
+    pub fn provider_name(&self) -> &'static str {
+        self.context().user_inputs.provider_config().provider_name()
+    }
+
     /// Get the tracker configuration regardless of current state
     ///
     /// This method provides access to the tracker configuration without needing to
