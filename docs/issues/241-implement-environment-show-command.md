@@ -15,12 +15,12 @@ This command displays different information based on the environment's current s
 
 ## Goals
 
-- [ ] Provide console command to display environment information
-- [ ] Show state-aware details (different information per state)
-- [ ] Use human-friendly output formatting with UserOutput
-- [ ] Handle errors gracefully with actionable messages
-- [ ] Maintain fast execution (< 100ms for typical environments)
-- [ ] Ensure comprehensive test coverage (unit + E2E)
+- [x] Provide console command to display environment information
+- [x] Show state-aware details (different information per state)
+- [x] Use human-friendly output formatting with UserOutput
+- [x] Handle errors gracefully with actionable messages
+- [x] Maintain fast execution (< 100ms for typical environments)
+- [x] Ensure comprehensive test coverage (unit + E2E)
 
 ## 🏗️ Architecture Requirements
 
@@ -199,96 +199,96 @@ All errors must include actionable messages guiding users on how to resolve the 
 
 ## Implementation Plan
 
-### Phase 1: Presentation Layer - CLI Skeleton (1-2 hours)
+### Phase 1: Presentation Layer - CLI Skeleton (1-2 hours) ✅
 
-- [ ] Create CLI subcommand in `src/presentation/input/cli/subcommands/show.rs`
-- [ ] Add `Show` variant to `Commands` enum in `src/presentation/input/cli/commands.rs`
-- [ ] Add command dispatch in `src/presentation/dispatch/mod.rs`
-- [ ] Add placeholder handler returning "Not implemented" message via UserOutput
-- [ ] Verify command appears in `--help` output
-- [ ] Create initial E2E test in `tests/e2e/commands/show_command.rs` (creates environment, runs show)
-- [ ] Manual CLI testing - command is runnable
+- [x] Create CLI subcommand in `src/presentation/input/cli/subcommands/show.rs`
+- [x] Add `Show` variant to `Commands` enum in `src/presentation/input/cli/commands.rs`
+- [x] Add command dispatch in `src/presentation/dispatch/mod.rs`
+- [x] Add placeholder handler returning "Not implemented" message via UserOutput
+- [x] Verify command appears in `--help` output
+- [x] Create initial E2E test in `tests/e2e/commands/show_command.rs` (creates environment, runs show)
+- [x] Manual CLI testing - command is runnable
 
 **Result**: Command runnable from CLI with placeholder message. E2E test validates basic execution.
 
-### Phase 2: Application Layer Foundation (2-3 hours)
+### Phase 2: Application Layer Foundation (2-3 hours) ✅
 
-- [ ] Create `ShowCommandHandler` in `src/application/commands/show/mod.rs`
-- [ ] Create `ShowCommandError` enum in `src/application/commands/show/error.rs`
-- [ ] Create `EnvironmentInfo` DTO in `src/application/commands/show/info.rs`
-- [ ] Implement environment loading with error handling (environment not found)
-- [ ] Extract basic info (name, state, provider) from environment
-- [ ] Display basic information via UserOutput (no println!/eprintln!)
-- [ ] Comprehensive unit tests for handler logic and error scenarios
-- [ ] Update E2E test to validate basic info display
+- [x] Create `ShowCommandHandler` in `src/application/commands/show/mod.rs`
+- [x] Create `ShowCommandError` enum in `src/application/commands/show/error.rs`
+- [x] Create `EnvironmentInfo` DTO in `src/application/commands/show/info.rs`
+- [x] Implement environment loading with error handling (environment not found)
+- [x] Extract basic info (name, state, provider) from environment
+- [x] Display basic information via UserOutput (no println!/eprintln!)
+- [x] Comprehensive unit tests for handler logic and error scenarios
+- [x] Update E2E test to validate basic info display
 
 **Result**: Command displays environment name, state, and provider.
 
-### Phase 3: State-Aware Information Extraction (3-4 hours)
+### Phase 3: State-Aware Information Extraction (3-4 hours) ✅
 
-- [ ] Implement state-specific extraction using existing environment data
-- [ ] Add infrastructure details for Provisioned state (IP, SSH port, SSH user, SSH key path)
-- [ ] Handle missing runtime_outputs gracefully with clear errors
-- [ ] Extract service configuration for Running state from tracker config
-- [ ] Handle all environment states (Created, Configured, Released, Running, etc.)
-- [ ] Handle invalid/corrupted state data
-- [ ] Comprehensive unit tests for all states and edge cases
-- [ ] Update E2E test to validate state-specific details
+- [x] Implement state-specific extraction using existing environment data
+- [x] Add infrastructure details for Provisioned state (IP, SSH port, SSH user, SSH key path)
+- [x] Handle missing runtime_outputs gracefully with clear errors
+- [x] Extract service configuration for Running state from tracker config
+- [x] Handle all environment states (Created, Configured, Released, Running, etc.)
+- [x] Handle invalid/corrupted state data
+- [x] Comprehensive unit tests for all states and edge cases
+- [x] Update E2E test to validate state-specific details
 
 **Result**: Command shows state-aware information for all environment states.
 
 **Note**: Uses only data already in environment JSON - no new fields yet.
 
-### Phase 4: Output Formatting (2-3 hours)
+### Phase 4: Output Formatting (2-3 hours) ✅
 
-- [ ] Implement output formatter using UserOutput
-- [ ] Add state-aware formatting for each environment state
-- [ ] Include next-step guidance based on current state
-- [ ] Add visual improvements (colors, spacing, structured output)
-- [ ] Unit tests for formatting logic
-- [ ] Update E2E test to validate output formatting
-- [ ] Manual terminal testing
+- [x] Implement output formatter using UserOutput
+- [x] Add state-aware formatting for each environment state
+- [x] Include next-step guidance based on current state
+- [x] Add visual improvements (colors, spacing, structured output)
+- [x] Unit tests for formatting logic
+- [x] Update E2E test to validate output formatting
+- [x] Manual terminal testing
 
 **Result**: Human-friendly, well-formatted output with next-step guidance.
 
-### Phase 5: Testing Strategy Analysis and Documentation (2-3 hours)
+### Phase 5: Testing Strategy Analysis and Documentation (2-3 hours) ✅
 
-- [ ] Analyze E2E testing strategies for different states:
+- [x] Analyze E2E testing strategies for different states:
   - **Strategy 1**: Call show in existing workflow tests after each state transition
   - **Strategy 2**: Mock internal state in dedicated E2E test
   - **Strategy 3**: Test different states via unit tests only (message formatting)
   - **Decision**: Use combination (Strategy 3 for formatting + Strategy 1 for E2E)
-- [ ] Implement chosen strategy
-- [ ] Add E2E tests for error scenarios (missing environment, corrupted data)
-- [ ] Verify test coverage meets requirements
-- [ ] Write user documentation in `docs/user-guide/commands/show.md`
-- [ ] Update `docs/console-commands.md` with show command
-- [ ] Update `docs/user-guide/commands.md` with command reference
-- [ ] Update `docs/roadmap.md` to mark task 5.1 as complete
+- [x] Implement chosen strategy
+- [x] Add E2E tests for error scenarios (missing environment, corrupted data)
+- [x] Verify test coverage meets requirements
+- [x] Write user documentation in `docs/user-guide/commands/show.md`
+- [x] Update `docs/console-commands.md` with show command
+- [x] Update `docs/user-guide/commands.md` with command reference
+- [x] Update `docs/roadmap.md` to mark task 5.1 as complete
 
 **Result**: Complete test coverage and user documentation.
 
-### Phase 6: Add Creation Timestamp (1-2 hours)
+### Phase 6: Add Creation Timestamp (1-2 hours) ✅
 
-- [ ] Add `created_at` field to Environment domain model
-- [ ] Update environment JSON serialization to include timestamp
-- [ ] Update `create` command to populate creation timestamp
-- [ ] Update `show` command to display creation timestamp
-- [ ] Unit tests for timestamp persistence and display
-- [ ] Update E2E test to validate timestamp display
+- [x] Add `created_at` field to Environment domain model
+- [x] Update environment JSON serialization to include timestamp
+- [x] Update `create` command to populate creation timestamp
+- [x] Update `show` command to display creation timestamp
+- [x] Unit tests for timestamp persistence and display
+- [x] Update E2E test to validate timestamp display
 
 **Result**: Show command displays when environment was created.
 
 **Note**: Extends domain model with new field. No backward compatibility needed (early development).
 
-### Phase 7: Add Service URLs to RuntimeOutputs (2-3 hours)
+### Phase 7: Add Service URLs to RuntimeOutputs (2-3 hours) ✅
 
-- [ ] Add `service_endpoints` field to RuntimeOutputs domain model (`src/domain/environment/runtime_outputs.rs`)
-- [ ] Define `ServiceEndpoints` struct with `url::Url` fields (not String)
-- [ ] Update `run` command to populate service URLs after successful startup
-- [ ] Update `show` command to read from RuntimeOutputs (with fallback to construction)
-- [ ] Unit tests for ServiceEndpoints persistence and display
-- [ ] Update E2E test to validate service URLs display
+- [x] Add `service_endpoints` field to RuntimeOutputs domain model (`src/domain/environment/runtime_outputs.rs`)
+- [x] Define `ServiceEndpoints` struct with `url::Url` fields (not String)
+- [x] Update `run` command to populate service URLs after successful startup
+- [x] Update `show` command to read from RuntimeOutputs (with fallback to construction)
+- [x] Unit tests for ServiceEndpoints persistence and display
+- [x] Update E2E test to validate service URLs display
 
 **Result**: Service URLs stored in RuntimeOutputs and displayed in show command.
 
