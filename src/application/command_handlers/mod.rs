@@ -16,6 +16,7 @@
 //! - `register` - Register existing instances as alternative to provisioning
 //! - `release` - Software release to target instances
 //! - `run` - Stack execution on target instances
+//! - `show` - Display environment information and status (read-only)
 //! - `test` - Deployment testing and validation
 //!
 //! Each command handler encapsulates a complete business workflow, handling orchestration,
@@ -29,6 +30,7 @@ pub mod provision;
 pub mod register;
 pub mod release;
 pub mod run;
+pub mod show;
 pub mod test;
 
 pub use configure::ConfigureCommandHandler;
@@ -38,4 +40,5 @@ pub use provision::ProvisionCommandHandler;
 pub use register::RegisterCommandHandler;
 pub use release::ReleaseCommandHandler;
 pub use run::RunCommandHandler;
+pub use show::ShowCommandHandler;
 pub use test::TestCommandHandler;

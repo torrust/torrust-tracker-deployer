@@ -89,7 +89,6 @@ pub struct CreateCommandHandler {
     pub(crate) environment_repository: Arc<dyn EnvironmentRepository>,
 
     /// Clock for timestamp generation (injected for testability)
-    #[allow(dead_code)] // Will be used in future enhancements
     pub(crate) clock: Arc<dyn Clock>,
 }
 
@@ -246,6 +245,7 @@ impl CreateCommandHandler {
             prometheus_config,
             grafana_config,
             working_dir,
+            self.clock.now(),
         );
 
         self.environment_repository

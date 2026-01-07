@@ -21,6 +21,7 @@ use crate::presentation::controllers::provision::ProvisionCommandController;
 use crate::presentation::controllers::register::RegisterCommandController;
 use crate::presentation::controllers::release::ReleaseCommandController;
 use crate::presentation::controllers::run::RunCommandController;
+use crate::presentation::controllers::show::ShowCommandController;
 use crate::presentation::controllers::test::handler::TestCommandController;
 use crate::presentation::views::{UserOutput, VerbosityLevel};
 use crate::shared::clock::Clock;
@@ -249,6 +250,12 @@ impl Container {
     #[must_use]
     pub fn create_run_controller(&self) -> RunCommandController {
         RunCommandController::new(self.repository(), self.clock(), self.user_output())
+    }
+
+    /// Create a new `ShowCommandController`
+    #[must_use]
+    pub fn create_show_controller(&self) -> ShowCommandController {
+        ShowCommandController::new(self.repository(), self.user_output())
     }
 }
 

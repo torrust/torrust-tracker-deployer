@@ -23,7 +23,7 @@ use crate::presentation::controllers::{
     configure::ConfigureSubcommandError, create::CreateCommandError,
     destroy::DestroySubcommandError, provision::ProvisionSubcommandError,
     register::errors::RegisterSubcommandError, release::ReleaseSubcommandError,
-    run::RunSubcommandError, test::TestSubcommandError,
+    run::RunSubcommandError, show::ShowSubcommandError, test::TestSubcommandError,
 };
 
 /// Errors that can occur during CLI command execution
@@ -89,6 +89,13 @@ pub enum CommandError {
     #[error("Run command failed: {0}")]
     Run(Box<RunSubcommandError>),
 
+    /// Show command specific errors
+    ///
+    /// Encapsulates all errors that can occur during environment information display.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Show command failed: {0}")]
+    Show(Box<ShowSubcommandError>),
+
     /// User output lock acquisition failed
     ///
     /// Failed to acquire the mutex lock for user output. This typically indicates
@@ -145,6 +152,12 @@ impl From<RunSubcommandError> for CommandError {
     }
 }
 
+impl From<ShowSubcommandError> for CommandError {
+    fn from(error: ShowSubcommandError) -> Self {
+        Self::Show(Box::new(error))
+    }
+}
+
 impl CommandError {
     /// Get detailed troubleshooting guidance for this error
     ///
@@ -189,6 +202,7 @@ impl CommandError {
             Self::Test(e) => e.as_ref().help().to_string(),
             Self::Release(e) => e.help().to_string(),
             Self::Run(e) => e.help().to_string(),
+            Self::Show(e) => e.help().to_string(),
             Self::UserOutputLockFailed => "User Output Lock Failed - Detailed Troubleshooting:
 
 This error indicates that a panic occurred in another thread while it was using

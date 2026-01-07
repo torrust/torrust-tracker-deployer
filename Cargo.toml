@@ -63,6 +63,7 @@ torrust-linting = { path = "packages/linting" }
 tracing = { version = "0.1", features = [ "attributes" ] }
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = [ "env-filter", "json", "fmt" ] }
+url = { version = "2.0", features = [ "serde" ] }
 uuid = { version = "1.0", features = [ "v4", "serde" ] }
 
 [dev-dependencies]

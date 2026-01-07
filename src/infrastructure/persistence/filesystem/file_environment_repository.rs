@@ -203,6 +203,7 @@ mod tests {
             default_lxd_provider_config(&env_name),
             ssh_credentials,
             22,
+            chrono::Utc::now(),
         )
     }
 

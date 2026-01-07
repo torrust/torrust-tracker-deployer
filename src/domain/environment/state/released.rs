@@ -9,6 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::domain::environment::runtime_outputs::ServiceEndpoints;
 use crate::domain::environment::state::{AnyEnvironmentState, Running, StateTypeError};
 use crate::domain::environment::Environment;
 
@@ -23,9 +24,27 @@ pub struct Released;
 
 // State transition implementations
 impl Environment<Released> {
+    /// Transitions from Released to Running state with service endpoints
+    ///
+    /// This method indicates that the application has started running and stores
+    /// the service endpoints for later display.
+    ///
+    /// # Arguments
+    ///
+    /// * `service_endpoints` - The URLs for all running services
+    #[must_use]
+    pub fn start_running_with_endpoints(
+        mut self,
+        service_endpoints: ServiceEndpoints,
+    ) -> Environment<Running> {
+        self.context.runtime_outputs.service_endpoints = Some(service_endpoints);
+        self.with_state(Running)
+    }
+
     /// Transitions from Released to Running state
     ///
     /// This method indicates that the application has started running.
+    /// Consider using `start_running_with_endpoints` to also store service URLs.
     #[must_use]
     pub fn start_running(self) -> Environment<Running> {
         self.with_state(Running)
@@ -103,6 +122,7 @@ mod tests {
                 default_lxd_provider_config(&name),
                 ssh_creds,
                 22,
+                chrono::Utc::now(),
             )
             .start_provisioning()
             .provisioned(
@@ -162,6 +182,7 @@ mod tests {
                 default_lxd_provider_config(&env_name),
                 ssh_credentials,
                 22,
+                chrono::Utc::now(),
             )
             .start_provisioning()
             .provisioned(

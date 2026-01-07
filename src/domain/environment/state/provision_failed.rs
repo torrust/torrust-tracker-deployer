@@ -201,6 +201,7 @@ mod tests {
                 default_lxd_provider_config(&name),
                 ssh_creds,
                 22,
+                chrono::Utc::now(),
             )
             .start_provisioning()
             .provision_failed(super::create_test_context())
@@ -231,6 +232,7 @@ mod tests {
                 default_lxd_provider_config(&name),
                 ssh_creds,
                 22,
+                chrono::Utc::now(),
             )
             .start_provisioning()
             .provision_failed(context.clone());

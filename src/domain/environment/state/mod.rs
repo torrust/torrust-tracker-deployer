@@ -43,7 +43,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::domain::environment::runtime_outputs::ProvisionMethod;
+use crate::domain::environment::runtime_outputs::{ProvisionMethod, ServiceEndpoints};
 
 // State modules
 mod common;
@@ -427,6 +427,19 @@ impl AnyEnvironmentState {
         self.context().user_inputs.ssh_port
     }
 
+    /// Get the provider name regardless of current state
+    ///
+    /// This method provides access to the provider name without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// A static string representing the provider name (e.g., "lxd", "hetzner").
+    #[must_use]
+    pub fn provider_name(&self) -> &'static str {
+        self.context().user_inputs.provider_config().provider_name()
+    }
+
     /// Get the tracker configuration regardless of current state
     ///
     /// This method provides access to the tracker configuration without needing to
@@ -454,6 +467,19 @@ impl AnyEnvironmentState {
         self.context().runtime_outputs.instance_ip
     }
 
+    /// Get when the environment was created
+    ///
+    /// This method provides access to the creation timestamp without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// The UTC timestamp when the environment was created.
+    #[must_use]
+    pub fn created_at(&self) -> chrono::DateTime<chrono::Utc> {
+        self.context().created_at
+    }
+
     /// Get the provision method if available, regardless of current state
     ///
     /// This method provides access to the provision method without needing to
@@ -467,6 +493,20 @@ impl AnyEnvironmentState {
     #[must_use]
     pub fn provision_method(&self) -> Option<ProvisionMethod> {
         self.context().runtime_outputs.provision_method
+    }
+
+    /// Get the service endpoints if available, regardless of current state
+    ///
+    /// This method provides access to the service endpoints without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(&ServiceEndpoints)` if services have been started and URLs are available
+    /// - `None` if services haven't been started yet or URLs weren't recorded
+    #[must_use]
+    pub fn service_endpoints(&self) -> Option<&ServiceEndpoints> {
+        self.context().runtime_outputs.service_endpoints.as_ref()
     }
 
     /// Check if this environment was registered from existing infrastructure
@@ -603,6 +643,7 @@ mod tests {
             default_lxd_provider_config(&name),
             ssh_creds,
             22,
+            chrono::Utc::now(),
         )
     }
 

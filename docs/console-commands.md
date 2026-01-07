@@ -8,6 +8,7 @@
 
 - **Create Template**: Generate environment configuration template (JSON)
 - **Create Environment**: Create new deployment environment from configuration file
+- **Show**: Display environment information with state-aware details
 - **Provision**: VM infrastructure provisioning with OpenTofu (LXD and Hetzner Cloud)
 - **Register**: Register existing instances as an alternative to provisioning (for pre-existing VMs, servers, or containers)
 - **Configure**: VM configuration with Docker, Docker Compose, and firewall via Ansible
@@ -124,6 +125,8 @@ torrust-tracker-deployer list            # List all environments (not yet implem
 # Environment Management
 torrust-tracker-deployer create template [PATH]         # ✅ Generate configuration template
 torrust-tracker-deployer create environment -f <file>   # ✅ Create environment from config
+torrust-tracker-deployer show <env>      # ✅ Display environment information
+
 # Plumbing Commands (Low-Level)
 torrust-tracker-deployer provision <env> # ✅ Create VM infrastructure
 torrust-tracker-deployer register <env> --instance-ip <IP>  # ✅ Register existing infrastructure
@@ -133,12 +136,9 @@ torrust-tracker-deployer run <env>       # ✅ Start Torrust Tracker services
 
 # Validation
 torrust-tracker-deployer test <env>      # ✅ Verify infrastructure (cloud-init, Docker, Docker Compose)
-torrust-tracker-deployer configure <env> # ✅ Setup VM (Docker, Docker Compose)
-torrust-tracker-deployer release <env>   # Deploy application files (not yet implemented)
-torrust-tracker-deployer run <env>       # Start application stack (not yet implemented)
 
-# Validation
-torrust-tracker-deployer test <env>      # ✅ Verify infrastructure (cloud-init, Docker, Docker Compose)
+# Cleanup
+torrust-tracker-deployer destroy <env>   # ✅ Destroy infrastructure and clean up
 ```
 
 ## Detailed Command Specifications
@@ -218,6 +218,72 @@ e2e-test      provisioned  2 hours ago  30 min ago   10.140.190.14
 production    running      5 days ago   1 hour ago   10.140.192.45
 staging       configured   1 day ago    6 hours ago  10.140.191.23
 development   destroyed    3 days ago   2 days ago   -
+```
+
+---
+
+### `show` - Environment Information
+
+**Status**: ✅ Implemented  
+**State Transition**: None (read-only)  
+**Purpose**: Display detailed information about a specific environment's current state.
+
+```bash
+torrust-tracker-deployer show <environment>
+```
+
+**Displays State-Aware Information**:
+
+- Environment name and current state
+- Provider type (LXD, Hetzner, etc.)
+- Infrastructure details (IP, SSH port, SSH user, SSH key path) for Provisioned+ states
+- Ready-to-use SSH connection command
+- Tracker service URLs for Released/Running states
+- Next-step guidance based on current state
+
+**Key Features**:
+
+- **Fast execution** - Reads only from local storage, no network connections
+- **State-aware output** - Shows different information based on environment state
+- **Actionable guidance** - Tells users what to do next
+
+**Example Output (Running State)**:
+
+```text
+Environment: my-environment
+State: Running
+Provider: LXD
+
+Infrastructure:
+  Instance IP: 10.140.190.171
+  SSH Port: 22
+  SSH User: torrust
+  SSH Key: ~/.ssh/torrust_deployer_key
+
+Connection:
+  ssh -i ~/.ssh/torrust_deployer_key torrust@10.140.190.171
+
+Tracker Services:
+  UDP Trackers:
+    - udp://10.140.190.171:6969/announce
+  HTTP Trackers:
+    - http://10.140.190.171:7070/announce
+  API Endpoint:
+    - http://10.140.190.171:1212/api
+  Health Check:
+    - http://10.140.190.171:1313/health_check
+
+Tracker is running! Use the URLs above to connect.
+```
+
+**Example Output (Created State)**:
+
+```text
+Environment: my-environment
+State: Created
+Provider: LXD
+
+Next: Run 'provision my-environment' to create infrastructure
 ```
 
 ---

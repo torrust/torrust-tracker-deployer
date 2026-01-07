@@ -40,8 +40,17 @@ use crate::domain::environment::{EnvironmentName, InternalConfig, RuntimeOutputs
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::ProviderConfig;
+use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+
+/// Default value for `created_at` field for backward compatibility
+///
+/// Returns Unix epoch (1970-01-01 00:00:00 UTC) for environments created
+/// before the `created_at` field was added.
+fn default_created_at() -> DateTime<Utc> {
+    Utc.timestamp_opt(0, 0).unwrap()
+}
 
 /// Complete environment context composed of three semantic types
 ///
@@ -81,6 +90,7 @@ use std::path::PathBuf;
 /// use torrust_tracker_deployer_lib::shared::Username;
 /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 /// use std::path::PathBuf;
+/// use chrono::{TimeZone, Utc};
 ///
 /// let env_name = EnvironmentName::new("production".to_string())?;
 /// let ssh_username = Username::new("torrust".to_string())?;
@@ -94,7 +104,8 @@ use std::path::PathBuf;
 /// });
 ///
 /// // Environment::new() creates the EnvironmentContext internally
-/// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+/// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+/// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
 ///
 /// // Access the context through the environment
 /// let context = environment.context();
@@ -104,6 +115,14 @@ use std::path::PathBuf;
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentContext {
+    /// Timestamp when the environment was created
+    ///
+    /// This field records the exact moment when the environment was first created
+    /// using the `create environment` command. It never changes throughout the
+    /// environment lifecycle.
+    #[serde(default = "default_created_at")]
+    pub created_at: DateTime<Utc>,
+
     /// User-provided configuration
     pub user_inputs: UserInputs,
 
@@ -141,6 +160,7 @@ impl EnvironmentContext {
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -153,7 +173,8 @@ impl EnvironmentContext {
     ///     profile_name: ProfileName::new("torrust-profile-production".to_string())?,
     /// });
     ///
-    /// let context = EnvironmentContext::new(&env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let context = EnvironmentContext::new(&env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// assert_eq!(context.user_inputs.instance_name.as_str(), "torrust-tracker-vm-production");
     /// let lxd_config = context.user_inputs.provider_config().as_lxd().unwrap();
@@ -174,13 +195,16 @@ impl EnvironmentContext {
         provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
+        created_at: DateTime<Utc>,
     ) -> Self {
         Self {
+            created_at,
             user_inputs: UserInputs::new(name, provider_config, ssh_credentials, ssh_port),
             internal_config: InternalConfig::new(name),
             runtime_outputs: RuntimeOutputs {
                 instance_ip: None,
                 provision_method: None,
+                service_endpoints: None,
             },
         }
     }
@@ -201,8 +225,10 @@ impl EnvironmentContext {
         prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
         grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
         working_dir: &std::path::Path,
+        created_at: DateTime<Utc>,
     ) -> Self {
         Self {
+            created_at,
             user_inputs: UserInputs::with_tracker(
                 name,
                 provider_config,
@@ -216,6 +242,7 @@ impl EnvironmentContext {
             runtime_outputs: RuntimeOutputs {
                 instance_ip: None,
                 provision_method: None,
+                service_endpoints: None,
             },
         }
     }
@@ -376,5 +403,11 @@ impl EnvironmentContext {
     #[must_use]
     pub fn provision_method(&self) -> Option<crate::domain::environment::ProvisionMethod> {
         self.runtime_outputs.provision_method
+    }
+
+    /// Returns the creation timestamp
+    #[must_use]
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
     }
 }

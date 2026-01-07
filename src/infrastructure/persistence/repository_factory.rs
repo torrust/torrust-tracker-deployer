@@ -164,7 +164,13 @@ mod tests {
         let provider_config = ProviderConfig::Lxd(LxdConfig {
             profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
         });
-        let environment = Environment::new(env_name.clone(), provider_config, ssh_credentials, 22);
+        let environment = Environment::new(
+            env_name.clone(),
+            provider_config,
+            ssh_credentials,
+            22,
+            chrono::Utc::now(),
+        );
 
         // Create repository with temp directory as base (not environment-specific directory)
         // The repository will automatically create the environment subdirectory

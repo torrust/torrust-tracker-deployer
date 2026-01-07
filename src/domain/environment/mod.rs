@@ -76,6 +76,7 @@
 //! use torrust_tracker_deployer_lib::shared::Username;
 //! use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 //! use std::path::PathBuf;
+//! use chrono::{TimeZone, Utc};
 //!
 //! let env_name = EnvironmentName::new("e2e-config".to_string())?;
 //! let ssh_username = Username::new("torrust".to_string())?;
@@ -87,7 +88,8 @@
 //! let provider_config = ProviderConfig::Lxd(LxdConfig {
 //!     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
 //! });
-//! let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+//! let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+//! let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
 //!
 //! // Environment automatically generates paths
 //! assert_eq!(*environment.data_dir(), PathBuf::from("./data/e2e-config"));
@@ -141,6 +143,7 @@ use crate::adapters::ssh::SshCredentials;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::{InstanceName, ProfileName};
 use crate::shared::Username;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use std::path::PathBuf;
@@ -243,6 +246,7 @@ impl Environment {
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -255,7 +259,8 @@ impl Environment {
     ///     profile_name: ProfileName::new("torrust-profile-production".to_string())?,
     /// });
     /// let ssh_port = 22;
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, ssh_port);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, ssh_port, created_at);
     ///
     /// assert_eq!(environment.instance_name().as_str(), "torrust-tracker-vm-production");
     /// assert_eq!(*environment.data_dir(), PathBuf::from("./data/production"));
@@ -275,8 +280,15 @@ impl Environment {
         provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
+        created_at: DateTime<Utc>,
     ) -> Environment<Created> {
-        let context = EnvironmentContext::new(&name, provider_config, ssh_credentials, ssh_port);
+        let context = EnvironmentContext::new(
+            &name,
+            provider_config,
+            ssh_credentials,
+            ssh_port,
+            created_at,
+        );
 
         Environment {
             context,
@@ -301,6 +313,7 @@ impl Environment {
         prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
         grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
         working_dir: &std::path::Path,
+        created_at: DateTime<Utc>,
     ) -> Environment<Created> {
         let context = EnvironmentContext::with_working_dir_and_tracker(
             &name,
@@ -311,6 +324,7 @@ impl Environment {
             prometheus_config,
             grafana_config,
             working_dir,
+            created_at,
         );
 
         Environment {
@@ -512,6 +526,7 @@ impl<S> Environment<S> {
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
     /// use std::net::{IpAddr, Ipv4Addr};
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("test".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -523,7 +538,8 @@ impl<S> Environment<S> {
     /// let provider_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// // Before provisioning
     /// assert_eq!(environment.instance_ip(), None);
@@ -538,6 +554,20 @@ impl<S> Environment<S> {
     #[must_use]
     pub fn instance_ip(&self) -> Option<IpAddr> {
         self.context.instance_ip()
+    }
+
+    /// Returns when this environment was created
+    ///
+    /// This timestamp is set when the environment is first created using the
+    /// `create environment` command and never changes throughout the
+    /// environment's lifecycle.
+    ///
+    /// # Returns
+    ///
+    /// The UTC timestamp when the environment was created.
+    #[must_use]
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.context.created_at()
     }
 
     /// Returns the provision method for this environment
@@ -579,6 +609,7 @@ impl<S> Environment<S> {
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -591,13 +622,14 @@ impl<S> Environment<S> {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
     ///
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
     /// // Provisioned environment - infrastructure is managed
-    /// let provisioned_env = Environment::new(env_name.clone(), provider_config.clone(), ssh_credentials.clone(), 22)
+    /// let provisioned_env = Environment::new(env_name.clone(), provider_config.clone(), ssh_credentials.clone(), 22, created_at)
     ///     .with_provision_method(ProvisionMethod::Provisioned);
     /// assert!(provisioned_env.is_infrastructure_managed());
     ///
     /// // Registered environment - infrastructure is NOT managed
-    /// let registered_env = Environment::new(env_name, provider_config, ssh_credentials, 22)
+    /// let registered_env = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at)
     ///     .with_provision_method(ProvisionMethod::Registered);
     /// assert!(!registered_env.is_infrastructure_managed());
     ///
@@ -637,6 +669,7 @@ impl<S> Environment<S> {
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
     /// use std::net::{IpAddr, Ipv4Addr};
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -648,7 +681,8 @@ impl<S> Environment<S> {
     /// let provider_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// // Set IP after provisioning
     /// let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 42));
@@ -697,6 +731,7 @@ impl<S> Environment<S> {
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("staging".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -708,7 +743,8 @@ impl<S> Environment<S> {
     /// let provider_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// assert_eq!(
     ///     environment.templates_dir(),
@@ -736,6 +772,7 @@ impl<S> Environment<S> {
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("production".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -747,7 +784,8 @@ impl<S> Environment<S> {
     /// let provider_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// assert_eq!(
     ///     environment.traces_dir(),
@@ -772,6 +810,7 @@ impl<S> Environment<S> {
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("dev".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -783,7 +822,8 @@ impl<S> Environment<S> {
     /// let provider_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// assert_eq!(
     ///     environment.ansible_build_dir(),
@@ -808,6 +848,7 @@ impl<S> Environment<S> {
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("test".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -819,7 +860,8 @@ impl<S> Environment<S> {
     /// let provider_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// assert_eq!(
     ///     environment.tofu_build_dir(),
@@ -844,6 +886,7 @@ impl<S> Environment<S> {
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("integration".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -855,7 +898,8 @@ impl<S> Environment<S> {
     /// let provider_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// assert_eq!(
     ///     environment.ansible_templates_dir(),
@@ -880,6 +924,7 @@ impl<S> Environment<S> {
     /// use torrust_tracker_deployer_lib::shared::Username;
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
     /// use std::path::PathBuf;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// let env_name = EnvironmentName::new("load-test".to_string())?;
     /// let ssh_username = Username::new("torrust".to_string())?;
@@ -891,7 +936,8 @@ impl<S> Environment<S> {
     /// let provider_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// assert_eq!(
     ///     environment.tofu_templates_dir(),
@@ -1002,7 +1048,13 @@ mod tests {
                 profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
             });
 
-            Environment::new(env_name, provider_config, ssh_credentials, ssh_port)
+            Environment::new(
+                env_name,
+                provider_config,
+                ssh_credentials,
+                ssh_port,
+                chrono::Utc::now(),
+            )
         }
 
         /// Builds an Environment and returns the `TempDir`
@@ -1025,8 +1077,13 @@ mod tests {
             let provider_config = ProviderConfig::Lxd(LxdConfig {
                 profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
             });
-            let environment =
-                Environment::new(env_name, provider_config, ssh_credentials, ssh_port);
+            let environment = Environment::new(
+                env_name,
+                provider_config,
+                ssh_credentials,
+                ssh_port,
+                chrono::Utc::now(),
+            );
             (environment, self.temp_dir)
         }
 
@@ -1070,7 +1127,9 @@ mod tests {
                 runtime_outputs: RuntimeOutputs {
                     instance_ip: None,
                     provision_method: None,
+                    service_endpoints: None,
                 },
+                created_at: chrono::Utc::now(),
             };
 
             let environment = Environment {

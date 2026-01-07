@@ -258,6 +258,7 @@ pub mod provision;
 pub mod register;
 pub mod release;
 pub mod run;
+pub mod show;
 pub mod test;
 
 // Shared test utilities

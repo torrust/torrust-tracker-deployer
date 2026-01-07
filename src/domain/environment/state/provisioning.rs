@@ -140,6 +140,7 @@ mod tests {
                 default_lxd_provider_config(&name),
                 ssh_creds,
                 22,
+                chrono::Utc::now(),
             )
             .start_provisioning()
         }
@@ -168,6 +169,7 @@ mod tests {
                 default_lxd_provider_config(&name),
                 ssh_creds,
                 22,
+                chrono::Utc::now(),
             );
             let any_env = env.into_any();
             let result = any_env.try_into_provisioning();
@@ -213,6 +215,7 @@ mod tests {
                 default_lxd_provider_config(&name),
                 ssh_creds,
                 22,
+                chrono::Utc::now(),
             )
             .start_provisioning()
         }

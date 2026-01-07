@@ -178,6 +178,31 @@ pub enum Commands {
         /// previously released and is in "Released" state.
         environment: String,
     },
+
+    /// Show environment information with state-aware details
+    ///
+    /// This command displays a read-only view of stored environment data
+    /// without remote verification, making it fast and reliable.
+    ///
+    /// The output includes:
+    /// - Environment name and current state
+    /// - Provider information
+    /// - Infrastructure details (IP, SSH credentials) when provisioned
+    /// - Service URLs when running
+    /// - Next-step guidance based on current state
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// torrust-tracker-deployer show my-env
+    /// torrust-tracker-deployer show production
+    /// ```
+    Show {
+        /// Name of the environment to show
+        ///
+        /// The environment name must match an existing environment.
+        environment: String,
+    },
 }
 
 /// Actions available for the create command

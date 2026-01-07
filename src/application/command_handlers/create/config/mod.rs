@@ -56,6 +56,7 @@
 //!     ProviderSection, LxdProviderSection
 //! };
 //! use torrust_tracker_deployer_lib::domain::Environment;
+//! use chrono::{TimeZone, Utc};
 //!
 //! // Deserialize configuration from JSON
 //! let json = r#"{
@@ -101,7 +102,8 @@
 //! let (name, instance_name, provider_config, credentials, port, tracker, _prometheus, _grafana) = config.to_environment_params()?;
 //!
 //! // Create domain entity - Environment::new() will use the provider_config
-//! let environment = Environment::new(name, provider_config, credentials, port);
+//! let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+//! let environment = Environment::new(name, provider_config, credentials, port, created_at);
 //!
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
