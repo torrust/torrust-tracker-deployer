@@ -254,9 +254,9 @@ impl ProgressReporter {
             let duration = start.elapsed();
             self.with_output(|output| {
                 if let Some(msg) = result {
-                    output.result(&format!("  ✓ {} (took {})", msg, format_duration(duration)));
+                    output.progress(&format!("  ✓ {} (took {})", msg, format_duration(duration)));
                 } else {
-                    output.result(&format!("  ✓ Done (took {})", format_duration(duration)));
+                    output.progress(&format!("  ✓ Done (took {})", format_duration(duration)));
                 }
             })?;
         }
@@ -301,7 +301,7 @@ impl ProgressReporter {
     /// ```
     pub fn sub_step(&mut self, description: &str) -> Result<(), ProgressReporterError> {
         self.with_output(|output| {
-            output.result(&format!("    → {description}"));
+            output.progress(&format!("    → {description}"));
         })?;
         Ok(())
     }
@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn it_should_complete_step_with_result_message() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, stdout, _stderr) = test_output.into_reentrant_wrapped();
+        let (output, _stdout, stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -575,16 +575,16 @@ mod tests {
             .complete_step(Some("Data loaded successfully"))
             .expect("Failed to complete step");
 
-        let stdout_content = String::from_utf8(stdout.lock().clone()).unwrap();
-        assert!(stdout_content.contains("✓ Data loaded successfully"));
-        assert!(stdout_content.contains("took"));
+        let stderr_content = String::from_utf8(stderr.lock().clone()).unwrap();
+        assert!(stderr_content.contains("✓ Data loaded successfully"));
+        assert!(stderr_content.contains("took"));
         assert!(progress.step_start.is_none());
     }
 
     #[test]
     fn it_should_complete_step_without_result_message() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, stdout, _stderr) = test_output.into_reentrant_wrapped();
+        let (output, _stdout, stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -594,16 +594,16 @@ mod tests {
             .complete_step(None)
             .expect("Failed to complete step");
 
-        let stdout_content = String::from_utf8(stdout.lock().clone()).unwrap();
-        assert!(stdout_content.contains("✓ Done"));
-        assert!(stdout_content.contains("took"));
+        let stderr_content = String::from_utf8(stderr.lock().clone()).unwrap();
+        assert!(stderr_content.contains("✓ Done"));
+        assert!(stderr_content.contains("took"));
         assert!(progress.step_start.is_none());
     }
 
     #[test]
     fn it_should_report_sub_steps() {
         let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-        let (output, stdout, _stderr) = test_output.into_reentrant_wrapped();
+        let (output, _stdout, stderr) = test_output.into_reentrant_wrapped();
         let mut progress = ProgressReporter::new(output, 1);
 
         progress
@@ -619,9 +619,9 @@ mod tests {
             .complete_step(None)
             .expect("Failed to complete step");
 
-        let stdout_content = String::from_utf8(stdout.lock().clone()).unwrap();
-        assert!(stdout_content.contains("→ Creating VM"));
-        assert!(stdout_content.contains("→ Configuring network"));
+        let stderr_content = String::from_utf8(stderr.lock().clone()).unwrap();
+        assert!(stderr_content.contains("→ Creating VM"));
+        assert!(stderr_content.contains("→ Configuring network"));
     }
 
     #[test]
@@ -741,12 +741,14 @@ mod tests {
         assert!(stderr_content.contains("[2/3] Provisioning infrastructure..."));
         assert!(stderr_content.contains("[3/3] Finalizing environment..."));
         assert!(stderr_content.contains("✅ Environment 'test-env' created successfully"));
+        assert!(stderr_content.contains("✓ Configuration loaded: test-env"));
+        assert!(stderr_content.contains("→ Creating virtual machine"));
+        assert!(stderr_content.contains("→ Configuring network"));
+        assert!(stderr_content.contains("✓ Instance created: test-instance"));
+        assert!(stderr_content.contains("✓ Done"));
 
         let stdout_content = String::from_utf8(stdout.lock().clone()).expect("Invalid UTF-8");
-        assert!(stdout_content.contains("✓ Configuration loaded: test-env"));
-        assert!(stdout_content.contains("→ Creating virtual machine"));
-        assert!(stdout_content.contains("→ Configuring network"));
-        assert!(stdout_content.contains("✓ Instance created: test-instance"));
-        assert!(stdout_content.contains("✓ Done"));
+        // stdout should be empty - all progress goes to stderr
+        assert!(stdout_content.is_empty());
     }
 }
