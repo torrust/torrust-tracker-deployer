@@ -362,6 +362,75 @@ impl ProcessRunner {
 
         Ok(ProcessResult::new(output))
     }
+
+    /// Run the list command with the production binary
+    ///
+    /// This method runs `cargo run -- list` with optional working directory
+    /// for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path contains invalid UTF-8.
+    pub fn run_list_command(&self) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "list",
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args(["run", "--", "list"]);
+        }
+
+        let output = cmd.output().context("Failed to execute list command")?;
+
+        Ok(ProcessResult::new(output))
+    }
+
+    /// Run the show command with the production binary
+    ///
+    /// This method runs `cargo run -- show <environment_name>` with
+    /// optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path contains invalid UTF-8.
+    pub fn run_show_command(&self, environment_name: &str) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "show",
+                environment_name,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args(["run", "--", "show", environment_name]);
+        }
+
+        let output = cmd.output().context("Failed to execute show command")?;
+
+        Ok(ProcessResult::new(output))
+    }
 }
 
 impl Default for ProcessRunner {

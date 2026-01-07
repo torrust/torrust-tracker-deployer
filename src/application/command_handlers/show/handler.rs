@@ -116,12 +116,12 @@ impl ShowCommandHandler {
     /// Extract information from environment based on its state
     fn extract_info(any_env: &AnyEnvironmentState) -> EnvironmentInfo {
         let name = any_env.name().to_string();
-        let state = Self::format_state_name(any_env.state_name());
-        let provider = Self::format_provider_name(any_env.provider_name());
+        let state = any_env.state_display_name().to_string();
+        let provider = any_env.provider_display_name().to_string();
         let created_at = any_env.created_at();
-        let next_step = Self::get_next_step_guidance(any_env.state_name());
+        let state_name = any_env.state_name().to_string();
 
-        let mut info = EnvironmentInfo::new(name, state, provider, created_at, next_step);
+        let mut info = EnvironmentInfo::new(name, state, provider, created_at, state_name);
 
         // Add infrastructure info if instance IP is available
         if let Some(instance_ip) = any_env.instance_ip() {
@@ -167,145 +167,11 @@ impl ShowCommandHandler {
             "released" | "running" | "release_failed" | "run_failed"
         )
     }
-
-    /// Format state name for display
-    fn format_state_name(state_name: &str) -> String {
-        // Convert snake_case to Title Case
-        state_name
-            .split('_')
-            .map(|word| {
-                let mut chars = word.chars();
-                match chars.next() {
-                    Some(first) => first.to_uppercase().chain(chars).collect(),
-                    None => String::new(),
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(" ")
-    }
-
-    /// Format provider name for display
-    fn format_provider_name(provider_name: &str) -> String {
-        match provider_name {
-            "lxd" => "LXD".to_string(),
-            "hetzner" => "Hetzner Cloud".to_string(),
-            other => Self::format_state_name(other),
-        }
-    }
-
-    /// Get next step guidance based on current state
-    fn get_next_step_guidance(state_name: &str) -> String {
-        match state_name {
-            "created" => "Run 'provision' to create infrastructure.".to_string(),
-            "provisioning" => {
-                "Provisioning in progress. Wait for completion or check logs.".to_string()
-            }
-            "provisioned" => "Run 'configure' to set up the system.".to_string(),
-            "configuring" => {
-                "Configuration in progress. Wait for completion or check logs.".to_string()
-            }
-            "configured" => "Run 'release' to deploy the tracker software.".to_string(),
-            "releasing" => "Release in progress. Wait for completion or check logs.".to_string(),
-            "released" => "Run 'run' to start the tracker services.".to_string(),
-            "running" => "Services are running. Use 'test' to verify health.".to_string(),
-            "destroying" => "Destruction in progress. Wait for completion.".to_string(),
-            "destroyed" => {
-                "Environment has been destroyed. Create a new environment to redeploy.".to_string()
-            }
-            "provision_failed" => {
-                "Provisioning failed. Check error details and retry 'provision'.".to_string()
-            }
-            "configure_failed" => {
-                "Configuration failed. Check error details and retry 'configure'.".to_string()
-            }
-            "release_failed" => {
-                "Release failed. Check error details and retry 'release'.".to_string()
-            }
-            "run_failed" => "Run failed. Check error details and retry 'run'.".to_string(),
-            "destroy_failed" => {
-                "Destruction failed. Check error details and retry 'destroy'.".to_string()
-            }
-            _ => format!("Unknown state: {state_name}. Check environment state file."),
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    mod format_state_name {
-        use super::*;
-
-        #[test]
-        fn it_should_format_simple_state() {
-            assert_eq!(ShowCommandHandler::format_state_name("created"), "Created");
-            assert_eq!(ShowCommandHandler::format_state_name("running"), "Running");
-        }
-
-        #[test]
-        fn it_should_format_compound_state() {
-            assert_eq!(
-                ShowCommandHandler::format_state_name("provision_failed"),
-                "Provision Failed"
-            );
-            assert_eq!(
-                ShowCommandHandler::format_state_name("configure_failed"),
-                "Configure Failed"
-            );
-        }
-    }
-
-    mod format_provider_name {
-        use super::*;
-
-        #[test]
-        fn it_should_format_lxd() {
-            assert_eq!(ShowCommandHandler::format_provider_name("lxd"), "LXD");
-        }
-
-        #[test]
-        fn it_should_format_hetzner() {
-            assert_eq!(
-                ShowCommandHandler::format_provider_name("hetzner"),
-                "Hetzner Cloud"
-            );
-        }
-
-        #[test]
-        fn it_should_format_unknown_provider() {
-            assert_eq!(ShowCommandHandler::format_provider_name("aws"), "Aws");
-        }
-    }
-
-    mod get_next_step_guidance {
-        use super::*;
-
-        #[test]
-        fn it_should_guide_from_created_state() {
-            let guidance = ShowCommandHandler::get_next_step_guidance("created");
-            assert!(guidance.contains("provision"));
-        }
-
-        #[test]
-        fn it_should_guide_from_provisioned_state() {
-            let guidance = ShowCommandHandler::get_next_step_guidance("provisioned");
-            assert!(guidance.contains("configure"));
-        }
-
-        #[test]
-        fn it_should_guide_from_running_state() {
-            let guidance = ShowCommandHandler::get_next_step_guidance("running");
-            assert!(guidance.contains("test"));
-        }
-
-        #[test]
-        fn it_should_handle_failed_states() {
-            let guidance = ShowCommandHandler::get_next_step_guidance("provision_failed");
-            assert!(guidance.contains("failed"));
-            assert!(guidance.contains("retry"));
-        }
-    }
 
     mod should_show_services {
         use super::*;

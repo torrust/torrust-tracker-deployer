@@ -33,8 +33,8 @@ pub struct EnvironmentInfo {
     /// Tracker service information, available for Released/Running states
     pub services: Option<ServiceInfo>,
 
-    /// Guidance for the next step based on current state
-    pub next_step: String,
+    /// Internal state name (e.g., "created", "provisioned") for guidance generation
+    pub state_name: String,
 }
 
 impl EnvironmentInfo {
@@ -45,7 +45,7 @@ impl EnvironmentInfo {
         state: String,
         provider: String,
         created_at: DateTime<Utc>,
-        next_step: String,
+        state_name: String,
     ) -> Self {
         Self {
             name,
@@ -54,7 +54,7 @@ impl EnvironmentInfo {
             created_at,
             infrastructure: None,
             services: None,
-            next_step,
+            state_name,
         }
     }
 

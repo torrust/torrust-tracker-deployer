@@ -275,6 +275,36 @@ impl AnyEnvironmentState {
         }
     }
 
+    /// Returns a human-readable display name for the current state.
+    ///
+    /// This provides a user-friendly representation suitable for CLI output,
+    /// reports, and other user-facing contexts. Failed states include a space
+    /// for readability (e.g., "Provision Failed").
+    ///
+    /// # Returns
+    ///
+    /// A static string representing the display name (e.g., "Created", "Provision Failed").
+    #[must_use]
+    pub fn state_display_name(&self) -> &'static str {
+        match self {
+            Self::Created(_) => "Created",
+            Self::Provisioning(_) => "Provisioning",
+            Self::Provisioned(_) => "Provisioned",
+            Self::Configuring(_) => "Configuring",
+            Self::Configured(_) => "Configured",
+            Self::Releasing(_) => "Releasing",
+            Self::Released(_) => "Released",
+            Self::Running(_) => "Running",
+            Self::Destroying(_) => "Destroying",
+            Self::ProvisionFailed(_) => "Provision Failed",
+            Self::ConfigureFailed(_) => "Configure Failed",
+            Self::ReleaseFailed(_) => "Release Failed",
+            Self::RunFailed(_) => "Run Failed",
+            Self::DestroyFailed(_) => "Destroy Failed",
+            Self::Destroyed(_) => "Destroyed",
+        }
+    }
+
     /// Check if the environment is in a success (non-error) state
     ///
     /// Success states are those representing normal operation flow, including
@@ -438,6 +468,22 @@ impl AnyEnvironmentState {
     #[must_use]
     pub fn provider_name(&self) -> &'static str {
         self.context().user_inputs.provider_config().provider_name()
+    }
+
+    /// Get the human-readable provider display name regardless of current state
+    ///
+    /// This method provides access to the provider display name without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// A static string representing the provider display name (e.g., "LXD", "Hetzner Cloud").
+    #[must_use]
+    pub fn provider_display_name(&self) -> &'static str {
+        self.context()
+            .user_inputs
+            .provider_config()
+            .provider_display_name()
     }
 
     /// Get the tracker configuration regardless of current state

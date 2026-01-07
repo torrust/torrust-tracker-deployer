@@ -106,6 +106,39 @@ impl ProviderConfig {
         self.provider().as_str()
     }
 
+    /// Returns a human-readable display name for the provider.
+    ///
+    /// This method converts the internal provider identifier to a user-friendly
+    /// format suitable for display in CLI output, logs, or documentation.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::provider::{ProviderConfig, LxdConfig, HetznerConfig};
+    /// use torrust_tracker_deployer_lib::domain::ProfileName;
+    /// use torrust_tracker_deployer_lib::shared::secrets::ApiToken;
+    ///
+    /// let lxd_config = ProviderConfig::Lxd(LxdConfig {
+    ///     profile_name: ProfileName::new("test").unwrap(),
+    /// });
+    /// assert_eq!(lxd_config.provider_display_name(), "LXD");
+    ///
+    /// let hetzner_config = ProviderConfig::Hetzner(HetznerConfig {
+    ///     api_token: ApiToken::from("token"),
+    ///     server_type: "cx22".to_string(),
+    ///     location: "nbg1".to_string(),
+    ///     image: "ubuntu-24.04".to_string(),
+    /// });
+    /// assert_eq!(hetzner_config.provider_display_name(), "Hetzner Cloud");
+    /// ```
+    #[must_use]
+    pub fn provider_display_name(&self) -> &'static str {
+        match self {
+            Self::Lxd(_) => "LXD",
+            Self::Hetzner(_) => "Hetzner Cloud",
+        }
+    }
+
     /// Returns a reference to the LXD configuration if this is an LXD provider.
     ///
     /// # Returns

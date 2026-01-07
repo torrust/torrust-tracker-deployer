@@ -21,9 +21,10 @@ use thiserror::Error;
 
 use crate::presentation::controllers::{
     configure::ConfigureSubcommandError, create::CreateCommandError,
-    destroy::DestroySubcommandError, provision::ProvisionSubcommandError,
-    register::errors::RegisterSubcommandError, release::ReleaseSubcommandError,
-    run::RunSubcommandError, show::ShowSubcommandError, test::TestSubcommandError,
+    destroy::DestroySubcommandError, list::ListSubcommandError,
+    provision::ProvisionSubcommandError, register::errors::RegisterSubcommandError,
+    release::ReleaseSubcommandError, run::RunSubcommandError, show::ShowSubcommandError,
+    test::TestSubcommandError,
 };
 
 /// Errors that can occur during CLI command execution
@@ -96,6 +97,13 @@ pub enum CommandError {
     #[error("Show command failed: {0}")]
     Show(Box<ShowSubcommandError>),
 
+    /// List command specific errors
+    ///
+    /// Encapsulates all errors that can occur during environment listing.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("List command failed: {0}")]
+    List(Box<ListSubcommandError>),
+
     /// User output lock acquisition failed
     ///
     /// Failed to acquire the mutex lock for user output. This typically indicates
@@ -158,6 +166,12 @@ impl From<ShowSubcommandError> for CommandError {
     }
 }
 
+impl From<ListSubcommandError> for CommandError {
+    fn from(error: ListSubcommandError) -> Self {
+        Self::List(Box::new(error))
+    }
+}
+
 impl CommandError {
     /// Get detailed troubleshooting guidance for this error
     ///
@@ -203,6 +217,7 @@ impl CommandError {
             Self::Release(e) => e.help().to_string(),
             Self::Run(e) => e.help().to_string(),
             Self::Show(e) => e.help().to_string(),
+            Self::List(e) => e.help().to_string(),
             Self::UserOutputLockFailed => "User Output Lock Failed - Detailed Troubleshooting:
 
 This error indicates that a panic occurred in another thread while it was using
