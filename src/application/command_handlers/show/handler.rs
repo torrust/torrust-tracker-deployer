@@ -28,7 +28,7 @@ use std::sync::Arc;
 use tracing::instrument;
 
 use super::errors::ShowCommandHandlerError;
-use super::info::{EnvironmentInfo, InfrastructureInfo};
+use super::info::{EnvironmentInfo, InfrastructureInfo, ServiceInfo};
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::EnvironmentName;
@@ -138,9 +138,27 @@ impl ShowCommandHandler {
                 ssh_creds.ssh_priv_key_path.to_string_lossy().to_string(),
             );
             info = info.with_infrastructure(infra);
+
+            // Add service info for Released/Running states
+            if Self::should_show_services(any_env.state_name()) {
+                let tracker_config = any_env.tracker_config();
+                let services = ServiceInfo::from_tracker_config(tracker_config, instance_ip);
+                info = info.with_services(services);
+            }
         }
 
         info
+    }
+
+    /// Determine if services should be shown based on state
+    ///
+    /// Services are shown for states where the tracker configuration has been
+    /// deployed and services may be running (Released, Running, or related failed states).
+    fn should_show_services(state_name: &str) -> bool {
+        matches!(
+            state_name,
+            "released" | "running" | "release_failed" | "run_failed"
+        )
     }
 
     /// Format state name for display
@@ -279,6 +297,45 @@ mod tests {
             let guidance = ShowCommandHandler::get_next_step_guidance("provision_failed");
             assert!(guidance.contains("failed"));
             assert!(guidance.contains("retry"));
+        }
+    }
+
+    mod should_show_services {
+        use super::*;
+
+        #[test]
+        fn it_should_show_services_for_released_state() {
+            assert!(ShowCommandHandler::should_show_services("released"));
+        }
+
+        #[test]
+        fn it_should_show_services_for_running_state() {
+            assert!(ShowCommandHandler::should_show_services("running"));
+        }
+
+        #[test]
+        fn it_should_show_services_for_release_failed_state() {
+            assert!(ShowCommandHandler::should_show_services("release_failed"));
+        }
+
+        #[test]
+        fn it_should_show_services_for_run_failed_state() {
+            assert!(ShowCommandHandler::should_show_services("run_failed"));
+        }
+
+        #[test]
+        fn it_should_not_show_services_for_created_state() {
+            assert!(!ShowCommandHandler::should_show_services("created"));
+        }
+
+        #[test]
+        fn it_should_not_show_services_for_provisioned_state() {
+            assert!(!ShowCommandHandler::should_show_services("provisioned"));
+        }
+
+        #[test]
+        fn it_should_not_show_services_for_configured_state() {
+            assert!(!ShowCommandHandler::should_show_services("configured"));
         }
     }
 }

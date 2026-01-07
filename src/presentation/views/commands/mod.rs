@@ -5,3 +5,4 @@
 //! command-specific output.
 
 pub mod provision;
+pub mod show;

@@ -47,3 +47,4 @@ pub use errors::ShowCommandHandlerError;
 pub use handler::ShowCommandHandler;
 pub use info::EnvironmentInfo;
 pub use info::InfrastructureInfo;
+pub use info::ServiceInfo;

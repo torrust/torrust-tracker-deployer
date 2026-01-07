@@ -12,6 +12,7 @@ use crate::application::command_handlers::show::info::EnvironmentInfo;
 use crate::application::command_handlers::show::{ShowCommandHandler, ShowCommandHandlerError};
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
+use crate::presentation::views::commands::show::EnvironmentInfoView;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
@@ -66,7 +67,6 @@ impl ShowStep {
 /// user interaction while delegating business logic to the application layer.
 pub struct ShowCommandController {
     handler: ShowCommandHandler,
-    user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     progress: ProgressReporter,
 }
 
@@ -83,13 +83,9 @@ impl ShowCommandController {
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
         let handler = ShowCommandHandler::new(repository);
-        let progress = ProgressReporter::new(Arc::clone(&user_output), ShowStep::count());
+        let progress = ProgressReporter::new(user_output, ShowStep::count());
 
-        Self {
-            handler,
-            user_output,
-            progress,
-        }
+        Self { handler, progress }
     }
 
     /// Execute the show command workflow
@@ -178,6 +174,20 @@ impl ShowCommandController {
     }
 
     /// Step 3: Display environment information
+    ///
+    /// Orchestrates a functional pipeline to display environment information:
+    /// `EnvironmentInfo` → `String` → stdout
+    ///
+    /// The output is written to stdout (not stderr) as it represents the final
+    /// command result rather than progress information.
+    ///
+    /// # MVC Architecture
+    ///
+    /// Following the MVC pattern with functional composition:
+    /// - Model: `EnvironmentInfo` (application layer DTO)
+    /// - View: `EnvironmentInfoView::render()` (formatting)
+    /// - Controller (this method): Orchestrates the pipeline
+    /// - Output: `ProgressReporter::result()` (routing to stdout)
     fn display_information(
         &mut self,
         env_info: &EnvironmentInfo,
@@ -185,33 +195,9 @@ impl ShowCommandController {
         self.progress
             .start_step(ShowStep::DisplayInformation.description())?;
 
-        let output = self.user_output.lock();
-        let mut output = output.borrow_mut();
-
-        // Display basic information
-        output.blank_line();
-        output.result(&format!("Environment: {}", env_info.name));
-        output.result(&format!("State: {}", env_info.state));
-        output.result(&format!("Provider: {}", env_info.provider));
-
-        // Display infrastructure details if available
-        if let Some(ref infra) = env_info.infrastructure {
-            output.blank_line();
-            output.result("Infrastructure:");
-            output.result(&format!("  Instance IP: {}", infra.instance_ip));
-            output.result(&format!("  SSH Port: {}", infra.ssh_port));
-            output.result(&format!("  SSH User: {}", infra.ssh_user));
-            output.result(&format!("  SSH Key: {}", infra.ssh_key_path));
-            output.blank_line();
-            output.result("Connection:");
-            output.result(&format!("  {}", infra.ssh_command()));
-        }
-
-        // Display next step guidance
-        output.blank_line();
-        output.result(&env_info.next_step);
-
-        drop(output);
+        // Pipeline: EnvironmentInfo → render → output to stdout
+        self.progress
+            .result(&EnvironmentInfoView::render(env_info))?;
 
         self.progress.complete_step(Some("Information displayed"))?;
 
