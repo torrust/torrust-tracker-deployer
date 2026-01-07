@@ -116,7 +116,7 @@ impl ShowCommandHandler {
     /// Extract information from environment based on its state
     fn extract_info(any_env: &AnyEnvironmentState) -> EnvironmentInfo {
         let name = any_env.name().to_string();
-        let state = Self::format_state_name(any_env.state_name());
+        let state = any_env.state_display_name().to_string();
         let provider = any_env.provider_display_name().to_string();
         let created_at = any_env.created_at();
         let next_step = Self::get_next_step_guidance(any_env.state_name());
@@ -168,22 +168,6 @@ impl ShowCommandHandler {
         )
     }
 
-    /// Format state name for display
-    fn format_state_name(state_name: &str) -> String {
-        // Convert snake_case to Title Case
-        state_name
-            .split('_')
-            .map(|word| {
-                let mut chars = word.chars();
-                match chars.next() {
-                    Some(first) => first.to_uppercase().chain(chars).collect(),
-                    None => String::new(),
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(" ")
-    }
-
     /// Get next step guidance based on current state
     fn get_next_step_guidance(state_name: &str) -> String {
         match state_name {
@@ -224,28 +208,6 @@ impl ShowCommandHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    mod format_state_name {
-        use super::*;
-
-        #[test]
-        fn it_should_format_simple_state() {
-            assert_eq!(ShowCommandHandler::format_state_name("created"), "Created");
-            assert_eq!(ShowCommandHandler::format_state_name("running"), "Running");
-        }
-
-        #[test]
-        fn it_should_format_compound_state() {
-            assert_eq!(
-                ShowCommandHandler::format_state_name("provision_failed"),
-                "Provision Failed"
-            );
-            assert_eq!(
-                ShowCommandHandler::format_state_name("configure_failed"),
-                "Configure Failed"
-            );
-        }
-    }
 
     mod get_next_step_guidance {
         use super::*;
