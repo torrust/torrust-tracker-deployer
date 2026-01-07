@@ -379,6 +379,9 @@ All errors must include actionable messages guiding users on how to resolve the 
   - `show` - Display stored data (fast, no network)
   - `test` - Verify infrastructure (cloud-init, Docker, Docker Compose)
   - `status` (future) - Check service health (connectivity, health endpoints)
+- **Destroyed State Handling**: Show destroyed environments. Since internal state persists after destruction, users who don't want destroyed environments in `list` or `show` should manually remove the internal state. This assumes users won't have many environments (deployment tool use case).
+- **Service URLs Storage**: Service endpoints are added to `RuntimeOutputs` after the `run` command succeeds, following the same pattern as `instance_ip` and `provision_method` which are added after `provision`.
+- **Next Step Messages**: Hardcoded strings in the formatter (simple approach for now).
 
 ### Development Approach
 
