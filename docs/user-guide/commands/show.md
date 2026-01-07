@@ -32,6 +32,7 @@ When an environment has been created but not provisioned:
 Environment: my-environment
 State: Created
 Provider: LXD
+Created: 2025-01-07 14:30:00 UTC
 
 Next: Run 'provision my-environment' to create infrastructure
 ```
@@ -44,6 +45,7 @@ When infrastructure has been created:
 Environment: my-environment
 State: Provisioned
 Provider: LXD
+Created: 2025-01-07 14:30:00 UTC
 
 Infrastructure:
   Instance IP: 10.140.190.171
@@ -65,6 +67,7 @@ When services have been deployed:
 Environment: my-environment
 State: Running
 Provider: LXD
+Created: 2025-01-07 14:30:00 UTC
 
 Infrastructure:
   Instance IP: 10.140.190.171

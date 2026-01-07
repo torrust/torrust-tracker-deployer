@@ -999,7 +999,13 @@ mod tests {
             _prometheus,
             _grafana,
         ) = config.to_environment_params().unwrap();
-        let environment = Environment::new(name.clone(), provider_config, credentials, port);
+        let environment = Environment::new(
+            name.clone(),
+            provider_config,
+            credentials,
+            port,
+            chrono::Utc::now(),
+        );
 
         assert_eq!(environment.name().as_str(), "test-env");
         assert_eq!(environment.ssh_username().as_str(), "torrust");

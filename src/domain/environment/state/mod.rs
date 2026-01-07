@@ -467,6 +467,19 @@ impl AnyEnvironmentState {
         self.context().runtime_outputs.instance_ip
     }
 
+    /// Get when the environment was created
+    ///
+    /// This method provides access to the creation timestamp without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// The UTC timestamp when the environment was created.
+    #[must_use]
+    pub fn created_at(&self) -> chrono::DateTime<chrono::Utc> {
+        self.context().created_at
+    }
+
     /// Get the provision method if available, regardless of current state
     ///
     /// This method provides access to the provision method without needing to
@@ -616,6 +629,7 @@ mod tests {
             default_lxd_provider_config(&name),
             ssh_creds,
             22,
+            chrono::Utc::now(),
         )
     }
 

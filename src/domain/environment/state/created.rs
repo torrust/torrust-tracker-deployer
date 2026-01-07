@@ -157,6 +157,7 @@ mod tests {
                 default_lxd_provider_config(&name),
                 ssh_creds,
                 22,
+                chrono::Utc::now(),
             )
         }
 
@@ -234,6 +235,7 @@ mod tests {
                 default_lxd_provider_config(&name),
                 ssh_creds,
                 22,
+                chrono::Utc::now(),
             )
         }
 

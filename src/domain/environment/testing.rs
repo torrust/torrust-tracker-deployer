@@ -11,8 +11,15 @@ use crate::domain::provider::{LxdConfig, ProviderConfig};
 use crate::domain::tracker::TrackerConfig;
 use crate::domain::EnvironmentName;
 use crate::shared::Username;
+use chrono::{TimeZone, Utc};
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
+
+/// Returns a fixed test timestamp for deterministic tests (2025-01-01 00:00:00 UTC)
+#[must_use]
+pub fn test_timestamp() -> chrono::DateTime<chrono::Utc> {
+    Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap()
+}
 
 /// Test builder for creating Environment instances with sensible defaults
 ///
@@ -144,6 +151,7 @@ impl EnvironmentTestBuilder {
         let provider_config = ProviderConfig::Lxd(LxdConfig { profile_name });
 
         let context = EnvironmentContext {
+            created_at: test_timestamp(),
             user_inputs: UserInputs {
                 name: env_name,
                 instance_name,

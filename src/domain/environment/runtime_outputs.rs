@@ -13,7 +13,7 @@
 //! **Runtime Outputs** are:
 //! - Generated during deployment operations
 //! - Mutable as operations progress
-//! - Examples: IP addresses, container IDs, timestamps
+//! - Examples: IP addresses, container IDs
 //!
 //! Add new fields here when: Operations produce new data about the deployed infrastructure.
 //!
@@ -21,7 +21,6 @@
 //!
 //! This struct is expected to grow with fields like:
 //! - `container_id: Option<String>` - Container/VM identifier
-//! - `deployment_timestamp: Option<DateTime<Utc>>` - When the environment was deployed
 //! - `resource_metrics: Option<ResourceMetrics>` - CPU, memory, disk usage
 //! - `service_endpoints: Option<Vec<ServiceEndpoint>>` - HTTP/TCP service URLs
 
@@ -68,7 +67,6 @@ impl std::fmt::Display for ProvisionMethod {
 ///
 /// This struct is expected to grow as deployment operations become more complex:
 /// - `container_id: Option<String>` - Container/VM identifier
-/// - `deployment_timestamp: Option<DateTime<Utc>>` - When the environment was deployed
 /// - `resource_metrics: Option<ResourceMetrics>` - CPU, memory, disk usage
 /// - `service_endpoints: Option<Vec<ServiceEndpoint>>` - HTTP/TCP service URLs
 ///

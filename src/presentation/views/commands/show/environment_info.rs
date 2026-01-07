@@ -23,11 +23,14 @@ use crate::application::command_handlers::show::info::EnvironmentInfo;
 /// ```rust
 /// use torrust_tracker_deployer_lib::application::command_handlers::show::info::EnvironmentInfo;
 /// use torrust_tracker_deployer_lib::presentation::views::commands::show::EnvironmentInfoView;
+/// use chrono::{TimeZone, Utc};
 ///
+/// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
 /// let info = EnvironmentInfo::new(
 ///     "my-env".to_string(),
 ///     "Created".to_string(),
 ///     "LXD".to_string(),
+///     created_at,
 ///     "Next: Run 'provision my-env' to create infrastructure".to_string(),
 /// );
 ///
@@ -63,11 +66,13 @@ impl EnvironmentInfoView {
     /// };
     /// use torrust_tracker_deployer_lib::presentation::views::commands::show::EnvironmentInfoView;
     /// use std::net::{IpAddr, Ipv4Addr};
+    /// use chrono::Utc;
     ///
     /// let info = EnvironmentInfo::new(
     ///     "prod-env".to_string(),
     ///     "Provisioned".to_string(),
     ///     "LXD".to_string(),
+    ///     Utc::now(),
     ///     "Next: Run 'configure prod-env' to install software".to_string(),
     /// ).with_infrastructure(InfrastructureInfo::new(
     ///     IpAddr::V4(Ipv4Addr::new(10, 140, 190, 171)),
@@ -89,6 +94,10 @@ impl EnvironmentInfoView {
         lines.push(format!("Environment: {}", info.name));
         lines.push(format!("State: {}", info.state));
         lines.push(format!("Provider: {}", info.provider));
+        lines.push(format!(
+            "Created: {}",
+            info.created_at.format("%Y-%m-%d %H:%M:%S UTC")
+        ));
 
         // Infrastructure details (if available)
         if let Some(ref infra) = info.infrastructure {
@@ -141,8 +150,15 @@ impl EnvironmentInfoView {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr};
 
+    use chrono::{TimeZone, Utc};
+
     use super::*;
     use crate::application::command_handlers::show::info::{InfrastructureInfo, ServiceInfo};
+
+    /// Helper to create a fixed test timestamp
+    fn test_timestamp() -> chrono::DateTime<chrono::Utc> {
+        Utc.with_ymd_and_hms(2025, 1, 7, 12, 30, 45).unwrap()
+    }
 
     #[test]
     fn it_should_render_basic_environment_info() {
@@ -150,6 +166,7 @@ mod tests {
             "test-env".to_string(),
             "Created".to_string(),
             "LXD".to_string(),
+            test_timestamp(),
             "Next: Run 'provision test-env' to create infrastructure".to_string(),
         );
 
@@ -158,6 +175,7 @@ mod tests {
         assert!(output.contains("Environment: test-env"));
         assert!(output.contains("State: Created"));
         assert!(output.contains("Provider: LXD"));
+        assert!(output.contains("Created: 2025-01-07 12:30:45 UTC"));
         assert!(output.contains("Next: Run 'provision test-env'"));
     }
 
@@ -167,6 +185,7 @@ mod tests {
             "prod-env".to_string(),
             "Provisioned".to_string(),
             "LXD".to_string(),
+            test_timestamp(),
             "Next: Run 'configure prod-env' to install software".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(
@@ -193,6 +212,7 @@ mod tests {
             "running-env".to_string(),
             "Running".to_string(),
             "LXD".to_string(),
+            test_timestamp(),
             "Tracker is running!".to_string(),
         )
         .with_services(ServiceInfo::new(
@@ -221,6 +241,7 @@ mod tests {
             "full-env".to_string(),
             "Running".to_string(),
             "LXD".to_string(),
+            test_timestamp(),
             "Tracker is running!".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(
@@ -254,6 +275,7 @@ mod tests {
             "custom-port-env".to_string(),
             "Provisioned".to_string(),
             "LXD".to_string(),
+            test_timestamp(),
             "Next step".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(

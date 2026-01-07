@@ -184,6 +184,7 @@ impl TestContext {
     /// use torrust_tracker_deployer_lib::testing::e2e::context::{TestContext, TestContextType};
     /// use std::path::PathBuf;
     /// use tempfile::TempDir;
+    /// use chrono::{TimeZone, Utc};
     ///
     /// // Use temporary directory to avoid creating real directories
     /// let temp_dir = TempDir::new()?;
@@ -199,7 +200,8 @@ impl TestContext {
     /// let provider_config = ProviderConfig::Lxd(LxdConfig {
     ///     profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
     /// });
-    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+    /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    /// let environment = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
     ///
     /// let test_context = TestContext::from_environment(
     ///     false,

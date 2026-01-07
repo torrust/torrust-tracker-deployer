@@ -6,6 +6,8 @@
 
 use std::net::IpAddr;
 
+use chrono::{DateTime, Utc};
+
 /// Environment information for display purposes
 ///
 /// This DTO contains all information about an environment that can be
@@ -22,6 +24,9 @@ pub struct EnvironmentInfo {
     /// Provider name (e.g., "LXD", "Hetzner Cloud")
     pub provider: String,
 
+    /// When the environment was created
+    pub created_at: DateTime<Utc>,
+
     /// Infrastructure details, available after provisioning
     pub infrastructure: Option<InfrastructureInfo>,
 
@@ -35,11 +40,18 @@ pub struct EnvironmentInfo {
 impl EnvironmentInfo {
     /// Create a new `EnvironmentInfo`
     #[must_use]
-    pub fn new(name: String, state: String, provider: String, next_step: String) -> Self {
+    pub fn new(
+        name: String,
+        state: String,
+        provider: String,
+        created_at: DateTime<Utc>,
+        next_step: String,
+    ) -> Self {
         Self {
             name,
             state,
             provider,
+            created_at,
             infrastructure: None,
             services: None,
             next_step,
@@ -191,14 +203,18 @@ impl ServiceInfo {
 mod tests {
     use std::net::Ipv4Addr;
 
+    use chrono::{TimeZone, Utc};
+
     use super::*;
 
     #[test]
     fn it_should_create_environment_info() {
+        let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
         let info = EnvironmentInfo::new(
             "test-env".to_string(),
             "Created".to_string(),
             "LXD".to_string(),
+            created_at,
             "Run 'provision' to create infrastructure.".to_string(),
         );
 
@@ -210,10 +226,12 @@ mod tests {
 
     #[test]
     fn it_should_add_infrastructure_info() {
+        let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
         let info = EnvironmentInfo::new(
             "test-env".to_string(),
             "Provisioned".to_string(),
             "LXD".to_string(),
+            created_at,
             "Run 'configure' to set up the system.".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(
@@ -276,10 +294,12 @@ mod tests {
 
     #[test]
     fn it_should_add_services_to_environment_info() {
+        let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
         let info = EnvironmentInfo::new(
             "test-env".to_string(),
             "Running".to_string(),
             "LXD".to_string(),
+            created_at,
             "Services are running.".to_string(),
         )
         .with_services(ServiceInfo::new(

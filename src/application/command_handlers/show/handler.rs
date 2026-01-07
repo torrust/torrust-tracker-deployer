@@ -118,9 +118,10 @@ impl ShowCommandHandler {
         let name = any_env.name().to_string();
         let state = Self::format_state_name(any_env.state_name());
         let provider = Self::format_provider_name(any_env.provider_name());
+        let created_at = any_env.created_at();
         let next_step = Self::get_next_step_guidance(any_env.state_name());
 
-        let mut info = EnvironmentInfo::new(name, state, provider, next_step);
+        let mut info = EnvironmentInfo::new(name, state, provider, created_at, next_step);
 
         // Add infrastructure info if instance IP is available
         if let Some(instance_ip) = any_env.instance_ip() {

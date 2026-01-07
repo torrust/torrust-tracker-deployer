@@ -212,7 +212,13 @@ impl CreateCommandHandlerTestBuilder {
             profile_name: ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap(),
         });
 
-        let environment = Environment::new(env_name, provider_config, ssh_credentials, 22);
+        let environment = Environment::new(
+            env_name,
+            provider_config,
+            ssh_credentials,
+            22,
+            chrono::Utc::now(),
+        );
 
         // Save to repository
         repository
