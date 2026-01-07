@@ -143,8 +143,22 @@ impl ServiceEndpoints {
         tracker_config: &crate::domain::tracker::TrackerConfig,
         instance_ip: IpAddr,
     ) -> Self {
-        let udp_trackers = tracker_config
-            .udp_trackers
+        let udp_trackers = Self::build_udp_tracker_urls(&tracker_config.udp_trackers, instance_ip);
+        let http_trackers =
+            Self::build_http_tracker_urls(&tracker_config.http_trackers, instance_ip);
+        let api_endpoint =
+            Self::build_api_endpoint_url(tracker_config.http_api.bind_address, instance_ip);
+        let health_check_url =
+            Self::build_health_check_url(tracker_config.health_check_api.bind_address, instance_ip);
+
+        Self::new(udp_trackers, http_trackers, api_endpoint, health_check_url)
+    }
+
+    fn build_udp_tracker_urls(
+        udp_trackers: &[crate::domain::tracker::UdpTrackerConfig],
+        instance_ip: IpAddr,
+    ) -> Vec<Url> {
+        udp_trackers
             .iter()
             .filter_map(|udp| {
                 Url::parse(&format!(
@@ -154,10 +168,14 @@ impl ServiceEndpoints {
                 ))
                 .ok()
             })
-            .collect();
+            .collect()
+    }
 
-        let http_trackers = tracker_config
-            .http_trackers
+    fn build_http_tracker_urls(
+        http_trackers: &[crate::domain::tracker::HttpTrackerConfig],
+        instance_ip: IpAddr,
+    ) -> Vec<Url> {
+        http_trackers
             .iter()
             .filter_map(|http| {
                 Url::parse(&format!(
@@ -167,23 +185,31 @@ impl ServiceEndpoints {
                 ))
                 .ok()
             })
-            .collect();
+            .collect()
+    }
 
-        let api_endpoint = Url::parse(&format!(
+    fn build_api_endpoint_url(
+        bind_address: std::net::SocketAddr,
+        instance_ip: IpAddr,
+    ) -> Option<Url> {
+        Url::parse(&format!(
             "http://{}:{}/api", // DevSkim: ignore DS137138
             instance_ip,
-            tracker_config.http_api.bind_address.port()
+            bind_address.port()
         ))
-        .ok();
+        .ok()
+    }
 
-        let health_check_url = Url::parse(&format!(
+    fn build_health_check_url(
+        bind_address: std::net::SocketAddr,
+        instance_ip: IpAddr,
+    ) -> Option<Url> {
+        Url::parse(&format!(
             "http://{}:{}/health_check", // DevSkim: ignore DS137138
             instance_ip,
-            tracker_config.health_check_api.bind_address.port()
+            bind_address.port()
         ))
-        .ok();
-
-        Self::new(udp_trackers, http_trackers, api_endpoint, health_check_url)
+        .ok()
     }
 }
 
