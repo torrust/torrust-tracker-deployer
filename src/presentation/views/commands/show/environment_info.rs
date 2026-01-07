@@ -165,15 +165,15 @@ impl EnvironmentInfoView {
                 "Environment has been destroyed. Create a new environment to redeploy.".to_string()
             }
             "provision_failed" => {
-                "Provisioning failed. Check error details and retry 'provision'.".to_string()
+                "Provisioning failed. Run 'destroy' and create a new environment.".to_string()
             }
             "configure_failed" => {
-                "Configuration failed. Check error details and retry 'configure'.".to_string()
+                "Configuration failed. Run 'destroy' and create a new environment.".to_string()
             }
             "release_failed" => {
-                "Release failed. Check error details and retry 'release'.".to_string()
+                "Release failed. Run 'destroy' and create a new environment.".to_string()
             }
-            "run_failed" => "Run failed. Check error details and retry 'run'.".to_string(),
+            "run_failed" => "Run failed. Run 'destroy' and create a new environment.".to_string(),
             "destroy_failed" => {
                 "Destruction failed. Check error details and retry 'destroy'.".to_string()
             }
@@ -351,7 +351,7 @@ mod tests {
         fn it_should_handle_failed_states() {
             let guidance = EnvironmentInfoView::get_next_step_guidance("provision_failed");
             assert!(guidance.contains("failed"));
-            assert!(guidance.contains("retry"));
+            assert!(guidance.contains("destroy"));
         }
     }
 }
