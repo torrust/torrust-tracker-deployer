@@ -309,3 +309,5 @@ binstall
 dockerhub
 pipx
 Containerfile
+procps
+esac
