@@ -305,3 +305,7 @@ zeroize
 файл
 Datagram
 connectionless
+binstall
+dockerhub
+pipx
+Containerfile
