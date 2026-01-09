@@ -150,6 +150,8 @@ These principles should guide all development decisions, code reviews, and featu
 
 18. **When handling sensitive data (secrets)** (CRITICAL for security): Read [`docs/contributing/secret-handling.md`](docs/contributing/secret-handling.md) for the complete guide. **NEVER use `String` for sensitive data like API tokens, passwords, private keys, or database credentials**. Always use wrapper types from `src/shared/secrets/`: `ApiToken` for API tokens, `Password` for passwords, and their plain type aliases (`PlainApiToken`/`PlainPassword`) at DTO boundaries. Call `.expose_secret()` only when the actual value is needed. See the [ADR](docs/decisions/secrecy-crate-for-sensitive-data.md) for architectural rationale.
 
+19. **When generating environment configurations** (for AI agents): Reference the Rust types in [`src/application/command_handlers/create/config/`](src/application/command_handlers/create/config/) for accurate constraint information. These types express richer validation rules than the JSON schema alone (e.g., `NonZeroU32`, tagged enums, newtype wrappers). Read the [README](src/application/command_handlers/create/config/README.md) in that folder for the full guide. The JSON schema (`schemas/environment-config.json`) provides basic structure, but the Rust types are authoritative for constraints. See the [ADR](docs/decisions/configuration-dto-layer-placement.md) for why these types are in the application layer.
+
 ## 🧪 Build & Test
 
 - **Setup Dependencies**: `cargo run --bin dependency-installer install` (sets up required development tools)
