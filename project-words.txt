@@ -236,6 +236,7 @@ rstest
 runbooks
 runcmd
 runnability
+runpip
 rustc
 rustflags
 rustls

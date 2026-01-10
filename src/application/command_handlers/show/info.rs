@@ -7,6 +7,7 @@
 use std::net::IpAddr;
 
 use chrono::{DateTime, Utc};
+use url::Url;
 
 /// Environment information for display purposes
 ///
@@ -33,6 +34,12 @@ pub struct EnvironmentInfo {
     /// Tracker service information, available for Released/Running states
     pub services: Option<ServiceInfo>,
 
+    /// Prometheus metrics service information, available for Released/Running states
+    pub prometheus: Option<PrometheusInfo>,
+
+    /// Grafana visualization service information, available for Released/Running states
+    pub grafana: Option<GrafanaInfo>,
+
     /// Internal state name (e.g., "created", "provisioned") for guidance generation
     pub state_name: String,
 }
@@ -54,6 +61,8 @@ impl EnvironmentInfo {
             created_at,
             infrastructure: None,
             services: None,
+            prometheus: None,
+            grafana: None,
             state_name,
         }
     }
@@ -69,6 +78,20 @@ impl EnvironmentInfo {
     #[must_use]
     pub fn with_services(mut self, services: ServiceInfo) -> Self {
         self.services = Some(services);
+        self
+    }
+
+    /// Set Prometheus information
+    #[must_use]
+    pub fn with_prometheus(mut self, prometheus: PrometheusInfo) -> Self {
+        self.prometheus = Some(prometheus);
+        self
+    }
+
+    /// Set Grafana information
+    #[must_use]
+    pub fn with_grafana(mut self, grafana: GrafanaInfo) -> Self {
+        self.grafana = Some(grafana);
         self
     }
 }
@@ -137,6 +160,67 @@ pub struct ServiceInfo {
 
     /// Health check API URL (e.g., `http://10.0.0.1:1313/health_check`)
     pub health_check_url: String,
+}
+
+/// Prometheus metrics service information for display purposes
+///
+/// This information shows the status of the Prometheus service when configured.
+/// Prometheus collects and stores metrics from the tracker service.
+/// It can be used independently or as a data source for Grafana.
+#[derive(Debug, Clone)]
+pub struct PrometheusInfo {
+    /// Description of how to access Prometheus (internal only)
+    pub access_note: String,
+}
+
+impl PrometheusInfo {
+    /// Create a new `PrometheusInfo`
+    #[must_use]
+    pub fn new(access_note: String) -> Self {
+        Self { access_note }
+    }
+
+    /// Create default `PrometheusInfo` for standard deployment
+    ///
+    /// Prometheus is always bound to localhost:9090 and not exposed externally.
+    #[must_use]
+    pub fn default_internal() -> Self {
+        Self::new("Internal only (localhost:9090) - not exposed externally".to_string())
+    }
+}
+
+/// Grafana visualization service information for display purposes
+///
+/// This information shows the status of the Grafana service when configured.
+/// Grafana provides dashboards for visualizing tracker metrics.
+/// Note: Grafana requires Prometheus to be configured.
+#[derive(Debug, Clone)]
+pub struct GrafanaInfo {
+    /// Grafana dashboard URL
+    pub url: Url,
+}
+
+impl GrafanaInfo {
+    /// Create a new `GrafanaInfo`
+    #[must_use]
+    pub fn new(url: Url) -> Self {
+        Self { url }
+    }
+
+    /// Build `GrafanaInfo` from instance IP
+    ///
+    /// Grafana is exposed on port 3100 (mapped from internal port 3000).
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the URL cannot be parsed, which should
+    /// never happen since we construct a valid URL from a valid IP address.
+    #[must_use]
+    pub fn from_instance_ip(instance_ip: std::net::IpAddr) -> Self {
+        let url = Url::parse(&format!("http://{instance_ip}:3100")) // DevSkim: ignore DS137138
+            .expect("Valid IP address should produce valid URL");
+        Self::new(url)
+    }
 }
 
 impl ServiceInfo {

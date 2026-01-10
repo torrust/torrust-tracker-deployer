@@ -138,6 +138,20 @@ impl EnvironmentInfoView {
             lines.push(format!("    - {}", services.health_check_url));
         }
 
+        // Prometheus service (if configured)
+        if let Some(ref prometheus) = info.prometheus {
+            lines.push(String::new()); // blank line
+            lines.push("Prometheus:".to_string());
+            lines.push(format!("  {}", prometheus.access_note));
+        }
+
+        // Grafana service (if configured)
+        if let Some(ref grafana) = info.grafana {
+            lines.push(String::new()); // blank line
+            lines.push("Grafana:".to_string());
+            lines.push(format!("  {}", grafana.url));
+        }
+
         // Next step guidance
         lines.push(String::new()); // blank line
         lines.push(Self::get_next_step_guidance(&info.state_name));

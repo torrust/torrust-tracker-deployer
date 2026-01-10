@@ -46,5 +46,7 @@ mod tests;
 pub use errors::ShowCommandHandlerError;
 pub use handler::ShowCommandHandler;
 pub use info::EnvironmentInfo;
+pub use info::GrafanaInfo;
 pub use info::InfrastructureInfo;
+pub use info::PrometheusInfo;
 pub use info::ServiceInfo;

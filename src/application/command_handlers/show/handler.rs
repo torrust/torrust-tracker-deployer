@@ -28,7 +28,7 @@ use std::sync::Arc;
 use tracing::instrument;
 
 use super::errors::ShowCommandHandlerError;
-use super::info::{EnvironmentInfo, InfrastructureInfo, ServiceInfo};
+use super::info::{EnvironmentInfo, GrafanaInfo, InfrastructureInfo, PrometheusInfo, ServiceInfo};
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::EnvironmentName;
@@ -151,6 +151,16 @@ impl ShowCommandHandler {
                     ServiceInfo::from_tracker_config(tracker_config, instance_ip)
                 };
                 info = info.with_services(services);
+
+                // Add Prometheus info if configured
+                if any_env.prometheus_config().is_some() {
+                    info = info.with_prometheus(PrometheusInfo::default_internal());
+                }
+
+                // Add Grafana info if configured
+                if any_env.grafana_config().is_some() {
+                    info = info.with_grafana(GrafanaInfo::from_instance_ip(instance_ip));
+                }
             }
         }
 
