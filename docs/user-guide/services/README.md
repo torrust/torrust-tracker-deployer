@@ -100,7 +100,7 @@ As the deployer evolves, additional optional services may be added to this direc
 ## Related Documentation
 
 - **[User Guide](../README.md)** - Main user guide with general configuration
-- **[Quick Start Guide](../quick-start.md)** - Getting started with deployments
+- **[Quick Start Guides](../quick-start/README.md)** - Getting started with deployments
 - **[Configuration Reference](../configuration/)** - Environment configuration details
 - **[Manual Testing Guides](../../e2e-testing/manual/)** - Service verification procedures
 

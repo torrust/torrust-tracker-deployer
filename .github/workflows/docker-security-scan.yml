@@ -33,6 +33,9 @@ jobs:
       fail-fast: false
       matrix:
         image:
+          - dockerfile: docker/deployer/Dockerfile
+            context: .
+            name: deployer
           - dockerfile: docker/provisioned-instance/Dockerfile
             context: docker/provisioned-instance
             name: provisioned-instance

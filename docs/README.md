@@ -44,7 +44,7 @@ docs/
 
 ### For Users
 
-- **Getting Started**: [`user-guide/README.md`](user-guide/README.md), [`user-guide/quick-start.md`](user-guide/quick-start.md)
+- **Getting Started**: [`user-guide/README.md`](user-guide/README.md), [`user-guide/quick-start/`](user-guide/quick-start/README.md)
 - **Commands**: [`user-guide/commands/`](user-guide/commands/), [`console-commands.md`](console-commands.md)
 - **Providers**: [`user-guide/providers/`](user-guide/providers/)
 
@@ -191,7 +191,7 @@ Complete user guide with command documentation, provider guides, quick start, lo
 **Key Documents:**
 
 - [`user-guide/README.md`](user-guide/README.md) - Complete user guide
-- [`user-guide/quick-start.md`](user-guide/quick-start.md) - Quick start guide
+- [`user-guide/quick-start/`](user-guide/quick-start/README.md) - Quick start guides (Docker and native)
 - [`user-guide/commands/`](user-guide/commands/) - Individual command documentation (8 commands)
 - [`user-guide/providers/`](user-guide/providers/) - Provider-specific guides (LXD, Hetzner)
 

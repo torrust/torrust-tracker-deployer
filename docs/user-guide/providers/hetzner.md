@@ -146,6 +146,7 @@ cat /var/log/cloud-init-output.log
 
 ## Related Documentation
 
-- [Quick Start Guide](../quick-start.md) - Complete deployment workflow
+- [Quick Start: Docker](../quick-start/docker.md) - Deploy to Hetzner using Docker
+- [Quick Start: Native](../quick-start/native.md) - Deploy using native installation
 - [SSH Keys Guide](../../tech-stack/ssh-keys.md) - SSH key generation
 - [LXD Provider](lxd.md) - Local development alternative

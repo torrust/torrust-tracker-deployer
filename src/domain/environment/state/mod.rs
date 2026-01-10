@@ -555,6 +555,34 @@ impl AnyEnvironmentState {
         self.context().runtime_outputs.service_endpoints.as_ref()
     }
 
+    /// Get the Prometheus configuration if enabled, regardless of current state
+    ///
+    /// This method provides access to the Prometheus configuration without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(&PrometheusConfig)` if Prometheus is configured for this environment
+    /// - `None` if Prometheus is not enabled
+    #[must_use]
+    pub fn prometheus_config(&self) -> Option<&crate::domain::prometheus::PrometheusConfig> {
+        self.context().user_inputs.prometheus.as_ref()
+    }
+
+    /// Get the Grafana configuration if enabled, regardless of current state
+    ///
+    /// This method provides access to the Grafana configuration without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(&GrafanaConfig)` if Grafana is configured for this environment
+    /// - `None` if Grafana is not enabled
+    #[must_use]
+    pub fn grafana_config(&self) -> Option<&crate::domain::grafana::GrafanaConfig> {
+        self.context().user_inputs.grafana.as_ref()
+    }
+
     /// Check if this environment was registered from existing infrastructure
     ///
     /// Registered environments have infrastructure that was created externally

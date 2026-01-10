@@ -1,0 +1,92 @@
+#!/bin/sh
+# Entrypoint script for Torrust Tracker Deployer container
+#
+# This script initializes the container environment and ensures
+# proper permissions before executing the deployer command.
+
+set -e
+
+# Function to log messages with timestamp
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >&2
+}
+
+log "Starting Torrust Tracker Deployer container..."
+
+# Verify critical tools are available
+check_tool() {
+    if ! command -v "$1" > /dev/null 2>&1; then
+        log "ERROR: Required tool '$1' is not available"
+        exit 1
+    fi
+}
+
+log "Verifying installed tools..."
+check_tool "tofu"
+check_tool "ansible"
+check_tool "ssh"
+check_tool "git"
+
+# Display versions for debugging
+log "Tool versions:"
+log "  - OpenTofu: $(tofu version | head -1)"
+log "  - Ansible: $(ansible --version | head -1)"
+log "  - SSH: $(ssh -V 2>&1)"
+log "  - Git: $(git --version)"
+
+# Ensure SSH directory exists with correct permissions
+if [ -d "$HOME/.ssh" ]; then
+    log "SSH directory found, checking permissions..."
+    chmod 700 "$HOME/.ssh" 2>/dev/null || true
+    if [ -f "$HOME/.ssh/id_rsa" ]; then
+        chmod 600 "$HOME/.ssh/id_rsa" 2>/dev/null || true
+    fi
+    if [ -f "$HOME/.ssh/id_ed25519" ]; then
+        chmod 600 "$HOME/.ssh/id_ed25519" 2>/dev/null || true
+    fi
+else
+    log "WARNING: No SSH directory found at $HOME/.ssh"
+    log "         Mount your SSH keys with: -v ~/.ssh:/home/deployer/.ssh:ro"
+fi
+
+# Create working directories if they don't exist
+mkdir -p "${TORRUST_TD_DATA_DIR:-/var/lib/torrust/deployer/data}" 2>/dev/null || true
+mkdir -p "${TORRUST_TD_BUILD_DIR:-/var/lib/torrust/deployer/build}" 2>/dev/null || true
+mkdir -p "${TORRUST_TD_ENVS_DIR:-/var/lib/torrust/deployer/envs}" 2>/dev/null || true
+
+# Display provider limitation warning if no arguments or help requested
+case "$1" in
+    ""|-h|--help|help)
+        cat << 'EOF'
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    TORRUST TRACKER DEPLOYER (CONTAINER)                    ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║                                                                            ║
+║  IMPORTANT LIMITATION                                                      ║
+║                                                                            ║
+║  This container only supports CLOUD PROVIDERS (e.g., Hetzner).             ║
+║  The LXD provider is NOT supported when running from a container.          ║
+║                                                                            ║
+║  For LXD deployments, install the deployer directly on the host.           ║
+║                                                                            ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║                                                                            ║
+║  VOLUME MOUNTS                                                             ║
+║                                                                            ║
+║  Mount these directories for persistent data:                              ║
+║    -v ./data:/var/lib/torrust/deployer/data                                ║
+║    -v ./build:/var/lib/torrust/deployer/build                              ║
+║    -v ./envs:/var/lib/torrust/deployer/envs                                ║
+║    -v ~/.ssh:/home/deployer/.ssh:ro                                        ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+EOF
+        ;;
+esac
+
+log "Container initialization complete. Executing command..."
+
+# Execute the provided command (deployer binary by default)
+exec torrust-tracker-deployer "$@"
