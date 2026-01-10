@@ -57,15 +57,36 @@ Open `envs/my-hetzner-env.json` and update:
     "image": "ubuntu-24.04"
   },
   "tracker": {
-    "image": "torrust/tracker:latest"
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "YOUR_SECURE_ADMIN_TOKEN"
+    }
   },
   "health_check_api": {
     "bind_address": "127.0.0.1:1313"
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "YOUR_SECURE_GRAFANA_PASSWORD"
   }
 }
 ```
 
 > **Important**: The `private_key_path` and `public_key_path` are paths **inside the container**. When you mount `~/.ssh:/home/deployer/.ssh:ro`, your host keys become available at `/home/deployer/.ssh/` inside the container.
+
+### Generating Secure Passwords
+
+For publicly exposed servers, **never use default passwords**. Generate secure random credentials:
+
+```bash
+# Generate a 32-character token for tracker HTTP API admin_token
+openssl rand -base64 32
+
+# Generate a 24-character password for Grafana admin
+openssl rand -base64 18
+```
+
+**Store these passwords securely** (password manager) - you'll need them to access the services.
 
 ### Configuration Reference
 
@@ -77,6 +98,8 @@ Open `envs/my-hetzner-env.json` and update:
 | `provider.api_token`               | Hetzner API token                 | `hcloud_xxx...`                      |
 | `provider.server_type`             | Server size                       | `cx22`, `cx32`, `cx42`               |
 | `provider.location`                | Datacenter                        | `nbg1`, `fsn1`, `hel1`               |
+| `tracker.http_api.admin_token`     | Tracker API authentication token  | (generated secure token)             |
+| `grafana.admin_password`           | Grafana admin password            | (generated secure password)          |
 
 See [Hetzner Provider Guide](../providers/hetzner.md) for all options.
 
@@ -231,6 +254,21 @@ Ensure you're mounting the `data` directory consistently:
 ```bash
 ls -la ./data/  # Should show your environment
 ```
+
+### Provisioning Failed - Cannot Re-provision
+
+If provisioning fails, the environment enters a `ProvisionFailed` state. You **cannot** re-provision directly - you must destroy and recreate:
+
+```bash
+# Destroy the failed environment
+deployer destroy my-hetzner-env
+
+# Recreate from scratch
+deployer create environment --env-file /var/lib/torrust/deployer/envs/my-hetzner-env.json
+deployer provision my-hetzner-env
+```
+
+> **Tip**: Check `data/<env-name>/environment.json` to see the current state and error details.
 
 ### LXD Provider Not Working
 
