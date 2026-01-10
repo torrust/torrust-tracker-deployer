@@ -124,7 +124,7 @@ jobs:
 
   publish_development:
     name: Publish (Development)
-    environment: dockerhub
+    environment: dockerhub-torrust
     needs: context
     if: needs.context.outputs.continue == 'true' && needs.context.outputs.type == 'development'
     runs-on: ubuntu-latest
@@ -167,7 +167,7 @@ jobs:
 
   publish_production:
     name: Publish (Production)
-    environment: dockerhub
+    environment: dockerhub-torrust
     needs: context
     if: needs.context.outputs.continue == 'true' && needs.context.outputs.type == 'production'
     runs-on: ubuntu-latest
