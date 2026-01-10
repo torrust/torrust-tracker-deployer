@@ -22,7 +22,126 @@ The automated workflow will:
 - Alert on new vulnerabilities
 - Track vulnerability trends over time
 
-## Latest Scan: December 29, 2025
+## Latest Scan: January 10, 2026
+
+### Scan Configuration
+
+**Trivy Version**: 0.68.2
+
+**Scan Command**:
+
+```bash
+trivy image --severity HIGH,CRITICAL <image-name>
+```
+
+**Severity Levels**:
+
+- `CRITICAL`: Exploitable vulnerabilities with severe impact
+- `HIGH`: Significant vulnerabilities requiring attention
+
+### Results
+
+#### Torrust Tracker Deployer (latest)
+
+**Image**: `torrust/tracker-deployer:latest`
+**Status**: ⚠️ 32 vulnerabilities (25 HIGH, 7 CRITICAL) - All in Debian base packages
+
+```text
+torrust/tracker-deployer:latest (debian 12.12)
+==============================================
+Total: 32 (HIGH: 25, CRITICAL: 7)
+
+Key Vulnerabilities:
+
+GnuPG (dirmngr, gnupg, gpg, gpg-agent, etc.) - 14 packages affected:
+┌─────────────────────┬────────────────┬──────────┬────────┬────────────────────┬────────────────────┐
+│ Library             │ Vulnerability  │ Severity │ Status │ Installed Version  │ Fixed Version      │
+├─────────────────────┼────────────────┼──────────┼────────┼────────────────────┼────────────────────┤
+│ dirmngr             │ CVE-2025-68973 │ HIGH     │ fixed  │ 2.2.40-1.1+deb12u1 │ 2.2.40-1.1+deb12u2 │
+│ gnupg, gpg, etc.    │                │          │        │                    │                    │
+└─────────────────────┴────────────────┴──────────┴────────┴────────────────────┴────────────────────┘
+
+Git:
+┌─────────────────────┬────────────────┬──────────┬──────────┬────────────────────┬───────────────┐
+│ Library             │ Vulnerability  │ Severity │ Status   │ Installed Version  │ Fixed Version │
+├─────────────────────┼────────────────┼──────────┼──────────┼────────────────────┼───────────────┤
+│ git, git-man        │ CVE-2025-48384 │ HIGH     │ affected │ 1:2.39.5-0+deb12u2 │               │
+│                     │ CVE-2025-48385 │ HIGH     │ affected │                    │               │
+└─────────────────────┴────────────────┴──────────┴──────────┴────────────────────┴───────────────┘
+
+Python 3.11 (libpython3.11-*, python3.11-*) - 6 packages affected:
+┌─────────────────────────┬────────────────┬──────────┬──────────┬──────────────────┬───────────────┐
+│ Library                 │ Vulnerability  │ Severity │ Status   │ Installed Version│ Fixed Version │
+├─────────────────────────┼────────────────┼──────────┼──────────┼──────────────────┼───────────────┤
+│ libpython3.11-minimal   │ CVE-2025-13836 │ CRITICAL │ affected │ 3.11.2-6+deb12u6 │               │
+│ libpython3.11-stdlib    │ CVE-2025-8194  │ HIGH     │ affected │                  │               │
+│ python3.11, etc.        │                │          │          │                  │               │
+└─────────────────────────┴────────────────┴──────────┴──────────┴──────────────────┴───────────────┘
+
+SQLite:
+┌─────────────────────┬────────────────┬──────────┬──────────┬──────────────────┬───────────────┐
+│ Library             │ Vulnerability  │ Severity │ Status   │ Installed Version│ Fixed Version │
+├─────────────────────┼────────────────┼──────────┼──────────┼──────────────────┼───────────────┤
+│ libsqlite3-0        │ CVE-2025-7458  │ CRITICAL │ affected │ 3.40.1-2+deb12u2 │               │
+└─────────────────────┴────────────────┴──────────┴──────────┴──────────────────┴───────────────┘
+
+PAM (libpam-*) - 4 packages affected:
+┌─────────────────────┬────────────────┬──────────┬────────┬─────────────────┬─────────────────┐
+│ Library             │ Vulnerability  │ Severity │ Status │ Installed Version│ Fixed Version   │
+├─────────────────────┼────────────────┼──────────┼────────┼─────────────────┼─────────────────┤
+│ libpam-modules      │ CVE-2025-6020  │ HIGH     │ fixed  │ 1.5.2-6+deb12u1 │ 1.5.2-6+deb12u2 │
+│ libpam0g, etc.      │                │          │        │                 │                 │
+└─────────────────────┴────────────────┴──────────┴────────┴─────────────────┴─────────────────┘
+
+zlib:
+┌─────────────────────┬────────────────┬──────────┬──────────────┬───────────────────┬───────────────┐
+│ Library             │ Vulnerability  │ Severity │ Status       │ Installed Version │ Fixed Version │
+├─────────────────────┼────────────────┼──────────┼──────────────┼───────────────────┼───────────────┤
+│ zlib1g              │ CVE-2023-45853 │ CRITICAL │ will_not_fix │ 1:1.2.13.dfsg-1   │               │
+└─────────────────────┴────────────────┴──────────┴──────────────┴───────────────────┴───────────────┘
+
+OpenLDAP:
+┌─────────────────────┬────────────────┬──────────┬──────────┬───────────────┬───────────────┐
+│ Library             │ Vulnerability  │ Severity │ Status   │ Installed Ver.│ Fixed Version │
+├─────────────────────┼────────────────┼──────────┼──────────┼───────────────┼───────────────┤
+│ libldap-2.5-0       │ CVE-2023-2953  │ HIGH     │ affected │ 2.5.13+dfsg-5 │               │
+└─────────────────────┴────────────────┴──────────┴──────────┴───────────────┴───────────────┘
+
+Other scanned targets (all clean):
+- opt/pipx/venvs/ansible-core/* (python-pkg): 0 vulnerabilities
+- usr/bin/tofu (gobinary): 0 vulnerabilities
+```
+
+**Notes**:
+
+- All vulnerabilities are in Debian 12 (bookworm) base packages, not our application code
+- **CVE-2025-13836** (CRITICAL): CPython HTTP client DoS - affects http.client module
+- **CVE-2025-7458** (CRITICAL): SQLite integer overflow
+- **CVE-2023-45853** (CRITICAL): zlib buffer overflow - marked "will_not_fix" by Debian
+- Git vulnerabilities (CVE-2025-48384, CVE-2025-48385) have no fix available yet
+- GnuPG and PAM have fixes available - will be patched on next image rebuild
+- OpenTofu binary (`usr/bin/tofu`) has 0 vulnerabilities
+- Ansible and Python packages in pipx have 0 vulnerabilities
+- Image will automatically get updates when Debian releases fixes and we rebuild
+
+**Mitigation**:
+
+- The deployer runs in a controlled environment (user's machine or CI)
+- Python HTTP client DoS (CVE-2025-13836) is low risk - deployer doesn't expose HTTP services
+- SQLite vulnerability (CVE-2025-7458) is low risk - not used by deployer
+- zlib vulnerability is in minizip functions not commonly used
+- Git vulnerabilities are low risk - deployer uses git for internal operations only
+- Regular image rebuilds will incorporate Debian security updates
+
+**Action Items**:
+
+1. Monitor Debian security tracker for Python 3.11 and Git fixes
+2. Rebuild image when GnuPG and PAM fixes are available in Debian repos
+3. Consider future migration to newer Python (3.12+) when Debian supports it
+
+---
+
+## Previous Scan: December 29, 2025
 
 ### Scan Configuration
 
@@ -169,13 +288,14 @@ Total: 2 (HIGH: 2, CRITICAL: 0)
 
 ### Scan Summary
 
-| Image             | Version | HIGH | CRITICAL | Status    | Support EOL  |
-| ----------------- | ------- | ---- | -------- | --------- | ------------ |
-| `prom/prometheus` | v3.5.0  | 0    | 0        | ✅ SECURE | Jul 31, 2026 |
-| `grafana/grafana` | 12.3.1  | 0    | 0        | ✅ SECURE | Feb 24, 2026 |
-| `mysql`           | 8.4     | 0    | 0        | ✅ SECURE | Apr 30, 2032 |
+| Image                      | Version | HIGH | CRITICAL | Status       | Support EOL  |
+| -------------------------- | ------- | ---- | -------- | ------------ | ------------ |
+| `torrust/tracker-deployer` | latest  | 25   | 7        | ⚠️ Monitored | N/A          |
+| `prom/prometheus`          | v3.5.0  | 0    | 0        | ✅ SECURE    | Jul 31, 2026 |
+| `grafana/grafana`          | 12.3.1  | 0    | 0        | ✅ SECURE    | Feb 24, 2026 |
+| `mysql`                    | 8.4     | 0    | 0        | ✅ SECURE    | Apr 30, 2032 |
 
-**Overall Status**: ✅ All images secure - No HIGH or CRITICAL vulnerabilities detected
+**Overall Status**: ⚠️ Deployer image has upstream Debian vulnerabilities (no fixes available yet). All other images secure.
 
 ## Previous Scans
 

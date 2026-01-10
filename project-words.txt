@@ -97,6 +97,8 @@ debuginfo
 deogmiudufm
 derefs
 devpass
+dfsg
+dirmngr
 distro
 distroless
 distutils
@@ -156,6 +158,10 @@ larstobi
 leecher
 leechers
 libc
+libldap
+libpam
+libpython
+libsqlite
 lifecycles
 lineinfile
 listenfd
@@ -169,6 +175,7 @@ lxdbr
 maxbytes
 mgmt
 millis
+minizip
 mkdir
 mktemp
 mlock
@@ -308,6 +315,7 @@ userspace
 usize
 utmp
 vbqajnc
+venvs
 viewmodel
 vulns
 webservers
