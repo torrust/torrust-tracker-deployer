@@ -78,6 +78,22 @@ variable "server_labels" {
 # ============================================================================
 
 # Create or import the SSH key for server access
+#
+# PURPOSE: This resource registers the SSH public key in Hetzner's account-level
+# registry and enables ROOT SSH access as a fallback/debugging mechanism.
+#
+# WHY BOTH THIS AND CLOUD-INIT?
+# - This SSH key (via ssh_keys on server) → root user access
+# - cloud-init ssh_authorized_keys → torrust user access
+#
+# The root access is intentional: if cloud-init fails (syntax error, network
+# issue, script error), the server would be completely inaccessible without it.
+# Root SSH provides a recovery/debugging path.
+#
+# SECURITY NOTE: For production deployments, consider disabling root SSH access
+# after verifying deployment succeeded. See docs/security/ssh-root-access-hetzner.md
+#
+# This key will appear in Hetzner Console → Security → SSH Keys.
 resource "hcloud_ssh_key" "torrust" {
   name       = var.ssh_key_name
   public_key = var.ssh_public_key
