@@ -110,6 +110,16 @@ impl EnvironmentInfoView {
             lines.push(String::new()); // blank line
             lines.push("Connection:".to_string());
             lines.push(format!("  {}", infra.ssh_command()));
+
+            // Hint for Docker users when container path pattern detected
+            if Self::looks_like_container_path(&infra.ssh_key_path) {
+                lines.push(String::new()); // blank line
+                lines.push("Note: Paths shown are inside the container.".to_string());
+                lines.push(
+                    "      If using Docker, translate to your host path (e.g., ~/.ssh/)."
+                        .to_string(),
+                );
+            }
         }
 
         // Service information (if available)
@@ -193,6 +203,16 @@ impl EnvironmentInfoView {
             }
             _ => format!("Unknown state: {state_name}. Check environment state file."),
         }
+    }
+
+    /// Check if a path looks like it's inside the Docker container.
+    ///
+    /// The deployer Docker image uses `/home/deployer/` as the home directory.
+    /// When paths contain this prefix, it indicates the environment was managed
+    /// from inside a container, and users need to translate paths to their host
+    /// equivalents.
+    fn looks_like_container_path(path: &str) -> bool {
+        path.starts_with("/home/deployer/")
     }
 }
 
