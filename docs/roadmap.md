@@ -109,8 +109,10 @@ When starting work on a new feature:
 
 ### 4. Create a docker image for the deployer
 
-- [ ] **4.1** Create docker image for the deployer to use it without needing to install the dependencies (OpenTofu, Ansible, etc) - [Issue #264](https://github.com/torrust/torrust-tracker-deployer/issues/264)
-  - Mount data and build dirs when running it.
+- [x] **4.1** Create docker image for the deployer to use it without needing to install the dependencies (OpenTofu, Ansible, etc) - [Issue #264](https://github.com/torrust/torrust-tracker-deployer/issues/264) ✅ Completed
+  - Docker image published to Docker Hub
+  - CI/CD workflow for automated builds
+  - Security scanning with Trivy
 
 ### 5. Add extra console app commands
 
