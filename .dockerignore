@@ -1,0 +1,25 @@
+# Build artifacts
+target/
+
+# Data directories (runtime generated)
+data/
+build/
+envs/
+
+# Git
+.git/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Documentation artifacts
+repomix-output.xml
+
+# Test fixtures that aren't needed for build
+fixtures/tofu/
+
+# Logs
+*.log
