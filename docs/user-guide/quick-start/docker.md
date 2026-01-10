@@ -73,6 +73,8 @@ Open `envs/my-hetzner-env.json` and update:
 ```
 
 > **Important**: The `private_key_path` and `public_key_path` are paths **inside the container**. When you mount `~/.ssh:/home/deployer/.ssh:ro`, your host keys become available at `/home/deployer/.ssh/` inside the container.
+>
+> **Note on displayed paths**: Commands like `show` display paths as they exist inside the container (e.g., `/home/deployer/.ssh/torrust_tracker_rsa`). These are not host paths. To SSH from your host machine, use the corresponding host path (e.g., `~/.ssh/torrust_tracker_rsa`).
 
 ### Generating Secure Passwords
 
@@ -305,6 +307,26 @@ deployer provision my-hetzner-env
 ```
 
 > **Tip**: Check `data/<env-name>/environment.json` to see the current state and error details.
+
+### Paths Shown Are Container Paths, Not Host Paths
+
+When running `show` or other commands, paths displayed (like SSH key paths) are **container paths**, not host paths:
+
+```bash
+# Output from 'show' command shows:
+#   SSH Key: /home/deployer/.ssh/torrust_tracker_rsa
+#
+# This is the path INSIDE the container.
+# On your host, this maps to wherever you mounted from:
+#   ~/.ssh/torrust_tracker_rsa (if you used -v ~/.ssh:/home/deployer/.ssh:ro)
+```
+
+To SSH from your host machine, translate the container path to your host path:
+
+```bash
+# Container shows: ssh -i /home/deployer/.ssh/torrust_tracker_rsa torrust@<IP>
+# On your host use: ssh -i ~/.ssh/torrust_tracker_rsa torrust@<IP>
+```
 
 ### LXD Provider Not Working
 
