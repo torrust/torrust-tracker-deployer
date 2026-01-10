@@ -95,6 +95,22 @@ lxc network create lxdbr0
 | Storage  | 20 GB   | 50+ GB        |
 | OS       | Linux   | Ubuntu 22.04+ |
 
+## SSH Key Behavior
+
+Unlike the [Hetzner provider](hetzner.md), LXD does **not** create a provider-level SSH key resource. This is because:
+
+1. **Direct console access**: `lxc exec` provides shell access without SSH
+2. **No account-level keys**: LXD doesn't have an SSH key registry concept
+3. **Local environment**: No need for remote debugging fallback
+
+SSH access is configured solely through cloud-init for the `torrust` user.
+
+**Debugging without SSH**: If cloud-init fails, use direct console access:
+
+```bash
+lxc exec torrust-tracker-vm-<environment> -- bash
+```
+
 ## Related Documentation
 
 - [LXD Tech Guide](../../tech-stack/lxd.md) - Installation and detailed LXD operations

@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                                  | Summary                                                                                    |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ✅ Accepted   | 2026-01-10 | [Hetzner SSH Key Dual Injection Pattern](./hetzner-ssh-key-dual-injection.md)                             | Use both OpenTofu SSH key and cloud-init for debugging capability with manual hardening    |
 | ✅ Accepted   | 2026-01-10 | [Configuration and Data Directories as Secrets](./configuration-directories-as-secrets.md)                | Treat envs/, data/, build/ as secrets; no env var injection; users secure via permissions  |
 | ✅ Accepted   | 2026-01-07 | [Configuration DTO Layer Placement](./configuration-dto-layer-placement.md)                               | Keep configuration DTOs in application layer, not domain; defer package extraction         |
 | ✅ Accepted   | 2025-12-23 | [Docker Security Scan Exit Code Zero](./docker-security-scan-exit-code-zero.md)                           | Use exit-code 0 for security scanning - Trivy detects, GitHub Security decides, CI green   |

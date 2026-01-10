@@ -143,10 +143,27 @@ cat /var/log/cloud-init-output.log
 2. **Restrict SSH access** - Consider using Hetzner Firewall
 3. **Use strong SSH keys** - Ed25519 or RSA 4096-bit minimum
 4. **Regular updates** - Keep server packages updated
+5. **Disable root SSH access** - For production, see [SSH Root Access Guide](../../security/ssh-root-access-hetzner.md)
+
+## SSH Key Behavior
+
+Hetzner deployments configure SSH access through two mechanisms:
+
+| Mechanism                 | User      | Purpose                   |
+| ------------------------- | --------- | ------------------------- |
+| OpenTofu `hcloud_ssh_key` | `root`    | Emergency/debug access    |
+| cloud-init                | `torrust` | Normal application access |
+
+**Why both?** If cloud-init fails, root SSH access provides a debugging path. Without it, a failed cloud-init would leave the server completely inaccessible.
+
+**For stricter security**: You can disable root SSH access after deployment. See [SSH Root Access on Hetzner](../../security/ssh-root-access-hetzner.md) for instructions.
+
+**Note**: The SSH key appears in your Hetzner Console under **Security** → **SSH Keys** with the name `torrust-tracker-vm-<environment>-ssh-key`.
 
 ## Related Documentation
 
 - [Quick Start: Docker](../quick-start/docker.md) - Deploy to Hetzner using Docker
 - [Quick Start: Native](../quick-start/native.md) - Deploy using native installation
 - [SSH Keys Guide](../../tech-stack/ssh-keys.md) - SSH key generation
+- [SSH Root Access Security](../../security/ssh-root-access-hetzner.md) - Disabling root access
 - [LXD Provider](lxd.md) - Local development alternative
