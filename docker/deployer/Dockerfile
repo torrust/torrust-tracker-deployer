@@ -96,6 +96,13 @@ ENV PIPX_HOME=/opt/pipx
 ENV PIPX_BIN_DIR=/usr/local/bin
 RUN pipx install ansible-core
 
+# Install required Ansible collections
+# ansible.posix: Required for the 'debug' callback plugin used in ansible.cfg
+# community.docker: Required for Docker management tasks
+# community.general: Required for common utility modules
+RUN pipx runpip ansible-core install ansible \
+    && ansible-galaxy collection install ansible.posix community.docker community.general
+
 # Install OpenTofu
 # Using the official installation script with deb method for Debian
 RUN curl -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh \
