@@ -63,7 +63,7 @@ case "$1" in
 ║                    TORRUST TRACKER DEPLOYER (CONTAINER)                    ║
 ╠════════════════════════════════════════════════════════════════════════════╣
 ║                                                                            ║
-║  ⚠️  IMPORTANT LIMITATION                                                  ║
+║  IMPORTANT LIMITATION                                                      ║
 ║                                                                            ║
 ║  This container only supports CLOUD PROVIDERS (e.g., Hetzner).             ║
 ║  The LXD provider is NOT supported when running from a container.          ║
