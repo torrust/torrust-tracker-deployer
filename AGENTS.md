@@ -188,7 +188,7 @@ The project has comprehensive documentation organized in the [`docs/`](docs/) di
 
 **For Users:**
 
-- Getting started: [`docs/user-guide/README.md`](docs/user-guide/README.md), [`docs/user-guide/quick-start.md`](docs/user-guide/quick-start.md)
+- Getting started: [`docs/user-guide/README.md`](docs/user-guide/README.md), [`docs/user-guide/quick-start/`](docs/user-guide/quick-start/README.md)
 - Commands: [`docs/user-guide/commands/`](docs/user-guide/commands/), [`docs/console-commands.md`](docs/console-commands.md)
 - Providers: [`docs/user-guide/providers/`](docs/user-guide/providers/)
 

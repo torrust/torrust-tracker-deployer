@@ -119,6 +119,28 @@ sudo apt install ansible
 
 ### 💻 Usage
 
+#### 🐳 Docker (Recommended for Cloud Deployments)
+
+The easiest way to use the deployer for **cloud provider deployments** (Hetzner) is with Docker - no local dependency installation required:
+
+```bash
+# Pull the image
+docker pull torrust/tracker-deployer:latest
+
+# Run a command (example: show help)
+docker run --rm \
+  -v $(pwd)/data:/var/lib/torrust/deployer/data \
+  -v $(pwd)/build:/var/lib/torrust/deployer/build \
+  -v $(pwd)/envs:/var/lib/torrust/deployer/envs \
+  -v ~/.ssh:/home/deployer/.ssh:ro \
+  torrust/tracker-deployer:latest \
+  --help
+```
+
+> ⚠️ **Important**: Docker only supports **cloud providers** (Hetzner). For **LXD local development**, install the deployer directly on your host.
+
+**[📖 See Docker documentation →](docker/deployer/README.md)**
+
 #### 🚀 Main Application
 
 The main application provides usage instructions:
@@ -234,7 +256,7 @@ cargo run --bin e2e-complete-workflow-tests -- --help
 >
 > **📖 For detailed command documentation and guides, see:**
 >
-> - **[Quick Start Guide](docs/user-guide/quick-start.md)** - Complete workflow walkthrough
+> - **[Quick Start Guides](docs/user-guide/quick-start/README.md)** - Docker and native installation guides
 > - **[Commands Reference](docs/user-guide/commands/)** - Detailed guide for each command _(coming soon)_
 > - **[Console Commands](docs/console-commands.md)** - Technical reference
 > - **[Advanced: Manual Commands](docs/user-guide/advanced-manual-commands.md)** - Manual OpenTofu and Ansible commands (advanced users only)
@@ -278,7 +300,7 @@ This project follows a structured development roadmap to evolve from the current
 **Next Major Milestones:**
 
 - 🔄 **Main Application Commands**: `create`, `deploy`, `destroy`, `status`
-- � **Real Cloud Providers**: Starting with Hetzner, expanding to AWS/GCP/Azure
+- ☁️ **Real Cloud Providers**: Starting with Hetzner, expanding to AWS/GCP/Azure
 - 🔄 **Production Features**: HTTPS, backups, monitoring stack
 
 **[📖 See complete roadmap →](docs/roadmap.md)**

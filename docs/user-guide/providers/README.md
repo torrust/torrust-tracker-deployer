@@ -36,6 +36,6 @@ See the [contributing guide](../../contributing/README.md) for more details.
 
 ## Related Documentation
 
-- [Quick Start Guide](../quick-start.md) - Complete deployment workflow
+- [Quick Start Guides](../quick-start/README.md) - Docker and native installation guides
 - [Commands Reference](../commands/README.md) - Available commands
 - [SSH Keys](../../tech-stack/ssh-keys.md) - SSH key generation and management

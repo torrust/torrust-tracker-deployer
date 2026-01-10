@@ -91,12 +91,12 @@ Simplified commands that orchestrate multiple plumbing commands:
 
 If you're new to the Torrust Tracker Deployer, we recommend:
 
-1. Start with the **[Quick Start Guide](../quick-start.md)** for a complete walkthrough
+1. Start with the **[Quick Start Guides](../quick-start/README.md)** for Docker or native installation
 2. Use the individual command guides for detailed information
 3. Check the **[Console Commands Reference](../../console-commands.md)** for technical details
 
 ## See Also
 
-- [Quick Start Guide](../quick-start.md) - Complete deployment walkthrough
+- [Quick Start Guides](../quick-start/README.md) - Docker and native installation guides
 - [Console Commands Reference](../../console-commands.md) - Technical command reference
 - [Codebase Architecture](../../codebase-architecture.md) - Understanding the internals

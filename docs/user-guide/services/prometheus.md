@@ -288,4 +288,4 @@ services:
 - **[Prometheus Verification Guide](../../e2e-testing/manual/prometheus-verification.md)** - Detailed verification steps
 - **[User Guide](../README.md)** - Main user guide
 - **[Configuration Guide](../configuration/)** - Environment configuration details
-- **[Quick Start Guide](../quick-start.md)** - Getting started with deployments
+- **[Quick Start Guides](../quick-start/README.md)** - Getting started with deployments

@@ -51,19 +51,46 @@ The Torrust Tracker Deployer is currently in active development. The following f
 
 ## Quick Start
 
-> **📖 For a complete step-by-step guide**, see the [Quick Start Guide](quick-start.md) which covers the full deployment workflow from template generation to infrastructure testing.
+> **📖 For complete step-by-step guides**, see the [Quick Start Guides](quick-start/README.md):
+>
+> - [Docker Deployment](quick-start/docker.md) - Fast setup for Hetzner Cloud
+> - [Native Installation](quick-start/native.md) - Full provider support including LXD
 
 ### Prerequisites
 
 Before using the Torrust Tracker Deployer, ensure you have:
 
-- Rust toolchain (for building from source)
 - SSH key pair for VM access
-- LXD installed and configured (for local deployments)
+- For **Docker** (cloud providers only): Docker installed
+- For **native installation**: Rust toolchain, LXD (for local), OpenTofu, Ansible
 
-### Installation
+### Installation Options
 
-Build from source:
+#### Option 1: Docker (Recommended for Cloud Providers)
+
+The easiest way to get started with **cloud provider deployments** (Hetzner) is using Docker:
+
+```bash
+# Pull the image
+docker pull torrust/tracker-deployer:latest
+
+# Create working directories
+mkdir -p data build envs
+
+# Generate a configuration template
+docker run --rm \
+  -v $(pwd)/envs:/var/lib/torrust/deployer/envs \
+  torrust/tracker-deployer:latest \
+  create template --provider hetzner /var/lib/torrust/deployer/envs/my-env.json
+```
+
+> ⚠️ **Limitation**: Docker only supports **cloud providers** (Hetzner). For LXD local development, use native installation.
+
+**[📖 Full Docker documentation →](../../docker/deployer/README.md)**
+
+#### Option 2: Native Installation
+
+Build from source for full provider support (including LXD):
 
 ```bash
 git clone https://github.com/torrust/torrust-tracker-deployer.git
@@ -467,7 +494,7 @@ This shows real-time progress and detailed error information.
 
 ### Documentation
 
-- **[Quick Start Guide](quick-start.md)** - Complete deployment workflow walkthrough
+- **[Quick Start Guides](quick-start/README.md)** - Docker and native installation guides
 - **[Command Reference](commands/README.md)** - Detailed documentation for all commands
 - **[Logging Guide](logging.md)** - Logging configuration and best practices
 - **[Template Customization](template-customization.md)** - Advanced configuration options
@@ -491,7 +518,7 @@ For contributors and developers:
 
 Now that you understand the basics:
 
-1. **Follow the [Quick Start Guide](quick-start.md)** - Complete deployment workflow tutorial
+1. **Follow the [Quick Start Guides](quick-start/README.md)** - Choose Docker or native installation
 2. **Explore Commands** - Read the detailed [Command Reference](commands/README.md)
 3. **Configure Logging** - Set up logging that fits your workflow
 4. **Report Feedback** - Share your experience on GitHub

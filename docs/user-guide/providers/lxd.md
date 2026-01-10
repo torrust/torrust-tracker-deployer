@@ -98,5 +98,5 @@ lxc network create lxdbr0
 ## Related Documentation
 
 - [LXD Tech Guide](../../tech-stack/lxd.md) - Installation and detailed LXD operations
-- [Quick Start Guide](../quick-start.md) - Complete deployment workflow
+- [Quick Start: Native](../quick-start/native.md) - LXD deployment workflow
 - [Hetzner Provider](hetzner.md) - Cloud deployment alternative

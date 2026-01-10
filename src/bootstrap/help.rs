@@ -59,7 +59,7 @@ pub fn display_getting_started() {
     println!("      torrust-tracker-deployer destroy my-environment");
     println!();
     println!("📖 Documentation:");
-    println!("   - Quick Start Guide: docs/user-guide/quick-start.md");
+    println!("   - Quick Start Guides: docs/user-guide/quick-start/");
     println!("   - Command Reference: docs/user-guide/commands/README.md");
     println!("   - Main README: README.md");
     println!();

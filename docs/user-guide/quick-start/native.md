@@ -1,14 +1,17 @@
-# Quick Start Guide
+# Quick Start: Native Installation
 
-Get up and running with Torrust Tracker Deployer in minutes.
+Deploy a Torrust Tracker with full provider support using native installation.
+
+> **Alternative**: For a faster setup with Docker (Hetzner only), see [Docker Deployment](docker.md).
 
 ## Prerequisites
 
-- **LXD** - Local LXD installation configured (for local development)
-- **Hetzner Account** - Hetzner Cloud account with API token (for production)
-- **OpenTofu** - OpenTofu CLI installed
-- **Ansible** - Ansible for configuration management
-- **SSH keys** - SSH key pair for VM access
+- **Rust toolchain** - For building the deployer
+- **LXD** - For local development (optional)
+- **Hetzner Account** - For cloud deployments (optional)
+- **OpenTofu** - Infrastructure as Code tool
+- **Ansible** - Configuration management
+- **SSH keys** - Key pair for VM access
 
 > **Tip**: Run `cargo run --bin dependency-installer check` to verify all prerequisites are met.
 
@@ -21,7 +24,7 @@ Before starting, decide which provider to use:
 | **LXD**           | Local development, CI/CD, testing | Linux with LXD installed    |
 | **Hetzner Cloud** | Production deployments            | Hetzner account + API token |
 
-📖 **See [Provider Guides](providers/README.md)** for detailed setup instructions.
+📖 **See [Provider Guides](../providers/README.md)** for detailed setup instructions.
 
 ## Installation
 
@@ -406,10 +409,10 @@ After completing this quick start:
 
 ## Additional Resources
 
-- [Command Reference](commands/README.md) - Detailed documentation for all commands
-- [Architecture Guide](../codebase-architecture.md) - Understanding the codebase
-- [Contributing Guide](../contributing/README.md) - Contributing to the project
-- [Console Commands](../console-commands.md) - Technical command reference
+- [Command Reference](../commands/README.md) - Detailed documentation for all commands
+- [Architecture Guide](../../codebase-architecture.md) - Understanding the codebase
+- [Contributing Guide](../../contributing/README.md) - Contributing to the project
+- [Console Commands](../../console-commands.md) - Technical command reference
 
 ## Getting Help
 
@@ -417,7 +420,7 @@ If you encounter issues:
 
 1. Check the troubleshooting section above
 2. Review the command-specific guides in `docs/user-guide/commands/`
-3. Check the [known issues](../contributing/known-issues.md) documentation
+3. Check the [known issues](../../contributing/known-issues.md) documentation
 4. Open an issue on GitHub with:
    - Steps to reproduce
    - Error messages
