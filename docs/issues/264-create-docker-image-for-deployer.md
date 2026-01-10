@@ -365,7 +365,7 @@ jobs:
 
 **Security Requirements**:
 
-- [x] Image passes Trivy vulnerability scan (see [security scan results](../security/docker-image-security-scans.md))
+- [x] Image passes Trivy vulnerability scan (see [security scan results](../security/docker/scans/torrust-tracker-deployer.md))
 - [x] No secrets or credentials in Dockerfile or image layers
 - [x] Container runs as non-root user by default
 
@@ -373,7 +373,7 @@ jobs:
 > from Debian base packages (GnuPG, Python 3.11, Git, SQLite, zlib). These are upstream Debian
 > issues with status "affected" (no fix yet) or "will_not_fix". No vulnerabilities in our
 > application code. The image will get updates automatically when Debian releases fixes and
-> we rebuild. See [full scan details](../security/docker-image-security-scans.md).
+> we rebuild. See [full scan details](../security/docker/scans/torrust-tracker-deployer.md).
 
 ## Related Documentation
 

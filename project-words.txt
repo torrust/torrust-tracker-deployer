@@ -60,6 +60,7 @@ addgroup
 adduser
 appender
 appendonly
+aquasec
 aquasecurity
 architecting
 autorestart
@@ -315,6 +316,7 @@ userspace
 usize
 utmp
 vbqajnc
+venv
 venvs
 viewmodel
 vulns
