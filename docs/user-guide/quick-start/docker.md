@@ -90,16 +90,19 @@ openssl rand -base64 18
 
 ### Configuration Reference
 
-| Field                              | Description                       | Example                              |
-| ---------------------------------- | --------------------------------- | ------------------------------------ |
-| `environment.name`                 | Unique environment identifier     | `my-hetzner-env`                     |
-| `ssh_credentials.private_key_path` | Container path to SSH private key | `/home/deployer/.ssh/id_ed25519`     |
-| `ssh_credentials.public_key_path`  | Container path to SSH public key  | `/home/deployer/.ssh/id_ed25519.pub` |
-| `provider.api_token`               | Hetzner API token                 | `hcloud_xxx...`                      |
-| `provider.server_type`             | Server size                       | `cx22`, `cx32`, `cx42`               |
-| `provider.location`                | Datacenter                        | `nbg1`, `fsn1`, `hel1`               |
-| `tracker.http_api.admin_token`     | Tracker API authentication token  | (generated secure token)             |
-| `grafana.admin_password`           | Grafana admin password            | (generated secure password)          |
+| Field                                | Description                                         | Example                              |
+| ------------------------------------ | --------------------------------------------------- | ------------------------------------ |
+| `environment.name`                   | Unique environment identifier                       | `my-hetzner-env`                     |
+| `ssh_credentials.private_key_path`   | Container path to SSH private key                   | `/home/deployer/.ssh/id_ed25519`     |
+| `ssh_credentials.public_key_path`    | Container path to SSH public key                    | `/home/deployer/.ssh/id_ed25519.pub` |
+| `provider.api_token`                 | Hetzner API token                                   | `hcloud_xxx...`                      |
+| `provider.server_type`               | Server size                                         | `cx22`, `cx32`, `cx42`               |
+| `provider.location`                  | Datacenter                                          | `nbg1`, `fsn1`, `hel1`               |
+| `tracker.http_api.admin_token`       | Tracker API authentication token                    | (generated secure token)             |
+| `tracker.health_check_api.bind`      | Health check binding (use `127.0.0.1` for security) | `127.0.0.1:1313`                     |
+| `grafana.admin_user`                 | Grafana admin username                              | `admin`                              |
+| `grafana.admin_password`             | Grafana admin password                              | (generated secure password)          |
+| `prometheus.scrape_interval_in_secs` | Metrics scrape interval                             | `15`                                 |
 
 See [Hetzner Provider Guide](../providers/hetzner.md) for all options.
 
@@ -189,6 +192,39 @@ docker run --rm \
   -v $(pwd)/data:/var/lib/torrust/deployer/data \
   torrust/tracker-deployer:latest \
   show my-hetzner-env
+
+# Run built-in health tests
+docker run --rm \
+  -v $(pwd)/data:/var/lib/torrust/deployer/data \
+  -v $(pwd)/build:/var/lib/torrust/deployer/build \
+  -v ~/.ssh:/home/deployer/.ssh:ro \
+  torrust/tracker-deployer:latest \
+  test my-hetzner-env
+```
+
+### Service Endpoints
+
+After deployment, your services are available at (replace `<IP>` with your server's IP):
+
+| Service      | URL                         | Notes                                  |
+| ------------ | --------------------------- | -------------------------------------- |
+| HTTP Tracker | `http://<IP>:7070/announce` | BitTorrent HTTP tracker announce       |
+| UDP Tracker  | `udp://<IP>:6969/announce`  | BitTorrent UDP tracker announce        |
+| Tracker API  | `http://<IP>:1212/api`      | Requires `admin_token` for auth        |
+| Health Check | `http://<IP>:1313/health`   | Bound to localhost only (internal)     |
+| Grafana      | `http://<IP>:3100`          | Metrics dashboard (admin credentials)  |
+| Prometheus   | `http://localhost:9090`     | Internal only - not exposed externally |
+
+> **Note**: The health check endpoint (`1313`) is bound to `127.0.0.1` by default for security. Access it via SSH if needed.
+
+### Testing the API
+
+```bash
+# Get tracker stats (requires admin token)
+curl "http://<IP>:1212/api/v1/stats?token=YOUR_ADMIN_TOKEN"
+
+# Test HTTP tracker (should return 200)
+curl -s -o /dev/null -w "%{http_code}" "http://<IP>:7070/announce"
 ```
 
 ## Clean Up
