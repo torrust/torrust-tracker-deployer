@@ -3,14 +3,12 @@ AAAAC
 AAAAI
 AGENTS
 Alertmanager
-alpn
 Ashburn
 Avalonia
 BBDBE
 Bitwarden
-certbot
-Certbot
 CIFS
+Certbot
 Cockburn
 Containerfile
 Crossplane
@@ -38,8 +36,6 @@ OSSEC
 Ollama
 Osherove
 Pingoo
-pingoo
-pingooio
 Preinstalling
 Pulumi
 RAII
@@ -64,6 +60,7 @@ Wazuh
 Zeroize
 addgroup
 adduser
+alpn
 appender
 appendonly
 aquasec
@@ -76,6 +73,8 @@ binstall
 bootcmd
 browsable
 buildx
+cdmon
+certbot
 chdir
 checkmarks
 childlogdir
@@ -223,6 +222,8 @@ pathbuf
 peerslee
 pidfile
 pids
+pingoo
+pingooio
 pipefail
 pipx
 pkill
