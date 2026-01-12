@@ -35,13 +35,13 @@ See [phase-1-environment-preparation.md](phase-1-environment-preparation.md) for
 - Server accessibility checks
 - Prerequisites for running experiments
 
-**Status**: ✅ DNS verified, server checks pending
+**Status**: ✅ Complete
 
 ### Phase 2: Experiments
 
 | Experiment             | Document                                                     | Status      |
 | ---------------------- | ------------------------------------------------------------ | ----------- |
-| 1. Minimal Hello World | [experiment-1-hello-world.md](experiment-1-hello-world.md)   | Not started |
+| 1. Minimal Hello World | [experiment-1-hello-world.md](experiment-1-hello-world.md)   | ✅ Complete |
 | 2. Tracker API HTTPS   | [experiment-2-tracker-api.md](experiment-2-tracker-api.md)   | Not started |
 | 3. HTTP Tracker HTTPS  | [experiment-3-http-tracker.md](experiment-3-http-tracker.md) | Not started |
 | 4. Grafana WebSocket   | [experiment-4-grafana.md](experiment-4-grafana.md)           | Not started |
@@ -54,12 +54,30 @@ See [phase-1-environment-preparation.md](phase-1-environment-preparation.md) for
 4. How does configuration complexity compare to nginx+certbot?
 5. Are there any issues with TLS 1.3-only support?
 
-## Conclusion
+## Preliminary Findings (from Experiment 1)
 
-See [conclusion.md](conclusion.md) for final recommendation (to be written after experiments).
+- ✅ **Automatic certificate generation works** - Pingoo obtained Let's Encrypt cert without manual steps
+- ✅ **TLS 1.3 with post-quantum cryptography** - Uses X25519MLKEM768 key exchange
+- ✅ **Minimal configuration** - Only 10 lines of YAML needed
+- ✅ **No email required** - Unlike certbot, no email setup needed
+- ⏳ **Certificate renewal** - Cannot test yet (cert valid for 90 days)
+- ⏳ **WebSocket support** - Will test in Experiment 4
+
+## Preliminary Decision
+
+**Switch to Pingoo** - See [conclusion.md](conclusion.md) for full rationale.
+
+Key factors:
+
+- Dramatically simpler configuration (~10 lines vs ~50+ for nginx+certbot)
+- Modern security defaults (TLS 1.3, post-quantum crypto)
+- Zero-touch certificate management
+
+**Pending**: WebSocket verification for Grafana (Experiment 4). If WebSocket doesn't
+work, a hybrid approach (Pingoo for Tracker, nginx for Grafana) is planned.
 
 ## Timeline
 
-- **2026-01-12**: Research started, environment preparation
-- **TBD**: Experiments completed
-- **TBD**: Conclusion and recommendation
+- **2026-01-12**: Research started, Experiment 1 completed ✅
+- **TBD**: Experiments 2-4 completed
+- **TBD**: Final decision after WebSocket verification

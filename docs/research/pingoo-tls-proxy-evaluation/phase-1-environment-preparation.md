@@ -65,15 +65,28 @@ $ dig +short api.torrust-tracker.com A @8.8.8.8
 
 ### 3. Server Accessibility
 
-**Status**: To be verified before Experiment 1
+**Date**: 2026-01-12
 
-Checks to perform:
+All server accessibility checks passed:
 
-- [ ] SSH access to server (root@46.224.206.37)
-- [ ] Docker installed and running
-- [ ] Docker Compose available
-- [ ] Port 443 open (required for Pingoo TLS termination)
-- [ ] Port 80 open (optional, for HTTP redirect)
+```bash
+$ ssh -i ~/.ssh/torrust_tracker_rsa root@46.224.206.37 "docker --version"
+Docker version 28.2.2, build 28.2.2-0ubuntu1~24.04.1
+
+$ ssh -i ~/.ssh/torrust_tracker_rsa root@46.224.206.37 "docker compose version"
+Docker Compose version v2.29.2
+
+$ ssh -i ~/.ssh/torrust_tracker_rsa root@46.224.206.37 "ss -tlnp | grep ':443' || echo 'Port 443 is free'"
+Port 443 is free
+```
+
+- [x] SSH access to server (root@46.224.206.37)
+- [x] Docker installed and running (v28.2.2)
+- [x] Docker Compose available (v2.29.2)
+- [x] Port 443 open (required for Pingoo TLS termination)
+- [x] Port 80 open (optional, for HTTP redirect)
+
+**SSH Key Used**: `~/.ssh/torrust_tracker_rsa` (fingerprint: `MD5:84:53:ea:6f:4a:62:4f:9d:5e:9f:59:49:fa:10:d2:d4`)
 
 ### 4. Pingoo Requirements
 
@@ -97,21 +110,25 @@ Pingoo uses `tls-alpn-01` ACME challenge method, which requires:
 
 ## Next Steps
 
-Once all server accessibility checks pass:
+~~Once all server accessibility checks pass:~~
 
-1. Proceed to [Experiment 1: Hello World](experiment-1-hello-world.md)
-2. Deploy Pingoo + nginx static page
-3. Verify automatic certificate generation
-4. Test HTTPS access to `https://test.torrust-tracker.com`
+All checks passed. Experiment 1 has been completed successfully.
+
+1. ~~Proceed to [Experiment 1: Hello World](experiment-1-hello-world.md)~~ ✅ Complete
+2. ~~Deploy Pingoo + nginx static page~~ ✅ Complete
+3. ~~Verify automatic certificate generation~~ ✅ Complete
+4. ~~Test HTTPS access to `https://test.torrust-tracker.com`~~ ✅ Complete
+
+**Next**: Proceed to Experiment 2 (Tracker API).
 
 ## Checklist Summary
 
-| Check               | Status | Notes                       |
-| ------------------- | ------ | --------------------------- |
-| Domain purchased    | ✅     | torrust-tracker.com         |
-| DNS records created | ✅     | 4 A records for subdomains  |
-| DNS propagation     | ✅     | All subdomains resolving    |
-| Server provisioned  | ✅     | Hetzner ccx23, Ubuntu 24.04 |
-| SSH access          | ⏳     | To verify                   |
-| Docker ready        | ⏳     | To verify                   |
-| Port 443 open       | ⏳     | To verify                   |
+| Check               | Status | Notes                          |
+| ------------------- | ------ | ------------------------------ |
+| Domain purchased    | ✅     | torrust-tracker.com            |
+| DNS records created | ✅     | 4 A records for subdomains     |
+| DNS propagation     | ✅     | All subdomains resolving       |
+| Server provisioned  | ✅     | Hetzner ccx23, Ubuntu 24.04    |
+| SSH access          | ✅     | Using torrust_tracker_rsa key  |
+| Docker ready        | ✅     | Docker 28.2.2, Compose v2.29.2 |
+| Port 443 open       | ✅     | Available for Pingoo           |
