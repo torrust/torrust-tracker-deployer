@@ -42,7 +42,7 @@ See [phase-1-environment-preparation.md](phase-1-environment-preparation.md) for
 | Experiment             | Document                                                     | Status      |
 | ---------------------- | ------------------------------------------------------------ | ----------- |
 | 1. Minimal Hello World | [experiment-1-hello-world.md](experiment-1-hello-world.md)   | ✅ Complete |
-| 2. Tracker API HTTPS   | [experiment-2-tracker-api.md](experiment-2-tracker-api.md)   | Not started |
+| 2. Tracker API HTTPS   | [experiment-2-tracker-api.md](experiment-2-tracker-api.md)   | ✅ Complete |
 | 3. HTTP Tracker HTTPS  | [experiment-3-http-tracker.md](experiment-3-http-tracker.md) | Not started |
 | 4. Grafana WebSocket   | [experiment-4-grafana.md](experiment-4-grafana.md)           | Not started |
 
