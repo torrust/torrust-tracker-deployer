@@ -1,14 +1,36 @@
 # Pingoo TLS Proxy Evaluation - Conclusion
 
-**Status**: Decision Pending WebSocket Verification
+**Status**: ✅ EVALUATION COMPLETE
 **Last Updated**: 2026-01-12
 
-## Preliminary Decision
+## Final Decision
 
-**Switch to Pingoo** as the primary TLS proxy for Torrust Tracker deployments.
+**Use hybrid architecture:** Pingoo for Tracker services, nginx for Grafana.
 
-Pingoo offers significant advantages in simplicity and modern security features that
-make it the preferred choice over nginx+certbot for automatic HTTPS/TLS termination.
+Pingoo provides excellent TLS termination for HTTP-based services but **does not support WebSocket connections**, which are required for Grafana Live. The hybrid approach maximizes Pingoo's simplicity benefits while maintaining full Grafana functionality.
+
+## Architecture Diagram
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                        Public Internet                          │
+└─────────────────────────────────────────────────────────────────┘
+                    │                           │
+                    ▼                           ▼
+         ┌──────────────────┐        ┌───────────────────┐
+         │     Pingoo       │        │  nginx+certbot    │
+         │   (port 443)     │        │   (port 3443)     │
+         │                  │        │                   │
+         │ api.example.com  │        │grafana.example.com│
+         │http1.example.com │        │                   │
+         └────────┬─────────┘        └────────┬──────────┘
+                  │                           │
+                  ▼                           ▼
+         ┌──────────────────┐        ┌───────────────────┐
+         │  Tracker API     │        │     Grafana       │
+         │  HTTP Tracker    │        │   (WebSocket)     │
+         └──────────────────┘        └───────────────────┘
+```
 
 ## Decision Rationale
 
@@ -52,46 +74,34 @@ make it the preferred choice over nginx+certbot for automatic HTTPS/TLS terminat
 
 ## Pending Verification
 
-### WebSocket Support (Experiment 4)
+### Certificate Renewal
 
-Grafana Live uses WebSocket connections for real-time dashboard updates. We need to
-verify that Pingoo correctly proxies WebSocket connections.
+Certificate renewal cannot be tested during this evaluation (certificates are valid
+for 90 days). Pingoo claims automatic renewal - this should work based on the ACME
+implementation, but should be verified after deployment.
 
-**Possible outcomes:**
+## WebSocket Limitation - Root Cause
 
-1. **WebSocket works** → Use Pingoo for all services (Tracker API, HTTP Tracker, Grafana)
-2. **WebSocket doesn't work** → Hybrid approach (see below)
+Pingoo's HTTP proxy explicitly removes the `Upgrade` header, which is required for
+WebSocket protocol upgrades. From the source code:
 
-### Fallback Strategy
-
-If Pingoo doesn't support WebSocket for Grafana:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                        Public Internet                          │
-└─────────────────────────────────────────────────────────────────┘
-                    │                           │
-                    ▼                           ▼
-         ┌──────────────────┐        ┌──────────────────┐
-         │     Pingoo       │        │  nginx+certbot   │
-         │   (port 443)     │        │   (port 3443)    │
-         │                  │        │                  │
-         │ api.example.com  │        │grafana.example.com│
-         │http1.example.com │        │                  │
-         └────────┬─────────┘        └────────┬─────────┘
-                  │                           │
-                  ▼                           ▼
-         ┌──────────────────┐        ┌──────────────────┐
-         │  Tracker API     │        │     Grafana      │
-         │  HTTP Tracker    │        │   (WebSocket)    │
-         └──────────────────┘        └──────────────────┘
+```rust
+// https://github.com/pingooio/pingoo/blob/main/pingoo/services/http_proxy_service.rs
+const HOP_HEADERS: &[&str] = &[
+    "Connection",
+    // ... other headers ...
+    "Upgrade",  // This breaks WebSocket!
+];
 ```
 
-**Benefits of hybrid approach:**
+This means any service requiring WebSocket connections cannot use Pingoo's `http_proxy`.
+This is a fundamental limitation, not a configuration issue.
 
-- Users who don't need Grafana get the simpler Pingoo-only setup
-- Grafana users get WebSocket support via nginx
-- Can migrate Grafana to Pingoo when WebSocket support is added
+### Potential Future Solutions
+
+1. **Pingoo WebSocket support** - The Pingoo team may add WebSocket support
+2. **TCP+TLS mode** - Could use raw TCP proxying (loses HTTP routing)
+3. **Feature request** - Could file an issue requesting WebSocket support
 
 ## Files to Backup (for Disaster Recovery)
 
@@ -110,12 +120,12 @@ apply to new registrations).
 
 ## Experiment Results Summary
 
-| Experiment             | Status      | Result                                   |
-| ---------------------- | ----------- | ---------------------------------------- |
-| 1. Hello World         | ✅ Complete | SUCCESS - Certificate auto-generated     |
-| 2. Tracker API         | ⏳ Pending  | -                                        |
-| 3. HTTP Tracker        | ⏳ Pending  | -                                        |
-| 4. Grafana (WebSocket) | ⏳ Pending  | CRITICAL - Determines final architecture |
+| Experiment             | Status      | Result                                       |
+| ---------------------- | ----------- | -------------------------------------------- |
+| 1. Hello World         | ✅ Complete | SUCCESS - Certificate auto-generated         |
+| 2. Tracker API         | ✅ Complete | SUCCESS - API endpoints work via HTTPS       |
+| 3. HTTP Tracker        | ✅ Complete | SUCCESS - BitTorrent announce/scrape working |
+| 4. Grafana (WebSocket) | ⚠️ Partial  | HTTP works, WebSocket FAILS                  |
 
 ## Key Findings from Experiments
 
@@ -128,14 +138,35 @@ apply to new registrations).
 - ✅ Certificate stored with domain-named files for easy identification
 - ✅ ACME account persisted for future renewals
 
+### Experiment 2: Tracker API
+
+- ✅ JSON API responses proxied correctly
+- ✅ Health check endpoints work
+- ✅ No issues with TLS 1.3 for API clients
+
+### Experiment 3: HTTP Tracker
+
+- ✅ BitTorrent `announce` endpoint works via HTTPS
+- ✅ BitTorrent `scrape` endpoint works via HTTPS
+- ✅ Binary bencoded responses handled correctly
+
+### Experiment 4: Grafana (WebSocket)
+
+- ✅ HTTP dashboard access works
+- ✅ Login and navigation work
+- ❌ **WebSocket fails** - `Upgrade` header stripped by Pingoo
+- ❌ Grafana Live (real-time streaming) does not work
+
 ## Next Steps
 
-1. Complete Experiment 2 (Tracker API) - Verify JSON API proxying
-2. Complete Experiment 3 (HTTP Tracker) - Verify announce/scrape endpoints
-3. Complete Experiment 4 (Grafana) - **Critical** WebSocket verification
-4. Finalize architecture decision based on Experiment 4 results
-5. Update deployment templates to use Pingoo
-6. Document migration path from nginx+certbot (if applicable)
+1. ✅ ~~Complete Experiment 1 (Hello World)~~ - Certificate auto-generation verified
+2. ✅ ~~Complete Experiment 2 (Tracker API)~~ - JSON API proxying verified
+3. ✅ ~~Complete Experiment 3 (HTTP Tracker)~~ - BitTorrent protocol verified
+4. ✅ ~~Complete Experiment 4 (Grafana)~~ - WebSocket limitation discovered
+5. 🔲 File issue with Pingoo project requesting WebSocket support
+6. 🔲 Update deployment templates with hybrid architecture
+7. 🔲 Document migration path from pure nginx+certbot
+8. 🔲 Implement Pingoo templates in deployer codebase
 
 ## References
 
