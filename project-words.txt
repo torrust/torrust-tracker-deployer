@@ -3,10 +3,13 @@ AAAAC
 AAAAI
 AGENTS
 Alertmanager
+alpn
 Ashburn
 Avalonia
 BBDBE
 Bitwarden
+certbot
+Certbot
 CIFS
 Cockburn
 Containerfile
@@ -34,6 +37,9 @@ OAAAAN
 OSSEC
 Ollama
 Osherove
+Pingoo
+pingoo
+pingooio
 Preinstalling
 Pulumi
 RAII
