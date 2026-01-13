@@ -249,6 +249,54 @@ This matches the production network topology.
 
 **Resolution Time**: ~3 minutes
 
+## Caddy Log Analysis
+
+During deployment, Caddy logs contain several warnings that are **expected and indicate correct behavior**:
+
+### Warning 1: HTTP/2 and HTTP/3 on Port 80
+
+```text
+WARN http HTTP/2 skipped because it requires TLS {"network": "tcp", "addr": ":80"}
+WARN http HTTP/3 skipped because it requires TLS {"network": "tcp", "addr": ":80"}
+```
+
+**Explanation**: These are **not errors**. Port 80 serves plain HTTP and is used **only for automatic HTTP→HTTPS redirects**. HTTP/2 and HTTP/3 require TLS encryption, so they cannot be used on port 80.
+
+**What actually happens**:
+
+- **Port 80 (HTTP)**: Redirects to HTTPS → HTTP/1.1 only
+- **Port 443 (HTTPS)**: Serves actual content → HTTP/1.1, HTTP/2, and HTTP/3 ✅
+
+**Verification**:
+
+```bash
+# HTTP/2 works on port 443
+curl -I --http2 https://api.torrust-tracker.com/api/health_check
+# Returns: HTTP/2 200
+
+# HTTP/3 (QUIC) also works on port 443
+curl -I --http3 https://api.torrust-tracker.com/api/health_check
+# Returns: HTTP/3 200
+```
+
+### Warning 2: OCSP Stapling
+
+```text
+WARN tls stapling OCSP {"identifiers": ["api.torrust-tracker.com"]}
+```
+
+**Explanation**: This is **not an error** - it's an informational message logged at WARN level. OCSP (Online Certificate Status Protocol) stapling is a **security enhancement feature**.
+
+**What is OCSP Stapling?**
+
+- Proves the TLS certificate hasn't been revoked
+- Server fetches and caches the proof, delivers it with TLS handshake
+- **Benefits**: Faster TLS handshakes, better privacy (client doesn't contact CA directly)
+
+**This warning means**: Caddy is successfully performing OCSP stapling for enhanced security.
+
+**Status**: ✅ All warnings are expected and indicate correct, secure behavior.
+
 ## Conclusion
 
 **Status**: ✅ **SUCCESSFUL**
