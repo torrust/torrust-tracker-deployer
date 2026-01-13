@@ -8,6 +8,7 @@ Avalonia
 BBDBE
 Bitwarden
 CIFS
+Caddyfile
 Certbot
 Cockburn
 Containerfile
@@ -39,6 +40,7 @@ Osherove
 Pingoo
 Preinstalling
 Pulumi
+QUIC
 RAII
 RUSTDOCFLAGS
 Repomix
