@@ -90,6 +90,28 @@ grafana.torrust-tracker.com {
 - Automatic certificate renewal
 - Human-readable syntax
 
+**Configuration Pattern Choice**:
+
+For this evaluation, we use a **single Caddyfile** approach, which is consistent with our docker-compose template pattern. Caddy also supports **modular configuration** via the `import` directive:
+
+```caddyfile
+# Main Caddyfile
+{
+    email admin@torrust.com
+}
+
+import sites/*.caddy
+```
+
+This allows separate files per service (e.g., `tracker-api.caddy`, `http-tracker.caddy`, `grafana.caddy`).
+
+**Trade-offs**:
+
+- **Single file** (current): Simpler template generation, matches docker-compose pattern, good for small-to-medium deployments
+- **Multiple files** (import): Better separation, easier to enable/disable services, valuable for many services (10+) or multi-team environments
+
+The single-file approach is recommended for initial implementation and can be refactored later if needed.
+
 ### 4. Protocol Support
 
 | Protocol      | nginx | nginx-quic        | Caddy       |
