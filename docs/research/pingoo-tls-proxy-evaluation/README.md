@@ -2,13 +2,19 @@
 
 **Issue**: [#234](https://github.com/torrust/torrust-tracker-deployer/issues/234)
 **Specification**: [docs/issues/234-evaluate-pingoo-for-https-termination.md](../../issues/234-evaluate-pingoo-for-https-termination.md)
-**Status**: In Progress
+**Status**: ✅ CLOSED - Not Adopting
 **Started**: 2026-01-12
+**Completed**: 2026-01-13
 
 ## Overview
 
-This research evaluates [Pingoo](https://pingoo.io/) as a potential replacement for nginx+certbot
+This research evaluated [Pingoo](https://pingoo.io/) as a potential replacement for nginx+certbot
 for automatic HTTPS/TLS termination in Torrust Tracker deployments.
+
+**Outcome**: Pingoo works excellently for the Tracker (API + HTTP Tracker) but does not
+support WebSocket connections required for Grafana Live. We have decided **not to adopt
+Pingoo** at this time and will instead evaluate **Caddy** as a simpler alternative that
+supports both HTTP proxying and WebSocket.
 
 ## Test Environment
 
@@ -78,18 +84,45 @@ See [phase-1-environment-preparation.md](phase-1-environment-preparation.md) for
 
 ## Final Decision
 
-**Use hybrid architecture:**
+**Not adopting Pingoo** - We will evaluate Caddy instead.
 
-| Service           | TLS Proxy | Reason                               |
-| ----------------- | --------- | ------------------------------------ |
-| Tracker API       | Pingoo    | ✅ Simple HTTP proxying works        |
-| HTTP Tracker      | Pingoo    | ✅ BitTorrent protocol works via TLS |
-| Grafana Dashboard | nginx     | ❌ Requires WebSocket for Live       |
+### Why Not Adopt Pingoo?
 
-See [conclusion.md](conclusion.md) for full rationale and implementation plan.
+While Pingoo works excellently for the Tracker, the WebSocket limitation means we would
+need a **hybrid architecture** (Pingoo for Tracker + another proxy for Grafana). This
+adds unnecessary complexity for our simple deployment setup:
+
+1. **Two proxies is overkill** - For a simple Tracker + Grafana setup, maintaining two
+   different TLS proxies adds operational complexity without significant benefit.
+
+2. **Caddy as alternative** - [Caddy](https://caddyserver.com/) offers similar benefits
+   to Pingoo (automatic HTTPS, simple config) while also supporting WebSocket natively.
+   It can handle both Tracker and Grafana with a single proxy.
+
+3. **Maturity considerations** - Caddy is more mature and battle-tested than Pingoo.
+   While Pingoo has attractive features (post-quantum crypto, Rust implementation),
+   Caddy's stability may be more valuable for production deployments.
+
+4. **Performance is not the bottleneck** - One concern about Caddy (written in Go) vs
+   Pingoo (written in Rust) is performance. However, based on running a tracker demo
+   for a couple of years, the proxy is unlikely to be the bottleneck. Most users prefer
+   the UDP tracker which doesn't use the proxy at all.
+
+### Open Issue on Pingoo
+
+We filed [pingooio/pingoo#23](https://github.com/pingooio/pingoo/issues/23) to confirm
+the WebSocket limitation and discuss potential solutions. If Pingoo adds WebSocket
+support in the future, it could be reconsidered.
+
+### Next Steps
+
+A new research issue will be opened to evaluate **Caddy** as an alternative to
+nginx+certbot, following the same experimental approach used here.
+
+See [conclusion.md](conclusion.md) for full rationale.
 
 ## Timeline
 
-- **2026-01-12**: Research started, Experiment 1 completed ✅
-- **TBD**: Experiments 2-4 completed
-- **TBD**: Final decision after WebSocket verification
+- **2026-01-12**: Research started, Experiments 1-4 completed
+- **2026-01-12**: WebSocket limitation discovered, issue filed on Pingoo repo
+- **2026-01-13**: Decision made not to adopt Pingoo, research closed

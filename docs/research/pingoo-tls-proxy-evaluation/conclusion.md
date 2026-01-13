@@ -1,15 +1,22 @@
 # Pingoo TLS Proxy Evaluation - Conclusion
 
-**Status**: ✅ EVALUATION COMPLETE
-**Last Updated**: 2026-01-12
+**Status**: ✅ EVALUATION COMPLETE - NOT ADOPTING
+**Last Updated**: 2026-01-13
 
 ## Final Decision
 
-**Use hybrid architecture:** Pingoo for Tracker services, nginx for Grafana.
+**Not adopting Pingoo.** We will evaluate Caddy as an alternative instead.
 
-Pingoo provides excellent TLS termination for HTTP-based services but **does not support WebSocket connections**, which are required for Grafana Live. The hybrid approach maximizes Pingoo's simplicity benefits while maintaining full Grafana functionality.
+Pingoo provides excellent TLS termination for HTTP-based services but **does not support
+WebSocket connections**, which are required for Grafana Live. Rather than adopting a
+hybrid architecture (Pingoo + another proxy), we have decided to evaluate Caddy, which
+can handle both the Tracker and Grafana with a single proxy.
 
-## Architecture Diagram
+## Why Not Adopt Pingoo?
+
+### The Hybrid Architecture Problem
+
+Initially, we considered using Pingoo for the Tracker and nginx/Caddy for Grafana:
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
@@ -18,11 +25,8 @@ Pingoo provides excellent TLS termination for HTTP-based services but **does not
                     │                           │
                     ▼                           ▼
          ┌──────────────────┐        ┌───────────────────┐
-         │     Pingoo       │        │  nginx+certbot    │
+         │     Pingoo       │        │  nginx or Caddy   │
          │   (port 443)     │        │   (port 3443)     │
-         │                  │        │                   │
-         │ api.example.com  │        │grafana.example.com│
-         │http1.example.com │        │                   │
          └────────┬─────────┘        └────────┬──────────┘
                   │                           │
                   ▼                           ▼
@@ -32,53 +36,70 @@ Pingoo provides excellent TLS termination for HTTP-based services but **does not
          └──────────────────┘        └───────────────────┘
 ```
 
-## Decision Rationale
+However, this approach has significant drawbacks for our use case:
 
-### Why Pingoo?
+1. **Operational complexity** - Two different TLS proxies means two different
+   configurations, two sets of certificates to manage, and two potential points of
+   failure.
 
-| Aspect                    | Pingoo                       | nginx+certbot                             |
-| ------------------------- | ---------------------------- | ----------------------------------------- |
-| Configuration complexity  | ~10 lines YAML               | ~50+ lines (nginx config + certbot setup) |
-| Email required            | ❌ No                        | ✅ Yes (or explicit opt-out)              |
-| TLS version               | 1.3 only (modern)            | 1.2 and 1.3                               |
-| Post-quantum cryptography | ✅ Built-in (X25519MLKEM768) | ❌ No                                     |
-| Certificate auto-renewal  | ✅ Built-in                  | ✅ Via cron/systemd timer                 |
-| Expiration notifications  | ❌ No                        | ✅ Via email                              |
-| Single binary             | ✅ Yes                       | ❌ Multiple components                    |
-| Docker-native             | ✅ Yes                       | ⚠️ Requires orchestration                 |
+2. **Overkill for simple setups** - For a typical Torrust deployment (Tracker +
+   Grafana), maintaining two proxies adds unnecessary complexity without clear benefits.
 
-### Key Advantages
+3. **Better alternatives exist** - Caddy offers similar benefits to Pingoo (automatic
+   HTTPS, simple configuration) while also supporting WebSocket natively.
 
-1. **Dramatically simpler configuration** - Just specify domains in YAML, no separate
-   certbot commands or nginx virtual host configs
+### Caddy as Alternative
 
-2. **Modern security by default** - TLS 1.3 only with post-quantum key exchange,
-   no legacy protocol support to misconfigure
+[Caddy](https://caddyserver.com/) is a more mature alternative that can replace
+nginx+certbot entirely:
 
-3. **Zero-touch certificate management** - No email setup, no cron jobs, no renewal
-   scripts to maintain
+| Feature              | Pingoo            | Caddy          |
+| -------------------- | ----------------- | -------------- |
+| Automatic HTTPS      | ✅ Yes            | ✅ Yes         |
+| Simple config        | ✅ ~10 lines      | ✅ ~5-10 lines |
+| WebSocket support    | ❌ No             | ✅ Native      |
+| Post-quantum crypto  | ✅ X25519MLKEM768 | ❌ No          |
+| TLS versions         | 1.3 only          | 1.2 and 1.3    |
+| Language             | Rust              | Go             |
+| Maturity             | Newer             | Very mature    |
+| Single proxy for all | ❌ Needs hybrid   | ✅ Yes         |
 
-4. **Better fit for container deployments** - Single container handles both TLS
-   termination and reverse proxying
+### Performance Considerations
 
-### Trade-offs Accepted
+One concern about Caddy (Go) vs Pingoo (Rust) is performance. However:
 
-1. **No expiration email notifications** - Must implement own monitoring or rely on
-   Pingoo's automatic renewal
+- **Proxy is not the bottleneck** - Based on running a Torrust tracker demo for a couple
+  of years, the TLS proxy is unlikely to be the performance bottleneck.
 
-2. **TLS 1.3 only** - Very old clients (pre-2018) won't connect. This is acceptable
-   as modern BitTorrent clients all support TLS 1.3
+- **UDP tracker dominates** - Most BitTorrent clients prefer the UDP tracker protocol,
+  which doesn't go through the HTTP/HTTPS proxy at all.
 
-3. **Newer project** - Less battle-tested than nginx+certbot, but actively maintained
-   and well-documented
+- **Stability over raw speed** - For a production deployment, Caddy's maturity and
+  stability may be more valuable than Pingoo's potential performance advantages.
 
-## Pending Verification
+### What We Lose by Not Using Pingoo
 
-### Certificate Renewal
+1. **Post-quantum cryptography** - Pingoo's X25519MLKEM768 key exchange provides
+   protection against future quantum computers. Caddy doesn't have this yet.
 
-Certificate renewal cannot be tested during this evaluation (certificates are valid
-for 90 days). Pingoo claims automatic renewal - this should work based on the ACME
-implementation, but should be verified after deployment.
+2. **TLS 1.3-only enforcement** - Pingoo only supports TLS 1.3, which simplifies
+   security configuration. Caddy supports both 1.2 and 1.3.
+
+3. **Rust implementation** - Pingoo's Rust codebase may offer better memory safety
+   and performance characteristics.
+
+These are trade-offs we accept in favor of a simpler, single-proxy architecture.
+
+## Open Issue on Pingoo Repository
+
+We filed [pingooio/pingoo#23](https://github.com/pingooio/pingoo/issues/23) to:
+
+1. Confirm that WebSocket proxying is not currently supported
+2. Discuss potential solutions or workarounds
+3. Request consideration for adding WebSocket support
+
+If Pingoo adds WebSocket support in the future, it could be reconsidered for Torrust
+deployments.
 
 ## WebSocket Limitation - Root Cause
 
@@ -96,27 +117,6 @@ const HOP_HEADERS: &[&str] = &[
 
 This means any service requiring WebSocket connections cannot use Pingoo's `http_proxy`.
 This is a fundamental limitation, not a configuration issue.
-
-### Potential Future Solutions
-
-1. **Pingoo WebSocket support** - The Pingoo team may add WebSocket support
-2. **TCP+TLS mode** - Could use raw TCP proxying (loses HTTP routing)
-3. **Feature request** - Could file an issue requesting WebSocket support
-
-## Files to Backup (for Disaster Recovery)
-
-When implementing backup procedures (Roadmap Task 7), include these Pingoo files:
-
-| File         | Purpose                                             | Location                    |
-| ------------ | --------------------------------------------------- | --------------------------- |
-| `acme.json`  | ACME account credentials (private key + account ID) | `/etc/pingoo/tls/acme.json` |
-| `*.key`      | Certificate private keys                            | `/etc/pingoo/tls/`          |
-| `*.pem`      | Certificate chains                                  | `/etc/pingoo/tls/`          |
-| `pingoo.yml` | Pingoo configuration                                | `/etc/pingoo/pingoo.yml`    |
-
-**Note:** The `acme.json` file contains the ACME account private key. Losing this file
-means you'll need to re-register with Let's Encrypt (not a major issue, but rate limits
-apply to new registrations).
 
 ## Experiment Results Summary
 
@@ -163,13 +163,15 @@ apply to new registrations).
 2. ✅ ~~Complete Experiment 2 (Tracker API)~~ - JSON API proxying verified
 3. ✅ ~~Complete Experiment 3 (HTTP Tracker)~~ - BitTorrent protocol verified
 4. ✅ ~~Complete Experiment 4 (Grafana)~~ - WebSocket limitation discovered
-5. 🔲 File issue with Pingoo project requesting WebSocket support
-6. 🔲 Update deployment templates with hybrid architecture
-7. 🔲 Document migration path from pure nginx+certbot
-8. 🔲 Implement Pingoo templates in deployer codebase
+5. ✅ ~~File issue with Pingoo project~~ - [pingooio/pingoo#23](https://github.com/pingooio/pingoo/issues/23)
+6. ✅ ~~Decision made~~ - Not adopting Pingoo, will evaluate Caddy instead
+7. 🔲 Open new issue to evaluate Caddy as nginx+certbot replacement
+8. 🔲 Run Caddy experiments following similar methodology
 
 ## References
 
 - [Pingoo Documentation](https://pingoo.io/docs)
+- [Pingoo WebSocket Issue](https://github.com/pingooio/pingoo/issues/23) - Our issue asking about WebSocket support
 - [Issue #234 - Evaluate Pingoo](https://github.com/torrust/torrust-tracker-deployer/issues/234)
 - [Issue Specification](../../issues/234-evaluate-pingoo-for-https-termination.md)
+- [Caddy Server](https://caddyserver.com/) - Alternative to evaluate next
