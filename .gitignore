@@ -67,6 +67,9 @@ data/
 # Generated environment config files for E2E tests
 envs/
 
+# Experimental deployments with live secrets
+experiments/
+
 # Meson build directory
 builddir/
 

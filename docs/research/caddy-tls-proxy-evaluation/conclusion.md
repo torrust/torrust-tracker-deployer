@@ -233,7 +233,25 @@ Caddy has **built-in HTTP/3 support** (stable), while nginx requires the experim
 3. **Phase 3**: Add Caddy to project template (docker-compose.yml, Caddyfile)
 4. **Phase 4**: Document Caddy configuration in user guide (1 day)
 5. **Phase 5**: Test with fresh deployment (e2e tests) (1 day)
-6. **Phase 6**: Migrate production deployments to Caddy (staged rollout)
+6. **Phase 6**: Update security workflows - add Caddy to `.github/workflows/docker-security-scan.yml` third-party images
+7. **Phase 7**: Migrate production deployments to Caddy (staged rollout)
+
+### Security Considerations
+
+A Docker security scan was performed on `caddy:2.10` (see [`security-scan.md`](security-scan.md) for full details):
+
+**Status**: ✅ **Safe to deploy with monitoring**
+
+- **Alpine base**: Clean (0 vulnerabilities)
+- **Caddy binary**: 4 vulnerabilities (3 HIGH, 1 CRITICAL) in Go dependencies
+- All vulnerabilities have **fixed versions available** in upstream libraries
+- Expected resolution in next Caddy release
+
+**Recommended actions**:
+
+1. Proceed with deployment - vulnerabilities are in dependencies, not Caddy core
+2. Monitor Caddy releases for patches (likely within 1-2 weeks)
+3. Update to patched version when available
 
 ### Alternative Considered: nginx+certbot
 

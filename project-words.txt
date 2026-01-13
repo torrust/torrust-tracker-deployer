@@ -28,6 +28,7 @@ Hillsboro
 Hostnames
 LUKS
 Liskov
+smallstep
 MAAACBA
 MLKEM
 MVVM
