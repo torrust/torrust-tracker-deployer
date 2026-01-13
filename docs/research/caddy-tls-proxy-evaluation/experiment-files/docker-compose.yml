@@ -30,6 +30,8 @@ services:
         max-file: "10"
 
   tracker:
+    # Note: healthcheck is built into the torrust/tracker image
+    # Checks http://localhost:${HEALTH_CHECK_API_PORT}/health_check every 5s
     image: torrust/tracker:develop
     container_name: tracker
     tty: true
