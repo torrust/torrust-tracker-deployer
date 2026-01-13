@@ -124,9 +124,12 @@ When starting work on a new feature:
 
 ### 6. Add HTTPS support
 
-- [ ] **6.1** Add HTTPS support for HTTP tracker
-- [ ] **6.2** Add HTTPS support for tracker API
-- [ ] **6.3** Add HTTPS support for Grafana
+- [ ] **6.1** Add HTTPS support with Caddy for all HTTP services - [Issue #272](https://github.com/torrust/torrust-tracker-deployer/issues/272)
+  - Implement Caddy TLS termination proxy
+  - Add HTTPS support for HTTP tracker
+  - Add HTTPS support for tracker API
+  - Add HTTPS support for Grafana
+  - **Research Complete**: [Issue #270](https://github.com/torrust/torrust-tracker-deployer/issues/270) - Caddy evaluation successful, production deployment verified
 
 ### 7. Add backup and disaster recovery
 
