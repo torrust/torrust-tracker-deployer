@@ -6,10 +6,25 @@ These are the configuration files used in the Caddy TLS proxy evaluation experim
 
 ## Files
 
-- **`Caddyfile`**: Caddy reverse proxy configuration for 3 domains
+- **`storage/caddy/etc/Caddyfile`**: Caddy reverse proxy configuration for 3 domains (follows project convention)
 - **`docker-compose.yml`**: Full stack (Caddy + Tracker + Prometheus + Grafana)
 - **`.env`**: Environment variables (with redacted secrets)
 - **`prometheus.yml`**: Prometheus scrape configuration (with redacted API token)
+
+## Directory Structure
+
+```text
+experiment-files/
+├── .env
+├── docker-compose.yml
+├── prometheus.yml
+└── storage/
+    └── caddy/
+        └── etc/
+            └── Caddyfile
+```
+
+**Note**: Configuration files follow project conventions where service configs are stored in `storage/<service>/etc/`.
 
 ## Deployment
 

@@ -14,6 +14,7 @@ This evaluation tested Caddy v2.10 as a TLS termination proxy for the Torrust Tr
 
 - **[Experiment Report](./experiment-full-stack.md)** - Complete deployment procedure, test results, and technical details
 - **[Security Scan](./security-scan.md)** - Docker security scan results for `caddy:2.10`
+- **[Production Deployment](./production-deployment.md)** - Production configuration at `/opt/torrust/` (reference for Tera templates)
 - **[Conclusion](./conclusion.md)** - Evaluation summary, comparison with alternatives, and recommendation
 - **[Configuration Files](./experiment-files/)** - All configuration files used in the experiment (secrets redacted)
 

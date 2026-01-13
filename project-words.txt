@@ -29,6 +29,7 @@ Hostnames
 LUKS
 Liskov
 smallstep
+letsencrypt
 MAAACBA
 MLKEM
 MVVM

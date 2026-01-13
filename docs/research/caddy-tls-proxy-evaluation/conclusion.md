@@ -230,11 +230,24 @@ Caddy has **built-in HTTP/3 support** (stable), while nginx requires the experim
 
 1. **Phase 1**: Create ADR documenting decision (this week)
 2. **Phase 2**: Update deployer Tera templates with Caddy configuration (1-2 days)
+   - **Reference**: Production configuration deployed at `/opt/torrust/` on Hetzner server
+   - See [`production-deployment.md`](production-deployment.md) for details
 3. **Phase 3**: Add Caddy to project template (docker-compose.yml, Caddyfile)
 4. **Phase 4**: Document Caddy configuration in user guide (1 day)
 5. **Phase 5**: Test with fresh deployment (e2e tests) (1 day)
 6. **Phase 6**: Update security workflows - add Caddy to `.github/workflows/docker-security-scan.yml` third-party images
-7. **Phase 7**: Migrate production deployments to Caddy (staged rollout)
+7. **Phase 7**: Migrate remaining deployments to Caddy (if any)
+
+### Production Deployment Status
+
+✅ **Caddy configuration is now deployed to production** at `/opt/torrust/` on the Hetzner server.
+
+- All services running and healthy
+- HTTPS certificates obtained automatically
+- All endpoints verified working (API, HTTP Tracker, Grafana with WebSocket)
+- Configuration serves as working reference for Tera template creation
+
+See [`production-deployment.md`](production-deployment.md) for complete deployment details.
 
 ### Security Considerations
 
