@@ -110,6 +110,32 @@ pub enum CreateConfigError {
     /// Tracker configuration validation failed
     #[error("Tracker configuration validation failed: {0}")]
     TrackerConfigValidation(#[from] TrackerConfigError),
+
+    /// Invalid admin email format for HTTPS configuration
+    #[error("Invalid admin email '{email}': {reason}")]
+    InvalidAdminEmail {
+        /// The invalid email that was provided
+        email: String,
+        /// The reason why the email is invalid
+        reason: String,
+    },
+
+    /// Invalid domain name format for TLS configuration
+    #[error("Invalid domain '{domain}': {reason}")]
+    InvalidDomain {
+        /// The invalid domain that was provided
+        domain: String,
+        /// The reason why the domain is invalid
+        reason: String,
+    },
+
+    /// TLS configured for services but HTTPS section missing
+    #[error("TLS configured for services but 'https' section is missing")]
+    TlsWithoutHttpsSection,
+
+    /// HTTPS section provided but no services have TLS configured
+    #[error("HTTPS section provided but no services have TLS configured")]
+    HttpsSectionWithoutTls,
 }
 
 impl CreateConfigError {
@@ -449,6 +475,121 @@ impl CreateConfigError {
                  but this is not recommended for clarity.\n\
                  \n\
                  Related: docs/external-issues/tracker/udp-tcp-port-sharing-allowed.md"
+            }
+            Self::InvalidAdminEmail { .. } => {
+                "Invalid admin email format for HTTPS configuration.\n\
+                 \n\
+                 The admin email is used for Let's Encrypt certificate notifications:\n\
+                 - Certificate expiration warnings (30 days before expiry)\n\
+                 - Certificate renewal failure notifications\n\
+                 - Important Let's Encrypt service announcements\n\
+                 \n\
+                 Requirements:\n\
+                 - Must contain '@' with content on both sides\n\
+                 - Must have a valid domain part (with at least one dot)\n\
+                 \n\
+                 Valid examples:\n\
+                 - admin@example.com\n\
+                 - certificates@my-company.org\n\
+                 - alerts+ssl@subdomain.example.com\n\
+                 \n\
+                 Fix:\n\
+                 Update the admin_email in your https configuration:\n\
+                 \n\
+                 \"https\": {\n\
+                   \"admin_email\": \"admin@yourdomain.com\"\n\
+                 }\n\
+                 \n\
+                 Note: This email may be visible in certificate transparency logs."
+            }
+            Self::InvalidDomain { .. } => {
+                "Invalid domain name format for TLS configuration.\n\
+                 \n\
+                 Domain names are used for:\n\
+                 - HTTPS certificate acquisition (Let's Encrypt HTTP-01 challenge)\n\
+                 - Caddy reverse proxy routing\n\
+                 - SNI-based TLS termination\n\
+                 \n\
+                 Requirements:\n\
+                 - Contains only letters, numbers, dots, and hyphens\n\
+                 - Has at least one dot (TLD separator)\n\
+                 - Doesn't start or end with dots or hyphens\n\
+                 \n\
+                 Valid examples:\n\
+                 - api.example.com\n\
+                 - tracker.torrust.org\n\
+                 - grafana.my-project.io\n\
+                 \n\
+                 Invalid examples:\n\
+                 - localhost (no TLD)\n\
+                 - -example.com (starts with hyphen)\n\
+                 - example_domain.com (underscore not allowed)\n\
+                 \n\
+                 Fix:\n\
+                 Update the domain in your service's tls configuration:\n\
+                 \n\
+                 \"tls\": {\n\
+                   \"domain\": \"api.yourdomain.com\"\n\
+                 }\n\
+                 \n\
+                 Note: The domain must point to your server's IP before certificate acquisition."
+            }
+            Self::TlsWithoutHttpsSection => {
+                "TLS configured for services but 'https' section is missing.\n\
+                 \n\
+                 You have configured TLS for one or more services but haven't provided\n\
+                 the required HTTPS configuration section with admin_email.\n\
+                 \n\
+                 The admin_email is required because:\n\
+                 - Let's Encrypt requires an email for certificate management\n\
+                 - You'll receive expiration warnings and renewal failure notifications\n\
+                 \n\
+                 Fix:\n\
+                 Add an 'https' section to your environment configuration:\n\
+                 \n\
+                 \"https\": {\n\
+                   \"admin_email\": \"admin@yourdomain.com\",\n\
+                   \"use_staging\": false  // optional, defaults to false\n\
+                 }\n\
+                 \n\
+                 Note: Set use_staging to true for testing (avoids rate limits, but\n\
+                 certificates will show browser warnings)."
+            }
+            Self::HttpsSectionWithoutTls => {
+                "HTTPS section provided but no services have TLS configured.\n\
+                 \n\
+                 You have provided an 'https' section with admin_email but no services\n\
+                 have TLS enabled. This is likely a configuration error.\n\
+                 \n\
+                 To enable HTTPS for a service, add a 'tls' section to it:\n\
+                 \n\
+                 For Tracker API:\n\
+                 \"http_api\": {\n\
+                   \"bind_address\": \"0.0.0.0:1212\",\n\
+                   \"admin_token\": \"MyAccessToken\",\n\
+                   \"tls\": {\n\
+                     \"domain\": \"api.example.com\"\n\
+                   }\n\
+                 }\n\
+                 \n\
+                 For HTTP Tracker:\n\
+                 \"http_trackers\": [{\n\
+                   \"bind_address\": \"0.0.0.0:7070\",\n\
+                   \"tls\": {\n\
+                     \"domain\": \"tracker.example.com\"\n\
+                   }\n\
+                 }]\n\
+                 \n\
+                 For Grafana:\n\
+                 \"grafana\": {\n\
+                   \"admin_user\": \"admin\",\n\
+                   \"admin_password\": \"admin\",\n\
+                   \"tls\": {\n\
+                     \"domain\": \"grafana.example.com\"\n\
+                   }\n\
+                 }\n\
+                 \n\
+                 Alternatively, remove the 'https' section entirely if you don't want HTTPS."
             }
         }
     }

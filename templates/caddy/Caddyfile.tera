@@ -8,31 +8,30 @@
 {
 	# Email for Let's Encrypt notifications
 	email {{ admin_email }}
-{% if use_staging %}
-
+{%- if use_staging %}
 	# Use Let's Encrypt staging environment (for testing, avoids rate limits)
 	# WARNING: Staging certificates will show browser warnings (not trusted)
 	acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
-{% endif %}
+{%- endif %}
 }
-{% if tracker_api %}
+{%- if tracker_api %}
 
 # Tracker REST API
 {{ tracker_api.domain }} {
 	reverse_proxy tracker:{{ tracker_api.port }}
 }
-{% endif %}
-{% for http_tracker in http_trackers %}
+{%- endif %}
+{%- for http_tracker in http_trackers %}
 
 # HTTP Tracker {{ loop.index }}
 {{ http_tracker.domain }} {
 	reverse_proxy tracker:{{ http_tracker.port }}
 }
-{% endfor %}
-{% if grafana %}
+{%- endfor %}
+{%- if grafana %}
 
 # Grafana UI with WebSocket support
 {{ grafana.domain }} {
 	reverse_proxy grafana:3000
 }
-{% endif %}
+{%- endif %}

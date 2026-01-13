@@ -10,6 +10,7 @@ use std::net::SocketAddr;
 use serde::{Deserialize, Serialize};
 
 use super::{BindingAddress, Protocol};
+use crate::domain::tls::TlsConfig;
 
 mod core;
 mod health_check_api;
@@ -47,11 +48,12 @@ pub use udp::UdpTrackerConfig;
 ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
 ///     ],
 ///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap() },
+///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), tls: None },
 ///     ],
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
 ///         admin_token: "MyAccessToken".to_string().into(),
+///         tls: None,
 ///     },
 ///     health_check_api: HealthCheckApiConfig {
 ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -196,11 +198,12 @@ impl TrackerConfig {
     ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
     ///     ],
     ///     http_trackers: vec![
-    ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap() },
+    ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), tls: None },
     ///     ],
     ///     http_api: HttpApiConfig {
     ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
     ///         admin_token: "MyAccessToken".to_string().into(),
+    ///         tls: None,
     ///     },
     ///     health_check_api: HealthCheckApiConfig {
     ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -314,6 +317,35 @@ impl TrackerConfig {
             .or_default()
             .push(service_name.to_string());
     }
+
+    /// Returns the HTTP API TLS domain if configured
+    #[must_use]
+    pub fn http_api_tls_domain(&self) -> Option<&str> {
+        self.http_api.tls.as_ref().map(TlsConfig::domain)
+    }
+
+    /// Returns the HTTP API port number
+    #[must_use]
+    pub fn http_api_port(&self) -> u16 {
+        self.http_api.bind_address.port()
+    }
+
+    /// Returns HTTP trackers that have TLS configured
+    ///
+    /// Returns a vector of tuples containing (domain, port) for each
+    /// HTTP tracker that has TLS configuration.
+    #[must_use]
+    pub fn http_trackers_with_tls(&self) -> Vec<(&str, u16)> {
+        self.http_trackers
+            .iter()
+            .filter_map(|tracker| {
+                tracker
+                    .tls
+                    .as_ref()
+                    .map(|tls| (tls.domain(), tracker.bind_address.port()))
+            })
+            .collect()
+    }
 }
 
 /// Trait for types that have a bind address
@@ -360,10 +392,12 @@ impl Default for TrackerConfig {
             }],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().expect("valid address"),
+                tls: None,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().expect("valid address"),
                 admin_token: "MyAccessToken".to_string().into(),
+                tls: None,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().expect("valid address"),
@@ -405,10 +439,12 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
+                tls: None,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_token".to_string().into(),
+                tls: None,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -435,6 +471,7 @@ mod tests {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "token123".to_string().into(),
+                tls: None,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -496,10 +533,12 @@ mod tests {
                 }],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    tls: None,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
+                    tls: None,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -530,6 +569,7 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
+                    tls: None,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -568,14 +608,17 @@ mod tests {
                 http_trackers: vec![
                     HttpTrackerConfig {
                         bind_address: "0.0.0.0:7070".parse().unwrap(),
+                        tls: None,
                     },
                     HttpTrackerConfig {
                         bind_address: "0.0.0.0:7070".parse().unwrap(),
+                        tls: None,
                     },
                 ],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
+                    tls: None,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -611,10 +654,12 @@ mod tests {
                 udp_trackers: vec![],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    tls: None,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
                     admin_token: "token".to_string().into(),
+                    tls: None,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -652,10 +697,12 @@ mod tests {
                 udp_trackers: vec![],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:1313".parse().unwrap(),
+                    tls: None,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
+                    tls: None,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "0.0.0.0:1313".parse().unwrap(),
@@ -696,10 +743,12 @@ mod tests {
                 }],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    tls: None,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
+                    tls: None,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -722,14 +771,17 @@ mod tests {
                 http_trackers: vec![
                     HttpTrackerConfig {
                         bind_address: "192.168.1.10:7070".parse().unwrap(),
+                        tls: None,
                     },
                     HttpTrackerConfig {
                         bind_address: "192.168.1.20:7070".parse().unwrap(),
+                        tls: None,
                     },
                 ],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
+                    tls: None,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -751,10 +803,12 @@ mod tests {
                 udp_trackers: vec![],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
+                    tls: None,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
                     admin_token: "token".to_string().into(),
+                    tls: None,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),

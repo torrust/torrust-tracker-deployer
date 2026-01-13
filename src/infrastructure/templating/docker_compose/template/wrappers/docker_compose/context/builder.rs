@@ -3,6 +3,7 @@
 // Internal crate
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
+use crate::infrastructure::templating::caddy::CaddyContext;
 
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
 use super::{DockerComposeContext, TrackerPorts};
@@ -16,6 +17,7 @@ pub struct DockerComposeContextBuilder {
     database: DatabaseConfig,
     prometheus_config: Option<PrometheusConfig>,
     grafana_config: Option<GrafanaConfig>,
+    caddy_config: Option<CaddyContext>,
 }
 
 impl DockerComposeContextBuilder {
@@ -29,6 +31,7 @@ impl DockerComposeContextBuilder {
             },
             prometheus_config: None,
             grafana_config: None,
+            caddy_config: None,
         }
     }
 
@@ -68,6 +71,20 @@ impl DockerComposeContextBuilder {
         self
     }
 
+    /// Adds Caddy TLS proxy configuration
+    ///
+    /// When Caddy is configured, it provides automatic HTTPS with Let's Encrypt
+    /// certificates for services that have TLS enabled.
+    ///
+    /// # Arguments
+    ///
+    /// * `caddy_config` - Caddy configuration with services to proxy
+    #[must_use]
+    pub fn with_caddy(mut self, caddy_config: CaddyContext) -> Self {
+        self.caddy_config = Some(caddy_config);
+        self
+    }
+
     /// Builds the `DockerComposeContext`
     #[must_use]
     pub fn build(self) -> DockerComposeContext {
@@ -76,6 +93,7 @@ impl DockerComposeContextBuilder {
             ports: self.ports,
             prometheus_config: self.prometheus_config,
             grafana_config: self.grafana_config,
+            caddy_config: self.caddy_config,
         }
     }
 }

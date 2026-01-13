@@ -4,13 +4,23 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
+use crate::application::command_handlers::create::config::https::TlsSection;
+use crate::domain::tls::TlsConfig;
 use crate::domain::tracker::HttpApiConfig;
 use crate::shared::secrets::PlainApiToken;
+use crate::shared::DomainName;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct HttpApiSection {
     pub bind_address: String,
     pub admin_token: PlainApiToken,
+
+    /// Optional TLS configuration for HTTPS
+    ///
+    /// When present, this service will be proxied through Caddy with HTTPS enabled.
+    /// The domain specified will be used for Let's Encrypt certificate acquisition.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tls: Option<TlsSection>,
 }
 
 impl HttpApiSection {
@@ -20,6 +30,7 @@ impl HttpApiSection {
     ///
     /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
     /// Returns `CreateConfigError::DynamicPortNotSupported` if port 0 (dynamic port assignment) is specified.
+    /// Returns `CreateConfigError::InvalidDomain` if the TLS domain is invalid.
     pub fn to_http_api_config(&self) -> Result<HttpApiConfig, CreateConfigError> {
         // Validate that the bind address can be parsed as SocketAddr
         let bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
@@ -36,10 +47,25 @@ impl HttpApiSection {
             });
         }
 
-        // Domain type now uses SocketAddr (Step 0.7 completed)
+        // Convert TLS section to domain type with validation
+        let tls = match &self.tls {
+            Some(tls_section) => {
+                tls_section.validate()?;
+                let domain = DomainName::new(&tls_section.domain).map_err(|e| {
+                    CreateConfigError::InvalidDomain {
+                        domain: tls_section.domain.clone(),
+                        reason: e.to_string(),
+                    }
+                })?;
+                Some(TlsConfig::new(domain))
+            }
+            None => None,
+        };
+
         Ok(HttpApiConfig {
             bind_address,
             admin_token: self.admin_token.clone().into(),
+            tls,
         })
     }
 }
@@ -53,6 +79,7 @@ mod tests {
         let section = HttpApiSection {
             bind_address: "0.0.0.0:1212".to_string(),
             admin_token: "MyAccessToken".to_string(),
+            tls: None,
         };
 
         let result = section.to_http_api_config();
@@ -71,6 +98,7 @@ mod tests {
         let section = HttpApiSection {
             bind_address: "invalid-address".to_string(),
             admin_token: "token".to_string(),
+            tls: None,
         };
 
         let result = section.to_http_api_config();
@@ -88,6 +116,7 @@ mod tests {
         let section = HttpApiSection {
             bind_address: "0.0.0.0:0".to_string(),
             admin_token: "token".to_string(),
+            tls: None,
         };
 
         let result = section.to_http_api_config();
@@ -105,6 +134,7 @@ mod tests {
         let section = HttpApiSection {
             bind_address: "0.0.0.0:1212".to_string(),
             admin_token: "MyAccessToken".to_string(),
+            tls: None,
         };
 
         let json = serde_json::to_string(&section).unwrap();

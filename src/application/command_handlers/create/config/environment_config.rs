@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::grafana::GrafanaConfig;
+use crate::domain::https::HttpsConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::tracker::TrackerConfig;
@@ -16,6 +17,7 @@ use crate::domain::{EnvironmentName, InstanceName};
 
 use super::errors::CreateConfigError;
 use super::grafana::GrafanaSection;
+use super::https::HttpsSection;
 use super::prometheus::PrometheusSection;
 use super::provider::{HetznerProviderSection, LxdProviderSection, ProviderSection};
 use super::ssh_credentials_config::SshCredentialsConfig;
@@ -122,6 +124,18 @@ pub struct EnvironmentCreationConfig {
     /// Converted to domain `GrafanaConfig` via `to_environment_params()`.
     #[serde(default)]
     pub grafana: Option<GrafanaSection>,
+
+    /// HTTPS configuration (optional)
+    ///
+    /// When present, enables HTTPS for services that have TLS configured.
+    /// Contains common settings like admin email for Let's Encrypt.
+    ///
+    /// **Required if any service has TLS configured** - The `admin_email`
+    /// is needed for Let's Encrypt certificate management.
+    ///
+    /// Uses `HttpsSection` for JSON parsing.
+    #[serde(default)]
+    pub https: Option<HttpsSection>,
 }
 
 /// Environment-specific configuration section
@@ -179,6 +193,7 @@ impl EnvironmentCreationConfig {
     ///     TrackerSection::default(),
     ///     None,
     ///     None,
+    ///     None,
     /// );
     /// ```
     #[must_use]
@@ -189,6 +204,7 @@ impl EnvironmentCreationConfig {
         tracker: TrackerSection,
         prometheus: Option<PrometheusSection>,
         grafana: Option<GrafanaSection>,
+        https: Option<HttpsSection>,
     ) -> Self {
         Self {
             environment,
@@ -197,6 +213,7 @@ impl EnvironmentCreationConfig {
             tracker,
             prometheus,
             grafana,
+            https,
         }
     }
 
@@ -217,6 +234,7 @@ impl EnvironmentCreationConfig {
     /// - SSH username must follow Linux username requirements (see `Username`)
     /// - SSH key files must exist and be accessible
     /// - Grafana requires Prometheus (dependency validation)
+    /// - HTTPS configuration must be consistent (section present iff services have TLS)
     ///
     /// # Instance Name Auto-Generation
     ///
@@ -233,6 +251,9 @@ impl EnvironmentCreationConfig {
     /// - SSH private key file does not exist
     /// - SSH public key file does not exist
     /// - Grafana is configured but Prometheus is not (dependency violation)
+    /// - HTTPS section is defined but no service has TLS configured
+    /// - A service has TLS configured but HTTPS section is missing
+    /// - HTTPS admin email is invalid
     ///
     /// # Examples
     ///
@@ -261,6 +282,7 @@ impl EnvironmentCreationConfig {
     ///     TrackerSection::default(),
     ///     None,
     ///     None,
+    ///     None, // HTTPS configuration
     /// );
     ///
     /// let result = config.to_environment_params()?;
@@ -282,9 +304,13 @@ impl EnvironmentCreationConfig {
             TrackerConfig,
             Option<PrometheusConfig>,
             Option<GrafanaConfig>,
+            Option<HttpsConfig>,
         ),
         CreateConfigError,
     > {
+        // Validate HTTPS configuration consistency before any other conversion
+        self.validate_https_config()?;
+
         // Convert environment name string to domain type
         let environment_name = EnvironmentName::new(&self.environment.name)?;
 
@@ -327,6 +353,11 @@ impl EnvironmentCreationConfig {
             return Err(CreateConfigError::GrafanaRequiresPrometheus);
         }
 
+        // Convert HTTPS section to domain type (already validated above)
+        let https_config = self
+            .https
+            .map(|section| HttpsConfig::new(section.admin_email, section.use_staging));
+
         Ok((
             environment_name,
             instance_name,
@@ -336,6 +367,7 @@ impl EnvironmentCreationConfig {
             tracker_config,
             prometheus_config,
             grafana_config,
+            https_config,
         ))
     }
 
@@ -351,6 +383,66 @@ impl EnvironmentCreationConfig {
         let instance_name_str = format!("torrust-tracker-vm-{}", env_name.as_str());
         InstanceName::new(instance_name_str)
             .expect("Generated instance name should always be valid for valid environment names")
+    }
+
+    /// Checks if any service has TLS configured
+    ///
+    /// Returns `true` if at least one of the following services has TLS:
+    /// - Tracker HTTP API
+    /// - Any HTTP tracker
+    /// - Grafana
+    ///
+    /// This is used for validation to ensure that when the HTTPS section is
+    /// defined, at least one service actually uses it.
+    #[must_use]
+    pub fn has_any_tls_configured(&self) -> bool {
+        // Check HTTP API
+        if self.tracker.http_api.tls.is_some() {
+            return true;
+        }
+
+        // Check HTTP trackers
+        for http_tracker in &self.tracker.http_trackers {
+            if http_tracker.tls.is_some() {
+                return true;
+            }
+        }
+
+        // Check Grafana
+        if let Some(ref grafana) = self.grafana {
+            if grafana.tls.is_some() {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Validates HTTPS configuration consistency
+    ///
+    /// Validates that:
+    /// - If any service has TLS configured, the HTTPS section must be present
+    /// - If HTTPS section is present, at least one service must have TLS configured
+    /// - If HTTPS section is present, the admin email must be valid
+    ///
+    /// # Errors
+    ///
+    /// Returns `CreateConfigError::TlsWithoutHttpsSection` if a service has TLS but no HTTPS section.
+    /// Returns `CreateConfigError::HttpsSectionWithoutTls` if HTTPS section exists but no service has TLS.
+    /// Returns `CreateConfigError::InvalidAdminEmail` if the admin email format is invalid.
+    pub fn validate_https_config(&self) -> Result<(), CreateConfigError> {
+        let has_tls = self.has_any_tls_configured();
+
+        match (&self.https, has_tls) {
+            // TLS on services but no HTTPS section - error
+            (None, true) => Err(CreateConfigError::TlsWithoutHttpsSection),
+            // HTTPS section but no TLS on any service - error
+            (Some(_), false) => Err(CreateConfigError::HttpsSectionWithoutTls),
+            // HTTPS section with TLS on services - validate the section
+            (Some(https_section), true) => https_section.validate(),
+            // No HTTPS section and no TLS - valid (HTTP-only setup)
+            (None, false) => Ok(()),
+        }
     }
 
     /// Creates a template instance with placeholder values for a specific provider
@@ -415,15 +507,18 @@ impl EnvironmentCreationConfig {
                 }],
                 http_trackers: vec![super::tracker::HttpTrackerSection {
                     bind_address: "0.0.0.0:7070".to_string(),
+                    tls: None,
                 }],
                 http_api: super::tracker::HttpApiSection {
                     bind_address: "0.0.0.0:1212".to_string(),
                     admin_token: "MyAccessToken".to_string(),
+                    tls: None,
                 },
                 health_check_api: super::tracker::HealthCheckApiSection::default(),
             },
             prometheus: Some(PrometheusSection::default()),
             grafana: Some(GrafanaSection::default()),
+            https: None, // Set to HttpsSection with admin_email for HTTPS deployments
         }
     }
 
@@ -527,6 +622,7 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
             None,
             None,
         );
@@ -678,6 +774,7 @@ mod tests {
             TrackerSection::default(),
             None,
             None,
+            None,
         );
 
         let json = serde_json::to_string(&config).unwrap();
@@ -704,6 +801,7 @@ mod tests {
             TrackerSection::default(),
             None,
             None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -718,6 +816,7 @@ mod tests {
             _tracker,
             _prometheus,
             _grafana,
+            _https,
         ) = result.unwrap();
 
         assert_eq!(name.as_str(), "dev");
@@ -745,6 +844,7 @@ mod tests {
             TrackerSection::default(),
             None,
             None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -759,6 +859,7 @@ mod tests {
             _tracker,
             _prometheus,
             _grafana,
+            _https,
         ) = result.unwrap();
 
         assert_eq!(name.as_str(), "prod");
@@ -781,6 +882,7 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile"),
             TrackerSection::default(),
+            None,
             None,
             None,
         );
@@ -812,6 +914,7 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile"),
             TrackerSection::default(),
+            None,
             None,
             None,
         );
@@ -846,6 +949,7 @@ mod tests {
                 profile_name: "invalid-".to_string(), // ends with dash - invalid
             }),
             TrackerSection::default(),
+            None,
             None,
             None,
         );
@@ -884,6 +988,7 @@ mod tests {
             TrackerSection::default(),
             None,
             None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -917,6 +1022,7 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
             None,
             None,
         );
@@ -954,6 +1060,7 @@ mod tests {
             TrackerSection::default(),
             None,
             None,
+            None,
         );
 
         let result = config.to_environment_params();
@@ -987,6 +1094,7 @@ mod tests {
             TrackerSection::default(),
             None,
             None,
+            None,
         );
 
         let (
@@ -998,6 +1106,7 @@ mod tests {
             _tracker,
             _prometheus,
             _grafana,
+            _https,
         ) = config.to_environment_params().unwrap();
         let environment = Environment::new(
             name.clone(),
@@ -1029,6 +1138,7 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
             None,
             None,
         );
@@ -1119,6 +1229,7 @@ mod tests {
             ),
             default_lxd_provider("test-profile"),
             TrackerSection::default(),
+            None,
             None,
             None,
         );
@@ -1251,5 +1362,255 @@ mod tests {
         // Verify nested directories were created
         assert!(nested_path.exists());
         assert!(nested_path.parent().unwrap().exists());
+    }
+
+    // HTTPS Validation Tests
+
+    #[test]
+    fn it_should_return_false_for_has_any_tls_configured_when_no_tls() {
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "dev".to_string(),
+                instance_name: None,
+            },
+            SshCredentialsConfig::new(
+                "fixtures/testing_rsa".to_string(),
+                "fixtures/testing_rsa.pub".to_string(),
+                "torrust".to_string(),
+                22,
+            ),
+            default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(),
+            None,
+            None,
+            None,
+        );
+
+        assert!(!config.has_any_tls_configured());
+    }
+
+    #[test]
+    fn it_should_return_true_for_has_any_tls_configured_when_http_api_has_tls() {
+        use crate::application::command_handlers::create::config::https::TlsSection;
+        use crate::application::command_handlers::create::config::tracker::{
+            DatabaseSection, HealthCheckApiSection, HttpApiSection, HttpTrackerSection,
+            TrackerCoreSection, TrackerSection, UdpTrackerSection,
+        };
+
+        let tracker_section = TrackerSection {
+            core: TrackerCoreSection {
+                database: DatabaseSection::Sqlite {
+                    database_name: "tracker.db".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![UdpTrackerSection {
+                bind_address: "0.0.0.0:6969".to_string(),
+            }],
+            http_trackers: vec![HttpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+                tls: None,
+            }],
+            http_api: HttpApiSection {
+                bind_address: "0.0.0.0:1212".to_string(),
+                admin_token: "MyAccessToken".to_string(),
+                tls: Some(TlsSection {
+                    domain: "api.tracker.example.com".to_string(),
+                }),
+            },
+            health_check_api: HealthCheckApiSection::default(),
+        };
+
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "dev".to_string(),
+                instance_name: None,
+            },
+            SshCredentialsConfig::new(
+                "fixtures/testing_rsa".to_string(),
+                "fixtures/testing_rsa.pub".to_string(),
+                "torrust".to_string(),
+                22,
+            ),
+            default_lxd_provider("torrust-profile-dev"),
+            tracker_section,
+            None,
+            None,
+            None,
+        );
+
+        assert!(config.has_any_tls_configured());
+    }
+
+    #[test]
+    fn it_should_pass_validation_when_no_https_and_no_tls() {
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "dev".to_string(),
+                instance_name: None,
+            },
+            SshCredentialsConfig::new(
+                "fixtures/testing_rsa".to_string(),
+                "fixtures/testing_rsa.pub".to_string(),
+                "torrust".to_string(),
+                22,
+            ),
+            default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(),
+            None,
+            None,
+            None,
+        );
+
+        assert!(config.validate_https_config().is_ok());
+    }
+
+    #[test]
+    fn it_should_fail_validation_when_tls_without_https_section() {
+        use crate::application::command_handlers::create::config::https::TlsSection;
+        use crate::application::command_handlers::create::config::tracker::{
+            DatabaseSection, HealthCheckApiSection, HttpApiSection, HttpTrackerSection,
+            TrackerCoreSection, TrackerSection, UdpTrackerSection,
+        };
+
+        let tracker_section = TrackerSection {
+            core: TrackerCoreSection {
+                database: DatabaseSection::Sqlite {
+                    database_name: "tracker.db".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![UdpTrackerSection {
+                bind_address: "0.0.0.0:6969".to_string(),
+            }],
+            http_trackers: vec![HttpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+                tls: Some(TlsSection {
+                    domain: "tracker.example.com".to_string(),
+                }),
+            }],
+            http_api: HttpApiSection {
+                bind_address: "0.0.0.0:1212".to_string(),
+                admin_token: "MyAccessToken".to_string(),
+                tls: None,
+            },
+            health_check_api: HealthCheckApiSection::default(),
+        };
+
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "dev".to_string(),
+                instance_name: None,
+            },
+            SshCredentialsConfig::new(
+                "fixtures/testing_rsa".to_string(),
+                "fixtures/testing_rsa.pub".to_string(),
+                "torrust".to_string(),
+                22,
+            ),
+            default_lxd_provider("torrust-profile-dev"),
+            tracker_section,
+            None,
+            None,
+            None, // No HTTPS section
+        );
+
+        let result = config.validate_https_config();
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::TlsWithoutHttpsSection
+        ));
+    }
+
+    #[test]
+    fn it_should_fail_validation_when_https_section_without_any_tls() {
+        use crate::application::command_handlers::create::config::https::HttpsSection;
+
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "dev".to_string(),
+                instance_name: None,
+            },
+            SshCredentialsConfig::new(
+                "fixtures/testing_rsa".to_string(),
+                "fixtures/testing_rsa.pub".to_string(),
+                "torrust".to_string(),
+                22,
+            ),
+            default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(), // No TLS on any service
+            None,
+            None,
+            Some(HttpsSection {
+                admin_email: "admin@example.com".to_string(),
+                use_staging: false,
+            }),
+        );
+
+        let result = config.validate_https_config();
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::HttpsSectionWithoutTls
+        ));
+    }
+
+    #[test]
+    fn it_should_pass_validation_when_https_section_with_tls() {
+        use crate::application::command_handlers::create::config::https::{
+            HttpsSection, TlsSection,
+        };
+        use crate::application::command_handlers::create::config::tracker::{
+            DatabaseSection, HealthCheckApiSection, HttpApiSection, HttpTrackerSection,
+            TrackerCoreSection, TrackerSection, UdpTrackerSection,
+        };
+
+        let tracker_section = TrackerSection {
+            core: TrackerCoreSection {
+                database: DatabaseSection::Sqlite {
+                    database_name: "tracker.db".to_string(),
+                },
+                private: false,
+            },
+            udp_trackers: vec![UdpTrackerSection {
+                bind_address: "0.0.0.0:6969".to_string(),
+            }],
+            http_trackers: vec![HttpTrackerSection {
+                bind_address: "0.0.0.0:7070".to_string(),
+                tls: Some(TlsSection {
+                    domain: "tracker.example.com".to_string(),
+                }),
+            }],
+            http_api: HttpApiSection {
+                bind_address: "0.0.0.0:1212".to_string(),
+                admin_token: "MyAccessToken".to_string(),
+                tls: None,
+            },
+            health_check_api: HealthCheckApiSection::default(),
+        };
+
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "dev".to_string(),
+                instance_name: None,
+            },
+            SshCredentialsConfig::new(
+                "fixtures/testing_rsa".to_string(),
+                "fixtures/testing_rsa.pub".to_string(),
+                "torrust".to_string(),
+                22,
+            ),
+            default_lxd_provider("torrust-profile-dev"),
+            tracker_section,
+            None,
+            None,
+            Some(HttpsSection {
+                admin_email: "admin@example.com".to_string(),
+                use_staging: false,
+            }),
+        );
+
+        assert!(config.validate_https_config().is_ok());
     }
 }

@@ -32,6 +32,7 @@ use tracing::{info, instrument};
 use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
 use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
+use crate::infrastructure::templating::caddy::{CaddyContext, CaddyService};
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
     DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerPorts,
 };
@@ -128,6 +129,9 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         // Apply Grafana configuration (independent of database choice)
         let builder = self.apply_grafana_config(builder);
+
+        // Apply Caddy configuration (if HTTPS enabled)
+        let builder = self.apply_caddy_config(builder);
         let docker_compose_context = builder.build();
 
         // Apply Grafana credentials to env context
@@ -222,6 +226,49 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
     ) -> DockerComposeContextBuilder {
         if let Some(grafana_config) = self.environment.grafana_config() {
             builder.with_grafana(grafana_config.clone())
+        } else {
+            builder
+        }
+    }
+
+    fn apply_caddy_config(
+        &self,
+        builder: DockerComposeContextBuilder,
+    ) -> DockerComposeContextBuilder {
+        let user_inputs = &self.environment.context().user_inputs;
+
+        // Check if HTTPS is configured
+        let Some(https_config) = &user_inputs.https else {
+            return builder;
+        };
+
+        let tracker = &user_inputs.tracker;
+
+        let mut caddy_context =
+            CaddyContext::new(https_config.admin_email(), https_config.use_staging());
+
+        // Add Tracker HTTP API if TLS configured
+        if let Some(tls_domain) = tracker.http_api_tls_domain() {
+            let port = tracker.http_api_port();
+            caddy_context = caddy_context.with_tracker_api(CaddyService::new(tls_domain, port));
+        }
+
+        // Add HTTP Trackers with TLS configured
+        for (domain, port) in tracker.http_trackers_with_tls() {
+            caddy_context = caddy_context.with_http_tracker(CaddyService::new(domain, port));
+        }
+
+        // Add Grafana if TLS configured
+        if let Some(ref grafana) = user_inputs.grafana {
+            if let Some(tls_domain) = grafana.tls_domain() {
+                // Grafana default port is 3000
+                caddy_context = caddy_context.with_grafana(CaddyService::new(tls_domain, 3000));
+            }
+        }
+
+        // Only add Caddy if at least one service has TLS
+        if caddy_context.has_any_tls() {
+            builder.with_caddy(caddy_context)
         } else {
             builder
         }

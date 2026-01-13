@@ -4,6 +4,7 @@ use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 
+use crate::domain::tls::TlsConfig;
 use crate::shared::ApiToken;
 
 /// HTTP API configuration
@@ -18,6 +19,13 @@ pub struct HttpApiConfig {
 
     /// Admin access token for HTTP API authentication
     pub admin_token: ApiToken,
+
+    /// TLS configuration for HTTPS termination via Caddy (optional)
+    ///
+    /// When present, the HTTP API will be accessible via HTTPS
+    /// through the Caddy reverse proxy.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tls: Option<TlsConfig>,
 }
 
 #[cfg(test)]
@@ -29,6 +37,7 @@ mod tests {
         let config = HttpApiConfig {
             bind_address: "0.0.0.0:1212".parse().unwrap(),
             admin_token: "test_token".to_string().into(),
+            tls: None,
         };
 
         assert_eq!(
@@ -43,6 +52,7 @@ mod tests {
         let config = HttpApiConfig {
             bind_address: "0.0.0.0:1212".parse().unwrap(),
             admin_token: "token123".to_string().into(),
+            tls: None,
         };
 
         let json = serde_json::to_value(&config).unwrap();

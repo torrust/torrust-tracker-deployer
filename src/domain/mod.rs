@@ -15,11 +15,13 @@
 
 pub mod environment;
 pub mod grafana;
+pub mod https;
 pub mod instance_name;
 pub mod profile_name;
 pub mod prometheus;
 pub mod provider;
 pub mod template;
+pub mod tls;
 pub mod tracker;
 
 // Re-export commonly used domain types for convenience

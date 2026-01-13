@@ -9,6 +9,7 @@ use serde::Serialize;
 // Internal crate
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
+use crate::infrastructure::templating::caddy::CaddyContext;
 
 // Submodules
 mod builder;
@@ -35,6 +36,12 @@ pub struct DockerComposeContext {
     /// Grafana configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub grafana_config: Option<GrafanaConfig>,
+    /// Caddy TLS proxy configuration (optional)
+    ///
+    /// When present, Caddy reverse proxy is deployed for TLS termination.
+    /// When absent, services are exposed directly over HTTP.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub caddy_config: Option<CaddyContext>,
 }
 
 impl DockerComposeContext {
@@ -102,6 +109,12 @@ impl DockerComposeContext {
     #[must_use]
     pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
         self.grafana_config.as_ref()
+    }
+
+    /// Get the Caddy TLS proxy configuration if present
+    #[must_use]
+    pub fn caddy_config(&self) -> Option<&CaddyContext> {
+        self.caddy_config.as_ref()
     }
 }
 

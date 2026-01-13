@@ -19,10 +19,10 @@ Production deployment at `/opt/torrust/` on Hetzner server (46.224.206.37) serve
 
 ## Goals
 
-- [ ] Integrate Caddy into deployer Tera templates
-- [ ] Support HTTPS for all HTTP services (Tracker API, HTTP Tracker, Grafana)
-- [ ] Enable automatic Let's Encrypt certificate management
-- [ ] Add HTTPS configuration to environment schema
+- [x] Integrate Caddy into deployer Tera templates
+- [x] Support HTTPS for all HTTP services (Tracker API, HTTP Tracker, Grafana)
+- [x] Enable automatic Let's Encrypt certificate management
+- [x] Add HTTPS configuration to environment schema
 - [ ] Implement security scanning for Caddy in CI/CD
 - [ ] Document HTTPS setup in user guide
 - [ ] Add E2E tests for HTTPS functionality
@@ -623,24 +623,24 @@ Add link to HTTPS setup guide.
 
 ### Phase 2: Configuration DTOs (3-4 hours)
 
-- [ ] Create `src/application/command_handlers/create/config/https.rs` with DTOs
-  - [ ] `HttpsConfig` struct with `admin_email` and `use_staging` fields
-    - [ ] `admin_email: String` (required if TLS configured)
-    - [ ] `use_staging: bool` (optional, defaults to false for production)
-  - [ ] `TlsConfig` struct with only `domain` field (service-specific)
-- [ ] Update existing service DTOs to include optional `tls` field:
-  - [ ] `HttpApiSection` in `tracker.rs` - add `tls: Option<TlsConfig>`
-  - [ ] `HttpTrackerSection` in `tracker.rs` - add `tls: Option<TlsConfig>`
-  - [ ] `GrafanaSection` in `grafana.rs` - add `tls: Option<TlsConfig>`
-- [ ] Update `EnvironmentCreationConfig` to include optional `HttpsConfig`
-- [ ] Add validation logic:
-  - [ ] `has_any_tls_configured()` - check if any service has `tls` section
-  - [ ] If any service has TLS, `https` section with `admin_email` is required
-  - [ ] If `https.admin_email` provided, at least one service must have TLS configured
-  - [ ] Email format validation for `HttpsConfig.admin_email`
-  - [ ] Domain name format validation in each service's `TlsConfig`
-- [ ] Add proper type wrappers for sensitive data (AdminEmail) per [docs/contributing/secret-handling.md](../contributing/secret-handling.md)
-- [ ] Create unit tests for all validation scenarios
+- [x] Create `src/application/command_handlers/create/config/https.rs` with DTOs
+  - [x] `HttpsSection` struct with `admin_email` and `use_staging` fields
+    - [x] `admin_email: String` (required if TLS configured)
+    - [x] `use_staging: bool` (optional, defaults to false for production)
+  - [x] `TlsSection` struct with only `domain` field (service-specific)
+- [x] Update existing service DTOs to include optional `tls` field:
+  - [x] `HttpApiSection` in `tracker.rs` - add `tls: Option<TlsSection>`
+  - [x] `HttpTrackerSection` in `tracker.rs` - add `tls: Option<TlsSection>`
+  - [x] `GrafanaSection` in `grafana.rs` - add `tls: Option<TlsSection>`
+- [x] Update `EnvironmentCreationConfig` to include optional `HttpsSection`
+- [x] Add validation logic:
+  - [x] `has_any_tls_configured()` - check if any service has `tls` section
+  - [x] If any service has TLS, `https` section with `admin_email` is required
+  - [x] If `https.admin_email` provided, at least one service must have TLS configured
+  - [x] Email format validation for `HttpsSection.admin_email` (using `email_address` crate via `Email` type in `src/shared/email.rs`)
+  - [x] Domain name format validation in each service's `TlsSection` (using `DomainName` type in `src/shared/domain_name.rs`)
+- [x] Add proper type wrappers for validation (`Email`, `DomainName` in `src/shared/`) - Note: DTOs remain as `String` primitives for JSON serialization, domain types used for validation during boundary crossing
+- [x] Create unit tests for all validation scenarios
 
 ### Phase 3: Template Rendering Integration (3-4 hours)
 
@@ -659,7 +659,15 @@ Add link to HTTPS setup guide.
   - [x] `{% if http_api_service %}` for API service block in Caddyfile
   - [x] `{% for service in http_tracker_services %}` for tracker iteration in Caddyfile
   - [x] `{% if grafana_service %}` for Grafana service block in Caddyfile
-- [ ] Update `ReleaseCommand` to include Caddy template generation
+- [x] Update `ReleaseCommand` to include Caddy template generation:
+  - [x] Add `RenderCaddyTemplates` step to `ReleaseStep` enum
+  - [x] Add `DeployCaddyConfigToRemote` step to `ReleaseStep` enum
+  - [x] Create `RenderCaddyTemplatesStep` for template rendering
+  - [x] Create `DeployCaddyConfigStep` for Ansible deployment
+  - [x] Create Ansible playbook `deploy-caddy-config.yml`
+  - [x] Register playbook in `copy_static_templates` method
+  - [x] Integrate `CaddyContext` into Docker Compose template rendering
+  - [x] Add error variant `CaddyConfigDeployment` with help text
 - [x] Test template generation with various scenarios:
   - [x] All services HTTPS
   - [x] Only Tracker API HTTPS
@@ -722,26 +730,75 @@ Add link to HTTPS setup guide.
 
 **Manual E2E Test** (reproduce production locally):
 
-- [ ] Create manual test environment config in `envs/`:
-  - [ ] Base on production config (`envs/docker-hetzner-test.json`)
-  - [ ] Replace Hetzner provider with LXD provider
-  - [ ] Add TLS configuration matching production (all services HTTPS)
-  - [ ] Use test domains (e.g., `api.local.torrust-tracker.com`)
-- [ ] Run provisioning locally:
+- [x] Create manual test environment config in `envs/`:
+  - [x] Base on production config (`envs/docker-hetzner-test.json`)
+  - [x] Replace Hetzner provider with LXD provider
+  - [x] Add TLS configuration matching production (all services HTTPS)
+  - [x] Use test domains (e.g., `api.tracker.local`)
+- [x] Run full deployment workflow locally:
 
   ```bash
   cargo run -- create environment --env-file envs/manual-https-test.json
-  cargo run -- create templates --env-name manual-https-test
-  cargo run -- create release --env-name manual-https-test
+  cargo run -- provision manual-https-test
+  cargo run -- configure manual-https-test
+  cargo run -- release manual-https-test
+  cargo run -- run manual-https-test
   ```
 
-- [ ] Verify rendered templates in `build/manual-https-test/`:
-  - [ ] Check `caddy/Caddyfile` contains all service blocks with correct domains
-  - [ ] Check `docker-compose/docker-compose.yml` includes Caddy service
-  - [ ] Verify port extraction from bind_address (e.g., 0.0.0.0:7070 → 7070)
-  - [ ] Confirm Caddy volumes (caddy_data, caddy_config) are present
+- [x] Verify rendered templates in `build/manual-https-test/`:
+  - [x] Check `caddy/Caddyfile` contains all service blocks with correct domains
+  - [x] Check `docker-compose/docker-compose.yml` includes Caddy service
+  - [x] Verify port extraction from bind_address (e.g., 0.0.0.0:7070 → 7070)
+  - [x] Confirm Caddy volumes (caddy_data, caddy_config) are present
+- [x] Verify Caddyfile deployed to server at `/opt/torrust/storage/caddy/etc/Caddyfile`
+- [x] Verify Caddy container running and healthy
+- [x] Verify Caddy logs show successful certificate acquisition (local CA for `.local` domains)
+- [x] Verify HTTPS endpoints accessible via curl:
+  - [x] `https://api.tracker.local` - Tracker API responds (HTTP/2 500, expected - auth required)
+  - [x] `https://grafana.tracker.local` - Grafana redirects to `/login` (HTTP/2 302)
+  - [x] `https://http1.tracker.local` - HTTP Tracker responds (HTTP/2 404, expected for GET)
+  - [x] `https://http2.tracker.local` - HTTP Tracker responds (HTTP/2 404, expected for GET)
+- [x] Verify HTTP→HTTPS redirect works (HTTP 308 Permanent Redirect)
+- [x] Verify `via: 1.1 Caddy` header present in responses
+- [x] Verify HTTP/2 and HTTP/3 enabled (`alt-svc: h3=":443"` header)
 - [ ] Compare with production templates to ensure consistency
 - [ ] Document manual test procedure in `docs/e2e-testing/manual-https-testing.md`
+
+**Manual Test Results** (2026-01-13):
+
+| Test                            | Status  | Notes                                      |
+| ------------------------------- | ------- | ------------------------------------------ |
+| Caddyfile template rendering    | ✅ Pass | Clean output, no formatting warnings       |
+| Caddy service in docker-compose | ✅ Pass | Ports 80, 443, 443/udp exposed             |
+| Caddyfile deployment to server  | ✅ Pass | `/opt/torrust/storage/caddy/etc/Caddyfile` |
+| Caddy container health          | ✅ Pass | Running, healthy                           |
+| Certificate acquisition         | ✅ Pass | Local CA used for `.local` domains         |
+| HTTPS API endpoint              | ✅ Pass | HTTP/2 500 (auth required)                 |
+| HTTPS Grafana endpoint          | ✅ Pass | HTTP/2 302 redirect to /login              |
+| HTTPS HTTP Tracker 1            | ✅ Pass | HTTP/2 404 (expected for GET)              |
+| HTTPS HTTP Tracker 2            | ✅ Pass | HTTP/2 404 (expected for GET)              |
+| HTTP→HTTPS redirect             | ✅ Pass | 308 Permanent Redirect                     |
+| HTTP/2 enabled                  | ✅ Pass | Confirmed in response                      |
+| HTTP/3 available                | ✅ Pass | `alt-svc: h3=":443"` header                |
+
+**Local DNS Setup** (for testing):
+
+Add to `/etc/hosts` (replace IP with your LXD VM IP):
+
+```text
+10.140.190.58   api.tracker.local
+10.140.190.58   http1.tracker.local
+10.140.190.58   http2.tracker.local
+10.140.190.58   grafana.tracker.local
+```
+
+**Certificate Behavior**:
+
+| Domain Type                                | Certificate Source         | Trust Level                    |
+| ------------------------------------------ | -------------------------- | ------------------------------ |
+| Real domains (e.g., `tracker.example.com`) | Let's Encrypt (or staging) | Browser trusted                |
+| Local domains (e.g., `*.tracker.local`)    | Caddy's Local CA           | Self-signed (browser warnings) |
+| Unreachable domains / No internet          | Caddy's Local CA           | Self-signed                    |
 
 ### Phase 7: Schema Generation (30 minutes)
 

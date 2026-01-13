@@ -31,6 +31,7 @@
 
 pub mod create_prometheus_storage;
 pub mod create_tracker_storage;
+pub mod deploy_caddy_config;
 pub mod deploy_compose_files;
 pub mod deploy_grafana_provisioning;
 pub mod deploy_prometheus_config;
@@ -41,6 +42,7 @@ pub mod start_services;
 
 pub use create_prometheus_storage::CreatePrometheusStorageStep;
 pub use create_tracker_storage::CreateTrackerStorageStep;
+pub use deploy_caddy_config::DeployCaddyConfigStep;
 pub use deploy_compose_files::{DeployComposeFilesStep, DeployComposeFilesStepError};
 pub use deploy_grafana_provisioning::DeployGrafanaProvisioningStep;
 pub use deploy_prometheus_config::DeployPrometheusConfigStep;

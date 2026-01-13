@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::domain::tls::TlsConfig;
 use crate::shared::secrets::Password;
 
 /// Grafana metrics visualization configuration
@@ -20,6 +21,13 @@ pub struct GrafanaConfig {
     /// - Memory zeroing when the value is dropped
     /// - Explicit `.expose_secret()` calls required to access plaintext
     admin_password: Password,
+
+    /// TLS configuration for HTTPS termination via Caddy (optional)
+    ///
+    /// When present, Grafana will be accessible via HTTPS through
+    /// the Caddy reverse proxy.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tls: Option<TlsConfig>,
 }
 
 impl GrafanaConfig {
@@ -38,6 +46,17 @@ impl GrafanaConfig {
         Self {
             admin_user,
             admin_password: Password::new(admin_password),
+            tls: None,
+        }
+    }
+
+    /// Creates a new Grafana configuration with TLS
+    #[must_use]
+    pub fn with_tls(admin_user: String, admin_password: String, tls: TlsConfig) -> Self {
+        Self {
+            admin_user,
+            admin_password: Password::new(admin_password),
+            tls: Some(tls),
         }
     }
 
@@ -52,6 +71,18 @@ impl GrafanaConfig {
     pub fn admin_password(&self) -> &Password {
         &self.admin_password
     }
+
+    /// Returns the TLS domain if configured
+    #[must_use]
+    pub fn tls_domain(&self) -> Option<&str> {
+        self.tls.as_ref().map(TlsConfig::domain)
+    }
+
+    /// Returns the TLS configuration if present
+    #[must_use]
+    pub fn tls(&self) -> Option<&TlsConfig> {
+        self.tls.as_ref()
+    }
 }
 
 impl Default for GrafanaConfig {
@@ -59,6 +90,7 @@ impl Default for GrafanaConfig {
         Self {
             admin_user: "admin".to_string(),
             admin_password: Password::new("admin"),
+            tls: None,
         }
     }
 }
@@ -80,6 +112,7 @@ mod tests {
         let config = GrafanaConfig {
             admin_user: "custom_admin".to_string(),
             admin_password: Password::new("custom_pass"),
+            tls: None,
         };
 
         assert_eq!(config.admin_user, "custom_admin");
@@ -91,6 +124,7 @@ mod tests {
         let config = GrafanaConfig {
             admin_user: "admin".to_string(),
             admin_password: Password::new("secret123"),
+            tls: None,
         };
 
         let json = serde_json::to_string(&config).expect("Failed to serialize");
@@ -114,6 +148,7 @@ mod tests {
         let config = GrafanaConfig {
             admin_user: "admin".to_string(),
             admin_password: Password::new("super_secret"),
+            tls: None,
         };
 
         let debug_output = format!("{config:?}");
@@ -128,6 +163,7 @@ mod tests {
         let config = GrafanaConfig {
             admin_user: "admin".to_string(),
             admin_password: Password::new("password"),
+            tls: None,
         };
 
         let cloned = config.clone();

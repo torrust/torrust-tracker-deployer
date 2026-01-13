@@ -312,6 +312,7 @@ impl AnsibleProjectGenerator {
             "create-prometheus-storage.yml",
             "deploy-prometheus-config.yml",
             "deploy-grafana-provisioning.yml",
+            "deploy-caddy-config.yml",
             "deploy-compose-files.yml",
             "run-compose-services.yml",
         ] {
@@ -321,7 +322,7 @@ impl AnsibleProjectGenerator {
 
         tracing::debug!(
             "Successfully copied {} static template files",
-            17 // ansible.cfg + 16 playbooks
+            18 // ansible.cfg + 17 playbooks
         );
 
         Ok(())

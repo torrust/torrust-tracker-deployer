@@ -161,6 +161,7 @@ impl EnvironmentTestBuilder {
                 tracker: TrackerConfig::default(),
                 prometheus: self.prometheus_config,
                 grafana: Some(GrafanaConfig::default()),
+                https: None,
             },
             internal_config: InternalConfig {
                 data_dir: data_dir.clone(),

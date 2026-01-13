@@ -76,6 +76,7 @@ use super::errors::CreateCommandHandlerError;
 ///     TrackerSection::default(),
 ///     None, // prometheus
 ///     None, // grafana
+///     None, // https
 /// );
 ///
 /// // Execute command with working directory
@@ -192,6 +193,7 @@ impl CreateCommandHandler {
     ///     TrackerSection::default(),
     ///     None, // prometheus
     ///     None, // grafana
+    ///     None, // https
     /// );
     ///
     /// let working_dir = std::path::Path::new(".");
@@ -222,6 +224,7 @@ impl CreateCommandHandler {
             tracker_config,
             prometheus_config,
             grafana_config,
+            https_config,
         ) = config
             .to_environment_params()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
@@ -244,6 +247,7 @@ impl CreateCommandHandler {
             tracker_config,
             prometheus_config,
             grafana_config,
+            https_config,
             working_dir,
             self.clock.now(),
         );
