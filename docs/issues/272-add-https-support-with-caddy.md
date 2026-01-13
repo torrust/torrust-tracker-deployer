@@ -102,15 +102,15 @@ Production deployment at `/opt/torrust/` on Hetzner server (46.224.206.37) serve
 - Each HTTP tracker maps to its configured port
 - Follow Torrust Tracker convention: if `tls` section exists in service config, HTTPS is enabled
 
-**Template Variables**:
+**Template Variables** (pre-processed in Rust Context):
 
-- `{{ https.admin_email }}` - Admin email for Let's Encrypt notifications (common config)
-- `{{ tracker.http_api.tls.domain }}` - Domain for Tracker API (if tls section present)
-- `{{ tracker.http_api.bind_address }}` - Parse port from bind_address (e.g., "0.0.0.0:1212" → port 1212)
-- `{{ tracker.http_trackers[*].tls.domain }}` - Domains for HTTP trackers (if tls section present)
-- `{{ tracker.http_trackers[*].bind_address }}` - Parse port from each tracker's bind_address
-- `{{ grafana.tls.domain }}` - Domain for Grafana UI (if tls section present)
-- Grafana port: hardcoded 3000 (matches docker-compose template)
+Following the [Context Data Preparation Pattern](../contributing/templates/template-system-architecture.md#-context-data-preparation-pattern), all data is pre-processed in Rust before being passed to the template. The template receives ready-to-use values:
+
+- `{{ admin_email }}` - Admin email for Let's Encrypt notifications
+- `{{ use_staging }}` - Boolean for Let's Encrypt staging environment
+- `{{ http_api_service }}` - Optional service object with `domain` and `port` (only present if TLS configured)
+- `{{ http_tracker_services }}` - Array of service objects, each with `domain` and `port` (only TLS-enabled trackers)
+- `{{ grafana_service }}` - Optional service object with `domain` and `port` (only present if TLS configured)
 
 **Example**:
 
@@ -121,40 +121,38 @@ Production deployment at `/opt/torrust/` on Hetzner server (46.224.206.37) serve
 # Global options
 {
     # Email for Let's Encrypt notifications
-    email {{ https.admin_email }}
+    email {{ admin_email }}
 
-    {% if https.use_staging %}
+    {% if use_staging %}
     # Use Let's Encrypt staging environment (for testing, avoids rate limits)
     # WARNING: Staging certificates will show browser warnings (not trusted)
     acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
     {% endif %}
 }
 
-{% if tracker.http_api.tls %}
+{% if http_api_service %}
 # Tracker REST API
-{{ tracker.http_api.tls.domain }} {
-    reverse_proxy tracker:{{ tracker.http_api.bind_address | extract_port }}
+{{ http_api_service.domain }} {
+    reverse_proxy tracker:{{ http_api_service.port }}
 }
 {% endif %}
 
-{% for http_tracker in tracker.http_trackers %}
-{% if http_tracker.tls %}
+{% for service in http_tracker_services %}
 # HTTP Tracker
-{{ http_tracker.tls.domain }} {
-    reverse_proxy tracker:{{ http_tracker.bind_address | extract_port }}
+{{ service.domain }} {
+    reverse_proxy tracker:{{ service.port }}
 }
-{% endif %}
 {% endfor %}
 
-{% if grafana.tls %}
+{% if grafana_service %}
 # Grafana UI with WebSocket support
-{{ grafana.tls.domain }} {
-    reverse_proxy grafana:3000
+{{ grafana_service.domain }} {
+    reverse_proxy grafana:{{ grafana_service.port }}
 }
 {% endif %}
 ```
 
-**Note**: The `extract_port` Tera filter extracts the port from bind_address (e.g., "0.0.0.0:7070" → "7070")
+**Note**: Port extraction and TLS filtering happens in Rust when building `CaddyContext`, not in the template. See [Context Data Preparation Pattern](../contributing/templates/template-system-architecture.md#-context-data-preparation-pattern).
 
 **Configuration Example** (user input):
 
@@ -646,20 +644,21 @@ Add link to HTTPS setup guide.
 
 ### Phase 3: Template Rendering Integration (3-4 hours)
 
-- [ ] Implement Tera `extract_port` filter to parse port from bind_address strings
-- [ ] Update Ansible template renderer to handle Caddy templates
-- [ ] Pass configuration to Tera context:
-  - [ ] `https.admin_email` (required if any service has TLS)
-  - [ ] `https.use_staging` (optional, defaults to false)
-  - [ ] `tracker.http_api` (with optional tls field)
-  - [ ] `tracker.http_trackers[]` (array, each with optional tls field)
-  - [ ] `grafana` (with optional tls field)
+- [ ] Create `CaddyProjectGenerator` following Project Generator pattern
+- [ ] Create `CaddyContext` with pre-processed data (following [Context Data Preparation Pattern](../contributing/templates/template-system-architecture.md#-context-data-preparation-pattern)):
+  - [ ] `admin_email: String` - extracted from config
+  - [ ] `use_staging: bool` - extracted from config
+  - [ ] `http_api_service: Option<CaddyService>` - only if TLS configured, with pre-extracted port
+  - [ ] `http_tracker_services: Vec<CaddyService>` - only TLS-enabled trackers, with pre-extracted ports
+  - [ ] `grafana_service: Option<CaddyService>` - only if TLS configured, with pre-extracted port
+- [ ] Create `CaddyService` struct with `domain: String` and `port: u16`
+- [ ] Implement port extraction in Rust (from `SocketAddr`) when building context
 - [ ] Handle conditional rendering in templates:
-  - [ ] `needs_caddy` variable checks if any service has `tls.is_some()`
+  - [ ] `needs_caddy` variable checks if any service list is non-empty
   - [ ] Only include Caddy service in docker-compose if `needs_caddy` is true
-  - [ ] `{% if tracker.http_api.tls %}` for API service block in Caddyfile
-  - [ ] `{% if http_tracker.tls %}` inside tracker iteration in Caddyfile
-  - [ ] `{% if grafana.tls %}` for Grafana service block in Caddyfile
+  - [ ] `{% if http_api_service %}` for API service block in Caddyfile
+  - [ ] `{% for service in http_tracker_services %}` for tracker iteration in Caddyfile
+  - [ ] `{% if grafana_service %}` for Grafana service block in Caddyfile
 - [ ] Update `ReleaseCommand` to include Caddy template generation
 - [ ] Test template generation with various scenarios:
   - [ ] All services HTTPS
