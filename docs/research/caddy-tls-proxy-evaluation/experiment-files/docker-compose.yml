@@ -18,6 +18,12 @@ services:
     networks:
       - metrics_network
       - visualization_network
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     logging:
       options:
         max-size: "10m"
