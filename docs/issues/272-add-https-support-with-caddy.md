@@ -618,8 +618,8 @@ Add link to HTTPS setup guide.
 - [x] Create `templates/caddy/Caddyfile.tera` based on production configuration
 - [x] Create `docs/contributing/templates/caddy.md` documenting template variables (per project convention: no README in templates/)
 - [x] Update `templates/docker-compose/docker-compose.yml.tera` with Caddy service block
-- [ ] Register Caddyfile in appropriate ProjectGenerator (likely new `CaddyProjectGenerator`)
-- [ ] Test template rendering manually with sample data
+- [x] Register Caddyfile in `CaddyProjectGenerator` (`src/infrastructure/templating/caddy/`)
+- [x] Test template rendering with sample data (14 unit tests in `CaddyProjectGenerator` and `CaddyfileRenderer`)
 
 ### Phase 2: Configuration DTOs (3-4 hours)
 
@@ -644,27 +644,27 @@ Add link to HTTPS setup guide.
 
 ### Phase 3: Template Rendering Integration (3-4 hours)
 
-- [ ] Create `CaddyProjectGenerator` following Project Generator pattern
-- [ ] Create `CaddyContext` with pre-processed data (following [Context Data Preparation Pattern](../contributing/templates/template-system-architecture.md#-context-data-preparation-pattern)):
-  - [ ] `admin_email: String` - extracted from config
-  - [ ] `use_staging: bool` - extracted from config
-  - [ ] `http_api_service: Option<CaddyService>` - only if TLS configured, with pre-extracted port
-  - [ ] `http_tracker_services: Vec<CaddyService>` - only TLS-enabled trackers, with pre-extracted ports
-  - [ ] `grafana_service: Option<CaddyService>` - only if TLS configured, with pre-extracted port
-- [ ] Create `CaddyService` struct with `domain: String` and `port: u16`
-- [ ] Implement port extraction in Rust (from `SocketAddr`) when building context
-- [ ] Handle conditional rendering in templates:
-  - [ ] `needs_caddy` variable checks if any service list is non-empty
-  - [ ] Only include Caddy service in docker-compose if `needs_caddy` is true
-  - [ ] `{% if http_api_service %}` for API service block in Caddyfile
-  - [ ] `{% for service in http_tracker_services %}` for tracker iteration in Caddyfile
-  - [ ] `{% if grafana_service %}` for Grafana service block in Caddyfile
+- [x] Create `CaddyProjectGenerator` following Project Generator pattern
+- [x] Create `CaddyContext` with pre-processed data (following [Context Data Preparation Pattern](../contributing/templates/template-system-architecture.md#-context-data-preparation-pattern)):
+  - [x] `admin_email: String` - extracted from config
+  - [x] `use_staging: bool` - extracted from config
+  - [x] `http_api_service: Option<CaddyService>` - only if TLS configured, with pre-extracted port
+  - [x] `http_tracker_services: Vec<CaddyService>` - only TLS-enabled trackers, with pre-extracted ports
+  - [x] `grafana_service: Option<CaddyService>` - only if TLS configured, with pre-extracted port
+- [x] Create `CaddyService` struct with `domain: String` and `port: u16`
+- [x] Implement port extraction in Rust (from `SocketAddr`) when building context
+- [x] Handle conditional rendering in templates:
+  - [x] `needs_caddy` variable checks if any service list is non-empty
+  - [x] Only include Caddy service in docker-compose if `needs_caddy` is true
+  - [x] `{% if http_api_service %}` for API service block in Caddyfile
+  - [x] `{% for service in http_tracker_services %}` for tracker iteration in Caddyfile
+  - [x] `{% if grafana_service %}` for Grafana service block in Caddyfile
 - [ ] Update `ReleaseCommand` to include Caddy template generation
-- [ ] Test template generation with various scenarios:
-  - [ ] All services HTTPS
-  - [ ] Only Tracker API HTTPS
-  - [ ] Multiple HTTP trackers, mixed HTTPS/HTTP
-  - [ ] No HTTPS (Caddy not deployed)
+- [x] Test template generation with various scenarios:
+  - [x] All services HTTPS
+  - [x] Only Tracker API HTTPS
+  - [x] Multiple HTTP trackers, mixed HTTPS/HTTP
+  - [x] No HTTPS (Caddy not deployed)
 
 ### Phase 4: Security Workflow Updates (1 hour)
 
