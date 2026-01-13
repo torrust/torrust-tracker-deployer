@@ -518,6 +518,55 @@ docs/research/caddy-tls-proxy-evaluation/
 
 ---
 
+## Evaluation Results
+
+**Status**: ✅ **COMPLETE** (January 13, 2026)
+
+**Recommendation**: ✅ **ADOPT CADDY** as TLS termination proxy
+
+### Key Findings
+
+- ✅ **WebSocket support works perfectly** (Pingoo's critical failure point)
+- ✅ **Automatic Let's Encrypt certificates** (~3-4 seconds for 3 domains)
+- ✅ **Simple configuration** (21 lines vs nginx+certbot complexity)
+- ✅ **All HTTPS endpoints working**:
+  - Tracker API: `/api/health_check` → HTTP/2 200
+  - HTTP Tracker: `/announce` and `/health_check` → HTTP/2 200
+  - Grafana UI: redirect to login → HTTP/2 302
+- ✅ **Production-ready** with automatic certificate renewal
+- ✅ **Built-in HTTP/3 (QUIC)** support
+
+### WebSocket Test Results (Critical Success Criterion)
+
+```text
+URL: wss://grafana.torrust-tracker.com/api/live/ws
+Method: GET
+Status: 101 Switching Protocols
+Server: Caddy
+
+Response Headers:
+  Connection: Upgrade
+  Upgrade: websocket
+  Sec-WebSocket-Accept: RVq4NYes7ZCMvnSWhc+pya0WUBk=
+
+Result: ✅ Dashboard live updates working perfectly
+```
+
+### Documentation
+
+- **Experiment Report**: [`docs/research/caddy-tls-proxy-evaluation/experiment-full-stack.md`](../research/caddy-tls-proxy-evaluation/experiment-full-stack.md)
+- **Evaluation Conclusion**: [`docs/research/caddy-tls-proxy-evaluation/conclusion.md`](../research/caddy-tls-proxy-evaluation/conclusion.md)
+
+### Next Steps
+
+1. Create ADR documenting Caddy adoption decision
+2. Update deployer Tera templates with Caddy configuration
+3. Add Caddy to project template (docker-compose.yml, Caddyfile)
+4. Document Caddy configuration in user guide
+5. Migrate production deployments to Caddy
+
+---
+
 **Created**: 2026-01-13
 **Last Updated**: 2026-01-13
-**Status**: Planning
+**Status**: ✅ Complete - Recommend Adoption
