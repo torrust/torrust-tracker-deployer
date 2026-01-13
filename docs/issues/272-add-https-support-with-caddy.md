@@ -615,9 +615,9 @@ Add link to HTTPS setup guide.
 
 ### Phase 1: Template Creation (3-4 hours)
 
-- [ ] Create `templates/caddy/Caddyfile.tera` based on production configuration
-- [ ] Create `templates/caddy/README.md` documenting template variables
-- [ ] Update `templates/docker-compose/docker-compose.yml.tera` with Caddy service block
+- [x] Create `templates/caddy/Caddyfile.tera` based on production configuration
+- [x] Create `docs/contributing/templates/caddy.md` documenting template variables (per project convention: no README in templates/)
+- [x] Update `templates/docker-compose/docker-compose.yml.tera` with Caddy service block
 - [ ] Register Caddyfile in appropriate ProjectGenerator (likely new `CaddyProjectGenerator`)
 - [ ] Test template rendering manually with sample data
 

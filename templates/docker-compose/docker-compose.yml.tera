@@ -20,6 +20,36 @@
 # See ADR: docs/decisions/environment-variable-injection-in-docker-compose.md
 
 services:
+{% if caddy_config %}
+  # Caddy reverse proxy for automatic HTTPS with Let's Encrypt
+  # Placed first as it's the entry point for HTTPS traffic
+  caddy:
+    image: caddy:2.10
+    container_name: caddy
+    tty: true
+    restart: unless-stopped
+    ports:
+      - "80:80"       # HTTP (ACME HTTP-01 challenge)
+      - "443:443"     # HTTPS
+      - "443:443/udp" # HTTP/3 (QUIC)
+    volumes:
+      - ./storage/caddy/etc/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data     # TLS certificates (MUST persist!)
+      - caddy_config:/config
+    networks:
+      - proxy_network  # Connects to services that need TLS termination
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+
+{% endif %}
   tracker:
     # TODO: Pin to stable v4.0.0 when released (currently using develop tag)
     # Tracking issue: https://github.com/torrust/torrust-tracker-deployer/issues/TBD
@@ -45,6 +75,9 @@ services:
 {% endif %}
 {% if database.driver == "mysql" %}
       - database_network  # Tracker connects to MySQL
+{% endif %}
+{% if caddy_config %}
+      - proxy_network  # Caddy reverse proxies to tracker
 {% endif %}
     ports:
       # UDP Tracker Ports (dynamically configured)
@@ -105,6 +138,9 @@ services:
     restart: unless-stopped
     networks:
       - visualization_network  # Queries Prometheus data source
+{% if caddy_config %}
+      - proxy_network  # Caddy reverse proxies to Grafana
+{% endif %}
     ports:
       - "3100:3000"
     environment:
@@ -201,8 +237,12 @@ networks:
   visualization_network:
     driver: bridge
 {% endif %}
+{% if caddy_config %}
+  proxy_network:
+    driver: bridge
+{% endif %}
 
-{% if database.driver == "mysql" or grafana_config %}
+{% if database.driver == "mysql" or grafana_config or caddy_config %}
 volumes:
 {%- if database.driver == "mysql" %}
   mysql_data:
@@ -210,6 +250,12 @@ volumes:
 {%- endif %}
 {%- if grafana_config %}
   grafana_data:
+    driver: local
+{%- endif %}
+{%- if caddy_config %}
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local
 {%- endif %}
 {% endif %}

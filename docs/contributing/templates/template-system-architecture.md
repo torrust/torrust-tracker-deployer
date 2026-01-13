@@ -382,6 +382,41 @@ impl CaddyContext {
 4. **Handle optionals in Rust**: Don't pass `Option<T>` to templates; provide defaults or filter out
 5. **Name for template clarity**: Use names like `http_api_port` not `bind_address_port_number`
 
+## 📁 Templates Directory Organization
+
+The `templates/` directory should contain **only template files** (`.tera` files and static configuration files). Documentation about templates should be placed in `docs/contributing/templates/`.
+
+### DO ✅
+
+- Place template files (`.tera`, `.yml`, `.toml`, etc.) in `templates/<service>/`
+- Add comments directly in template files to explain template-specific details
+- Create documentation in `docs/contributing/templates/<service>.md` for detailed explanations
+
+### DON'T ❌
+
+- ❌ Add `README.md` files in `templates/` subdirectories
+- ❌ Add documentation files in the `templates/` directory structure
+- ❌ Mix documentation with template source files
+
+### Service Documentation Location
+
+| Service        | Templates Location          | Documentation Location                          |
+| -------------- | --------------------------- | ----------------------------------------------- |
+| Ansible        | `templates/ansible/`        | `docs/contributing/templates/ansible.md`        |
+| Caddy          | `templates/caddy/`          | `docs/contributing/templates/caddy.md`          |
+| Docker Compose | `templates/docker-compose/` | `docs/contributing/templates/docker-compose.md` |
+| Grafana        | `templates/grafana/`        | `docs/contributing/templates/grafana.md`        |
+| Prometheus     | `templates/prometheus/`     | `docs/contributing/templates/prometheus.md`     |
+| Tofu           | `templates/tofu/`           | `docs/contributing/templates/tofu.md`           |
+| Tracker        | `templates/tracker/`        | `docs/contributing/templates/tracker.md`        |
+
+### Rationale
+
+1. **Clean separation**: Template files are source code; documentation is separate
+2. **Embedded templates**: The `templates/` directory is embedded in the binary - documentation files would unnecessarily increase binary size
+3. **Consistency**: All documentation lives in `docs/`, not scattered across the codebase
+4. **Discoverability**: Contributors know to look in `docs/contributing/templates/` for template documentation
+
 ## ⚠️ Important Behaviors
 
 ### Template Persistence
