@@ -1,0 +1,23 @@
+# Prometheus configuration for Caddy experiment
+# Matches production at /opt/torrust/storage/prometheus/etc/prometheus.yml
+# NOTE: API token has been redacted for security
+
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "tracker_stats"
+    metrics_path: "/api/v1/stats"
+    params:
+      token: ["<REDACTED>"]
+      format: ["prometheus"]
+    static_configs:
+      - targets: ["tracker:1212"]
+
+  - job_name: "tracker_metrics"
+    metrics_path: "/api/v1/metrics"
+    params:
+      token: ["<REDACTED>"]
+      format: ["prometheus"]
+    static_configs:
+      - targets: ["tracker:1212"]
