@@ -19,15 +19,23 @@
 #
 # See ADR: docs/decisions/environment-variable-injection-in-docker-compose.md
 
+# Common service defaults (YAML anchor for DRY configuration)
+x-defaults: &defaults
+  tty: true
+  restart: unless-stopped
+  logging:
+    options:
+      max-size: "10m"
+      max-file: "10"
+
 services:
 {% if caddy_config %}
   # Caddy reverse proxy for automatic HTTPS with Let's Encrypt
   # Placed first as it's the entry point for HTTPS traffic
   caddy:
+    <<: *defaults
     image: caddy:2.10
     container_name: caddy
-    tty: true
-    restart: unless-stopped
     ports:
       - "80:80"       # HTTP (ACME HTTP-01 challenge)
       - "443:443"     # HTTPS
@@ -44,21 +52,16 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging:
-      options:
-        max-size: "10m"
-        max-file: "10"
 
 {% endif %}
   tracker:
+    <<: *defaults
     # TODO: Pin to stable v4.0.0 when released (currently using develop tag)
     # Tracking issue: https://github.com/torrust/torrust-tracker-deployer/issues/TBD
     # Rationale: The develop tag is mutable and introduces deployment non-reproducibility.
     #            Pinning to a stable release ensures predictable deployments and easier rollback.
     image: torrust/tracker:develop
     container_name: tracker
-    tty: true
-    restart: unless-stopped
 {% if database.driver == "mysql" %}
     depends_on:
       mysql:
@@ -98,17 +101,12 @@ services:
       - ./storage/tracker/lib:/var/lib/torrust/tracker:Z
       - ./storage/tracker/log:/var/log/torrust/tracker:Z
       - ./storage/tracker/etc:/etc/torrust/tracker:Z
-    logging:
-      options:
-        max-size: "10m"
-        max-file: "10"
 
 {% if prometheus_config %}
   prometheus:
+    <<: *defaults
     image: prom/prometheus:v3.5.0
     container_name: prometheus
-    tty: true
-    restart: unless-stopped
     networks:
       - metrics_network  # Scrapes metrics from tracker
 {% if grafana_config %}
@@ -126,20 +124,15 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging:
-      options:
-        max-size: "10m"
-        max-file: "10"
     depends_on:
       - tracker
 {% endif %}
 
 {% if grafana_config %}
   grafana:
+    <<: *defaults
     image: grafana/grafana:12.3.1
     container_name: grafana
-    tty: true
-    restart: unless-stopped
     networks:
       - visualization_network  # Queries Prometheus data source
 {% if caddy_config %}
@@ -161,10 +154,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    logging:
-      options:
-        max-size: "10m"
-        max-file: "10"
     depends_on:
 {% if prometheus_config %}
       prometheus:
@@ -176,9 +165,9 @@ services:
 
 {% if database.driver == "mysql" %}
   mysql:
+    <<: *defaults
     image: mysql:8.4
     container_name: mysql
-    restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
@@ -197,10 +186,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    logging:
-      options:
-        max-size: "10m"
-        max-file: "10"
 {% endif %}
 
 # SECURITY: Three-Network Segmentation (Defense in Depth)
