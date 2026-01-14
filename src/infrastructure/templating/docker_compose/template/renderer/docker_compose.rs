@@ -189,16 +189,19 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-        DockerComposeContext, MysqlSetupConfig, TrackerPorts,
+        DockerComposeContext, MysqlSetupConfig, TrackerServiceConfig,
     };
 
-    /// Helper to create `TrackerPorts` for tests (no TLS)
-    fn test_tracker_ports() -> TrackerPorts {
-        TrackerPorts::new(
+    /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
+    fn test_tracker_config() -> TrackerServiceConfig {
+        TrackerServiceConfig::new(
             vec![6868, 6969], // UDP ports
             vec![7070],       // HTTP ports without TLS
             1212,             // API port
             false,            // API has no TLS
+            false,            // has_prometheus
+            false,            // has_mysql
+            false,            // has_caddy
         )
     }
 
@@ -224,7 +227,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let ports = test_tracker_ports();
+        let tracker = test_tracker_config();
         let mysql_config = MysqlSetupConfig {
             root_password: "rootpass123".to_string(),
             database: "tracker_db".to_string(),
@@ -232,7 +235,7 @@ mod tests {
             password: "userpass123".to_string(),
             port: 3306,
         };
-        let mysql_context = DockerComposeContext::builder(ports)
+        let mysql_context = DockerComposeContext::builder(tracker)
             .with_mysql(mysql_config)
             .build();
 
@@ -310,8 +313,8 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let ports = test_tracker_ports();
-        let sqlite_context = DockerComposeContext::builder(ports).build();
+        let tracker = test_tracker_config();
+        let sqlite_context = DockerComposeContext::builder(tracker).build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();
@@ -349,10 +352,19 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let ports = test_tracker_ports();
+        // Create tracker config with prometheus enabled
+        let tracker = TrackerServiceConfig::new(
+            vec![6868, 6969], // UDP ports
+            vec![7070],       // HTTP ports without TLS
+            1212,             // API port
+            false,            // API has no TLS
+            true,             // has_prometheus
+            false,            // has_mysql
+            false,            // has_caddy
+        );
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
-        let context = DockerComposeContext::builder(ports)
+        let context = DockerComposeContext::builder(tracker)
             .with_prometheus(prometheus_config)
             .build();
 
@@ -417,7 +429,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let context = DockerComposeContext::builder(test_tracker_ports()).build();
+        let context = DockerComposeContext::builder(test_tracker_config()).build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();

@@ -73,28 +73,22 @@ services:
       - TORRUST_TRACKER_CONFIG_TOML_PATH=${TORRUST_TRACKER_CONFIG_TOML_PATH}
       - TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=${TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN}
     networks:
-{% if prometheus_config %}
-      - metrics_network  # Prometheus scrapes metrics from tracker
-{% endif %}
-{% if database.driver == "mysql" %}
-      - database_network  # Tracker connects to MySQL
-{% endif %}
-{% if caddy_config %}
-      - proxy_network  # Caddy reverse proxies to tracker
-{% endif %}
-{%- if ports.needs_ports_section %}
+{% for network in tracker.networks %}
+      - {{ network }}
+{% endfor %}
+{%- if tracker.needs_ports_section %}
     ports:
       # UDP Tracker Ports (always exposed - UDP doesn't use TLS)
-{%- for port in ports.udp_tracker_ports %}
+{%- for port in tracker.udp_tracker_ports %}
       - {{ port }}:{{ port }}/udp
 {%- endfor %}
       # HTTP Tracker Ports (only ports without TLS - Caddy handles HTTPS)
-{%- for port in ports.http_tracker_ports_without_tls %}
+{%- for port in tracker.http_tracker_ports_without_tls %}
       - {{ port }}:{{ port }}
 {%- endfor %}
-{%- if not ports.http_api_has_tls %}
+{%- if not tracker.http_api_has_tls %}
       # HTTP API Port (dynamically configured)
-      - {{ ports.http_api_port }}:{{ ports.http_api_port }}
+      - {{ tracker.http_api_port }}:{{ tracker.http_api_port }}
 {%- endif %}
 {%- endif %}
     volumes:

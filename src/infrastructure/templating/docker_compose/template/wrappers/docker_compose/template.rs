@@ -81,16 +81,19 @@ impl DockerComposeTemplate {
 
 #[cfg(test)]
 mod tests {
-    use super::super::context::{MysqlSetupConfig, TrackerPorts};
+    use super::super::context::{MysqlSetupConfig, TrackerServiceConfig};
     use super::*;
 
-    /// Helper to create `TrackerPorts` for tests (no TLS)
-    fn test_tracker_ports() -> TrackerPorts {
-        TrackerPorts::new(
+    /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
+    fn test_tracker_config() -> TrackerServiceConfig {
+        TrackerServiceConfig::new(
             vec![6868, 6969], // UDP ports
             vec![7070],       // HTTP ports without TLS
             1212,             // API port
             false,            // API has no TLS
+            false,            // has_prometheus
+            false,            // has_mysql
+            false,            // has_caddy
         )
     }
 
@@ -109,8 +112,8 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let ports = test_tracker_ports();
-        let context = DockerComposeContext::builder(ports).build();
+        let tracker = test_tracker_config();
+        let context = DockerComposeContext::builder(tracker).build();
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
         assert_eq!(template.database().driver(), "sqlite3");
@@ -135,7 +138,7 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let ports = test_tracker_ports();
+        let tracker = test_tracker_config();
         let mysql_config = MysqlSetupConfig {
             root_password: "root123".to_string(),
             database: "tracker".to_string(),
@@ -143,7 +146,7 @@ services:
             password: "pass".to_string(),
             port: 3306,
         };
-        let context = DockerComposeContext::builder(ports)
+        let context = DockerComposeContext::builder(tracker)
             .with_mysql(mysql_config)
             .build();
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
@@ -165,8 +168,8 @@ services:
 ";
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
-        let ports = test_tracker_ports();
-        let context = DockerComposeContext::builder(ports).build();
+        let tracker = test_tracker_config();
+        let context = DockerComposeContext::builder(tracker).build();
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
         // Create temp directory for output
@@ -190,8 +193,8 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let ports = test_tracker_ports();
-        let context = DockerComposeContext::builder(ports).build();
+        let tracker = test_tracker_config();
+        let context = DockerComposeContext::builder(tracker).build();
         let result = DockerComposeTemplate::new(&template_file, context);
 
         assert!(result.is_err());

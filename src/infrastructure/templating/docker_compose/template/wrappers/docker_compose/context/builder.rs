@@ -6,14 +6,14 @@ use crate::domain::prometheus::PrometheusConfig;
 use crate::infrastructure::templating::caddy::CaddyContext;
 
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
-use super::{DockerComposeContext, TrackerPorts};
+use super::{DockerComposeContext, TrackerServiceConfig};
 
 /// Builder for `DockerComposeContext`
 ///
 /// Provides a fluent API for constructing Docker Compose contexts with optional features.
 /// Defaults to `SQLite` database configuration.
 pub struct DockerComposeContextBuilder {
-    ports: TrackerPorts,
+    tracker: TrackerServiceConfig,
     database: DatabaseConfig,
     prometheus_config: Option<PrometheusConfig>,
     grafana_config: Option<GrafanaConfig>,
@@ -23,9 +23,9 @@ pub struct DockerComposeContextBuilder {
 
 impl DockerComposeContextBuilder {
     /// Creates a new builder with default `SQLite` configuration
-    pub(super) fn new(ports: TrackerPorts) -> Self {
+    pub(super) fn new(tracker: TrackerServiceConfig) -> Self {
         Self {
-            ports,
+            tracker,
             database: DatabaseConfig {
                 driver: DRIVER_SQLITE.to_string(),
                 mysql: None,
@@ -102,7 +102,7 @@ impl DockerComposeContextBuilder {
     pub fn build(self) -> DockerComposeContext {
         DockerComposeContext {
             database: self.database,
-            ports: self.ports,
+            tracker: self.tracker,
             prometheus_config: self.prometheus_config,
             grafana_config: self.grafana_config,
             caddy_config: self.caddy_config,

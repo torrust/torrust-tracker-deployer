@@ -35,7 +35,7 @@ use crate::domain::template::TemplateManager;
 use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
 use crate::infrastructure::templating::caddy::{CaddyContext, CaddyService};
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-    DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerPorts,
+    DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerServiceConfig,
 };
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
@@ -109,15 +109,15 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         let generator = DockerComposeProjectGenerator::new(&self.build_dir, &self.template_manager);
 
         let admin_token = self.extract_admin_token();
-        let ports = self.build_tracker_ports();
+        let tracker = self.build_tracker_config();
 
         // Create contexts based on database configuration
         let database_config = self.environment.database_config();
         let (env_context, builder) = match database_config {
-            DatabaseConfig::Sqlite(..) => Self::create_sqlite_contexts(admin_token, ports),
+            DatabaseConfig::Sqlite(..) => Self::create_sqlite_contexts(admin_token, tracker),
             DatabaseConfig::Mysql(mysql_config) => Self::create_mysql_contexts(
                 admin_token,
-                ports,
+                tracker,
                 mysql_config.port,
                 mysql_config.database_name.clone(),
                 mysql_config.username.clone(),
@@ -156,34 +156,68 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         self.environment.admin_token().to_string()
     }
 
-    fn build_tracker_ports(&self) -> TrackerPorts {
+    fn build_tracker_config(&self) -> TrackerServiceConfig {
         let tracker_config = self.environment.tracker_config();
         let user_inputs = &self.environment.context().user_inputs;
 
         let (udp_tracker_ports, http_tracker_ports_without_tls, http_api_port, http_api_has_tls) =
             Self::extract_tracker_ports(tracker_config, user_inputs);
 
-        TrackerPorts::new(
+        // Determine which features are enabled (affects tracker networks)
+        let has_prometheus = self.environment.prometheus_config().is_some();
+        let has_mysql = matches!(
+            self.environment.database_config(),
+            DatabaseConfig::Mysql(..)
+        );
+        let has_caddy = self.has_caddy_enabled();
+
+        TrackerServiceConfig::new(
             udp_tracker_ports,
             http_tracker_ports_without_tls,
             http_api_port,
             http_api_has_tls,
+            has_prometheus,
+            has_mysql,
+            has_caddy,
         )
+    }
+
+    /// Check if Caddy is enabled (HTTPS with at least one TLS-configured service)
+    fn has_caddy_enabled(&self) -> bool {
+        let user_inputs = &self.environment.context().user_inputs;
+
+        // Check if HTTPS is configured
+        if user_inputs.https.is_none() {
+            return false;
+        }
+
+        let tracker = &user_inputs.tracker;
+
+        // Check if any service has TLS configured
+        let tracker_api_has_tls = tracker.http_api_tls_domain().is_some();
+        let http_trackers_have_tls = !tracker.http_trackers_with_tls().is_empty();
+        let grafana_has_tls = user_inputs
+            .grafana
+            .as_ref()
+            .is_some_and(|g| g.tls_domain().is_some());
+
+        // Caddy is enabled if HTTPS is configured AND at least one service has TLS
+        tracker_api_has_tls || http_trackers_have_tls || grafana_has_tls
     }
 
     fn create_sqlite_contexts(
         admin_token: String,
-        ports: TrackerPorts,
+        tracker: TrackerServiceConfig,
     ) -> (EnvContext, DockerComposeContextBuilder) {
         let env_context = EnvContext::new(admin_token);
-        let builder = DockerComposeContext::builder(ports);
+        let builder = DockerComposeContext::builder(tracker);
 
         (env_context, builder)
     }
 
     fn create_mysql_contexts(
         admin_token: String,
-        ports: TrackerPorts,
+        tracker: TrackerServiceConfig,
         port: u16,
         database_name: String,
         username: String,
@@ -208,7 +242,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             port,
         };
 
-        let builder = DockerComposeContext::builder(ports).with_mysql(mysql_config);
+        let builder = DockerComposeContext::builder(tracker).with_mysql(mysql_config);
 
         (env_context, builder)
     }
