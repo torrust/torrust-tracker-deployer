@@ -45,6 +45,7 @@ QUIC
 RAII
 RUSTDOCFLAGS
 Repomix
+Rescan
 Rustdoc
 SARIF
 SCRIPTDIR

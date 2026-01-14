@@ -676,11 +676,11 @@ Add link to HTTPS setup guide.
 
 ### Phase 4: Security Workflow Updates (1 hour)
 
-- [ ] Add `caddy:2.10` to security scan workflow matrix
-- [ ] Add SARIF upload step for Caddy scan results
-- [ ] Update `docs/security/docker/scans/README.md` with Caddy entry
-- [ ] Run security scan locally to verify configuration
-- [ ] Document vulnerability assessment (reference [docs/research/caddy-tls-proxy-evaluation/security-scan.md](../research/caddy-tls-proxy-evaluation/security-scan.md))
+- [x] Add `caddy:2.10` to security scan workflow matrix
+- [x] Add SARIF upload step for Caddy scan results
+- [x] Update `docs/security/docker/scans/README.md` with Caddy entry
+- [x] Run security scan locally to verify configuration
+- [x] Document vulnerability assessment (reference [docs/research/caddy-tls-proxy-evaluation/security-scan.md](../research/caddy-tls-proxy-evaluation/security-scan.md))
 
 ### Phase 5: Documentation (4-5 hours)
 
