@@ -64,7 +64,7 @@ services:
     #            Pinning to a stable release ensures predictable deployments and easier rollback.
     image: torrust/tracker:develop
     container_name: tracker
-{% if database.driver == "mysql" %}
+{% if mysql %}
     depends_on:
       mysql:
         condition: service_healthy
@@ -157,7 +157,7 @@ services:
 {% endif %}
 {% endif %}
 
-{% if database.driver == "mysql" %}
+{% if mysql %}
   mysql:
     <<: *defaults
     image: mysql:8.4
@@ -168,7 +168,9 @@ services:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     networks:
-      - database_network  # Only accessible by tracker
+{% for network in mysql.networks %}
+      - {{ network }}
+{% endfor %}
     ports:
       - "3306:3306"
     volumes:
@@ -210,7 +212,7 @@ services:
 # See Analysis: docs/analysis/security/docker-network-segmentation-analysis.md
 
 networks:
-{% if database.driver == "mysql" %}
+{% if mysql %}
   database_network:
     driver: bridge
 {% endif %}
@@ -227,9 +229,9 @@ networks:
     driver: bridge
 {% endif %}
 
-{% if database.driver == "mysql" or grafana or caddy %}
+{% if mysql or grafana or caddy %}
 volumes:
-{%- if database.driver == "mysql" %}
+{%- if mysql %}
   mysql_data:
     driver: local
 {%- endif %}

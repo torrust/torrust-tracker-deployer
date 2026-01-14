@@ -11,6 +11,7 @@ mod builder;
 mod caddy;
 mod database;
 mod grafana;
+mod mysql;
 mod prometheus;
 mod tracker;
 
@@ -19,6 +20,7 @@ pub use builder::DockerComposeContextBuilder;
 pub use caddy::CaddyServiceConfig;
 pub use database::{DatabaseConfig, MysqlSetupConfig};
 pub use grafana::GrafanaServiceConfig;
+pub use mysql::MysqlServiceConfig;
 pub use prometheus::PrometheusServiceConfig;
 pub use tracker::{TrackerPorts, TrackerServiceConfig};
 
@@ -46,6 +48,12 @@ pub struct DockerComposeContext {
     /// This type only contains the docker-compose service definition data.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub caddy: Option<CaddyServiceConfig>,
+    /// `MySQL` service configuration (optional)
+    ///
+    /// Contains network configuration for the `MySQL` service.
+    /// This is separate from `MysqlSetupConfig` which contains credentials.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mysql: Option<MysqlServiceConfig>,
 }
 
 impl DockerComposeContext {
@@ -123,6 +131,12 @@ impl DockerComposeContext {
     #[must_use]
     pub fn caddy(&self) -> Option<&CaddyServiceConfig> {
         self.caddy.as_ref()
+    }
+
+    /// Get the `MySQL` service configuration if present
+    #[must_use]
+    pub fn mysql(&self) -> Option<&MysqlServiceConfig> {
+        self.mysql.as_ref()
     }
 }
 

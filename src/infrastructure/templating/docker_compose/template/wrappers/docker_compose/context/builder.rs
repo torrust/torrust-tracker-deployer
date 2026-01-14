@@ -7,6 +7,7 @@ use crate::domain::prometheus::PrometheusConfig;
 use super::caddy::CaddyServiceConfig;
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
 use super::grafana::GrafanaServiceConfig;
+use super::mysql::MysqlServiceConfig;
 use super::prometheus::PrometheusServiceConfig;
 use super::{DockerComposeContext, TrackerServiceConfig};
 
@@ -118,12 +119,20 @@ impl DockerComposeContextBuilder {
             None
         };
 
+        // Build MySQL service config if enabled
+        let mysql = if self.database.driver == DRIVER_MYSQL {
+            Some(MysqlServiceConfig::new())
+        } else {
+            None
+        };
+
         DockerComposeContext {
             database: self.database,
             tracker: self.tracker,
             prometheus,
             grafana,
             caddy,
+            mysql,
         }
     }
 }
