@@ -7,19 +7,21 @@
 use serde::Serialize;
 
 // Internal crate
-use crate::domain::grafana::GrafanaConfig;
-use crate::domain::prometheus::PrometheusConfig;
 use crate::infrastructure::templating::caddy::CaddyContext;
 
 // Submodules
 mod builder;
 mod database;
+mod grafana;
 mod ports;
+mod prometheus;
 
 // Re-exports
 pub use builder::DockerComposeContextBuilder;
 pub use database::{DatabaseConfig, MysqlSetupConfig};
+pub use grafana::GrafanaServiceConfig;
 pub use ports::{TrackerPorts, TrackerServiceConfig};
+pub use prometheus::PrometheusServiceConfig;
 
 /// Context for rendering the docker-compose.yml template
 ///
@@ -30,21 +32,18 @@ pub struct DockerComposeContext {
     pub database: DatabaseConfig,
     /// Tracker service configuration (ports, networks)
     pub tracker: TrackerServiceConfig,
-    /// Prometheus configuration (optional)
+    /// Prometheus service configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub prometheus_config: Option<PrometheusConfig>,
-    /// Grafana configuration (optional)
+    pub prometheus: Option<PrometheusServiceConfig>,
+    /// Grafana service configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub grafana_config: Option<GrafanaConfig>,
+    pub grafana: Option<GrafanaServiceConfig>,
     /// Caddy TLS proxy configuration (optional)
     ///
     /// When present, Caddy reverse proxy is deployed for TLS termination.
     /// When absent, services are exposed directly over HTTP.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub caddy_config: Option<CaddyContext>,
-    /// Whether Grafana has TLS enabled (port should not be exposed if true)
-    #[serde(default)]
-    pub grafana_has_tls: bool,
 }
 
 impl DockerComposeContext {
@@ -106,16 +105,16 @@ impl DockerComposeContext {
         &self.tracker
     }
 
-    /// Get the Prometheus configuration if present
+    /// Get the Prometheus service configuration if present
     #[must_use]
-    pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
-        self.prometheus_config.as_ref()
+    pub fn prometheus(&self) -> Option<&PrometheusServiceConfig> {
+        self.prometheus.as_ref()
     }
 
-    /// Get the Grafana configuration if present
+    /// Get the Grafana service configuration if present
     #[must_use]
-    pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
-        self.grafana_config.as_ref()
+    pub fn grafana(&self) -> Option<&GrafanaServiceConfig> {
+        self.grafana.as_ref()
     }
 
     /// Get the Caddy TLS proxy configuration if present
@@ -127,6 +126,8 @@ impl DockerComposeContext {
 
 #[cfg(test)]
 mod tests {
+    use crate::domain::prometheus::PrometheusConfig;
+
     use super::*;
 
     /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
@@ -235,15 +236,15 @@ mod tests {
     }
 
     #[test]
-    fn it_should_not_include_prometheus_config_by_default() {
+    fn it_should_not_include_prometheus_by_default() {
         let tracker = test_tracker_config();
         let context = DockerComposeContext::builder(tracker).build();
 
-        assert!(context.prometheus_config().is_none());
+        assert!(context.prometheus().is_none());
     }
 
     #[test]
-    fn it_should_include_prometheus_config_when_added() {
+    fn it_should_include_prometheus_when_added() {
         let tracker = test_tracker_config();
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
@@ -251,27 +252,21 @@ mod tests {
             .with_prometheus(prometheus_config)
             .build();
 
-        assert!(context.prometheus_config().is_some());
-        assert_eq!(
-            context
-                .prometheus_config()
-                .unwrap()
-                .scrape_interval_in_secs(),
-            30
-        );
+        assert!(context.prometheus().is_some());
+        assert_eq!(context.prometheus().unwrap().scrape_interval_in_secs, 30);
     }
 
     #[test]
-    fn it_should_not_serialize_prometheus_config_when_absent() {
+    fn it_should_not_serialize_prometheus_when_absent() {
         let tracker = test_tracker_config();
         let context = DockerComposeContext::builder(tracker).build();
 
         let serialized = serde_json::to_string(&context).unwrap();
-        assert!(!serialized.contains("prometheus_config"));
+        assert!(!serialized.contains("prometheus"));
     }
 
     #[test]
-    fn it_should_serialize_prometheus_config_when_present() {
+    fn it_should_serialize_prometheus_when_present() {
         let tracker = test_tracker_config();
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(20).expect("20 is non-zero"));
@@ -280,7 +275,75 @@ mod tests {
             .build();
 
         let serialized = serde_json::to_string(&context).unwrap();
-        assert!(serialized.contains("prometheus_config"));
+        assert!(serialized.contains("prometheus"));
         assert!(serialized.contains("\"scrape_interval_in_secs\":20"));
+    }
+
+    #[test]
+    fn it_should_compute_prometheus_networks_without_grafana() {
+        let tracker = test_tracker_config();
+        let prometheus_config =
+            PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
+        let context = DockerComposeContext::builder(tracker)
+            .with_prometheus(prometheus_config)
+            .build();
+
+        let prometheus = context.prometheus().unwrap();
+        assert_eq!(prometheus.networks, vec!["metrics_network"]);
+    }
+
+    #[test]
+    fn it_should_compute_prometheus_networks_with_grafana() {
+        use crate::domain::grafana::GrafanaConfig;
+
+        let tracker = test_tracker_config();
+        let prometheus_config =
+            PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
+        let grafana_config = GrafanaConfig::new("admin".to_string(), "password".to_string());
+        let context = DockerComposeContext::builder(tracker)
+            .with_prometheus(prometheus_config)
+            .with_grafana(grafana_config)
+            .build();
+
+        let prometheus = context.prometheus().unwrap();
+        assert_eq!(
+            prometheus.networks,
+            vec!["metrics_network", "visualization_network"]
+        );
+    }
+
+    #[test]
+    fn it_should_compute_grafana_networks_without_caddy() {
+        use crate::domain::grafana::GrafanaConfig;
+
+        let tracker = test_tracker_config();
+        let grafana_config = GrafanaConfig::new("admin".to_string(), "password".to_string());
+        let context = DockerComposeContext::builder(tracker)
+            .with_grafana(grafana_config)
+            .build();
+
+        let grafana = context.grafana().unwrap();
+        assert_eq!(grafana.networks, vec!["visualization_network"]);
+        assert!(!grafana.has_tls);
+    }
+
+    #[test]
+    fn it_should_compute_grafana_networks_with_caddy() {
+        use crate::domain::grafana::GrafanaConfig;
+        use crate::infrastructure::templating::caddy::CaddyContext;
+
+        let tracker = test_tracker_config();
+        let grafana_config = GrafanaConfig::new("admin".to_string(), "password".to_string());
+        let caddy_config = CaddyContext::new("admin@example.com".to_string(), false);
+        let context = DockerComposeContext::builder(tracker)
+            .with_grafana(grafana_config)
+            .with_caddy(caddy_config)
+            .build();
+
+        let grafana = context.grafana().unwrap();
+        assert_eq!(
+            grafana.networks,
+            vec!["visualization_network", "proxy_network"]
+        );
     }
 }

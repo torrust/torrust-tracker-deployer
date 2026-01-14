@@ -96,16 +96,15 @@ services:
       - ./storage/tracker/log:/var/log/torrust/tracker:Z
       - ./storage/tracker/etc:/etc/torrust/tracker:Z
 
-{% if prometheus_config %}
+{% if prometheus %}
   prometheus:
     <<: *defaults
     image: prom/prometheus:v3.5.0
     container_name: prometheus
     networks:
-      - metrics_network  # Scrapes metrics from tracker
-{% if grafana_config %}
-      - visualization_network  # Grafana queries Prometheus
-{% endif %}
+{% for network in prometheus.networks %}
+      - {{ network }}
+{% endfor %}
     ports:
       - "127.0.0.1:9090:9090"  # Localhost only - not exposed to external network
     # Grafana accesses Prometheus via Docker network: http://prometheus:9090
@@ -122,17 +121,16 @@ services:
       - tracker
 {% endif %}
 
-{% if grafana_config %}
+{% if grafana %}
   grafana:
     <<: *defaults
     image: grafana/grafana:12.3.1
     container_name: grafana
     networks:
-      - visualization_network  # Queries Prometheus data source
-{% if caddy_config %}
-      - proxy_network  # Caddy reverse proxies to Grafana
-{% endif %}
-{%- if not grafana_has_tls %}
+{% for network in grafana.networks %}
+      - {{ network }}
+{% endfor %}
+{%- if not grafana.has_tls %}
     ports:
       - "3100:3000"
 {%- endif %}
@@ -149,7 +147,7 @@ services:
       retries: 5
       start_period: 30s
     depends_on:
-{% if prometheus_config %}
+{% if prometheus %}
       prometheus:
         condition: service_healthy
 {% else %}
@@ -214,11 +212,11 @@ networks:
   database_network:
     driver: bridge
 {% endif %}
-{% if prometheus_config %}
+{% if prometheus %}
   metrics_network:
     driver: bridge
 {% endif %}
-{% if grafana_config %}
+{% if grafana %}
   visualization_network:
     driver: bridge
 {% endif %}
@@ -227,13 +225,13 @@ networks:
     driver: bridge
 {% endif %}
 
-{% if database.driver == "mysql" or grafana_config or caddy_config %}
+{% if database.driver == "mysql" or grafana or caddy_config %}
 volumes:
 {%- if database.driver == "mysql" %}
   mysql_data:
     driver: local
 {%- endif %}
-{%- if grafana_config %}
+{%- if grafana %}
   grafana_data:
     driver: local
 {%- endif %}

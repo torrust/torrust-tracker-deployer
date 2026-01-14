@@ -6,19 +6,23 @@ use crate::domain::prometheus::PrometheusConfig;
 use crate::infrastructure::templating::caddy::CaddyContext;
 
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
+use super::grafana::GrafanaServiceConfig;
+use super::prometheus::PrometheusServiceConfig;
 use super::{DockerComposeContext, TrackerServiceConfig};
 
 /// Builder for `DockerComposeContext`
 ///
 /// Provides a fluent API for constructing Docker Compose contexts with optional features.
 /// Defaults to `SQLite` database configuration.
+///
+/// The builder collects domain configuration objects and transforms them into
+/// service configuration objects with pre-computed networks at build time.
 pub struct DockerComposeContextBuilder {
     tracker: TrackerServiceConfig,
     database: DatabaseConfig,
     prometheus_config: Option<PrometheusConfig>,
     grafana_config: Option<GrafanaConfig>,
     caddy_config: Option<CaddyContext>,
-    grafana_has_tls: bool,
 }
 
 impl DockerComposeContextBuilder {
@@ -33,7 +37,6 @@ impl DockerComposeContextBuilder {
             prometheus_config: None,
             grafana_config: None,
             caddy_config: None,
-            grafana_has_tls: false,
         }
     }
 
@@ -73,16 +76,6 @@ impl DockerComposeContextBuilder {
         self
     }
 
-    /// Sets whether Grafana has TLS enabled
-    ///
-    /// When true, Grafana port will not be exposed directly in Docker Compose
-    /// (traffic goes through Caddy on port 443 instead).
-    #[must_use]
-    pub fn with_grafana_tls(mut self, has_tls: bool) -> Self {
-        self.grafana_has_tls = has_tls;
-        self
-    }
-
     /// Adds Caddy TLS proxy configuration
     ///
     /// When Caddy is configured, it provides automatic HTTPS with Let's Encrypt
@@ -98,15 +91,36 @@ impl DockerComposeContextBuilder {
     }
 
     /// Builds the `DockerComposeContext`
+    ///
+    /// Transforms domain configuration objects into service configuration
+    /// objects with pre-computed networks based on enabled features.
     #[must_use]
     pub fn build(self) -> DockerComposeContext {
+        let has_grafana = self.grafana_config.is_some();
+        let has_caddy = self.caddy_config.is_some();
+
+        // Build Prometheus service config if enabled
+        let prometheus = self.prometheus_config.map(|config| {
+            PrometheusServiceConfig::new(config.scrape_interval_in_secs(), has_grafana)
+        });
+
+        // Build Grafana service config if enabled
+        let grafana = self.grafana_config.map(|config| {
+            let has_tls = config.tls().is_some();
+            GrafanaServiceConfig::new(
+                config.admin_user().to_string(),
+                config.admin_password().clone(),
+                has_tls,
+                has_caddy,
+            )
+        });
+
         DockerComposeContext {
             database: self.database,
             tracker: self.tracker,
-            prometheus_config: self.prometheus_config,
-            grafana_config: self.grafana_config,
+            prometheus,
+            grafana,
             caddy_config: self.caddy_config,
-            grafana_has_tls: self.grafana_has_tls,
         }
     }
 }

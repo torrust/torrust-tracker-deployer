@@ -296,12 +296,6 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             caddy_context = caddy_context.with_http_tracker(CaddyService::new(domain, port));
         }
 
-        // Check if Grafana has TLS configured
-        let grafana_has_tls = user_inputs
-            .grafana
-            .as_ref()
-            .is_some_and(|g| g.tls_domain().is_some());
-
         // Add Grafana if TLS configured
         if let Some(ref grafana) = user_inputs.grafana {
             if let Some(tls_domain) = grafana.tls_domain() {
@@ -312,9 +306,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         // Only add Caddy if at least one service has TLS
         if caddy_context.has_any_tls() {
-            builder
-                .with_caddy(caddy_context)
-                .with_grafana_tls(grafana_has_tls)
+            builder.with_caddy(caddy_context)
         } else {
             builder
         }
