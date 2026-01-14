@@ -84,6 +84,16 @@ mod tests {
     use super::super::context::{MysqlSetupConfig, TrackerPorts};
     use super::*;
 
+    /// Helper to create `TrackerPorts` for tests (no TLS)
+    fn test_tracker_ports() -> TrackerPorts {
+        TrackerPorts::new(
+            vec![6868, 6969], // UDP ports
+            vec![7070],       // HTTP ports without TLS
+            1212,             // API port
+            false,            // API has no TLS
+        )
+    }
+
     #[test]
     fn it_should_create_docker_compose_template_with_sqlite() {
         let template_content = r#"
@@ -99,11 +109,7 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let ports = TrackerPorts {
-            udp_tracker_ports: vec![6868, 6969],
-            http_tracker_ports: vec![7070],
-            http_api_port: 1212,
-        };
+        let ports = test_tracker_ports();
         let context = DockerComposeContext::builder(ports).build();
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
@@ -129,11 +135,7 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let ports = TrackerPorts {
-            udp_tracker_ports: vec![6868, 6969],
-            http_tracker_ports: vec![7070],
-            http_api_port: 1212,
-        };
+        let ports = test_tracker_ports();
         let mysql_config = MysqlSetupConfig {
             root_password: "root123".to_string(),
             database: "tracker".to_string(),
@@ -163,11 +165,7 @@ services:
 ";
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
-        let ports = TrackerPorts {
-            udp_tracker_ports: vec![6868, 6969],
-            http_tracker_ports: vec![7070],
-            http_api_port: 1212,
-        };
+        let ports = test_tracker_ports();
         let context = DockerComposeContext::builder(ports).build();
         let template = DockerComposeTemplate::new(&template_file, context).unwrap();
 
@@ -192,11 +190,7 @@ services:
         let template_file =
             File::new("docker-compose.yml.tera", template_content.to_string()).unwrap();
 
-        let ports = TrackerPorts {
-            udp_tracker_ports: vec![6868, 6969],
-            http_tracker_ports: vec![7070],
-            http_api_port: 1212,
-        };
+        let ports = test_tracker_ports();
         let context = DockerComposeContext::builder(ports).build();
         let result = DockerComposeTemplate::new(&template_file, context);
 

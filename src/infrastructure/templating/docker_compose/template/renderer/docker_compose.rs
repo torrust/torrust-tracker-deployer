@@ -192,6 +192,16 @@ mod tests {
         DockerComposeContext, MysqlSetupConfig, TrackerPorts,
     };
 
+    /// Helper to create `TrackerPorts` for tests (no TLS)
+    fn test_tracker_ports() -> TrackerPorts {
+        TrackerPorts::new(
+            vec![6868, 6969], // UDP ports
+            vec![7070],       // HTTP ports without TLS
+            1212,             // API port
+            false,            // API has no TLS
+        )
+    }
+
     #[test]
     fn it_should_create_renderer_with_template_manager() {
         let temp_dir = TempDir::new().unwrap();
@@ -214,11 +224,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let ports = TrackerPorts {
-            udp_tracker_ports: vec![6868, 6969],
-            http_tracker_ports: vec![7070],
-            http_api_port: 1212,
-        };
+        let ports = test_tracker_ports();
         let mysql_config = MysqlSetupConfig {
             root_password: "rootpass123".to_string(),
             database: "tracker_db".to_string(),
@@ -304,11 +310,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let ports = TrackerPorts {
-            udp_tracker_ports: vec![6868, 6969],
-            http_tracker_ports: vec![7070],
-            http_api_port: 1212,
-        };
+        let ports = test_tracker_ports();
         let sqlite_context = DockerComposeContext::builder(ports).build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
@@ -347,11 +349,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let ports = TrackerPorts {
-            udp_tracker_ports: vec![6868, 6969],
-            http_tracker_ports: vec![7070],
-            http_api_port: 1212,
-        };
+        let ports = test_tracker_ports();
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
         let context = DockerComposeContext::builder(ports)
@@ -419,12 +417,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
-        let ports = TrackerPorts {
-            udp_tracker_ports: vec![6868, 6969],
-            http_tracker_ports: vec![7070],
-            http_api_port: 1212,
-        };
-        let context = DockerComposeContext::builder(ports).build();
+        let context = DockerComposeContext::builder(test_tracker_ports()).build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();

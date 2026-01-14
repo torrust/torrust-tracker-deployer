@@ -207,11 +207,12 @@ mod tests {
     /// Helper function to create a test docker-compose context with `SQLite`
     fn create_test_docker_compose_context_sqlite() -> DockerComposeContext {
         // Use default test ports (matching TrackerConfig::default())
-        let ports = TrackerPorts {
-            udp_tracker_ports: vec![6969],
-            http_tracker_ports: vec![7070],
-            http_api_port: 1212,
-        };
+        let ports = TrackerPorts::new(
+            vec![6969], // UDP ports
+            vec![7070], // HTTP ports without TLS
+            1212,       // API port
+            false,      // API has no TLS
+        );
         DockerComposeContext::builder(ports).build()
     }
 

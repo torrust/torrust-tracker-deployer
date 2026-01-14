@@ -761,10 +761,11 @@ Add link to HTTPS setup guide.
 - [x] Verify HTTP→HTTPS redirect works (HTTP 308 Permanent Redirect)
 - [x] Verify `via: 1.1 Caddy` header present in responses
 - [x] Verify HTTP/2 and HTTP/3 enabled (`alt-svc: h3=":443"` header)
+- [x] Verify port filtering (TLS ports NOT exposed, non-TLS ports exposed)
 - [ ] Compare with production templates to ensure consistency
 - [ ] Document manual test procedure in `docs/e2e-testing/manual-https-testing.md`
 
-**Manual Test Results** (2026-01-13):
+**Manual Test Results** (2026-01-14):
 
 | Test                            | Status  | Notes                                      |
 | ------------------------------- | ------- | ------------------------------------------ |
@@ -780,6 +781,7 @@ Add link to HTTPS setup guide.
 | HTTP→HTTPS redirect             | ✅ Pass | 308 Permanent Redirect                     |
 | HTTP/2 enabled                  | ✅ Pass | Confirmed in response                      |
 | HTTP/3 available                | ✅ Pass | `alt-svc: h3=":443"` header                |
+| TLS port filtering              | ✅ Pass | TLS ports hidden, non-TLS ports exposed    |
 
 **Local DNS Setup** (for testing):
 
@@ -799,6 +801,99 @@ Add to `/etc/hosts` (replace IP with your LXD VM IP):
 | Real domains (e.g., `tracker.example.com`) | Let's Encrypt (or staging) | Browser trusted                |
 | Local domains (e.g., `*.tracker.local`)    | Caddy's Local CA           | Self-signed (browser warnings) |
 | Unreachable domains / No internet          | Caddy's Local CA           | Self-signed                    |
+
+**Manual E2E Test Procedure**:
+
+This section documents the step-by-step procedure for running manual E2E tests with HTTPS support.
+
+**1. Setup the environment configuration file**:
+
+Create an environment configuration file (e.g., `envs/manual-https-test.json`) with the desired HTTPS settings. See `envs/manual-https-test.json` for a complete example.
+
+**2. Run the deployment workflow**:
+
+```bash
+# Destroy any existing environment with the same name
+cargo run -- destroy manual-https-test
+
+# Clean up local build artifacts (if needed)
+rm -rf data/manual-https-test build/manual-https-test
+
+# Create the environment
+cargo run -- create environment --env-file envs/manual-https-test.json
+
+# Provision infrastructure (creates LXD VM)
+cargo run -- provision manual-https-test
+
+# Configure the environment (install Docker, etc.)
+cargo run -- configure manual-https-test
+
+# Release application (render templates and deploy to VM)
+cargo run -- release manual-https-test
+
+# Run the application (start Docker Compose services)
+cargo run -- run manual-https-test
+```
+
+**3. Verify local build artifacts**:
+
+Check the generated templates in `build/<env-name>/`:
+
+```bash
+# Verify docker-compose.yml has correct port exposure
+cat build/manual-https-test/docker-compose/docker-compose.yml
+
+# Verify Caddyfile has all TLS services configured
+cat build/manual-https-test/caddy/Caddyfile
+```
+
+**4. Verify deployment on the VM**:
+
+Get the VM IP from the provision output or from environment data:
+
+```bash
+# Check environment state for VM IP
+cat data/manual-https-test/environment.json | jq '.context.provisioned_context.instance_ip'
+```
+
+SSH into the VM to verify services:
+
+```bash
+# Check running containers (use your SSH key path)
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP> "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+
+# Check Caddyfile inside the Caddy container
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP> "docker exec caddy cat /etc/caddy/Caddyfile"
+
+# Check container logs if needed
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP> "docker logs caddy --tail 50"
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP> "docker logs tracker --tail 50"
+```
+
+**5. Key file locations on the VM**:
+
+| File               | Location on VM                         | Location in Container   |
+| ------------------ | -------------------------------------- | ----------------------- |
+| Caddyfile          | N/A (bind mount)                       | `/etc/caddy/Caddyfile`  |
+| docker-compose.yml | `/home/torrust/app/docker-compose.yml` | N/A                     |
+| Tracker config     | Bind mount from host                   | `/etc/torrust/tracker/` |
+| Caddy certificates | Docker volume `caddy_data`             | `/data/`                |
+
+**6. Port exposure verification**:
+
+For mixed TLS/non-TLS configurations, verify correct port exposure:
+
+- TLS-enabled services (API, HTTP trackers with TLS, Grafana with TLS) should NOT have ports exposed directly
+- Non-TLS services (UDP trackers, HTTP trackers without TLS) should have ports exposed
+- Caddy ports (80, 443, 443/udp) should always be exposed when HTTPS is configured
+
+Example verification with `docker ps`:
+
+```text
+# Expected output for mixed TLS config (7070, 7071 have TLS, 7072 doesn't):
+tracker   6969/udp, 7072/tcp   # 7070, 7071 NOT exposed (Caddy handles them)
+caddy     80/tcp, 443/tcp, 443/udp  # Entry point for HTTPS
+```
 
 ### Phase 7: Schema Generation (30 minutes)
 

@@ -18,6 +18,7 @@ pub struct DockerComposeContextBuilder {
     prometheus_config: Option<PrometheusConfig>,
     grafana_config: Option<GrafanaConfig>,
     caddy_config: Option<CaddyContext>,
+    grafana_has_tls: bool,
 }
 
 impl DockerComposeContextBuilder {
@@ -32,6 +33,7 @@ impl DockerComposeContextBuilder {
             prometheus_config: None,
             grafana_config: None,
             caddy_config: None,
+            grafana_has_tls: false,
         }
     }
 
@@ -71,6 +73,16 @@ impl DockerComposeContextBuilder {
         self
     }
 
+    /// Sets whether Grafana has TLS enabled
+    ///
+    /// When true, Grafana port will not be exposed directly in Docker Compose
+    /// (traffic goes through Caddy on port 443 instead).
+    #[must_use]
+    pub fn with_grafana_tls(mut self, has_tls: bool) -> Self {
+        self.grafana_has_tls = has_tls;
+        self
+    }
+
     /// Adds Caddy TLS proxy configuration
     ///
     /// When Caddy is configured, it provides automatic HTTPS with Let's Encrypt
@@ -94,6 +106,7 @@ impl DockerComposeContextBuilder {
             prometheus_config: self.prometheus_config,
             grafana_config: self.grafana_config,
             caddy_config: self.caddy_config,
+            grafana_has_tls: self.grafana_has_tls,
         }
     }
 }

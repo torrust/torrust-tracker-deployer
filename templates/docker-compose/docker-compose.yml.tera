@@ -79,17 +79,21 @@ services:
 {% if caddy_config %}
       - proxy_network  # Caddy reverse proxies to tracker
 {% endif %}
+{%- if ports.needs_ports_section %}
     ports:
-      # UDP Tracker Ports (dynamically configured)
+      # UDP Tracker Ports (always exposed - UDP doesn't use TLS)
 {%- for port in ports.udp_tracker_ports %}
       - {{ port }}:{{ port }}/udp
 {%- endfor %}
-      # HTTP Tracker Ports (dynamically configured)
-{%- for port in ports.http_tracker_ports %}
+      # HTTP Tracker Ports (only ports without TLS - Caddy handles HTTPS)
+{%- for port in ports.http_tracker_ports_without_tls %}
       - {{ port }}:{{ port }}
 {%- endfor %}
+{%- if not ports.http_api_has_tls %}
       # HTTP API Port (dynamically configured)
       - {{ ports.http_api_port }}:{{ ports.http_api_port }}
+{%- endif %}
+{%- endif %}
     volumes:
       - ./storage/tracker/lib:/var/lib/torrust/tracker:Z
       - ./storage/tracker/log:/var/log/torrust/tracker:Z
@@ -141,8 +145,10 @@ services:
 {% if caddy_config %}
       - proxy_network  # Caddy reverse proxies to Grafana
 {% endif %}
+{%- if not grafana_has_tls %}
     ports:
       - "3100:3000"
+{%- endif %}
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
