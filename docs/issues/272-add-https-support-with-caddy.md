@@ -872,12 +872,23 @@ ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP> "docker 
 
 **5. Key file locations on the VM**:
 
-| File               | Location on VM                         | Location in Container   |
-| ------------------ | -------------------------------------- | ----------------------- |
-| Caddyfile          | N/A (bind mount)                       | `/etc/caddy/Caddyfile`  |
-| docker-compose.yml | `/home/torrust/app/docker-compose.yml` | N/A                     |
-| Tracker config     | Bind mount from host                   | `/etc/torrust/tracker/` |
-| Caddy certificates | Docker volume `caddy_data`             | `/data/`                |
+| File               | Location on VM                             | Location in Container                |
+| ------------------ | ------------------------------------------ | ------------------------------------ |
+| docker-compose.yml | `/opt/torrust/docker-compose.yml`          | N/A                                  |
+| .env               | `/opt/torrust/.env`                        | N/A                                  |
+| Caddyfile          | `/opt/torrust/storage/caddy/etc/Caddyfile` | `/etc/caddy/Caddyfile` (bind mount)  |
+| Tracker config     | `/opt/torrust/storage/tracker/etc/`        | `/etc/torrust/tracker/` (bind mount) |
+| Caddy certificates | Docker volume `caddy_data`                 | `/data/`                             |
+
+**App directory**: The application is deployed to `/opt/torrust/`, **NOT** `/home/torrust/app/`. This is the working directory for docker compose commands on the VM.
+
+```bash
+# Example: Check running containers on the VM
+ssh -i fixtures/testing_rsa torrust@<VM_IP> "cd /opt/torrust && docker compose ps"
+
+# Example: View docker-compose.yml on the VM
+ssh -i fixtures/testing_rsa torrust@<VM_IP> "cat /opt/torrust/docker-compose.yml"
+```
 
 **6. Port exposure verification**:
 
@@ -895,7 +906,149 @@ tracker   6969/udp, 7072/tcp   # 7070, 7071 NOT exposed (Caddy handles them)
 caddy     80/tcp, 443/tcp, 443/udp  # Entry point for HTTPS
 ```
 
-### Phase 7: Schema Generation (30 minutes)
+### Phase 7: CLI Command Compatibility with HTTPS (3-4 hours)
+
+When HTTPS is enabled, the deployer commands must adapt their behavior to work with domain-based URLs instead of direct IP addresses, and handle internal ports that are no longer directly accessible.
+
+#### 7.1: Update `test` command for HTTPS-enabled environments
+
+**Current Problem**: The `test` command validates services by accessing them directly via IP and internal ports (e.g., `http://10.140.190.214:1212/api/health_check`). When TLS is enabled for a service:
+
+1. The internal port (e.g., 1212) is not exposed externally - only Caddy ports (80, 443) are exposed
+2. The service should be accessed via its HTTPS domain (e.g., `https://api.tracker.local`)
+
+**Current Behavior** (fails when TLS enabled):
+
+```text
+$ cargo run -- test manual-https-test
+
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: manual-https-test (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Testing infrastructure...
+❌ Test command failed: Validation failed for environment 'manual-https-test': Remote action failed: Action 'running-services-validation' validation failed: Tracker API external health check failed: error sending request for url (http://10.140.190.214:1212/api/health_check). Check that tracker is running and firewall allows port 1212.
+```
+
+**Required Changes**:
+
+- [ ] Detect if a service has TLS enabled from environment configuration
+- [ ] For TLS-enabled services:
+  - [ ] Use the configured domain with HTTPS protocol instead of IP with internal port
+  - [ ] For local/test domains (e.g., `.local`), accept self-signed certificates from Caddy's local CA
+  - [ ] Show clear message: "Testing via HTTPS endpoint: https://api.tracker.local"
+- [ ] For non-TLS services:
+  - [ ] Continue using direct IP and port access as before
+- [ ] Update error messages to clarify the HTTPS testing behavior
+
+**Expected Behavior After Fix**:
+
+```text
+Testing Tracker API via HTTPS: https://api.tracker.local/api/health_check ✅
+Testing HTTP Tracker (non-TLS): http://10.140.190.214:7072/announce ✅
+```
+
+#### 7.2: Update `show` command for HTTPS-enabled environments
+
+**Current Problem**: The `show` command displays service endpoints using only IP addresses and internal ports, which are misleading when HTTPS is enabled:
+
+1. Displayed URLs may not work (internal ports not exposed)
+2. Users don't know the correct HTTPS URLs to use
+3. No indication that domain-based access is required
+
+**Current Behavior** (shows incorrect URLs when TLS enabled):
+
+```text
+$ cargo run -- show manual-https-test
+
+Environment: manual-https-test
+State: Running
+Provider: LXD
+Created: 2026-01-14 11:08:00 UTC
+
+Infrastructure:
+  Instance IP: 10.140.190.214
+  SSH Port: 22
+  SSH User: torrust
+  SSH Key: /home/.../fixtures/testing_rsa
+
+Connection:
+  ssh -i /home/.../fixtures/testing_rsa torrust@10.140.190.214
+
+Tracker Services:
+  UDP Trackers:
+    - udp://10.140.190.214:6969/announce
+  HTTP Trackers:
+    - http://10.140.190.214:7070/announce  # ❌ Port not exposed (TLS enabled)
+    - http://10.140.190.214:7071/announce  # ❌ Port not exposed (TLS enabled)
+    - http://10.140.190.214:7072/announce  # ✅ Works (no TLS)
+  API Endpoint:
+    - http://10.140.190.214:1212/api       # ❌ Port not exposed (TLS enabled)
+  Health Check:
+    - http://10.140.190.214:1313/health_check
+
+Prometheus:
+  Internal only (localhost:9090) - not exposed externally
+
+Grafana:
+  http://10.140.190.214:3100/              # ❌ Port not exposed (TLS enabled)
+
+Services are running. Use 'test' to verify health.
+```
+
+**Required Changes**:
+
+- [ ] Detect if a service has TLS enabled from environment configuration
+- [ ] For TLS-enabled services:
+  - [ ] Show HTTPS URL with configured domain: `https://api.tracker.local`
+  - [ ] Show HTTP redirect URL: `http://api.tracker.local` (redirects to HTTPS)
+  - [ ] Add note: "Direct IP access not available when TLS is enabled"
+- [ ] For non-TLS services:
+  - [ ] Show direct IP URL as before: `http://10.140.190.214:7072`
+- [ ] Add informational section explaining:
+  - [ ] "Services with TLS enabled must be accessed via their configured domain"
+  - [ ] "For local domains (\*.local), add entries to /etc/hosts pointing to the VM IP"
+  - [ ] "Internal ports are not directly accessible when TLS is enabled"
+
+**Expected Output After Fix**:
+
+```text
+Environment: manual-https-test
+State: Running
+Provider: LXD
+Created: 2026-01-14 11:08:00 UTC
+
+Infrastructure:
+  Instance IP: 10.140.190.214
+  SSH Port: 22
+  SSH User: torrust
+
+Tracker Services:
+  UDP Trackers:
+    - udp://10.140.190.214:6969/announce
+  HTTP Trackers (HTTPS via Caddy):
+    - https://http1.tracker.local/announce
+    - https://http2.tracker.local/announce
+  HTTP Trackers (direct):
+    - http://10.140.190.214:7072/announce
+  API Endpoint (HTTPS via Caddy):
+    - https://api.tracker.local/api
+
+Grafana (HTTPS via Caddy):
+  https://grafana.tracker.local/
+
+Prometheus:
+  Internal only (localhost:9090) - not exposed externally
+
+Note: HTTPS services require domain-based access. For local domains (*.local),
+add the following to your /etc/hosts file:
+
+  10.140.190.214   api.tracker.local http1.tracker.local http2.tracker.local grafana.tracker.local
+
+Internal ports (1212, 7070, 7071, 3000) are not directly accessible when TLS is enabled.
+```
+
+### Phase 8: Schema Generation (30 minutes)
 
 - [ ] Regenerate JSON schema from Rust DTOs:
 
@@ -908,7 +1061,7 @@ caddy     80/tcp, 443/tcp, 443/udp  # Entry point for HTTPS
 - [ ] Test schema with example HTTPS-enabled environment file
 - [ ] Commit updated schema file
 
-### Phase 8: Create ADR (1 hour)
+### Phase 9: Create ADR (1 hour)
 
 - [ ] Create `docs/decisions/caddy-for-tls-termination.md`
 - [ ] Document decision rationale (reference #270 evaluation)
@@ -976,6 +1129,20 @@ caddy     80/tcp, 443/tcp, 443/udp  # Entry point for HTTPS
   - [ ] Invalid: endpoints without admin_email
   - [ ] Valid: no HTTPS configuration at all
 - [ ] WebSocket connectivity tested through Caddy proxy
+
+**CLI Command Compatibility**:
+
+- [ ] `test` command works correctly with HTTPS-enabled services:
+  - [ ] Uses HTTPS domain URLs for TLS-enabled services
+  - [ ] Uses direct IP/port for non-TLS services
+  - [ ] Accepts self-signed certificates for local domains (e.g., `*.local`)
+  - [ ] Shows clear message indicating HTTPS test mode
+- [ ] `show` command displays correct endpoints:
+  - [ ] Shows HTTPS URLs with domains for TLS-enabled services
+  - [ ] Shows direct IP/port for non-TLS services
+  - [ ] Includes note about domain-based access requirement
+  - [ ] Provides `/etc/hosts` configuration hint for local domains
+  - [ ] Clarifies internal ports are not accessible when TLS is enabled
 
 **Production Verification**:
 
