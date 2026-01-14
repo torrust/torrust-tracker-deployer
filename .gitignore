@@ -52,6 +52,7 @@ repomix-output.xml
 # Rust build artifacts
 target/
 Cargo.lock
+rustc-ice-*.txt
 
 # Template build directory (runtime-generated configs)
 build/
