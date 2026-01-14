@@ -13,15 +13,15 @@ use crate::infrastructure::templating::caddy::CaddyContext;
 mod builder;
 mod database;
 mod grafana;
-mod ports;
 mod prometheus;
+mod tracker;
 
 // Re-exports
 pub use builder::DockerComposeContextBuilder;
 pub use database::{DatabaseConfig, MysqlSetupConfig};
 pub use grafana::GrafanaServiceConfig;
-pub use ports::{TrackerPorts, TrackerServiceConfig};
 pub use prometheus::PrometheusServiceConfig;
+pub use tracker::{TrackerPorts, TrackerServiceConfig};
 
 /// Context for rendering the docker-compose.yml template
 ///
