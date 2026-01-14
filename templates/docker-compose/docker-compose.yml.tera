@@ -29,7 +29,7 @@ x-defaults: &defaults
       max-file: "10"
 
 services:
-{% if caddy %}
+{%- if caddy %}
   # Caddy reverse proxy for automatic HTTPS with Let's Encrypt
   # Placed first as it's the entry point for HTTPS traffic
   caddy:
@@ -45,17 +45,17 @@ services:
       - caddy_data:/data     # TLS certificates (MUST persist!)
       - caddy_config_vol:/config
     networks:
-{% for network in caddy.networks %}
+{%- for network in caddy.networks %}
       - {{ network }}
-{% endfor %}
+{%- endfor %}
     healthcheck:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+{%- endif %}
 
-{% endif %}
   tracker:
     <<: *defaults
     # TODO: Pin to stable v4.0.0 when released (currently using develop tag)
@@ -64,20 +64,20 @@ services:
     #            Pinning to a stable release ensures predictable deployments and easier rollback.
     image: torrust/tracker:develop
     container_name: tracker
-{% if mysql %}
+{%- if mysql %}
     depends_on:
       mysql:
         condition: service_healthy
-{% endif %}
+{%- endif %}
     environment:
       - USER_ID=1000
       - TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER=${TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER}
       - TORRUST_TRACKER_CONFIG_TOML_PATH=${TORRUST_TRACKER_CONFIG_TOML_PATH}
       - TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=${TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN}
     networks:
-{% for network in tracker.networks %}
+{%- for network in tracker.networks %}
       - {{ network }}
-{% endfor %}
+{%- endfor %}
 {%- if tracker.needs_ports_section %}
     ports:
       # UDP Tracker Ports (always exposed - UDP doesn't use TLS)
@@ -97,16 +97,16 @@ services:
       - ./storage/tracker/lib:/var/lib/torrust/tracker:Z
       - ./storage/tracker/log:/var/log/torrust/tracker:Z
       - ./storage/tracker/etc:/etc/torrust/tracker:Z
+{%- if prometheus %}
 
-{% if prometheus %}
   prometheus:
     <<: *defaults
     image: prom/prometheus:v3.5.0
     container_name: prometheus
     networks:
-{% for network in prometheus.networks %}
+{%- for network in prometheus.networks %}
       - {{ network }}
-{% endfor %}
+{%- endfor %}
     ports:
       - "127.0.0.1:9090:9090"  # Localhost only - not exposed to external network
     # Grafana accesses Prometheus via Docker network: http://prometheus:9090
@@ -121,17 +121,17 @@ services:
       start_period: 10s
     depends_on:
       - tracker
-{% endif %}
+{%- endif %}
+{%- if grafana %}
 
-{% if grafana %}
   grafana:
     <<: *defaults
     image: grafana/grafana:12.3.1
     container_name: grafana
     networks:
-{% for network in grafana.networks %}
+{%- for network in grafana.networks %}
       - {{ network }}
-{% endfor %}
+{%- endfor %}
 {%- if not grafana.has_tls %}
     ports:
       - "3100:3000"
@@ -149,15 +149,15 @@ services:
       retries: 5
       start_period: 30s
     depends_on:
-{% if prometheus %}
+{%- if prometheus %}
       prometheus:
         condition: service_healthy
-{% else %}
+{%- else %}
       - tracker
-{% endif %}
-{% endif %}
+{%- endif %}
+{%- endif %}
+{%- if mysql %}
 
-{% if mysql %}
   mysql:
     <<: *defaults
     image: mysql:8.4
@@ -168,9 +168,9 @@ services:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     networks:
-{% for network in mysql.networks %}
+{%- for network in mysql.networks %}
       - {{ network }}
-{% endfor %}
+{%- endfor %}
     ports:
       - "3306:3306"
     volumes:
@@ -182,7 +182,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-{% endif %}
+{%- endif %}
 
 # SECURITY: Three-Network Segmentation (Defense in Depth)
 # =========================================================
@@ -212,24 +212,25 @@ services:
 # See Analysis: docs/analysis/security/docker-network-segmentation-analysis.md
 
 networks:
-{% if mysql %}
+{%- if mysql %}
   database_network:
     driver: bridge
-{% endif %}
-{% if prometheus %}
+{%- endif %}
+{%- if prometheus %}
   metrics_network:
     driver: bridge
-{% endif %}
-{% if grafana %}
+{%- endif %}
+{%- if grafana %}
   visualization_network:
     driver: bridge
-{% endif %}
-{% if caddy %}
+{%- endif %}
+{%- if caddy %}
   proxy_network:
     driver: bridge
-{% endif %}
+{%- endif %}
 
-{% if mysql or grafana or caddy %}
+
+{%- if mysql or grafana or caddy %}
 volumes:
 {%- if mysql %}
   mysql_data:
