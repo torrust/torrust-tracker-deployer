@@ -6,11 +6,9 @@
 // External crates
 use serde::Serialize;
 
-// Internal crate
-use crate::infrastructure::templating::caddy::CaddyContext;
-
 // Submodules
 mod builder;
+mod caddy;
 mod database;
 mod grafana;
 mod prometheus;
@@ -18,6 +16,7 @@ mod tracker;
 
 // Re-exports
 pub use builder::DockerComposeContextBuilder;
+pub use caddy::CaddyServiceConfig;
 pub use database::{DatabaseConfig, MysqlSetupConfig};
 pub use grafana::GrafanaServiceConfig;
 pub use prometheus::PrometheusServiceConfig;
@@ -38,12 +37,15 @@ pub struct DockerComposeContext {
     /// Grafana service configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub grafana: Option<GrafanaServiceConfig>,
-    /// Caddy TLS proxy configuration (optional)
+    /// Caddy TLS proxy service configuration (optional)
     ///
     /// When present, Caddy reverse proxy is deployed for TLS termination.
     /// When absent, services are exposed directly over HTTP.
+    ///
+    /// Note: This is separate from `CaddyContext` (used for Caddyfile.tera).
+    /// This type only contains the docker-compose service definition data.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub caddy_config: Option<CaddyContext>,
+    pub caddy: Option<CaddyServiceConfig>,
 }
 
 impl DockerComposeContext {
@@ -117,10 +119,10 @@ impl DockerComposeContext {
         self.grafana.as_ref()
     }
 
-    /// Get the Caddy TLS proxy configuration if present
+    /// Get the Caddy TLS proxy service configuration if present
     #[must_use]
-    pub fn caddy_config(&self) -> Option<&CaddyContext> {
-        self.caddy_config.as_ref()
+    pub fn caddy(&self) -> Option<&CaddyServiceConfig> {
+        self.caddy.as_ref()
     }
 }
 
@@ -330,14 +332,12 @@ mod tests {
     #[test]
     fn it_should_compute_grafana_networks_with_caddy() {
         use crate::domain::grafana::GrafanaConfig;
-        use crate::infrastructure::templating::caddy::CaddyContext;
 
         let tracker = test_tracker_config();
         let grafana_config = GrafanaConfig::new("admin".to_string(), "password".to_string());
-        let caddy_config = CaddyContext::new("admin@example.com".to_string(), false);
         let context = DockerComposeContext::builder(tracker)
             .with_grafana(grafana_config)
-            .with_caddy(caddy_config)
+            .with_caddy()
             .build();
 
         let grafana = context.grafana().unwrap();

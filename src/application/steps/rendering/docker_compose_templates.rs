@@ -33,7 +33,6 @@ use crate::domain::environment::user_inputs::UserInputs;
 use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
 use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
-use crate::infrastructure::templating::caddy::{CaddyContext, CaddyService};
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
     DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerServiceConfig,
 };
@@ -282,31 +281,24 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         let tracker = &user_inputs.tracker;
 
-        let mut caddy_context =
-            CaddyContext::new(https_config.admin_email(), https_config.use_staging());
+        // Check if any service has TLS configured
+        let has_tracker_api_tls = tracker.http_api_tls_domain().is_some();
+        let has_http_tracker_tls = !tracker.http_trackers_with_tls().is_empty();
+        let has_grafana_tls = user_inputs
+            .grafana
+            .as_ref()
+            .is_some_and(|g| g.tls_domain().is_some());
 
-        // Add Tracker HTTP API if TLS configured
-        if let Some(tls_domain) = tracker.http_api_tls_domain() {
-            let port = tracker.http_api_port();
-            caddy_context = caddy_context.with_tracker_api(CaddyService::new(tls_domain, port));
-        }
+        let has_any_tls = has_tracker_api_tls || has_http_tracker_tls || has_grafana_tls;
 
-        // Add HTTP Trackers with TLS configured
-        for (domain, port) in tracker.http_trackers_with_tls() {
-            caddy_context = caddy_context.with_http_tracker(CaddyService::new(domain, port));
-        }
-
-        // Add Grafana if TLS configured
-        if let Some(ref grafana) = user_inputs.grafana {
-            if let Some(tls_domain) = grafana.tls_domain() {
-                // Grafana default port is 3000
-                caddy_context = caddy_context.with_grafana(CaddyService::new(tls_domain, 3000));
-            }
-        }
+        // Note: The CaddyContext with full service details is built separately
+        // in caddy_templates.rs for the Caddyfile.tera template. The docker-compose
+        // template only needs to know if Caddy is enabled, not the service details.
+        let _ = https_config; // Silence unused warning - admin_email/use_staging used in caddy_templates.rs
 
         // Only add Caddy if at least one service has TLS
-        if caddy_context.has_any_tls() {
-            builder.with_caddy(caddy_context)
+        if has_any_tls {
+            builder.with_caddy()
         } else {
             builder
         }

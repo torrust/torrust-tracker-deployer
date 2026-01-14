@@ -3,8 +3,8 @@
 // Internal crate
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
-use crate::infrastructure::templating::caddy::CaddyContext;
 
+use super::caddy::CaddyServiceConfig;
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
 use super::grafana::GrafanaServiceConfig;
 use super::prometheus::PrometheusServiceConfig;
@@ -22,7 +22,7 @@ pub struct DockerComposeContextBuilder {
     database: DatabaseConfig,
     prometheus_config: Option<PrometheusConfig>,
     grafana_config: Option<GrafanaConfig>,
-    caddy_config: Option<CaddyContext>,
+    has_caddy: bool,
 }
 
 impl DockerComposeContextBuilder {
@@ -36,7 +36,7 @@ impl DockerComposeContextBuilder {
             },
             prometheus_config: None,
             grafana_config: None,
-            caddy_config: None,
+            has_caddy: false,
         }
     }
 
@@ -76,17 +76,13 @@ impl DockerComposeContextBuilder {
         self
     }
 
-    /// Adds Caddy TLS proxy configuration
+    /// Enables Caddy TLS proxy
     ///
-    /// When Caddy is configured, it provides automatic HTTPS with Let's Encrypt
+    /// When Caddy is enabled, it provides automatic HTTPS with Let's Encrypt
     /// certificates for services that have TLS enabled.
-    ///
-    /// # Arguments
-    ///
-    /// * `caddy_config` - Caddy configuration with services to proxy
     #[must_use]
-    pub fn with_caddy(mut self, caddy_config: CaddyContext) -> Self {
-        self.caddy_config = Some(caddy_config);
+    pub fn with_caddy(mut self) -> Self {
+        self.has_caddy = true;
         self
     }
 
@@ -97,7 +93,7 @@ impl DockerComposeContextBuilder {
     #[must_use]
     pub fn build(self) -> DockerComposeContext {
         let has_grafana = self.grafana_config.is_some();
-        let has_caddy = self.caddy_config.is_some();
+        let has_caddy = self.has_caddy;
 
         // Build Prometheus service config if enabled
         let prometheus = self.prometheus_config.map(|config| {
@@ -115,12 +111,19 @@ impl DockerComposeContextBuilder {
             )
         });
 
+        // Build Caddy service config if enabled
+        let caddy = if has_caddy {
+            Some(CaddyServiceConfig::new())
+        } else {
+            None
+        };
+
         DockerComposeContext {
             database: self.database,
             tracker: self.tracker,
             prometheus,
             grafana,
-            caddy_config: self.caddy_config,
+            caddy,
         }
     }
 }

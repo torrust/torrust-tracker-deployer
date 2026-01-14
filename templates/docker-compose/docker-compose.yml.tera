@@ -29,7 +29,7 @@ x-defaults: &defaults
       max-file: "10"
 
 services:
-{% if caddy_config %}
+{% if caddy %}
   # Caddy reverse proxy for automatic HTTPS with Let's Encrypt
   # Placed first as it's the entry point for HTTPS traffic
   caddy:
@@ -43,9 +43,11 @@ services:
     volumes:
       - ./storage/caddy/etc/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data     # TLS certificates (MUST persist!)
-      - caddy_config:/config
+      - caddy_config_vol:/config
     networks:
-      - proxy_network  # Connects to services that need TLS termination
+{% for network in caddy.networks %}
+      - {{ network }}
+{% endfor %}
     healthcheck:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 10s
@@ -220,12 +222,12 @@ networks:
   visualization_network:
     driver: bridge
 {% endif %}
-{% if caddy_config %}
+{% if caddy %}
   proxy_network:
     driver: bridge
 {% endif %}
 
-{% if database.driver == "mysql" or grafana or caddy_config %}
+{% if database.driver == "mysql" or grafana or caddy %}
 volumes:
 {%- if database.driver == "mysql" %}
   mysql_data:
@@ -235,10 +237,10 @@ volumes:
   grafana_data:
     driver: local
 {%- endif %}
-{%- if caddy_config %}
+{%- if caddy %}
   caddy_data:
     driver: local
-  caddy_config:
+  caddy_config_vol:
     driver: local
 {%- endif %}
 {% endif %}
