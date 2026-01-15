@@ -948,7 +948,7 @@ Testing Tracker API via HTTPS: https://api.tracker.local/api/health_check ✅
 Testing HTTP Tracker (non-TLS): http://10.140.190.214:7072/announce ✅
 ```
 
-#### 7.2: Update `show` command for HTTPS-enabled environments
+#### 7.2: Update `show` command for HTTPS-enabled environments ✅ COMPLETE
 
 **Current Problem**: The `show` command displays service endpoints using only IP addresses and internal ports, which are misleading when HTTPS is enabled:
 
@@ -1001,7 +1001,7 @@ Services are running. Use 'test' to verify health.
 - [x] Detect if a service has TLS enabled from environment configuration
 - [x] For TLS-enabled services:
   - [x] Show HTTPS URL with configured domain: `https://api.tracker.local`
-  - [ ] Show HTTP redirect URL: `http://api.tracker.local` (redirects to HTTPS) *(deferred - not essential)*
+  - [ ] Show HTTP redirect URL: `http://api.tracker.local` (redirects to HTTPS) _(deferred - not essential)_
   - [x] Add note: "Direct IP access not available when TLS is enabled"
 - [x] For non-TLS services:
   - [x] Show direct IP URL as before: `http://10.140.190.214:7072`
@@ -1047,6 +1047,94 @@ add the following to your /etc/hosts file:
 
 Internal ports (1212, 7070, 7071, 3000) are not directly accessible when TLS is enabled.
 ```
+
+#### 7.3: Add TLS Support for Health Check API
+
+**Current State**: The health check API (`health_check_api`) doesn't support TLS configuration like other HTTP services (HTTP trackers, Tracker API, Grafana).
+
+**Problem**: Users may want to expose the health check API publicly with HTTPS for external monitoring systems, load balancers, or orchestration tools that need to verify service health.
+
+**Solution**: Add an optional `tls` field to the health check API configuration, following the same service-based TLS pattern used by other services.
+
+**Configuration Change**:
+
+```json
+{
+  "tracker": {
+    "health_check_api": {
+      "bind_address": "0.0.0.0:1313",
+      "tls": {
+        "domain": "health.tracker.local"
+      }
+    }
+  }
+}
+```
+
+**Implementation Scope**:
+
+- [ ] Add `tls: Option<TlsConfig>` to health check API domain model
+- [ ] Add `tls: Option<TlsConfig>` to health check API DTOs
+- [ ] Update Caddyfile template to include health check when TLS is configured
+- [ ] Update show command to display HTTPS URL when health check has TLS
+- [ ] Update test command to use HTTPS for health check when TLS is configured
+
+> **Note**: JSON schema regeneration deferred to Phase 8.
+
+#### 7.4: Handle Localhost-Bound Services in Show Command and Validation
+
+**Current State**:
+
+- Services can bind to localhost (`127.0.0.1` or `::1`)
+- If TLS is configured for such a service, Caddy cannot reach the backend (Caddy runs in a separate container, localhost is not shared between containers)
+- The show command incorrectly displays public IP URLs for localhost-bound services
+
+**Problem Example**: Configuration has `"bind_address": "127.0.0.1:1313"` but show command displays `http://10.140.190.190:1313/health_check` which won't work because the service is only listening on localhost.
+
+**Solution** (two parts):
+
+##### Part A: Validation at Create Time
+
+Fail environment creation if any service has BOTH:
+
+- TLS configuration (`tls` section present)
+- Localhost bind address (`127.0.0.1` or `::1`)
+
+**Error message example**:
+
+```text
+Error: Invalid configuration for health_check_api
+
+  The service binds to localhost (127.0.0.1:1313) but has TLS configured.
+  Caddy cannot proxy to localhost-bound services (different container network).
+
+  To fix, either:
+  - Remove the 'tls' section to keep the service internal-only
+  - Change bind_address to '0.0.0.0:1313' to expose the service through Caddy
+```
+
+##### Part B: Show Command for Localhost Services (without TLS)
+
+For services bound to localhost WITHOUT TLS, display:
+
+```text
+Health Check:
+  Internal only (localhost:1313) - access via SSH tunnel
+```
+
+Instead of the incorrect:
+
+```text
+Health Check:
+  - http://10.140.190.190:1313/health_check
+```
+
+**Implementation Scope**:
+
+- [ ] Add validation in create command to reject localhost + TLS combinations
+- [ ] Update show command to detect localhost-bound services
+- [ ] Display appropriate message for internal-only services
+- [ ] Apply to all configurable HTTP services (health check, HTTP trackers, API, Grafana)
 
 ### Phase 8: Schema Generation (30 minutes)
 
