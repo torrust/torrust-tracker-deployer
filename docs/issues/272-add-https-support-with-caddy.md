@@ -1048,7 +1048,7 @@ add the following to your /etc/hosts file:
 Internal ports (1212, 7070, 7071, 3000) are not directly accessible when TLS is enabled.
 ```
 
-#### 7.3: Add TLS Support for Health Check API
+#### 7.3: Add TLS Support for Health Check API ✅ COMPLETE
 
 **Current State**: The health check API (`health_check_api`) doesn't support TLS configuration like other HTTP services (HTTP trackers, Tracker API, Grafana).
 
@@ -1073,11 +1073,11 @@ Internal ports (1212, 7070, 7071, 3000) are not directly accessible when TLS is 
 
 **Implementation Scope**:
 
-- [ ] Add `tls: Option<TlsConfig>` to health check API domain model
-- [ ] Add `tls: Option<TlsConfig>` to health check API DTOs
-- [ ] Update Caddyfile template to include health check when TLS is configured
-- [ ] Update show command to display HTTPS URL when health check has TLS
-- [ ] Update test command to use HTTPS for health check when TLS is configured
+- [x] Add `tls: Option<TlsConfig>` to health check API domain model
+- [x] Add `tls: Option<TlsConfig>` to health check API DTOs
+- [x] Update Caddyfile template to include health check when TLS is configured
+- [x] Update show command to display HTTPS URL when health check has TLS
+- [ ] Update test command to use HTTPS for health check when TLS is configured (deferred to 7.1)
 
 > **Note**: JSON schema regeneration deferred to Phase 8.
 

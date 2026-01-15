@@ -28,6 +28,13 @@
 	reverse_proxy tracker:{{ http_tracker.port }}
 }
 {%- endfor %}
+{%- if health_check_api %}
+
+# Health Check API
+{{ health_check_api.domain }} {
+	reverse_proxy tracker:{{ health_check_api.port }}
+}
+{%- endif %}
 {%- if grafana %}
 
 # Grafana UI with WebSocket support

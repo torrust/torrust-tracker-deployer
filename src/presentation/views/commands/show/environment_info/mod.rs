@@ -236,6 +236,7 @@ mod tests {
             "http://10.0.0.1:1212/api".to_string(),            // DevSkim: ignore DS137138
             false,                                             // API doesn't use HTTPS
             "http://10.0.0.1:1313/health_check".to_string(),   // DevSkim: ignore DS137138
+            false,                                             // Health check doesn't use HTTPS
             vec![],                                            // No TLS domains
         ));
 
@@ -274,6 +275,7 @@ mod tests {
             "http://192.168.1.100:1212/api".to_string(), // DevSkim: ignore DS137138
             false,
             "http://192.168.1.100:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,                                                // Health check doesn't use HTTPS
             vec![],
         ));
 
@@ -314,6 +316,7 @@ mod tests {
             "https://api.tracker.local/api".to_string(),
             true,                                                  // API uses HTTPS
             "http://10.140.190.214:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,                                                 // Health check doesn't use HTTPS
             vec![
                 TlsDomainInfo::new("api.tracker.local".to_string(), 1212),
                 TlsDomainInfo::new("http1.tracker.local".to_string(), 7070),

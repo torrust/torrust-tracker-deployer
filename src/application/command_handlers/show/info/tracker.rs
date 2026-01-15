@@ -29,8 +29,11 @@ pub struct ServiceInfo {
     /// Whether the API endpoint uses HTTPS via Caddy
     pub api_uses_https: bool,
 
-    /// Health check API URL (e.g., `http://10.0.0.1:1313/health_check`)
+    /// Health check API URL (e.g., `http://10.0.0.1:1313/health_check` or `https://health.tracker.local/health_check`)
     pub health_check_url: String,
+
+    /// Whether the health check endpoint uses HTTPS via Caddy
+    pub health_check_uses_https: bool,
 
     /// Domains configured for TLS services (for /etc/hosts hint)
     pub tls_domains: Vec<TlsDomainInfo>,
@@ -59,6 +62,7 @@ impl TlsDomainInfo {
 impl ServiceInfo {
     /// Create a new `ServiceInfo`
     #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         udp_trackers: Vec<String>,
         https_http_trackers: Vec<String>,
@@ -66,6 +70,7 @@ impl ServiceInfo {
         api_endpoint: String,
         api_uses_https: bool,
         health_check_url: String,
+        health_check_uses_https: bool,
         tls_domains: Vec<TlsDomainInfo>,
     ) -> Self {
         Self {
@@ -75,6 +80,7 @@ impl ServiceInfo {
             api_endpoint,
             api_uses_https,
             health_check_url,
+            health_check_uses_https,
             tls_domains,
         }
     }
@@ -153,11 +159,24 @@ impl ServiceInfo {
             }
         }
 
-        let health_check_url = format!(
-            "http://{}:{}/health_check", // DevSkim: ignore DS137138
-            instance_ip,
-            tracker_config.health_check_api.bind_address.port()
-        );
+        // Build health check URL based on TLS configuration
+        let (health_check_url, health_check_uses_https) =
+            if let Some(tls) = &tracker_config.health_check_api.tls {
+                tls_domains.push(TlsDomainInfo {
+                    domain: tls.domain().to_string(),
+                    internal_port: tracker_config.health_check_api.bind_address.port(),
+                });
+                (format!("https://{}/health_check", tls.domain()), true)
+            } else {
+                (
+                    format!(
+                        "http://{}:{}/health_check", // DevSkim: ignore DS137138
+                        instance_ip,
+                        tracker_config.health_check_api.bind_address.port()
+                    ),
+                    false,
+                )
+            };
 
         Self::new(
             udp_trackers,
@@ -166,6 +185,7 @@ impl ServiceInfo {
             api_endpoint,
             api_uses_https,
             health_check_url,
+            health_check_uses_https,
             tls_domains,
         )
     }
@@ -210,6 +230,7 @@ impl ServiceInfo {
             api_endpoint,
             false, // Legacy endpoints don't have TLS info
             health_check_url,
+            false,      // Legacy endpoints don't have health check TLS info
             Vec::new(), // No TLS domains from legacy endpoints
         )
     }
@@ -246,6 +267,7 @@ mod tests {
             "http://10.0.0.1:1212/api".to_string(),            // DevSkim: ignore DS137138
             false,
             "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,                                           // Health check doesn't use HTTPS
             vec![TlsDomainInfo {
                 domain: "http1.tracker.local".to_string(),
                 internal_port: 7070,
@@ -270,6 +292,7 @@ mod tests {
             "https://api.tracker.local/api".to_string(),
             true,
             "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,                                           // Health check doesn't use HTTPS
             vec![
                 TlsDomainInfo {
                     domain: "api.tracker.local".to_string(),
@@ -297,6 +320,7 @@ mod tests {
             "https://api.tracker.local/api".to_string(),
             true,
             String::new(),
+            false, // Health check doesn't use HTTPS
             vec![
                 TlsDomainInfo {
                     domain: "api.tracker.local".to_string(),
@@ -324,6 +348,7 @@ mod tests {
             "http://10.0.0.1:1212/api".to_string(),            // DevSkim: ignore DS137138
             false,
             "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,                                           // Health check doesn't use HTTPS
             vec![],
         );
 

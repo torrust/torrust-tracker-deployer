@@ -61,7 +61,11 @@ impl TrackerServicesView {
         lines.push(format!("    - {}", services.api_endpoint));
 
         // Health check
-        lines.push("  Health Check:".to_string());
+        if services.health_check_uses_https {
+            lines.push("  Health Check (HTTPS via Caddy):".to_string());
+        } else {
+            lines.push("  Health Check:".to_string());
+        }
         lines.push(format!("    - {}", services.health_check_url));
 
         lines
@@ -81,6 +85,7 @@ mod tests {
             "http://10.0.0.1:1212/api".to_string(),            // DevSkim: ignore DS137138
             false,                                             // API doesn't use HTTPS
             "http://10.0.0.1:1313/health_check".to_string(),   // DevSkim: ignore DS137138
+            false,                                             // Health check doesn't use HTTPS
             vec![],                                            // No TLS domains
         )
     }
@@ -96,6 +101,7 @@ mod tests {
             "https://api.tracker.local/api".to_string(),
             true,                                            // API uses HTTPS
             "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,                                           // Health check doesn't use HTTPS (yet)
             vec![
                 TlsDomainInfo::new("api.tracker.local".to_string(), 1212),
                 TlsDomainInfo::new("http1.tracker.local".to_string(), 7070),
@@ -157,9 +163,34 @@ mod tests {
     fn it_should_render_health_check() {
         let lines = TrackerServicesView::render(&sample_http_only_services());
         assert!(lines.iter().any(|l| l.contains("Health Check:")));
+        assert!(!lines
+            .iter()
+            .any(|l| l.contains("Health Check (HTTPS via Caddy):")));
         assert!(lines
             .iter()
             .any(|l| l.contains("http://10.0.0.1:1313/health_check"))); // DevSkim: ignore DS137138
+    }
+
+    #[test]
+    fn it_should_render_health_check_with_https_indicator() {
+        let services = ServiceInfo::new(
+            vec![],
+            vec![],
+            vec![],
+            "http://10.0.0.1:1212/api".to_string(), // DevSkim: ignore DS137138
+            false,
+            "https://health.tracker.local/health_check".to_string(),
+            true, // Health check uses HTTPS
+            vec![TlsDomainInfo::new("health.tracker.local".to_string(), 1313)],
+        );
+
+        let lines = TrackerServicesView::render(&services);
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("Health Check (HTTPS via Caddy):")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("https://health.tracker.local/health_check")));
     }
 
     #[test]
@@ -171,6 +202,7 @@ mod tests {
             "http://10.0.0.1:1212/api".to_string(), // DevSkim: ignore DS137138
             false,
             "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,                                           // Health check doesn't use HTTPS
             vec![],
         );
 

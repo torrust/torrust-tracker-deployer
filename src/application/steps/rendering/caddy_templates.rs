@@ -172,6 +172,12 @@ impl<S> RenderCaddyTemplatesStep<S> {
             context = context.with_http_tracker(CaddyService::new(domain, port));
         }
 
+        // Add Health Check API if TLS configured
+        if let Some(tls_domain) = tracker.health_check_api_tls_domain() {
+            let port = tracker.health_check_api_port();
+            context = context.with_health_check_api(CaddyService::new(tls_domain, port));
+        }
+
         // Add Grafana if TLS configured
         if let Some(ref grafana) = user_inputs.grafana {
             if let Some(tls_domain) = grafana.tls_domain() {

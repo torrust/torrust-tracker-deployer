@@ -86,6 +86,7 @@ impl CaddyService {
 ///         CaddyService::new("http2.example.com", 7071),
 ///     ],
 ///     grafana: Some(CaddyService::new("grafana.example.com", 3000)),
+///     health_check_api: None,
 /// };
 /// ```
 ///
@@ -120,6 +121,12 @@ pub struct CaddyContext {
     /// Trackers without TLS are served directly over HTTP, not through Caddy.
     pub http_trackers: Vec<CaddyService>,
 
+    /// Health Check API service (if TLS configured)
+    ///
+    /// Present only if `tracker.health_check_api.tls` is configured.
+    /// The health check API provides a simple /health endpoint for monitoring.
+    pub health_check_api: Option<CaddyService>,
+
     /// Grafana UI service (if TLS configured)
     ///
     /// Present only if `grafana.tls` is configured.
@@ -141,6 +148,7 @@ impl CaddyContext {
             use_staging,
             tracker_api: None,
             http_trackers: Vec::new(),
+            health_check_api: None,
             grafana: None,
         }
     }
@@ -159,6 +167,13 @@ impl CaddyContext {
         self
     }
 
+    /// Sets the Health Check API service
+    #[must_use]
+    pub fn with_health_check_api(mut self, service: CaddyService) -> Self {
+        self.health_check_api = Some(service);
+        self
+    }
+
     /// Sets the Grafana service
     #[must_use]
     pub fn with_grafana(mut self, service: CaddyService) -> Self {
@@ -171,7 +186,10 @@ impl CaddyContext {
     /// Used to determine whether Caddy should be deployed at all.
     #[must_use]
     pub fn has_any_tls(&self) -> bool {
-        self.tracker_api.is_some() || !self.http_trackers.is_empty() || self.grafana.is_some()
+        self.tracker_api.is_some()
+            || !self.http_trackers.is_empty()
+            || self.health_check_api.is_some()
+            || self.grafana.is_some()
     }
 }
 
@@ -215,6 +233,10 @@ mod tests {
             .with_http_tracker(CaddyService::new("http.example.com", 7070));
         assert!(http_tracker_only.has_any_tls());
 
+        let health_check_only = CaddyContext::new("admin@example.com", false)
+            .with_health_check_api(CaddyService::new("health.example.com", 1313));
+        assert!(health_check_only.has_any_tls());
+
         let grafana_only = CaddyContext::new("admin@example.com", false)
             .with_grafana(CaddyService::new("grafana.example.com", 3000));
         assert!(grafana_only.has_any_tls());
@@ -228,6 +250,7 @@ mod tests {
         assert!(!context.use_staging);
         assert!(context.tracker_api.is_none());
         assert!(context.http_trackers.is_empty());
+        assert!(context.health_check_api.is_none());
         assert!(context.grafana.is_none());
     }
 

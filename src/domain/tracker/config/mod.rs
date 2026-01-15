@@ -57,6 +57,7 @@ pub use udp::UdpTrackerConfig;
 ///     },
 ///     health_check_api: HealthCheckApiConfig {
 ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
+///         tls: None,
 ///     },
 /// };
 /// ```
@@ -207,6 +208,7 @@ impl TrackerConfig {
     ///     },
     ///     health_check_api: HealthCheckApiConfig {
     ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
+    ///         tls: None,
     ///     },
     /// };
     ///
@@ -330,6 +332,18 @@ impl TrackerConfig {
         self.http_api.bind_address.port()
     }
 
+    /// Returns the Health Check API TLS domain if configured
+    #[must_use]
+    pub fn health_check_api_tls_domain(&self) -> Option<&str> {
+        self.health_check_api.tls.as_ref().map(TlsConfig::domain)
+    }
+
+    /// Returns the Health Check API port number
+    #[must_use]
+    pub fn health_check_api_port(&self) -> u16 {
+        self.health_check_api.bind_address.port()
+    }
+
     /// Returns HTTP trackers that have TLS configured
     ///
     /// Returns a vector of tuples containing (domain, port) for each
@@ -401,6 +415,7 @@ impl Default for TrackerConfig {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().expect("valid address"),
+                tls: None,
             },
         }
     }
@@ -448,6 +463,7 @@ mod tests {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                tls: None,
             },
         };
 
@@ -475,6 +491,7 @@ mod tests {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                tls: None,
             },
         };
 
@@ -542,6 +559,7 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
+                    tls: None,
                 },
             };
 
@@ -573,6 +591,7 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
+                    tls: None,
                 },
             };
 
@@ -622,6 +641,7 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
+                    tls: None,
                 },
             };
 
@@ -663,6 +683,7 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
+                    tls: None,
                 },
             };
 
@@ -706,6 +727,7 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "0.0.0.0:1313".parse().unwrap(),
+                    tls: None,
                 },
             };
 
@@ -752,6 +774,7 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
+                    tls: None,
                 },
             };
 
@@ -785,6 +808,7 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
+                    tls: None,
                 },
             };
 
@@ -812,6 +836,7 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
+                    tls: None,
                 },
             };
 

@@ -214,6 +214,7 @@ mod tests {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                tls: None,
             },
         };
 
@@ -246,6 +247,7 @@ mod tests {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                tls: None,
             },
         };
 
@@ -289,6 +291,7 @@ mod tests {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                tls: None,
             },
         };
 
