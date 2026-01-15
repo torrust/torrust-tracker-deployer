@@ -1113,6 +1113,14 @@ Error: Invalid configuration for health_check_api
   - Change bind_address to '0.0.0.0:1313' to expose the service through Caddy
 ```
 
+**Implementation Notes**:
+
+- Validation occurs in the domain layer when converting DTO to domain object (similar to the Grafana→Prometheus dependency validation)
+- This is an internal rule per service, checked during DTO-to-domain conversion
+- Services to validate: `health_check_api`, `http_api`, `http_trackers` (each individually)
+- Grafana excluded: bind address is hardcoded (port 3000), not user-configurable
+- Localhost detection: Check for `127.0.0.1` and `::1` (IPv6 localhost) only, not entire ranges
+
 ##### Part B: Show Command for Localhost Services (without TLS)
 
 For services bound to localhost WITHOUT TLS, display:
@@ -1129,12 +1137,19 @@ Health Check:
   - http://10.140.190.190:1313/health_check
 ```
 
+**Implementation Notes**:
+
+- Add `is_localhost_only: bool` field to `ServiceInfo` for relevant services (don't put message in URL field)
+- Show "Internal only" message for localhost-bound services - never hide services from output
+- Principle: Keep user informed about everything. If keeping a service internal was an error, the user catches it sooner rather than wondering why the service is missing from output.
+
 **Implementation Scope**:
 
-- [ ] Add validation in create command to reject localhost + TLS combinations
+- [ ] Add validation in domain layer to reject localhost + TLS combinations (during DTO-to-domain conversion)
 - [ ] Update show command to detect localhost-bound services
-- [ ] Display appropriate message for internal-only services
-- [ ] Apply to all configurable HTTP services (health check, HTTP trackers, API, Grafana)
+- [ ] Add `is_localhost_only` field to `ServiceInfo` for health check, API, and HTTP trackers
+- [ ] Display "Internal only" message for internal-only services
+- [ ] Apply to: health check API, HTTP API, HTTP trackers (Grafana excluded - hardcoded port)
 
 ### Phase 8: Schema Generation (30 minutes)
 
