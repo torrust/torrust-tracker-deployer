@@ -2,6 +2,33 @@
 //!
 //! This module provides a view for rendering environment information
 //! with state-aware details.
+//!
+//! # Module Structure
+//!
+//! The view is composed of specialized child views for each section:
+//! - `basic`: Basic environment info (name, state, provider, created)
+//! - `infrastructure`: Infrastructure details (IP, SSH credentials)
+//! - `tracker_services`: Tracker service endpoints
+//! - `prometheus`: Prometheus metrics service
+//! - `grafana`: Grafana visualization service
+//! - `https_hint`: HTTPS configuration hints (/etc/hosts)
+//! - `next_step`: State-aware guidance
+
+mod basic;
+mod grafana;
+mod https_hint;
+mod infrastructure;
+mod next_step;
+mod prometheus;
+mod tracker_services;
+
+use basic::BasicInfoView;
+use grafana::GrafanaView;
+use https_hint::HttpsHintView;
+use infrastructure::InfrastructureView;
+use next_step::NextStepGuidanceView;
+use prometheus::PrometheusView;
+use tracker_services::TrackerServicesView;
 
 use crate::application::command_handlers::show::info::EnvironmentInfo;
 
@@ -12,10 +39,10 @@ use crate::application::command_handlers::show::info::EnvironmentInfo;
 ///
 /// # Design
 ///
-/// Following MVC pattern, this view:
+/// Following MVC pattern with composition, this view:
 /// - Receives data from the controller via the `EnvironmentInfo` DTO
-/// - Formats the output for display
-/// - Handles optional fields gracefully (infrastructure, services)
+/// - Delegates rendering to specialized child views
+/// - Composes the final output from child view results
 /// - Returns a string ready for output to stdout
 ///
 /// # Examples
@@ -44,7 +71,8 @@ impl EnvironmentInfoView {
     /// Render environment information as a formatted string
     ///
     /// Takes environment info and produces a human-readable output suitable
-    /// for displaying to users via stdout.
+    /// for displaying to users via stdout. Uses composition to delegate
+    /// rendering to specialized child views.
     ///
     /// # Arguments
     ///
@@ -89,130 +117,44 @@ impl EnvironmentInfoView {
     pub fn render(info: &EnvironmentInfo) -> String {
         let mut lines = Vec::new();
 
-        // Basic information
-        lines.push(String::new()); // blank line
-        lines.push(format!("Environment: {}", info.name));
-        lines.push(format!("State: {}", info.state));
-        lines.push(format!("Provider: {}", info.provider));
-        lines.push(format!(
-            "Created: {}",
-            info.created_at.format("%Y-%m-%d %H:%M:%S UTC")
+        // Basic information (always present)
+        lines.extend(BasicInfoView::render(
+            &info.name,
+            &info.state,
+            &info.provider,
+            info.created_at,
         ));
 
         // Infrastructure details (if available)
         if let Some(ref infra) = info.infrastructure {
-            lines.push(String::new()); // blank line
-            lines.push("Infrastructure:".to_string());
-            lines.push(format!("  Instance IP: {}", infra.instance_ip));
-            lines.push(format!("  SSH Port: {}", infra.ssh_port));
-            lines.push(format!("  SSH User: {}", infra.ssh_user));
-            lines.push(format!("  SSH Key: {}", infra.ssh_key_path));
-            lines.push(String::new()); // blank line
-            lines.push("Connection:".to_string());
-            lines.push(format!("  {}", infra.ssh_command()));
-
-            // Hint for Docker users when container path pattern detected
-            if Self::looks_like_container_path(&infra.ssh_key_path) {
-                lines.push(String::new()); // blank line
-                lines.push("Note: Paths shown are inside the container.".to_string());
-                lines.push(
-                    "      If using Docker, translate to your host path (e.g., ~/.ssh/)."
-                        .to_string(),
-                );
-            }
+            lines.extend(InfrastructureView::render(infra));
         }
 
-        // Service information (if available)
+        // Tracker service information (if available)
         if let Some(ref services) = info.services {
-            lines.push(String::new()); // blank line
-            lines.push("Tracker Services:".to_string());
-
-            if !services.udp_trackers.is_empty() {
-                lines.push("  UDP Trackers:".to_string());
-                for url in &services.udp_trackers {
-                    lines.push(format!("    - {url}"));
-                }
-            }
-
-            if !services.http_trackers.is_empty() {
-                lines.push("  HTTP Trackers:".to_string());
-                for url in &services.http_trackers {
-                    lines.push(format!("    - {url}"));
-                }
-            }
-
-            lines.push("  API Endpoint:".to_string());
-            lines.push(format!("    - {}", services.api_endpoint));
-
-            lines.push("  Health Check:".to_string());
-            lines.push(format!("    - {}", services.health_check_url));
+            lines.extend(TrackerServicesView::render(services));
         }
 
         // Prometheus service (if configured)
         if let Some(ref prometheus) = info.prometheus {
-            lines.push(String::new()); // blank line
-            lines.push("Prometheus:".to_string());
-            lines.push(format!("  {}", prometheus.access_note));
+            lines.extend(PrometheusView::render(prometheus));
         }
 
         // Grafana service (if configured)
         if let Some(ref grafana) = info.grafana {
-            lines.push(String::new()); // blank line
-            lines.push("Grafana:".to_string());
-            lines.push(format!("  {}", grafana.url));
+            lines.extend(GrafanaView::render(grafana));
         }
 
-        // Next step guidance
-        lines.push(String::new()); // blank line
-        lines.push(Self::get_next_step_guidance(&info.state_name));
+        // HTTPS hint with /etc/hosts (if TLS is configured)
+        if let Some(ref services) = info.services {
+            let instance_ip = info.infrastructure.as_ref().map(|i| i.instance_ip);
+            lines.extend(HttpsHintView::render(services, instance_ip));
+        }
+
+        // Next step guidance (always present)
+        lines.extend(NextStepGuidanceView::render(&info.state_name));
 
         lines.join("\n")
-    }
-
-    /// Get next step guidance based on current state
-    fn get_next_step_guidance(state_name: &str) -> String {
-        match state_name {
-            "created" => "Run 'provision' to create infrastructure.".to_string(),
-            "provisioning" => {
-                "Provisioning in progress. Wait for completion or check logs.".to_string()
-            }
-            "provisioned" => "Run 'configure' to set up the system.".to_string(),
-            "configuring" => {
-                "Configuration in progress. Wait for completion or check logs.".to_string()
-            }
-            "configured" => "Run 'release' to deploy the tracker software.".to_string(),
-            "releasing" => "Release in progress. Wait for completion or check logs.".to_string(),
-            "released" => "Run 'run' to start the tracker services.".to_string(),
-            "running" => "Services are running. Use 'test' to verify health.".to_string(),
-            "destroying" => "Destruction in progress. Wait for completion.".to_string(),
-            "destroyed" => {
-                "Environment has been destroyed. Create a new environment to redeploy.".to_string()
-            }
-            "provision_failed" => {
-                "Provisioning failed. Run 'destroy' and create a new environment.".to_string()
-            }
-            "configure_failed" => {
-                "Configuration failed. Run 'destroy' and create a new environment.".to_string()
-            }
-            "release_failed" => {
-                "Release failed. Run 'destroy' and create a new environment.".to_string()
-            }
-            "run_failed" => "Run failed. Run 'destroy' and create a new environment.".to_string(),
-            "destroy_failed" => {
-                "Destruction failed. Check error details and retry 'destroy'.".to_string()
-            }
-            _ => format!("Unknown state: {state_name}. Check environment state file."),
-        }
-    }
-
-    /// Check if a path looks like it's inside the Docker container.
-    ///
-    /// The deployer Docker image uses `/home/deployer/` as the home directory.
-    /// When paths contain this prefix, it indicates the environment was managed
-    /// from inside a container, and users need to translate paths to their host
-    /// equivalents.
-    fn looks_like_container_path(path: &str) -> bool {
-        path.starts_with("/home/deployer/")
     }
 }
 
@@ -223,7 +165,9 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use super::*;
-    use crate::application::command_handlers::show::info::{InfrastructureInfo, ServiceInfo};
+    use crate::application::command_handlers::show::info::{
+        InfrastructureInfo, ServiceInfo, TlsDomainInfo,
+    };
 
     /// Helper to create a fixed test timestamp
     fn test_timestamp() -> chrono::DateTime<chrono::Utc> {
@@ -287,9 +231,12 @@ mod tests {
         )
         .with_services(ServiceInfo::new(
             vec!["udp://10.0.0.1:6969/announce".to_string()],
+            vec![],                                            // No HTTPS trackers
             vec!["http://10.0.0.1:7070/announce".to_string()], // DevSkim: ignore DS137138
             "http://10.0.0.1:1212/api".to_string(),            // DevSkim: ignore DS137138
+            false,                                             // API doesn't use HTTPS
             "http://10.0.0.1:1313/health_check".to_string(),   // DevSkim: ignore DS137138
+            vec![],                                            // No TLS domains
         ));
 
         let output = EnvironmentInfoView::render(&info);
@@ -297,7 +244,7 @@ mod tests {
         assert!(output.contains("Tracker Services:"));
         assert!(output.contains("UDP Trackers:"));
         assert!(output.contains("udp://10.0.0.1:6969/announce"));
-        assert!(output.contains("HTTP Trackers:"));
+        assert!(output.contains("HTTP Trackers (direct):"));
         assert!(output.contains("http://10.0.0.1:7070/announce")); // DevSkim: ignore DS137138
         assert!(output.contains("API Endpoint:"));
         assert!(output.contains("http://10.0.0.1:1212/api")); // DevSkim: ignore DS137138
@@ -322,9 +269,12 @@ mod tests {
         ))
         .with_services(ServiceInfo::new(
             vec!["udp://192.168.1.100:6969/announce".to_string()],
-            vec![],
+            vec![],                                      // No HTTPS trackers
+            vec![],                                      // No direct trackers
             "http://192.168.1.100:1212/api".to_string(), // DevSkim: ignore DS137138
+            false,
             "http://192.168.1.100:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            vec![],
         ));
 
         let output = EnvironmentInfoView::render(&info);
@@ -336,7 +286,68 @@ mod tests {
         assert!(output.contains("Tracker Services:"));
         assert!(output.contains("UDP Trackers:"));
         // Should not have HTTP Trackers section when empty
-        assert!(!output.contains("HTTP Trackers:"));
+        assert!(!output.contains("HTTP Trackers"));
+    }
+
+    #[test]
+    fn it_should_render_https_services_with_hosts_hint() {
+        let info = EnvironmentInfo::new(
+            "https-env".to_string(),
+            "Running".to_string(),
+            "LXD".to_string(),
+            test_timestamp(),
+            "running".to_string(),
+        )
+        .with_infrastructure(InfrastructureInfo::new(
+            IpAddr::V4(Ipv4Addr::new(10, 140, 190, 214)),
+            22,
+            "torrust".to_string(),
+            "~/.ssh/id_rsa".to_string(),
+        ))
+        .with_services(ServiceInfo::new(
+            vec!["udp://10.140.190.214:6969/announce".to_string()],
+            vec![
+                "https://http1.tracker.local/announce".to_string(),
+                "https://http2.tracker.local/announce".to_string(),
+            ],
+            vec!["http://10.140.190.214:7072/announce".to_string()], // DevSkim: ignore DS137138
+            "https://api.tracker.local/api".to_string(),
+            true,                                                  // API uses HTTPS
+            "http://10.140.190.214:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            vec![
+                TlsDomainInfo::new("api.tracker.local".to_string(), 1212),
+                TlsDomainInfo::new("http1.tracker.local".to_string(), 7070),
+                TlsDomainInfo::new("http2.tracker.local".to_string(), 7071),
+                TlsDomainInfo::new("grafana.tracker.local".to_string(), 3000),
+            ],
+        ));
+
+        let output = EnvironmentInfoView::render(&info);
+
+        // Check HTTPS trackers section
+        assert!(output.contains("HTTP Trackers (HTTPS via Caddy):"));
+        assert!(output.contains("https://http1.tracker.local/announce"));
+        assert!(output.contains("https://http2.tracker.local/announce"));
+
+        // Check direct HTTP trackers section
+        assert!(output.contains("HTTP Trackers (direct):"));
+        assert!(output.contains("http://10.140.190.214:7072/announce")); // DevSkim: ignore DS137138
+
+        // Check API shows HTTPS
+        assert!(output.contains("API Endpoint (HTTPS via Caddy):"));
+        assert!(output.contains("https://api.tracker.local/api"));
+
+        // Check /etc/hosts hint
+        assert!(output.contains("Note: HTTPS services require domain-based access"));
+        assert!(output.contains("/etc/hosts"));
+        assert!(output.contains("10.140.190.214"));
+        assert!(output.contains("api.tracker.local"));
+        assert!(output.contains("http1.tracker.local"));
+        assert!(output.contains("grafana.tracker.local"));
+
+        // Check unexposed ports message
+        assert!(output.contains("Internal ports"));
+        assert!(output.contains("not directly accessible when TLS is enabled"));
     }
 
     #[test]
@@ -358,34 +369,5 @@ mod tests {
         let output = EnvironmentInfoView::render(&info);
 
         assert!(output.contains("-p 2222"));
-    }
-
-    mod get_next_step_guidance {
-        use super::*;
-
-        #[test]
-        fn it_should_guide_from_created_state() {
-            let guidance = EnvironmentInfoView::get_next_step_guidance("created");
-            assert!(guidance.contains("provision"));
-        }
-
-        #[test]
-        fn it_should_guide_from_provisioned_state() {
-            let guidance = EnvironmentInfoView::get_next_step_guidance("provisioned");
-            assert!(guidance.contains("configure"));
-        }
-
-        #[test]
-        fn it_should_guide_from_running_state() {
-            let guidance = EnvironmentInfoView::get_next_step_guidance("running");
-            assert!(guidance.contains("test"));
-        }
-
-        #[test]
-        fn it_should_handle_failed_states() {
-            let guidance = EnvironmentInfoView::get_next_step_guidance("provision_failed");
-            assert!(guidance.contains("failed"));
-            assert!(guidance.contains("destroy"));
-        }
     }
 }

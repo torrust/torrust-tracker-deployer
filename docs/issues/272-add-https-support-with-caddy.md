@@ -998,17 +998,17 @@ Services are running. Use 'test' to verify health.
 
 **Required Changes**:
 
-- [ ] Detect if a service has TLS enabled from environment configuration
-- [ ] For TLS-enabled services:
-  - [ ] Show HTTPS URL with configured domain: `https://api.tracker.local`
-  - [ ] Show HTTP redirect URL: `http://api.tracker.local` (redirects to HTTPS)
-  - [ ] Add note: "Direct IP access not available when TLS is enabled"
-- [ ] For non-TLS services:
-  - [ ] Show direct IP URL as before: `http://10.140.190.214:7072`
-- [ ] Add informational section explaining:
-  - [ ] "Services with TLS enabled must be accessed via their configured domain"
-  - [ ] "For local domains (\*.local), add entries to /etc/hosts pointing to the VM IP"
-  - [ ] "Internal ports are not directly accessible when TLS is enabled"
+- [x] Detect if a service has TLS enabled from environment configuration
+- [x] For TLS-enabled services:
+  - [x] Show HTTPS URL with configured domain: `https://api.tracker.local`
+  - [ ] Show HTTP redirect URL: `http://api.tracker.local` (redirects to HTTPS) *(deferred - not essential)*
+  - [x] Add note: "Direct IP access not available when TLS is enabled"
+- [x] For non-TLS services:
+  - [x] Show direct IP URL as before: `http://10.140.190.214:7072`
+- [x] Add informational section explaining:
+  - [x] "Services with TLS enabled must be accessed via their configured domain"
+  - [x] "For local domains (\*.local), add entries to /etc/hosts pointing to the VM IP"
+  - [x] "Internal ports are not directly accessible when TLS is enabled"
 
 **Expected Output After Fix**:
 

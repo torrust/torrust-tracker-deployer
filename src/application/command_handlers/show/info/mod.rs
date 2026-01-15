@@ -21,7 +21,7 @@ use chrono::{DateTime, Utc};
 
 pub use self::grafana::GrafanaInfo;
 pub use self::prometheus::PrometheusInfo;
-pub use self::tracker::ServiceInfo;
+pub use self::tracker::{ServiceInfo, TlsDomainInfo};
 
 /// Environment information for display purposes
 ///
