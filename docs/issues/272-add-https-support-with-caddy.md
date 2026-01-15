@@ -1081,7 +1081,7 @@ Internal ports (1212, 7070, 7071, 3000) are not directly accessible when TLS is 
 
 > **Note**: JSON schema regeneration deferred to Phase 8.
 
-#### 7.4: Handle Localhost-Bound Services in Show Command and Validation
+#### 7.4: Handle Localhost-Bound Services in Show Command and Validation ✅ COMPLETE
 
 **Current State**:
 
@@ -1145,11 +1145,11 @@ Health Check:
 
 **Implementation Scope**:
 
-- [ ] Add validation in domain layer to reject localhost + TLS combinations (during DTO-to-domain conversion)
-- [ ] Update show command to detect localhost-bound services
-- [ ] Add `is_localhost_only` field to `ServiceInfo` for health check, API, and HTTP trackers
-- [ ] Display "Internal only" message for internal-only services
-- [ ] Apply to: health check API, HTTP API, HTTP trackers (Grafana excluded - hardcoded port)
+- [x] Add validation in domain layer to reject localhost + TLS combinations (during DTO-to-domain conversion)
+- [x] Update show command to detect localhost-bound services
+- [x] Add `is_localhost_only` field to `ServiceInfo` for health check, API, and HTTP trackers
+- [x] Display "Internal only" message for internal-only services
+- [x] Apply to: health check API, HTTP API, HTTP trackers (Grafana excluded - hardcoded port)
 
 ### Phase 8: Schema Generation (30 minutes)
 

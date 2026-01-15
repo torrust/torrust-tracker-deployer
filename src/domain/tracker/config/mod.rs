@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +23,28 @@ pub use health_check_api::HealthCheckApiConfig;
 pub use http::HttpTrackerConfig;
 pub use http_api::HttpApiConfig;
 pub use udp::UdpTrackerConfig;
+
+/// Checks if a socket address is bound to localhost (127.0.0.1 or `::1`).
+///
+/// This is used to validate that TLS-enabled services don't bind to localhost,
+/// since Caddy runs in a separate container and cannot reach localhost addresses.
+///
+/// # Returns
+///
+/// `true` if the address is IPv4 localhost (127.0.0.1) or IPv6 localhost (`::1`),
+/// `false` otherwise.
+///
+/// # Note
+///
+/// This intentionally checks only exact localhost addresses (127.0.0.1 and `::1`),
+/// not the entire 127.0.0.0/8 loopback range, as per design decision.
+#[must_use]
+pub fn is_localhost(addr: &SocketAddr) -> bool {
+    match addr.ip() {
+        IpAddr::V4(ipv4) => ipv4 == Ipv4Addr::LOCALHOST,
+        IpAddr::V6(ipv6) => ipv6 == Ipv6Addr::LOCALHOST,
+    }
+}
 
 /// Tracker deployment configuration
 ///
@@ -91,6 +113,18 @@ pub enum TrackerConfigError {
         /// Names of services attempting to bind to this address
         services: Vec<String>,
     },
+
+    /// A service is bound to localhost but has TLS configured
+    ///
+    /// When a service binds to localhost (127.0.0.1 or `::1`), it cannot be proxied
+    /// through Caddy because Caddy runs in a separate container and localhost
+    /// addresses are not routable between containers.
+    LocalhostWithTls {
+        /// The service name (e.g., "HTTP API", "Health Check API", "HTTP Tracker #1")
+        service_name: String,
+        /// The bind address that uses localhost
+        bind_address: SocketAddr,
+    },
 }
 
 impl fmt::Display for TrackerConfigError {
@@ -110,6 +144,16 @@ impl fmt::Display for TrackerConfigError {
                     f,
                     "Socket address conflict: {services_list} cannot bind to {address} ({protocol})\n\
                     Tip: Assign different port numbers to each service"
+                )
+            }
+            Self::LocalhostWithTls {
+                service_name,
+                bind_address,
+            } => {
+                write!(
+                    f,
+                    "Localhost with TLS: '{service_name}' binds to {bind_address} which is not accessible for TLS proxy\n\
+                    Tip: Use a non-localhost address (e.g., 0.0.0.0) or remove TLS configuration"
                 )
             }
         }
@@ -160,6 +204,38 @@ impl TrackerConfigError {
                 help.push_str(
                     "Services using different protocols (UDP vs TCP) CAN share the same port.\n\
                     See: docs/external-issues/tracker/udp-tcp-port-sharing-allowed.md\n",
+                );
+
+                help
+            }
+            Self::LocalhostWithTls {
+                service_name,
+                bind_address,
+            } => {
+                use std::fmt::Write;
+
+                let mut help = String::from("Localhost with TLS - Detailed Troubleshooting:\n\n");
+
+                help.push_str("Affected service:\n");
+                let _ = writeln!(help, "  - {service_name}: {bind_address}\n");
+
+                help.push_str("Why this fails:\n");
+                help.push_str(
+                    "When a service binds to localhost (127.0.0.1 or `::1`), it is only accessible\n\
+                    from the same container. Caddy runs in a separate container and cannot\n\
+                    reach localhost addresses in the tracker container.\n\n",
+                );
+
+                help.push_str("Fix (choose one):\n");
+                help.push_str(
+                    "1. Change bind address to 0.0.0.0 to allow external access\n\
+                    2. Remove TLS configuration if external access is not needed\n\n",
+                );
+
+                help.push_str("Note:\n");
+                help.push_str(
+                    "Services bound to localhost without TLS can be accessed via SSH tunnel.\n\
+                    Use: ssh -L local_port:localhost:remote_port user@host\n",
                 );
 
                 help
@@ -215,8 +291,52 @@ impl TrackerConfig {
     /// assert!(config.validate().is_ok());
     /// ```
     pub fn validate(&self) -> Result<(), TrackerConfigError> {
+        // Check for localhost + TLS combinations
+        self.check_localhost_with_tls()?;
+
+        // Check for socket address conflicts
         let bindings = self.collect_bindings();
         Self::check_for_conflicts(bindings)
+    }
+
+    /// Checks that no service has both localhost binding and TLS configured
+    ///
+    /// When a service binds to localhost (127.0.0.1 or `::1`), it cannot be
+    /// proxied through Caddy because Caddy runs in a separate container.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TrackerConfigError::LocalhostWithTls` if any service has
+    /// both a localhost binding and TLS configuration.
+    fn check_localhost_with_tls(&self) -> Result<(), TrackerConfigError> {
+        // Check HTTP API
+        if self.http_api.tls.is_some() && is_localhost(&self.http_api.bind_address) {
+            return Err(TrackerConfigError::LocalhostWithTls {
+                service_name: "HTTP API".to_string(),
+                bind_address: self.http_api.bind_address,
+            });
+        }
+
+        // Check Health Check API
+        if self.health_check_api.tls.is_some() && is_localhost(&self.health_check_api.bind_address)
+        {
+            return Err(TrackerConfigError::LocalhostWithTls {
+                service_name: "Health Check API".to_string(),
+                bind_address: self.health_check_api.bind_address,
+            });
+        }
+
+        // Check HTTP trackers
+        for (i, tracker) in self.http_trackers.iter().enumerate() {
+            if tracker.tls.is_some() && is_localhost(&tracker.bind_address) {
+                return Err(TrackerConfigError::LocalhostWithTls {
+                    service_name: format!("HTTP Tracker #{}", i + 1),
+                    bind_address: tracker.bind_address,
+                });
+            }
+        }
+
+        Ok(())
     }
 
     /// Checks for socket address conflicts in the collected bindings
@@ -439,6 +559,47 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    mod is_localhost_tests {
+        use super::*;
+
+        #[test]
+        fn it_should_detect_ipv4_localhost() {
+            let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+            assert!(is_localhost(&addr));
+        }
+
+        #[test]
+        fn it_should_detect_ipv6_localhost() {
+            let addr: SocketAddr = "[::1]:8080".parse().unwrap();
+            assert!(is_localhost(&addr));
+        }
+
+        #[test]
+        fn it_should_not_detect_all_interfaces_ipv4() {
+            let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
+            assert!(!is_localhost(&addr));
+        }
+
+        #[test]
+        fn it_should_not_detect_all_interfaces_ipv6() {
+            let addr: SocketAddr = "[::]:8080".parse().unwrap();
+            assert!(!is_localhost(&addr));
+        }
+
+        #[test]
+        fn it_should_not_detect_specific_ip() {
+            let addr: SocketAddr = "10.0.0.1:8080".parse().unwrap();
+            assert!(!is_localhost(&addr));
+        }
+
+        #[test]
+        fn it_should_not_detect_other_127_x_addresses() {
+            // Only 127.0.0.1 is considered localhost, not the entire 127.0.0.0/8 range
+            let addr: SocketAddr = "127.0.0.2:8080".parse().unwrap();
+            assert!(!is_localhost(&addr));
+        }
+    }
 
     #[test]
     fn it_should_create_tracker_config() {
@@ -860,6 +1021,188 @@ mod tests {
             assert!(help.contains("Why this fails:"));
             assert!(help.contains("How to fix:"));
             assert!(help.contains("docs/external-issues/tracker/udp-tcp-port-sharing-allowed.md"));
+        }
+    }
+
+    mod localhost_with_tls_validation {
+        use super::*;
+
+        fn base_config() -> TrackerConfig {
+            TrackerConfig {
+                core: TrackerCoreConfig {
+                    database: DatabaseConfig::Sqlite(SqliteConfig {
+                        database_name: "tracker.db".to_string(),
+                    }),
+                    private: false,
+                },
+                udp_trackers: vec![],
+                http_trackers: vec![],
+                http_api: HttpApiConfig {
+                    bind_address: "0.0.0.0:1212".parse().unwrap(),
+                    admin_token: "token".to_string().into(),
+                    tls: None,
+                },
+                health_check_api: HealthCheckApiConfig {
+                    bind_address: "127.0.0.1:1313".parse().unwrap(),
+                    tls: None,
+                },
+            }
+        }
+
+        #[test]
+        fn it_should_reject_http_api_localhost_ipv4_with_tls() {
+            let domain = crate::shared::DomainName::new("api.tracker.local").unwrap();
+            let mut config = base_config();
+            config.http_api = HttpApiConfig {
+                bind_address: "127.0.0.1:1212".parse().unwrap(),
+                admin_token: "token".to_string().into(),
+                tls: Some(TlsConfig::new(domain)),
+            };
+
+            let result = config.validate();
+            assert!(result.is_err());
+
+            if let Err(TrackerConfigError::LocalhostWithTls {
+                service_name,
+                bind_address,
+            }) = result
+            {
+                assert_eq!(service_name, "HTTP API");
+                assert_eq!(
+                    bind_address,
+                    "127.0.0.1:1212".parse::<SocketAddr>().unwrap()
+                );
+            } else {
+                panic!("Expected LocalhostWithTls error");
+            }
+        }
+
+        #[test]
+        fn it_should_reject_http_api_localhost_ipv6_with_tls() {
+            let domain = crate::shared::DomainName::new("api.tracker.local").unwrap();
+            let mut config = base_config();
+            config.http_api = HttpApiConfig {
+                bind_address: "[::1]:1212".parse().unwrap(),
+                admin_token: "token".to_string().into(),
+                tls: Some(TlsConfig::new(domain)),
+            };
+
+            let result = config.validate();
+            assert!(result.is_err());
+
+            if let Err(TrackerConfigError::LocalhostWithTls {
+                service_name,
+                bind_address,
+            }) = result
+            {
+                assert_eq!(service_name, "HTTP API");
+                assert_eq!(bind_address, "[::1]:1212".parse::<SocketAddr>().unwrap());
+            } else {
+                panic!("Expected LocalhostWithTls error");
+            }
+        }
+
+        #[test]
+        fn it_should_reject_health_check_api_localhost_with_tls() {
+            let domain = crate::shared::DomainName::new("health.tracker.local").unwrap();
+            let mut config = base_config();
+            config.health_check_api = HealthCheckApiConfig {
+                bind_address: "127.0.0.1:1313".parse().unwrap(),
+                tls: Some(TlsConfig::new(domain)),
+            };
+
+            let result = config.validate();
+            assert!(result.is_err());
+
+            if let Err(TrackerConfigError::LocalhostWithTls {
+                service_name,
+                bind_address,
+            }) = result
+            {
+                assert_eq!(service_name, "Health Check API");
+                assert_eq!(
+                    bind_address,
+                    "127.0.0.1:1313".parse::<SocketAddr>().unwrap()
+                );
+            } else {
+                panic!("Expected LocalhostWithTls error");
+            }
+        }
+
+        #[test]
+        fn it_should_reject_http_tracker_localhost_with_tls() {
+            let domain = crate::shared::DomainName::new("tracker.local").unwrap();
+            let mut config = base_config();
+            config.http_trackers = vec![HttpTrackerConfig {
+                bind_address: "127.0.0.1:7070".parse().unwrap(),
+                tls: Some(TlsConfig::new(domain)),
+            }];
+
+            let result = config.validate();
+            assert!(result.is_err());
+
+            if let Err(TrackerConfigError::LocalhostWithTls {
+                service_name,
+                bind_address,
+            }) = result
+            {
+                assert_eq!(service_name, "HTTP Tracker #1");
+                assert_eq!(
+                    bind_address,
+                    "127.0.0.1:7070".parse::<SocketAddr>().unwrap()
+                );
+            } else {
+                panic!("Expected LocalhostWithTls error");
+            }
+        }
+
+        #[test]
+        fn it_should_allow_localhost_without_tls() {
+            let config = base_config();
+            // base_config has http_api on 0.0.0.0 and health_check_api on 127.0.0.1 without TLS
+            assert!(config.validate().is_ok());
+        }
+
+        #[test]
+        fn it_should_allow_non_localhost_with_tls() {
+            let domain = crate::shared::DomainName::new("api.tracker.local").unwrap();
+            let mut config = base_config();
+            config.http_api = HttpApiConfig {
+                bind_address: "0.0.0.0:1212".parse().unwrap(),
+                admin_token: "token".to_string().into(),
+                tls: Some(TlsConfig::new(domain)),
+            };
+
+            assert!(config.validate().is_ok());
+        }
+
+        #[test]
+        fn it_should_provide_clear_error_message_for_localhost_with_tls() {
+            let domain = crate::shared::DomainName::new("api.tracker.local").unwrap();
+            let mut config = base_config();
+            config.http_api = HttpApiConfig {
+                bind_address: "127.0.0.1:1212".parse().unwrap(),
+                admin_token: "token".to_string().into(),
+                tls: Some(TlsConfig::new(domain)),
+            };
+
+            let error = config.validate().unwrap_err();
+            let error_message = error.to_string();
+
+            // Verify brief error message
+            assert!(error_message.contains("Localhost with TLS"));
+            assert!(error_message.contains("HTTP API"));
+            assert!(error_message.contains("127.0.0.1:1212"));
+            assert!(error_message.contains("Tip:"));
+
+            // Verify detailed help
+            let help = error.help();
+            assert!(help.contains("Localhost with TLS - Detailed Troubleshooting"));
+            assert!(help.contains("Why this fails"));
+            assert!(help.contains("Caddy"));
+            assert!(help.contains("Fix (choose one)"));
+            assert!(help.contains("0.0.0.0"));
+            assert!(help.contains("SSH tunnel"));
         }
     }
 }

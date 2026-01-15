@@ -52,21 +52,46 @@ impl TrackerServicesView {
             }
         }
 
-        // API endpoint with HTTPS indicator
-        if services.api_uses_https {
+        // Localhost-only HTTP trackers
+        if !services.localhost_http_trackers.is_empty() {
+            lines.push("  HTTP Trackers (internal only):".to_string());
+            for tracker in &services.localhost_http_trackers {
+                lines.push(format!(
+                    "    - {} - localhost:{} (access via SSH tunnel)",
+                    tracker.service_name, tracker.port
+                ));
+            }
+        }
+
+        // API endpoint with HTTPS indicator and localhost-only marker
+        if services.api_is_localhost_only {
+            lines.push("  API Endpoint (internal only):".to_string());
+            lines.push(format!(
+                "    - {} (access via SSH tunnel)",
+                services.api_endpoint
+            ));
+        } else if services.api_uses_https {
             lines.push("  API Endpoint (HTTPS via Caddy):".to_string());
+            lines.push(format!("    - {}", services.api_endpoint));
         } else {
             lines.push("  API Endpoint:".to_string());
+            lines.push(format!("    - {}", services.api_endpoint));
         }
-        lines.push(format!("    - {}", services.api_endpoint));
 
-        // Health check
-        if services.health_check_uses_https {
+        // Health check with HTTPS indicator and localhost-only marker
+        if services.health_check_is_localhost_only {
+            lines.push("  Health Check (internal only):".to_string());
+            lines.push(format!(
+                "    - {} (access via SSH tunnel)",
+                services.health_check_url
+            ));
+        } else if services.health_check_uses_https {
             lines.push("  Health Check (HTTPS via Caddy):".to_string());
+            lines.push(format!("    - {}", services.health_check_url));
         } else {
             lines.push("  Health Check:".to_string());
+            lines.push(format!("    - {}", services.health_check_url));
         }
-        lines.push(format!("    - {}", services.health_check_url));
 
         lines
     }
@@ -75,17 +100,20 @@ impl TrackerServicesView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::command_handlers::show::info::TlsDomainInfo;
+    use crate::application::command_handlers::show::info::{LocalhostServiceInfo, TlsDomainInfo};
 
     fn sample_http_only_services() -> ServiceInfo {
         ServiceInfo::new(
             vec!["udp://10.0.0.1:6969/announce".to_string()],
             vec![],                                            // No HTTPS trackers
             vec!["http://10.0.0.1:7070/announce".to_string()], // DevSkim: ignore DS137138
+            vec![],                                            // No localhost HTTP trackers
             "http://10.0.0.1:1212/api".to_string(),            // DevSkim: ignore DS137138
             false,                                             // API doesn't use HTTPS
+            false,                                             // API not localhost-only
             "http://10.0.0.1:1313/health_check".to_string(),   // DevSkim: ignore DS137138
             false,                                             // Health check doesn't use HTTPS
+            false,                                             // Health check not localhost-only
             vec![],                                            // No TLS domains
         )
     }
@@ -98,10 +126,13 @@ mod tests {
                 "https://http2.tracker.local/announce".to_string(),
             ],
             vec!["http://10.0.0.1:7072/announce".to_string()], // DevSkim: ignore DS137138
+            vec![],                                            // No localhost HTTP trackers
             "https://api.tracker.local/api".to_string(),
             true,                                            // API uses HTTPS
+            false,                                           // API not localhost-only
             "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
             false,                                           // Health check doesn't use HTTPS (yet)
+            false,                                           // Health check not localhost-only
             vec![
                 TlsDomainInfo::new("api.tracker.local".to_string(), 1212),
                 TlsDomainInfo::new("http1.tracker.local".to_string(), 7070),
@@ -177,10 +208,13 @@ mod tests {
             vec![],
             vec![],
             vec![],
+            vec![],                                 // No localhost HTTP trackers
             "http://10.0.0.1:1212/api".to_string(), // DevSkim: ignore DS137138
             false,
+            false, // API not localhost-only
             "https://health.tracker.local/health_check".to_string(),
-            true, // Health check uses HTTPS
+            true,  // Health check uses HTTPS
+            false, // Health check not localhost-only
             vec![TlsDomainInfo::new("health.tracker.local".to_string(), 1313)],
         );
 
@@ -199,14 +233,107 @@ mod tests {
             vec!["udp://10.0.0.1:6969/announce".to_string()],
             vec![],                                 // No HTTPS trackers
             vec![],                                 // No direct HTTP trackers
+            vec![],                                 // No localhost HTTP trackers
             "http://10.0.0.1:1212/api".to_string(), // DevSkim: ignore DS137138
             false,
+            false,                                           // API not localhost-only
             "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
             false,                                           // Health check doesn't use HTTPS
+            false,                                           // Health check not localhost-only
             vec![],
         );
 
         let lines = TrackerServicesView::render(&services);
         assert!(!lines.iter().any(|l| l.contains("HTTP Trackers")));
+    }
+
+    #[test]
+    fn it_should_render_localhost_only_api() {
+        let services = ServiceInfo::new(
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            "http://127.0.0.1:1212/api".to_string(), // DevSkim: ignore DS137138
+            false,
+            true,                                            // API is localhost-only
+            "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,
+            false,
+            vec![],
+        );
+
+        let lines = TrackerServicesView::render(&services);
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("API Endpoint (internal only):")));
+        assert!(lines.iter().any(|l| l.contains("access via SSH tunnel")));
+    }
+
+    #[test]
+    fn it_should_render_localhost_only_health_check() {
+        let services = ServiceInfo::new(
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            "http://10.0.0.1:1212/api".to_string(), // DevSkim: ignore DS137138
+            false,
+            false,
+            "http://127.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,
+            true, // Health check is localhost-only
+            vec![],
+        );
+
+        let lines = TrackerServicesView::render(&services);
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("Health Check (internal only):")));
+        assert!(lines.iter().any(|l| l.contains("access via SSH tunnel")));
+    }
+
+    #[test]
+    fn it_should_render_localhost_only_http_trackers() {
+        let services = ServiceInfo::new(
+            vec![],
+            vec![],
+            vec![],
+            vec![
+                LocalhostServiceInfo {
+                    service_name: "http_tracker_1".to_string(),
+                    port: 7070,
+                },
+                LocalhostServiceInfo {
+                    service_name: "http_tracker_2".to_string(),
+                    port: 7071,
+                },
+            ],
+            "http://10.0.0.1:1212/api".to_string(), // DevSkim: ignore DS137138
+            false,
+            false,
+            "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,
+            false,
+            vec![],
+        );
+
+        let lines = TrackerServicesView::render(&services);
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("HTTP Trackers (internal only):")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("http_tracker_1 - localhost:7070")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("http_tracker_2 - localhost:7071")));
+        assert!(
+            lines
+                .iter()
+                .filter(|l| l.contains("access via SSH tunnel"))
+                .count()
+                >= 2
+        );
     }
 }

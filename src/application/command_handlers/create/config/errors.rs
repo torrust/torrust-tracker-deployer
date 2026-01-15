@@ -675,7 +675,7 @@ mod tests {
             let help = error.help();
             assert!(!help.is_empty(), "Help text should not be empty");
             assert!(
-                help.contains("Fix:") || help.contains("Common"),
+                help.contains("Fix") || help.contains("Common"),
                 "Help should contain actionable guidance"
             );
         }

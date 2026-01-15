@@ -30,6 +30,9 @@ impl HealthCheckApiSection {
     /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
     /// Returns `CreateConfigError::DynamicPortNotSupported` if port 0 (dynamic port assignment) is specified.
     /// Returns `CreateConfigError::InvalidDomain` if the TLS domain is invalid.
+    ///
+    /// Note: Localhost + TLS validation is performed at the domain layer
+    /// (see `TrackerConfig::validate()`) to avoid duplicating business rules.
     pub fn to_health_check_api_config(&self) -> Result<HealthCheckApiConfig, CreateConfigError> {
         // Validate that the bind address can be parsed as SocketAddr
         let bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {

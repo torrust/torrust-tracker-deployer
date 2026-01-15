@@ -77,10 +77,13 @@ mod tests {
             vec!["udp://10.0.0.1:6969/announce".to_string()],
             vec![],                                            // No HTTPS trackers
             vec!["http://10.0.0.1:7070/announce".to_string()], // DevSkim: ignore DS137138
+            vec![],                                            // No localhost HTTP trackers
             "http://10.0.0.1:1212/api".to_string(),            // DevSkim: ignore DS137138
             false,
+            false,                                           // API not localhost-only
             "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
             false,                                           // Health check doesn't use HTTPS
+            false,                                           // Health check not localhost-only
             vec![],                                          // No TLS domains
         )
     }
@@ -90,10 +93,13 @@ mod tests {
             vec!["udp://10.0.0.1:6969/announce".to_string()],
             vec!["https://http1.tracker.local/announce".to_string()],
             vec![],
+            vec![], // No localhost HTTP trackers
             "https://api.tracker.local/api".to_string(),
             true,
+            false,                                           // API not localhost-only
             "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
             false,                                           // Health check doesn't use HTTPS
+            false,                                           // Health check not localhost-only
             vec![
                 TlsDomainInfo::new("api.tracker.local".to_string(), 1212),
                 TlsDomainInfo::new("http1.tracker.local".to_string(), 7070),

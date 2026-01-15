@@ -233,10 +233,13 @@ mod tests {
             vec!["udp://10.0.0.1:6969/announce".to_string()],
             vec![],                                            // No HTTPS trackers
             vec!["http://10.0.0.1:7070/announce".to_string()], // DevSkim: ignore DS137138
+            vec![],                                            // No localhost HTTP trackers
             "http://10.0.0.1:1212/api".to_string(),            // DevSkim: ignore DS137138
             false,                                             // API doesn't use HTTPS
+            false,                                             // API not localhost-only
             "http://10.0.0.1:1313/health_check".to_string(),   // DevSkim: ignore DS137138
             false,                                             // Health check doesn't use HTTPS
+            false,                                             // Health check not localhost-only
             vec![],                                            // No TLS domains
         ));
 
@@ -272,10 +275,13 @@ mod tests {
             vec!["udp://192.168.1.100:6969/announce".to_string()],
             vec![],                                      // No HTTPS trackers
             vec![],                                      // No direct trackers
+            vec![],                                      // No localhost HTTP trackers
             "http://192.168.1.100:1212/api".to_string(), // DevSkim: ignore DS137138
             false,
+            false,                                                // API not localhost-only
             "http://192.168.1.100:1313/health_check".to_string(), // DevSkim: ignore DS137138
             false,                                                // Health check doesn't use HTTPS
+            false,                                                // Health check not localhost-only
             vec![],
         ));
 
@@ -313,10 +319,13 @@ mod tests {
                 "https://http2.tracker.local/announce".to_string(),
             ],
             vec!["http://10.140.190.214:7072/announce".to_string()], // DevSkim: ignore DS137138
+            vec![],                                                  // No localhost HTTP trackers
             "https://api.tracker.local/api".to_string(),
             true,                                                  // API uses HTTPS
+            false,                                                 // API not localhost-only
             "http://10.140.190.214:1313/health_check".to_string(), // DevSkim: ignore DS137138
             false,                                                 // Health check doesn't use HTTPS
+            false, // Health check not localhost-only
             vec![
                 TlsDomainInfo::new("api.tracker.local".to_string(), 1212),
                 TlsDomainInfo::new("http1.tracker.local".to_string(), 7070),

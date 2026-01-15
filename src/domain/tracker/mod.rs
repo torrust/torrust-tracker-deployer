@@ -49,12 +49,13 @@
 //! ```
 
 mod binding_address;
-mod config;
+pub mod config;
 mod protocol;
 
 pub use binding_address::BindingAddress;
 pub use config::{
-    DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig,
-    SqliteConfig, TrackerConfig, TrackerConfigError, TrackerCoreConfig, UdpTrackerConfig,
+    is_localhost, DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig,
+    MysqlConfig, SqliteConfig, TrackerConfig, TrackerConfigError, TrackerCoreConfig,
+    UdpTrackerConfig,
 };
 pub use protocol::{Protocol, ProtocolParseError};

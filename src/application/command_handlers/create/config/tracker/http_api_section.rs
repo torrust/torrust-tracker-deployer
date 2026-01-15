@@ -31,6 +31,9 @@ impl HttpApiSection {
     /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
     /// Returns `CreateConfigError::DynamicPortNotSupported` if port 0 (dynamic port assignment) is specified.
     /// Returns `CreateConfigError::InvalidDomain` if the TLS domain is invalid.
+    ///
+    /// Note: Localhost + TLS validation is performed at the domain layer
+    /// (see `TrackerConfig::validate()`) to avoid duplicating business rules.
     pub fn to_http_api_config(&self) -> Result<HttpApiConfig, CreateConfigError> {
         // Validate that the bind address can be parsed as SocketAddr
         let bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
@@ -150,5 +153,22 @@ mod tests {
         let section: HttpApiSection = serde_json::from_str(json).unwrap();
         assert_eq!(section.bind_address, "0.0.0.0:1212");
         assert_eq!(section.admin_token, "MyAccessToken");
+    }
+
+    #[test]
+    fn it_should_allow_non_localhost_with_tls() {
+        let section = HttpApiSection {
+            bind_address: "0.0.0.0:1212".to_string(),
+            admin_token: "token".to_string(),
+            tls: Some(TlsSection {
+                domain: "api.tracker.local".to_string(),
+            }),
+        };
+
+        let result = section.to_http_api_config();
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert!(config.tls.is_some());
     }
 }
