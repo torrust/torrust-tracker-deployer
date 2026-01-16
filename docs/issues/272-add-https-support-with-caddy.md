@@ -1151,6 +1151,308 @@ Health Check:
 - [x] Display "Internal only" message for internal-only services
 - [x] Apply to: health check API, HTTP API, HTTP trackers (Grafana excluded - hardcoded port)
 
+#### 7.5: Fix `on_reverse_proxy` Tracker Configuration Bug
+
+**Problem**:
+
+The Torrust Tracker has a configuration option `[core.net].on_reverse_proxy` that tells the tracker whether it's running behind a reverse proxy. When `true`, the tracker expects the `X-Forwarded-For` HTTP header to get the real client IP instead of the proxy's IP. This is critical for HTTP trackers to correctly identify peers.
+
+Currently, in `templates/tracker/tracker.toml.tera`, this option is **hardcoded to `true`**:
+
+```toml
+[core.net]
+on_reverse_proxy = true
+```
+
+This is wrong because:
+
+1. When an HTTP tracker is exposed directly (no Caddy proxy), the tracker expects `X-Forwarded-For` headers that won't exist, causing incorrect peer identification
+2. The current implementation assumes all HTTP trackers with TLS go through Caddy, but users might want to use the tracker's built-in TLS support without a proxy
+
+**Tracker Configuration Limitation**:
+
+The `on_reverse_proxy` option is **global** (in `[core.net]`), not per-tracker. This means:
+
+- ALL HTTP trackers share the same setting
+- You cannot have some trackers behind a proxy and others direct in the same deployment
+- If ANY tracker uses a proxy, ALL trackers must be configured for proxy mode
+
+This is a limitation in the Torrust Tracker itself (not the deployer). A proper fix would require the tracker to support per-tracker `on_reverse_proxy` settings.
+
+**Solution**:
+
+Rename `tls` to a clearer structure with `domain` at the top level and `use_tls_proxy` as a separate boolean. The `tls` name was misleading because it doesn't map to the tracker's TLS config - the domain is only used for Caddy proxy configuration.
+
+**Before** (current - using `tls` object):
+
+```json
+{
+  "environment": {
+    "name": "manual-https-test"
+  },
+  "ssh_credentials": {
+    "private_key_path": "/path/to/fixtures/testing_rsa",
+    "public_key_path": "/path/to/fixtures/testing_rsa.pub"
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-manual-https-test"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "sqlite3",
+        "database_name": "tracker.db"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070",
+        "tls": {
+          "domain": "http1.tracker.local"
+        }
+      },
+      {
+        "bind_address": "0.0.0.0:7071",
+        "tls": {
+          "domain": "http2.tracker.local"
+        }
+      },
+      {
+        "bind_address": "0.0.0.0:7072"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "MyAccessToken",
+      "tls": {
+        "domain": "api.tracker.local"
+      }
+    },
+    "health_check_api": {
+      "bind_address": "0.0.0.0:1313",
+      "tls": {
+        "domain": "health.tracker.local"
+      }
+    }
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "admin-password",
+    "tls": {
+      "domain": "grafana.tracker.local"
+    }
+  },
+  "prometheus": {
+    "scrape_interval_in_secs": 15
+  },
+  "https": {
+    "admin_email": "admin@tracker.local",
+    "use_staging": true
+  }
+}
+```
+
+**After** (proposed - using `domain` + `use_tls_proxy`):
+
+```json
+{
+  "environment": {
+    "name": "manual-https-test"
+  },
+  "ssh_credentials": {
+    "private_key_path": "/path/to/fixtures/testing_rsa",
+    "public_key_path": "/path/to/fixtures/testing_rsa.pub"
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-manual-https-test"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "sqlite3",
+        "database_name": "tracker.db"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070",
+        "domain": "http1.tracker.local",
+        "use_tls_proxy": true
+      },
+      {
+        "bind_address": "0.0.0.0:7071",
+        "domain": "http2.tracker.local",
+        "use_tls_proxy": true
+      },
+      {
+        "bind_address": "0.0.0.0:7072"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "MyAccessToken",
+      "domain": "api.tracker.local",
+      "use_tls_proxy": true
+    },
+    "health_check_api": {
+      "bind_address": "0.0.0.0:1313",
+      "domain": "health.tracker.local",
+      "use_tls_proxy": true
+    }
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "admin-password",
+    "domain": "grafana.tracker.local",
+    "use_tls_proxy": true
+  },
+  "prometheus": {
+    "scrape_interval_in_secs": 15
+  },
+  "https": {
+    "admin_email": "admin@tracker.local",
+    "use_staging": true
+  }
+}
+```
+
+**Configuration Semantics**:
+
+| `domain` | `use_tls_proxy` | Meaning                                                   |
+| -------- | --------------- | --------------------------------------------------------- |
+| absent   | absent          | Direct HTTP, no proxy                                     |
+| present  | absent          | HTTP with domain (for future use, e.g., DNS-based access) |
+| present  | `true`          | HTTPS via Caddy proxy (TLS termination)                   |
+| absent   | `true`          | **INVALID** - TLS proxy needs domain for virtual host     |
+
+**Why `use_tls_proxy` (not `on_reverse_proxy`)?**:
+
+The name `use_tls_proxy` accurately describes what our Caddy proxy does: **TLS termination**. This naming choice is intentional for future compatibility:
+
+1. **Current state**: The tracker has a global `[core.net].on_reverse_proxy` option
+2. **Future state**: The tracker may add per-tracker `on_reverse_proxy` support
+3. **No conflict**: When that happens, we can expose both options without ambiguity:
+
+```json
+{
+  "bind_address": "0.0.0.0:7071",
+  "domain": "http2.tracker.local",
+  "use_tls_proxy": true,
+  "on_reverse_proxy": true
+}
+```
+
+**Dependency Rule**: `use_tls_proxy: true` → tracker's `on_reverse_proxy` MUST be `true`. This is enforced automatically:
+
+- When `use_tls_proxy: true`, the deployer sets the tracker's `[core.net].on_reverse_proxy = true`
+- This is because Caddy sends `X-Forwarded-For` headers that the tracker must read
+
+**Future Compatibility**: If the tracker adds per-tracker `on_reverse_proxy`:
+
+- `use_tls_proxy` controls Caddy inclusion and implies `on_reverse_proxy: true`
+- `on_reverse_proxy` could be explicitly set for edge cases (non-TLS reverse proxy)
+- Validation: `use_tls_proxy: true` + `on_reverse_proxy: false` = **INVALID**
+
+**Behavior**:
+
+1. **Tracker config** (`[core.net].on_reverse_proxy`):
+
+   - Set to `true` if ANY HTTP tracker has `use_tls_proxy: true`
+   - Set to `false` otherwise
+   - Note: This only affects HTTP trackers; other services ignore it
+
+2. **Caddy config** (Caddyfile):
+
+   - Include service in Caddy config only if `use_tls_proxy: true`
+   - Requires `domain` to be present for the virtual host configuration
+
+3. **Validation rules**:
+   - `use_tls_proxy: true` requires `domain` to be present
+   - Localhost bind addresses with `use_tls_proxy: true` should be rejected (proxy can't reach localhost)
+
+**Known Limitation** (due to tracker's global setting):
+
+If you have multiple HTTP trackers where some use `use_tls_proxy` and others don't, the ones without it will still receive the global `on_reverse_proxy = true` setting and may fail if they receive direct requests without `X-Forwarded-For` headers.
+
+**Workaround**: Ensure all HTTP trackers in a deployment either ALL use the TLS proxy or NONE use it.
+
+**Reference**: [Torrust Tracker Network Configuration](https://docs.rs/torrust-tracker-configuration/latest/torrust_tracker_configuration/v2_0_0/network/struct.Network.html)
+
+**Implementation Scope**:
+
+The implementation is split into incremental steps, one service type at a time, to minimize risk and simplify review.
+
+##### Step 7.5.1: HTTP Trackers
+
+- [ ] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HttpTrackerSection` DTO
+- [ ] Update `HttpTrackerConfig` domain type to include `use_tls_proxy` and `domain`
+- [ ] Add validation: `use_tls_proxy: true` requires `domain` to be present
+- [ ] Add validation: `use_tls_proxy: true` with localhost bind address → reject
+- [ ] Update tracker config template (`templates/tracker/tracker.toml.tera`) to conditionally set `on_reverse_proxy` based on ANY HTTP tracker having `use_tls_proxy: true`
+- [ ] Update Caddy template (`templates/caddy/Caddyfile.tera`) to check `use_tls_proxy` for HTTP trackers
+- [ ] Update show command `ServiceInfo` for HTTP trackers
+- [ ] Update `envs/manual-https-test.json` for HTTP trackers only
+- [ ] Remove `TlsSection` from HTTP trackers (keep in other services temporarily)
+- [ ] Add unit tests for HTTP tracker validation
+- [ ] Run E2E tests to verify HTTP trackers work
+
+##### Step 7.5.2: Tracker REST API
+
+- [ ] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HttpApiSection` DTO
+- [ ] Update `HttpApiConfig` domain type
+- [ ] Add validation rules (same as HTTP trackers)
+- [ ] Update Caddy template for API
+- [ ] Update show command `ServiceInfo` for API
+- [ ] Update `envs/manual-https-test.json` for API
+- [ ] Remove `TlsSection` from API
+- [ ] Add unit tests for API validation
+- [ ] Run E2E tests
+
+##### Step 7.5.3: Tracker Health Check API
+
+- [ ] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HealthCheckApiSection` DTO
+- [ ] Update `HealthCheckApiConfig` domain type
+- [ ] Add validation rules
+- [ ] Update Caddy template for health check
+- [ ] Update show command `ServiceInfo` for health check
+- [ ] Update `envs/manual-https-test.json` for health check
+- [ ] Remove `TlsSection` from health check
+- [ ] Add unit tests
+- [ ] Run E2E tests
+
+##### Step 7.5.4: Grafana
+
+- [ ] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `GrafanaSection` DTO
+- [ ] Update `GrafanaConfig` domain type
+- [ ] Add validation rules (note: Grafana has no configurable bind address, so localhost validation not needed)
+- [ ] Update Caddy template for Grafana
+- [ ] Update show command `ServiceInfo` for Grafana
+- [ ] Update `envs/manual-https-test.json` for Grafana
+- [ ] Remove `TlsSection` from Grafana
+- [ ] Add unit tests
+- [ ] Run E2E tests
+
+##### Step 7.5.5: Cleanup and Final Verification
+
+- [ ] Remove `TlsSection` type completely (should be unused after all services migrated)
+- [ ] Run full E2E test suite
+- [ ] Run all linters
+- [ ] Manual verification with `envs/manual-https-test.json`
+
 ### Phase 8: Schema Generation (30 minutes)
 
 - [ ] Regenerate JSON schema from Rust DTOs:
