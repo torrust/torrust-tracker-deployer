@@ -1179,6 +1179,39 @@ The `on_reverse_proxy` option is **global** (in `[core.net]`), not per-tracker. 
 
 This is a limitation in the Torrust Tracker itself (not the deployer). A proper fix would require the tracker to support per-tracker `on_reverse_proxy` settings.
 
+**Upstream Issue**: [torrust/torrust-tracker#1640](https://github.com/torrust/torrust-tracker/issues/1640)
+
+**How to Reproduce**:
+
+1. Deploy the manual test environment with mixed TLS/non-TLS HTTP trackers:
+
+   ```bash
+   cargo run -- show manual-https-test
+   ```
+
+2. Verify the tracker config has `on_reverse_proxy = true` (set because trackers 7070, 7071 use TLS proxy):
+
+   ```bash
+   cat build/manual-https-test/tracker/tracker.toml | grep -A2 "core.net"
+   # Output: [core.net]
+   #         on_reverse_proxy = true
+   ```
+
+3. Make a direct HTTP announce request to the tracker on port 7072 (no proxy):
+
+   ```bash
+   curl -v "http://<VM_IP>:7072/announce?info_hash=%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00&peer_id=-TR3000-000000000000&port=6881&uploaded=0&downloaded=0&left=0&event=started"
+   ```
+
+4. Observe the failure response:
+
+   ```text
+   d14:failure reason208:Error resolving peer IP: missing or invalid the right most
+   X-Forwarded-For IP (mandatory on reverse proxy tracker configuration)e
+   ```
+
+The tracker on port 7072 expects `X-Forwarded-For` header (due to global `on_reverse_proxy = true`) but doesn't receive it from direct requests, causing the announce to fail.
+
 **Solution**:
 
 Rename `tls` to a clearer structure with `domain` at the top level and `use_tls_proxy` as a separate boolean. The `tls` name was misleading because it doesn't map to the tracker's TLS config - the domain is only used for Caddy proxy configuration.
