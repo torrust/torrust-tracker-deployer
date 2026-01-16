@@ -44,3 +44,6 @@ bind_address = "{{ http_tracker.bind_address }}"
 {% endfor %}
 [http_api]
 bind_address = "{{ http_api_bind_address }}"
+
+[health_check_api]
+bind_address = "{{ health_check_api_bind_address }}"

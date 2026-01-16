@@ -143,6 +143,7 @@ fn it_should_fail_with_invalid_environment_name() {
         TrackerSection::default(),
         None,
         None,
+        None, // HTTPS configuration
     );
 
     // Act
@@ -194,6 +195,7 @@ fn it_should_fail_when_ssh_private_key_not_found() {
         TrackerSection::default(),
         None,
         None,
+        None, // HTTPS configuration
     );
 
     // Act

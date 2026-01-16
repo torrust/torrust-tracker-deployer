@@ -107,6 +107,7 @@ jobs:
           - mysql:8.0
           - grafana/grafana:11.4.0
           - prom/prometheus:v3.0.1
+          - caddy:2.10
 
     steps:
       - name: Display vulnerabilities (table format)
@@ -218,4 +219,12 @@ jobs:
         with:
           sarif_file: sarif-third-party-prom-prometheus-v3.0.1-${{ github.run_id }}/trivy.sarif
           category: docker-third-party-prom-prometheus-v3.0.1
+        continue-on-error: true
+
+      - name: Upload third-party caddy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-third-party-caddy-2.10-${{ github.run_id }}/trivy.sarif
+          category: docker-third-party-caddy-2.10
         continue-on-error: true

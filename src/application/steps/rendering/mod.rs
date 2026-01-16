@@ -24,6 +24,7 @@
 //! runtime information like IP addresses, SSH keys, and deployment settings.
 
 pub mod ansible_templates;
+pub mod caddy_templates;
 pub mod docker_compose_templates;
 pub mod grafana_templates;
 pub mod opentofu_templates;
@@ -31,6 +32,7 @@ pub mod prometheus_templates;
 pub mod tracker_templates;
 
 pub use ansible_templates::RenderAnsibleTemplatesStep;
+pub use caddy_templates::RenderCaddyTemplatesStep;
 pub use docker_compose_templates::RenderDockerComposeTemplatesStep;
 pub use grafana_templates::RenderGrafanaTemplatesStep;
 pub use opentofu_templates::RenderOpenTofuTemplatesStep;

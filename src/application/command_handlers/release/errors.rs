@@ -52,6 +52,10 @@ pub enum ReleaseCommandHandlerError {
     #[error("Prometheus storage creation failed: {0}")]
     PrometheusStorageCreation(String),
 
+    /// Caddy configuration deployment failed
+    #[error("Caddy configuration deployment failed: {0}")]
+    CaddyConfigDeployment(String),
+
     /// General deployment operation failed
     #[error("Deployment failed: {message}")]
     Deployment {
@@ -111,6 +115,11 @@ impl Traceable for ReleaseCommandHandlerError {
                     "ReleaseCommandHandlerError: Prometheus storage creation failed - {message}"
                 )
             }
+            Self::CaddyConfigDeployment(message) => {
+                format!(
+                    "ReleaseCommandHandlerError: Caddy configuration deployment failed - {message}"
+                )
+            }
             Self::Deployment { message, .. } | Self::DeploymentFailed { message, .. } => {
                 format!("ReleaseCommandHandlerError: Deployment failed - {message}")
             }
@@ -135,6 +144,7 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::TrackerStorageCreation(_)
             | Self::TrackerDatabaseInit(_)
             | Self::PrometheusStorageCreation(_)
+            | Self::CaddyConfigDeployment(_)
             | Self::ReleaseOperationFailed { .. } => None,
         }
     }
@@ -148,7 +158,8 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::TemplateRendering(_)
             | Self::TrackerStorageCreation(_)
             | Self::TrackerDatabaseInit(_)
-            | Self::PrometheusStorageCreation(_) => ErrorKind::TemplateRendering,
+            | Self::PrometheusStorageCreation(_)
+            | Self::CaddyConfigDeployment(_) => ErrorKind::TemplateRendering,
             Self::Deployment { .. } | Self::ReleaseOperationFailed { .. } => {
                 ErrorKind::InfrastructureOperation
             }
@@ -338,6 +349,32 @@ For more information, see docs/user-guide/commands.md"
 5. Review the error message above for specific details
 
 Common causes:
+- Insufficient disk space on target instance
+- Permission denied on target directories
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::CaddyConfigDeployment(_) => {
+                "Caddy Configuration Deployment Failed - Troubleshooting:
+
+1. Verify the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+2. Check that the Caddyfile was generated in the build directory:
+   ls build/<env-name>/caddy/Caddyfile
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/deploy-caddy-config.yml
+
+4. Check that the instance has sufficient disk space:
+   df -h
+
+5. Review the error message above for specific details
+
+Common causes:
+- Caddyfile not generated (HTTPS not configured)
 - Insufficient disk space on target instance
 - Permission denied on target directories
 - Ansible playbook not found

@@ -4,6 +4,8 @@ use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 
+use crate::domain::tls::TlsConfig;
+
 /// HTTP tracker bind configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HttpTrackerConfig {
@@ -13,6 +15,13 @@ pub struct HttpTrackerConfig {
         deserialize_with = "crate::domain::tracker::config::deserialize_socket_addr"
     )]
     pub bind_address: SocketAddr,
+
+    /// TLS configuration for HTTPS termination via Caddy (optional)
+    ///
+    /// When present, this HTTP tracker will be accessible via HTTPS
+    /// through the Caddy reverse proxy.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tls: Option<TlsConfig>,
 }
 
 #[cfg(test)]
@@ -23,6 +32,7 @@ mod tests {
     fn it_should_create_http_tracker_config() {
         let config = HttpTrackerConfig {
             bind_address: "0.0.0.0:7070".parse().unwrap(),
+            tls: None,
         };
 
         assert_eq!(
@@ -35,6 +45,7 @@ mod tests {
     fn it_should_serialize_http_tracker_config() {
         let json = serde_json::to_value(&HttpTrackerConfig {
             bind_address: "0.0.0.0:7070".parse().unwrap(),
+            tls: None,
         })
         .unwrap();
 

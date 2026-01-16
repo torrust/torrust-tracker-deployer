@@ -99,7 +99,7 @@
 //! let config: EnvironmentCreationConfig = serde_json::from_str(json)?;
 //!
 //! // Convert to domain parameters
-//! let (name, instance_name, provider_config, credentials, port, tracker, _prometheus, _grafana) = config.to_environment_params()?;
+//! let (name, instance_name, provider_config, credentials, port, tracker, _prometheus, _grafana, _https) = config.to_environment_params()?;
 //!
 //! // Create domain entity - Environment::new() will use the provider_config
 //! let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
@@ -133,6 +133,7 @@
 pub mod environment_config;
 pub mod errors;
 pub mod grafana;
+pub mod https;
 pub mod prometheus;
 pub mod provider;
 pub mod ssh_credentials_config;
@@ -142,6 +143,7 @@ pub mod tracker;
 pub use environment_config::{EnvironmentCreationConfig, EnvironmentSection};
 pub use errors::CreateConfigError;
 pub use grafana::GrafanaSection;
+pub use https::{HttpsSection, TlsSection};
 pub use prometheus::PrometheusSection;
 pub use provider::{HetznerProviderSection, LxdProviderSection, ProviderSection};
 pub use ssh_credentials_config::SshCredentialsConfig;

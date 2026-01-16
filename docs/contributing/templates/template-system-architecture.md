@@ -245,6 +245,178 @@ impl DockerComposeProjectGenerator {
 - Template syntax validation and error handling
 - Strongly typed wrappers prevent runtime template errors
 
+## 🎯 Context Data Preparation Pattern
+
+**Templates should receive only pre-processed, ready-to-use data.** All data transformation, parsing, and extraction must happen in Rust code when building the Context, not in the template.
+
+### Core Principle
+
+The Context acts as a **presentation layer** for templates:
+
+- **Rust code** does the heavy lifting: parsing, validation, extraction, conversion
+- **Templates** only do simple variable interpolation and conditional rendering
+- **No custom Tera filters** for data transformation (e.g., no `extract_port` filter)
+
+### Why This Matters
+
+1. **Testability**: Rust transformations are unit-testable; template logic is harder to test
+2. **Type Safety**: Rust catches errors at compile time; template errors appear at runtime
+3. **Simplicity**: Templates remain simple and readable
+4. **Consistency**: All data preparation follows the same pattern
+5. **Debugging**: Errors in data preparation have clear stack traces
+
+### Example: Port Extraction
+
+**❌ WRONG - Processing in template:**
+
+```tera
+{# Template tries to extract port from bind_address #}
+reverse_proxy tracker:{{ tracker.http_api.bind_address | extract_port }}
+```
+
+Problems:
+
+- Requires custom Tera filter registration
+- Error handling in templates is awkward
+- Template becomes coupled to data structure
+
+**✅ CORRECT - Pre-processed in Rust:**
+
+```rust
+// Context struct with ready-to-use values
+pub struct CaddyContext {
+    pub http_api_port: u16,  // Already extracted from bind_address
+    pub http_api_domain: String,
+    // ...
+}
+
+// Port extraction happens in Rust when building context
+impl CaddyContext {
+    pub fn from_config(config: &TrackerConfig) -> Self {
+        Self {
+            http_api_port: config.http_api.bind_address.port(), // Extraction here
+            http_api_domain: config.http_api.tls.as_ref()
+                .map(|tls| tls.domain.clone())
+                .unwrap_or_default(),
+        }
+    }
+}
+```
+
+```tera
+{# Template receives ready-to-use port number #}
+reverse_proxy tracker:{{ http_api_port }}
+```
+
+### Example: Conditional Data
+
+**❌ WRONG - Complex logic in template:**
+
+```tera
+{% if tracker.http_api.tls is defined and tracker.http_api.tls.domain != "" %}
+{{ tracker.http_api.tls.domain }} {
+    reverse_proxy tracker:{{ tracker.http_api.bind_address | extract_port }}
+}
+{% endif %}
+```
+
+**✅ CORRECT - Rust prepares filtered list:**
+
+```rust
+// Context contains only services that need rendering
+pub struct CaddyContext {
+    pub services: Vec<CaddyService>,  // Only TLS-enabled services included
+}
+
+pub struct CaddyService {
+    pub domain: String,
+    pub upstream_port: u16,
+}
+
+// Filtering happens in Rust
+impl CaddyContext {
+    pub fn from_config(config: &EnvironmentConfig) -> Self {
+        let mut services = Vec::new();
+
+        // Only add if TLS is configured
+        if let Some(tls) = &config.tracker.http_api.tls {
+            services.push(CaddyService {
+                domain: tls.domain.clone(),
+                upstream_port: config.tracker.http_api.bind_address.port(),
+            });
+        }
+
+        Self { services }
+    }
+}
+```
+
+```tera
+{# Template simply iterates pre-filtered list #}
+{% for service in services %}
+{{ service.domain }} {
+    reverse_proxy tracker:{{ service.upstream_port }}
+}
+{% endfor %}
+```
+
+### Data Flow Summary
+
+```text
+┌──────────────────┐     ┌───────────────────┐     ┌──────────────────┐
+│ Domain Config    │────▶│ Context Builder   │────▶│ Template         │
+│ (raw data)       │     │ (Rust processing) │     │ (simple output)  │
+└──────────────────┘     └───────────────────┘     └──────────────────┘
+                                 │
+                    ┌────────────┼────────────┐
+                    │            │            │
+               Parse ports   Filter by    Convert types
+                            condition     to strings
+```
+
+### Guidelines for Context Design
+
+1. **Flatten nested structures**: If template needs `config.tracker.http_api.bind_address.port()`, provide `http_api_port: u16`
+2. **Pre-filter collections**: If template only renders TLS-enabled services, filter in Rust first
+3. **Use primitive types**: Prefer `String`, `u16`, `bool` over complex domain types
+4. **Handle optionals in Rust**: Don't pass `Option<T>` to templates; provide defaults or filter out
+5. **Name for template clarity**: Use names like `http_api_port` not `bind_address_port_number`
+
+## 📁 Templates Directory Organization
+
+The `templates/` directory should contain **only template files** (`.tera` files and static configuration files). Documentation about templates should be placed in `docs/contributing/templates/`.
+
+### DO ✅
+
+- Place template files (`.tera`, `.yml`, `.toml`, etc.) in `templates/<service>/`
+- Add comments directly in template files to explain template-specific details
+- Create documentation in `docs/contributing/templates/<service>.md` for detailed explanations
+
+### DON'T ❌
+
+- ❌ Add `README.md` files in `templates/` subdirectories
+- ❌ Add documentation files in the `templates/` directory structure
+- ❌ Mix documentation with template source files
+
+### Service Documentation Location
+
+| Service        | Templates Location          | Documentation Location                          |
+| -------------- | --------------------------- | ----------------------------------------------- |
+| Ansible        | `templates/ansible/`        | `docs/contributing/templates/ansible.md`        |
+| Caddy          | `templates/caddy/`          | `docs/contributing/templates/caddy.md`          |
+| Docker Compose | `templates/docker-compose/` | `docs/contributing/templates/docker-compose.md` |
+| Grafana        | `templates/grafana/`        | `docs/contributing/templates/grafana.md`        |
+| Prometheus     | `templates/prometheus/`     | `docs/contributing/templates/prometheus.md`     |
+| Tofu           | `templates/tofu/`           | `docs/contributing/templates/tofu.md`           |
+| Tracker        | `templates/tracker/`        | `docs/contributing/templates/tracker.md`        |
+
+### Rationale
+
+1. **Clean separation**: Template files are source code; documentation is separate
+2. **Embedded templates**: The `templates/` directory is embedded in the binary - documentation files would unnecessarily increase binary size
+3. **Consistency**: All documentation lives in `docs/`, not scattered across the codebase
+4. **Discoverability**: Contributors know to look in `docs/contributing/templates/` for template documentation
+
 ## ⚠️ Important Behaviors
 
 ### Template Persistence

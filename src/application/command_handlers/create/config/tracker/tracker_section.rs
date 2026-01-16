@@ -128,10 +128,12 @@ impl Default for TrackerSection {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
+                tls: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
+                tls: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         }
@@ -160,10 +162,12 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
+                tls: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
+                tls: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -205,14 +209,17 @@ mod tests {
             http_trackers: vec![
                 HttpTrackerSection {
                     bind_address: "0.0.0.0:7070".to_string(),
+                    tls: None,
                 },
                 HttpTrackerSection {
                     bind_address: "0.0.0.0:7071".to_string(),
+                    tls: None,
                 },
             ],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
+                tls: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -239,6 +246,7 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
+                tls: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -266,10 +274,12 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
+                tls: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
+                tls: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -326,10 +336,12 @@ mod tests {
             udp_trackers: vec![],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
+                tls: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:7070".to_string(),
                 admin_token: "token".to_string(),
+                tls: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -357,10 +369,12 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
+                tls: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "token".to_string(),
+                tls: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };

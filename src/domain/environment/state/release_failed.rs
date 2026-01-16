@@ -48,6 +48,10 @@ pub enum ReleaseStep {
     RenderGrafanaTemplates,
     /// Deploying Grafana provisioning configuration to the remote host via Ansible
     DeployGrafanaProvisioning,
+    /// Rendering Caddy configuration templates to the build directory (if HTTPS enabled)
+    RenderCaddyTemplates,
+    /// Deploying Caddy configuration to the remote host via Ansible (if HTTPS enabled)
+    DeployCaddyConfigToRemote,
     /// Rendering Docker Compose templates to the build directory
     RenderDockerComposeTemplates,
     /// Deploying compose files to the remote host via Ansible
@@ -66,6 +70,8 @@ impl fmt::Display for ReleaseStep {
             Self::DeployPrometheusConfigToRemote => "Deploy Prometheus Config to Remote",
             Self::RenderGrafanaTemplates => "Render Grafana Templates",
             Self::DeployGrafanaProvisioning => "Deploy Grafana Provisioning",
+            Self::RenderCaddyTemplates => "Render Caddy Templates",
+            Self::DeployCaddyConfigToRemote => "Deploy Caddy Config to Remote",
             Self::RenderDockerComposeTemplates => "Render Docker Compose Templates",
             Self::DeployComposeFilesToRemote => "Deploy Compose Files to Remote",
         };

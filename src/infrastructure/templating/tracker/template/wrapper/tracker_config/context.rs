@@ -38,14 +38,16 @@ use crate::domain::environment::TrackerConfig;
 ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
 ///     ],
 ///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap() },
+///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), tls: None },
 ///     ],
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
 ///         admin_token: "MyToken".to_string().into(),
+///         tls: None,
 ///     },
 ///     health_check_api: HealthCheckApiConfig {
 ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
+///         tls: None,
 ///     },
 /// };
 /// let context = TrackerContext::from_config(&tracker_config);
@@ -89,6 +91,9 @@ pub struct TrackerContext {
 
     /// HTTP API bind address
     pub http_api_bind_address: String,
+
+    /// Health check API bind address
+    pub health_check_api_bind_address: String,
 }
 
 /// UDP tracker entry for template rendering
@@ -149,6 +154,7 @@ impl TrackerContext {
                 })
                 .collect(),
             http_api_bind_address: config.http_api.bind_address.to_string(),
+            health_check_api_bind_address: config.health_check_api.bind_address.to_string(),
         }
     }
 
@@ -183,6 +189,7 @@ impl TrackerContext {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
             }],
             http_api_bind_address: "0.0.0.0:1212".parse().unwrap(),
+            health_check_api_bind_address: "127.0.0.1:1313".parse().unwrap(),
         }
     }
 }
@@ -220,13 +227,16 @@ mod tests {
             ],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
+                tls: None,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_admin_token".to_string().into(),
+                tls: None,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                tls: None,
             },
         }
     }
@@ -269,13 +279,16 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
+                tls: None,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_token".to_string().into(),
+                tls: None,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                tls: None,
             },
         };
 

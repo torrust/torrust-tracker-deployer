@@ -102,6 +102,7 @@ pub fn run_create_command(
         TrackerSection::default(),
         None,
         None,
+        None, // HTTPS configuration
     );
 
     // Execute the command

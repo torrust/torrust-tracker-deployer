@@ -8,8 +8,12 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
+use crate::application::command_handlers::create::config::https::TlsSection;
 use crate::domain::grafana::GrafanaConfig;
+use crate::domain::tls::TlsConfig;
 use crate::shared::secrets::PlainPassword;
+
+use crate::shared::DomainName;
 
 /// Grafana configuration section (DTO)
 ///
@@ -30,6 +34,17 @@ use crate::shared::secrets::PlainPassword;
 ///     "admin_password": "admin"
 /// }
 /// ```
+///
+/// With TLS configuration:
+/// ```json
+/// {
+///     "admin_user": "admin",
+///     "admin_password": "admin",
+///     "tls": {
+///         "domain": "grafana.example.com"
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct GrafanaSection {
     /// Grafana admin username
@@ -40,6 +55,13 @@ pub struct GrafanaSection {
     /// This will be converted to `Password` type in the domain layer
     /// to prevent accidental exposure in logs or debug output.
     pub admin_password: PlainPassword,
+
+    /// Optional TLS configuration for HTTPS
+    ///
+    /// When present, Grafana will be proxied through Caddy with HTTPS enabled.
+    /// The domain specified will be used for Let's Encrypt certificate acquisition.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tls: Option<TlsSection>,
 }
 
 impl Default for GrafanaSection {
@@ -48,6 +70,7 @@ impl Default for GrafanaSection {
         Self {
             admin_user: default_config.admin_user().to_string(),
             admin_password: default_config.admin_password().expose_secret().to_string(),
+            tls: None,
         }
     }
 }
@@ -61,13 +84,26 @@ impl GrafanaSection {
     ///
     /// # Errors
     ///
-    /// Currently returns `Ok` for all valid inputs. Future versions may
-    /// add validation for `admin_user` format or password strength requirements.
+    /// Returns `CreateConfigError::InvalidDomain` if the TLS domain is invalid.
     pub fn to_grafana_config(&self) -> Result<GrafanaConfig, CreateConfigError> {
-        Ok(GrafanaConfig::new(
-            self.admin_user.clone(),
-            self.admin_password.clone(),
-        ))
+        let config = match &self.tls {
+            Some(tls_section) => {
+                tls_section.validate()?;
+                let domain = DomainName::new(&tls_section.domain).map_err(|e| {
+                    CreateConfigError::InvalidDomain {
+                        domain: tls_section.domain.clone(),
+                        reason: e.to_string(),
+                    }
+                })?;
+                GrafanaConfig::with_tls(
+                    self.admin_user.clone(),
+                    self.admin_password.clone(),
+                    TlsConfig::new(domain),
+                )
+            }
+            None => GrafanaConfig::new(self.admin_user.clone(), self.admin_password.clone()),
+        };
+        Ok(config)
     }
 }
 
@@ -80,6 +116,7 @@ mod tests {
         let section = GrafanaSection::default();
         assert_eq!(section.admin_user, "admin");
         assert_eq!(section.admin_password, "admin");
+        assert!(section.tls.is_none());
     }
 
     #[test]
@@ -87,6 +124,7 @@ mod tests {
         let section = GrafanaSection {
             admin_user: "custom_admin".to_string(),
             admin_password: "secure_password".to_string(),
+            tls: None,
         };
 
         let result = section.to_grafana_config();
@@ -112,6 +150,7 @@ mod tests {
         let section = GrafanaSection {
             admin_user: "admin".to_string(),
             admin_password: "secret_password".to_string(),
+            tls: None,
         };
 
         let config = section.to_grafana_config().unwrap();

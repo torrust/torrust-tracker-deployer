@@ -142,13 +142,21 @@ impl ShowCommandHandler {
 
             // Add service info for Released/Running states
             if Self::should_show_services(any_env.state_name()) {
-                // Try to use stored service endpoints first, fall back to computing from config
-                let services = if let Some(endpoints) = any_env.service_endpoints() {
+                // If HTTPS is configured, always compute from tracker config to show TLS domains
+                // Otherwise, try stored endpoints first for backward compatibility
+                let services = if any_env.https_config().is_some() {
+                    // HTTPS enabled: compute from config to show proper TLS domains
+                    let tracker_config = any_env.tracker_config();
+                    let grafana_config = any_env.grafana_config();
+                    ServiceInfo::from_tracker_config(tracker_config, instance_ip, grafana_config)
+                } else if let Some(endpoints) = any_env.service_endpoints() {
+                    // No HTTPS: use stored endpoints (backward compatibility)
                     ServiceInfo::from_service_endpoints(endpoints)
                 } else {
-                    // Backward compatibility: compute from tracker config
+                    // Fallback: compute from tracker config
                     let tracker_config = any_env.tracker_config();
-                    ServiceInfo::from_tracker_config(tracker_config, instance_ip)
+                    let grafana_config = any_env.grafana_config();
+                    ServiceInfo::from_tracker_config(tracker_config, instance_ip, grafana_config)
                 };
                 info = info.with_services(services);
 
@@ -158,8 +166,8 @@ impl ShowCommandHandler {
                 }
 
                 // Add Grafana info if configured
-                if any_env.grafana_config().is_some() {
-                    info = info.with_grafana(GrafanaInfo::from_instance_ip(instance_ip));
+                if let Some(grafana) = any_env.grafana_config() {
+                    info = info.with_grafana(GrafanaInfo::from_config(grafana, instance_ip));
                 }
             }
         }

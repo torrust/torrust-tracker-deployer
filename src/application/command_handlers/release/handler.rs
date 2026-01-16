@@ -11,11 +11,13 @@ use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
     application::{
-        CreatePrometheusStorageStep, CreateTrackerStorageStep, DeployGrafanaProvisioningStep,
-        DeployPrometheusConfigStep, DeployTrackerConfigStep, InitTrackerDatabaseStep,
+        CreatePrometheusStorageStep, CreateTrackerStorageStep, DeployCaddyConfigStep,
+        DeployGrafanaProvisioningStep, DeployPrometheusConfigStep, DeployTrackerConfigStep,
+        InitTrackerDatabaseStep,
     },
     rendering::{
-        RenderGrafanaTemplatesStep, RenderPrometheusTemplatesStep, RenderTrackerTemplatesStep,
+        RenderCaddyTemplatesStep, RenderGrafanaTemplatesStep, RenderPrometheusTemplatesStep,
+        RenderTrackerTemplatesStep,
     },
     DeployComposeFilesStep, RenderDockerComposeTemplatesStep,
 };
@@ -219,10 +221,16 @@ impl ReleaseCommandHandler {
         // Step 9: Deploy Grafana provisioning to remote (if enabled)
         self.deploy_grafana_provisioning_to_remote(environment, instance_ip)?;
 
-        // Step 10: Render Docker Compose templates
+        // Step 10: Render Caddy configuration templates (if HTTPS enabled)
+        Self::render_caddy_templates(environment)?;
+
+        // Step 11: Deploy Caddy configuration to remote (if HTTPS enabled)
+        self.deploy_caddy_config_to_remote(environment, instance_ip)?;
+
+        // Step 12: Render Docker Compose templates
         let compose_build_dir = self.render_docker_compose_templates(environment).await?;
 
-        // Step 11: Deploy compose files to remote
+        // Step 13: Deploy compose files to remote
         self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
@@ -528,6 +536,101 @@ impl ReleaseCommandHandler {
             command = "release",
             step = %current_step,
             "Grafana provisioning templates rendered successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Render Caddy configuration templates (if HTTPS enabled)
+    ///
+    /// This step is optional and only executes if HTTPS is configured in the environment.
+    /// If HTTPS is not configured, the step is skipped without error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::RenderCaddyTemplates`) if rendering fails
+    #[allow(clippy::result_large_err)]
+    fn render_caddy_templates(
+        environment: &Environment<Releasing>,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::RenderCaddyTemplates;
+
+        // Check if HTTPS is configured
+        if environment.context().user_inputs.https.is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "HTTPS not configured - skipping Caddy template rendering"
+            );
+            return Ok(());
+        }
+
+        let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+        let step = RenderCaddyTemplatesStep::new(
+            Arc::new(environment.clone()),
+            template_manager,
+            environment.build_dir().clone(),
+        );
+
+        step.execute().map_err(|e| {
+            (
+                ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                current_step,
+            )
+        })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Caddy configuration templates rendered successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Deploy Caddy configuration to the remote host (if HTTPS enabled)
+    ///
+    /// This step is optional and only executes if HTTPS is configured in the environment.
+    /// If HTTPS is not configured, the step is skipped without error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::DeployCaddyConfigToRemote`) if deployment fails
+    #[allow(clippy::result_large_err, clippy::unused_self)]
+    fn deploy_caddy_config_to_remote(
+        &self,
+        environment: &Environment<Releasing>,
+        _instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::DeployCaddyConfigToRemote;
+
+        // Check if HTTPS is configured
+        if environment.context().user_inputs.https.is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "HTTPS not configured - skipping Caddy config deployment"
+            );
+            return Ok(());
+        }
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
+
+        DeployCaddyConfigStep::new(ansible_client)
+            .execute()
+            .map_err(|e| {
+                (
+                    ReleaseCommandHandlerError::CaddyConfigDeployment(e.to_string()),
+                    current_step,
+                )
+            })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Caddy configuration deployed to remote successfully"
         );
 
         Ok(())

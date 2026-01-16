@@ -213,7 +213,7 @@ impl EnvironmentContext {
     ///
     /// This creates absolute paths for data and build directories by using the
     /// provided working directory as the base, and allows specifying custom
-    /// tracker, prometheus, and grafana configurations.
+    /// tracker, prometheus, grafana, and https configurations.
     #[must_use]
     #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
     pub fn with_working_dir_and_tracker(
@@ -224,6 +224,7 @@ impl EnvironmentContext {
         tracker_config: crate::domain::tracker::TrackerConfig,
         prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
         grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
+        https_config: Option<crate::domain::https::HttpsConfig>,
         working_dir: &std::path::Path,
         created_at: DateTime<Utc>,
     ) -> Self {
@@ -237,6 +238,7 @@ impl EnvironmentContext {
                 tracker_config,
                 prometheus_config,
                 grafana_config,
+                https_config,
             ),
             internal_config: InternalConfig::with_working_dir(name, working_dir),
             runtime_outputs: RuntimeOutputs {
