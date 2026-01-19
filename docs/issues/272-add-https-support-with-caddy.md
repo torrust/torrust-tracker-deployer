@@ -1403,13 +1403,11 @@ The name `use_tls_proxy` accurately describes what our Caddy proxy does: **TLS t
 **Behavior**:
 
 1. **Tracker config** (`[core.net].on_reverse_proxy`):
-
    - Set to `true` if ANY HTTP tracker has `use_tls_proxy: true`
    - Set to `false` otherwise
    - Note: This only affects HTTP trackers; other services ignore it
 
 2. **Caddy config** (Caddyfile):
-
    - Include service in Caddy config only if `use_tls_proxy: true`
    - Requires `domain` to be present for the virtual host configuration
 
@@ -1431,17 +1429,17 @@ The implementation is split into incremental steps, one service type at a time, 
 
 ##### Step 7.5.1: HTTP Trackers
 
-- [ ] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HttpTrackerSection` DTO
-- [ ] Update `HttpTrackerConfig` domain type to include `use_tls_proxy` and `domain`
-- [ ] Add validation: `use_tls_proxy: true` requires `domain` to be present
-- [ ] Add validation: `use_tls_proxy: true` with localhost bind address → reject
-- [ ] Update tracker config template (`templates/tracker/tracker.toml.tera`) to conditionally set `on_reverse_proxy` based on ANY HTTP tracker having `use_tls_proxy: true`
-- [ ] Update Caddy template (`templates/caddy/Caddyfile.tera`) to check `use_tls_proxy` for HTTP trackers
-- [ ] Update show command `ServiceInfo` for HTTP trackers
-- [ ] Update `envs/manual-https-test.json` for HTTP trackers only
-- [ ] Remove `TlsSection` from HTTP trackers (keep in other services temporarily)
-- [ ] Add unit tests for HTTP tracker validation
-- [ ] Run E2E tests to verify HTTP trackers work
+- [x] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HttpTrackerSection` DTO
+- [x] Update `HttpTrackerConfig` domain type to include `use_tls_proxy` and `domain`
+- [x] Add validation: `use_tls_proxy: true` requires `domain` to be present
+- [x] Add validation: `use_tls_proxy: true` with localhost bind address → reject
+- [x] Update tracker config template (`templates/tracker/tracker.toml.tera`) to conditionally set `on_reverse_proxy` based on ANY HTTP tracker having `use_tls_proxy: true`
+- [x] Update Caddy template (`templates/caddy/Caddyfile.tera`) to check `use_tls_proxy` for HTTP trackers
+- [x] Update show command `ServiceInfo` for HTTP trackers
+- [x] Update `envs/manual-https-test.json` for HTTP trackers only
+- [x] Remove `TlsSection` from HTTP trackers (keep in other services temporarily)
+- [x] Add unit tests for HTTP tracker validation
+- [x] Run E2E tests to verify HTTP trackers work
 
 ##### Step 7.5.2: Tracker REST API
 

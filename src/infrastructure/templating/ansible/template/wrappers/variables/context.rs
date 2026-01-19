@@ -205,7 +205,8 @@ mod tests {
             ],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
@@ -282,7 +283,8 @@ mod tests {
             ],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(), // Valid address
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),

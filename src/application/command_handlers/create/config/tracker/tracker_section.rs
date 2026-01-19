@@ -128,7 +128,8 @@ impl Default for TrackerSection {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
@@ -162,7 +163,8 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
@@ -209,11 +211,13 @@ mod tests {
             http_trackers: vec![
                 HttpTrackerSection {
                     bind_address: "0.0.0.0:7070".to_string(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: None,
                 },
                 HttpTrackerSection {
                     bind_address: "0.0.0.0:7071".to_string(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: None,
                 },
             ],
             http_api: HttpApiSection {
@@ -274,7 +278,8 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
@@ -336,7 +341,8 @@ mod tests {
             udp_trackers: vec![],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:7070".to_string(),
@@ -369,7 +375,8 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),

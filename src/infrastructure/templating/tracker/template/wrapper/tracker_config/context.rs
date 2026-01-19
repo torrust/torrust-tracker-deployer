@@ -38,7 +38,7 @@ use crate::domain::environment::TrackerConfig;
 ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
 ///     ],
 ///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), tls: None },
+///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
 ///     ],
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
@@ -82,6 +82,16 @@ pub struct TrackerContext {
 
     /// Whether tracker is in private mode
     pub tracker_core_private: bool,
+
+    /// Whether the tracker is behind a reverse proxy (Caddy TLS termination)
+    ///
+    /// When `true`, the tracker expects `X-Forwarded-For` headers to determine
+    /// the real client IP address. This is set to `true` if ANY HTTP tracker
+    /// has `use_tls_proxy: true`.
+    ///
+    /// **Note**: This is a global tracker setting that affects ALL HTTP trackers.
+    /// See docs/external-issues/tracker/on-reverse-proxy-global-setting.md
+    pub on_reverse_proxy: bool,
 
     /// UDP tracker bind addresses
     pub udp_trackers: Vec<UdpTrackerEntry>,
@@ -139,6 +149,7 @@ impl TrackerContext {
             mysql_user,
             mysql_password,
             tracker_core_private: config.core.private,
+            on_reverse_proxy: config.any_http_tracker_uses_tls_proxy(),
             udp_trackers: config
                 .udp_trackers
                 .iter()
@@ -177,6 +188,7 @@ impl TrackerContext {
             mysql_user: None,
             mysql_password: None,
             tracker_core_private: false,
+            on_reverse_proxy: false, // Default: no HTTP trackers use TLS proxy
             udp_trackers: vec![
                 UdpTrackerEntry {
                     bind_address: "0.0.0.0:6868".parse().unwrap(),
@@ -227,7 +239,8 @@ mod tests {
             ],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
@@ -279,7 +292,8 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),

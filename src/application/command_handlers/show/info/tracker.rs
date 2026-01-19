@@ -142,15 +142,17 @@ impl ServiceInfo {
         let mut tls_domains = Vec::new();
 
         for (index, http) in tracker_config.http_trackers.iter().enumerate() {
-            if let Some(tls) = &http.tls {
-                // TLS-enabled tracker - use HTTPS domain URL
-                // Note: localhost + TLS is rejected at config validation time,
-                // so we don't need to check for it here
-                https_http_trackers.push(format!("https://{}/announce", tls.domain()));
-                tls_domains.push(TlsDomainInfo {
-                    domain: tls.domain().to_string(),
-                    internal_port: http.bind_address.port(),
-                });
+            if http.use_tls_proxy {
+                if let Some(domain) = &http.domain {
+                    // TLS-enabled tracker - use HTTPS domain URL
+                    // Note: localhost + TLS is rejected at config validation time,
+                    // so we don't need to check for it here
+                    https_http_trackers.push(format!("https://{}/announce", domain.as_str()));
+                    tls_domains.push(TlsDomainInfo {
+                        domain: domain.as_str().to_string(),
+                        internal_port: http.bind_address.port(),
+                    });
+                }
             } else if is_localhost(&http.bind_address) {
                 // Localhost-only tracker - internal access only
                 localhost_http_trackers.push(LocalhostServiceInfo {

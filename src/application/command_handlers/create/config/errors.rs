@@ -136,6 +136,15 @@ pub enum CreateConfigError {
     /// HTTPS section provided but no services have TLS configured
     #[error("HTTPS section provided but no services have TLS configured")]
     HttpsSectionWithoutTls,
+
+    /// TLS proxy enabled but domain not specified
+    #[error("TLS proxy enabled for {service_type} '{bind_address}' but domain is missing")]
+    TlsProxyWithoutDomain {
+        /// The type of service (e.g., "HTTP tracker", "API")
+        service_type: String,
+        /// The bind address of the service
+        bind_address: String,
+    },
 }
 
 impl CreateConfigError {
@@ -590,6 +599,29 @@ impl CreateConfigError {
                  }\n\
                  \n\
                  Alternatively, remove the 'https' section entirely if you don't want HTTPS."
+            }
+            Self::TlsProxyWithoutDomain { .. } => {
+                "TLS proxy enabled but domain is missing.\n\
+                 \n\
+                 When use_tls_proxy is set to true, you must also specify a domain name\n\
+                 for the HTTPS certificate acquisition.\n\
+                 \n\
+                 The domain is required because:\n\
+                 - Caddy needs it to request a Let's Encrypt certificate\n\
+                 - SNI-based TLS termination routes requests to the correct service\n\
+                 \n\
+                 Fix:\n\
+                 Add a domain when enabling the TLS proxy:\n\
+                 \n\
+                 For HTTP Tracker:\n\
+                 \"http_trackers\": [{\n\
+                   \"bind_address\": \"0.0.0.0:7070\",\n\
+                   \"domain\": \"tracker.example.com\",\n\
+                   \"use_tls_proxy\": true\n\
+                 }]\n\
+                 \n\
+                 Alternatively, if you don't want HTTPS for this service,\n\
+                 remove or set use_tls_proxy to false."
             }
         }
     }

@@ -34,7 +34,7 @@
 //!         UdpTrackerConfig { bind_address: "0.0.0.0:6868".parse().unwrap() },
 //!     ],
 //!     http_trackers: vec![
-//!         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), tls: None },
+//!         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
 //!     ],
 //!     http_api: HttpApiConfig {
 //!         bind_address: "0.0.0.0:1212".parse().unwrap(),

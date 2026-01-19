@@ -403,7 +403,7 @@ impl EnvironmentCreationConfig {
 
         // Check HTTP trackers
         for http_tracker in &self.tracker.http_trackers {
-            if http_tracker.tls.is_some() {
+            if http_tracker.use_tls_proxy == Some(true) {
                 return true;
             }
         }
@@ -507,7 +507,8 @@ impl EnvironmentCreationConfig {
                 }],
                 http_trackers: vec![super::tracker::HttpTrackerSection {
                     bind_address: "0.0.0.0:7070".to_string(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: None,
                 }],
                 http_api: super::tracker::HttpApiSection {
                     bind_address: "0.0.0.0:1212".to_string(),
@@ -1409,7 +1410,8 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
@@ -1467,7 +1469,6 @@ mod tests {
 
     #[test]
     fn it_should_fail_validation_when_tls_without_https_section() {
-        use crate::application::command_handlers::create::config::https::TlsSection;
         use crate::application::command_handlers::create::config::tracker::{
             DatabaseSection, HealthCheckApiSection, HttpApiSection, HttpTrackerSection,
             TrackerCoreSection, TrackerSection, UdpTrackerSection,
@@ -1485,9 +1486,8 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
-                tls: Some(TlsSection {
-                    domain: "tracker.example.com".to_string(),
-                }),
+                domain: Some("tracker.example.com".to_string()),
+                use_tls_proxy: Some(true),
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
@@ -1558,9 +1558,7 @@ mod tests {
 
     #[test]
     fn it_should_pass_validation_when_https_section_with_tls() {
-        use crate::application::command_handlers::create::config::https::{
-            HttpsSection, TlsSection,
-        };
+        use crate::application::command_handlers::create::config::https::HttpsSection;
         use crate::application::command_handlers::create::config::tracker::{
             DatabaseSection, HealthCheckApiSection, HttpApiSection, HttpTrackerSection,
             TrackerCoreSection, TrackerSection, UdpTrackerSection,
@@ -1578,9 +1576,8 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
-                tls: Some(TlsSection {
-                    domain: "tracker.example.com".to_string(),
-                }),
+                domain: Some("tracker.example.com".to_string()),
+                use_tls_proxy: Some(true),
             }],
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),

@@ -70,7 +70,7 @@ pub fn is_localhost(addr: &SocketAddr) -> bool {
 ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
 ///     ],
 ///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), tls: None },
+///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
 ///     ],
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
@@ -275,7 +275,7 @@ impl TrackerConfig {
     ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
     ///     ],
     ///     http_trackers: vec![
-    ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), tls: None },
+    ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
     ///     ],
     ///     http_api: HttpApiConfig {
     ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
@@ -328,7 +328,7 @@ impl TrackerConfig {
 
         // Check HTTP trackers
         for (i, tracker) in self.http_trackers.iter().enumerate() {
-            if tracker.tls.is_some() && is_localhost(&tracker.bind_address) {
+            if tracker.use_tls_proxy && is_localhost(&tracker.bind_address) {
                 return Err(TrackerConfigError::LocalhostWithTls {
                     service_name: format!("HTTP Tracker #{}", i + 1),
                     bind_address: tracker.bind_address,
@@ -464,21 +464,31 @@ impl TrackerConfig {
         self.health_check_api.bind_address.port()
     }
 
-    /// Returns HTTP trackers that have TLS configured
+    /// Returns HTTP trackers that have TLS proxy enabled
     ///
     /// Returns a vector of tuples containing (domain, port) for each
-    /// HTTP tracker that has TLS configuration.
+    /// HTTP tracker that has `use_tls_proxy: true` and a domain configured.
     #[must_use]
     pub fn http_trackers_with_tls(&self) -> Vec<(&str, u16)> {
         self.http_trackers
             .iter()
+            .filter(|tracker| tracker.use_tls_proxy)
             .filter_map(|tracker| {
                 tracker
-                    .tls
+                    .domain
                     .as_ref()
-                    .map(|tls| (tls.domain(), tracker.bind_address.port()))
+                    .map(|domain| (domain.as_str(), tracker.bind_address.port()))
             })
             .collect()
+    }
+
+    /// Returns true if any HTTP tracker has `use_tls_proxy: true`
+    ///
+    /// This is used to determine if the tracker's global `on_reverse_proxy`
+    /// setting should be enabled in the tracker configuration template.
+    #[must_use]
+    pub fn any_http_tracker_uses_tls_proxy(&self) -> bool {
+        self.http_trackers.iter().any(|t| t.use_tls_proxy)
     }
 }
 
@@ -526,7 +536,8 @@ impl Default for TrackerConfig {
             }],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().expect("valid address"),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().expect("valid address"),
@@ -615,7 +626,8 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
@@ -711,7 +723,8 @@ mod tests {
                 }],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
@@ -788,11 +801,13 @@ mod tests {
                 http_trackers: vec![
                     HttpTrackerConfig {
                         bind_address: "0.0.0.0:7070".parse().unwrap(),
-                        tls: None,
+                        domain: None,
+                        use_tls_proxy: false,
                     },
                     HttpTrackerConfig {
                         bind_address: "0.0.0.0:7070".parse().unwrap(),
-                        tls: None,
+                        domain: None,
+                        use_tls_proxy: false,
                     },
                 ],
                 http_api: HttpApiConfig {
@@ -835,7 +850,8 @@ mod tests {
                 udp_trackers: vec![],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
@@ -879,7 +895,8 @@ mod tests {
                 udp_trackers: vec![],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
@@ -926,7 +943,8 @@ mod tests {
                 }],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
@@ -955,11 +973,13 @@ mod tests {
                 http_trackers: vec![
                     HttpTrackerConfig {
                         bind_address: "192.168.1.10:7070".parse().unwrap(),
-                        tls: None,
+                        domain: None,
+                        use_tls_proxy: false,
                     },
                     HttpTrackerConfig {
                         bind_address: "192.168.1.20:7070".parse().unwrap(),
-                        tls: None,
+                        domain: None,
+                        use_tls_proxy: false,
                     },
                 ],
                 http_api: HttpApiConfig {
@@ -988,7 +1008,8 @@ mod tests {
                 udp_trackers: vec![],
                 http_trackers: vec![HttpTrackerConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 }],
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
@@ -1135,7 +1156,8 @@ mod tests {
             let mut config = base_config();
             config.http_trackers = vec![HttpTrackerConfig {
                 bind_address: "127.0.0.1:7070".parse().unwrap(),
-                tls: Some(TlsConfig::new(domain)),
+                domain: Some(domain),
+                use_tls_proxy: true,
             }];
 
             let result = config.validate();
