@@ -1479,9 +1479,10 @@ The implementation is split into incremental steps, one service type at a time, 
 
 ##### Step 7.5.5: Cleanup and Final Verification
 
-- [ ] Remove `TlsSection` type completely (should be unused after all services migrated)
-- [ ] Run full E2E test suite
-- [ ] Run all linters
+- [x] Remove `TlsSection` type completely (should be unused after all services migrated)
+- [x] Remove `domain::tls` module completely (unused after migration)
+- [x] Run full E2E test suite
+- [x] Run all linters
 - [ ] Manual verification with `envs/manual-https-test.json`
 
 ### Phase 8: Schema Generation (30 minutes)

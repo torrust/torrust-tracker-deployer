@@ -143,7 +143,7 @@ pub mod tracker;
 pub use environment_config::{EnvironmentCreationConfig, EnvironmentSection};
 pub use errors::CreateConfigError;
 pub use grafana::GrafanaSection;
-pub use https::{HttpsSection, TlsSection};
+pub use https::HttpsSection;
 pub use prometheus::PrometheusSection;
 pub use provider::{HetznerProviderSection, LxdProviderSection, ProviderSection};
 pub use ssh_credentials_config::SshCredentialsConfig;
