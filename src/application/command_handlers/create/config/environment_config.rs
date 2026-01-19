@@ -410,7 +410,7 @@ impl EnvironmentCreationConfig {
 
         // Check Grafana
         if let Some(ref grafana) = self.grafana {
-            if grafana.tls.is_some() {
+            if grafana.use_tls_proxy == Some(true) {
                 return true;
             }
         }

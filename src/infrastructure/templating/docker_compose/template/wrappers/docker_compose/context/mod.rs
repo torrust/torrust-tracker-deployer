@@ -315,7 +315,8 @@ mod tests {
         let tracker = test_tracker_config();
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
-        let grafana_config = GrafanaConfig::new("admin".to_string(), "password".to_string());
+        let grafana_config =
+            GrafanaConfig::new("admin".to_string(), "password".to_string(), None, false);
         let context = DockerComposeContext::builder(tracker)
             .with_prometheus(prometheus_config)
             .with_grafana(grafana_config)
@@ -333,7 +334,8 @@ mod tests {
         use crate::domain::grafana::GrafanaConfig;
 
         let tracker = test_tracker_config();
-        let grafana_config = GrafanaConfig::new("admin".to_string(), "password".to_string());
+        let grafana_config =
+            GrafanaConfig::new("admin".to_string(), "password".to_string(), None, false);
         let context = DockerComposeContext::builder(tracker)
             .with_grafana(grafana_config)
             .build();
@@ -348,7 +350,8 @@ mod tests {
         use crate::domain::grafana::GrafanaConfig;
 
         let tracker = test_tracker_config();
-        let grafana_config = GrafanaConfig::new("admin".to_string(), "password".to_string());
+        let grafana_config =
+            GrafanaConfig::new("admin".to_string(), "password".to_string(), None, false);
         let context = DockerComposeContext::builder(tracker)
             .with_grafana(grafana_config)
             .with_caddy()

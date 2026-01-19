@@ -103,7 +103,7 @@ impl DockerComposeContextBuilder {
 
         // Build Grafana service config if enabled
         let grafana = self.grafana_config.map(|config| {
-            let has_tls = config.tls().is_some();
+            let has_tls = config.use_tls_proxy();
             GrafanaServiceConfig::new(
                 config.admin_user().to_string(),
                 config.admin_password().clone(),

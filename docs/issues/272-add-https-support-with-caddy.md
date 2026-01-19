@@ -1467,15 +1467,15 @@ The implementation is split into incremental steps, one service type at a time, 
 
 ##### Step 7.5.4: Grafana
 
-- [ ] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `GrafanaSection` DTO
-- [ ] Update `GrafanaConfig` domain type
-- [ ] Add validation rules (note: Grafana has no configurable bind address, so localhost validation not needed)
-- [ ] Update Caddy template for Grafana
-- [ ] Update show command `ServiceInfo` for Grafana
-- [ ] Update `envs/manual-https-test.json` for Grafana
-- [ ] Remove `TlsSection` from Grafana
-- [ ] Add unit tests
-- [ ] Run E2E tests
+- [x] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `GrafanaSection` DTO
+- [x] Update `GrafanaConfig` domain type
+- [x] Add validation rules (note: Grafana has no configurable bind address, so localhost validation not needed)
+- [x] Update Caddy template for Grafana
+- [x] Update show command `ServiceInfo` for Grafana
+- [x] Update `envs/manual-https-test.json` for Grafana
+- [x] Remove `TlsSection` from Grafana
+- [x] Add unit tests
+- [x] Run E2E tests
 
 ##### Step 7.5.5: Cleanup and Final Verification
 

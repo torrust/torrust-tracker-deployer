@@ -91,15 +91,11 @@ mod tests {
     #[test]
     fn it_should_create_grafana_info_with_https_from_config() {
         use crate::domain::grafana::GrafanaConfig;
-        use crate::domain::tls::TlsConfig;
         use crate::shared::domain_name::DomainName;
 
         let domain = DomainName::new("grafana.tracker.local").unwrap();
-        let config = GrafanaConfig::with_tls(
-            "admin".to_string(),
-            "pass".to_string(),
-            TlsConfig::new(domain),
-        );
+        let config =
+            GrafanaConfig::new("admin".to_string(), "pass".to_string(), Some(domain), true);
         let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1));
 
         let info = GrafanaInfo::from_config(&config, ip);
@@ -111,7 +107,7 @@ mod tests {
 
     #[test]
     fn it_should_create_grafana_info_with_http_from_config_without_tls() {
-        let config = GrafanaConfig::new("admin".to_string(), "pass".to_string());
+        let config = GrafanaConfig::new("admin".to_string(), "pass".to_string(), None, false);
         let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1));
 
         let info = GrafanaInfo::from_config(&config, ip);
