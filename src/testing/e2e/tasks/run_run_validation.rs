@@ -264,7 +264,7 @@ pub async fn run_run_validation(
     let ip_addr = socket_addr.ip();
 
     // Validate externally accessible services (tracker API, HTTP tracker)
-    validate_external_services(ip_addr, tracker_api_endpoint, http_tracker_endpoints).await?;
+    validate_external_services(tracker_api_endpoint, http_tracker_endpoints).await?;
 
     // Optionally validate Prometheus is running and accessible
     if services.prometheus {
@@ -291,9 +291,8 @@ pub async fn run_run_validation(
 ///
 /// # Arguments
 ///
-/// * `ip_addr` - IP address of the target instance
-/// * `tracker_api_endpoint` - Endpoint for the tracker API health check
-/// * `http_tracker_endpoints` - Endpoints for HTTP tracker health checks
+/// * `tracker_api_endpoint` - Endpoint for the tracker API health check (includes server IP)
+/// * `http_tracker_endpoints` - Endpoints for HTTP tracker health checks (include server IP)
 ///
 /// # Returns
 ///
@@ -303,20 +302,23 @@ pub async fn run_run_validation(
 ///
 /// Returns an error if any service is not running or unhealthy.
 async fn validate_external_services(
-    ip_addr: IpAddr,
     tracker_api_endpoint: ServiceEndpoint,
     http_tracker_endpoints: Vec<ServiceEndpoint>,
 ) -> Result<(), RunValidationError> {
     info!(
         api_uses_tls = tracker_api_endpoint.uses_tls(),
         http_tracker_count = http_tracker_endpoints.len(),
+        server_ip = %tracker_api_endpoint.server_ip(),
         "Validating externally accessible services (tracker API, HTTP tracker)"
     );
+
+    // Get server IP from endpoint for trait compatibility
+    let server_ip = tracker_api_endpoint.server_ip();
 
     let services_validator =
         RunningServicesValidator::new(tracker_api_endpoint, http_tracker_endpoints);
     services_validator
-        .execute(&ip_addr)
+        .execute(&server_ip)
         .await
         .map_err(|source| RunValidationError::RunningServicesValidationFailed { source })?;
 

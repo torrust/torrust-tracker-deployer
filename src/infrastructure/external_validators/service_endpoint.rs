@@ -4,114 +4,193 @@
 //! tested via HTTP or HTTPS. When TLS is enabled, the endpoint uses the
 //! domain with HTTPS protocol and resolves it locally to the server IP.
 
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
+
+use url::Url;
 
 use crate::shared::DomainName;
 
-/// Represents a service endpoint for external validation testing
-///
-/// When TLS is enabled, the endpoint uses HTTPS with the configured domain.
-/// The domain is resolved locally to the server IP using reqwest's resolve
-/// feature (equivalent to curl's `--resolve` flag), allowing tests to work
-/// without DNS configuration while still being realistic.
+/// Error when creating a `ServiceEndpoint` with an invalid URL
 #[derive(Debug, Clone, PartialEq)]
-pub struct ServiceEndpoint {
-    /// The port the service listens on internally
-    pub port: u16,
-
-    /// The health check path (e.g., `/api/health_check` or `/health_check`)
-    pub path: String,
-
-    /// TLS configuration if HTTPS is enabled
-    pub tls: Option<TlsEndpointConfig>,
+pub struct InvalidServiceEndpointUrl {
+    /// The URL string that failed to parse
+    pub url_string: String,
+    /// The parse error message
+    pub reason: String,
 }
 
-/// TLS configuration for an endpoint
+impl std::fmt::Display for InvalidServiceEndpointUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Invalid service endpoint URL '{}': {}",
+            self.url_string, self.reason
+        )
+    }
+}
+
+impl std::error::Error for InvalidServiceEndpointUrl {}
+
+/// Represents a service endpoint for external validation testing
+///
+/// Internally stores a validated URL and the server IP address.
+/// For HTTPS endpoints, the IP is used to resolve the domain locally
+/// (since we can't rely on DNS for `.local` domains).
+///
+/// # Examples
+///
+/// ```
+/// use std::net::SocketAddr;
+/// use torrust_tracker_deployer_lib::infrastructure::external_validators::ServiceEndpoint;
+///
+/// // HTTP endpoint
+/// let socket_addr: SocketAddr = "10.0.0.1:1212".parse().unwrap();
+/// let endpoint = ServiceEndpoint::http(socket_addr, "/api/health_check").unwrap();
+/// assert_eq!(endpoint.url().as_str(), "http://10.0.0.1:1212/api/health_check");
+/// ```
 #[derive(Debug, Clone, PartialEq)]
-pub struct TlsEndpointConfig {
-    /// Domain name for HTTPS access
-    pub domain: DomainName,
+pub struct ServiceEndpoint {
+    /// The validated URL for this endpoint
+    url: Url,
+
+    /// The server IP address.
+    /// For HTTP: extracted from the socket address.
+    /// For HTTPS: used to resolve the domain locally.
+    server_ip: IpAddr,
 }
 
 impl ServiceEndpoint {
     /// Create a new HTTP endpoint (no TLS)
-    #[must_use]
-    pub fn http(port: u16, path: impl Into<String>) -> Self {
-        Self {
-            port,
-            path: path.into(),
-            tls: None,
-        }
+    ///
+    /// # Arguments
+    ///
+    /// * `socket_addr` - The IP address and port the service listens on
+    /// * `path` - The health check path (e.g., `/api/health_check`)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the socket address and path don't form a valid URL.
+    pub fn http(
+        socket_addr: SocketAddr,
+        path: impl Into<String>,
+    ) -> Result<Self, InvalidServiceEndpointUrl> {
+        let path = path.into();
+        let url_string = format!("http://{}:{}{}", socket_addr.ip(), socket_addr.port(), path); // DevSkim: ignore DS137138
+
+        let url = Url::parse(&url_string).map_err(|e| InvalidServiceEndpointUrl {
+            url_string,
+            reason: e.to_string(),
+        })?;
+
+        Ok(Self {
+            url,
+            server_ip: socket_addr.ip(),
+        })
     }
 
     /// Create a new HTTPS endpoint with TLS
-    #[must_use]
-    pub fn https(port: u16, path: impl Into<String>, domain: DomainName) -> Self {
-        Self {
-            port,
-            path: path.into(),
-            tls: Some(TlsEndpointConfig { domain }),
-        }
+    ///
+    /// # Arguments
+    ///
+    /// * `domain` - The domain name for HTTPS access (required for certificate issuance)
+    /// * `path` - The health check path (e.g., `/api/health_check`)
+    /// * `server_ip` - The IP address to resolve the domain to
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the domain and path don't form a valid URL.
+    pub fn https(
+        domain: &DomainName,
+        path: impl Into<String>,
+        server_ip: IpAddr,
+    ) -> Result<Self, InvalidServiceEndpointUrl> {
+        let path = path.into();
+        let url_string = format!("https://{}{}", domain.as_str(), path);
+
+        let url = Url::parse(&url_string).map_err(|e| InvalidServiceEndpointUrl {
+            url_string,
+            reason: e.to_string(),
+        })?;
+
+        Ok(Self { url, server_ip })
     }
 
-    /// Returns true if this endpoint uses TLS
+    /// Returns the URL for this endpoint
+    #[must_use]
+    pub fn url(&self) -> &Url {
+        &self.url
+    }
+
+    /// Returns true if this endpoint uses TLS (HTTPS)
     #[must_use]
     pub fn uses_tls(&self) -> bool {
-        self.tls.is_some()
+        self.url.scheme() == "https"
     }
 
-    /// Get the domain if TLS is enabled
+    /// Returns the server IP address
     #[must_use]
-    pub fn domain(&self) -> Option<&DomainName> {
-        self.tls.as_ref().map(|t| &t.domain)
+    pub fn server_ip(&self) -> IpAddr {
+        self.server_ip
     }
 
-    /// Build the URL for this endpoint
+    /// Returns the port for this endpoint
     ///
-    /// - For HTTP: `http://{server_ip}:{port}{path}`
-    /// - For HTTPS: `https://{domain}{path}` (port 443 implied)
+    /// For HTTP: the configured port from the URL.
+    /// For HTTPS: 443 (the default HTTPS port).
     #[must_use]
-    pub fn url(&self, server_ip: &IpAddr) -> String {
-        if let Some(tls) = &self.tls {
-            // HTTPS uses domain, port 443 is implied
-            format!("https://{}{}", tls.domain.as_str(), self.path)
+    pub fn port(&self) -> u16 {
+        self.url.port_or_known_default().unwrap_or(80)
+    }
+
+    /// Get the domain if this is an HTTPS endpoint
+    #[must_use]
+    pub fn domain(&self) -> Option<&str> {
+        if self.uses_tls() {
+            self.url.host_str()
         } else {
-            // HTTP uses IP and port directly
-            format!("http://{}:{}{}", server_ip, self.port, self.path) // DevSkim: ignore DS137138
+            None
         }
     }
 
-    /// Check if the domain ends with .local (for self-signed cert handling)
+    /// Check if the domain ends with `.local` (for self-signed cert handling)
     #[must_use]
     pub fn is_local_domain(&self) -> bool {
-        self.tls.as_ref().is_some_and(|t| {
-            std::path::Path::new(t.domain.as_str())
+        self.domain().is_some_and(|d| {
+            std::path::Path::new(d)
                 .extension()
                 .is_some_and(|ext| ext.eq_ignore_ascii_case("local"))
         })
     }
 
-    /// Returns the HTTPS port (443 for TLS, or the configured port for HTTP)
+    /// Returns the socket address for connecting to this endpoint
+    ///
+    /// Combines the server IP with the port from the URL.
     #[must_use]
-    pub fn effective_port(&self) -> u16 {
-        if self.uses_tls() {
-            443
-        } else {
-            self.port
-        }
+    pub fn socket_addr(&self) -> SocketAddr {
+        SocketAddr::new(self.server_ip(), self.port())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::net::IpAddr;
+
     use super::*;
+
+    fn test_ip() -> IpAddr {
+        "10.0.0.1".parse().unwrap()
+    }
+
+    fn test_socket_addr(port: u16) -> SocketAddr {
+        SocketAddr::new(test_ip(), port)
+    }
 
     #[test]
     fn it_should_create_http_endpoint() {
-        let endpoint = ServiceEndpoint::http(1212, "/api/health_check");
+        let endpoint = ServiceEndpoint::http(test_socket_addr(1212), "/api/health_check").unwrap();
 
-        assert_eq!(endpoint.port, 1212);
-        assert_eq!(endpoint.path, "/api/health_check");
+        assert_eq!(endpoint.server_ip(), test_ip());
+        assert_eq!(endpoint.port(), 1212);
         assert!(!endpoint.uses_tls());
         assert!(endpoint.domain().is_none());
     }
@@ -119,31 +198,32 @@ mod tests {
     #[test]
     fn it_should_create_https_endpoint() {
         let domain = DomainName::new("api.tracker.local").unwrap();
-        let endpoint = ServiceEndpoint::https(1212, "/api/health_check", domain);
+        let endpoint = ServiceEndpoint::https(&domain, "/api/health_check", test_ip()).unwrap();
 
-        assert_eq!(endpoint.port, 1212);
-        assert_eq!(endpoint.path, "/api/health_check");
+        assert_eq!(endpoint.server_ip(), test_ip());
+        assert_eq!(endpoint.port(), 443);
         assert!(endpoint.uses_tls());
-        assert_eq!(endpoint.domain().unwrap().as_str(), "api.tracker.local");
+        assert_eq!(endpoint.domain().unwrap(), "api.tracker.local");
     }
 
     #[test]
     fn it_should_build_http_url() {
-        let endpoint = ServiceEndpoint::http(1212, "/api/health_check");
-        let ip: IpAddr = "10.0.0.1".parse().unwrap();
+        let endpoint = ServiceEndpoint::http(test_socket_addr(1212), "/api/health_check").unwrap();
 
-        assert_eq!(endpoint.url(&ip), "http://10.0.0.1:1212/api/health_check");
+        assert_eq!(
+            endpoint.url().as_str(),
+            "http://10.0.0.1:1212/api/health_check" // DevSkim: ignore DS137138
+        );
     }
 
     #[test]
     fn it_should_build_https_url() {
         let domain = DomainName::new("api.tracker.local").unwrap();
-        let endpoint = ServiceEndpoint::https(1212, "/api/health_check", domain);
-        let ip: IpAddr = "10.0.0.1".parse().unwrap();
+        let endpoint = ServiceEndpoint::https(&domain, "/api/health_check", test_ip()).unwrap();
 
         // HTTPS uses domain, not IP
         assert_eq!(
-            endpoint.url(&ip),
+            endpoint.url().as_str(),
             "https://api.tracker.local/api/health_check"
         );
     }
@@ -151,7 +231,7 @@ mod tests {
     #[test]
     fn it_should_detect_local_domain() {
         let domain = DomainName::new("api.tracker.local").unwrap();
-        let endpoint = ServiceEndpoint::https(1212, "/api/health_check", domain);
+        let endpoint = ServiceEndpoint::https(&domain, "/api/health_check", test_ip()).unwrap();
 
         assert!(endpoint.is_local_domain());
     }
@@ -159,23 +239,57 @@ mod tests {
     #[test]
     fn it_should_not_detect_non_local_domain_as_local() {
         let domain = DomainName::new("api.tracker.example.com").unwrap();
-        let endpoint = ServiceEndpoint::https(1212, "/api/health_check", domain);
+        let endpoint = ServiceEndpoint::https(&domain, "/api/health_check", test_ip()).unwrap();
 
         assert!(!endpoint.is_local_domain());
     }
 
     #[test]
-    fn it_should_return_effective_port_443_for_tls() {
+    fn it_should_return_port_443_for_https() {
         let domain = DomainName::new("api.tracker.local").unwrap();
-        let endpoint = ServiceEndpoint::https(1212, "/api/health_check", domain);
+        let endpoint = ServiceEndpoint::https(&domain, "/api/health_check", test_ip()).unwrap();
 
-        assert_eq!(endpoint.effective_port(), 443);
+        assert_eq!(endpoint.port(), 443);
     }
 
     #[test]
     fn it_should_return_configured_port_for_http() {
-        let endpoint = ServiceEndpoint::http(1212, "/api/health_check");
+        let endpoint = ServiceEndpoint::http(test_socket_addr(1212), "/api/health_check").unwrap();
 
-        assert_eq!(endpoint.effective_port(), 1212);
+        assert_eq!(endpoint.port(), 1212);
+    }
+
+    #[test]
+    fn it_should_return_socket_addr_for_http() {
+        let endpoint = ServiceEndpoint::http(test_socket_addr(1212), "/api/health_check").unwrap();
+
+        assert_eq!(endpoint.socket_addr(), test_socket_addr(1212));
+    }
+
+    #[test]
+    fn it_should_return_socket_addr_with_port_443_for_https() {
+        let domain = DomainName::new("api.tracker.local").unwrap();
+        let endpoint = ServiceEndpoint::https(&domain, "/api/health_check", test_ip()).unwrap();
+
+        assert_eq!(endpoint.socket_addr(), test_socket_addr(443));
+    }
+
+    #[test]
+    fn it_should_return_error_for_invalid_http_path() {
+        // A path with invalid characters that would break URL parsing
+        let result = ServiceEndpoint::http(test_socket_addr(1212), "not a valid path\x00");
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.url_string.contains("not a valid path"));
+    }
+
+    #[test]
+    fn it_should_return_url_reference() {
+        let endpoint = ServiceEndpoint::http(test_socket_addr(1212), "/api/health_check").unwrap();
+
+        // url() returns a reference, not a clone
+        let url_ref: &Url = endpoint.url();
+        assert_eq!(url_ref.path(), "/api/health_check");
     }
 }

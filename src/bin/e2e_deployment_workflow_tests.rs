@@ -309,14 +309,17 @@ async fn run_deployer_workflow(
         prometheus: true,
         grafana: true,
     };
+    let server_ip = socket_addr.ip();
     let api_endpoint = ServiceEndpoint::http(
-        runtime_env.container_ports.http_api_port,
-        "/api/health_check".to_string(),
-    );
+        std::net::SocketAddr::new(server_ip, runtime_env.container_ports.http_api_port),
+        "/api/health_check",
+    )
+    .expect("Valid socket address should produce valid HTTP URL");
     let http_tracker_endpoint = ServiceEndpoint::http(
-        runtime_env.container_ports.http_tracker_port,
-        "/health_check".to_string(),
-    );
+        std::net::SocketAddr::new(server_ip, runtime_env.container_ports.http_tracker_port),
+        "/health_check",
+    )
+    .expect("Valid socket address should produce valid HTTP URL");
     run_run_validation(
         socket_addr,
         ssh_credentials,

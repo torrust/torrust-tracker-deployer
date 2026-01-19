@@ -52,7 +52,6 @@ use crate::domain::tracker::config::{HttpApiConfig, HttpTrackerConfig};
 use crate::domain::EnvironmentName;
 use crate::infrastructure::external_validators::{RunningServicesValidator, ServiceEndpoint};
 use crate::infrastructure::remote_actions::RemoteAction;
-use crate::shared::domain_name::DomainName;
 
 /// `TestCommandHandler` orchestrates smoke testing for running Torrust Tracker services
 ///
@@ -136,12 +135,12 @@ impl TestCommandHandler {
         // Extract tracker config
         let tracker_config = any_env.tracker_config();
 
-        // Build service endpoints from configuration
-        let tracker_api_endpoint = Self::build_api_endpoint(&tracker_config.http_api);
+        // Build service endpoints from configuration (with server IP)
+        let tracker_api_endpoint = Self::build_api_endpoint(instance_ip, &tracker_config.http_api);
         let http_tracker_endpoints: Vec<ServiceEndpoint> = tracker_config
             .http_trackers
             .iter()
-            .map(Self::build_http_tracker_endpoint)
+            .map(|config| Self::build_http_tracker_endpoint(instance_ip, config))
             .collect();
 
         // Log endpoint information
@@ -150,7 +149,7 @@ impl TestCommandHandler {
             environment = %env_name,
             instance_ip = ?instance_ip,
             api_endpoint_tls = tracker_api_endpoint.uses_tls(),
-            api_endpoint_domain = ?tracker_api_endpoint.domain().map(DomainName::as_str),
+            api_endpoint_domain = ?tracker_api_endpoint.domain(),
             http_tracker_count = http_tracker_endpoints.len(),
             "Starting service health checks"
         );
@@ -172,26 +171,35 @@ impl TestCommandHandler {
     }
 
     /// Build a `ServiceEndpoint` from the HTTP API configuration
-    fn build_api_endpoint(config: &HttpApiConfig) -> ServiceEndpoint {
+    fn build_api_endpoint(server_ip: std::net::IpAddr, config: &HttpApiConfig) -> ServiceEndpoint {
         let port = config.bind_address.port();
         let path = "/api/health_check";
+        let socket_addr = std::net::SocketAddr::new(server_ip, port);
 
         if let Some(domain) = config.tls_domain() {
-            ServiceEndpoint::https(port, path, domain.clone())
+            ServiceEndpoint::https(domain, path, server_ip)
+                .expect("Valid TLS domain should produce valid HTTPS URL")
         } else {
-            ServiceEndpoint::http(port, path)
+            ServiceEndpoint::http(socket_addr, path)
+                .expect("Valid socket address should produce valid HTTP URL")
         }
     }
 
     /// Build a `ServiceEndpoint` from the HTTP Tracker configuration
-    fn build_http_tracker_endpoint(config: &HttpTrackerConfig) -> ServiceEndpoint {
+    fn build_http_tracker_endpoint(
+        server_ip: std::net::IpAddr,
+        config: &HttpTrackerConfig,
+    ) -> ServiceEndpoint {
         let port = config.bind_address.port();
         let path = "/health_check";
+        let socket_addr = std::net::SocketAddr::new(server_ip, port);
 
         if let Some(domain) = config.tls_domain() {
-            ServiceEndpoint::https(port, path, domain.clone())
+            ServiceEndpoint::https(domain, path, server_ip)
+                .expect("Valid TLS domain should produce valid HTTPS URL")
         } else {
-            ServiceEndpoint::http(port, path)
+            ServiceEndpoint::http(socket_addr, path)
+                .expect("Valid socket address should produce valid HTTP URL")
         }
     }
 

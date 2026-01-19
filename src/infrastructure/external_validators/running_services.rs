@@ -52,7 +52,6 @@ use tracing::{info, instrument, warn};
 
 use super::service_endpoint::ServiceEndpoint;
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
-use crate::shared::domain_name::DomainName;
 
 /// Default deployment directory for Docker Compose files
 const DEFAULT_DEPLOY_DIR: &str = "/opt/torrust";
@@ -112,18 +111,15 @@ impl RunningServicesValidator {
     }
 
     /// Validate external accessibility of all configured endpoints
-    async fn validate_external_accessibility(
-        &self,
-        server_ip: &IpAddr,
-    ) -> Result<(), RemoteActionError> {
+    async fn validate_external_accessibility(&self) -> Result<(), RemoteActionError> {
         // Check tracker API (required)
-        self.check_endpoint(server_ip, &self.tracker_api_endpoint, "Tracker API")
+        self.check_endpoint(&self.tracker_api_endpoint, "Tracker API")
             .await?;
 
         // Check all HTTP trackers
         for (idx, endpoint) in self.http_tracker_endpoints.iter().enumerate() {
             let name = format!("HTTP Tracker {}", idx + 1);
-            self.check_endpoint(server_ip, endpoint, &name).await?;
+            self.check_endpoint(endpoint, &name).await?;
         }
 
         Ok(())
@@ -136,11 +132,10 @@ impl RunningServicesValidator {
     /// - Accepts self-signed certs for `.local` domains
     async fn check_endpoint(
         &self,
-        server_ip: &IpAddr,
         endpoint: &ServiceEndpoint,
         service_name: &str,
     ) -> Result<(), RemoteActionError> {
-        let url = endpoint.url(server_ip);
+        let url = endpoint.url();
 
         if endpoint.uses_tls() {
             info!(
@@ -148,8 +143,8 @@ impl RunningServicesValidator {
                 check = "service_external",
                 service = service_name,
                 url = %url,
-                domain = ?endpoint.domain().map(DomainName::as_str),
-                resolve_to = %server_ip,
+                domain = ?endpoint.domain(),
+                resolve_to = %endpoint.server_ip(),
                 "Testing HTTPS endpoint (resolving domain to IP locally)"
             );
         } else {
@@ -162,7 +157,7 @@ impl RunningServicesValidator {
             );
         }
 
-        let response = self.make_request(server_ip, endpoint, &url).await?;
+        let response = self.make_request(endpoint).await?;
 
         if !response.status().is_success() {
             return Err(RemoteActionError::ValidationFailed {
@@ -194,24 +189,22 @@ impl RunningServicesValidator {
     /// - Accepts self-signed certificates for `.local` domains
     async fn make_request(
         &self,
-        server_ip: &IpAddr,
         endpoint: &ServiceEndpoint,
-        url: &str,
     ) -> Result<reqwest::Response, RemoteActionError> {
+        let url = endpoint.url();
         let mut client_builder =
             ClientBuilder::new().timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS));
 
         // For HTTPS endpoints, configure domain resolution and certificate handling
         if let Some(domain) = endpoint.domain() {
             // Resolve domain to IP locally (like curl --resolve)
-            let socket_addr = std::net::SocketAddr::new(*server_ip, endpoint.effective_port());
-            client_builder = client_builder.resolve(domain.as_str(), socket_addr);
+            client_builder = client_builder.resolve(domain, endpoint.socket_addr());
 
             // Accept self-signed certs for .local domains (Caddy's internal CA)
             if endpoint.is_local_domain() {
                 warn!(
                     action = "running_services_validation",
-                    domain = domain.as_str(),
+                    domain = domain,
                     "Accepting self-signed certificates for .local domain"
                 );
                 client_builder = client_builder.danger_accept_invalid_certs(true);
@@ -225,19 +218,20 @@ impl RunningServicesValidator {
                 message: format!("Failed to build HTTP client: {e}"),
             })?;
 
-        client.get(url).send().await.map_err(|e| {
+        client.get(url.clone()).send().await.map_err(|e| {
             let help_message = if endpoint.uses_tls() {
                 format!(
                     "HTTPS request to '{url}' failed: {e}. \
                      Check that Caddy is running and port 443 is open. \
-                     Domain '{}' was resolved to {server_ip} for testing.",
-                    endpoint.domain().map_or("unknown", DomainName::as_str)
+                     Domain '{}' was resolved to {} for testing.",
+                    endpoint.domain().unwrap_or("unknown"),
+                    endpoint.server_ip()
                 )
             } else {
                 format!(
                     "HTTP request to '{url}' failed: {e}. \
                      Check that service is running and firewall allows port {}.",
-                    endpoint.port
+                    endpoint.port()
                 )
             };
 
@@ -265,13 +259,17 @@ impl RemoteAction for RunningServicesValidator {
         )
     )]
     async fn execute(&self, server_ip: &IpAddr) -> Result<(), RemoteActionError> {
+        // Note: server_ip parameter is kept for trait compatibility and logging,
+        // but endpoints now contain their own server_ip for URL generation.
+        let _ = server_ip; // Suppress unused warning - used in instrument macro
+
         info!(
             action = "running_services_validation",
             deploy_dir = %self.deploy_dir.display(),
             "Validating Docker Compose services are running via external accessibility"
         );
 
-        self.validate_external_accessibility(server_ip).await?;
+        self.validate_external_accessibility().await?;
 
         info!(
             action = "running_services_validation",
@@ -285,11 +283,20 @@ impl RemoteAction for RunningServicesValidator {
 
 #[cfg(test)]
 mod tests {
+    use std::net::{IpAddr, SocketAddr};
     use std::path::PathBuf;
 
     use crate::shared::DomainName;
 
     use super::*;
+
+    fn test_ip() -> IpAddr {
+        "10.0.0.1".parse().unwrap()
+    }
+
+    fn test_socket_addr(port: u16) -> SocketAddr {
+        SocketAddr::new(test_ip(), port)
+    }
 
     #[test]
     fn it_should_use_default_deploy_dir_when_not_specified() {
@@ -303,8 +310,10 @@ mod tests {
 
     #[test]
     fn it_should_create_validator_with_http_endpoints() {
-        let api_endpoint = ServiceEndpoint::http(1212, "/api/health_check");
-        let tracker_endpoints = vec![ServiceEndpoint::http(7070, "/health_check")];
+        let api_endpoint =
+            ServiceEndpoint::http(test_socket_addr(1212), "/api/health_check").unwrap();
+        let tracker_endpoints =
+            vec![ServiceEndpoint::http(test_socket_addr(7070), "/health_check").unwrap()];
 
         let validator = RunningServicesValidator::new(api_endpoint.clone(), tracker_endpoints);
 
@@ -315,7 +324,7 @@ mod tests {
     #[test]
     fn it_should_create_validator_with_https_endpoints() {
         let domain = DomainName::new("api.tracker.local").unwrap();
-        let api_endpoint = ServiceEndpoint::https(1212, "/api/health_check", domain);
+        let api_endpoint = ServiceEndpoint::https(&domain, "/api/health_check", test_ip()).unwrap();
         let tracker_endpoints = vec![];
 
         let validator = RunningServicesValidator::new(api_endpoint.clone(), tracker_endpoints);
@@ -326,10 +335,10 @@ mod tests {
     #[test]
     fn it_should_create_validator_with_mixed_endpoints() {
         let domain = DomainName::new("api.tracker.local").unwrap();
-        let api_endpoint = ServiceEndpoint::https(1212, "/api/health_check", domain);
+        let api_endpoint = ServiceEndpoint::https(&domain, "/api/health_check", test_ip()).unwrap();
         let tracker_endpoints = vec![
-            ServiceEndpoint::http(7070, "/health_check"),
-            ServiceEndpoint::http(7071, "/health_check"),
+            ServiceEndpoint::http(test_socket_addr(7070), "/health_check").unwrap(),
+            ServiceEndpoint::http(test_socket_addr(7071), "/health_check").unwrap(),
         ];
 
         let validator = RunningServicesValidator::new(api_endpoint, tracker_endpoints);
@@ -341,7 +350,8 @@ mod tests {
 
     #[test]
     fn it_should_accept_empty_tracker_endpoints() {
-        let api_endpoint = ServiceEndpoint::http(1212, "/api/health_check");
+        let api_endpoint =
+            ServiceEndpoint::http(test_socket_addr(1212), "/api/health_check").unwrap();
         let validator = RunningServicesValidator::new(api_endpoint, vec![]);
 
         assert_eq!(validator.http_tracker_endpoints.len(), 0);
@@ -349,7 +359,8 @@ mod tests {
 
     #[test]
     fn it_should_use_custom_deploy_dir() {
-        let api_endpoint = ServiceEndpoint::http(1212, "/api/health_check");
+        let api_endpoint =
+            ServiceEndpoint::http(test_socket_addr(1212), "/api/health_check").unwrap();
         let validator = RunningServicesValidator::with_deploy_dir(
             PathBuf::from("/custom/path"),
             api_endpoint,
