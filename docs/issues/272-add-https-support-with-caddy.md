@@ -23,8 +23,8 @@ Production deployment at `/opt/torrust/` on Hetzner server (46.224.206.37) serve
 - [x] Support HTTPS for all HTTP services (Tracker API, HTTP Tracker, Grafana)
 - [x] Enable automatic Let's Encrypt certificate management
 - [x] Add HTTPS configuration to environment schema
-- [ ] Implement security scanning for Caddy in CI/CD
-- [ ] Document HTTPS setup in user guide
+- [x] Implement security scanning for Caddy in CI/CD
+- [x] Document HTTPS setup in user guide
 - [ ] Add E2E tests for HTTPS functionality
 
 ## 🏗️ Architecture Requirements
@@ -684,27 +684,24 @@ Add link to HTTPS setup guide.
 
 ### Phase 5: Documentation (4-5 hours)
 
-- [ ] Create `docs/user-guide/https-setup.md` with complete setup guide:
-  - [ ] Prerequisites (domain names, DNS configuration)
-  - [ ] **Configuration patterns**: All services, single service, multiple trackers
-  - [ ] **Selective HTTPS**: How to enable HTTPS for some services but not others
-  - [ ] **Multiple HTTP trackers**: Configuration examples with mixed HTTPS/HTTP
-  - [ ] Environment configuration examples for each pattern
-  - [ ] Let's Encrypt certificate process
-  - [ ] **Let's Encrypt staging environment**: Document `use_staging: true` for testing (avoids rate limits)
-  - [ ] **Rate limits**: Document Let's Encrypt limits (50 certs/week, 5 duplicates/week)
-  - [ ] **Staging certificates warning**: Browser warnings expected (not trusted), only for testing
-  - [ ] Troubleshooting common issues
-  - [ ] Certificate renewal (automatic)
-  - [ ] Domain verification requirements
-- [ ] Update `docs/user-guide/README.md` with HTTPS guide link
-- [ ] Update `docs/user-guide/configuration.md` with HTTPS config examples:
-  - [ ] Example: HTTPS only for API (sensitive token)
-  - [ ] Example: Multiple trackers, selective HTTPS
-  - [ ] Example: VPN deployment without HTTPS
-- [ ] Create example environment files in `envs/` demonstrating patterns
-- [ ] Add troubleshooting section for common certificate issues
-- [ ] Document Let's Encrypt rate limits and best practices
+- [x] Create `docs/user-guide/services/https.md` with complete HTTPS setup guide:
+  - [x] Overview of HTTPS architecture with Caddy
+  - [x] Prerequisites (domain names, DNS configuration, firewall)
+  - [x] **Global HTTPS configuration**: `admin_email` and `use_staging` options
+  - [x] **Per-service TLS configuration**: `domain` and `use_tls_proxy` pattern
+  - [x] Services supporting HTTPS (Tracker HTTP API, HTTP Trackers, Health Check API, Grafana)
+  - [x] Let's Encrypt certificate process (automatic acquisition and renewal)
+  - [x] **Let's Encrypt staging environment**: Document `use_staging: true` for testing (avoids rate limits)
+  - [x] **Rate limits**: Document Let's Encrypt limits (50 certs/week, 5 duplicates/week)
+  - [x] **Staging certificates warning**: Browser warnings expected (not trusted), only for testing
+  - [x] Complete configuration example with all services HTTPS-enabled
+  - [x] Verification commands for checking HTTPS functionality
+  - [x] Troubleshooting section (DNS, firewall, certificates, Caddy logs)
+  - [x] Architecture explanation (Caddy as TLS termination proxy)
+- [x] Update `docs/user-guide/services/README.md` with HTTPS service entry
+- [x] Update `docs/user-guide/README.md` with HTTPS reference in services section
+- [x] Update `docs/user-guide/services/grafana.md` with TLS proxy fields documentation
+- [x] Regenerate JSON schema (`schemas/environment-config.json`)
 
 ### Phase 6: E2E Testing (5-6 hours)
 
@@ -1483,20 +1480,20 @@ The implementation is split into incremental steps, one service type at a time, 
 - [x] Remove `domain::tls` module completely (unused after migration)
 - [x] Run full E2E test suite
 - [x] Run all linters
-- [ ] Manual verification with `envs/manual-https-test.json`
+- [x] Manual verification with `envs/manual-https-test.json`
 
 ### Phase 8: Schema Generation (30 minutes)
 
-- [ ] Regenerate JSON schema from Rust DTOs:
+- [x] Regenerate JSON schema from Rust DTOs:
 
   ```bash
   cargo run --bin torrust-tracker-deployer -- create schema > schemas/environment-config.json
   ```
 
-- [ ] Verify schema includes HTTPS configuration section
-- [ ] Verify schema validation rules match Rust DTO constraints
-- [ ] Test schema with example HTTPS-enabled environment file
-- [ ] Commit updated schema file
+- [x] Verify schema includes HTTPS configuration section
+- [x] Verify schema validation rules match Rust DTO constraints
+- [x] Test schema with example HTTPS-enabled environment file
+- [x] Commit updated schema file
 
 ### Phase 9: Create ADR (1 hour)
 

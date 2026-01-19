@@ -308,8 +308,13 @@ The Torrust Tracker Deployer supports optional services that can be enabled in y
 
 ### Available Services
 
-- **[Prometheus Monitoring](services/prometheus.md)** - Metrics collection and monitoring (enabled by default)
+- **[HTTPS Support](services/https.md)** - Automatic TLS/SSL with Let's Encrypt (disabled by default)
+  - Automatic certificate management via Caddy reverse proxy
+  - Per-service TLS configuration (API, HTTP trackers, Health Check API, Grafana)
+  - HTTP/2 and HTTP/3 support
+  - Enabled by adding `domain` and `use_tls_proxy: true` to individual services
 
+- **[Prometheus Monitoring](services/prometheus.md)** - Metrics collection and monitoring (enabled by default)
   - Automatic metrics scraping from tracker API
   - Web UI on port 9090
   - Configurable scrape intervals

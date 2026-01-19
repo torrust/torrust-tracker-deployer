@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "EnvironmentCreationConfig",
-  "description": "Configuration for creating a deployment environment\n\nThis is the top-level configuration object that contains all information\nneeded to create a new deployment environment. It deserializes from JSON\nconfiguration and provides type-safe conversion to domain parameters.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::{\n    EnvironmentCreationConfig, EnvironmentSection, ProviderSection, LxdProviderSection\n};\n\nlet json = r#\"{\n    \"environment\": {\n        \"name\": \"dev\"\n    },\n    \"ssh_credentials\": {\n        \"private_key_path\": \"fixtures/testing_rsa\",\n        \"public_key_path\": \"fixtures/testing_rsa.pub\"\n    },\n    \"provider\": {\n        \"provider\": \"lxd\",\n        \"profile_name\": \"torrust-profile-dev\"\n    },\n    \"tracker\": {\n        \"core\": {\n            \"database\": {\n                \"driver\": \"sqlite3\",\n                \"database_name\": \"tracker.db\"\n            },\n            \"private\": false\n        },\n        \"udp_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:6969\"\n            }\n        ],\n        \"http_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:7070\"\n            }\n        ],\n        \"http_api\": {\n            \"bind_address\": \"0.0.0.0:1212\",\n            \"admin_token\": \"MyAccessToken\"\n        }\n    },\n    \"prometheus\": {\n        \"scrape_interval_in_secs\": 15\n    },\n    \"grafana\": {\n        \"admin_user\": \"admin\",\n        \"admin_password\": \"admin\"\n    }\n}\"#;\n\nlet config: EnvironmentCreationConfig = serde_json::from_str(json)?;\n# Ok::<(), Box<dyn std::error::Error>>(())\n```",
+  "description": "Configuration for creating a deployment environment\n\nThis is the top-level configuration object that contains all information\nneeded to create a new deployment environment. It deserializes from JSON\nconfiguration and provides type-safe conversion to domain parameters.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::{\n    EnvironmentCreationConfig, EnvironmentSection, ProviderSection, LxdProviderSection\n};\n\nlet json = r#\"{\n    \"environment\": {\n        \"name\": \"dev\"\n    },\n    \"ssh_credentials\": {\n        \"private_key_path\": \"fixtures/testing_rsa\",\n        \"public_key_path\": \"fixtures/testing_rsa.pub\"\n    },\n    \"provider\": {\n        \"provider\": \"lxd\",\n        \"profile_name\": \"torrust-profile-dev\"\n    },\n    \"tracker\": {\n        \"core\": {\n            \"database\": {\n                \"driver\": \"sqlite3\",\n                \"database_name\": \"tracker.db\"\n            },\n            \"private\": false\n        },\n        \"udp_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:6969\"\n            }\n        ],\n        \"http_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:7070\"\n            }\n        ],\n        \"http_api\": {\n            \"bind_address\": \"0.0.0.0:1212\",\n            \"admin_token\": \"MyAccessToken\"\n        },\n        \"health_check_api\": {\n            \"bind_address\": \"127.0.0.1:1313\"\n        }\n    },\n    \"prometheus\": {\n        \"scrape_interval_in_secs\": 15\n    },\n    \"grafana\": {\n        \"admin_user\": \"admin\",\n        \"admin_password\": \"admin\"\n    }\n}\"#;\n\nlet config: EnvironmentCreationConfig = serde_json::from_str(json)?;\n# Ok::<(), Box<dyn std::error::Error>>(())\n```",
   "type": "object",
   "properties": {
     "environment": {
@@ -13,6 +13,18 @@
       "anyOf": [
         {
           "$ref": "#/$defs/GrafanaSection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "https": {
+      "description": "HTTPS configuration (optional)\n\nWhen present, enables HTTPS for services that have TLS configured.\nContains common settings like admin email for Let's Encrypt.\n\n**Required if any service has TLS configured** - The `admin_email`\nis needed for Let's Encrypt certificate management.\n\nUses `HttpsSection` for JSON parsing.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HttpsSection"
         },
         {
           "type": "null"
@@ -138,7 +150,7 @@
       ]
     },
     "GrafanaSection": {
-      "description": "Grafana configuration section (DTO)\n\nThis is a DTO that deserializes from JSON strings and validates\nwhen converting to the domain `GrafanaConfig`.\n\n# Security\n\nThe `admin_password` field uses `PlainPassword` type alias for string at\nDTO boundaries. It will be converted to `Password` (secrecy-wrapped) in\nthe domain layer.\n\n# Examples\n\n```json\n{\n    \"admin_user\": \"admin\",\n    \"admin_password\": \"admin\"\n}\n```",
+      "description": "Grafana configuration section (DTO)\n\nThis is a DTO that deserializes from JSON strings and validates\nwhen converting to the domain `GrafanaConfig`.\n\n# Security\n\nThe `admin_password` field uses `PlainPassword` type alias for string at\nDTO boundaries. It will be converted to `Password` (secrecy-wrapped) in\nthe domain layer.\n\n# Examples\n\n```json\n{\n    \"admin_user\": \"admin\",\n    \"admin_password\": \"admin\"\n}\n```\n\nWith TLS proxy configuration:\n```json\n{\n    \"admin_user\": \"admin\",\n    \"admin_password\": \"admin\",\n    \"domain\": \"grafana.example.com\",\n    \"use_tls_proxy\": true\n}\n```",
       "type": "object",
       "properties": {
         "admin_password": {
@@ -148,6 +160,20 @@
         "admin_user": {
           "description": "Grafana admin username",
           "type": "string"
+        },
+        "domain": {
+          "description": "Domain name for external HTTPS access (optional)\n\nWhen present, defines the domain at which Grafana will be accessible.\nCaddy uses this for automatic certificate management.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "use_tls_proxy": {
+          "description": "Whether to use TLS proxy via Caddy (default: false)\n\nWhen true:\n- Caddy handles HTTPS termination with automatic certificates\n- Requires a domain to be configured\n- Grafana is accessed via HTTPS through Caddy",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "required": [
@@ -160,6 +186,20 @@
       "properties": {
         "bind_address": {
           "type": "string"
+        },
+        "domain": {
+          "description": "Domain name for HTTPS access via Caddy reverse proxy\n\nWhen present with `use_tls_proxy: true`, this service will be accessible\nvia HTTPS at this domain. The domain will be used for Let's Encrypt\ncertificate acquisition.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "use_tls_proxy": {
+          "description": "Whether to proxy this service through Caddy with TLS termination\n\nWhen `true`, the service will be accessible via HTTPS through Caddy.\nRequires `domain` to be set.\nThis is useful for exposing health checks to external monitoring systems.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "required": [
@@ -202,6 +242,20 @@
         },
         "bind_address": {
           "type": "string"
+        },
+        "domain": {
+          "description": "Domain name for HTTPS certificate acquisition\n\nWhen present along with `use_tls_proxy: true`, this service will be\naccessible via HTTPS through the Caddy reverse proxy using this domain.\nThe domain is used for Let's Encrypt certificate acquisition.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "use_tls_proxy": {
+          "description": "Whether to proxy this service through Caddy with TLS termination\n\nWhen `true`:\n- The service is proxied through Caddy with HTTPS enabled\n- `domain` field is required\n- Cannot be used with localhost bind addresses (`127.0.0.1`, `::1`)\n\nWhen `false` or omitted:\n- The service is accessed directly without TLS termination\n- `domain` field is optional (ignored if present)",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "required": [
@@ -214,10 +268,42 @@
       "properties": {
         "bind_address": {
           "type": "string"
+        },
+        "domain": {
+          "description": "Domain name for HTTPS certificate acquisition\n\nWhen present along with `use_tls_proxy: true`, this HTTP tracker will be\naccessible via HTTPS through the Caddy reverse proxy using this domain.\nThe domain is used for Let's Encrypt certificate acquisition.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "use_tls_proxy": {
+          "description": "Whether to proxy this service through Caddy with TLS termination\n\nWhen `true`:\n- The service is proxied through Caddy with HTTPS enabled\n- `domain` field is required\n- Cannot be used with localhost bind addresses (`127.0.0.1`, `::1`)\n- Implies the tracker's `on_reverse_proxy` should be `true`\n\nWhen `false` or omitted:\n- The service is accessed directly without TLS termination\n- `domain` field is optional (ignored if present)",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "required": [
         "bind_address"
+      ]
+    },
+    "HttpsSection": {
+      "description": "Common HTTPS configuration (top-level)\n\nContains configuration shared across all TLS-enabled services.\nThis section is required if any service has TLS enabled.\n\n# Let's Encrypt Environments\n\n- **Production** (default): Uses `https://acme-v02.api.letsencrypt.org/directory`\n  - Rate limits: 50 certs/week per domain, 5 duplicates/week\n  - Certificates are trusted by all browsers\n\n- **Staging** (`use_staging: true`): Uses `https://acme-staging-v02.api.letsencrypt.org/directory`\n  - Much higher rate limits for testing\n  - Certificates show browser warnings (not trusted)\n  - Use only for testing the HTTPS flow\n\n# Examples\n\nProduction configuration:\n```json\n{\n    \"https\": {\n        \"admin_email\": \"admin@example.com\"\n    }\n}\n```\n\nStaging configuration (for testing):\n```json\n{\n    \"https\": {\n        \"admin_email\": \"admin@example.com\",\n        \"use_staging\": true\n    }\n}\n```",
+      "type": "object",
+      "properties": {
+        "admin_email": {
+          "description": "Admin email for Let's Encrypt certificate notifications\n\nThis email will receive:\n- Certificate expiration warnings (30 days before expiry)\n- Certificate renewal failure notifications\n- Important Let's Encrypt service announcements\n\n**Note**: This email may be publicly visible in certificate transparency logs.",
+          "type": "string"
+        },
+        "use_staging": {
+          "description": "Use Let's Encrypt staging environment for testing\n\nWhen `true`:\n- Uses staging CA: `https://acme-staging-v02.api.letsencrypt.org/directory`\n- Certificates will show browser warnings (not trusted by browsers)\n- Higher rate limits allow extensive testing\n\nWhen `false` or omitted (default):\n- Uses production CA: `https://acme-v02.api.letsencrypt.org/directory`\n- Certificates are trusted by all browsers\n- Subject to rate limits (50 certs/week, 5 duplicates/week)",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "admin_email"
       ]
     },
     "LxdProviderSection": {
