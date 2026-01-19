@@ -10,10 +10,19 @@
 //!
 //! The test command validates deployed services through:
 //!
-//! 1. **Docker Compose Service Status** - Verifies containers are running
-//! 2. **External Health Checks** - Tests service accessibility from outside the VM:
-//!    - Tracker API health endpoint (required): `http://<vm-ip>:<api-port>/api/health_check`
-//!    - HTTP Tracker health endpoint (required): `http://<vm-ip>:<tracker-port>/health_check`
+//! 1. **External Health Checks** - Tests service accessibility from outside the VM:
+//!    - Tracker API health endpoint (required)
+//!    - HTTP Tracker health endpoint (required)
+//!
+//! ## HTTPS Support
+//!
+//! When services have TLS enabled via Caddy reverse proxy:
+//! - Uses HTTPS URLs with the configured domain
+//! - Resolves domains locally to the VM IP (no DNS dependency for testing)
+//! - Accepts self-signed certificates for `.local` domains
+//!
+//! This approach allows testing to work without DNS configuration while still
+//! being realistic (Caddy receives the correct SNI/Host header).
 //!
 //! ## Why External-Only Validation?
 //!
@@ -33,17 +42,17 @@
 //! For rationale and alternatives, see:
 //! - `docs/decisions/test-command-as-smoke-test.md` - Architectural decision record
 
-use std::net::SocketAddr;
 use std::sync::Arc;
 
 use tracing::{info, instrument};
 
 use super::errors::TestCommandHandlerError;
-use crate::adapters::ssh::SshConfig;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
+use crate::domain::tracker::config::{HttpApiConfig, HttpTrackerConfig};
 use crate::domain::EnvironmentName;
-use crate::infrastructure::external_validators::RunningServicesValidator;
+use crate::infrastructure::external_validators::{RunningServicesValidator, ServiceEndpoint};
 use crate::infrastructure::remote_actions::RemoteAction;
+use crate::shared::domain_name::DomainName;
 
 /// `TestCommandHandler` orchestrates smoke testing for running Torrust Tracker services
 ///
@@ -124,33 +133,31 @@ impl TestCommandHandler {
                     environment_name: env_name.to_string(),
                 })?;
 
-        // Extract tracker ports from configuration
+        // Extract tracker config
         let tracker_config = any_env.tracker_config();
 
-        // Get HTTP API port from bind_address (e.g., "0.0.0.0:1212" -> 1212)
-        let tracker_api_port = Some(Self::extract_port_from_bind_address(
-            &tracker_config.http_api.bind_address,
-        ))
-        .ok_or_else(|| TestCommandHandlerError::InvalidTrackerConfiguration {
-            message: format!(
-                "Invalid HTTP API bind_address: {}. Expected format: 'host:port'",
-                tracker_config.http_api.bind_address
-            ),
-        })?;
-
-        // Get all HTTP Tracker ports
-        let http_tracker_ports: Vec<u16> = tracker_config
+        // Build service endpoints from configuration
+        let tracker_api_endpoint = Self::build_api_endpoint(&tracker_config.http_api);
+        let http_tracker_endpoints: Vec<ServiceEndpoint> = tracker_config
             .http_trackers
             .iter()
-            .map(|tracker| Self::extract_port_from_bind_address(&tracker.bind_address))
+            .map(Self::build_http_tracker_endpoint)
             .collect();
 
-        let ssh_config =
-            SshConfig::with_default_port(any_env.ssh_credentials().clone(), instance_ip);
+        // Log endpoint information
+        info!(
+            command = "test",
+            environment = %env_name,
+            instance_ip = ?instance_ip,
+            api_endpoint_tls = tracker_api_endpoint.uses_tls(),
+            api_endpoint_domain = ?tracker_api_endpoint.domain().map(DomainName::as_str),
+            http_tracker_count = http_tracker_endpoints.len(),
+            "Starting service health checks"
+        );
 
         // Validate running services with external accessibility checks
         let services_validator =
-            RunningServicesValidator::new(ssh_config, tracker_api_port, http_tracker_ports.clone());
+            RunningServicesValidator::new(tracker_api_endpoint, http_tracker_endpoints);
 
         services_validator.execute(&instance_ip).await?;
 
@@ -158,17 +165,34 @@ impl TestCommandHandler {
             command = "test",
             environment = %env_name,
             instance_ip = ?instance_ip,
-            tracker_api_port = tracker_api_port,
-            http_tracker_ports = ?http_tracker_ports,
             "Service testing workflow completed successfully"
         );
 
         Ok(())
     }
 
-    /// Extract port number from `SocketAddr` (e.g., `"0.0.0.0:1212".parse()` returns 1212)
-    fn extract_port_from_bind_address(bind_address: &SocketAddr) -> u16 {
-        bind_address.port()
+    /// Build a `ServiceEndpoint` from the HTTP API configuration
+    fn build_api_endpoint(config: &HttpApiConfig) -> ServiceEndpoint {
+        let port = config.bind_address.port();
+        let path = "/api/health_check";
+
+        if let Some(domain) = config.tls_domain() {
+            ServiceEndpoint::https(port, path, domain.clone())
+        } else {
+            ServiceEndpoint::http(port, path)
+        }
+    }
+
+    /// Build a `ServiceEndpoint` from the HTTP Tracker configuration
+    fn build_http_tracker_endpoint(config: &HttpTrackerConfig) -> ServiceEndpoint {
+        let port = config.bind_address.port();
+        let path = "/health_check";
+
+        if let Some(domain) = config.tls_domain() {
+            ServiceEndpoint::https(port, path, domain.clone())
+        } else {
+            ServiceEndpoint::http(port, path)
+        }
     }
 
     /// Load environment from storage

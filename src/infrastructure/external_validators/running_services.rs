@@ -20,201 +20,155 @@
 //! - **Remote actions**: Validate internal VM state and configuration
 //! - **External validators**: Validate end-to-end accessibility including network and firewall
 //!
+//! ## HTTPS Support
+//!
+//! When services have TLS enabled via Caddy reverse proxy:
+//! - The validator uses HTTPS URLs with the configured domain
+//! - Domains are resolved locally to the VM IP (no DNS dependency)
+//! - Self-signed certificates are accepted for `.local` domains
+//!
+//! This approach allows testing to work without DNS configuration while still
+//! being realistic (Caddy receives the correct SNI/Host header).
+//!
 //! ## Current Scope (Torrust Tracker)
 //!
 //! This validator performs external validation only (from test runner to VM):
-//! - Verifies Docker Compose services are running (via SSH: `docker compose ps`)
-//! - Tests tracker API health endpoint from outside: `http://<vm-ip>:1212/api/health_check`
-//! - Tests HTTP tracker health endpoint from outside: `http://<vm-ip>:7070/health_check`
+//! - Tests tracker API health endpoint: HTTP or HTTPS depending on TLS config
+//! - Tests HTTP tracker health endpoint: HTTP or HTTPS depending on TLS config
 //!
 //! **Validation Philosophy**: External checks are a superset of internal checks.
 //! If external validation passes, it proves:
 //! - Services are running inside the VM
-//! - Firewall rules are configured correctly
+//! - Firewall rules are configured correctly (port 80/443 for TLS, or service port for HTTP)
 //! - Services are accessible from outside the VM
-//!
-//! ## Why External-Only Validation?
-//!
-//! We don't perform separate internal checks (via SSH curl to localhost) because:
-//! - External checks already verify service functionality
-//! - Simpler E2E tests are easier to maintain
-//! - If external check fails, debugging will reveal whether it's a service or firewall issue
-//! - Avoiding dual validation reduces test complexity
-//!
-//! ## Future Enhancements
-//!
-//! When deploying additional Torrust services or expanding validation:
-//!
-//! 1. **External Accessibility Testing**: Test service accessibility from outside the VM,
-//!    not just from inside. For example, if the HTTP tracker is on port 7070, we need
-//!    to verify it's reachable from the test runner machine.
-//!
-//! 2. **Firewall Rule Verification**: External tests will implicitly validate that
-//!    firewall rules (UFW/iptables) are correctly configured. If a service is running
-//!    inside but not accessible from outside, it indicates a firewall misconfiguration.
-//!
-//! 3. **Protocol-Specific Tests**:
-//!    - HTTP Tracker announce: `curl http://localhost:7070/announce?info_hash=...`
-//!    - UDP Tracker announce (requires tracker client library from torrust-tracker)
-//!    - Additional Index API endpoints
-//!
-//! 4. **Both Internal and External Checks**: Consider running both types of validation:
-//!    - Internal (via SSH): Confirms service is running inside the container/VM
-//!    - External (from test runner): Confirms service is accessible through the network
-//!
-//! Example future validation for HTTP Tracker on port 7070:
-//! ```text
-//! // Internal check (current approach)
-//! ssh user@vm "curl -sf http://localhost:7070/announce?info_hash=..."
-//!
-//! // External check (future enhancement)
-//! curl -sf http://<vm-public-ip>:7070/announce?info_hash=...
-//! ```
-//!
-//! This dual approach ensures complete end-to-end validation including network
-//! configuration and firewall rules.
-//!
-//! ## Key Features
-//!
-//! - Validates services are in "running" state via `docker compose ps` (via SSH)
-//! - Tests tracker API accessibility from outside the VM (external HTTP check)
-//! - Tests HTTP tracker accessibility from outside the VM (external HTTP check)
-//! - Comprehensive error reporting with actionable troubleshooting steps
-//!
-//! ## Validation Process
-//!
-//! The validator performs the following checks:
-//! 1. SSH into VM and execute `docker compose ps` to verify services are running
-//! 2. Check that containers are in "running" status (not "exited" or "restarting")
-//! 3. Verify health check status if configured (e.g., "healthy")
-//! 4. Test tracker API from outside: HTTP GET to `http://<vm-ip>:1212/api/health_check`
-//! 5. Test HTTP tracker from outside: HTTP GET to `http://<vm-ip>:7070/health_check`
-//!
-//! This ensures end-to-end validation:
-//! - Services are deployed and running
-//! - Firewall rules allow external access
-//! - Services are accessible from outside the VM
+//! - TLS termination is working correctly (when enabled)
 
 use std::net::IpAddr;
 use std::path::PathBuf;
-use tracing::{info, instrument};
+use std::time::Duration;
 
-use crate::adapters::ssh::SshConfig;
+use reqwest::ClientBuilder;
+use tracing::{info, instrument, warn};
+
+use super::service_endpoint::ServiceEndpoint;
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
+use crate::shared::domain_name::DomainName;
 
 /// Default deployment directory for Docker Compose files
 const DEFAULT_DEPLOY_DIR: &str = "/opt/torrust";
 
+/// HTTP client request timeout
+const REQUEST_TIMEOUT_SECS: u64 = 10;
+
 /// Action that validates Docker Compose services are running and healthy
+///
+/// Supports both HTTP and HTTPS endpoints. For HTTPS endpoints:
+/// - Uses domain-based URLs with the configured domain
+/// - Resolves domain to IP locally (no DNS dependency for testing)
+/// - Accepts self-signed certificates for `.local` domains
 pub struct RunningServicesValidator {
     deploy_dir: PathBuf,
-    tracker_api_port: u16,
-    http_tracker_ports: Vec<u16>,
+    tracker_api_endpoint: ServiceEndpoint,
+    http_tracker_endpoints: Vec<ServiceEndpoint>,
 }
 
 impl RunningServicesValidator {
-    /// Create a new `RunningServicesValidator` with the specified SSH configuration
+    /// Create a new `RunningServicesValidator` with service endpoints
     ///
     /// Uses the default deployment directory `/opt/torrust`.
     ///
     /// # Arguments
-    /// * `ssh_config` - SSH connection configuration containing credentials and host IP
-    /// * `tracker_api_port` - Port for the tracker API health endpoint
-    /// * `http_tracker_ports` - Ports for HTTP tracker health endpoints (can be empty)
+    /// * `tracker_api_endpoint` - Endpoint for the tracker API health check
+    /// * `http_tracker_endpoints` - Endpoints for HTTP tracker health checks
     #[must_use]
     pub fn new(
-        _ssh_config: SshConfig,
-        tracker_api_port: u16,
-        http_tracker_ports: Vec<u16>,
+        tracker_api_endpoint: ServiceEndpoint,
+        http_tracker_endpoints: Vec<ServiceEndpoint>,
     ) -> Self {
         Self {
             deploy_dir: PathBuf::from(DEFAULT_DEPLOY_DIR),
-            tracker_api_port,
-            http_tracker_ports,
+            tracker_api_endpoint,
+            http_tracker_endpoints,
         }
     }
 
     /// Create a new `RunningServicesValidator` with a custom deployment directory
     ///
     /// # Arguments
-    /// * `ssh_config` - SSH connection configuration containing credentials and host IP
     /// * `deploy_dir` - Path to the directory containing docker-compose.yml on the remote host
-    /// * `tracker_api_port` - Port for the tracker API health endpoint
-    /// * `http_tracker_ports` - Ports for HTTP tracker health endpoints (can be empty)
+    /// * `tracker_api_endpoint` - Endpoint for the tracker API health check
+    /// * `http_tracker_endpoints` - Endpoints for HTTP tracker health checks
     #[must_use]
     pub fn with_deploy_dir(
-        _ssh_config: SshConfig,
         deploy_dir: PathBuf,
-        tracker_api_port: u16,
-        http_tracker_ports: Vec<u16>,
+        tracker_api_endpoint: ServiceEndpoint,
+        http_tracker_endpoints: Vec<ServiceEndpoint>,
     ) -> Self {
         Self {
             deploy_dir,
-            tracker_api_port,
-            http_tracker_ports,
+            tracker_api_endpoint,
+            http_tracker_endpoints,
         }
     }
 
-    /// Check service status using docker compose ps (human-readable format)
-    /// Validate external accessibility of tracker services
-    ///
-    /// # Arguments
-    /// * `server_ip` - IP address of the server to validate
-    /// * `tracker_api_port` - Port for the tracker API health endpoint
-    /// * `http_tracker_ports` - Ports for HTTP tracker health endpoints (can be empty)
+    /// Validate external accessibility of all configured endpoints
     async fn validate_external_accessibility(
         &self,
         server_ip: &IpAddr,
-        tracker_api_port: u16,
-        http_tracker_ports: &[u16],
     ) -> Result<(), RemoteActionError> {
         // Check tracker API (required)
-        self.check_tracker_api_external(server_ip, tracker_api_port)
+        self.check_endpoint(server_ip, &self.tracker_api_endpoint, "Tracker API")
             .await?;
 
-        // Check all HTTP trackers (required)
-        for port in http_tracker_ports {
-            self.check_http_tracker_external(server_ip, *port).await?;
+        // Check all HTTP trackers
+        for (idx, endpoint) in self.http_tracker_endpoints.iter().enumerate() {
+            let name = format!("HTTP Tracker {}", idx + 1);
+            self.check_endpoint(server_ip, endpoint, &name).await?;
         }
 
         Ok(())
     }
 
-    /// Check tracker API accessibility from outside the VM
+    /// Check a service endpoint for accessibility
     ///
-    /// # Arguments
-    /// * `server_ip` - IP address of the server
-    /// * `port` - Port for the tracker API health endpoint
-    async fn check_tracker_api_external(
+    /// Handles both HTTP and HTTPS endpoints. For HTTPS:
+    /// - Resolves domain to IP locally using reqwest's resolve feature
+    /// - Accepts self-signed certs for `.local` domains
+    async fn check_endpoint(
         &self,
         server_ip: &IpAddr,
-        port: u16,
+        endpoint: &ServiceEndpoint,
+        service_name: &str,
     ) -> Result<(), RemoteActionError> {
-        info!(
-            action = "running_services_validation",
-            check = "tracker_api_external",
-            port = port,
-            validation_type = "external",
-            "Checking tracker API health endpoint (external from test runner)"
-        );
+        let url = endpoint.url(server_ip);
 
-        let url = format!("http://{server_ip}:{port}/api/health_check"); // DevSkim: ignore DS137138
-        let response =
-            reqwest::get(&url)
-                .await
-                .map_err(|e| RemoteActionError::ValidationFailed {
-                    action_name: self.name().to_string(),
-                    message: format!(
-                        "Tracker API external health check failed: {e}. \
-                     Check that tracker is running and firewall allows port {port}."
-                    ),
-                })?;
+        if endpoint.uses_tls() {
+            info!(
+                action = "running_services_validation",
+                check = "service_external",
+                service = service_name,
+                url = %url,
+                domain = ?endpoint.domain().map(DomainName::as_str),
+                resolve_to = %server_ip,
+                "Testing HTTPS endpoint (resolving domain to IP locally)"
+            );
+        } else {
+            info!(
+                action = "running_services_validation",
+                check = "service_external",
+                service = service_name,
+                url = %url,
+                "Testing HTTP endpoint"
+            );
+        }
+
+        let response = self.make_request(server_ip, endpoint, &url).await?;
 
         if !response.status().is_success() {
             return Err(RemoteActionError::ValidationFailed {
                 action_name: self.name().to_string(),
                 message: format!(
-                    "Tracker API returned HTTP {}: {}. Service may not be healthy.",
+                    "{service_name} returned HTTP {}: {}. Service may not be healthy.",
                     response.status(),
                     response.status().canonical_reason().unwrap_or("Unknown")
                 ),
@@ -223,68 +177,75 @@ impl RunningServicesValidator {
 
         info!(
             action = "running_services_validation",
-            check = "tracker_api_external",
-            port = port,
-            status = "success",
-            validation_type = "external",
-            "Tracker API is accessible from outside (external check passed)"
-        );
-
-        Ok(())
-    }
-
-    /// Check HTTP tracker accessibility from outside the VM
-    ///
-    /// # Arguments
-    /// * `server_ip` - IP address of the server
-    /// * `port` - Port for the HTTP tracker health endpoint
-    async fn check_http_tracker_external(
-        &self,
-        server_ip: &IpAddr,
-        port: u16,
-    ) -> Result<(), RemoteActionError> {
-        info!(
-            action = "running_services_validation",
-            check = "http_tracker_external",
-            port = port,
-            validation_type = "external",
-            "Checking HTTP tracker health endpoint (external from test runner)"
-        );
-
-        let url = format!("http://{server_ip}:{port}/health_check"); // DevSkim: ignore DS137138
-        let response =
-            reqwest::get(&url)
-                .await
-                .map_err(|e| RemoteActionError::ValidationFailed {
-                    action_name: self.name().to_string(),
-                    message: format!(
-                        "HTTP Tracker external health check failed for URL '{url}': {e}. \n\
-                     Check that HTTP tracker is running and firewall allows port {port}."
-                    ),
-                })?;
-
-        if !response.status().is_success() {
-            return Err(RemoteActionError::ValidationFailed {
-                action_name: self.name().to_string(),
-                message: format!(
-                    "HTTP Tracker returned HTTP {} for URL '{url}': {}. Service may not be healthy.",
-                    response.status(),
-                    response.status().canonical_reason().unwrap_or("Unknown")
-                ),
-            });
-        }
-
-        info!(
-            action = "running_services_validation",
-            check = "http_tracker_external",
-            port = port,
-            status = "success",
-            validation_type = "external",
+            check = "service_external",
+            service = service_name,
             url = %url,
-            "HTTP Tracker is accessible from outside (external check passed)"
+            status = "success",
+            "{service_name} health check passed"
         );
 
         Ok(())
+    }
+
+    /// Make an HTTP/HTTPS request to the endpoint
+    ///
+    /// For HTTPS endpoints, this:
+    /// - Uses reqwest's `resolve()` to map domain to IP (like curl --resolve)
+    /// - Accepts self-signed certificates for `.local` domains
+    async fn make_request(
+        &self,
+        server_ip: &IpAddr,
+        endpoint: &ServiceEndpoint,
+        url: &str,
+    ) -> Result<reqwest::Response, RemoteActionError> {
+        let mut client_builder =
+            ClientBuilder::new().timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS));
+
+        // For HTTPS endpoints, configure domain resolution and certificate handling
+        if let Some(domain) = endpoint.domain() {
+            // Resolve domain to IP locally (like curl --resolve)
+            let socket_addr = std::net::SocketAddr::new(*server_ip, endpoint.effective_port());
+            client_builder = client_builder.resolve(domain.as_str(), socket_addr);
+
+            // Accept self-signed certs for .local domains (Caddy's internal CA)
+            if endpoint.is_local_domain() {
+                warn!(
+                    action = "running_services_validation",
+                    domain = domain.as_str(),
+                    "Accepting self-signed certificates for .local domain"
+                );
+                client_builder = client_builder.danger_accept_invalid_certs(true);
+            }
+        }
+
+        let client = client_builder
+            .build()
+            .map_err(|e| RemoteActionError::ValidationFailed {
+                action_name: self.name().to_string(),
+                message: format!("Failed to build HTTP client: {e}"),
+            })?;
+
+        client.get(url).send().await.map_err(|e| {
+            let help_message = if endpoint.uses_tls() {
+                format!(
+                    "HTTPS request to '{url}' failed: {e}. \
+                     Check that Caddy is running and port 443 is open. \
+                     Domain '{}' was resolved to {server_ip} for testing.",
+                    endpoint.domain().map_or("unknown", DomainName::as_str)
+                )
+            } else {
+                format!(
+                    "HTTP request to '{url}' failed: {e}. \
+                     Check that service is running and firewall allows port {}.",
+                    endpoint.port
+                )
+            };
+
+            RemoteActionError::ValidationFailed {
+                action_name: self.name().to_string(),
+                message: help_message,
+            }
+        })
     }
 }
 
@@ -310,14 +271,7 @@ impl RemoteAction for RunningServicesValidator {
             "Validating Docker Compose services are running via external accessibility"
         );
 
-        // For E2E tests, external accessibility validation is sufficient
-        // If services are accessible externally, it proves they are running and healthy
-        self.validate_external_accessibility(
-            server_ip,
-            self.tracker_api_port,
-            &self.http_tracker_ports,
-        )
-        .await?;
+        self.validate_external_accessibility(server_ip).await?;
 
         info!(
             action = "running_services_validation",
@@ -333,19 +287,9 @@ impl RemoteAction for RunningServicesValidator {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::adapters::ssh::{SshConfig, SshCredentials};
-    use crate::shared::Username;
+    use crate::shared::DomainName;
 
     use super::*;
-
-    fn create_test_ssh_config() -> SshConfig {
-        let credentials = SshCredentials::new(
-            PathBuf::from("/mock/path/to/private_key"),
-            PathBuf::from("/mock/path/to/public_key.pub"),
-            Username::new("testuser").unwrap(),
-        );
-        SshConfig::with_default_port(credentials, "127.0.0.1".parse().unwrap())
-    }
 
     #[test]
     fn it_should_use_default_deploy_dir_when_not_specified() {
@@ -354,64 +298,64 @@ mod tests {
 
     #[test]
     fn it_should_return_correct_action_name_when_queried() {
-        // Can't test without SSH config, but we can verify the constant
         assert_eq!("running-services-validation", "running-services-validation");
     }
 
     #[test]
-    fn it_should_accept_validation_when_http_tracker_ports_are_empty() {
-        let ssh_config = create_test_ssh_config();
-        let validator = RunningServicesValidator::new(ssh_config, 6969, vec![]);
+    fn it_should_create_validator_with_http_endpoints() {
+        let api_endpoint = ServiceEndpoint::http(1212, "/api/health_check");
+        let tracker_endpoints = vec![ServiceEndpoint::http(7070, "/health_check")];
 
-        assert_eq!(validator.http_tracker_ports.len(), 0);
+        let validator = RunningServicesValidator::new(api_endpoint.clone(), tracker_endpoints);
+
+        assert_eq!(validator.tracker_api_endpoint, api_endpoint);
+        assert_eq!(validator.http_tracker_endpoints.len(), 1);
     }
 
     #[test]
-    fn it_should_accept_validation_when_single_http_tracker_port_configured() {
-        let ssh_config = create_test_ssh_config();
-        let validator = RunningServicesValidator::new(ssh_config, 6969, vec![6060]);
+    fn it_should_create_validator_with_https_endpoints() {
+        let domain = DomainName::new("api.tracker.local").unwrap();
+        let api_endpoint = ServiceEndpoint::https(1212, "/api/health_check", domain);
+        let tracker_endpoints = vec![];
 
-        assert_eq!(validator.http_tracker_ports.len(), 1);
-        assert_eq!(validator.http_tracker_ports[0], 6060);
+        let validator = RunningServicesValidator::new(api_endpoint.clone(), tracker_endpoints);
+
+        assert!(validator.tracker_api_endpoint.uses_tls());
     }
 
     #[test]
-    fn it_should_accept_validation_when_multiple_http_tracker_ports_configured() {
-        let ssh_config = create_test_ssh_config();
-        let ports = vec![6060, 6061, 6062];
-        let validator = RunningServicesValidator::new(ssh_config, 6969, ports.clone());
+    fn it_should_create_validator_with_mixed_endpoints() {
+        let domain = DomainName::new("api.tracker.local").unwrap();
+        let api_endpoint = ServiceEndpoint::https(1212, "/api/health_check", domain);
+        let tracker_endpoints = vec![
+            ServiceEndpoint::http(7070, "/health_check"),
+            ServiceEndpoint::http(7071, "/health_check"),
+        ];
 
-        assert_eq!(validator.http_tracker_ports.len(), 3);
-        assert_eq!(validator.http_tracker_ports, ports);
+        let validator = RunningServicesValidator::new(api_endpoint, tracker_endpoints);
+
+        assert!(validator.tracker_api_endpoint.uses_tls());
+        assert!(!validator.http_tracker_endpoints[0].uses_tls());
+        assert!(!validator.http_tracker_endpoints[1].uses_tls());
     }
 
     #[test]
-    fn it_should_accept_empty_ports_when_using_custom_deploy_dir() {
-        let ssh_config = create_test_ssh_config();
+    fn it_should_accept_empty_tracker_endpoints() {
+        let api_endpoint = ServiceEndpoint::http(1212, "/api/health_check");
+        let validator = RunningServicesValidator::new(api_endpoint, vec![]);
+
+        assert_eq!(validator.http_tracker_endpoints.len(), 0);
+    }
+
+    #[test]
+    fn it_should_use_custom_deploy_dir() {
+        let api_endpoint = ServiceEndpoint::http(1212, "/api/health_check");
         let validator = RunningServicesValidator::with_deploy_dir(
-            ssh_config,
             PathBuf::from("/custom/path"),
-            6969,
+            api_endpoint,
             vec![],
         );
 
-        assert_eq!(validator.http_tracker_ports.len(), 0);
-        assert_eq!(validator.deploy_dir, PathBuf::from("/custom/path"));
-    }
-
-    #[test]
-    fn it_should_accept_multiple_ports_when_using_custom_deploy_dir() {
-        let ssh_config = create_test_ssh_config();
-        let ports = vec![6060, 6061];
-        let validator = RunningServicesValidator::with_deploy_dir(
-            ssh_config,
-            PathBuf::from("/custom/path"),
-            6969,
-            ports.clone(),
-        );
-
-        assert_eq!(validator.http_tracker_ports.len(), 2);
-        assert_eq!(validator.http_tracker_ports, ports);
         assert_eq!(validator.deploy_dir, PathBuf::from("/custom/path"));
     }
 }
