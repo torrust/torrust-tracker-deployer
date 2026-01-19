@@ -4,8 +4,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
-use crate::application::command_handlers::create::config::https::TlsSection;
-use crate::domain::tls::TlsConfig;
 use crate::domain::tracker::HealthCheckApiConfig;
 use crate::shared::DomainName;
 
@@ -13,13 +11,21 @@ use crate::shared::DomainName;
 pub struct HealthCheckApiSection {
     pub bind_address: String,
 
-    /// Optional TLS configuration for HTTPS
+    /// Domain name for HTTPS access via Caddy reverse proxy
     ///
-    /// When present, this service will be proxied through Caddy with HTTPS enabled.
-    /// The domain specified will be used for Let's Encrypt certificate acquisition.
+    /// When present with `use_tls_proxy: true`, this service will be accessible
+    /// via HTTPS at this domain. The domain will be used for Let's Encrypt
+    /// certificate acquisition.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain: Option<String>,
+
+    /// Whether to proxy this service through Caddy with TLS termination
+    ///
+    /// When `true`, the service will be accessible via HTTPS through Caddy.
+    /// Requires `domain` to be set.
     /// This is useful for exposing health checks to external monitoring systems.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub tls: Option<TlsSection>,
+    pub use_tls_proxy: Option<bool>,
 }
 
 impl HealthCheckApiSection {
@@ -29,7 +35,8 @@ impl HealthCheckApiSection {
     ///
     /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
     /// Returns `CreateConfigError::DynamicPortNotSupported` if port 0 (dynamic port assignment) is specified.
-    /// Returns `CreateConfigError::InvalidDomain` if the TLS domain is invalid.
+    /// Returns `CreateConfigError::InvalidDomain` if the domain is invalid.
+    /// Returns `CreateConfigError::TlsProxyWithoutDomain` if `use_tls_proxy` is true but domain is missing.
     ///
     /// Note: Localhost + TLS validation is performed at the domain layer
     /// (see `TrackerConfig::validate()`) to avoid duplicating business rules.
@@ -49,22 +56,33 @@ impl HealthCheckApiSection {
             });
         }
 
-        // Convert TLS section to domain type with validation
-        let tls = match &self.tls {
-            Some(tls_section) => {
-                tls_section.validate()?;
-                let domain = DomainName::new(&tls_section.domain).map_err(|e| {
+        let use_tls_proxy = self.use_tls_proxy.unwrap_or(false);
+
+        // Validate: use_tls_proxy requires domain
+        if use_tls_proxy && self.domain.is_none() {
+            return Err(CreateConfigError::TlsProxyWithoutDomain {
+                service_type: "Health Check API".to_string(),
+                bind_address: self.bind_address.clone(),
+            });
+        }
+
+        // Parse domain if present
+        let domain =
+            match &self.domain {
+                Some(domain_str) => Some(DomainName::new(domain_str).map_err(|e| {
                     CreateConfigError::InvalidDomain {
-                        domain: tls_section.domain.clone(),
+                        domain: domain_str.clone(),
                         reason: e.to_string(),
                     }
-                })?;
-                Some(TlsConfig::new(domain))
-            }
-            None => None,
-        };
+                })?),
+                None => None,
+            };
 
-        Ok(HealthCheckApiConfig { bind_address, tls })
+        Ok(HealthCheckApiConfig {
+            bind_address,
+            domain,
+            use_tls_proxy,
+        })
     }
 }
 
@@ -72,7 +90,8 @@ impl Default for HealthCheckApiSection {
     fn default() -> Self {
         Self {
             bind_address: "127.0.0.1:1313".to_string(),
-            tls: None,
+            domain: None,
+            use_tls_proxy: None,
         }
     }
 }
@@ -85,7 +104,8 @@ mod tests {
     fn it_should_convert_to_domain_config_when_bind_address_is_valid() {
         let section = HealthCheckApiSection {
             bind_address: "127.0.0.1:1313".to_string(),
-            tls: None,
+            domain: None,
+            use_tls_proxy: None,
         };
 
         let config = section.to_health_check_api_config().unwrap();
@@ -94,16 +114,16 @@ mod tests {
             config.bind_address,
             "127.0.0.1:1313".parse::<SocketAddr>().unwrap()
         );
-        assert!(config.tls.is_none());
+        assert!(!config.use_tls_proxy);
+        assert!(config.domain.is_none());
     }
 
     #[test]
-    fn it_should_convert_to_domain_config_with_tls() {
+    fn it_should_convert_to_domain_config_with_tls_proxy() {
         let section = HealthCheckApiSection {
             bind_address: "0.0.0.0:1313".to_string(),
-            tls: Some(TlsSection {
-                domain: "health.tracker.local".to_string(),
-            }),
+            domain: Some("health.tracker.local".to_string()),
+            use_tls_proxy: Some(true),
         };
 
         let config = section.to_health_check_api_config().unwrap();
@@ -112,7 +132,7 @@ mod tests {
             config.bind_address,
             "0.0.0.0:1313".parse::<SocketAddr>().unwrap()
         );
-        assert!(config.tls.is_some());
+        assert!(config.use_tls_proxy);
         assert_eq!(config.tls_domain(), Some("health.tracker.local"));
     }
 
@@ -120,7 +140,8 @@ mod tests {
     fn it_should_fail_when_bind_address_is_invalid() {
         let section = HealthCheckApiSection {
             bind_address: "invalid".to_string(),
-            tls: None,
+            domain: None,
+            use_tls_proxy: None,
         };
 
         let result = section.to_health_check_api_config();
@@ -136,7 +157,8 @@ mod tests {
     fn it_should_reject_dynamic_port_assignment() {
         let section = HealthCheckApiSection {
             bind_address: "0.0.0.0:0".to_string(),
-            tls: None,
+            domain: None,
+            use_tls_proxy: None,
         };
 
         let result = section.to_health_check_api_config();
@@ -152,7 +174,8 @@ mod tests {
     fn it_should_allow_ipv6_addresses() {
         let section = HealthCheckApiSection {
             bind_address: "[::1]:1313".to_string(),
-            tls: None,
+            domain: None,
+            use_tls_proxy: None,
         };
 
         let result = section.to_health_check_api_config();
@@ -164,7 +187,8 @@ mod tests {
     fn it_should_allow_any_port_except_zero() {
         let section = HealthCheckApiSection {
             bind_address: "127.0.0.1:8080".to_string(),
-            tls: None,
+            domain: None,
+            use_tls_proxy: None,
         };
 
         let result = section.to_health_check_api_config();
@@ -177,16 +201,16 @@ mod tests {
         let section = HealthCheckApiSection::default();
 
         assert_eq!(section.bind_address, "127.0.0.1:1313");
-        assert!(section.tls.is_none());
+        assert!(section.domain.is_none());
+        assert!(section.use_tls_proxy.is_none());
     }
 
     #[test]
-    fn it_should_fail_when_tls_domain_is_invalid() {
+    fn it_should_fail_when_domain_is_invalid() {
         let section = HealthCheckApiSection {
             bind_address: "0.0.0.0:1313".to_string(),
-            tls: Some(TlsSection {
-                domain: "invalid domain with spaces".to_string(),
-            }),
+            domain: Some("invalid domain with spaces".to_string()),
+            use_tls_proxy: Some(true),
         };
 
         let result = section.to_health_check_api_config();
@@ -196,5 +220,36 @@ mod tests {
             result.unwrap_err(),
             CreateConfigError::InvalidDomain { .. }
         ));
+    }
+
+    #[test]
+    fn it_should_fail_when_use_tls_proxy_without_domain() {
+        let section = HealthCheckApiSection {
+            bind_address: "0.0.0.0:1313".to_string(),
+            domain: None,
+            use_tls_proxy: Some(true),
+        };
+
+        let result = section.to_health_check_api_config();
+
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::TlsProxyWithoutDomain { .. }
+        ));
+    }
+
+    #[test]
+    fn it_should_allow_domain_without_tls_proxy() {
+        let section = HealthCheckApiSection {
+            bind_address: "0.0.0.0:1313".to_string(),
+            domain: Some("health.tracker.local".to_string()),
+            use_tls_proxy: None,
+        };
+
+        let config = section.to_health_check_api_config().unwrap();
+
+        assert!(!config.use_tls_proxy);
+        assert!(config.domain.is_some());
     }
 }

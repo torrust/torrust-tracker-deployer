@@ -115,15 +115,15 @@ pub struct CaddyContext {
     /// Present only if `tracker.http_api.tls` is configured.
     pub tracker_api: Option<CaddyService>,
 
-    /// HTTP Tracker services with TLS configured
+    /// HTTP Tracker services with TLS proxy configured
     ///
-    /// Contains only trackers that have `tls` configuration.
-    /// Trackers without TLS are served directly over HTTP, not through Caddy.
+    /// Contains only trackers that have `use_tls_proxy: true` and a domain.
+    /// Trackers without TLS proxy are served directly over HTTP, not through Caddy.
     pub http_trackers: Vec<CaddyService>,
 
-    /// Health Check API service (if TLS configured)
+    /// Health Check API service (if TLS proxy configured)
     ///
-    /// Present only if `tracker.health_check_api.tls` is configured.
+    /// Present only if `tracker.health_check_api.use_tls_proxy` is enabled.
     /// The health check API provides a simple /health endpoint for monitoring.
     pub health_check_api: Option<CaddyService>,
 

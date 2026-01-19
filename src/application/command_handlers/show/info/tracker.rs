@@ -214,12 +214,12 @@ impl ServiceInfo {
         let health_check_is_localhost_only =
             is_localhost(&tracker_config.health_check_api.bind_address);
         let (health_check_url, health_check_uses_https) =
-            if let Some(tls) = &tracker_config.health_check_api.tls {
+            if let Some(domain) = tracker_config.health_check_api.tls_domain() {
                 tls_domains.push(TlsDomainInfo {
-                    domain: tls.domain().to_string(),
+                    domain: domain.to_string(),
                     internal_port: tracker_config.health_check_api.bind_address.port(),
                 });
-                (format!("https://{}/health_check", tls.domain()), true)
+                (format!("https://{domain}/health_check"), true)
             } else {
                 (
                     format!(

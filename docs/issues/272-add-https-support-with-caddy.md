@@ -1455,15 +1455,15 @@ The implementation is split into incremental steps, one service type at a time, 
 
 ##### Step 7.5.3: Tracker Health Check API
 
-- [ ] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HealthCheckApiSection` DTO
-- [ ] Update `HealthCheckApiConfig` domain type
-- [ ] Add validation rules
-- [ ] Update Caddy template for health check
-- [ ] Update show command `ServiceInfo` for health check
-- [ ] Update `envs/manual-https-test.json` for health check
-- [ ] Remove `TlsSection` from health check
-- [ ] Add unit tests
-- [ ] Run E2E tests
+- [x] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HealthCheckApiSection` DTO
+- [x] Update `HealthCheckApiConfig` domain type
+- [x] Add validation rules
+- [x] Update Caddy template for health check
+- [x] Update show command `ServiceInfo` for health check
+- [x] Update `envs/manual-https-test.json` for health check
+- [x] Remove `TlsSection` from health check
+- [x] Add unit tests
+- [x] Run E2E tests
 
 ##### Step 7.5.4: Grafana
 

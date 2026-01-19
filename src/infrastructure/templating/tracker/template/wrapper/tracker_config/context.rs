@@ -48,7 +48,8 @@ use crate::domain::environment::TrackerConfig;
 ///     },
 ///     health_check_api: HealthCheckApiConfig {
 ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
-///         tls: None,
+///         domain: None,
+///         use_tls_proxy: false,
 ///     },
 /// };
 /// let context = TrackerContext::from_config(&tracker_config);
@@ -251,7 +252,8 @@ mod tests {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             },
         }
     }
@@ -305,7 +307,8 @@ mod tests {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             },
         };
 

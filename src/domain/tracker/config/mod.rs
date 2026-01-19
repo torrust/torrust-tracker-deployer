@@ -10,7 +10,6 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use serde::{Deserialize, Serialize};
 
 use super::{BindingAddress, Protocol};
-use crate::domain::tls::TlsConfig;
 use crate::shared::DomainName;
 
 mod core;
@@ -81,7 +80,8 @@ pub fn is_localhost(addr: &SocketAddr) -> bool {
 ///     },
 ///     health_check_api: HealthCheckApiConfig {
 ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
-///         tls: None,
+///         domain: None,
+///         use_tls_proxy: false,
 ///     },
 /// };
 /// ```
@@ -287,7 +287,8 @@ impl TrackerConfig {
     ///     },
     ///     health_check_api: HealthCheckApiConfig {
     ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
-    ///         tls: None,
+    ///         domain: None,
+    ///         use_tls_proxy: false,
     ///     },
     /// };
     ///
@@ -321,7 +322,7 @@ impl TrackerConfig {
         }
 
         // Check Health Check API
-        if self.health_check_api.tls.is_some() && is_localhost(&self.health_check_api.bind_address)
+        if self.health_check_api.use_tls_proxy && is_localhost(&self.health_check_api.bind_address)
         {
             return Err(TrackerConfigError::LocalhostWithTls {
                 service_name: "Health Check API".to_string(),
@@ -458,7 +459,7 @@ impl TrackerConfig {
     /// Returns the Health Check API TLS domain if configured
     #[must_use]
     pub fn health_check_api_tls_domain(&self) -> Option<&str> {
-        self.health_check_api.tls.as_ref().map(TlsConfig::domain)
+        self.health_check_api.tls_domain()
     }
 
     /// Returns the Health Check API port number
@@ -550,7 +551,8 @@ impl Default for TrackerConfig {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().expect("valid address"),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             },
         }
     }
@@ -641,7 +643,8 @@ mod tests {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             },
         };
 
@@ -670,7 +673,8 @@ mod tests {
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             },
         };
 
@@ -740,7 +744,8 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
             };
 
@@ -773,7 +778,8 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
             };
 
@@ -826,7 +832,8 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
             };
 
@@ -870,7 +877,8 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
             };
 
@@ -916,7 +924,8 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "0.0.0.0:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
             };
 
@@ -965,7 +974,8 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
             };
 
@@ -1002,7 +1012,8 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
             };
 
@@ -1032,7 +1043,8 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
             };
 
@@ -1080,7 +1092,8 @@ mod tests {
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
             }
         }
@@ -1146,7 +1159,8 @@ mod tests {
             let mut config = base_config();
             config.health_check_api = HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
-                tls: Some(TlsConfig::new(domain)),
+                domain: Some(domain),
+                use_tls_proxy: true,
             };
 
             let result = config.validate();

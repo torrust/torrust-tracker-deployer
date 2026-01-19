@@ -4,7 +4,7 @@ use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::tls::TlsConfig;
+use crate::shared::domain_name::DomainName;
 
 /// Health Check API configuration
 ///
@@ -21,51 +21,71 @@ pub struct HealthCheckApiConfig {
     )]
     pub bind_address: SocketAddr,
 
-    /// TLS configuration for HTTPS termination via Caddy (optional)
+    /// Domain name for external HTTPS access (optional)
     ///
-    /// When present, the Health Check API will be accessible via HTTPS
-    /// through the Caddy reverse proxy. This is useful when exposing
-    /// health checks to external monitoring systems or load balancers.
+    /// When present, defines the domain at which this service will be accessible.
+    /// Caddy uses this for automatic certificate management.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tls: Option<TlsConfig>,
+    pub domain: Option<DomainName>,
+
+    /// Whether to use TLS proxy via Caddy (default: false)
+    ///
+    /// When true:
+    /// - Caddy handles HTTPS termination with automatic certificates
+    /// - Requires a domain to be configured
+    /// - Service receives plain HTTP from Caddy internally
+    #[serde(default)]
+    pub use_tls_proxy: bool,
 }
 
 impl HealthCheckApiConfig {
-    /// Returns the TLS domain if configured
+    /// Returns whether TLS proxy is enabled
+    #[must_use]
+    pub fn uses_tls_proxy(&self) -> bool {
+        self.use_tls_proxy
+    }
+
+    /// Returns the TLS domain if TLS proxy is configured
     #[must_use]
     pub fn tls_domain(&self) -> Option<&str> {
-        self.tls.as_ref().map(TlsConfig::domain)
+        if self.use_tls_proxy {
+            self.domain.as_ref().map(DomainName::as_str)
+        } else {
+            None
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::domain_name::DomainName;
 
     #[test]
     fn it_should_create_health_check_api_config() {
         let config = HealthCheckApiConfig {
             bind_address: "127.0.0.1:1313".parse().unwrap(),
-            tls: None,
+            domain: None,
+            use_tls_proxy: false,
         };
 
         assert_eq!(
             config.bind_address,
             "127.0.0.1:1313".parse::<SocketAddr>().unwrap()
         );
-        assert!(config.tls.is_none());
+        assert!(!config.use_tls_proxy);
+        assert!(config.domain.is_none());
     }
 
     #[test]
-    fn it_should_create_health_check_api_config_with_tls() {
+    fn it_should_create_health_check_api_config_with_tls_proxy() {
         let domain = DomainName::new("health.tracker.local").unwrap();
         let config = HealthCheckApiConfig {
             bind_address: "0.0.0.0:1313".parse().unwrap(),
-            tls: Some(TlsConfig::new(domain)),
+            domain: Some(domain),
+            use_tls_proxy: true,
         };
 
-        assert!(config.tls.is_some());
+        assert!(config.uses_tls_proxy());
         assert_eq!(config.tls_domain(), Some("health.tracker.local"));
     }
 
@@ -73,43 +93,48 @@ mod tests {
     fn it_should_serialize_health_check_api_config() {
         let config = HealthCheckApiConfig {
             bind_address: "127.0.0.1:1313".parse().unwrap(),
-            tls: None,
+            domain: None,
+            use_tls_proxy: false,
         };
 
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(json["bind_address"], "127.0.0.1:1313");
-        // tls should not be serialized when None
-        assert!(json.get("tls").is_none());
+        // domain should not be serialized when None
+        assert!(json.get("domain").is_none());
+        // use_tls_proxy should be serialized
+        assert_eq!(json["use_tls_proxy"], false);
     }
 
     #[test]
-    fn it_should_serialize_health_check_api_config_with_tls() {
+    fn it_should_serialize_health_check_api_config_with_tls_proxy() {
         let domain = DomainName::new("health.tracker.local").unwrap();
         let config = HealthCheckApiConfig {
             bind_address: "0.0.0.0:1313".parse().unwrap(),
-            tls: Some(TlsConfig::new(domain)),
+            domain: Some(domain),
+            use_tls_proxy: true,
         };
 
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(json["bind_address"], "0.0.0.0:1313");
-        assert_eq!(json["tls"]["domain"], "health.tracker.local");
+        assert_eq!(json["domain"], "health.tracker.local");
+        assert_eq!(json["use_tls_proxy"], true);
     }
 
     #[test]
     fn it_should_deserialize_health_check_api_config() {
-        let json = r#"{"bind_address": "127.0.0.1:1313"}"#;
+        let json = r#"{"bind_address": "127.0.0.1:1313", "use_tls_proxy": false}"#;
         let config: HealthCheckApiConfig = serde_json::from_str(json).unwrap();
 
         assert_eq!(
             config.bind_address,
             "127.0.0.1:1313".parse::<SocketAddr>().unwrap()
         );
-        assert!(config.tls.is_none());
+        assert!(!config.use_tls_proxy);
     }
 
     #[test]
-    fn it_should_deserialize_health_check_api_config_with_tls() {
-        let json = r#"{"bind_address": "0.0.0.0:1313", "tls": {"domain": "health.tracker.local"}}"#;
+    fn it_should_deserialize_health_check_api_config_with_tls_proxy() {
+        let json = r#"{"bind_address": "0.0.0.0:1313", "domain": "health.tracker.local", "use_tls_proxy": true}"#;
         let config: HealthCheckApiConfig = serde_json::from_str(json).unwrap();
 
         assert_eq!(
@@ -117,5 +142,18 @@ mod tests {
             "0.0.0.0:1313".parse::<SocketAddr>().unwrap()
         );
         assert_eq!(config.tls_domain(), Some("health.tracker.local"));
+    }
+
+    #[test]
+    fn it_should_return_none_for_tls_domain_when_tls_proxy_disabled() {
+        let domain = DomainName::new("health.tracker.local").unwrap();
+        let config = HealthCheckApiConfig {
+            bind_address: "0.0.0.0:1313".parse().unwrap(),
+            domain: Some(domain),
+            use_tls_proxy: false,
+        };
+
+        assert!(!config.uses_tls_proxy());
+        assert!(config.tls_domain().is_none());
     }
 }
