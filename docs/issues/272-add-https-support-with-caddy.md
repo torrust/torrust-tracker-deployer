@@ -1443,15 +1443,15 @@ The implementation is split into incremental steps, one service type at a time, 
 
 ##### Step 7.5.2: Tracker REST API
 
-- [ ] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HttpApiSection` DTO
-- [ ] Update `HttpApiConfig` domain type
-- [ ] Add validation rules (same as HTTP trackers)
-- [ ] Update Caddy template for API
-- [ ] Update show command `ServiceInfo` for API
-- [ ] Update `envs/manual-https-test.json` for API
-- [ ] Remove `TlsSection` from API
-- [ ] Add unit tests for API validation
-- [ ] Run E2E tests
+- [x] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HttpApiSection` DTO
+- [x] Update `HttpApiConfig` domain type
+- [x] Add validation rules (same as HTTP trackers)
+- [x] Update Caddy template for API
+- [x] Update show command `ServiceInfo` for API
+- [x] Update `envs/manual-https-test.json` for API
+- [x] Remove `TlsSection` from API
+- [x] Add unit tests for API validation
+- [x] Run E2E tests
 
 ##### Step 7.5.3: Tracker Health Check API
 

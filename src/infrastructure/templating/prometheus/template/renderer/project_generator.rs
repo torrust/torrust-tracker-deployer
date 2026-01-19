@@ -209,7 +209,8 @@ scrape_configs:
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().expect("valid address"),
                 admin_token: "test_admin_token".to_string().into(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             },
             ..Default::default()
         }

@@ -171,12 +171,24 @@ impl ServiceInfo {
 
         // Build API endpoint based on TLS configuration and localhost status
         let api_is_localhost_only = is_localhost(&tracker_config.http_api.bind_address);
-        let (api_endpoint, api_uses_https) = if let Some(tls) = &tracker_config.http_api.tls {
-            tls_domains.push(TlsDomainInfo {
-                domain: tls.domain().to_string(),
-                internal_port: tracker_config.http_api.bind_address.port(),
-            });
-            (format!("https://{}/api", tls.domain()), true)
+        let (api_endpoint, api_uses_https) = if tracker_config.http_api.use_tls_proxy {
+            if let Some(domain) = &tracker_config.http_api.domain {
+                tls_domains.push(TlsDomainInfo {
+                    domain: domain.as_str().to_string(),
+                    internal_port: tracker_config.http_api.bind_address.port(),
+                });
+                (format!("https://{}/api", domain.as_str()), true)
+            } else {
+                // TLS proxy without domain shouldn't happen after validation
+                (
+                    format!(
+                        "http://{}:{}/api", // DevSkim: ignore DS137138
+                        instance_ip,
+                        tracker_config.http_api.bind_address.port()
+                    ),
+                    false,
+                )
+            }
         } else {
             (
                 format!(

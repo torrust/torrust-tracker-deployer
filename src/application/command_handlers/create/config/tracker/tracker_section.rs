@@ -134,7 +134,8 @@ impl Default for TrackerSection {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         }
@@ -169,7 +170,8 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -223,7 +225,8 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -250,7 +253,8 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -284,7 +288,8 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -347,7 +352,8 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:7070".to_string(),
                 admin_token: "token".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -381,7 +387,8 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "token".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };

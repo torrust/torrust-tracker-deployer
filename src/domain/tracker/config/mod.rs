@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{BindingAddress, Protocol};
 use crate::domain::tls::TlsConfig;
+use crate::shared::DomainName;
 
 mod core;
 mod health_check_api;
@@ -75,7 +76,8 @@ pub fn is_localhost(addr: &SocketAddr) -> bool {
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
 ///         admin_token: "MyAccessToken".to_string().into(),
-///         tls: None,
+///         domain: None,
+///         use_tls_proxy: false,
 ///     },
 ///     health_check_api: HealthCheckApiConfig {
 ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -280,7 +282,8 @@ impl TrackerConfig {
     ///     http_api: HttpApiConfig {
     ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
     ///         admin_token: "MyAccessToken".to_string().into(),
-    ///         tls: None,
+    ///         domain: None,
+    ///         use_tls_proxy: false,
     ///     },
     ///     health_check_api: HealthCheckApiConfig {
     ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -310,7 +313,7 @@ impl TrackerConfig {
     /// both a localhost binding and TLS configuration.
     fn check_localhost_with_tls(&self) -> Result<(), TrackerConfigError> {
         // Check HTTP API
-        if self.http_api.tls.is_some() && is_localhost(&self.http_api.bind_address) {
+        if self.http_api.use_tls_proxy && is_localhost(&self.http_api.bind_address) {
             return Err(TrackerConfigError::LocalhostWithTls {
                 service_name: "HTTP API".to_string(),
                 bind_address: self.http_api.bind_address,
@@ -443,7 +446,7 @@ impl TrackerConfig {
     /// Returns the HTTP API TLS domain if configured
     #[must_use]
     pub fn http_api_tls_domain(&self) -> Option<&str> {
-        self.http_api.tls.as_ref().map(TlsConfig::domain)
+        self.http_api.tls_domain().map(DomainName::as_str)
     }
 
     /// Returns the HTTP API port number
@@ -542,7 +545,8 @@ impl Default for TrackerConfig {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().expect("valid address"),
                 admin_token: "MyAccessToken".to_string().into(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().expect("valid address"),
@@ -632,7 +636,8 @@ mod tests {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_token".to_string().into(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -660,7 +665,8 @@ mod tests {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "token123".to_string().into(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: false,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -729,7 +735,8 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -761,7 +768,8 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -813,7 +821,8 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -856,7 +865,8 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
                     admin_token: "token".to_string().into(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -901,7 +911,8 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "0.0.0.0:1313".parse().unwrap(),
@@ -949,7 +960,8 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -985,7 +997,8 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -1014,7 +1027,8 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:7070".parse().unwrap(),
                     admin_token: "token".to_string().into(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -1061,7 +1075,8 @@ mod tests {
                 http_api: HttpApiConfig {
                     bind_address: "0.0.0.0:1212".parse().unwrap(),
                     admin_token: "token".to_string().into(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: false,
                 },
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
@@ -1077,7 +1092,8 @@ mod tests {
             config.http_api = HttpApiConfig {
                 bind_address: "127.0.0.1:1212".parse().unwrap(),
                 admin_token: "token".to_string().into(),
-                tls: Some(TlsConfig::new(domain)),
+                domain: Some(domain),
+                use_tls_proxy: true,
             };
 
             let result = config.validate();
@@ -1105,7 +1121,8 @@ mod tests {
             config.http_api = HttpApiConfig {
                 bind_address: "[::1]:1212".parse().unwrap(),
                 admin_token: "token".to_string().into(),
-                tls: Some(TlsConfig::new(domain)),
+                domain: Some(domain),
+                use_tls_proxy: true,
             };
 
             let result = config.validate();
@@ -1192,7 +1209,8 @@ mod tests {
             config.http_api = HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "token".to_string().into(),
-                tls: Some(TlsConfig::new(domain)),
+                domain: Some(domain),
+                use_tls_proxy: true,
             };
 
             assert!(config.validate().is_ok());
@@ -1205,7 +1223,8 @@ mod tests {
             config.http_api = HttpApiConfig {
                 bind_address: "127.0.0.1:1212".parse().unwrap(),
                 admin_token: "token".to_string().into(),
-                tls: Some(TlsConfig::new(domain)),
+                domain: Some(domain),
+                use_tls_proxy: true,
             };
 
             let error = config.validate().unwrap_err();

@@ -397,7 +397,7 @@ impl EnvironmentCreationConfig {
     #[must_use]
     pub fn has_any_tls_configured(&self) -> bool {
         // Check HTTP API
-        if self.tracker.http_api.tls.is_some() {
+        if self.tracker.http_api.use_tls_proxy == Some(true) {
             return true;
         }
 
@@ -513,7 +513,8 @@ impl EnvironmentCreationConfig {
                 http_api: super::tracker::HttpApiSection {
                     bind_address: "0.0.0.0:1212".to_string(),
                     admin_token: "MyAccessToken".to_string(),
-                    tls: None,
+                    domain: None,
+                    use_tls_proxy: None,
                 },
                 health_check_api: super::tracker::HealthCheckApiSection::default(),
             },
@@ -1392,7 +1393,6 @@ mod tests {
 
     #[test]
     fn it_should_return_true_for_has_any_tls_configured_when_http_api_has_tls() {
-        use crate::application::command_handlers::create::config::https::TlsSection;
         use crate::application::command_handlers::create::config::tracker::{
             DatabaseSection, HealthCheckApiSection, HttpApiSection, HttpTrackerSection,
             TrackerCoreSection, TrackerSection, UdpTrackerSection,
@@ -1416,9 +1416,8 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
-                tls: Some(TlsSection {
-                    domain: "api.tracker.example.com".to_string(),
-                }),
+                domain: Some("api.tracker.example.com".to_string()),
+                use_tls_proxy: Some(true),
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -1492,7 +1491,8 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
@@ -1582,7 +1582,8 @@ mod tests {
             http_api: HttpApiSection {
                 bind_address: "0.0.0.0:1212".to_string(),
                 admin_token: "MyAccessToken".to_string(),
-                tls: None,
+                domain: None,
+                use_tls_proxy: None,
             },
             health_check_api: HealthCheckApiSection::default(),
         };
