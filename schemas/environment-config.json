@@ -1,3 +1,5 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running `target/debug/torrust-tracker-deployer create schema`
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "EnvironmentCreationConfig",
@@ -460,6 +462,13 @@
       "properties": {
         "bind_address": {
           "type": "string"
+        },
+        "domain": {
+          "description": "Domain name for the UDP tracker (optional)\n\nWhen present, this domain can be used in announce URLs instead of the IP.\nExample: `udp://tracker.example.com:6969/announce`\n\nNote: Unlike HTTP trackers, UDP does not support TLS, so there is no\n`use_tls_proxy` field for UDP trackers.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [

@@ -198,9 +198,11 @@ mod tests {
             udp_trackers: vec![
                 UdpTrackerConfig {
                     bind_address: "0.0.0.0:6868".parse().unwrap(),
+                    domain: None,
                 },
                 UdpTrackerConfig {
                     bind_address: "0.0.0.0:6969".parse().unwrap(),
+                    domain: None,
                 },
             ],
             http_trackers: vec![HttpTrackerConfig {
@@ -280,9 +282,11 @@ mod tests {
             udp_trackers: vec![
                 UdpTrackerConfig {
                     bind_address: "0.0.0.0:6868".parse().unwrap(), // Valid address
+                    domain: None,
                 },
                 UdpTrackerConfig {
                     bind_address: "0.0.0.0:6969".parse().unwrap(), // Valid address
+                    domain: None,
                 },
             ],
             http_trackers: vec![HttpTrackerConfig {

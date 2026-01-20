@@ -34,8 +34,8 @@ use crate::domain::environment::TrackerConfig;
 ///         private: true,
 ///     },
 ///     udp_trackers: vec![
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6868".parse().unwrap() },
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
+///         UdpTrackerConfig { bind_address: "0.0.0.0:6868".parse().unwrap(), domain: None },
+///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap(), domain: None },
 ///     ],
 ///     http_trackers: vec![
 ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
@@ -234,9 +234,11 @@ mod tests {
             udp_trackers: vec![
                 UdpTrackerConfig {
                     bind_address: "0.0.0.0:6868".parse().unwrap(),
+                    domain: None,
                 },
                 UdpTrackerConfig {
                     bind_address: "0.0.0.0:6969".parse().unwrap(),
+                    domain: None,
                 },
             ],
             http_trackers: vec![HttpTrackerConfig {
@@ -293,6 +295,7 @@ mod tests {
             },
             udp_trackers: vec![UdpTrackerConfig {
                 bind_address: "0.0.0.0:6969".parse().unwrap(),
+                domain: None,
             }],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
