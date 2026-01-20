@@ -86,7 +86,6 @@ When starting work on a new feature:
 - [ ] **3.2** Implement ReleaseCommand and RunCommand with vertical slices - [Epic #216](https://github.com/torrust/torrust-tracker-deployer/issues/216)
 
   **Strategy:** Build incrementally with working deployments at each step. Each slice adds a new service to the docker-compose stack.
-
   - [x] **3.2.1** Hello World slice (scaffolding) - [Issue #217](https://github.com/torrust/torrust-tracker-deployer/issues/217) ✅ Completed
     - Create `release` and `run` commands with minimal docker-compose template
     - Deploy and run a simple hello-world container to validate the full pipeline
@@ -102,7 +101,6 @@ When starting work on a new feature:
     - Add Grafana service for metrics visualization
 
   **Notes:**
-
   - Each slice delivers a working deployment
   - Configuration complexity grows incrementally (hardcoded → environment config → full flexibility)
   - Detailed implementation tasks will be defined in EPIC issues
@@ -122,13 +120,13 @@ When starting work on a new feature:
 
 **Note:** The test console subcommand is already partially implemented. The `show` command displays stored environment data (read-only, no remote verification). A future `status` command may be added for service health checks.
 
-### 6. Add HTTPS support
+### 6. Add HTTPS support ✅ COMPLETED
 
-- [ ] **6.1** Add HTTPS support with Caddy for all HTTP services - [Issue #272](https://github.com/torrust/torrust-tracker-deployer/issues/272)
-  - Implement Caddy TLS termination proxy
-  - Add HTTPS support for HTTP tracker
-  - Add HTTPS support for tracker API
-  - Add HTTPS support for Grafana
+- [x] **6.1** Add HTTPS support with Caddy for all HTTP services - [Issue #272](https://github.com/torrust/torrust-tracker-deployer/issues/272) ✅ Completed
+  - Implemented Caddy TLS termination proxy
+  - Added HTTPS support for HTTP tracker
+  - Added HTTPS support for tracker API
+  - Added HTTPS support for Grafana
   - **Research Complete**: [Issue #270](https://github.com/torrust/torrust-tracker-deployer/issues/270) - Caddy evaluation successful, production deployment verified
 
 ### 7. Add backup and disaster recovery
