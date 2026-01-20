@@ -1590,13 +1590,19 @@ The implementation is split into incremental steps, one service type at a time, 
 - [x] Test schema with example HTTPS-enabled environment file
 - [x] Commit updated schema file
 
-### Phase 9: Create ADR (1 hour)
+### Phase 9: Create ADRs (1 hour)
 
-- [ ] Create `docs/decisions/caddy-for-tls-termination.md`
-- [ ] Document decision rationale (reference #270 evaluation)
-- [ ] Document alternatives considered (Pingoo, nginx+certbot)
-- [ ] Document implementation approach
-- [ ] Document risks and mitigations
+- [x] Create `docs/decisions/caddy-for-tls-termination.md`
+  - Document decision rationale (reference #270 evaluation)
+  - Document alternatives considered (Pingoo, nginx+certbot)
+  - Document implementation approach
+- [x] Create `docs/decisions/per-service-tls-configuration.md`
+  - Document why we use `domain` + `use_tls_proxy` instead of nested `tls` section
+  - Document configuration matrix and validation rules
+- [x] Create `docs/decisions/uniform-http-tracker-tls-requirement.md`
+  - Document tracker `on_reverse_proxy` global limitation
+  - Document why mixed HTTP tracker TLS is not allowed
+  - Reference upstream issue torrust/torrust-tracker#1640
 
 ## Acceptance Criteria
 
@@ -1639,7 +1645,10 @@ The implementation is split into incremental steps, one service type at a time, 
 - [ ] User guide index updated with HTTPS documentation link
 - [ ] Configuration examples include HTTPS scenarios
 - [ ] Troubleshooting section covers common certificate issues
-- [ ] ADR created documenting Caddy adoption decision
+- [x] ADRs created documenting key decisions:
+  - [x] `caddy-for-tls-termination.md` - Caddy adoption decision
+  - [x] `per-service-tls-configuration.md` - domain + use_tls_proxy pattern
+  - [x] `uniform-http-tracker-tls-requirement.md` - tracker on_reverse_proxy limitation
 
 **Testing**:
 

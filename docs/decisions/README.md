@@ -6,6 +6,9 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                                  | Summary                                                                                    |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ✅ Accepted   | 2026-01-20 | [Caddy for TLS Termination](./caddy-for-tls-termination.md)                                               | Use Caddy v2.10 as TLS proxy for automatic HTTPS with WebSocket support                    |
+| ✅ Accepted   | 2026-01-20 | [Per-Service TLS Configuration](./per-service-tls-configuration.md)                                       | Use domain + use_tls_proxy fields instead of nested tls section for explicit TLS opt-in    |
+| ✅ Accepted   | 2026-01-20 | [Uniform HTTP Tracker TLS Requirement](./uniform-http-tracker-tls-requirement.md)                         | All HTTP trackers must use same TLS setting due to tracker's global on_reverse_proxy       |
 | ✅ Accepted   | 2026-01-10 | [Hetzner SSH Key Dual Injection Pattern](./hetzner-ssh-key-dual-injection.md)                             | Use both OpenTofu SSH key and cloud-init for debugging capability with manual hardening    |
 | ✅ Accepted   | 2026-01-10 | [Configuration and Data Directories as Secrets](./configuration-directories-as-secrets.md)                | Treat envs/, data/, build/ as secrets; no env var injection; users secure via permissions  |
 | ✅ Accepted   | 2026-01-07 | [Configuration DTO Layer Placement](./configuration-dto-layer-placement.md)                               | Keep configuration DTOs in application layer, not domain; defer package extraction         |
