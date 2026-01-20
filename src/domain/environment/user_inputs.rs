@@ -21,6 +21,7 @@
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::EnvironmentName;
 use crate::domain::grafana::GrafanaConfig;
+use crate::domain::https::HttpsConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::tracker::TrackerConfig;
@@ -63,6 +64,7 @@ use serde::{Deserialize, Serialize};
 ///     tracker: TrackerConfig::default(),
 ///     prometheus: Some(PrometheusConfig::default()),
 ///     grafana: Some(GrafanaConfig::default()),
+///     https: None,
 /// };
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -100,6 +102,13 @@ pub struct UserInputs {
     /// Requires Prometheus to be enabled - dependency validated at configuration time.
     /// Default: `Some(GrafanaConfig::default())` in generated templates.
     pub grafana: Option<GrafanaConfig>,
+
+    /// HTTPS/TLS configuration for Caddy reverse proxy (optional)
+    ///
+    /// When present, Caddy service is deployed as a TLS termination proxy.
+    /// When absent (`None`), services are exposed directly over HTTP.
+    /// Requires at least one service to have TLS configuration.
+    pub https: Option<HttpsConfig>,
 }
 
 impl UserInputs {
@@ -168,14 +177,16 @@ impl UserInputs {
             tracker: TrackerConfig::default(),
             prometheus: Some(PrometheusConfig::default()),
             grafana: Some(GrafanaConfig::default()),
+            https: None,
         }
     }
 
     /// Creates a new `UserInputs` with custom tracker configuration
     ///
     /// This is similar to `new` but allows specifying custom tracker,
-    /// prometheus, and grafana configurations instead of using defaults.
+    /// prometheus, grafana, and https configurations instead of using defaults.
     #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn with_tracker(
         name: &EnvironmentName,
         provider_config: ProviderConfig,
@@ -184,6 +195,7 @@ impl UserInputs {
         tracker: TrackerConfig,
         prometheus: Option<PrometheusConfig>,
         grafana: Option<GrafanaConfig>,
+        https: Option<HttpsConfig>,
     ) -> Self {
         let instance_name = Self::generate_instance_name(name);
 
@@ -196,6 +208,7 @@ impl UserInputs {
             tracker,
             prometheus,
             grafana,
+            https,
         }
     }
 

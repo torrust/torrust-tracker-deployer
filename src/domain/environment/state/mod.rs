@@ -583,6 +583,20 @@ impl AnyEnvironmentState {
         self.context().user_inputs.grafana.as_ref()
     }
 
+    /// Get the HTTPS configuration if enabled, regardless of current state
+    ///
+    /// This method provides access to the HTTPS configuration without needing to
+    /// pattern match on the specific state variant.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(&HttpsConfig)` if HTTPS/TLS is configured for this environment
+    /// - `None` if HTTPS is not enabled
+    #[must_use]
+    pub fn https_config(&self) -> Option<&crate::domain::https::HttpsConfig> {
+        self.context().user_inputs.https.as_ref()
+    }
+
     /// Check if this environment was registered from existing infrastructure
     ///
     /// Registered environments have infrastructure that was created externally

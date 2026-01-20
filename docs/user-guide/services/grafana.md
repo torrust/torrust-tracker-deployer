@@ -49,10 +49,23 @@ Add the `grafana` section to your environment configuration file:
 - Default: `admin`
 - **⚠️ SECURITY WARNING**: Always change the default password before deploying to production environments
 
+**grafana.domain** (optional):
+
+- Domain name for HTTPS access via Caddy reverse proxy
+- When present with `use_tls_proxy: true`, Grafana is accessible via HTTPS at this domain
+- Caddy automatically obtains and renews TLS certificates
+
+**grafana.use_tls_proxy** (optional):
+
+- Boolean to enable HTTPS via Caddy reverse proxy
+- Default: `false` (HTTP only)
+- Requires `domain` to be set
+- When enabled, port 3100 is not exposed; access is via HTTPS (port 443)
+
 **Examples**:
 
 ```json
-// Development environment (simple credentials)
+// Development environment (HTTP only)
 {
   "grafana": {
     "admin_user": "admin",
@@ -60,14 +73,18 @@ Add the `grafana` section to your environment configuration file:
   }
 }
 
-// Production environment (strong credentials)
+// Production environment with HTTPS
 {
   "grafana": {
     "admin_user": "grafana-admin",
-    "admin_password": "Str0ng!P@ssw0rd#2024"
+    "admin_password": "Str0ng!P@ssw0rd#2024",
+    "domain": "grafana.example.com",
+    "use_tls_proxy": true
   }
 }
 ```
+
+> **Note**: When using HTTPS, you must also configure the global `https` section with `admin_email`. See the [HTTPS Guide](https.md) for complete documentation.
 
 **Real Example**: See [`envs/manual-test-grafana.json`](../../../envs/manual-test-grafana.json) for a working configuration.
 
@@ -117,22 +134,31 @@ To deploy without Grafana visualization, remove the entire `grafana` section fro
 
 After deployment, the Grafana web UI is available at:
 
+**HTTP (default)**:
+
 ```text
 http://<vm-ip>:3100
 ```
 
-Where `<vm-ip>` is the IP address of your deployed VM instance.
+**HTTPS (when TLS enabled)**:
+
+```text
+https://<your-domain>
+```
+
+Where `<vm-ip>` is the IP address of your deployed VM instance and `<your-domain>` is the configured domain (e.g., `grafana.example.com`).
 
 ### Finding Your VM IP
 
-```bash
-# Extract IP from environment state
-cat data/<env-name>/environment.json | grep ip_address
+Use the `show` command to display environment information including the VM IP:
 
-# Or use jq for cleaner output
-INSTANCE_IP=$(cat data/<env-name>/environment.json | jq -r '.Running.context.runtime_outputs.instance_ip')
-echo "Grafana UI: http://$INSTANCE_IP:3100"
+```bash
+torrust-tracker-deployer show <env-name>
 ```
+
+Look for the "Instance IP" field in the output.
+
+> **Note**: JSON output format is planned for future releases to enable scripting.
 
 ### First Login
 
@@ -151,17 +177,14 @@ echo "Grafana UI: http://$INSTANCE_IP:3100"
 After first login, you need to add Prometheus as a datasource:
 
 1. **Navigate to Configuration**:
-
    - Click the gear icon (⚙️) in the left sidebar
    - Select **Data Sources**
 
 2. **Add New Datasource**:
-
    - Click **Add data source**
    - Select **Prometheus** from the list
 
 3. **Configure Datasource**:
-
    - **Name**: `Prometheus` (or any name you prefer)
    - **URL**: `http://prometheus:9090`
    - **Access**: `Server (default)`
@@ -184,7 +207,6 @@ The Torrust project provides two sample dashboards for visualizing tracker metri
 #### Available Dashboards
 
 1. **stats.json** - Statistics Dashboard
-
    - Displays data from the `/api/v1/stats` tracker endpoint
    - Shows high-level tracker statistics
    - Good for general monitoring
@@ -199,17 +221,14 @@ The Torrust project provides two sample dashboards for visualizing tracker metri
 #### Import Process
 
 1. **Navigate to Dashboards**:
-
    - Click the **+** icon in the left sidebar
    - Select **Import**
 
 2. **Upload Dashboard**:
-
    - Click **Upload JSON file** and select the dashboard file
    - Or paste the JSON content directly into the text area
 
 3. **Configure Import**:
-
    - **Name**: Keep the default or customize
    - **Folder**: Select a folder or leave as default
    - **Prometheus**: Select the datasource you created earlier
@@ -254,16 +273,13 @@ After importing, you can:
 ### Creating Custom Dashboards
 
 1. **New Dashboard**:
-
    - Click **+** icon → **Dashboard**
    - Click **Add visualization**
 
 2. **Select Data Source**:
-
    - Choose your Prometheus datasource
 
 3. **Write Query**:
-
    - Use Prometheus query language (PromQL)
    - Examples:
 
@@ -279,7 +295,6 @@ After importing, you can:
      ```
 
 4. **Customize Visualization**:
-
    - Choose panel type (Graph, Stat, Gauge, Table, etc.)
    - Set thresholds and colors
    - Add units and labels
@@ -501,13 +516,11 @@ services:
 A separate issue is planned to add:
 
 1. **Auto-Provision Prometheus Datasource**:
-
    - Automatically create datasource during deployment
    - Zero-config experience for users
    - No manual setup steps required
 
 2. **Auto-Import Tracker Dashboards**:
-
    - Automatically import `stats.json` and `metrics.json`
    - Dashboards available immediately after deployment
    - Provisioning via `provisioning/dashboards/` directory
@@ -525,6 +538,7 @@ A separate issue is planned to add:
 
 ## Related Documentation
 
+- **[HTTPS Guide](https.md)** - Enable HTTPS with automatic TLS certificates
 - **[Prometheus Service Guide](prometheus.md)** - Metrics collection service
 - **[Manual Verification Guide](../../e2e-testing/manual/grafana-verification.md)** - Detailed verification steps
 - **[Grafana Integration ADR](../../decisions/grafana-integration-pattern.md)** - Design decisions and rationale

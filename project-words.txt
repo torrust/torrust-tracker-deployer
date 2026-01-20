@@ -28,8 +28,6 @@ Hillsboro
 Hostnames
 LUKS
 Liskov
-smallstep
-letsencrypt
 MAAACBA
 MLKEM
 MVVM
@@ -47,6 +45,7 @@ QUIC
 RAII
 RUSTDOCFLAGS
 Repomix
+Rescan
 Rustdoc
 SARIF
 SCRIPTDIR
@@ -155,6 +154,7 @@ hexdump
 hotfixes
 htdocs
 hugepages
+idna
 impls
 incompletei
 intervali
@@ -170,6 +170,7 @@ kutca
 larstobi
 leecher
 leechers
+letsencrypt
 libc
 libldap
 libpam
@@ -243,6 +244,7 @@ println
 procps
 promtool
 publickey
+publicsuffix
 pytest
 readlink
 realpath
@@ -255,6 +257,7 @@ resolv
 rgba
 rootpass
 rpcinterface
+rsplit
 rstest
 runbooks
 runcmd
@@ -273,6 +276,7 @@ selectattr
 serde
 serverurl
 shellcheck
+smallstep
 smorimoto
 spki
 spëcial
@@ -324,6 +328,7 @@ unergonomic
 unittests
 unrepresentable
 unsubscription
+userexample
 usermod
 useroutput
 userpass
@@ -338,6 +343,7 @@ vulns
 webservers
 writeln
 wrongpassword
+yourdomain
 youruser
 zeroize
 Émojis
@@ -345,3 +351,4 @@ zeroize
 ключ
 конфиг
 файл
+reissuance

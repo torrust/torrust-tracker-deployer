@@ -19,12 +19,12 @@ Production deployment at `/opt/torrust/` on Hetzner server (46.224.206.37) serve
 
 ## Goals
 
-- [ ] Integrate Caddy into deployer Tera templates
-- [ ] Support HTTPS for all HTTP services (Tracker API, HTTP Tracker, Grafana)
-- [ ] Enable automatic Let's Encrypt certificate management
-- [ ] Add HTTPS configuration to environment schema
-- [ ] Implement security scanning for Caddy in CI/CD
-- [ ] Document HTTPS setup in user guide
+- [x] Integrate Caddy into deployer Tera templates
+- [x] Support HTTPS for all HTTP services (Tracker API, HTTP Tracker, Grafana)
+- [x] Enable automatic Let's Encrypt certificate management
+- [x] Add HTTPS configuration to environment schema
+- [x] Implement security scanning for Caddy in CI/CD
+- [x] Document HTTPS setup in user guide
 - [ ] Add E2E tests for HTTPS functionality
 
 ## 🏗️ Architecture Requirements
@@ -102,15 +102,15 @@ Production deployment at `/opt/torrust/` on Hetzner server (46.224.206.37) serve
 - Each HTTP tracker maps to its configured port
 - Follow Torrust Tracker convention: if `tls` section exists in service config, HTTPS is enabled
 
-**Template Variables**:
+**Template Variables** (pre-processed in Rust Context):
 
-- `{{ https.admin_email }}` - Admin email for Let's Encrypt notifications (common config)
-- `{{ tracker.http_api.tls.domain }}` - Domain for Tracker API (if tls section present)
-- `{{ tracker.http_api.bind_address }}` - Parse port from bind_address (e.g., "0.0.0.0:1212" → port 1212)
-- `{{ tracker.http_trackers[*].tls.domain }}` - Domains for HTTP trackers (if tls section present)
-- `{{ tracker.http_trackers[*].bind_address }}` - Parse port from each tracker's bind_address
-- `{{ grafana.tls.domain }}` - Domain for Grafana UI (if tls section present)
-- Grafana port: hardcoded 3000 (matches docker-compose template)
+Following the [Context Data Preparation Pattern](../contributing/templates/template-system-architecture.md#-context-data-preparation-pattern), all data is pre-processed in Rust before being passed to the template. The template receives ready-to-use values:
+
+- `{{ admin_email }}` - Admin email for Let's Encrypt notifications
+- `{{ use_staging }}` - Boolean for Let's Encrypt staging environment
+- `{{ http_api_service }}` - Optional service object with `domain` and `port` (only present if TLS configured)
+- `{{ http_tracker_services }}` - Array of service objects, each with `domain` and `port` (only TLS-enabled trackers)
+- `{{ grafana_service }}` - Optional service object with `domain` and `port` (only present if TLS configured)
 
 **Example**:
 
@@ -121,40 +121,38 @@ Production deployment at `/opt/torrust/` on Hetzner server (46.224.206.37) serve
 # Global options
 {
     # Email for Let's Encrypt notifications
-    email {{ https.admin_email }}
+    email {{ admin_email }}
 
-    {% if https.use_staging %}
+    {% if use_staging %}
     # Use Let's Encrypt staging environment (for testing, avoids rate limits)
     # WARNING: Staging certificates will show browser warnings (not trusted)
     acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
     {% endif %}
 }
 
-{% if tracker.http_api.tls %}
+{% if http_api_service %}
 # Tracker REST API
-{{ tracker.http_api.tls.domain }} {
-    reverse_proxy tracker:{{ tracker.http_api.bind_address | extract_port }}
+{{ http_api_service.domain }} {
+    reverse_proxy tracker:{{ http_api_service.port }}
 }
 {% endif %}
 
-{% for http_tracker in tracker.http_trackers %}
-{% if http_tracker.tls %}
+{% for service in http_tracker_services %}
 # HTTP Tracker
-{{ http_tracker.tls.domain }} {
-    reverse_proxy tracker:{{ http_tracker.bind_address | extract_port }}
+{{ service.domain }} {
+    reverse_proxy tracker:{{ service.port }}
 }
-{% endif %}
 {% endfor %}
 
-{% if grafana.tls %}
+{% if grafana_service %}
 # Grafana UI with WebSocket support
-{{ grafana.tls.domain }} {
-    reverse_proxy grafana:3000
+{{ grafana_service.domain }} {
+    reverse_proxy grafana:{{ grafana_service.port }}
 }
 {% endif %}
 ```
 
-**Note**: The `extract_port` Tera filter extracts the port from bind_address (e.g., "0.0.0.0:7070" → "7070")
+**Note**: Port extraction and TLS filtering happens in Rust when building `CaddyContext`, not in the template. See [Context Data Preparation Pattern](../contributing/templates/template-system-architecture.md#-context-data-preparation-pattern).
 
 **Configuration Example** (user input):
 
@@ -617,91 +615,192 @@ Add link to HTTPS setup guide.
 
 ### Phase 1: Template Creation (3-4 hours)
 
-- [ ] Create `templates/caddy/Caddyfile.tera` based on production configuration
-- [ ] Create `templates/caddy/README.md` documenting template variables
-- [ ] Update `templates/docker-compose/docker-compose.yml.tera` with Caddy service block
-- [ ] Register Caddyfile in appropriate ProjectGenerator (likely new `CaddyProjectGenerator`)
-- [ ] Test template rendering manually with sample data
+- [x] Create `templates/caddy/Caddyfile.tera` based on production configuration
+- [x] Create `docs/contributing/templates/caddy.md` documenting template variables (per project convention: no README in templates/)
+- [x] Update `templates/docker-compose/docker-compose.yml.tera` with Caddy service block
+- [x] Register Caddyfile in `CaddyProjectGenerator` (`src/infrastructure/templating/caddy/`)
+- [x] Test template rendering with sample data (14 unit tests in `CaddyProjectGenerator` and `CaddyfileRenderer`)
 
 ### Phase 2: Configuration DTOs (3-4 hours)
 
-- [ ] Create `src/application/command_handlers/create/config/https.rs` with DTOs
-  - [ ] `HttpsConfig` struct with `admin_email` and `use_staging` fields
-    - [ ] `admin_email: String` (required if TLS configured)
-    - [ ] `use_staging: bool` (optional, defaults to false for production)
-  - [ ] `TlsConfig` struct with only `domain` field (service-specific)
-- [ ] Update existing service DTOs to include optional `tls` field:
-  - [ ] `HttpApiSection` in `tracker.rs` - add `tls: Option<TlsConfig>`
-  - [ ] `HttpTrackerSection` in `tracker.rs` - add `tls: Option<TlsConfig>`
-  - [ ] `GrafanaSection` in `grafana.rs` - add `tls: Option<TlsConfig>`
-- [ ] Update `EnvironmentCreationConfig` to include optional `HttpsConfig`
-- [ ] Add validation logic:
-  - [ ] `has_any_tls_configured()` - check if any service has `tls` section
-  - [ ] If any service has TLS, `https` section with `admin_email` is required
-  - [ ] If `https.admin_email` provided, at least one service must have TLS configured
-  - [ ] Email format validation for `HttpsConfig.admin_email`
-  - [ ] Domain name format validation in each service's `TlsConfig`
-- [ ] Add proper type wrappers for sensitive data (AdminEmail) per [docs/contributing/secret-handling.md](../contributing/secret-handling.md)
-- [ ] Create unit tests for all validation scenarios
+- [x] Create `src/application/command_handlers/create/config/https.rs` with DTOs
+  - [x] `HttpsSection` struct with `admin_email` and `use_staging` fields
+    - [x] `admin_email: String` (required if TLS configured)
+    - [x] `use_staging: bool` (optional, defaults to false for production)
+  - [x] `TlsSection` struct with only `domain` field (service-specific)
+- [x] Update existing service DTOs to include optional `tls` field:
+  - [x] `HttpApiSection` in `tracker.rs` - add `tls: Option<TlsSection>`
+  - [x] `HttpTrackerSection` in `tracker.rs` - add `tls: Option<TlsSection>`
+  - [x] `GrafanaSection` in `grafana.rs` - add `tls: Option<TlsSection>`
+- [x] Update `EnvironmentCreationConfig` to include optional `HttpsSection`
+- [x] Add validation logic:
+  - [x] `has_any_tls_configured()` - check if any service has `tls` section
+  - [x] If any service has TLS, `https` section with `admin_email` is required
+  - [x] If `https.admin_email` provided, at least one service must have TLS configured
+  - [x] Email format validation for `HttpsSection.admin_email` (using `email_address` crate via `Email` type in `src/shared/email.rs`)
+  - [x] Domain name format validation in each service's `TlsSection` (using `DomainName` type in `src/shared/domain_name.rs`)
+- [x] Add proper type wrappers for validation (`Email`, `DomainName` in `src/shared/`) - Note: DTOs remain as `String` primitives for JSON serialization, domain types used for validation during boundary crossing
+- [x] Create unit tests for all validation scenarios
 
 ### Phase 3: Template Rendering Integration (3-4 hours)
 
-- [ ] Implement Tera `extract_port` filter to parse port from bind_address strings
-- [ ] Update Ansible template renderer to handle Caddy templates
-- [ ] Pass configuration to Tera context:
-  - [ ] `https.admin_email` (required if any service has TLS)
-  - [ ] `https.use_staging` (optional, defaults to false)
-  - [ ] `tracker.http_api` (with optional tls field)
-  - [ ] `tracker.http_trackers[]` (array, each with optional tls field)
-  - [ ] `grafana` (with optional tls field)
-- [ ] Handle conditional rendering in templates:
-  - [ ] `needs_caddy` variable checks if any service has `tls.is_some()`
-  - [ ] Only include Caddy service in docker-compose if `needs_caddy` is true
-  - [ ] `{% if tracker.http_api.tls %}` for API service block in Caddyfile
-  - [ ] `{% if http_tracker.tls %}` inside tracker iteration in Caddyfile
-  - [ ] `{% if grafana.tls %}` for Grafana service block in Caddyfile
-- [ ] Update `ReleaseCommand` to include Caddy template generation
-- [ ] Test template generation with various scenarios:
-  - [ ] All services HTTPS
-  - [ ] Only Tracker API HTTPS
-  - [ ] Multiple HTTP trackers, mixed HTTPS/HTTP
-  - [ ] No HTTPS (Caddy not deployed)
+- [x] Create `CaddyProjectGenerator` following Project Generator pattern
+- [x] Create `CaddyContext` with pre-processed data (following [Context Data Preparation Pattern](../contributing/templates/template-system-architecture.md#-context-data-preparation-pattern)):
+  - [x] `admin_email: String` - extracted from config
+  - [x] `use_staging: bool` - extracted from config
+  - [x] `http_api_service: Option<CaddyService>` - only if TLS configured, with pre-extracted port
+  - [x] `http_tracker_services: Vec<CaddyService>` - only TLS-enabled trackers, with pre-extracted ports
+  - [x] `grafana_service: Option<CaddyService>` - only if TLS configured, with pre-extracted port
+- [x] Create `CaddyService` struct with `domain: String` and `port: u16`
+- [x] Implement port extraction in Rust (from `SocketAddr`) when building context
+- [x] Handle conditional rendering in templates:
+  - [x] `needs_caddy` variable checks if any service list is non-empty
+  - [x] Only include Caddy service in docker-compose if `needs_caddy` is true
+  - [x] `{% if http_api_service %}` for API service block in Caddyfile
+  - [x] `{% for service in http_tracker_services %}` for tracker iteration in Caddyfile
+  - [x] `{% if grafana_service %}` for Grafana service block in Caddyfile
+- [x] Update `ReleaseCommand` to include Caddy template generation:
+  - [x] Add `RenderCaddyTemplates` step to `ReleaseStep` enum
+  - [x] Add `DeployCaddyConfigToRemote` step to `ReleaseStep` enum
+  - [x] Create `RenderCaddyTemplatesStep` for template rendering
+  - [x] Create `DeployCaddyConfigStep` for Ansible deployment
+  - [x] Create Ansible playbook `deploy-caddy-config.yml`
+  - [x] Register playbook in `copy_static_templates` method
+  - [x] Integrate `CaddyContext` into Docker Compose template rendering
+  - [x] Add error variant `CaddyConfigDeployment` with help text
+- [x] Test template generation with various scenarios:
+  - [x] All services HTTPS
+  - [x] Only Tracker API HTTPS
+  - [x] Multiple HTTP trackers, mixed HTTPS/HTTP
+  - [x] No HTTPS (Caddy not deployed)
 
 ### Phase 4: Security Workflow Updates (1 hour)
 
-- [ ] Add `caddy:2.10` to security scan workflow matrix
-- [ ] Add SARIF upload step for Caddy scan results
-- [ ] Update `docs/security/docker/scans/README.md` with Caddy entry
-- [ ] Run security scan locally to verify configuration
-- [ ] Document vulnerability assessment (reference [docs/research/caddy-tls-proxy-evaluation/security-scan.md](../research/caddy-tls-proxy-evaluation/security-scan.md))
+- [x] Add `caddy:2.10` to security scan workflow matrix
+- [x] Add SARIF upload step for Caddy scan results
+- [x] Update `docs/security/docker/scans/README.md` with Caddy entry
+- [x] Run security scan locally to verify configuration
+- [x] Document vulnerability assessment (reference [docs/research/caddy-tls-proxy-evaluation/security-scan.md](../research/caddy-tls-proxy-evaluation/security-scan.md))
 
 ### Phase 5: Documentation (4-5 hours)
 
-- [ ] Create `docs/user-guide/https-setup.md` with complete setup guide:
-  - [ ] Prerequisites (domain names, DNS configuration)
-  - [ ] **Configuration patterns**: All services, single service, multiple trackers
-  - [ ] **Selective HTTPS**: How to enable HTTPS for some services but not others
-  - [ ] **Multiple HTTP trackers**: Configuration examples with mixed HTTPS/HTTP
-  - [ ] Environment configuration examples for each pattern
-  - [ ] Let's Encrypt certificate process
-  - [ ] **Let's Encrypt staging environment**: Document `use_staging: true` for testing (avoids rate limits)
-  - [ ] **Rate limits**: Document Let's Encrypt limits (50 certs/week, 5 duplicates/week)
-  - [ ] **Staging certificates warning**: Browser warnings expected (not trusted), only for testing
-  - [ ] Troubleshooting common issues
-  - [ ] Certificate renewal (automatic)
-  - [ ] Domain verification requirements
-- [ ] Update `docs/user-guide/README.md` with HTTPS guide link
-- [ ] Update `docs/user-guide/configuration.md` with HTTPS config examples:
-  - [ ] Example: HTTPS only for API (sensitive token)
-  - [ ] Example: Multiple trackers, selective HTTPS
-  - [ ] Example: VPN deployment without HTTPS
-- [ ] Create example environment files in `envs/` demonstrating patterns
-- [ ] Add troubleshooting section for common certificate issues
-- [ ] Document Let's Encrypt rate limits and best practices
+- [x] Create `docs/user-guide/services/https.md` with complete HTTPS setup guide:
+  - [x] Overview of HTTPS architecture with Caddy
+  - [x] Prerequisites (domain names, DNS configuration, firewall)
+  - [x] **Global HTTPS configuration**: `admin_email` and `use_staging` options
+  - [x] **Per-service TLS configuration**: `domain` and `use_tls_proxy` pattern
+  - [x] Services supporting HTTPS (Tracker HTTP API, HTTP Trackers, Health Check API, Grafana)
+  - [x] Let's Encrypt certificate process (automatic acquisition and renewal)
+  - [x] **Let's Encrypt staging environment**: Document `use_staging: true` for testing (avoids rate limits)
+  - [x] **Rate limits**: Document Let's Encrypt limits (50 certs/week, 5 duplicates/week)
+  - [x] **Staging certificates warning**: Browser warnings expected (not trusted), only for testing
+  - [x] Complete configuration example with all services HTTPS-enabled
+  - [x] Verification commands for checking HTTPS functionality
+  - [x] Troubleshooting section (DNS, firewall, certificates, Caddy logs)
+  - [x] Architecture explanation (Caddy as TLS termination proxy)
+- [x] Update `docs/user-guide/services/README.md` with HTTPS service entry
+- [x] Update `docs/user-guide/README.md` with HTTPS reference in services section
+- [x] Update `docs/user-guide/services/grafana.md` with TLS proxy fields documentation
+- [x] Regenerate JSON schema (`schemas/environment-config.json`)
 
 ### Phase 6: E2E Testing (5-6 hours)
 
-**Automated E2E Tests**:
+**Revised Strategy** (2026-01-20):
+
+The original plan to test multiple HTTPS patterns is not feasible because the Torrust Tracker
+has only one config option to enable the TLS proxy - we cannot have some HTTP trackers using
+HTTPS while others use HTTP simultaneously. Instead, we'll take a simpler, more maintainable approach:
+
+1. **Enable HTTPS for all HTTP trackers** in the E2E test configuration
+2. **Use the `test` command** (smoke test) instead of manual validation
+3. **Test non-HTTPS via UDP tracker** which never uses the Caddy proxy
+
+This approach provides comprehensive HTTPS coverage while leveraging existing infrastructure.
+
+**Why the `test` command cannot be used in Docker-based E2E tests** (2026-01-20):
+
+The `e2e_deployment_workflow_tests` binary uses Docker containers (via testcontainers) with
+bridge networking, which creates a port mapping layer:
+
+- **Internal ports**: Tracker binds to configured ports (e.g., 1212, 7070) inside the container
+- **External ports**: Docker maps these to random host ports (e.g., 1212 → 32942)
+
+The `test` command reads `service_endpoints` from the persisted environment state, which contains
+the configured internal ports (e.g., `http://127.0.0.1:1212/api/health_check`). However, to access
+services from the host, we need the external mapped ports. This is similar to trying to test
+infrastructure behind a VPN - the command only knows about local configuration, not external
+network layers.
+
+The existing `run_run_validation()` in Docker-based E2E tests already handles this by using
+`runtime_env.container_ports` which contains the actual Docker-mapped ports.
+
+**Solution: Use LXD VM-based E2E tests** (2026-01-20):
+
+The `e2e_complete_workflow_tests` binary uses LXD virtual machines instead of Docker containers.
+In this setup, there's no port mapping layer - the configured ports match the actual ports
+accessible from the host. The `test` command works correctly here because:
+
+- The VM has its own IP address (e.g., `10.x.x.x`)
+- Services bind to configured ports (1212, 7070, etc.)
+- The `test` command can reach services directly at `http://10.x.x.x:1212/api/health_check`
+
+This test binary already calls `validate_deployment()` which runs the `test` command, and it
+passes successfully (verified 2026-01-20):
+
+```text
+Deployment validated successfully, step: "test", environment: e2e-complete, status: "success"
+```
+
+**Note**: The LXD-based E2E tests cannot run on GitHub Actions CI due to network connectivity
+requirements. They must be run manually on a local machine with LXD configured.
+
+**Implementation Status**:
+
+- [x] `test` command already supports HTTPS via `ServiceEndpoint::https()` with domain resolution
+- [x] `validate_deployment()` exists in `E2eTestRunner` and calls the `test` command
+- [x] LXD VM-based E2E tests (`e2e_complete_workflow_tests`) call `validate_deployment()` after `run_services()`
+- [x] Verified LXD VM-based E2E tests pass (2026-01-20)
+- [ ] Add HTTPS configuration to LXD VM-based E2E test config (future enhancement)
+- [ ] Run LXD VM-based E2E tests with HTTPS configuration to validate end-to-end flow
+
+**Configuration Example** (E2E test config):
+
+```json
+{
+  "tracker": {
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070",
+        "domain": "http1.tracker.local",
+        "use_tls_proxy": true
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "domain": "api.tracker.local",
+      "use_tls_proxy": true,
+      "admin_token": "MyAccessToken"
+    }
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "e2e-test-password",
+    "domain": "grafana.tracker.local",
+    "use_tls_proxy": true
+  },
+  "https": {
+    "admin_email": "admin@tracker.local",
+    "use_staging": true
+  }
+}
+```
+
+**Non-HTTPS coverage** (tested implicitly):
+
+- UDP tracker - never uses Caddy proxy, validates non-TLS path
+- Health Check API - can be tested independently without TLS
+
+**Automated E2E Tests** (deferred - may not be needed):
 
 - [ ] Create E2E test environment configs with various HTTPS patterns:
   - [ ] All services HTTPS
@@ -723,47 +822,787 @@ Add link to HTTPS setup guide.
 
 **Manual E2E Test** (reproduce production locally):
 
-- [ ] Create manual test environment config in `envs/`:
-  - [ ] Base on production config (`envs/docker-hetzner-test.json`)
-  - [ ] Replace Hetzner provider with LXD provider
-  - [ ] Add TLS configuration matching production (all services HTTPS)
-  - [ ] Use test domains (e.g., `api.local.torrust-tracker.com`)
-- [ ] Run provisioning locally:
+- [x] Create manual test environment config in `envs/`:
+  - [x] Base on production config (`envs/docker-hetzner-test.json`)
+  - [x] Replace Hetzner provider with LXD provider
+  - [x] Add TLS configuration matching production (all services HTTPS)
+  - [x] Use test domains (e.g., `api.tracker.local`)
+- [x] Run full deployment workflow locally:
 
   ```bash
   cargo run -- create environment --env-file envs/manual-https-test.json
-  cargo run -- create templates --env-name manual-https-test
-  cargo run -- create release --env-name manual-https-test
+  cargo run -- provision manual-https-test
+  cargo run -- configure manual-https-test
+  cargo run -- release manual-https-test
+  cargo run -- run manual-https-test
   ```
 
-- [ ] Verify rendered templates in `build/manual-https-test/`:
-  - [ ] Check `caddy/Caddyfile` contains all service blocks with correct domains
-  - [ ] Check `docker-compose/docker-compose.yml` includes Caddy service
-  - [ ] Verify port extraction from bind_address (e.g., 0.0.0.0:7070 → 7070)
-  - [ ] Confirm Caddy volumes (caddy_data, caddy_config) are present
+- [x] Verify rendered templates in `build/manual-https-test/`:
+  - [x] Check `caddy/Caddyfile` contains all service blocks with correct domains
+  - [x] Check `docker-compose/docker-compose.yml` includes Caddy service
+  - [x] Verify port extraction from bind_address (e.g., 0.0.0.0:7070 → 7070)
+  - [x] Confirm Caddy volumes (caddy_data, caddy_config) are present
+- [x] Verify Caddyfile deployed to server at `/opt/torrust/storage/caddy/etc/Caddyfile`
+- [x] Verify Caddy container running and healthy
+- [x] Verify Caddy logs show successful certificate acquisition (local CA for `.local` domains)
+- [x] Verify HTTPS endpoints accessible via curl:
+  - [x] `https://api.tracker.local` - Tracker API responds (HTTP/2 500, expected - auth required)
+  - [x] `https://grafana.tracker.local` - Grafana redirects to `/login` (HTTP/2 302)
+  - [x] `https://http1.tracker.local` - HTTP Tracker responds (HTTP/2 404, expected for GET)
+  - [x] `https://http2.tracker.local` - HTTP Tracker responds (HTTP/2 404, expected for GET)
+- [x] Verify HTTP→HTTPS redirect works (HTTP 308 Permanent Redirect)
+- [x] Verify `via: 1.1 Caddy` header present in responses
+- [x] Verify HTTP/2 and HTTP/3 enabled (`alt-svc: h3=":443"` header)
+- [x] Verify port filtering (TLS ports NOT exposed, non-TLS ports exposed)
 - [ ] Compare with production templates to ensure consistency
 - [ ] Document manual test procedure in `docs/e2e-testing/manual-https-testing.md`
 
-### Phase 7: Schema Generation (30 minutes)
+**Manual Test Results** (2026-01-14):
 
-- [ ] Regenerate JSON schema from Rust DTOs:
+| Test                            | Status  | Notes                                      |
+| ------------------------------- | ------- | ------------------------------------------ |
+| Caddyfile template rendering    | ✅ Pass | Clean output, no formatting warnings       |
+| Caddy service in docker-compose | ✅ Pass | Ports 80, 443, 443/udp exposed             |
+| Caddyfile deployment to server  | ✅ Pass | `/opt/torrust/storage/caddy/etc/Caddyfile` |
+| Caddy container health          | ✅ Pass | Running, healthy                           |
+| Certificate acquisition         | ✅ Pass | Local CA used for `.local` domains         |
+| HTTPS API endpoint              | ✅ Pass | HTTP/2 500 (auth required)                 |
+| HTTPS Grafana endpoint          | ✅ Pass | HTTP/2 302 redirect to /login              |
+| HTTPS HTTP Tracker 1            | ✅ Pass | HTTP/2 404 (expected for GET)              |
+| HTTPS HTTP Tracker 2            | ✅ Pass | HTTP/2 404 (expected for GET)              |
+| HTTP→HTTPS redirect             | ✅ Pass | 308 Permanent Redirect                     |
+| HTTP/2 enabled                  | ✅ Pass | Confirmed in response                      |
+| HTTP/3 available                | ✅ Pass | `alt-svc: h3=":443"` header                |
+| TLS port filtering              | ✅ Pass | TLS ports hidden, non-TLS ports exposed    |
+
+**Local DNS Setup** (for testing):
+
+Add to `/etc/hosts` (replace IP with your LXD VM IP):
+
+```text
+10.140.190.58   api.tracker.local
+10.140.190.58   http1.tracker.local
+10.140.190.58   http2.tracker.local
+10.140.190.58   grafana.tracker.local
+```
+
+**Certificate Behavior**:
+
+| Domain Type                                | Certificate Source         | Trust Level                    |
+| ------------------------------------------ | -------------------------- | ------------------------------ |
+| Real domains (e.g., `tracker.example.com`) | Let's Encrypt (or staging) | Browser trusted                |
+| Local domains (e.g., `*.tracker.local`)    | Caddy's Local CA           | Self-signed (browser warnings) |
+| Unreachable domains / No internet          | Caddy's Local CA           | Self-signed                    |
+
+**Manual E2E Test Procedure**:
+
+This section documents the step-by-step procedure for running manual E2E tests with HTTPS support.
+
+**1. Setup the environment configuration file**:
+
+Create an environment configuration file (e.g., `envs/manual-https-test.json`) with the desired HTTPS settings. See `envs/manual-https-test.json` for a complete example.
+
+**2. Run the deployment workflow**:
+
+```bash
+# Destroy any existing environment with the same name
+cargo run -- destroy manual-https-test
+
+# Clean up local build artifacts (if needed)
+rm -rf data/manual-https-test build/manual-https-test
+
+# Create the environment
+cargo run -- create environment --env-file envs/manual-https-test.json
+
+# Provision infrastructure (creates LXD VM)
+cargo run -- provision manual-https-test
+
+# Configure the environment (install Docker, etc.)
+cargo run -- configure manual-https-test
+
+# Release application (render templates and deploy to VM)
+cargo run -- release manual-https-test
+
+# Run the application (start Docker Compose services)
+cargo run -- run manual-https-test
+```
+
+**3. Verify local build artifacts**:
+
+Check the generated templates in `build/<env-name>/`:
+
+```bash
+# Verify docker-compose.yml has correct port exposure
+cat build/manual-https-test/docker-compose/docker-compose.yml
+
+# Verify Caddyfile has all TLS services configured
+cat build/manual-https-test/caddy/Caddyfile
+```
+
+**4. Verify deployment on the VM**:
+
+Get the VM IP from the provision output or from environment data:
+
+```bash
+# Check environment state for VM IP
+cat data/manual-https-test/environment.json | jq '.context.provisioned_context.instance_ip'
+```
+
+SSH into the VM to verify services:
+
+```bash
+# Check running containers (use your SSH key path)
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP> "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+
+# Check Caddyfile inside the Caddy container
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP> "docker exec caddy cat /etc/caddy/Caddyfile"
+
+# Check container logs if needed
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP> "docker logs caddy --tail 50"
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no torrust@<VM_IP> "docker logs tracker --tail 50"
+```
+
+**5. Key file locations on the VM**:
+
+| File               | Location on VM                             | Location in Container                |
+| ------------------ | ------------------------------------------ | ------------------------------------ |
+| docker-compose.yml | `/opt/torrust/docker-compose.yml`          | N/A                                  |
+| .env               | `/opt/torrust/.env`                        | N/A                                  |
+| Caddyfile          | `/opt/torrust/storage/caddy/etc/Caddyfile` | `/etc/caddy/Caddyfile` (bind mount)  |
+| Tracker config     | `/opt/torrust/storage/tracker/etc/`        | `/etc/torrust/tracker/` (bind mount) |
+| Caddy certificates | Docker volume `caddy_data`                 | `/data/`                             |
+
+**App directory**: The application is deployed to `/opt/torrust/`, **NOT** `/home/torrust/app/`. This is the working directory for docker compose commands on the VM.
+
+```bash
+# Example: Check running containers on the VM
+ssh -i fixtures/testing_rsa torrust@<VM_IP> "cd /opt/torrust && docker compose ps"
+
+# Example: View docker-compose.yml on the VM
+ssh -i fixtures/testing_rsa torrust@<VM_IP> "cat /opt/torrust/docker-compose.yml"
+```
+
+**6. Port exposure verification**:
+
+For mixed TLS/non-TLS configurations, verify correct port exposure:
+
+- TLS-enabled services (API, HTTP trackers with TLS, Grafana with TLS) should NOT have ports exposed directly
+- Non-TLS services (UDP trackers, HTTP trackers without TLS) should have ports exposed
+- Caddy ports (80, 443, 443/udp) should always be exposed when HTTPS is configured
+
+Example verification with `docker ps`:
+
+```text
+# Expected output for mixed TLS config (7070, 7071 have TLS, 7072 doesn't):
+tracker   6969/udp, 7072/tcp   # 7070, 7071 NOT exposed (Caddy handles them)
+caddy     80/tcp, 443/tcp, 443/udp  # Entry point for HTTPS
+```
+
+### Phase 7: CLI Command Compatibility with HTTPS (3-4 hours)
+
+When HTTPS is enabled, the deployer commands must adapt their behavior to work with domain-based URLs instead of direct IP addresses, and handle internal ports that are no longer directly accessible.
+
+#### 7.1: Update `test` command for HTTPS-enabled environments
+
+**Current Problem**: The `test` command validates services by accessing them directly via IP and internal ports (e.g., `http://10.140.190.214:1212/api/health_check`). When TLS is enabled for a service:
+
+1. The internal port (e.g., 1212) is not exposed externally - only Caddy ports (80, 443) are exposed
+2. The service should be accessed via its HTTPS domain (e.g., `https://api.tracker.local`)
+
+**Current Behavior** (fails when TLS enabled):
+
+```text
+$ cargo run -- test manual-https-test
+
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: manual-https-test (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Testing infrastructure...
+❌ Test command failed: Validation failed for environment 'manual-https-test': Remote action failed: Action 'running-services-validation' validation failed: Tracker API external health check failed: error sending request for url (http://10.140.190.214:1212/api/health_check). Check that tracker is running and firewall allows port 1212.
+```
+
+**Required Changes**:
+
+- [ ] Detect if a service has TLS enabled from environment configuration
+- [ ] For TLS-enabled services:
+  - [ ] Use the configured domain with HTTPS protocol instead of IP with internal port
+  - [ ] For local/test domains (e.g., `.local`), accept self-signed certificates from Caddy's local CA
+  - [ ] Show clear message: "Testing via HTTPS endpoint: https://api.tracker.local"
+- [ ] For non-TLS services:
+  - [ ] Continue using direct IP and port access as before
+- [ ] Update error messages to clarify the HTTPS testing behavior
+
+**Expected Behavior After Fix**:
+
+```text
+Testing Tracker API via HTTPS: https://api.tracker.local/api/health_check ✅
+Testing HTTP Tracker (non-TLS): http://10.140.190.214:7072/announce ✅
+```
+
+#### 7.2: Update `show` command for HTTPS-enabled environments ✅ COMPLETE
+
+**Current Problem**: The `show` command displays service endpoints using only IP addresses and internal ports, which are misleading when HTTPS is enabled:
+
+1. Displayed URLs may not work (internal ports not exposed)
+2. Users don't know the correct HTTPS URLs to use
+3. No indication that domain-based access is required
+
+**Current Behavior** (shows incorrect URLs when TLS enabled):
+
+```text
+$ cargo run -- show manual-https-test
+
+Environment: manual-https-test
+State: Running
+Provider: LXD
+Created: 2026-01-14 11:08:00 UTC
+
+Infrastructure:
+  Instance IP: 10.140.190.214
+  SSH Port: 22
+  SSH User: torrust
+  SSH Key: /home/.../fixtures/testing_rsa
+
+Connection:
+  ssh -i /home/.../fixtures/testing_rsa torrust@10.140.190.214
+
+Tracker Services:
+  UDP Trackers:
+    - udp://10.140.190.214:6969/announce
+  HTTP Trackers:
+    - http://10.140.190.214:7070/announce  # ❌ Port not exposed (TLS enabled)
+    - http://10.140.190.214:7071/announce  # ❌ Port not exposed (TLS enabled)
+    - http://10.140.190.214:7072/announce  # ✅ Works (no TLS)
+  API Endpoint:
+    - http://10.140.190.214:1212/api       # ❌ Port not exposed (TLS enabled)
+  Health Check:
+    - http://10.140.190.214:1313/health_check
+
+Prometheus:
+  Internal only (localhost:9090) - not exposed externally
+
+Grafana:
+  http://10.140.190.214:3100/              # ❌ Port not exposed (TLS enabled)
+
+Services are running. Use 'test' to verify health.
+```
+
+**Required Changes**:
+
+- [x] Detect if a service has TLS enabled from environment configuration
+- [x] For TLS-enabled services:
+  - [x] Show HTTPS URL with configured domain: `https://api.tracker.local`
+  - [ ] Show HTTP redirect URL: `http://api.tracker.local` (redirects to HTTPS) _(deferred - not essential)_
+  - [x] Add note: "Direct IP access not available when TLS is enabled"
+- [x] For non-TLS services:
+  - [x] Show direct IP URL as before: `http://10.140.190.214:7072`
+- [x] Add informational section explaining:
+  - [x] "Services with TLS enabled must be accessed via their configured domain"
+  - [x] "For local domains (\*.local), add entries to /etc/hosts pointing to the VM IP"
+  - [x] "Internal ports are not directly accessible when TLS is enabled"
+
+**Expected Output After Fix**:
+
+```text
+Environment: manual-https-test
+State: Running
+Provider: LXD
+Created: 2026-01-14 11:08:00 UTC
+
+Infrastructure:
+  Instance IP: 10.140.190.214
+  SSH Port: 22
+  SSH User: torrust
+
+Tracker Services:
+  UDP Trackers:
+    - udp://10.140.190.214:6969/announce
+  HTTP Trackers (HTTPS via Caddy):
+    - https://http1.tracker.local/announce
+    - https://http2.tracker.local/announce
+  HTTP Trackers (direct):
+    - http://10.140.190.214:7072/announce
+  API Endpoint (HTTPS via Caddy):
+    - https://api.tracker.local/api
+
+Grafana (HTTPS via Caddy):
+  https://grafana.tracker.local/
+
+Prometheus:
+  Internal only (localhost:9090) - not exposed externally
+
+Note: HTTPS services require domain-based access. For local domains (*.local),
+add the following to your /etc/hosts file:
+
+  10.140.190.214   api.tracker.local http1.tracker.local http2.tracker.local grafana.tracker.local
+
+Internal ports (1212, 7070, 7071, 3000) are not directly accessible when TLS is enabled.
+```
+
+#### 7.3: Add TLS Support for Health Check API ✅ COMPLETE
+
+**Current State**: The health check API (`health_check_api`) doesn't support TLS configuration like other HTTP services (HTTP trackers, Tracker API, Grafana).
+
+**Problem**: Users may want to expose the health check API publicly with HTTPS for external monitoring systems, load balancers, or orchestration tools that need to verify service health.
+
+**Solution**: Add an optional `tls` field to the health check API configuration, following the same service-based TLS pattern used by other services.
+
+**Configuration Change**:
+
+```json
+{
+  "tracker": {
+    "health_check_api": {
+      "bind_address": "0.0.0.0:1313",
+      "tls": {
+        "domain": "health.tracker.local"
+      }
+    }
+  }
+}
+```
+
+**Implementation Scope**:
+
+- [x] Add `tls: Option<TlsConfig>` to health check API domain model
+- [x] Add `tls: Option<TlsConfig>` to health check API DTOs
+- [x] Update Caddyfile template to include health check when TLS is configured
+- [x] Update show command to display HTTPS URL when health check has TLS
+- [ ] Update test command to use HTTPS for health check when TLS is configured (deferred to 7.1)
+
+> **Note**: JSON schema regeneration deferred to Phase 8.
+
+#### 7.4: Handle Localhost-Bound Services in Show Command and Validation ✅ COMPLETE
+
+**Current State**:
+
+- Services can bind to localhost (`127.0.0.1` or `::1`)
+- If TLS is configured for such a service, Caddy cannot reach the backend (Caddy runs in a separate container, localhost is not shared between containers)
+- The show command incorrectly displays public IP URLs for localhost-bound services
+
+**Problem Example**: Configuration has `"bind_address": "127.0.0.1:1313"` but show command displays `http://10.140.190.190:1313/health_check` which won't work because the service is only listening on localhost.
+
+**Solution** (two parts):
+
+##### Part A: Validation at Create Time
+
+Fail environment creation if any service has BOTH:
+
+- TLS configuration (`tls` section present)
+- Localhost bind address (`127.0.0.1` or `::1`)
+
+**Error message example**:
+
+```text
+Error: Invalid configuration for health_check_api
+
+  The service binds to localhost (127.0.0.1:1313) but has TLS configured.
+  Caddy cannot proxy to localhost-bound services (different container network).
+
+  To fix, either:
+  - Remove the 'tls' section to keep the service internal-only
+  - Change bind_address to '0.0.0.0:1313' to expose the service through Caddy
+```
+
+**Implementation Notes**:
+
+- Validation occurs in the domain layer when converting DTO to domain object (similar to the Grafana→Prometheus dependency validation)
+- This is an internal rule per service, checked during DTO-to-domain conversion
+- Services to validate: `health_check_api`, `http_api`, `http_trackers` (each individually)
+- Grafana excluded: bind address is hardcoded (port 3000), not user-configurable
+- Localhost detection: Check for `127.0.0.1` and `::1` (IPv6 localhost) only, not entire ranges
+
+##### Part B: Show Command for Localhost Services (without TLS)
+
+For services bound to localhost WITHOUT TLS, display:
+
+```text
+Health Check:
+  Internal only (localhost:1313) - access via SSH tunnel
+```
+
+Instead of the incorrect:
+
+```text
+Health Check:
+  - http://10.140.190.190:1313/health_check
+```
+
+**Implementation Notes**:
+
+- Add `is_localhost_only: bool` field to `ServiceInfo` for relevant services (don't put message in URL field)
+- Show "Internal only" message for localhost-bound services - never hide services from output
+- Principle: Keep user informed about everything. If keeping a service internal was an error, the user catches it sooner rather than wondering why the service is missing from output.
+
+**Implementation Scope**:
+
+- [x] Add validation in domain layer to reject localhost + TLS combinations (during DTO-to-domain conversion)
+- [x] Update show command to detect localhost-bound services
+- [x] Add `is_localhost_only` field to `ServiceInfo` for health check, API, and HTTP trackers
+- [x] Display "Internal only" message for internal-only services
+- [x] Apply to: health check API, HTTP API, HTTP trackers (Grafana excluded - hardcoded port)
+
+#### 7.5: Fix `on_reverse_proxy` Tracker Configuration Bug
+
+**Problem**:
+
+The Torrust Tracker has a configuration option `[core.net].on_reverse_proxy` that tells the tracker whether it's running behind a reverse proxy. When `true`, the tracker expects the `X-Forwarded-For` HTTP header to get the real client IP instead of the proxy's IP. This is critical for HTTP trackers to correctly identify peers.
+
+Currently, in `templates/tracker/tracker.toml.tera`, this option is **hardcoded to `true`**:
+
+```toml
+[core.net]
+on_reverse_proxy = true
+```
+
+This is wrong because:
+
+1. When an HTTP tracker is exposed directly (no Caddy proxy), the tracker expects `X-Forwarded-For` headers that won't exist, causing incorrect peer identification
+2. The current implementation assumes all HTTP trackers with TLS go through Caddy, but users might want to use the tracker's built-in TLS support without a proxy
+
+**Tracker Configuration Limitation**:
+
+The `on_reverse_proxy` option is **global** (in `[core.net]`), not per-tracker. This means:
+
+- ALL HTTP trackers share the same setting
+- You cannot have some trackers behind a proxy and others direct in the same deployment
+- If ANY tracker uses a proxy, ALL trackers must be configured for proxy mode
+
+This is a limitation in the Torrust Tracker itself (not the deployer). A proper fix would require the tracker to support per-tracker `on_reverse_proxy` settings.
+
+**Upstream Issue**: [torrust/torrust-tracker#1640](https://github.com/torrust/torrust-tracker/issues/1640)
+
+**How to Reproduce**:
+
+1. Deploy the manual test environment with mixed TLS/non-TLS HTTP trackers:
+
+   ```bash
+   cargo run -- show manual-https-test
+   ```
+
+2. Verify the tracker config has `on_reverse_proxy = true` (set because trackers 7070, 7071 use TLS proxy):
+
+   ```bash
+   cat build/manual-https-test/tracker/tracker.toml | grep -A2 "core.net"
+   # Output: [core.net]
+   #         on_reverse_proxy = true
+   ```
+
+3. Make a direct HTTP announce request to the tracker on port 7072 (no proxy):
+
+   ```bash
+   curl -v "http://<VM_IP>:7072/announce?info_hash=%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00&peer_id=-TR3000-000000000000&port=6881&uploaded=0&downloaded=0&left=0&event=started"
+   ```
+
+4. Observe the failure response:
+
+   ```text
+   d14:failure reason208:Error resolving peer IP: missing or invalid the right most
+   X-Forwarded-For IP (mandatory on reverse proxy tracker configuration)e
+   ```
+
+The tracker on port 7072 expects `X-Forwarded-For` header (due to global `on_reverse_proxy = true`) but doesn't receive it from direct requests, causing the announce to fail.
+
+**Solution**:
+
+Rename `tls` to a clearer structure with `domain` at the top level and `use_tls_proxy` as a separate boolean. The `tls` name was misleading because it doesn't map to the tracker's TLS config - the domain is only used for Caddy proxy configuration.
+
+**Before** (current - using `tls` object):
+
+```json
+{
+  "environment": {
+    "name": "manual-https-test"
+  },
+  "ssh_credentials": {
+    "private_key_path": "/path/to/fixtures/testing_rsa",
+    "public_key_path": "/path/to/fixtures/testing_rsa.pub"
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-manual-https-test"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "sqlite3",
+        "database_name": "tracker.db"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070",
+        "tls": {
+          "domain": "http1.tracker.local"
+        }
+      },
+      {
+        "bind_address": "0.0.0.0:7071",
+        "tls": {
+          "domain": "http2.tracker.local"
+        }
+      },
+      {
+        "bind_address": "0.0.0.0:7072"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "MyAccessToken",
+      "tls": {
+        "domain": "api.tracker.local"
+      }
+    },
+    "health_check_api": {
+      "bind_address": "0.0.0.0:1313",
+      "tls": {
+        "domain": "health.tracker.local"
+      }
+    }
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "admin-password",
+    "tls": {
+      "domain": "grafana.tracker.local"
+    }
+  },
+  "prometheus": {
+    "scrape_interval_in_secs": 15
+  },
+  "https": {
+    "admin_email": "admin@tracker.local",
+    "use_staging": true
+  }
+}
+```
+
+**After** (proposed - using `domain` + `use_tls_proxy`):
+
+```json
+{
+  "environment": {
+    "name": "manual-https-test"
+  },
+  "ssh_credentials": {
+    "private_key_path": "/path/to/fixtures/testing_rsa",
+    "public_key_path": "/path/to/fixtures/testing_rsa.pub"
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-manual-https-test"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "sqlite3",
+        "database_name": "tracker.db"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070",
+        "domain": "http1.tracker.local",
+        "use_tls_proxy": true
+      },
+      {
+        "bind_address": "0.0.0.0:7071",
+        "domain": "http2.tracker.local",
+        "use_tls_proxy": true
+      },
+      {
+        "bind_address": "0.0.0.0:7072"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "MyAccessToken",
+      "domain": "api.tracker.local",
+      "use_tls_proxy": true
+    },
+    "health_check_api": {
+      "bind_address": "0.0.0.0:1313",
+      "domain": "health.tracker.local",
+      "use_tls_proxy": true
+    }
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "admin-password",
+    "domain": "grafana.tracker.local",
+    "use_tls_proxy": true
+  },
+  "prometheus": {
+    "scrape_interval_in_secs": 15
+  },
+  "https": {
+    "admin_email": "admin@tracker.local",
+    "use_staging": true
+  }
+}
+```
+
+**Configuration Semantics**:
+
+| `domain` | `use_tls_proxy` | Meaning                                                   |
+| -------- | --------------- | --------------------------------------------------------- |
+| absent   | absent          | Direct HTTP, no proxy                                     |
+| present  | absent          | HTTP with domain (for future use, e.g., DNS-based access) |
+| present  | `true`          | HTTPS via Caddy proxy (TLS termination)                   |
+| absent   | `true`          | **INVALID** - TLS proxy needs domain for virtual host     |
+
+**Why `use_tls_proxy` (not `on_reverse_proxy`)?**:
+
+The name `use_tls_proxy` accurately describes what our Caddy proxy does: **TLS termination**. This naming choice is intentional for future compatibility:
+
+1. **Current state**: The tracker has a global `[core.net].on_reverse_proxy` option
+2. **Future state**: The tracker may add per-tracker `on_reverse_proxy` support
+3. **No conflict**: When that happens, we can expose both options without ambiguity:
+
+```json
+{
+  "bind_address": "0.0.0.0:7071",
+  "domain": "http2.tracker.local",
+  "use_tls_proxy": true,
+  "on_reverse_proxy": true
+}
+```
+
+**Dependency Rule**: `use_tls_proxy: true` → tracker's `on_reverse_proxy` MUST be `true`. This is enforced automatically:
+
+- When `use_tls_proxy: true`, the deployer sets the tracker's `[core.net].on_reverse_proxy = true`
+- This is because Caddy sends `X-Forwarded-For` headers that the tracker must read
+
+**Future Compatibility**: If the tracker adds per-tracker `on_reverse_proxy`:
+
+- `use_tls_proxy` controls Caddy inclusion and implies `on_reverse_proxy: true`
+- `on_reverse_proxy` could be explicitly set for edge cases (non-TLS reverse proxy)
+- Validation: `use_tls_proxy: true` + `on_reverse_proxy: false` = **INVALID**
+
+**Behavior**:
+
+1. **Tracker config** (`[core.net].on_reverse_proxy`):
+   - Set to `true` if ANY HTTP tracker has `use_tls_proxy: true`
+   - Set to `false` otherwise
+   - Note: This only affects HTTP trackers; other services ignore it
+
+2. **Caddy config** (Caddyfile):
+   - Include service in Caddy config only if `use_tls_proxy: true`
+   - Requires `domain` to be present for the virtual host configuration
+
+3. **Validation rules**:
+   - `use_tls_proxy: true` requires `domain` to be present
+   - Localhost bind addresses with `use_tls_proxy: true` should be rejected (proxy can't reach localhost)
+
+**Known Limitation** (due to tracker's global setting):
+
+If you have multiple HTTP trackers where some use `use_tls_proxy` and others don't, the ones without it will still receive the global `on_reverse_proxy = true` setting and may fail if they receive direct requests without `X-Forwarded-For` headers.
+
+**Workaround**: Ensure all HTTP trackers in a deployment either ALL use the TLS proxy or NONE use it.
+
+**Reference**: [Torrust Tracker Network Configuration](https://docs.rs/torrust-tracker-configuration/latest/torrust_tracker_configuration/v2_0_0/network/struct.Network.html)
+
+**Implementation Scope**:
+
+The implementation is split into incremental steps, one service type at a time, to minimize risk and simplify review.
+
+##### Step 7.5.1: HTTP Trackers
+
+- [x] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HttpTrackerSection` DTO
+- [x] Update `HttpTrackerConfig` domain type to include `use_tls_proxy` and `domain`
+- [x] Add validation: `use_tls_proxy: true` requires `domain` to be present
+- [x] Add validation: `use_tls_proxy: true` with localhost bind address → reject
+- [x] Update tracker config template (`templates/tracker/tracker.toml.tera`) to conditionally set `on_reverse_proxy` based on ANY HTTP tracker having `use_tls_proxy: true`
+- [x] Update Caddy template (`templates/caddy/Caddyfile.tera`) to check `use_tls_proxy` for HTTP trackers
+- [x] Update show command `ServiceInfo` for HTTP trackers
+- [x] Update `envs/manual-https-test.json` for HTTP trackers only
+- [x] Remove `TlsSection` from HTTP trackers (keep in other services temporarily)
+- [x] Add unit tests for HTTP tracker validation
+- [x] Run E2E tests to verify HTTP trackers work
+
+##### Step 7.5.2: Tracker REST API
+
+- [x] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HttpApiSection` DTO
+- [x] Update `HttpApiConfig` domain type
+- [x] Add validation rules (same as HTTP trackers)
+- [x] Update Caddy template for API
+- [x] Update show command `ServiceInfo` for API
+- [x] Update `envs/manual-https-test.json` for API
+- [x] Remove `TlsSection` from API
+- [x] Add unit tests for API validation
+- [x] Run E2E tests
+
+##### Step 7.5.3: Tracker Health Check API
+
+- [x] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `HealthCheckApiSection` DTO
+- [x] Update `HealthCheckApiConfig` domain type
+- [x] Add validation rules
+- [x] Update Caddy template for health check
+- [x] Update show command `ServiceInfo` for health check
+- [x] Update `envs/manual-https-test.json` for health check
+- [x] Remove `TlsSection` from health check
+- [x] Add unit tests
+- [x] Run E2E tests
+
+##### Step 7.5.4: Grafana
+
+- [x] Add `domain: Option<String>` and `use_tls_proxy: Option<bool>` to `GrafanaSection` DTO
+- [x] Update `GrafanaConfig` domain type
+- [x] Add validation rules (note: Grafana has no configurable bind address, so localhost validation not needed)
+- [x] Update Caddy template for Grafana
+- [x] Update show command `ServiceInfo` for Grafana
+- [x] Update `envs/manual-https-test.json` for Grafana
+- [x] Remove `TlsSection` from Grafana
+- [x] Add unit tests
+- [x] Run E2E tests
+
+##### Step 7.5.5: Cleanup and Final Verification
+
+- [x] Remove `TlsSection` type completely (should be unused after all services migrated)
+- [x] Remove `domain::tls` module completely (unused after migration)
+- [x] Run full E2E test suite
+- [x] Run all linters
+- [x] Manual verification with `envs/manual-https-test.json`
+
+### Phase 8: Schema Generation (30 minutes)
+
+- [x] Regenerate JSON schema from Rust DTOs:
 
   ```bash
   cargo run --bin torrust-tracker-deployer -- create schema > schemas/environment-config.json
   ```
 
-- [ ] Verify schema includes HTTPS configuration section
-- [ ] Verify schema validation rules match Rust DTO constraints
-- [ ] Test schema with example HTTPS-enabled environment file
-- [ ] Commit updated schema file
+- [x] Verify schema includes HTTPS configuration section
+- [x] Verify schema validation rules match Rust DTO constraints
+- [x] Test schema with example HTTPS-enabled environment file
+- [x] Commit updated schema file
 
-### Phase 8: Create ADR (1 hour)
+### Phase 9: Create ADRs (1 hour)
 
-- [ ] Create `docs/decisions/caddy-for-tls-termination.md`
-- [ ] Document decision rationale (reference #270 evaluation)
-- [ ] Document alternatives considered (Pingoo, nginx+certbot)
-- [ ] Document implementation approach
-- [ ] Document risks and mitigations
+- [x] Create `docs/decisions/caddy-for-tls-termination.md`
+  - Document decision rationale (reference #270 evaluation)
+  - Document alternatives considered (Pingoo, nginx+certbot)
+  - Document implementation approach
+- [x] Create `docs/decisions/per-service-tls-configuration.md`
+  - Document why we use `domain` + `use_tls_proxy` instead of nested `tls` section
+  - Document configuration matrix and validation rules
+- [x] Create `docs/decisions/uniform-http-tracker-tls-requirement.md`
+  - Document tracker `on_reverse_proxy` global limitation
+  - Document why mixed HTTP tracker TLS is not allowed
+  - Reference upstream issue torrust/torrust-tracker#1640
 
 ## Acceptance Criteria
 
@@ -806,7 +1645,10 @@ Add link to HTTPS setup guide.
 - [ ] User guide index updated with HTTPS documentation link
 - [ ] Configuration examples include HTTPS scenarios
 - [ ] Troubleshooting section covers common certificate issues
-- [ ] ADR created documenting Caddy adoption decision
+- [x] ADRs created documenting key decisions:
+  - [x] `caddy-for-tls-termination.md` - Caddy adoption decision
+  - [x] `per-service-tls-configuration.md` - domain + use_tls_proxy pattern
+  - [x] `uniform-http-tracker-tls-requirement.md` - tracker on_reverse_proxy limitation
 
 **Testing**:
 
@@ -825,6 +1667,20 @@ Add link to HTTPS setup guide.
   - [ ] Invalid: endpoints without admin_email
   - [ ] Valid: no HTTPS configuration at all
 - [ ] WebSocket connectivity tested through Caddy proxy
+
+**CLI Command Compatibility**:
+
+- [ ] `test` command works correctly with HTTPS-enabled services:
+  - [ ] Uses HTTPS domain URLs for TLS-enabled services
+  - [ ] Uses direct IP/port for non-TLS services
+  - [ ] Accepts self-signed certificates for local domains (e.g., `*.local`)
+  - [ ] Shows clear message indicating HTTPS test mode
+- [ ] `show` command displays correct endpoints:
+  - [ ] Shows HTTPS URLs with domains for TLS-enabled services
+  - [ ] Shows direct IP/port for non-TLS services
+  - [ ] Includes note about domain-based access requirement
+  - [ ] Provides `/etc/hosts` configuration hint for local domains
+  - [ ] Clarifies internal ports are not accessible when TLS is enabled
 
 **Production Verification**:
 

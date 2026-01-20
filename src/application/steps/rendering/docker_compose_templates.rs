@@ -29,11 +29,12 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::domain::environment::user_inputs::UserInputs;
 use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
 use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-    DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerPorts,
+    DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerServiceConfig,
 };
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
@@ -107,15 +108,15 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         let generator = DockerComposeProjectGenerator::new(&self.build_dir, &self.template_manager);
 
         let admin_token = self.extract_admin_token();
-        let ports = self.build_tracker_ports();
+        let tracker = self.build_tracker_config();
 
         // Create contexts based on database configuration
         let database_config = self.environment.database_config();
         let (env_context, builder) = match database_config {
-            DatabaseConfig::Sqlite(..) => Self::create_sqlite_contexts(admin_token, ports),
+            DatabaseConfig::Sqlite(..) => Self::create_sqlite_contexts(admin_token, tracker),
             DatabaseConfig::Mysql(mysql_config) => Self::create_mysql_contexts(
                 admin_token,
-                ports,
+                tracker,
                 mysql_config.port,
                 mysql_config.database_name.clone(),
                 mysql_config.username.clone(),
@@ -128,6 +129,9 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         // Apply Grafana configuration (independent of database choice)
         let builder = self.apply_grafana_config(builder);
+
+        // Apply Caddy configuration (if HTTPS enabled)
+        let builder = self.apply_caddy_config(builder);
         let docker_compose_context = builder.build();
 
         // Apply Grafana credentials to env context
@@ -151,31 +155,68 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         self.environment.admin_token().to_string()
     }
 
-    fn build_tracker_ports(&self) -> TrackerPorts {
+    fn build_tracker_config(&self) -> TrackerServiceConfig {
         let tracker_config = self.environment.tracker_config();
-        let (udp_tracker_ports, http_tracker_ports, http_api_port) =
-            Self::extract_tracker_ports(tracker_config);
+        let user_inputs = &self.environment.context().user_inputs;
 
-        TrackerPorts {
+        let (udp_tracker_ports, http_tracker_ports_without_tls, http_api_port, http_api_has_tls) =
+            Self::extract_tracker_ports(tracker_config, user_inputs);
+
+        // Determine which features are enabled (affects tracker networks)
+        let has_prometheus = self.environment.prometheus_config().is_some();
+        let has_mysql = matches!(
+            self.environment.database_config(),
+            DatabaseConfig::Mysql(..)
+        );
+        let has_caddy = self.has_caddy_enabled();
+
+        TrackerServiceConfig::new(
             udp_tracker_ports,
-            http_tracker_ports,
+            http_tracker_ports_without_tls,
             http_api_port,
+            http_api_has_tls,
+            has_prometheus,
+            has_mysql,
+            has_caddy,
+        )
+    }
+
+    /// Check if Caddy is enabled (HTTPS with at least one TLS-configured service)
+    fn has_caddy_enabled(&self) -> bool {
+        let user_inputs = &self.environment.context().user_inputs;
+
+        // Check if HTTPS is configured
+        if user_inputs.https.is_none() {
+            return false;
         }
+
+        let tracker = &user_inputs.tracker;
+
+        // Check if any service has TLS configured
+        let tracker_api_has_tls = tracker.http_api_tls_domain().is_some();
+        let http_trackers_have_tls = !tracker.http_trackers_with_tls().is_empty();
+        let grafana_has_tls = user_inputs
+            .grafana
+            .as_ref()
+            .is_some_and(|g| g.tls_domain().is_some());
+
+        // Caddy is enabled if HTTPS is configured AND at least one service has TLS
+        tracker_api_has_tls || http_trackers_have_tls || grafana_has_tls
     }
 
     fn create_sqlite_contexts(
         admin_token: String,
-        ports: TrackerPorts,
+        tracker: TrackerServiceConfig,
     ) -> (EnvContext, DockerComposeContextBuilder) {
         let env_context = EnvContext::new(admin_token);
-        let builder = DockerComposeContext::builder(ports);
+        let builder = DockerComposeContext::builder(tracker);
 
         (env_context, builder)
     }
 
     fn create_mysql_contexts(
         admin_token: String,
-        ports: TrackerPorts,
+        tracker: TrackerServiceConfig,
         port: u16,
         database_name: String,
         username: String,
@@ -200,7 +241,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             port,
         };
 
-        let builder = DockerComposeContext::builder(ports).with_mysql(mysql_config);
+        let builder = DockerComposeContext::builder(tracker).with_mysql(mysql_config);
 
         (env_context, builder)
     }
@@ -227,6 +268,42 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         }
     }
 
+    fn apply_caddy_config(
+        &self,
+        builder: DockerComposeContextBuilder,
+    ) -> DockerComposeContextBuilder {
+        let user_inputs = &self.environment.context().user_inputs;
+
+        // Check if HTTPS is configured
+        let Some(https_config) = &user_inputs.https else {
+            return builder;
+        };
+
+        let tracker = &user_inputs.tracker;
+
+        // Check if any service has TLS configured
+        let has_tracker_api_tls = tracker.http_api_tls_domain().is_some();
+        let has_http_tracker_tls = !tracker.http_trackers_with_tls().is_empty();
+        let has_grafana_tls = user_inputs
+            .grafana
+            .as_ref()
+            .is_some_and(|g| g.tls_domain().is_some());
+
+        let has_any_tls = has_tracker_api_tls || has_http_tracker_tls || has_grafana_tls;
+
+        // Note: The CaddyContext with full service details is built separately
+        // in caddy_templates.rs for the Caddyfile.tera template. The docker-compose
+        // template only needs to know if Caddy is enabled, not the service details.
+        let _ = https_config; // Silence unused warning - admin_email/use_staging used in caddy_templates.rs
+
+        // Only add Caddy if at least one service has TLS
+        if has_any_tls {
+            builder.with_caddy()
+        } else {
+            builder
+        }
+    }
+
     fn apply_grafana_env_context(&self, env_context: EnvContext) -> EnvContext {
         if let Some(grafana_config) = self.environment.grafana_config() {
             env_context.with_grafana(
@@ -238,25 +315,45 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         }
     }
 
-    fn extract_tracker_ports(tracker_config: &TrackerConfig) -> (Vec<u16>, Vec<u16>, u16) {
-        // Extract UDP tracker ports
+    fn extract_tracker_ports(
+        tracker_config: &TrackerConfig,
+        user_inputs: &UserInputs,
+    ) -> (Vec<u16>, Vec<u16>, u16, bool) {
+        // Extract UDP tracker ports (always exposed - no TLS termination via Caddy)
         let udp_ports: Vec<u16> = tracker_config
             .udp_trackers
             .iter()
             .map(|tracker| tracker.bind_address.port())
             .collect();
 
-        // Extract HTTP tracker ports
-        let http_ports: Vec<u16> = tracker_config
+        // Get the set of HTTP tracker ports that have TLS enabled
+        let tls_enabled_ports: std::collections::HashSet<u16> = user_inputs
+            .tracker
+            .http_trackers_with_tls()
+            .iter()
+            .map(|(_, port)| *port)
+            .collect();
+
+        // Extract HTTP tracker ports WITHOUT TLS (these need to be exposed)
+        let http_ports_without_tls: Vec<u16> = tracker_config
             .http_trackers
             .iter()
             .map(|tracker| tracker.bind_address.port())
+            .filter(|port| !tls_enabled_ports.contains(port))
             .collect();
 
         // Extract HTTP API port
         let api_port = tracker_config.http_api.bind_address.port();
 
-        (udp_ports, http_ports, api_port)
+        // Check if HTTP API has TLS enabled
+        let http_api_has_tls = user_inputs.tracker.http_api_tls_domain().is_some();
+
+        (
+            udp_ports,
+            http_ports_without_tls,
+            api_port,
+            http_api_has_tls,
+        )
     }
 }
 

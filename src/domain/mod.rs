@@ -15,6 +15,7 @@
 
 pub mod environment;
 pub mod grafana;
+pub mod https;
 pub mod instance_name;
 pub mod profile_name;
 pub mod prometheus;

@@ -205,13 +205,19 @@ mod tests {
             ],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "MyAccessToken".to_string().into(),
+                domain: None,
+                use_tls_proxy: false,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                domain: None,
+                use_tls_proxy: false,
             },
         };
 
@@ -240,9 +246,13 @@ mod tests {
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "Token123".to_string().into(),
+                domain: None,
+                use_tls_proxy: false,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                domain: None,
+                use_tls_proxy: false,
             },
         };
 
@@ -277,13 +287,19 @@ mod tests {
             ],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(), // Valid address
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "Token".to_string().into(),
+                domain: None,
+                use_tls_proxy: false,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                domain: None,
+                use_tls_proxy: false,
             },
         };
 

@@ -1,0 +1,58 @@
+---
+# Deploy Caddy Configuration
+#
+# This playbook deploys the Caddyfile configuration file to the remote host.
+# The configuration file is copied from the local build directory to the Caddy
+# configuration directory on the remote instance.
+#
+# Requirements:
+# - Build directory must contain rendered Caddyfile
+#
+# Variables:
+# - ansible_user: The SSH user for the remote host (set automatically)
+#
+# Storage Directories:
+# - /opt/torrust/storage/caddy/etc/ - Caddyfile configuration
+# - /opt/torrust/storage/caddy/data/ - Caddy data (certificates, etc.)
+# - /opt/torrust/storage/caddy/config/ - Caddy config state
+
+- name: Deploy Caddy configuration
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create Caddy storage directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      loop:
+        - /opt/torrust/storage/caddy
+        - /opt/torrust/storage/caddy/etc
+        - /opt/torrust/storage/caddy/data
+        - /opt/torrust/storage/caddy/config
+
+    - name: Copy Caddyfile to VM
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../caddy/Caddyfile"
+        # Note: This is the host path. Inside the container, it's mounted to /etc/caddy/Caddyfile
+        dest: /opt/torrust/storage/caddy/etc/Caddyfile
+        mode: "0644"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Verify Caddy configuration file exists
+      ansible.builtin.stat:
+        path: /opt/torrust/storage/caddy/etc/Caddyfile
+      register: caddy_config
+
+    - name: Assert Caddy configuration was deployed
+      ansible.builtin.assert:
+        that:
+          - caddy_config.stat.exists
+          - caddy_config.stat.isreg
+          - caddy_config.stat.pw_name == ansible_user
+        fail_msg: "Caddy configuration file was not deployed properly"
+        success_msg: "Caddy configuration deployed successfully"

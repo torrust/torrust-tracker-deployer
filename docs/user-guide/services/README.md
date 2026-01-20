@@ -14,8 +14,14 @@ The services documentation provides comprehensive guides for each optional servi
 
 ## Available Services
 
-- **[Prometheus Monitoring](prometheus.md)** - Metrics collection and monitoring service
+- **[HTTPS Support](https.md)** - Automatic TLS/SSL with Let's Encrypt
+  - Automatic certificate management via Caddy reverse proxy
+  - Per-service TLS configuration (API, HTTP trackers, Health Check API, Grafana)
+  - HTTP/2 and HTTP/3 support
+  - Automatic HTTP to HTTPS redirect
+  - Disabled by default, enabled by adding `domain` and `use_tls_proxy: true` to services
 
+- **[Prometheus Monitoring](prometheus.md)** - Metrics collection and monitoring service
   - Automatic metrics scraping from tracker API endpoints
   - Web UI for querying and visualizing metrics
   - Configurable scrape intervals
@@ -92,8 +98,6 @@ To exclude a service from your deployment, simply remove its configuration secti
 
 As the deployer evolves, additional optional services may be added to this directory:
 
-- Database services (MySQL, PostgreSQL)
-- Reverse proxy services (Nginx, Traefik)
 - Logging aggregation (Loki, Elasticsearch)
 - Alerting services (Alertmanager)
 

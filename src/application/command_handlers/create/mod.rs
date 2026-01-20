@@ -59,6 +59,7 @@
 //!     TrackerSection::default(),
 //!     None, // prometheus
 //!     None, // grafana
+//!     None, // https
 //! );
 //!
 //! // Execute command with working directory

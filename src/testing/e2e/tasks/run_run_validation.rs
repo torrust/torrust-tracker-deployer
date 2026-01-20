@@ -58,7 +58,7 @@ use tracing::info;
 
 use crate::adapters::ssh::SshConfig;
 use crate::adapters::ssh::SshCredentials;
-use crate::infrastructure::external_validators::RunningServicesValidator;
+use crate::infrastructure::external_validators::{RunningServicesValidator, ServiceEndpoint};
 use crate::infrastructure::remote_actions::validators::{GrafanaValidator, PrometheusValidator};
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
 
@@ -227,8 +227,8 @@ For more information, see docs/e2e-testing/."
 ///
 /// * `socket_addr` - Socket address where the target instance can be reached
 /// * `ssh_credentials` - SSH credentials for connecting to the instance
-/// * `tracker_api_port` - Port for the tracker API health endpoint
-/// * `http_tracker_ports` - Ports for HTTP tracker health endpoints (can be empty)
+/// * `tracker_api_endpoint` - Endpoint for the tracker API health check
+/// * `http_tracker_endpoints` - Endpoints for HTTP tracker health checks
 /// * `services` - Optional service validation configuration (defaults to no optional services)
 ///
 /// # Returns
@@ -245,8 +245,8 @@ For more information, see docs/e2e-testing/."
 pub async fn run_run_validation(
     socket_addr: SocketAddr,
     ssh_credentials: &SshCredentials,
-    tracker_api_port: u16,
-    http_tracker_ports: Vec<u16>,
+    tracker_api_endpoint: ServiceEndpoint,
+    http_tracker_endpoints: Vec<ServiceEndpoint>,
     services: Option<ServiceValidation>,
 ) -> Result<(), RunValidationError> {
     let services = services.unwrap_or_default();
@@ -254,8 +254,8 @@ pub async fn run_run_validation(
     info!(
         socket_addr = %socket_addr,
         ssh_user = %ssh_credentials.ssh_username,
-        tracker_api_port = tracker_api_port,
-        http_tracker_ports = ?http_tracker_ports,
+        api_uses_tls = tracker_api_endpoint.uses_tls(),
+        http_tracker_count = http_tracker_endpoints.len(),
         validate_prometheus = services.prometheus,
         validate_grafana = services.grafana,
         "Running 'run' command validation tests"
@@ -264,14 +264,7 @@ pub async fn run_run_validation(
     let ip_addr = socket_addr.ip();
 
     // Validate externally accessible services (tracker API, HTTP tracker)
-    validate_external_services(
-        ip_addr,
-        ssh_credentials,
-        socket_addr.port(),
-        tracker_api_port,
-        http_tracker_ports,
-    )
-    .await?;
+    validate_external_services(tracker_api_endpoint, http_tracker_endpoints).await?;
 
     // Optionally validate Prometheus is running and accessible
     if services.prometheus {
@@ -291,32 +284,41 @@ pub async fn run_run_validation(
     Ok(())
 }
 
-/// Validate externally accessible services on a configured instance
+/// Validate externally accessible services (tracker API, HTTP tracker)
 ///
-/// This function validates services that are exposed outside the VM and accessible
-/// without SSH (e.g., tracker API, HTTP tracker). These services have firewall rules
-/// allowing external access. It checks the status of services started by the `run`
-/// command and verifies they are operational by connecting from outside the VM.
+/// This function validates that the tracker API and HTTP tracker services
+/// are running and responding to health check requests.
 ///
-/// # Note
+/// # Arguments
 ///
-/// Internal services like Prometheus (not exposed externally) are validated separately
-/// via SSH in `validate_prometheus()`.
+/// * `tracker_api_endpoint` - Endpoint for the tracker API health check (includes server IP)
+/// * `http_tracker_endpoints` - Endpoints for HTTP tracker health checks (include server IP)
+///
+/// # Returns
+///
+/// Returns `Ok(())` when all services are validated successfully.
+///
+/// # Errors
+///
+/// Returns an error if any service is not running or unhealthy.
 async fn validate_external_services(
-    ip_addr: IpAddr,
-    ssh_credentials: &SshCredentials,
-    port: u16,
-    tracker_api_port: u16,
-    http_tracker_ports: Vec<u16>,
+    tracker_api_endpoint: ServiceEndpoint,
+    http_tracker_endpoints: Vec<ServiceEndpoint>,
 ) -> Result<(), RunValidationError> {
-    info!("Validating externally accessible services (tracker API, HTTP tracker)");
+    info!(
+        api_uses_tls = tracker_api_endpoint.uses_tls(),
+        http_tracker_count = http_tracker_endpoints.len(),
+        server_ip = %tracker_api_endpoint.server_ip(),
+        "Validating externally accessible services (tracker API, HTTP tracker)"
+    );
 
-    let ssh_config = SshConfig::new(ssh_credentials.clone(), SocketAddr::new(ip_addr, port));
+    // Get server IP from endpoint for trait compatibility
+    let server_ip = tracker_api_endpoint.server_ip();
 
     let services_validator =
-        RunningServicesValidator::new(ssh_config, tracker_api_port, http_tracker_ports);
+        RunningServicesValidator::new(tracker_api_endpoint, http_tracker_endpoints);
     services_validator
-        .execute(&ip_addr)
+        .execute(&server_ip)
         .await
         .map_err(|source| RunValidationError::RunningServicesValidationFailed { source })?;
 

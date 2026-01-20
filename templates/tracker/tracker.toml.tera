@@ -18,7 +18,10 @@ interval = 300
 interval_min = 300
 
 [core.net]
-on_reverse_proxy = true
+# Whether the tracker expects X-Forwarded-For headers from a reverse proxy.
+# Set to true when ANY HTTP tracker uses Caddy TLS termination (use_tls_proxy: true).
+# Note: This is a global setting - see docs/external-issues/tracker/on-reverse-proxy-global-setting.md
+on_reverse_proxy = {{ on_reverse_proxy }}
 
 [core.database]
 driver = "{{ database_driver }}"
@@ -44,3 +47,6 @@ bind_address = "{{ http_tracker.bind_address }}"
 {% endfor %}
 [http_api]
 bind_address = "{{ http_api_bind_address }}"
+
+[health_check_api]
+bind_address = "{{ health_check_api_bind_address }}"

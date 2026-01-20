@@ -61,6 +61,7 @@ use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
+use torrust_tracker_deployer_lib::infrastructure::external_validators::ServiceEndpoint;
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::e2e::containers::actions::{
     SshKeySetupAction, SshWaitAction,
@@ -303,15 +304,27 @@ async fn run_deployer_workflow(
 
     // Validate services are running using actual mapped ports from runtime environment
     // Note: E2E deployment environment has Prometheus and Grafana enabled
+    // Note: E2E tests use HTTP (no TLS) since we don't set up Caddy in test containers
     let run_services = RunServiceValidation {
         prometheus: true,
         grafana: true,
     };
+    let server_ip = socket_addr.ip();
+    let api_endpoint = ServiceEndpoint::http(
+        std::net::SocketAddr::new(server_ip, runtime_env.container_ports.http_api_port),
+        "/api/health_check",
+    )
+    .expect("Valid socket address should produce valid HTTP URL");
+    let http_tracker_endpoint = ServiceEndpoint::http(
+        std::net::SocketAddr::new(server_ip, runtime_env.container_ports.http_tracker_port),
+        "/health_check",
+    )
+    .expect("Valid socket address should produce valid HTTP URL");
     run_run_validation(
         socket_addr,
         ssh_credentials,
-        runtime_env.container_ports.http_api_port,
-        vec![runtime_env.container_ports.http_tracker_port],
+        api_endpoint,
+        vec![http_tracker_endpoint],
         Some(run_services),
     )
     .await

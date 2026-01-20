@@ -1,0 +1,55 @@
+# Caddyfile for Torrust Tracker - Automatic HTTPS with Let's Encrypt
+# IMPORTANT: Caddy requires TABS for indentation, not spaces.
+#
+# This template generates a Caddyfile based on which services have TLS configured.
+# Services without TLS configuration will not have entries here (they remain HTTP-only).
+#
+# Header Forwarding for HTTP Trackers:
+# Caddy sets X-Forwarded-For, X-Forwarded-Proto, and X-Forwarded-Host by default.
+# We explicitly set X-Forwarded-For for HTTP trackers to ensure this behavior is
+# maintained even if Caddy's defaults change in future versions. The tracker requires
+# X-Forwarded-For when running behind a reverse proxy (on_reverse_proxy: true) to
+# correctly identify the original client IP address for peer tracking.
+
+# Global options
+{
+	# Email for Let's Encrypt notifications
+	email {{ admin_email }}
+{%- if use_staging %}
+	# Use Let's Encrypt staging environment (for testing, avoids rate limits)
+	# WARNING: Staging certificates will show browser warnings (not trusted)
+	acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+{%- endif %}
+}
+{%- if tracker_api %}
+
+# Tracker REST API
+{{ tracker_api.domain }} {
+	reverse_proxy tracker:{{ tracker_api.port }}
+}
+{%- endif %}
+{%- for http_tracker in http_trackers %}
+
+# HTTP Tracker {{ loop.index }}
+{{ http_tracker.domain }} {
+	reverse_proxy tracker:{{ http_tracker.port }} {
+		# Explicitly forward client IP - critical for peer tracking accuracy
+		# The tracker uses this to record the correct peer IP in the swarm
+		header_up X-Forwarded-For {remote_host}
+	}
+}
+{%- endfor %}
+{%- if health_check_api %}
+
+# Health Check API
+{{ health_check_api.domain }} {
+	reverse_proxy tracker:{{ health_check_api.port }}
+}
+{%- endif %}
+{%- if grafana %}
+
+# Grafana UI with WebSocket support
+{{ grafana.domain }} {
+	reverse_proxy grafana:3000
+}
+{%- endif %}

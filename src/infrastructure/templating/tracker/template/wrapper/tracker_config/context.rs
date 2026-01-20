@@ -38,14 +38,18 @@ use crate::domain::environment::TrackerConfig;
 ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap() },
 ///     ],
 ///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap() },
+///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
 ///     ],
 ///     http_api: HttpApiConfig {
 ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
 ///         admin_token: "MyToken".to_string().into(),
+///         domain: None,
+///         use_tls_proxy: false,
 ///     },
 ///     health_check_api: HealthCheckApiConfig {
 ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
+///         domain: None,
+///         use_tls_proxy: false,
 ///     },
 /// };
 /// let context = TrackerContext::from_config(&tracker_config);
@@ -81,6 +85,16 @@ pub struct TrackerContext {
     /// Whether tracker is in private mode
     pub tracker_core_private: bool,
 
+    /// Whether the tracker is behind a reverse proxy (Caddy TLS termination)
+    ///
+    /// When `true`, the tracker expects `X-Forwarded-For` headers to determine
+    /// the real client IP address. This is set to `true` if ANY HTTP tracker
+    /// has `use_tls_proxy: true`.
+    ///
+    /// **Note**: This is a global tracker setting that affects ALL HTTP trackers.
+    /// See docs/external-issues/tracker/on-reverse-proxy-global-setting.md
+    pub on_reverse_proxy: bool,
+
     /// UDP tracker bind addresses
     pub udp_trackers: Vec<UdpTrackerEntry>,
 
@@ -89,6 +103,9 @@ pub struct TrackerContext {
 
     /// HTTP API bind address
     pub http_api_bind_address: String,
+
+    /// Health check API bind address
+    pub health_check_api_bind_address: String,
 }
 
 /// UDP tracker entry for template rendering
@@ -134,6 +151,7 @@ impl TrackerContext {
             mysql_user,
             mysql_password,
             tracker_core_private: config.core.private,
+            on_reverse_proxy: config.any_http_tracker_uses_tls_proxy(),
             udp_trackers: config
                 .udp_trackers
                 .iter()
@@ -149,6 +167,7 @@ impl TrackerContext {
                 })
                 .collect(),
             http_api_bind_address: config.http_api.bind_address.to_string(),
+            health_check_api_bind_address: config.health_check_api.bind_address.to_string(),
         }
     }
 
@@ -171,6 +190,7 @@ impl TrackerContext {
             mysql_user: None,
             mysql_password: None,
             tracker_core_private: false,
+            on_reverse_proxy: false, // Default: no HTTP trackers use TLS proxy
             udp_trackers: vec![
                 UdpTrackerEntry {
                     bind_address: "0.0.0.0:6868".parse().unwrap(),
@@ -183,6 +203,7 @@ impl TrackerContext {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
             }],
             http_api_bind_address: "0.0.0.0:1212".parse().unwrap(),
+            health_check_api_bind_address: "127.0.0.1:1313".parse().unwrap(),
         }
     }
 }
@@ -220,13 +241,19 @@ mod tests {
             ],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_admin_token".to_string().into(),
+                domain: None,
+                use_tls_proxy: false,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                domain: None,
+                use_tls_proxy: false,
             },
         }
     }
@@ -269,13 +296,19 @@ mod tests {
             }],
             http_trackers: vec![HttpTrackerConfig {
                 bind_address: "0.0.0.0:7070".parse().unwrap(),
+                domain: None,
+                use_tls_proxy: false,
             }],
             http_api: HttpApiConfig {
                 bind_address: "0.0.0.0:1212".parse().unwrap(),
                 admin_token: "test_token".to_string().into(),
+                domain: None,
+                use_tls_proxy: false,
             },
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
+                domain: None,
+                use_tls_proxy: false,
             },
         };
 
