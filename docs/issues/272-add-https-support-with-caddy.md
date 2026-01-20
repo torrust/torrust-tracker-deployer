@@ -705,7 +705,83 @@ Add link to HTTPS setup guide.
 
 ### Phase 6: E2E Testing (5-6 hours)
 
-**Automated E2E Tests**:
+**Revised Strategy** (2026-01-20):
+
+The original plan to test multiple HTTPS patterns is not feasible because the Torrust Tracker
+has only one config option to enable the TLS proxy - we cannot have some HTTP trackers using
+HTTPS while others use HTTP simultaneously. Instead, we'll take a simpler, more maintainable approach:
+
+1. **Enable HTTPS for all HTTP trackers** in the E2E test configuration
+2. **Use the `test` command** (smoke test) instead of manual validation
+3. **Test non-HTTPS via UDP tracker** which never uses the Caddy proxy
+
+This approach provides comprehensive HTTPS coverage while leveraging existing infrastructure.
+
+Implementation Plan:
+
+- **Step 1: Add smoke test execution to E2E workflow**
+  - [ ] Add `run_smoke_tests()` method to `E2eTestRunner` in `src/testing/e2e/tasks/black_box/test_runner.rs`
+    - [ ] Execute `cargo run --bin torrust-tracker-deployer -- test <env-name>` via `ProcessRunner`
+    - [ ] The existing `test` command already supports HTTPS via `ServiceEndpoint::https()` with domain resolution
+  - [ ] Call `test_runner.run_smoke_tests()` in `run_deployer_workflow()` after `run_services()`
+  - [ ] Verify E2E tests pass on GitHub Actions (may require runner changes)
+  - [ ] Commit and push to verify CI passes
+
+- **Step 2: Enable HTTPS in E2E test configuration**
+  - [ ] Modify `E2eConfigEnvironment::to_json_config()` in `src/testing/e2e/containers/tracker_ports.rs`:
+    - [ ] Add `domain` and `use_tls_proxy: true` for each HTTP tracker
+    - [ ] Add `domain` and `use_tls_proxy: true` for HTTP API
+    - [ ] Add `domain` and `use_tls_proxy: true` for Grafana
+    - [ ] Add `https` section with `admin_email` and `use_staging: true`
+    - [ ] Use `.local` domains (e.g., `api.tracker.local`, `http1.tracker.local`)
+  - [ ] Caddy's internal CA automatically handles `.local` domain certificates
+  - [ ] Wait for Caddy certificate acquisition after `run_services()` (add brief delay or retry logic)
+
+- **Step 3: Verify HTTPS E2E tests pass**
+  - [ ] Run E2E tests locally: `cargo run --bin e2e-deployment-workflow-tests`
+  - [ ] Verify `test` command validates HTTPS endpoints correctly
+  - [ ] Verify Caddy logs show successful certificate acquisition
+  - [ ] Run all linters and pre-commit checks
+  - [ ] Push to GitHub and verify CI passes
+
+**Configuration Example** (E2E test config):
+
+```json
+{
+  "tracker": {
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070",
+        "domain": "http1.tracker.local",
+        "use_tls_proxy": true
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "domain": "api.tracker.local",
+      "use_tls_proxy": true,
+      "admin_token": "MyAccessToken"
+    }
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "e2e-test-password",
+    "domain": "grafana.tracker.local",
+    "use_tls_proxy": true
+  },
+  "https": {
+    "admin_email": "admin@tracker.local",
+    "use_staging": true
+  }
+}
+```
+
+**Non-HTTPS coverage** (tested implicitly):
+
+- UDP tracker - never uses Caddy proxy, validates non-TLS path
+- Health Check API - can be tested independently without TLS
+
+**Automated E2E Tests** (deferred - may not be needed):
 
 - [ ] Create E2E test environment configs with various HTTPS patterns:
   - [ ] All services HTTPS
