@@ -324,7 +324,7 @@ When HTTPS is enabled for a service:
 | ------------ | ------------------------- | ------------------------------------- |
 | Tracker API  | Port exposed (e.g., 1212) | Port hidden, accessed via Caddy (443) |
 | HTTP Tracker | Port exposed (e.g., 7070) | Port hidden, accessed via Caddy (443) |
-| Grafana      | Port 3100 exposed         | Port hidden, accessed via Caddy (443) |
+| Grafana      | Port 3000 exposed         | Port hidden, accessed via Caddy (443) |
 
 **Security benefit**: Backend service ports are not exposed when TLS is enabled, reducing attack surface.
 

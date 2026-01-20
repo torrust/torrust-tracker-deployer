@@ -85,7 +85,7 @@ f0e3124878de   torrust/tracker:develop    "/usr/local/bin/entr…"   Up 2 minute
 
 - ✅ `grafana/grafana:11.4.0` container is present
 - ✅ Container status shows "Up" (not "Restarting" or "Exited")
-- ✅ Port 3100 is exposed (`0.0.0.0:3100->3000/tcp`)
+- ✅ Port 3000 is exposed (`0.0.0.0:3000->3000/tcp`)
 
 ### 2. Verify Grafana Web Interface is Accessible
 
@@ -93,7 +93,7 @@ Test that you can access the Grafana web interface from your local machine:
 
 ```bash
 # Test HTTP response (should get redirect to login page)
-curl -v http://<VM_IP>:3100/
+curl -v http://<VM_IP>:3000/
 ```
 
 **Expected output:**
@@ -110,7 +110,7 @@ This confirms Grafana is running and accessible. The 302 redirect is expected - 
 Open your web browser and navigate to:
 
 ```text
-http://<VM_IP>:3100/
+http://<VM_IP>:3000/
 ```
 
 You should see the Grafana login page.
@@ -127,7 +127,7 @@ Test that you can authenticate with the credentials from your environment config
 
 ```bash
 # Test with your configured credentials
-curl -u admin:SecurePassword123! http://<VM_IP>:3100/api/datasources
+curl -u admin:SecurePassword123! http://<VM_IP>:3000/api/datasources
 ```
 
 **Expected output:**
@@ -142,7 +142,7 @@ An empty array indicates successful authentication (no datasources configured ye
 
 ```bash
 # This should fail
-curl -u admin:wrongpassword http://<VM_IP>:3100/api/datasources
+curl -u admin:wrongpassword http://<VM_IP>:3000/api/datasources
 ```
 
 **Expected output:**
@@ -286,7 +286,7 @@ Check the Prometheus datasource configuration via Grafana API:
 
 ```bash
 # List configured datasources
-curl -u admin:SecurePassword123! http://<VM_IP>:3100/api/datasources
+curl -u admin:SecurePassword123! http://<VM_IP>:3000/api/datasources
 ```
 
 **Expected output:**
@@ -334,7 +334,7 @@ Test that Grafana can successfully query metrics from Prometheus:
 ```bash
 # Test datasource health check
 curl -u admin:SecurePassword123! \
-  "http://<VM_IP>:3100/api/datasources/proxy/1/api/v1/query?query=up"
+  "http://<VM_IP>:3000/api/datasources/proxy/1/api/v1/query?query=up"
 ```
 
 **Expected output:**
@@ -371,7 +371,7 @@ curl -u admin:SecurePassword123! \
 ```bash
 # Query total announces
 curl -u admin:SecurePassword123! \
-  "http://<VM_IP>:3100/api/datasources/proxy/1/api/v1/query?query=tracker_announces_total"
+  "http://<VM_IP>:3000/api/datasources/proxy/1/api/v1/query?query=tracker_announces_total"
 ```
 
 **Key verification points:**
@@ -519,7 +519,7 @@ Finally, verify that the Grafana dashboards can display the data:
 
 **Via Browser:**
 
-1. Open Grafana: `http://<VM_IP>:3100/`
+1. Open Grafana: `http://<VM_IP>:3000/`
 2. Login with your credentials (admin / SecurePassword123!)
 3. Navigate to Dashboards → Browse
 4. Open the "Torrust Tracker" folder
@@ -537,7 +537,7 @@ Finally, verify that the Grafana dashboards can display the data:
 ```bash
 # Query via Grafana datasource proxy
 curl -u admin:SecurePassword123! \
-  "http://<VM_IP>:3100/api/datasources/proxy/1/api/v1/query?query=swarm_coordination_registry_torrents_total{job=\"tracker_metrics\"}" | jq .
+  "http://<VM_IP>:3000/api/datasources/proxy/1/api/v1/query?query=swarm_coordination_registry_torrents_total{job=\"tracker_metrics\"}" | jq .
 ```
 
 **Expected output:**
@@ -588,7 +588,7 @@ docker ps -a | grep grafana
 
 **Common causes:**
 
-- Port 3100 already in use on the VM
+- Port 3000 already in use on the VM
 - Invalid environment variable in `.env` file
 - Insufficient permissions on data directory
 
@@ -596,14 +596,14 @@ docker ps -a | grep grafana
 
 **Symptoms:**
 
-- `curl http://<VM_IP>:3100/` times out or connection refused
+- `curl http://<VM_IP>:3000/` times out or connection refused
 - Browser cannot load the page
 
 **Diagnosis:**
 
 ```bash
 # Check if port is listening
-ssh torrust@<VM_IP> "netstat -tlnp | grep 3100"
+ssh torrust@<VM_IP> "netstat -tlnp | grep 3000"
 
 # Check container networking
 docker inspect <grafana_container_id> | grep IPAddress
@@ -804,18 +804,15 @@ Use this checklist when verifying a Grafana deployment:
 For a complete verification, you can also test through the Grafana web UI:
 
 1. **Login**:
-
-   - Navigate to `http://<VM_IP>:3100/`
+   - Navigate to `http://<VM_IP>:3000/`
    - Login with your configured credentials
 
 2. **Check Datasource**:
-
    - Go to Configuration → Data Sources
    - Verify "Prometheus" datasource exists
    - Click "Test" button → should show "Data source is working"
 
 3. **Explore Metrics**:
-
    - Go to Explore (compass icon in sidebar)
    - Select "Prometheus" datasource
    - Try queries:

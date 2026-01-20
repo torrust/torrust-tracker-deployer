@@ -321,7 +321,7 @@ The Torrust Tracker Deployer supports optional services that can be enabled in y
   - Can be disabled by removing from configuration
 
 - **[Grafana Visualization](services/grafana.md)** - Metrics visualization and dashboards (enabled by default)
-  - Web UI on port 3100 for dashboard access
+  - Web UI on port 3000 for dashboard access
   - Requires Prometheus to be enabled
   - Configurable admin credentials
   - Pre-built tracker dashboards available for import

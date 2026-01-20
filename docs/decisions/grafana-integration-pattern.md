@@ -143,7 +143,7 @@ volumes:
 
 ### 4. External Port Exposure for UI Access
 
-Grafana UI is exposed on host port 3100 for external access.
+Grafana UI is exposed on host port 3000 for external access (same as internal port).
 
 **Implementation**:
 
@@ -151,15 +151,15 @@ Grafana UI is exposed on host port 3100 for external access.
 services:
   grafana:
     ports:
-      - "3100:3000" # Host:Container
+      - "3000:3000" # Host:Container (using Grafana's default port)
 ```
 
-**Port Choice**: 3100 on host to avoid conflicts with common port 3000 usage (Node.js dev servers, other services).
+**Port Choice**: 3000 on both host and container, matching Grafana's default port for simplicity.
 
 **Security Considerations**:
 
 - **Docker Bypasses UFW**: Published ports bypass firewall rules entirely (see [DRAFT-docker-ufw-firewall-security-strategy.md](../issues/DRAFT-docker-ufw-firewall-security-strategy.md))
-- **Current Exposure**: Port 3100 accessible from any network that can reach the host
+- **Current Exposure**: Port 3000 accessible from any network that can reach the host
 - **Acceptable for MVP**: Public exposure acceptable for development/testing environments
 - **Future Security**: Reverse proxy with TLS termination (roadmap task 6)
 
@@ -167,7 +167,7 @@ services:
 
 - Users need web UI access from their local machines
 - Simple port mapping for MVP (no reverse proxy complexity)
-- Port 3100 avoids common conflicts
+- Using default port 3000 is more intuitive and expected
 - Security tradeoffs documented and deferred to reverse proxy implementation
 
 ### 5. Service Dependencies in Docker Compose
@@ -276,25 +276,21 @@ Initial implementation does **not** auto-provision Prometheus datasource or impo
 ### Positive
 
 1. **Complete Monitoring Stack Out-of-the-Box**:
-
    - Users get metrics collection (Prometheus) + visualization (Grafana) by default
    - Production-ready monitoring without manual setup
    - Consistent with infrastructure best practices
 
 2. **Clear Dependency Management**:
-
    - Validation enforces Grafana-Prometheus dependency at creation time
    - Helpful error messages guide users to fix configuration
    - Prevents invalid configurations before deployment
 
 3. **Consistent Configuration Pattern**:
-
    - All services use environment variable injection pattern
    - Predictable structure for users and maintainers
    - Easy to add future services (Alertmanager, Loki)
 
 4. **Simple Storage Management**:
-
    - Named volume managed by Docker (no permission issues)
    - Persistent across container restarts
    - Standard Grafana practice
@@ -307,7 +303,6 @@ Initial implementation does **not** auto-provision Prometheus datasource or impo
 ### Negative
 
 1. **Manual Initial Setup Required**:
-
    - Users must add Prometheus datasource manually
    - Users must import/create dashboards manually
    - Extra steps before visualization works
@@ -315,22 +310,19 @@ Initial implementation does **not** auto-provision Prometheus datasource or impo
    - **Future**: Automation planned in follow-up issue
 
 2. **Port Exposure Security Concerns**:
-
-   - Port 3100 publicly accessible (Docker bypasses UFW)
+   - Port 3000 publicly accessible (Docker bypasses UFW)
    - No authentication beyond Grafana login (no TLS)
    - Potential security risk for production deployments
    - **Mitigation**: Documented security implications and limitations
    - **Future**: Reverse proxy with TLS (roadmap task 6)
 
 3. **Hard Prometheus Dependency**:
-
    - Grafana cannot be enabled without Prometheus
    - Limits flexibility for users with alternative data sources
    - **Mitigation**: Prometheus is the natural choice for tracker metrics
    - **Acceptable**: Hard dependency makes sense for this use case
 
 4. **Default Resource Overhead**:
-
    - Grafana container included by default increases memory/disk usage
    - Users who don't want visualization must manually remove section
    - **Mitigation**: Simple opt-out (remove config section)
@@ -345,14 +337,12 @@ Initial implementation does **not** auto-provision Prometheus datasource or impo
 ### Implementation Maintenance
 
 1. **Template Consistency**:
-
    - Conditional Grafana service in docker-compose.yml.tera
    - Conditional environment variables in .env.tera
    - Conditional volume declaration
    - Must be kept in sync with environment state
 
 2. **Validation Logic**:
-
    - Dependency validation called during environment creation
    - Error messages must remain clear and actionable
    - Unit tests cover all validation scenarios
@@ -367,13 +357,11 @@ Initial implementation does **not** auto-provision Prometheus datasource or impo
 **Planned Automation** (separate issue):
 
 1. **Auto-Provision Prometheus Datasource**:
-
    - Create `provisioning/datasources/prometheus.yml` during release
    - Grafana automatically connects to Prometheus on startup
    - Zero-config experience for users
 
 2. **Auto-Import Tracker Dashboards**:
-
    - Copy `stats.json` and `metrics.json` from torrust-demo
    - Create `provisioning/dashboards/` directory during release
    - Dashboards available immediately after deployment

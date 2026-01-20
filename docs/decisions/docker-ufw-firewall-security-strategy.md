@@ -87,7 +87,7 @@ tracker:
 
 grafana:
   ports:
-    - "3100:3000" # Grafana UI - public
+    - "3000:3000" # Grafana UI - public
 
 # Host-accessible services - bind to localhost only
 prometheus:
@@ -407,19 +407,16 @@ Docker's built-in security features we rely on:
 **Test Strategy**:
 
 1. **External Port Scanning**:
-
    - Use `nmap` or `netstat` from external host to scan VM's public IP
    - Verify ONLY expected ports are open (SSH, tracker UDP/HTTP, Grafana)
    - Verify internal service ports (Prometheus 9090, MySQL 3306) are NOT accessible
 
 2. **Docker Network Inspection**:
-
    - Query `docker port <container>` to list published ports
    - Parse `docker inspect` output to verify port bindings match specification
    - Fail if any internal service has unexpected `HostPort` mapping
 
 3. **Service Accessibility Tests**:
-
    - **From external host**: Verify public services respond (tracker, Grafana)
    - **From external host**: Verify internal services timeout/refuse (Prometheus, MySQL)
    - **From Docker host**: Verify localhost bindings work (`curl 127.0.0.1:9090` succeeds)
@@ -447,7 +444,7 @@ fn it_should_block_external_access_to_prometheus_when_deployed() {
 fn it_should_allow_external_access_to_grafana_when_deployed() {
     // 1. Deploy environment with Grafana
     // 2. Get VM public IP and configured Grafana port
-    // 3. Connect to http://<vm-ip>:3100
+    // 3. Connect to http://<vm-ip>:3000
     // 4. Assert successful connection and Grafana login page
 }
 
@@ -548,26 +545,22 @@ This section addresses critical security questions about the chosen approach.
 **✅ Meets Best Practices**:
 
 1. **Defense in Depth**:
-
    - UFW firewall (host level)
    - Docker port bindings (service level)
    - Docker network segmentation (lateral movement prevention)
    - Application authentication (Grafana, Tracker API)
 
 2. **Principle of Least Privilege**:
-
    - Services only have network access to what they need
    - Non-root container users
    - Minimal capabilities
 
 3. **Security by Default**:
-
    - Internal services not exposed (MySQL, Prometheus)
    - Public services explicitly configured
    - Localhost-only bindings for debugging services
 
 4. **Auditability**:
-
    - Explicit port bindings documented
    - Network topology documented in templates
    - Security decisions documented in ADR
@@ -607,7 +600,7 @@ This section addresses critical security questions about the chosen approach.
    fn it_should_detect_unexpected_port_exposure() {
        // Run nmap scan from external host
        // Parse open ports
-       // Assert only expected ports open (22, 6969, 7070, 1212, 3100)
+       // Assert only expected ports open (22, 6969, 7070, 1212, 3000)
        // Fail if MySQL (3306) or Prometheus (9090) detected
    }
    ```
@@ -618,7 +611,7 @@ This section addresses critical security questions about the chosen approach.
    #!/bin/bash
    # scripts/check-port-exposure.sh
 
-   EXPECTED_PORTS="22,6969,7070,1212,3100"
+   EXPECTED_PORTS="22,6969,7070,1212,3000"
    FORBIDDEN_PORTS="3306,9090"
 
    # Check docker ps for published ports
@@ -651,7 +644,7 @@ This section addresses critical security questions about the chosen approach.
    # 6969 (UDP tracker)
    # 7070 (HTTP tracker)
    # 1212 (REST API)
-   # 3100 (Grafana)
+   # 3000 (Grafana)
 
    # Unexpected = security issue
    ```

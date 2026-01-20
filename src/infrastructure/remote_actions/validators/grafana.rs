@@ -12,7 +12,7 @@
 //!
 //! ## Validation Approach
 //!
-//! Grafana is exposed on port 3100 via Docker, but validation is performed
+//! Grafana is exposed on port 3000 via Docker, but validation is performed
 //! from inside the VM via SSH for consistency with other service validators:
 //!
 //! 1. Connect to VM via SSH
@@ -20,15 +20,15 @@
 //! 3. Verify successful HTTP response (200 OK)
 //!
 //! This smoke test confirms Grafana is:
-//! - Running and bound to the expected port (3000 internally, 3100 externally)
+//! - Running and bound to the expected port (3000 internally and externally)
 //! - Responding to HTTP requests
 //! - Web UI is functional
 //!
 //! ## Port Mapping
 //!
 //! - Internal (container): 3000 (Grafana default)
-//! - External (host): 3100 (docker-compose port mapping)
-//! - Validation uses: 3100 (tests the published port from inside VM)
+//! - External (host): 3000 (docker-compose port mapping, same as internal)
+//! - Validation uses: 3000 (tests the published port from inside VM)
 //!
 //! ## Future Enhancements
 //!
@@ -37,13 +37,13 @@
 //! 1. **Authentication Validation**:
 //!    - Test admin login with configured credentials
 //!    - Verify authentication works correctly
-//!    - Example: `curl -u admin:password http://localhost:3100/api/health`
+//!    - Example: `curl -u admin:password http://localhost:3000/api/health`
 //!
 //! 2. **Datasource Validation**:
 //!    - Query Grafana API for configured datasources
 //!    - Verify Prometheus datasource is configured
 //!    - Check datasource connectivity to Prometheus
-//!    - Example: `curl http://localhost:3100/api/datasources | jq`
+//!    - Example: `curl http://localhost:3000/api/datasources | jq`
 //!
 //! 3. **Dashboard Availability**:
 //!    - Query for available dashboards
@@ -67,7 +67,7 @@ use crate::adapters::ssh::SshConfig;
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
 
 /// Default Grafana external port (exposed by docker-compose)
-const DEFAULT_GRAFANA_PORT: u16 = 3100;
+const DEFAULT_GRAFANA_PORT: u16 = 3000;
 
 /// Maximum retry attempts for Grafana startup
 const MAX_RETRIES: u32 = 30;
@@ -86,7 +86,7 @@ impl GrafanaValidator {
     ///
     /// # Arguments
     /// * `ssh_config` - SSH connection configuration containing credentials and host IP
-    /// * `grafana_port` - Port where Grafana is accessible (defaults to 3100 if None)
+    /// * `grafana_port` - Port where Grafana is accessible (defaults to 3000 if None)
     #[must_use]
     pub fn new(ssh_config: SshConfig, grafana_port: Option<u16>) -> Self {
         let ssh_client = SshClient::new(ssh_config);

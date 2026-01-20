@@ -31,7 +31,7 @@ impl GrafanaInfo {
 
     /// Build `GrafanaInfo` from instance IP (HTTP direct access)
     ///
-    /// Grafana is exposed on port 3100 (mapped from internal port 3000).
+    /// Grafana is exposed on port 3000 (same as internal port).
     ///
     /// # Panics
     ///
@@ -39,7 +39,7 @@ impl GrafanaInfo {
     /// never happen since we construct a valid URL from a valid IP address.
     #[must_use]
     pub fn from_instance_ip(instance_ip: IpAddr) -> Self {
-        let url = Url::parse(&format!("http://{instance_ip}:3100")) // DevSkim: ignore DS137138
+        let url = Url::parse(&format!("http://{instance_ip}:3000")) // DevSkim: ignore DS137138
             .expect("Valid IP address should produce valid URL");
         Self::new(url, false)
     }
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn it_should_create_grafana_info_from_url() {
-        let url = Url::parse("http://10.0.0.1:3100").unwrap(); // DevSkim: ignore DS137138
+        let url = Url::parse("http://10.0.0.1:3000").unwrap(); // DevSkim: ignore DS137138
         let info = GrafanaInfo::new(url.clone(), false);
         assert_eq!(info.url, url);
         assert!(!info.uses_https);
@@ -84,7 +84,7 @@ mod tests {
         let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
         let info = GrafanaInfo::from_instance_ip(ip);
         assert_eq!(info.url.host_str(), Some("192.168.1.100"));
-        assert_eq!(info.url.port(), Some(3100));
+        assert_eq!(info.url.port(), Some(3000));
         assert!(!info.uses_https);
     }
 
@@ -114,7 +114,7 @@ mod tests {
 
         assert_eq!(info.url.scheme(), "http");
         assert_eq!(info.url.host_str(), Some("10.0.0.1"));
-        assert_eq!(info.url.port(), Some(3100));
+        assert_eq!(info.url.port(), Some(3000));
         assert!(!info.uses_https);
     }
 }
