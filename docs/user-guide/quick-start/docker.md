@@ -214,7 +214,7 @@ After deployment, your services are available at (replace `<IP>` with your serve
 | UDP Tracker  | `udp://<IP>:6969/announce`  | BitTorrent UDP tracker announce        |
 | Tracker API  | `http://<IP>:1212/api`      | Requires `admin_token` for auth        |
 | Health Check | `http://<IP>:1313/health`   | Bound to localhost only (internal)     |
-| Grafana      | `http://<IP>:3100`          | Metrics dashboard (admin credentials)  |
+| Grafana      | `http://<IP>:3000`          | Metrics dashboard (admin credentials)  |
 | Prometheus   | `http://localhost:9090`     | Internal only - not exposed externally |
 
 > **Note**: The health check endpoint (`1313`) is bound to `127.0.0.1` by default for security. Access it via SSH if needed.

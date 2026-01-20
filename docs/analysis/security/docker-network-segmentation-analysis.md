@@ -76,7 +76,7 @@ graph LR
     subgraph VM["Docker Host VM"]
         subgraph PublicServices["Publicly Exposed Services"]
             Tracker[Tracker<br/>Ports: 6969/udp, 7070, 1212]
-            Grafana[Grafana<br/>Port: 3100]
+            Grafana[Grafana<br/>Port: 3000]
         end
 
         subgraph InternalServices["Internal Services<br/>(No external exposure)"]
@@ -107,12 +107,10 @@ graph LR
 **IMPORTANT**: The Tracker service stores MySQL database credentials in multiple locations:
 
 1. **Environment Variables**:
-
    - `MYSQL_ROOT_PASSWORD` (injected from `.env` file)
    - Other database connection parameters
 
 2. **Configuration Files**:
-
    - `torrust-tracker.toml` or equivalent configuration may contain database credentials
    - Mounted at `./storage/tracker/etc:/etc/torrust/tracker:Z`
 
@@ -265,24 +263,20 @@ ports:
 **Answer**: **YES - Network segmentation still provides significant value**:
 
 1. **Isolates Grafana from Database**:
-
    - Grafana has NO MySQL credentials
    - Compromising Grafana alone cannot access database
    - Attacker must compromise BOTH Grafana AND Tracker to reach MySQL
 
 2. **Reduces Attack Surface**:
-
    - Only 1 service (Tracker) can access MySQL, not 3 services
    - Fewer pathways to database = fewer opportunities for attackers
 
 3. **Defense in Depth**:
-
    - Network segmentation is ONE layer
    - Even if attacker has credentials, they need network access
    - Grafana compromise doesn't automatically give MySQL network access
 
 4. **Limits Lateral Movement**:
-
    - Compromised Grafana cannot pivot to MySQL
    - Compromised Prometheus cannot pivot to MySQL
    - Attack chain must go: Grafana → Tracker → MySQL (3 steps, not 2)
@@ -293,13 +287,11 @@ ports:
 
 **Revised Risk Matrix WITH Network Segmentation**:
 
-1. **Attacker compromises Grafana** (public service at port 3100)
-
+1. **Attacker compromises Grafana** (public service at port 3000)
    - Exploits a Grafana vulnerability (CVE in grafana/grafana image)
    - Gains shell access inside Grafana container
 
 2. **Lateral movement via shared network**
-
    - From Grafana container: `telnet mysql 3306` - **succeeds** ❌
    - Attacker can now attempt MySQL authentication attacks
    - Attacker can perform network reconnaissance: `nmap -p- mysql`
@@ -372,7 +364,6 @@ Beyond network segmentation, implement these credential protection measures:
    ```
 
 5. **Monitor Credential Access**:
-
    - Log all MySQL connection attempts
    - Alert on failed authentication
    - Audit container exec commands
@@ -514,13 +505,11 @@ services:
 ### Testing Requirements
 
 1. **Positive Tests** (these MUST work):
-
    - Tracker can connect to MySQL
    - Prometheus can scrape metrics from Tracker
    - Grafana can query Prometheus
 
 2. **Negative Tests** (these MUST fail):
-
    - Grafana CANNOT reach MySQL: `docker exec grafana ping mysql` → fails
    - Grafana CANNOT reach Tracker: `docker exec grafana curl tracker:1212` → fails
    - Prometheus CANNOT reach MySQL: `docker exec prometheus ping mysql` → fails

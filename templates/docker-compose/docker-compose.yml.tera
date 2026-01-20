@@ -139,7 +139,7 @@ services:
 {%- endfor %}
 {%- if not grafana.has_tls %}
     ports:
-      - "3100:3000"
+      - "3000:3000"
 {%- endif %}
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}

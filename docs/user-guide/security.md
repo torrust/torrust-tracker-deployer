@@ -17,7 +17,6 @@ Security is a critical aspect of production deployments. The Torrust Tracker Dep
 The deployer implements security at two levels:
 
 1. **Instance-Level Security (UFW)** - Protects the VM itself
-
    - Denies all incoming traffic by default
    - Allows only SSH access for administration
    - **Does NOT control Docker container ports** (Docker bypasses UFW)
@@ -74,7 +73,7 @@ services:
 
   grafana:
     ports:
-      - "3100:3000" # Public - Monitoring UI (authenticated)
+      - "3000:3000" # Public - Monitoring UI (authenticated)
 
   # 🔒 LOCALHOST-ONLY SERVICES - Bound to 127.0.0.1
   prometheus:

@@ -44,7 +44,7 @@ mod tests {
 
     fn http_grafana() -> GrafanaInfo {
         GrafanaInfo::new(
-            Url::parse("http://10.0.0.1:3100").unwrap(), // DevSkim: ignore DS137138
+            Url::parse("http://10.0.0.1:3000").unwrap(), // DevSkim: ignore DS137138
             false,
         )
     }
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn it_should_render_http_url() {
         let lines = GrafanaView::render(&http_grafana());
-        assert!(lines.iter().any(|l| l.contains("http://10.0.0.1:3100"))); // DevSkim: ignore DS137138
+        assert!(lines.iter().any(|l| l.contains("http://10.0.0.1:3000"))); // DevSkim: ignore DS137138
     }
 
     #[test]

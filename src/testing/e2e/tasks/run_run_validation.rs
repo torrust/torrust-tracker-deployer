@@ -101,7 +101,7 @@ Tip: Ensure Prometheus container is running and accessible on port 9090"
     /// Grafana smoke test failed
     #[error(
         "Grafana smoke test failed: {source}
-Tip: Ensure Grafana container is running and accessible on port 3100"
+Tip: Ensure Grafana container is running and accessible on port 3000"
     )]
     GrafanaValidationFailed {
         #[source]
@@ -192,12 +192,12 @@ For more information, see docs/e2e-testing/."
    - View Grafana logs: docker compose logs grafana
 
 2. Verify Grafana is accessible:
-   - Test from inside VM: curl http://localhost:3100
-   - Check if port 3100 is listening: ss -tlnp | grep 3100
+   - Test from inside VM: curl http://localhost:3000
+   - Check if port 3000 is listening: ss -tlnp | grep 3000
 
 3. Common issues:
    - Grafana container failed to start (check logs)
-   - Port 3100 already in use by another process
+   - Port 3000 already in use by another process
    - Invalid admin credentials in environment variables
    - Insufficient memory for Grafana
    - Grafana depends on Prometheus but Prometheus not running
@@ -205,8 +205,8 @@ For more information, see docs/e2e-testing/."
 4. Debug steps:
    - Check environment variables: docker compose exec grafana env | grep GF_
    - Restart Grafana: docker compose restart grafana
-   - Access Grafana UI: http://<vm-ip>:3100 (from your browser)
-   - Check datasources: curl http://localhost:3100/api/datasources | jq
+   - Access Grafana UI: http://<vm-ip>:3000 (from your browser)
+   - Check datasources: curl http://localhost:3000/api/datasources | jq
 
 5. Re-deploy if needed:
    - Release command: cargo run -- release <environment>
@@ -359,7 +359,7 @@ async fn validate_prometheus(
 ///
 /// # Note
 ///
-/// Grafana runs on port 3000 inside the container but is exposed on port 3100
+/// Grafana runs on port 3000 inside the container and is exposed on port 3000
 /// on the host via docker-compose port mapping. Docker published ports bypass
 /// UFW firewall, so Grafana is accessible externally. However, for consistency
 /// with other validators, we test from inside the VM via SSH.

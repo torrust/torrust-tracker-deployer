@@ -10,7 +10,7 @@ The deployer includes Grafana for metrics visualization by default. Grafana prov
 
 - **Enabled by default** in generated environment templates
 - **Requires Prometheus** to be enabled (hard dependency)
-- Web UI accessible on port `3100`
+- Web UI accessible on port `3000`
 - Default admin credentials: `admin` / `admin` (should be changed)
 - Uses Docker named volume for persistent storage
 
@@ -60,7 +60,7 @@ Add the `grafana` section to your environment configuration file:
 - Boolean to enable HTTPS via Caddy reverse proxy
 - Default: `false` (HTTP only)
 - Requires `domain` to be set
-- When enabled, port 3100 is not exposed; access is via HTTPS (port 443)
+- When enabled, port 3000 is not exposed; access is via HTTPS (port 443)
 
 **Examples**:
 
@@ -137,7 +137,7 @@ After deployment, the Grafana web UI is available at:
 **HTTP (default)**:
 
 ```text
-http://<vm-ip>:3100
+http://<vm-ip>:3000
 ```
 
 **HTTPS (when TLS enabled)**:
@@ -162,7 +162,7 @@ Look for the "Instance IP" field in the output.
 
 ### First Login
 
-1. Open `http://<vm-ip>:3100` in your web browser
+1. Open `http://<vm-ip>:3000` in your web browser
 2. Enter your credentials:
    - **Username**: Value from `grafana.admin_user` in your config
    - **Password**: Value from `grafana.admin_password` in your config
@@ -316,16 +316,16 @@ For detailed step-by-step verification instructions, see the [Grafana Verificati
 ssh torrust@<vm-ip> "docker ps | grep grafana"
 
 # 2. Check Grafana is accessible
-curl -u admin:SecurePassword123! http://<vm-ip>:3100/api/health
+curl -u admin:SecurePassword123! http://<vm-ip>:3000/api/health
 
 # Expected output: {"commit":"...","database":"ok","version":"11.4.0"}
 
 # 3. Verify login credentials
-curl -u admin:SecurePassword123! http://<vm-ip>:3100/api/org
+curl -u admin:SecurePassword123! http://<vm-ip>:3000/api/org
 # Should return HTTP 200 with organization info
 
 # 4. Test with wrong credentials (should fail)
-curl -u admin:wrongpassword http://<vm-ip>:3100/api/org
+curl -u admin:wrongpassword http://<vm-ip>:3000/api/org
 # Should return HTTP 401 Unauthorized
 ```
 
@@ -372,7 +372,7 @@ torrust-tracker-deployer run <env-name>
 
 ### Grafana UI Not Accessible
 
-**Symptom**: Browser cannot connect to `http://<vm-ip>:3100`.
+**Symptom**: Browser cannot connect to `http://<vm-ip>:3000`.
 
 **Diagnosis**:
 
@@ -381,11 +381,11 @@ torrust-tracker-deployer run <env-name>
 ssh torrust@<vm-ip> "docker ps | grep grafana"
 
 # 2. Check port binding
-ssh torrust@<vm-ip> "docker ps | grep grafana" | grep "3100"
-# Should show: 0.0.0.0:3100->3000/tcp
+ssh torrust@<vm-ip> "docker ps | grep grafana" | grep "3000"
+# Should show: 0.0.0.0:3000->3000/tcp
 
 # 3. Test from VM itself
-ssh torrust@<vm-ip> "curl -s http://localhost:3100/api/health"
+ssh torrust@<vm-ip> "curl -s http://localhost:3000/api/health"
 
 # 4. Check container logs
 ssh torrust@<vm-ip> "docker logs grafana"
@@ -394,7 +394,7 @@ ssh torrust@<vm-ip> "docker logs grafana"
 **Common Solutions**:
 
 - Container not running: `docker start grafana`
-- Port conflict: Check if port 3100 is already in use
+- Port conflict: Check if port 3000 is already in use
 - Network issues: Verify Docker network `backend_network` exists
 
 ### Prometheus Datasource Connection Fails
@@ -453,7 +453,7 @@ curl http://<vm-ip>:8080/api/v1/metrics
 ```text
 VM Instance
 ├── Docker Containers
-│   ├── grafana (port 3100 → 3000)
+│   ├── grafana (port 3000)
 │   ├── prometheus (port 9090)
 │   └── tracker (port 8080)
 ├── Docker Networks
@@ -481,11 +481,10 @@ docker run --rm -v grafana_data:/data -v $(pwd):/backup \
 
 ### Port Exposure
 
-**Port Mapping**: `3100:3000` (Host:Container)
+**Port Mapping**: `3000:3000` (Host:Container)
 
-- **Host Port**: `3100` - Accessible from outside VM
+- **Host Port**: `3000` - Accessible from outside VM
 - **Container Port**: `3000` - Grafana's default internal port
-- **Reason for 3100**: Avoid conflicts with other services commonly using port 3000
 
 **Security Note**: Docker published ports **bypass UFW firewall rules**. The port is accessible from any network that can reach the host. This is acceptable for development/testing but requires reverse proxy with TLS for production (see roadmap).
 
