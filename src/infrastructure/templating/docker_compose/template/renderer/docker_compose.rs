@@ -301,10 +301,10 @@ mod tests {
             "Volume should use local driver"
         );
 
-        // Verify port mapping
+        // Verify port is NOT exposed (security fix: https://github.com/torrust/torrust-tracker-deployer/issues/277)
         assert!(
-            content.contains("3306:3306"),
-            "Should expose MySQL port 3306"
+            !content.contains("3306:3306"),
+            "MySQL port 3306 should NOT be exposed externally for security"
         );
     }
 

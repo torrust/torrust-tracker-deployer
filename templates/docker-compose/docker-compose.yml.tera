@@ -176,8 +176,11 @@ services:
 {%- for network in mysql.networks %}
       - {{ network }}
 {%- endfor %}
-    ports:
-      - "3306:3306"
+    # SECURITY: MySQL port is NOT exposed to the host/external network.
+    # - Only the tracker container can access MySQL via Docker's internal database_network
+    # - The healthcheck runs inside the container, so no external port is needed
+    # - This prevents unauthorized external access to the database
+    # See: https://github.com/torrust/torrust-tracker-deployer/issues/277
     volumes:
       - mysql_data:/var/lib/mysql
     command: --mysql-native-password=ON
