@@ -717,32 +717,51 @@ HTTPS while others use HTTP simultaneously. Instead, we'll take a simpler, more 
 
 This approach provides comprehensive HTTPS coverage while leveraging existing infrastructure.
 
-Implementation Plan:
+**Why the `test` command cannot be used in Docker-based E2E tests** (2026-01-20):
 
-- **Step 1: Add smoke test execution to E2E workflow**
-  - [ ] Add `run_smoke_tests()` method to `E2eTestRunner` in `src/testing/e2e/tasks/black_box/test_runner.rs`
-    - [ ] Execute `cargo run --bin torrust-tracker-deployer -- test <env-name>` via `ProcessRunner`
-    - [ ] The existing `test` command already supports HTTPS via `ServiceEndpoint::https()` with domain resolution
-  - [ ] Call `test_runner.run_smoke_tests()` in `run_deployer_workflow()` after `run_services()`
-  - [ ] Verify E2E tests pass on GitHub Actions (may require runner changes)
-  - [ ] Commit and push to verify CI passes
+The `e2e_deployment_workflow_tests` binary uses Docker containers (via testcontainers) with
+bridge networking, which creates a port mapping layer:
 
-- **Step 2: Enable HTTPS in E2E test configuration**
-  - [ ] Modify `E2eConfigEnvironment::to_json_config()` in `src/testing/e2e/containers/tracker_ports.rs`:
-    - [ ] Add `domain` and `use_tls_proxy: true` for each HTTP tracker
-    - [ ] Add `domain` and `use_tls_proxy: true` for HTTP API
-    - [ ] Add `domain` and `use_tls_proxy: true` for Grafana
-    - [ ] Add `https` section with `admin_email` and `use_staging: true`
-    - [ ] Use `.local` domains (e.g., `api.tracker.local`, `http1.tracker.local`)
-  - [ ] Caddy's internal CA automatically handles `.local` domain certificates
-  - [ ] Wait for Caddy certificate acquisition after `run_services()` (add brief delay or retry logic)
+- **Internal ports**: Tracker binds to configured ports (e.g., 1212, 7070) inside the container
+- **External ports**: Docker maps these to random host ports (e.g., 1212 → 32942)
 
-- **Step 3: Verify HTTPS E2E tests pass**
-  - [ ] Run E2E tests locally: `cargo run --bin e2e-deployment-workflow-tests`
-  - [ ] Verify `test` command validates HTTPS endpoints correctly
-  - [ ] Verify Caddy logs show successful certificate acquisition
-  - [ ] Run all linters and pre-commit checks
-  - [ ] Push to GitHub and verify CI passes
+The `test` command reads `service_endpoints` from the persisted environment state, which contains
+the configured internal ports (e.g., `http://127.0.0.1:1212/api/health_check`). However, to access
+services from the host, we need the external mapped ports. This is similar to trying to test
+infrastructure behind a VPN - the command only knows about local configuration, not external
+network layers.
+
+The existing `run_run_validation()` in Docker-based E2E tests already handles this by using
+`runtime_env.container_ports` which contains the actual Docker-mapped ports.
+
+**Solution: Use LXD VM-based E2E tests** (2026-01-20):
+
+The `e2e_complete_workflow_tests` binary uses LXD virtual machines instead of Docker containers.
+In this setup, there's no port mapping layer - the configured ports match the actual ports
+accessible from the host. The `test` command works correctly here because:
+
+- The VM has its own IP address (e.g., `10.x.x.x`)
+- Services bind to configured ports (1212, 7070, etc.)
+- The `test` command can reach services directly at `http://10.x.x.x:1212/api/health_check`
+
+This test binary already calls `validate_deployment()` which runs the `test` command, and it
+passes successfully (verified 2026-01-20):
+
+```text
+Deployment validated successfully, step: "test", environment: e2e-complete, status: "success"
+```
+
+**Note**: The LXD-based E2E tests cannot run on GitHub Actions CI due to network connectivity
+requirements. They must be run manually on a local machine with LXD configured.
+
+**Implementation Status**:
+
+- [x] `test` command already supports HTTPS via `ServiceEndpoint::https()` with domain resolution
+- [x] `validate_deployment()` exists in `E2eTestRunner` and calls the `test` command
+- [x] LXD VM-based E2E tests (`e2e_complete_workflow_tests`) call `validate_deployment()` after `run_services()`
+- [x] Verified LXD VM-based E2E tests pass (2026-01-20)
+- [ ] Add HTTPS configuration to LXD VM-based E2E test config (future enhancement)
+- [ ] Run LXD VM-based E2E tests with HTTPS configuration to validate end-to-end flow
 
 **Configuration Example** (E2E test config):
 
