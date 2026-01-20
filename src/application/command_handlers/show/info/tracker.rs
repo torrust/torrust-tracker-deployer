@@ -124,6 +124,7 @@ impl ServiceInfo {
     /// * `instance_ip` - The IP address of the deployed instance
     /// * `grafana_config` - Optional Grafana configuration (for TLS domain info)
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn from_tracker_config(
         tracker_config: &TrackerConfig,
         instance_ip: IpAddr,
@@ -132,7 +133,13 @@ impl ServiceInfo {
         let udp_trackers = tracker_config
             .udp_trackers
             .iter()
-            .map(|udp| format!("udp://{}:{}/announce", instance_ip, udp.bind_address.port()))
+            .map(|udp| {
+                let host = udp
+                    .domain
+                    .as_ref()
+                    .map_or_else(|| instance_ip.to_string(), |d| d.as_str().to_string());
+                format!("udp://{}:{}/announce", host, udp.bind_address.port())
+            })
             .collect();
 
         // Separate HTTP trackers by TLS configuration and localhost status

@@ -504,6 +504,7 @@ impl EnvironmentCreationConfig {
                 },
                 udp_trackers: vec![super::tracker::UdpTrackerSection {
                     bind_address: "0.0.0.0:6969".to_string(),
+                    domain: None,
                 }],
                 http_trackers: vec![super::tracker::HttpTrackerSection {
                     bind_address: "0.0.0.0:7070".to_string(),
@@ -1407,6 +1408,7 @@ mod tests {
             },
             udp_trackers: vec![UdpTrackerSection {
                 bind_address: "0.0.0.0:6969".to_string(),
+                domain: None,
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
@@ -1482,6 +1484,7 @@ mod tests {
             },
             udp_trackers: vec![UdpTrackerSection {
                 bind_address: "0.0.0.0:6969".to_string(),
+                domain: None,
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
@@ -1573,6 +1576,7 @@ mod tests {
             },
             udp_trackers: vec![UdpTrackerSection {
                 bind_address: "0.0.0.0:6969".to_string(),
+                domain: None,
             }],
             http_trackers: vec![HttpTrackerSection {
                 bind_address: "0.0.0.0:7070".to_string(),
