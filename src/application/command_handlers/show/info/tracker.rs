@@ -135,10 +135,9 @@ impl ServiceInfo {
             .iter()
             .map(|udp| {
                 let host = udp
-                    .domain
-                    .as_ref()
+                    .domain()
                     .map_or_else(|| instance_ip.to_string(), |d| d.as_str().to_string());
-                format!("udp://{}:{}/announce", host, udp.bind_address.port())
+                format!("udp://{}:{}/announce", host, udp.bind_address().port())
             })
             .collect();
 
@@ -149,29 +148,29 @@ impl ServiceInfo {
         let mut tls_domains = Vec::new();
 
         for (index, http) in tracker_config.http_trackers.iter().enumerate() {
-            if http.use_tls_proxy {
-                if let Some(domain) = &http.domain {
+            if http.use_tls_proxy() {
+                if let Some(domain) = http.domain() {
                     // TLS-enabled tracker - use HTTPS domain URL
                     // Note: localhost + TLS is rejected at config validation time,
                     // so we don't need to check for it here
                     https_http_trackers.push(format!("https://{}/announce", domain.as_str()));
                     tls_domains.push(TlsDomainInfo {
                         domain: domain.as_str().to_string(),
-                        internal_port: http.bind_address.port(),
+                        internal_port: http.bind_address().port(),
                     });
                 }
-            } else if is_localhost(&http.bind_address) {
+            } else if is_localhost(&http.bind_address()) {
                 // Localhost-only tracker - internal access only
                 localhost_http_trackers.push(LocalhostServiceInfo {
                     service_name: format!("http_tracker_{}", index + 1),
-                    port: http.bind_address.port(),
+                    port: http.bind_address().port(),
                 });
             } else {
                 // Non-TLS, non-localhost tracker - use direct IP URL
                 direct_http_trackers.push(format!(
                     "http://{}:{}/announce", // DevSkim: ignore DS137138
                     instance_ip,
-                    http.bind_address.port()
+                    http.bind_address().port()
                 ));
             }
         }
@@ -219,12 +218,12 @@ impl ServiceInfo {
 
         // Build health check URL based on TLS configuration and localhost status
         let health_check_is_localhost_only =
-            is_localhost(&tracker_config.health_check_api.bind_address);
+            is_localhost(&tracker_config.health_check_api.bind_address());
         let (health_check_url, health_check_uses_https) =
             if let Some(domain) = tracker_config.health_check_api.tls_domain() {
                 tls_domains.push(TlsDomainInfo {
                     domain: domain.to_string(),
-                    internal_port: tracker_config.health_check_api.bind_address.port(),
+                    internal_port: tracker_config.health_check_api.bind_address().port(),
                 });
                 (format!("https://{domain}/health_check"), true)
             } else {
@@ -232,7 +231,7 @@ impl ServiceInfo {
                     format!(
                         "http://{}:{}/health_check", // DevSkim: ignore DS137138
                         instance_ip,
-                        tracker_config.health_check_api.bind_address.port()
+                        tracker_config.health_check_api.bind_address().port()
                     ),
                     false,
                 )

@@ -31,10 +31,10 @@
 //!         private: false,
 //!     },
 //!     udp_trackers: vec![
-//!         UdpTrackerConfig { bind_address: "0.0.0.0:6868".parse().unwrap(), domain: None },
+//!         UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).unwrap(),
 //!     ],
 //!     http_trackers: vec![
-//!         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
+//!         HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).unwrap(),
 //!     ],
 //!     http_api: HttpApiConfig::new(
 //!         "0.0.0.0:1212".parse().unwrap(),
@@ -42,11 +42,11 @@
 //!         None,
 //!         false,
 //!     ).expect("valid config"),
-//!     health_check_api: HealthCheckApiConfig {
-//!         bind_address: "127.0.0.1:1313".parse().unwrap(),
-//!         domain: None,
-//!         use_tls_proxy: false,
-//!     },
+//!     health_check_api: HealthCheckApiConfig::new(
+//!         "127.0.0.1:1313".parse().unwrap(),
+//!         None,
+//!         false,
+//!     ).expect("valid config"),
 //! };
 //! ```
 
@@ -56,8 +56,8 @@ mod protocol;
 
 pub use binding_address::BindingAddress;
 pub use config::{
-    is_localhost, DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpApiConfigError,
-    HttpTrackerConfig, MysqlConfig, SqliteConfig, TrackerConfig, TrackerConfigError,
-    TrackerCoreConfig, UdpTrackerConfig,
+    is_localhost, DatabaseConfig, HealthCheckApiConfig, HealthCheckApiConfigError, HttpApiConfig,
+    HttpApiConfigError, HttpTrackerConfig, HttpTrackerConfigError, MysqlConfig, SqliteConfig,
+    TrackerConfig, TrackerConfigError, TrackerCoreConfig, UdpTrackerConfig, UdpTrackerConfigError,
 };
 pub use protocol::{Protocol, ProtocolParseError};

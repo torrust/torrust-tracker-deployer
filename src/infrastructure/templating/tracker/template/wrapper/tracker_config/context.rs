@@ -34,11 +34,11 @@ use crate::domain::environment::TrackerConfig;
 ///         private: true,
 ///     },
 ///     udp_trackers: vec![
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6868".parse().unwrap(), domain: None },
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap(), domain: None },
+///         UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
+///         UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
 ///     ],
 ///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
+///         HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).expect("valid config"),
 ///     ],
 ///     http_api: HttpApiConfig::new(
 ///         "0.0.0.0:1212".parse().unwrap(),
@@ -46,11 +46,11 @@ use crate::domain::environment::TrackerConfig;
 ///         None,
 ///         false,
 ///     ).expect("valid config"),
-///     health_check_api: HealthCheckApiConfig {
-///         bind_address: "127.0.0.1:1313".parse().unwrap(),
-///         domain: None,
-///         use_tls_proxy: false,
-///     },
+///     health_check_api: HealthCheckApiConfig::new(
+///         "127.0.0.1:1313".parse().unwrap(),
+///         None,
+///         false,
+///     ).expect("valid config"),
 /// };
 /// let context = TrackerContext::from_config(&tracker_config);
 /// ```
@@ -156,18 +156,18 @@ impl TrackerContext {
                 .udp_trackers
                 .iter()
                 .map(|t| UdpTrackerEntry {
-                    bind_address: t.bind_address.to_string(),
+                    bind_address: t.bind_address().to_string(),
                 })
                 .collect(),
             http_trackers: config
                 .http_trackers
                 .iter()
                 .map(|t| HttpTrackerEntry {
-                    bind_address: t.bind_address.to_string(),
+                    bind_address: t.bind_address().to_string(),
                 })
                 .collect(),
             http_api_bind_address: config.http_api.bind_address().to_string(),
-            health_check_api_bind_address: config.health_check_api.bind_address.to_string(),
+            health_check_api_bind_address: config.health_check_api.bind_address().to_string(),
         }
     }
 
@@ -232,20 +232,15 @@ mod tests {
                 private: true,
             },
             udp_trackers: vec![
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6868".parse().unwrap(),
-                    domain: None,
-                },
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".parse().unwrap(),
-                    domain: None,
-                },
+                UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
             ],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
+            http_trackers: vec![HttpTrackerConfig::new(
+                "0.0.0.0:7070".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config")],
             http_api: HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_admin_token".to_string().into(),
@@ -253,11 +248,12 @@ mod tests {
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: HealthCheckApiConfig::new(
+                "127.0.0.1:1313".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config"),
         }
     }
 
@@ -294,15 +290,15 @@ mod tests {
                 }),
                 private: false,
             },
-            udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6969".parse().unwrap(),
-                domain: None,
-            }],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
+            udp_trackers: vec![
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
+            ],
+            http_trackers: vec![HttpTrackerConfig::new(
+                "0.0.0.0:7070".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config")],
             http_api: HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_token".to_string().into(),
@@ -310,11 +306,12 @@ mod tests {
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: HealthCheckApiConfig::new(
+                "127.0.0.1:1313".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config"),
         };
 
         let context = TrackerContext::from_config(&config);

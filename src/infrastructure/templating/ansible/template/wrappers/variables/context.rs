@@ -80,14 +80,14 @@ impl AnsibleVariablesContext {
         let udp_ports: Vec<u16> = config
             .udp_trackers
             .iter()
-            .map(|tracker| Self::extract_port(&tracker.bind_address))
+            .map(|tracker| Self::extract_port(&tracker.bind_address()))
             .collect();
 
         // Extract HTTP tracker ports
         let http_ports: Vec<u16> = config
             .http_trackers
             .iter()
-            .map(|tracker| Self::extract_port(&tracker.bind_address))
+            .map(|tracker| Self::extract_port(&tracker.bind_address()))
             .collect();
 
         // Extract HTTP API port (hardcoded to 1212 for now - can be made configurable later)
@@ -196,20 +196,15 @@ mod tests {
                 private: false,
             },
             udp_trackers: vec![
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6868".parse().unwrap(),
-                    domain: None,
-                },
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".parse().unwrap(),
-                    domain: None,
-                },
+                UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
             ],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
+            http_trackers: vec![HttpTrackerConfig::new(
+                "0.0.0.0:7070".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config")],
             http_api: HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "MyAccessToken".to_string().into(),
@@ -217,11 +212,12 @@ mod tests {
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: HealthCheckApiConfig::new(
+                "127.0.0.1:1313".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config"),
         };
 
         let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
@@ -253,11 +249,12 @@ mod tests {
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: HealthCheckApiConfig::new(
+                "127.0.0.1:1313".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config"),
         };
 
         let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
@@ -282,20 +279,15 @@ mod tests {
                 private: false,
             },
             udp_trackers: vec![
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6868".parse().unwrap(), // Valid address
-                    domain: None,
-                },
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".parse().unwrap(), // Valid address
-                    domain: None,
-                },
+                UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
             ],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(), // Valid address
-                domain: None,
-                use_tls_proxy: false,
-            }],
+            http_trackers: vec![HttpTrackerConfig::new(
+                "0.0.0.0:7070".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config")],
             http_api: HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "Token".to_string().into(),
@@ -303,11 +295,12 @@ mod tests {
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: HealthCheckApiConfig::new(
+                "127.0.0.1:1313".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config"),
         };
 
         let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();

@@ -7,7 +7,10 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
-use crate::domain::tracker::{HttpApiConfigError, TrackerConfigError};
+use crate::domain::tracker::{
+    HealthCheckApiConfigError, HttpApiConfigError, HttpTrackerConfigError, TrackerConfigError,
+    UdpTrackerConfigError,
+};
 use crate::domain::EnvironmentNameError;
 use crate::domain::ProfileNameError;
 use crate::shared::UsernameError;
@@ -117,6 +120,27 @@ pub enum CreateConfigError {
     /// providing a bridge between domain errors and application-level error handling.
     #[error("HTTP API configuration invalid: {0}")]
     HttpApiConfigInvalid(#[from] HttpApiConfigError),
+
+    /// UDP tracker configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `UdpTrackerConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("UDP tracker configuration invalid: {0}")]
+    UdpTrackerConfigInvalid(#[from] UdpTrackerConfigError),
+
+    /// HTTP tracker configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `HttpTrackerConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("HTTP tracker configuration invalid: {0}")]
+    HttpTrackerConfigInvalid(#[from] HttpTrackerConfigError),
+
+    /// Health Check API configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `HealthCheckApiConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("Health Check API configuration invalid: {0}")]
+    HealthCheckApiConfigInvalid(#[from] HealthCheckApiConfigError),
 
     /// Invalid admin email format for HTTPS configuration
     #[error("Invalid admin email '{email}': {reason}")]
@@ -493,6 +517,18 @@ impl CreateConfigError {
                  Related: docs/external-issues/tracker/udp-tcp-port-sharing-allowed.md"
             }
             Self::HttpApiConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::UdpTrackerConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::HttpTrackerConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::HealthCheckApiConfigInvalid(inner) => {
                 // Delegate to domain error's help method for detailed guidance
                 inner.help()
             }

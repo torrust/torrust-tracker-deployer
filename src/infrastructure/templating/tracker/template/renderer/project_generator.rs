@@ -219,15 +219,15 @@ mod tests {
                 }),
                 private: false,
             },
-            udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6969".parse().unwrap(),
-                domain: None,
-            }],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
+            udp_trackers: vec![
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
+            ],
+            http_trackers: vec![HttpTrackerConfig::new(
+                "0.0.0.0:7070".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config")],
             http_api: HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_token".to_string().into(),
@@ -235,11 +235,12 @@ mod tests {
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: HealthCheckApiConfig::new(
+                "127.0.0.1:1313".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config"),
         };
 
         generator
@@ -277,15 +278,15 @@ mod tests {
                 }),
                 private: false,
             },
-            udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6969".parse().unwrap(),
-                domain: None,
-            }],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
+            udp_trackers: vec![
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
+            ],
+            http_trackers: vec![HttpTrackerConfig::new(
+                "0.0.0.0:7070".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config")],
             http_api: HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_token".to_string().into(),
@@ -293,11 +294,12 @@ mod tests {
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: HealthCheckApiConfig::new(
+                "127.0.0.1:1313".parse().unwrap(),
+                None,
+                false,
+            )
+            .expect("valid config"),
         };
 
         generator

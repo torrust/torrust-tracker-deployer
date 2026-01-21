@@ -32,13 +32,13 @@ This refactoring plan addresses DDD violations where domain types fail to enforc
 **Total Active Proposals**: 6
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 1
+**Completed**: 2
 **In Progress**: 0
-**Not Started**: 5
+**Not Started**: 4
 
 ### Phase Summary
 
-- **Phase 0 - Foundation (High Impact, Low Effort)**: ⏳ 1/2 completed (50%)
+- **Phase 0 - Foundation (High Impact, Low Effort)**: ✅ 2/2 completed (100%)
 - **Phase 1 - Tracker Config Hardening (High Impact, Medium Effort)**: ⏳ 0/2 completed (0%)
 - **Phase 2 - Aggregate Invariants (Medium Impact, Low Effort)**: ⏳ 0/2 completed (0%)
 
@@ -330,7 +330,7 @@ impl TryFrom<HttpApiSection> for HttpApiConfig {
 
 ### Proposal #1: Apply Same Pattern to UdpTrackerConfig, HttpTrackerConfig, HealthCheckApiConfig
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵🔵 Medium
 **Priority**: P0
@@ -416,44 +416,44 @@ Consistent pattern across all tracker configuration types.
 
 #### Implementation Checklist
 
-- [ ] **UdpTrackerConfig**:
-  - [ ] Create `UdpTrackerConfigError` enum with `help()` method
-  - [ ] Create `UdpTrackerConfigRaw` struct for deserialization
-  - [ ] Make fields private
-  - [ ] Add `UdpTrackerConfig::new()` with port validation
-  - [ ] Add getter methods
-  - [ ] Implement custom `Deserialize`
-  - [ ] Implement `TryFrom<UdpTrackerSection> for UdpTrackerConfig` (standard trait conversion)
-  - [ ] Add `From<UdpTrackerConfigError>` for `CreateConfigError`
-  - [ ] Update tests
+- [x] **UdpTrackerConfig**:
+  - [x] Create `UdpTrackerConfigError` enum with `help()` method
+  - [x] Create `UdpTrackerConfigRaw` struct for deserialization
+  - [x] Make fields private
+  - [x] Add `UdpTrackerConfig::new()` with port validation
+  - [x] Add getter methods
+  - [x] Implement custom `Deserialize`
+  - [x] Implement `TryFrom<UdpTrackerSection> for UdpTrackerConfig` (standard trait conversion)
+  - [x] Add `From<UdpTrackerConfigError>` for `CreateConfigError`
+  - [x] Update tests
 
-- [ ] **HttpTrackerConfig**:
-  - [ ] Create `HttpTrackerConfigError` enum (same variants as HttpApiConfigError minus admin_token)
-  - [ ] Create `HttpTrackerConfigRaw` struct
-  - [ ] Make fields private
-  - [ ] Add `HttpTrackerConfig::new()` with full validation
-  - [ ] Add getter methods
-  - [ ] Implement custom `Deserialize`
-  - [ ] Implement `TryFrom<HttpTrackerSection> for HttpTrackerConfig` (standard trait conversion)
-  - [ ] Add `From<HttpTrackerConfigError>` for `CreateConfigError`
-  - [ ] Update tests
+- [x] **HttpTrackerConfig**:
+  - [x] Create `HttpTrackerConfigError` enum (same variants as HttpApiConfigError minus admin_token)
+  - [x] Create `HttpTrackerConfigRaw` struct
+  - [x] Make fields private
+  - [x] Add `HttpTrackerConfig::new()` with full validation
+  - [x] Add getter methods
+  - [x] Implement custom `Deserialize`
+  - [x] Implement `TryFrom<HttpTrackerSection> for HttpTrackerConfig` (standard trait conversion)
+  - [x] Add `From<HttpTrackerConfigError>` for `CreateConfigError`
+  - [x] Update tests
 
-- [ ] **HealthCheckApiConfig**:
-  - [ ] Create `HealthCheckApiConfigError` enum
-  - [ ] Create `HealthCheckApiConfigRaw` struct
-  - [ ] Make fields private
-  - [ ] Add `HealthCheckApiConfig::new()` with full validation
-  - [ ] Add getter methods
-  - [ ] Implement custom `Deserialize`
-  - [ ] Implement `TryFrom<HealthCheckApiSection> for HealthCheckApiConfig` (standard trait conversion)
-  - [ ] Add `From<HealthCheckApiConfigError>` for `CreateConfigError`
-  - [ ] Update tests
+- [x] **HealthCheckApiConfig**:
+  - [x] Create `HealthCheckApiConfigError` enum
+  - [x] Create `HealthCheckApiConfigRaw` struct
+  - [x] Make fields private
+  - [x] Add `HealthCheckApiConfig::new()` with full validation
+  - [x] Add getter methods
+  - [x] Implement custom `Deserialize`
+  - [x] Implement `TryFrom<HealthCheckApiSection> for HealthCheckApiConfig` (standard trait conversion)
+  - [x] Add `From<HealthCheckApiConfigError>` for `CreateConfigError`
+  - [x] Update tests
 
-- [ ] **Final verification**:
-  - [ ] Remove redundant localhost+TLS tests from `TrackerConfig::validate()` tests
-  - [ ] Verify all tests pass
-  - [ ] Run clippy and fix any issues
-  - [ ] Run doc tests
+- [x] **Final verification**:
+  - [x] Remove redundant localhost+TLS tests from `TrackerConfig::validate()` tests
+  - [x] Verify all tests pass
+  - [x] Run clippy and fix any issues
+  - [x] Run doc tests
 
 #### Estimated Effort
 
@@ -471,6 +471,34 @@ Based on Proposal #0 experience:
 3. Update application DTO tests to verify delegation
 4. Check that `TrackerConfig::validate()` still catches aggregate-level issues
 5. Integration tests remain unchanged (behavior preserved)
+
+#### Implementation Notes (Completed)
+
+**Key Files Modified:**
+
+- `src/domain/tracker/config/udp.rs` - Rewritten with validated constructor pattern
+- `src/domain/tracker/config/http.rs` - Rewritten with validated constructor pattern
+- `src/domain/tracker/config/health_check_api.rs` - Rewritten with validated constructor pattern
+- `src/domain/tracker/config/mod.rs` - Updated `TrackerConfig::default()` to use `::new()` constructors, updated tests with helper functions, removed redundant localhost+TLS tests
+- `src/application/command_handlers/create/config/tracker/udp_tracker_section.rs` - Added `TryFrom` impl
+- `src/application/command_handlers/create/config/tracker/http_tracker_section.rs` - Added `TryFrom` impl
+- `src/application/command_handlers/create/config/tracker/health_check_api_section.rs` - Added `TryFrom` impl
+- `src/application/command_handlers/create/config/tracker/tracker_section.rs` - Updated to use `.try_into()` for conversions
+- `src/application/command_handlers/create/config/errors.rs` - Added three new error variants with `From` implementations
+- Multiple infrastructure test files updated to use `::new()` constructors
+
+**Key Decisions:**
+
+1. Custom `Deserialize` implementation via serde `deserialize_with` attribute (same pattern as HttpApiConfig)
+2. Test helper functions added: `test_udp_tracker_config()`, `test_http_tracker_config()`, `test_health_check_api_config()` (and TLS variants)
+3. Localhost+TLS validation tests removed from `TrackerConfig::validate()` tests since these invariants are now enforced at construction time by individual config types
+4. All field accesses updated to use getter methods (`.bind_address()`, `.domain()`, `.use_tls_proxy()`)
+
+**Lessons Learned:**
+
+- Bulk replacement of field accesses (`.field` → `.field()`) required updates across many files
+- Test code changes were more extensive than production code changes
+- The `HasBindAddress` trait implementations needed fully-qualified method calls to avoid ambiguity
 
 ---
 

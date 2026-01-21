@@ -148,8 +148,10 @@ impl ServiceEndpoints {
             Self::build_http_tracker_urls(&tracker_config.http_trackers, instance_ip);
         let api_endpoint =
             Self::build_api_endpoint_url(tracker_config.http_api.bind_address(), instance_ip);
-        let health_check_url =
-            Self::build_health_check_url(tracker_config.health_check_api.bind_address, instance_ip);
+        let health_check_url = Self::build_health_check_url(
+            tracker_config.health_check_api.bind_address(),
+            instance_ip,
+        );
 
         Self::new(udp_trackers, http_trackers, api_endpoint, health_check_url)
     }
@@ -164,7 +166,7 @@ impl ServiceEndpoints {
                 Url::parse(&format!(
                     "udp://{}:{}/announce",
                     instance_ip,
-                    udp.bind_address.port()
+                    udp.bind_address().port()
                 ))
                 .ok()
             })
@@ -181,7 +183,7 @@ impl ServiceEndpoints {
                 Url::parse(&format!(
                     "http://{}:{}/announce", // DevSkim: ignore DS137138
                     instance_ip,
-                    http.bind_address.port()
+                    http.bind_address().port()
                 ))
                 .ok()
             })

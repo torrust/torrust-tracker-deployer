@@ -1,3 +1,19 @@
+//! HTTP tracker section DTO
+//!
+//! This module contains the application layer DTO for HTTP tracker configuration.
+//! It follows the **`TryFrom` pattern** for DTO to domain conversion, delegating
+//! all business validation to the domain layer.
+//!
+//! ## Conversion Pattern
+//!
+//! The `TryFrom<HttpTrackerSection> for HttpTrackerConfig` implementation:
+//! 1. Parses string fields into typed values (e.g., `String` → `SocketAddr`)
+//! 2. Delegates domain validation to `HttpTrackerConfig::new()`
+//! 3. Maps domain errors to application errors via `From` implementations
+//!
+//! See `docs/decisions/tryfrom-for-dto-to-domain-conversion.md` for rationale.
+
+use std::convert::TryFrom;
 use std::net::SocketAddr;
 
 use schemars::JsonSchema;
@@ -34,68 +50,58 @@ pub struct HttpTrackerSection {
     pub use_tls_proxy: Option<bool>,
 }
 
-impl HttpTrackerSection {
-    /// Converts this DTO to a domain `HttpTrackerConfig`
-    ///
-    /// # Errors
-    ///
-    /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
-    /// Returns `CreateConfigError::DynamicPortNotSupported` if port 0 (dynamic port assignment) is specified.
-    /// Returns `CreateConfigError::InvalidDomain` if the domain is invalid.
-    /// Returns `CreateConfigError::TlsProxyWithoutDomain` if `use_tls_proxy` is true but domain is missing.
-    ///
-    /// Note: Localhost + TLS validation is performed at the domain layer
-    /// (see `TrackerConfig::validate()`) to avoid duplicating business rules.
-    pub fn to_http_tracker_config(&self) -> Result<HttpTrackerConfig, CreateConfigError> {
-        // Validate that the bind address can be parsed as SocketAddr
-        let bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
+/// Converts from application DTO to domain type using `TryFrom` trait
+///
+/// This implementation follows the standard library convention for fallible
+/// conversions, enabling use of `.try_into()` and `TryFrom::try_from()`.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let section = HttpTrackerSection {
+///     bind_address: "0.0.0.0:7070".to_string(),
+///     domain: None,
+///     use_tls_proxy: None,
+/// };
+/// let config: HttpTrackerConfig = section.try_into()?;
+/// ```
+impl TryFrom<HttpTrackerSection> for HttpTrackerConfig {
+    type Error = CreateConfigError;
+
+    fn try_from(section: HttpTrackerSection) -> Result<Self, Self::Error> {
+        // Parse bind address from string to SocketAddr
+        let bind_address = section.bind_address.parse::<SocketAddr>().map_err(|e| {
             CreateConfigError::InvalidBindAddress {
-                address: self.bind_address.clone(),
+                address: section.bind_address.clone(),
                 source: e,
             }
         })?;
 
-        // Reject port 0 (dynamic port assignment)
-        if bind_address.port() == 0 {
-            return Err(CreateConfigError::DynamicPortNotSupported {
-                bind_address: self.bind_address.clone(),
-            });
-        }
+        // Parse domain if present
+        let domain = section
+            .domain
+            .map(|d| {
+                DomainName::new(&d).map_err(|e| CreateConfigError::InvalidDomain {
+                    domain: d,
+                    reason: e.to_string(),
+                })
+            })
+            .transpose()?;
 
-        let use_tls_proxy = self.use_tls_proxy.unwrap_or(false);
+        let use_tls_proxy = section.use_tls_proxy.unwrap_or(false);
 
-        // Validate: use_tls_proxy: true requires domain
-        if use_tls_proxy && self.domain.is_none() {
-            return Err(CreateConfigError::TlsProxyWithoutDomain {
-                service_type: "HTTP tracker".to_string(),
-                bind_address: self.bind_address.clone(),
-            });
-        }
-
-        // Convert domain to domain type with validation (if present)
-        let domain = match &self.domain {
-            Some(domain_str) => {
-                let domain =
-                    DomainName::new(domain_str).map_err(|e| CreateConfigError::InvalidDomain {
-                        domain: domain_str.clone(),
-                        reason: e.to_string(),
-                    })?;
-                Some(domain)
-            }
-            None => None,
-        };
-
-        Ok(HttpTrackerConfig {
-            bind_address,
-            domain,
-            use_tls_proxy,
-        })
+        // Delegate all business validation to domain layer
+        HttpTrackerConfig::new(bind_address, domain, use_tls_proxy).map_err(CreateConfigError::from)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // =========================================================================
+    // TryFrom conversion tests
+    // =========================================================================
 
     #[test]
     fn it_should_convert_valid_bind_address_to_http_tracker_config() {
@@ -105,15 +111,15 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let result = section.to_http_tracker_config();
+        let result: Result<HttpTrackerConfig, _> = section.try_into();
         assert!(result.is_ok());
 
         let config = result.unwrap();
         assert_eq!(
-            config.bind_address,
+            config.bind_address(),
             "0.0.0.0:7070".parse::<SocketAddr>().unwrap()
         );
-        assert!(!config.use_tls_proxy);
+        assert!(!config.use_tls_proxy());
     }
 
     #[test]
@@ -124,7 +130,7 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let result = section.to_http_tracker_config();
+        let result: Result<HttpTrackerConfig, _> = section.try_into();
         assert!(result.is_err());
 
         if let Err(CreateConfigError::InvalidBindAddress { address, .. }) = result {
@@ -135,21 +141,21 @@ mod tests {
     }
 
     #[test]
-    fn it_should_reject_port_zero() {
+    fn it_should_reject_port_zero_via_domain_validation() {
         let section = HttpTrackerSection {
             bind_address: "0.0.0.0:0".to_string(),
             domain: None,
             use_tls_proxy: None,
         };
 
-        let result = section.to_http_tracker_config();
+        let result: Result<HttpTrackerConfig, _> = section.try_into();
         assert!(result.is_err());
 
-        if let Err(CreateConfigError::DynamicPortNotSupported { bind_address }) = result {
-            assert_eq!(bind_address, "0.0.0.0:0");
-        } else {
-            panic!("Expected DynamicPortNotSupported error");
-        }
+        // Port 0 is now rejected by domain layer
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::HttpTrackerConfigInvalid(_)
+        ));
     }
 
     #[test]
@@ -182,53 +188,66 @@ mod tests {
             use_tls_proxy: Some(true),
         };
 
-        let result = section.to_http_tracker_config();
+        let result: Result<HttpTrackerConfig, _> = section.try_into();
 
         assert!(result.is_ok());
         let config = result.unwrap();
-        assert!(config.use_tls_proxy);
-        assert!(config.domain.is_some());
+        assert!(config.use_tls_proxy());
+        assert!(config.domain().is_some());
     }
 
     #[test]
-    fn it_should_reject_tls_proxy_without_domain() {
+    fn it_should_reject_tls_proxy_without_domain_via_domain_validation() {
         let section = HttpTrackerSection {
             bind_address: "0.0.0.0:7070".to_string(),
             domain: None,
             use_tls_proxy: Some(true),
         };
 
-        let result = section.to_http_tracker_config();
+        let result: Result<HttpTrackerConfig, _> = section.try_into();
         assert!(result.is_err());
 
-        if let Err(CreateConfigError::TlsProxyWithoutDomain {
-            service_type,
-            bind_address,
-        }) = result
-        {
-            assert_eq!(service_type, "HTTP tracker");
-            assert_eq!(bind_address, "0.0.0.0:7070");
-        } else {
-            panic!("Expected TlsProxyWithoutDomain error");
-        }
+        // TLS without domain is now rejected by domain layer
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::HttpTrackerConfigInvalid(_)
+        ));
+    }
+
+    #[test]
+    fn it_should_reject_localhost_with_tls_via_domain_validation() {
+        let section = HttpTrackerSection {
+            bind_address: "127.0.0.1:7070".to_string(),
+            domain: Some("tracker.local".to_string()),
+            use_tls_proxy: Some(true),
+        };
+
+        let result: Result<HttpTrackerConfig, _> = section.try_into();
+        assert!(result.is_err());
+
+        // Localhost + TLS is now rejected by domain layer
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::HttpTrackerConfigInvalid(_)
+        ));
     }
 
     #[test]
     fn it_should_accept_domain_without_tls_proxy() {
-        // Domain provided but use_tls_proxy is false - domain is ignored
+        // Domain provided but use_tls_proxy is false - domain is stored but not used for TLS
         let section = HttpTrackerSection {
             bind_address: "0.0.0.0:7070".to_string(),
             domain: Some("tracker.local".to_string()),
             use_tls_proxy: Some(false),
         };
 
-        let result = section.to_http_tracker_config();
+        let result: Result<HttpTrackerConfig, _> = section.try_into();
         assert!(result.is_ok());
 
         let config = result.unwrap();
-        assert!(!config.use_tls_proxy);
+        assert!(!config.use_tls_proxy());
         // Domain is still stored but won't be used for TLS
-        assert!(config.domain.is_some());
+        assert!(config.domain().is_some());
     }
 
     #[test]

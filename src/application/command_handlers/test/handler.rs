@@ -190,7 +190,7 @@ impl TestCommandHandler {
         server_ip: std::net::IpAddr,
         config: &HttpTrackerConfig,
     ) -> ServiceEndpoint {
-        let port = config.bind_address.port();
+        let port = config.bind_address().port();
         let path = "/health_check";
         let socket_addr = std::net::SocketAddr::new(server_ip, port);
 

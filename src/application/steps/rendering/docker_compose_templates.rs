@@ -323,7 +323,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         let udp_ports: Vec<u16> = tracker_config
             .udp_trackers
             .iter()
-            .map(|tracker| tracker.bind_address.port())
+            .map(|tracker| tracker.bind_address().port())
             .collect();
 
         // Get the set of HTTP tracker ports that have TLS enabled
@@ -338,7 +338,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         let http_ports_without_tls: Vec<u16> = tracker_config
             .http_trackers
             .iter()
-            .map(|tracker| tracker.bind_address.port())
+            .map(|tracker| tracker.bind_address().port())
             .filter(|port| !tls_enabled_ports.contains(port))
             .collect();
 

@@ -3,6 +3,8 @@
 //! This module provides the aggregated DTO for complete tracker configuration,
 //! used for JSON deserialization and validation before converting to domain types.
 
+use std::convert::TryInto;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -72,22 +74,24 @@ impl TrackerSection {
     pub fn to_tracker_config(&self) -> Result<TrackerConfig, CreateConfigError> {
         let core = self.core.to_tracker_core_config()?;
 
+        // Use TryFrom for DTO to domain conversions
         let udp_trackers: Result<Vec<UdpTrackerConfig>, CreateConfigError> = self
             .udp_trackers
             .iter()
-            .map(UdpTrackerSection::to_udp_tracker_config)
+            .cloned()
+            .map(TryInto::try_into)
             .collect();
 
         let http_trackers: Result<Vec<HttpTrackerConfig>, CreateConfigError> = self
             .http_trackers
             .iter()
-            .map(HttpTrackerSection::to_http_tracker_config)
+            .cloned()
+            .map(TryInto::try_into)
             .collect();
 
         let http_api: HttpApiConfig = self.http_api.clone().try_into()?;
 
-        let health_check_api: HealthCheckApiConfig =
-            self.health_check_api.to_health_check_api_config()?;
+        let health_check_api: HealthCheckApiConfig = self.health_check_api.clone().try_into()?;
 
         let config = TrackerConfig {
             core,

@@ -19,10 +19,10 @@ mod http_api;
 mod udp;
 
 pub use core::{DatabaseConfig, MysqlConfig, SqliteConfig, TrackerCoreConfig};
-pub use health_check_api::HealthCheckApiConfig;
-pub use http::HttpTrackerConfig;
+pub use health_check_api::{HealthCheckApiConfig, HealthCheckApiConfigError};
+pub use http::{HttpTrackerConfig, HttpTrackerConfigError};
 pub use http_api::{HttpApiConfig, HttpApiConfigError};
-pub use udp::UdpTrackerConfig;
+pub use udp::{UdpTrackerConfig, UdpTrackerConfigError};
 
 /// Checks if a socket address is bound to localhost (127.0.0.1 or `::1`).
 ///
@@ -67,10 +67,10 @@ pub fn is_localhost(addr: &SocketAddr) -> bool {
 ///         private: false,
 ///     },
 ///     udp_trackers: vec![
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap(), domain: None },
+///         UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap(),
 ///     ],
 ///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
+///         HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).unwrap(),
 ///     ],
 ///     http_api: HttpApiConfig::new(
 ///         "0.0.0.0:1212".parse().unwrap(),
@@ -78,11 +78,11 @@ pub fn is_localhost(addr: &SocketAddr) -> bool {
 ///         None,
 ///         false,
 ///     ).expect("valid config"),
-///     health_check_api: HealthCheckApiConfig {
-///         bind_address: "127.0.0.1:1313".parse().unwrap(),
-///         domain: None,
-///         use_tls_proxy: false,
-///     },
+///     health_check_api: HealthCheckApiConfig::new(
+///         "127.0.0.1:1313".parse().unwrap(),
+///         None,
+///         false,
+///     ).expect("valid config"),
 /// };
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -274,10 +274,10 @@ impl TrackerConfig {
     ///         private: false,
     ///     },
     ///     udp_trackers: vec![
-    ///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap(), domain: None },
+    ///         UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
     ///     ],
     ///     http_trackers: vec![
-    ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
+    ///         HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).expect("valid config"),
     ///     ],
     ///     http_api: HttpApiConfig::new(
     ///         "0.0.0.0:1212".parse().unwrap(),
@@ -285,11 +285,11 @@ impl TrackerConfig {
     ///         None,
     ///         false,
     ///     ).expect("valid config"),
-    ///     health_check_api: HealthCheckApiConfig {
-    ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
-    ///         domain: None,
-    ///         use_tls_proxy: false,
-    ///     },
+    ///     health_check_api: HealthCheckApiConfig::new(
+    ///         "127.0.0.1:1313".parse().unwrap(),
+    ///         None,
+    ///         false,
+    ///     ).expect("valid config"),
     /// };
     ///
     /// assert!(config.validate().is_ok());
@@ -322,20 +322,21 @@ impl TrackerConfig {
         }
 
         // Check Health Check API
-        if self.health_check_api.use_tls_proxy && is_localhost(&self.health_check_api.bind_address)
+        if self.health_check_api.use_tls_proxy()
+            && is_localhost(&self.health_check_api.bind_address())
         {
             return Err(TrackerConfigError::LocalhostWithTls {
                 service_name: "Health Check API".to_string(),
-                bind_address: self.health_check_api.bind_address,
+                bind_address: self.health_check_api.bind_address(),
             });
         }
 
         // Check HTTP trackers
         for (i, tracker) in self.http_trackers.iter().enumerate() {
-            if tracker.use_tls_proxy && is_localhost(&tracker.bind_address) {
+            if tracker.use_tls_proxy() && is_localhost(&tracker.bind_address()) {
                 return Err(TrackerConfigError::LocalhostWithTls {
                     service_name: format!("HTTP Tracker #{}", i + 1),
-                    bind_address: tracker.bind_address,
+                    bind_address: tracker.bind_address(),
                 });
             }
         }
@@ -403,7 +404,7 @@ impl TrackerConfig {
         // Add Health Check API
         Self::register_binding(
             &mut bindings,
-            self.health_check_api.bind_address,
+            self.health_check_api.bind_address(),
             Protocol::Tcp,
             "Health Check API",
         );
@@ -465,7 +466,7 @@ impl TrackerConfig {
     /// Returns the Health Check API port number
     #[must_use]
     pub fn health_check_api_port(&self) -> u16 {
-        self.health_check_api.bind_address.port()
+        self.health_check_api.bind_address().port()
     }
 
     /// Returns HTTP trackers that have TLS proxy enabled
@@ -476,12 +477,11 @@ impl TrackerConfig {
     pub fn http_trackers_with_tls(&self) -> Vec<(&str, u16)> {
         self.http_trackers
             .iter()
-            .filter(|tracker| tracker.use_tls_proxy)
+            .filter(|tracker| tracker.use_tls_proxy())
             .filter_map(|tracker| {
                 tracker
-                    .domain
-                    .as_ref()
-                    .map(|domain| (domain.as_str(), tracker.bind_address.port()))
+                    .domain()
+                    .map(|domain| (domain.as_str(), tracker.bind_address().port()))
             })
             .collect()
     }
@@ -492,7 +492,9 @@ impl TrackerConfig {
     /// setting should be enabled in the tracker configuration template.
     #[must_use]
     pub fn any_http_tracker_uses_tls_proxy(&self) -> bool {
-        self.http_trackers.iter().any(|t| t.use_tls_proxy)
+        self.http_trackers
+            .iter()
+            .any(http::HttpTrackerConfig::use_tls_proxy)
     }
 }
 
@@ -506,13 +508,13 @@ trait HasBindAddress {
 
 impl HasBindAddress for UdpTrackerConfig {
     fn bind_address(&self) -> SocketAddr {
-        self.bind_address
+        UdpTrackerConfig::bind_address(self)
     }
 }
 
 impl HasBindAddress for HttpTrackerConfig {
     fn bind_address(&self) -> SocketAddr {
-        self.bind_address
+        HttpTrackerConfig::bind_address(self)
     }
 }
 
@@ -535,15 +537,17 @@ impl Default for TrackerConfig {
                 }),
                 private: false,
             },
-            udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6969".parse().expect("valid address"),
-                domain: None,
-            }],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().expect("valid address"),
-                domain: None,
-                use_tls_proxy: false,
-            }],
+            udp_trackers: vec![UdpTrackerConfig::new(
+                "0.0.0.0:6969".parse().expect("valid address"),
+                None,
+            )
+            .expect("default UdpTrackerConfig values are always valid")],
+            http_trackers: vec![HttpTrackerConfig::new(
+                "0.0.0.0:7070".parse().expect("valid address"),
+                None,
+                false,
+            )
+            .expect("default HttpTrackerConfig values are always valid")],
             http_api: HttpApiConfig::new(
                 "0.0.0.0:1212".parse().expect("valid address"),
                 "MyAccessToken".to_string().into(),
@@ -551,11 +555,12 @@ impl Default for TrackerConfig {
                 false,
             )
             .expect("default HttpApiConfig values are always valid"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().expect("valid address"),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: HealthCheckApiConfig::new(
+                "127.0.0.1:1313".parse().expect("valid address"),
+                None,
+                false,
+            )
+            .expect("default HealthCheckApiConfig values are always valid"),
         }
     }
 }
@@ -578,6 +583,65 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Test helper to create a `UdpTrackerConfig` with default values.
+    /// Uses the validated constructor, making tests more realistic.
+    fn test_udp_tracker_config(bind_address: &str) -> UdpTrackerConfig {
+        UdpTrackerConfig::new(bind_address.parse().expect("valid address"), None)
+            .expect("test values should be valid")
+    }
+
+    /// Test helper to create a `UdpTrackerConfig` with domain.
+    #[allow(dead_code)]
+    fn test_udp_tracker_config_with_domain(
+        bind_address: &str,
+        domain: DomainName,
+    ) -> UdpTrackerConfig {
+        UdpTrackerConfig::new(bind_address.parse().expect("valid address"), Some(domain))
+            .expect("test values should be valid")
+    }
+
+    /// Test helper to create an `HttpTrackerConfig` with default values (no TLS).
+    fn test_http_tracker_config(bind_address: &str) -> HttpTrackerConfig {
+        HttpTrackerConfig::new(bind_address.parse().expect("valid address"), None, false)
+            .expect("test values should be valid")
+    }
+
+    /// Test helper with TLS options for HTTP trackers.
+    #[allow(dead_code)]
+    fn test_http_tracker_config_with_tls(
+        bind_address: &str,
+        domain: Option<DomainName>,
+        use_tls_proxy: bool,
+    ) -> HttpTrackerConfig {
+        HttpTrackerConfig::new(
+            bind_address.parse().expect("valid address"),
+            domain,
+            use_tls_proxy,
+        )
+        .expect("test values should be valid")
+    }
+
+    /// Test helper to create a `HealthCheckApiConfig` with default values (no TLS).
+    fn test_health_check_api_config(bind_address: &str) -> HealthCheckApiConfig {
+        HealthCheckApiConfig::new(bind_address.parse().expect("valid address"), None, false)
+            .expect("test values should be valid")
+    }
+
+    /// Test helper with TLS options for Health Check API.
+    #[allow(dead_code)]
+    fn test_health_check_api_config_with_tls(
+        bind_address: &str,
+        domain: Option<DomainName>,
+        use_tls_proxy: bool,
+    ) -> HealthCheckApiConfig {
+        HealthCheckApiConfig::new(
+            bind_address.parse().expect("valid address"),
+            domain,
+            use_tls_proxy,
+        )
+        .expect("test values should be valid")
+    }
 
     /// Test helper to create an `HttpApiConfig` with default or custom values.
     /// Uses the validated constructor, making tests more realistic.
@@ -657,21 +721,10 @@ mod tests {
                 }),
                 private: true,
             },
-            udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6868".parse().unwrap(),
-                domain: None,
-            }],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
+            udp_trackers: vec![test_udp_tracker_config("0.0.0.0:6868")],
+            http_trackers: vec![test_http_tracker_config("0.0.0.0:7070")],
             http_api: test_http_api_config("0.0.0.0:1212", "test_token"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: test_health_check_api_config("127.0.0.1:1313"),
         };
 
         assert_eq!(config.core.database.database_name(), "tracker.db");
@@ -692,11 +745,7 @@ mod tests {
             udp_trackers: vec![],
             http_trackers: vec![],
             http_api: test_http_api_config("0.0.0.0:1212", "token123"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            health_check_api: test_health_check_api_config("127.0.0.1:1313"),
         };
 
         let json = serde_json::to_value(&config).unwrap();
@@ -718,14 +767,14 @@ mod tests {
         // Verify UDP trackers (1 instance)
         assert_eq!(config.udp_trackers.len(), 1);
         assert_eq!(
-            config.udp_trackers[0].bind_address,
+            config.udp_trackers[0].bind_address(),
             "0.0.0.0:6969".parse::<SocketAddr>().unwrap()
         );
 
         // Verify HTTP trackers (1 instance)
         assert_eq!(config.http_trackers.len(), 1);
         assert_eq!(
-            config.http_trackers[0].bind_address,
+            config.http_trackers[0].bind_address(),
             "0.0.0.0:7070".parse::<SocketAddr>().unwrap()
         );
 
@@ -752,21 +801,10 @@ mod tests {
                     }),
                     private: false,
                 },
-                udp_trackers: vec![UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".parse().unwrap(),
-                    domain: None,
-                }],
-                http_trackers: vec![HttpTrackerConfig {
-                    bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                }],
+                udp_trackers: vec![test_udp_tracker_config("0.0.0.0:6969")],
+                http_trackers: vec![test_http_tracker_config("0.0.0.0:7070")],
                 http_api: test_http_api_config("0.0.0.0:1212", "token"),
-                health_check_api: HealthCheckApiConfig {
-                    bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                health_check_api: test_health_check_api_config("127.0.0.1:1313"),
             };
 
             assert!(config.validate().is_ok());
@@ -782,22 +820,12 @@ mod tests {
                     private: false,
                 },
                 udp_trackers: vec![
-                    UdpTrackerConfig {
-                        bind_address: "0.0.0.0:7070".parse().unwrap(),
-                        domain: None,
-                    },
-                    UdpTrackerConfig {
-                        bind_address: "0.0.0.0:7070".parse().unwrap(),
-                        domain: None,
-                    },
+                    test_udp_tracker_config("0.0.0.0:7070"),
+                    test_udp_tracker_config("0.0.0.0:7070"),
                 ],
                 http_trackers: vec![],
                 http_api: test_http_api_config("0.0.0.0:1212", "token"),
-                health_check_api: HealthCheckApiConfig {
-                    bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                health_check_api: test_health_check_api_config("127.0.0.1:1313"),
             };
 
             let result = config.validate();
@@ -830,23 +858,11 @@ mod tests {
                 },
                 udp_trackers: vec![],
                 http_trackers: vec![
-                    HttpTrackerConfig {
-                        bind_address: "0.0.0.0:7070".parse().unwrap(),
-                        domain: None,
-                        use_tls_proxy: false,
-                    },
-                    HttpTrackerConfig {
-                        bind_address: "0.0.0.0:7070".parse().unwrap(),
-                        domain: None,
-                        use_tls_proxy: false,
-                    },
+                    test_http_tracker_config("0.0.0.0:7070"),
+                    test_http_tracker_config("0.0.0.0:7070"),
                 ],
                 http_api: test_http_api_config("0.0.0.0:1212", "token"),
-                health_check_api: HealthCheckApiConfig {
-                    bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                health_check_api: test_health_check_api_config("127.0.0.1:1313"),
             };
 
             let result = config.validate();
@@ -876,17 +892,9 @@ mod tests {
                     private: false,
                 },
                 udp_trackers: vec![],
-                http_trackers: vec![HttpTrackerConfig {
-                    bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                }],
+                http_trackers: vec![test_http_tracker_config("0.0.0.0:7070")],
                 http_api: test_http_api_config("0.0.0.0:7070", "token"),
-                health_check_api: HealthCheckApiConfig {
-                    bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                health_check_api: test_health_check_api_config("127.0.0.1:1313"),
             };
 
             let result = config.validate();
@@ -918,17 +926,9 @@ mod tests {
                     private: false,
                 },
                 udp_trackers: vec![],
-                http_trackers: vec![HttpTrackerConfig {
-                    bind_address: "0.0.0.0:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                }],
+                http_trackers: vec![test_http_tracker_config("0.0.0.0:1313")],
                 http_api: test_http_api_config("0.0.0.0:1212", "token"),
-                health_check_api: HealthCheckApiConfig {
-                    bind_address: "0.0.0.0:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                health_check_api: test_health_check_api_config("0.0.0.0:1313"),
             };
 
             let result = config.validate();
@@ -960,21 +960,10 @@ mod tests {
                     }),
                     private: false,
                 },
-                udp_trackers: vec![UdpTrackerConfig {
-                    bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    domain: None,
-                }],
-                http_trackers: vec![HttpTrackerConfig {
-                    bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                }],
+                udp_trackers: vec![test_udp_tracker_config("0.0.0.0:7070")],
+                http_trackers: vec![test_http_tracker_config("0.0.0.0:7070")],
                 http_api: test_http_api_config("0.0.0.0:1212", "token"),
-                health_check_api: HealthCheckApiConfig {
-                    bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                health_check_api: test_health_check_api_config("127.0.0.1:1313"),
             };
 
             assert!(config.validate().is_ok());
@@ -991,23 +980,11 @@ mod tests {
                 },
                 udp_trackers: vec![],
                 http_trackers: vec![
-                    HttpTrackerConfig {
-                        bind_address: "192.168.1.10:7070".parse().unwrap(),
-                        domain: None,
-                        use_tls_proxy: false,
-                    },
-                    HttpTrackerConfig {
-                        bind_address: "192.168.1.20:7070".parse().unwrap(),
-                        domain: None,
-                        use_tls_proxy: false,
-                    },
+                    test_http_tracker_config("192.168.1.10:7070"),
+                    test_http_tracker_config("192.168.1.20:7070"),
                 ],
                 http_api: test_http_api_config("0.0.0.0:1212", "token"),
-                health_check_api: HealthCheckApiConfig {
-                    bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                health_check_api: test_health_check_api_config("127.0.0.1:1313"),
             };
 
             assert!(config.validate().is_ok());
@@ -1023,17 +1000,9 @@ mod tests {
                     private: false,
                 },
                 udp_trackers: vec![],
-                http_trackers: vec![HttpTrackerConfig {
-                    bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                }],
+                http_trackers: vec![test_http_tracker_config("0.0.0.0:7070")],
                 http_api: test_http_api_config("0.0.0.0:7070", "token"),
-                health_check_api: HealthCheckApiConfig {
-                    bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                health_check_api: test_health_check_api_config("127.0.0.1:1313"),
             };
 
             let error = config.validate().unwrap_err();
@@ -1073,73 +1042,15 @@ mod tests {
                 udp_trackers: vec![],
                 http_trackers: vec![],
                 http_api: test_http_api_config("0.0.0.0:1212", "token"),
-                health_check_api: HealthCheckApiConfig {
-                    bind_address: "127.0.0.1:1313".parse().unwrap(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                health_check_api: test_health_check_api_config("127.0.0.1:1313"),
             }
         }
 
-        // NOTE: Tests for HTTP API localhost + TLS rejection have been removed because
-        // this validation is now enforced at construction time by HttpApiConfig::new().
-        // See http_api.rs for the corresponding tests.
-
-        #[test]
-        fn it_should_reject_health_check_api_localhost_with_tls() {
-            let domain = crate::shared::DomainName::new("health.tracker.local").unwrap();
-            let mut config = base_config();
-            config.health_check_api = HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: Some(domain),
-                use_tls_proxy: true,
-            };
-
-            let result = config.validate();
-            assert!(result.is_err());
-
-            if let Err(TrackerConfigError::LocalhostWithTls {
-                service_name,
-                bind_address,
-            }) = result
-            {
-                assert_eq!(service_name, "Health Check API");
-                assert_eq!(
-                    bind_address,
-                    "127.0.0.1:1313".parse::<SocketAddr>().unwrap()
-                );
-            } else {
-                panic!("Expected LocalhostWithTls error");
-            }
-        }
-
-        #[test]
-        fn it_should_reject_http_tracker_localhost_with_tls() {
-            let domain = crate::shared::DomainName::new("tracker.local").unwrap();
-            let mut config = base_config();
-            config.http_trackers = vec![HttpTrackerConfig {
-                bind_address: "127.0.0.1:7070".parse().unwrap(),
-                domain: Some(domain),
-                use_tls_proxy: true,
-            }];
-
-            let result = config.validate();
-            assert!(result.is_err());
-
-            if let Err(TrackerConfigError::LocalhostWithTls {
-                service_name,
-                bind_address,
-            }) = result
-            {
-                assert_eq!(service_name, "HTTP Tracker #1");
-                assert_eq!(
-                    bind_address,
-                    "127.0.0.1:7070".parse::<SocketAddr>().unwrap()
-                );
-            } else {
-                panic!("Expected LocalhostWithTls error");
-            }
-        }
+        // NOTE: Tests for localhost + TLS rejection have been moved to the individual
+        // config type tests (health_check_api.rs, http.rs) because validation is now
+        // enforced at construction time by their respective ::new() methods.
+        // TrackerConfig::validate() no longer needs to check for localhost + TLS
+        // as it's impossible to construct invalid configs.
 
         #[test]
         fn it_should_allow_localhost_without_tls() {
@@ -1157,9 +1068,5 @@ mod tests {
 
             assert!(config.validate().is_ok());
         }
-
-        // NOTE: The test it_should_provide_clear_error_message_for_localhost_with_tls
-        // has been removed because HttpApiConfig::new() now validates this invariant
-        // at construction time. See http_api.rs for error message tests.
     }
 }

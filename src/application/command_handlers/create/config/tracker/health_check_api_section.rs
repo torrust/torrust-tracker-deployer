@@ -1,3 +1,19 @@
+//! Health Check API section DTO
+//!
+//! This module contains the application layer DTO for Health Check API configuration.
+//! It follows the **`TryFrom` pattern** for DTO to domain conversion, delegating
+//! all business validation to the domain layer.
+//!
+//! ## Conversion Pattern
+//!
+//! The `TryFrom<HealthCheckApiSection> for HealthCheckApiConfig` implementation:
+//! 1. Parses string fields into typed values (e.g., `String` → `SocketAddr`)
+//! 2. Delegates domain validation to `HealthCheckApiConfig::new()`
+//! 3. Maps domain errors to application errors via `From` implementations
+//!
+//! See `docs/decisions/tryfrom-for-dto-to-domain-conversion.md` for rationale.
+
+use std::convert::TryFrom;
 use std::net::SocketAddr;
 
 use schemars::JsonSchema;
@@ -28,61 +44,49 @@ pub struct HealthCheckApiSection {
     pub use_tls_proxy: Option<bool>,
 }
 
-impl HealthCheckApiSection {
-    /// Converts this DTO to a domain `HealthCheckApiConfig`
-    ///
-    /// # Errors
-    ///
-    /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
-    /// Returns `CreateConfigError::DynamicPortNotSupported` if port 0 (dynamic port assignment) is specified.
-    /// Returns `CreateConfigError::InvalidDomain` if the domain is invalid.
-    /// Returns `CreateConfigError::TlsProxyWithoutDomain` if `use_tls_proxy` is true but domain is missing.
-    ///
-    /// Note: Localhost + TLS validation is performed at the domain layer
-    /// (see `TrackerConfig::validate()`) to avoid duplicating business rules.
-    pub fn to_health_check_api_config(&self) -> Result<HealthCheckApiConfig, CreateConfigError> {
-        // Validate that the bind address can be parsed as SocketAddr
-        let bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
+/// Converts from application DTO to domain type using `TryFrom` trait
+///
+/// This implementation follows the standard library convention for fallible
+/// conversions, enabling use of `.try_into()` and `TryFrom::try_from()`.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let section = HealthCheckApiSection {
+///     bind_address: "127.0.0.1:1313".to_string(),
+///     domain: None,
+///     use_tls_proxy: None,
+/// };
+/// let config: HealthCheckApiConfig = section.try_into()?;
+/// ```
+impl TryFrom<HealthCheckApiSection> for HealthCheckApiConfig {
+    type Error = CreateConfigError;
+
+    fn try_from(section: HealthCheckApiSection) -> Result<Self, Self::Error> {
+        // Parse bind address from string to SocketAddr
+        let bind_address = section.bind_address.parse::<SocketAddr>().map_err(|e| {
             CreateConfigError::InvalidBindAddress {
-                address: self.bind_address.clone(),
+                address: section.bind_address.clone(),
                 source: e,
             }
         })?;
 
-        // Reject port 0 (dynamic port assignment)
-        if bind_address.port() == 0 {
-            return Err(CreateConfigError::DynamicPortNotSupported {
-                bind_address: self.bind_address.clone(),
-            });
-        }
-
-        let use_tls_proxy = self.use_tls_proxy.unwrap_or(false);
-
-        // Validate: use_tls_proxy requires domain
-        if use_tls_proxy && self.domain.is_none() {
-            return Err(CreateConfigError::TlsProxyWithoutDomain {
-                service_type: "Health Check API".to_string(),
-                bind_address: self.bind_address.clone(),
-            });
-        }
-
         // Parse domain if present
-        let domain =
-            match &self.domain {
-                Some(domain_str) => Some(DomainName::new(domain_str).map_err(|e| {
-                    CreateConfigError::InvalidDomain {
-                        domain: domain_str.clone(),
-                        reason: e.to_string(),
-                    }
-                })?),
-                None => None,
-            };
+        let domain = section
+            .domain
+            .map(|d| {
+                DomainName::new(&d).map_err(|e| CreateConfigError::InvalidDomain {
+                    domain: d,
+                    reason: e.to_string(),
+                })
+            })
+            .transpose()?;
 
-        Ok(HealthCheckApiConfig {
-            bind_address,
-            domain,
-            use_tls_proxy,
-        })
+        let use_tls_proxy = section.use_tls_proxy.unwrap_or(false);
+
+        // Delegate all business validation to domain layer
+        HealthCheckApiConfig::new(bind_address, domain, use_tls_proxy)
+            .map_err(CreateConfigError::from)
     }
 }
 
@@ -100,6 +104,10 @@ impl Default for HealthCheckApiSection {
 mod tests {
     use super::*;
 
+    // =========================================================================
+    // TryFrom conversion tests
+    // =========================================================================
+
     #[test]
     fn it_should_convert_to_domain_config_when_bind_address_is_valid() {
         let section = HealthCheckApiSection {
@@ -108,14 +116,14 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let config = section.to_health_check_api_config().unwrap();
+        let config: HealthCheckApiConfig = section.try_into().unwrap();
 
         assert_eq!(
-            config.bind_address,
+            config.bind_address(),
             "127.0.0.1:1313".parse::<SocketAddr>().unwrap()
         );
-        assert!(!config.use_tls_proxy);
-        assert!(config.domain.is_none());
+        assert!(!config.use_tls_proxy());
+        assert!(config.domain().is_none());
     }
 
     #[test]
@@ -126,13 +134,13 @@ mod tests {
             use_tls_proxy: Some(true),
         };
 
-        let config = section.to_health_check_api_config().unwrap();
+        let config: HealthCheckApiConfig = section.try_into().unwrap();
 
         assert_eq!(
-            config.bind_address,
+            config.bind_address(),
             "0.0.0.0:1313".parse::<SocketAddr>().unwrap()
         );
-        assert!(config.use_tls_proxy);
+        assert!(config.use_tls_proxy());
         assert_eq!(config.tls_domain(), Some("health.tracker.local"));
     }
 
@@ -144,7 +152,7 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let result = section.to_health_check_api_config();
+        let result: Result<HealthCheckApiConfig, _> = section.try_into();
 
         assert!(result.is_err());
         assert!(matches!(
@@ -154,19 +162,20 @@ mod tests {
     }
 
     #[test]
-    fn it_should_reject_dynamic_port_assignment() {
+    fn it_should_reject_dynamic_port_assignment_via_domain_validation() {
         let section = HealthCheckApiSection {
             bind_address: "0.0.0.0:0".to_string(),
             domain: None,
             use_tls_proxy: None,
         };
 
-        let result = section.to_health_check_api_config();
+        let result: Result<HealthCheckApiConfig, _> = section.try_into();
 
         assert!(result.is_err());
+        // Port 0 is now rejected by domain layer
         assert!(matches!(
             result.unwrap_err(),
-            CreateConfigError::DynamicPortNotSupported { .. }
+            CreateConfigError::HealthCheckApiConfigInvalid(_)
         ));
     }
 
@@ -178,7 +187,7 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let result = section.to_health_check_api_config();
+        let result: Result<HealthCheckApiConfig, _> = section.try_into();
 
         assert!(result.is_ok());
     }
@@ -191,7 +200,7 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let result = section.to_health_check_api_config();
+        let result: Result<HealthCheckApiConfig, _> = section.try_into();
 
         assert!(result.is_ok());
     }
@@ -213,7 +222,7 @@ mod tests {
             use_tls_proxy: Some(true),
         };
 
-        let result = section.to_health_check_api_config();
+        let result: Result<HealthCheckApiConfig, _> = section.try_into();
 
         assert!(result.is_err());
         assert!(matches!(
@@ -223,19 +232,38 @@ mod tests {
     }
 
     #[test]
-    fn it_should_fail_when_use_tls_proxy_without_domain() {
+    fn it_should_fail_when_use_tls_proxy_without_domain_via_domain_validation() {
         let section = HealthCheckApiSection {
             bind_address: "0.0.0.0:1313".to_string(),
             domain: None,
             use_tls_proxy: Some(true),
         };
 
-        let result = section.to_health_check_api_config();
+        let result: Result<HealthCheckApiConfig, _> = section.try_into();
 
         assert!(result.is_err());
+        // TLS without domain is now rejected by domain layer
         assert!(matches!(
             result.unwrap_err(),
-            CreateConfigError::TlsProxyWithoutDomain { .. }
+            CreateConfigError::HealthCheckApiConfigInvalid(_)
+        ));
+    }
+
+    #[test]
+    fn it_should_reject_localhost_with_tls_via_domain_validation() {
+        let section = HealthCheckApiSection {
+            bind_address: "127.0.0.1:1313".to_string(),
+            domain: Some("health.tracker.local".to_string()),
+            use_tls_proxy: Some(true),
+        };
+
+        let result: Result<HealthCheckApiConfig, _> = section.try_into();
+
+        assert!(result.is_err());
+        // Localhost + TLS is now rejected by domain layer
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::HealthCheckApiConfigInvalid(_)
         ));
     }
 
@@ -247,9 +275,9 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let config = section.to_health_check_api_config().unwrap();
+        let config: HealthCheckApiConfig = section.try_into().unwrap();
 
-        assert!(!config.use_tls_proxy);
-        assert!(config.domain.is_some());
+        assert!(!config.use_tls_proxy());
+        assert!(config.domain().is_some());
     }
 }
