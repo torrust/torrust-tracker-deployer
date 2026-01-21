@@ -308,8 +308,9 @@ impl EnvironmentCreationConfig {
         ),
         CreateConfigError,
     > {
-        // Validate HTTPS configuration consistency before any other conversion
-        self.validate_https_config()?;
+        // Note: Email validation for HTTPS config now happens in domain layer
+        // (HttpsConfig::new() validates the email format)
+        // Cross-service validation (TLS/HTTPS consistency) happens in UserInputs
 
         // Convert environment name string to domain type
         let environment_name = EnvironmentName::new(&self.environment.name)?;
@@ -351,10 +352,11 @@ impl EnvironmentCreationConfig {
         // Note: Grafana-Prometheus dependency is now validated at domain level
         // in UserInputs::with_tracker() when the environment is created
 
-        // Convert HTTPS section to domain type (already validated above)
+        // Convert HTTPS section to domain type with email validation
         let https_config = self
             .https
-            .map(|section| HttpsConfig::new(section.admin_email, section.use_staging));
+            .map(|section| HttpsConfig::new(section.admin_email, section.use_staging))
+            .transpose()?;
 
         Ok((
             environment_name,
@@ -416,24 +418,9 @@ impl EnvironmentCreationConfig {
         false
     }
 
-    /// Validates HTTPS section configuration details
-    ///
-    /// Note: Cross-service validation (TLS/HTTPS section consistency) is now
-    /// enforced by the domain layer in `UserInputs`. This method only validates
-    /// the HTTPS section's internal details (like admin email format).
-    ///
-    /// # Errors
-    ///
-    /// Returns `CreateConfigError::InvalidAdminEmail` if the admin email format is invalid.
-    pub fn validate_https_config(&self) -> Result<(), CreateConfigError> {
-        // Cross-service validation (HTTPS section + TLS consistency) is now
-        // enforced by UserInputs in the domain layer. We only validate the
-        // HTTPS section's internal details here.
-        if let Some(https_section) = &self.https {
-            https_section.validate()?;
-        }
-        Ok(())
-    }
+    // Note: validate_https_config() method has been removed.
+    // Email validation now happens in domain layer (HttpsConfig::new())
+    // Cross-service validation (TLS/HTTPS consistency) happens in UserInputs::with_tracker()
 
     /// Creates a template instance with placeholder values for a specific provider
     ///
@@ -1436,18 +1423,19 @@ mod tests {
     }
 
     #[test]
-    fn it_should_pass_validation_when_no_https_section() {
+    fn it_should_pass_conversion_when_no_https_section() {
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
                 instance_name: None,
             },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
             None,
@@ -1455,9 +1443,9 @@ mod tests {
             None,
         );
 
-        // validate_https_config only checks HTTPS section internal details (admin email)
-        // Cross-service TLS/HTTPS validation is now in domain layer (UserInputs)
-        assert!(config.validate_https_config().is_ok());
+        // Config with no HTTPS section should convert successfully
+        let result = config.to_environment_params();
+        assert!(result.is_ok(), "Expected Ok but got: {:?}", result.err());
     }
 
     // Note: Tests for TLS/HTTPS cross-service validation have been moved to domain layer.
@@ -1466,23 +1454,22 @@ mod tests {
     // - it_should_reject_https_section_without_tls_services
 
     #[test]
-    fn it_should_pass_validation_when_https_section_has_valid_email() {
+    fn it_should_pass_conversion_when_https_section_has_valid_email() {
         use crate::application::command_handlers::create::config::https::HttpsSection;
+        use std::env;
 
-        // Note: validate_https_config only validates HTTPS section internal details
-        // (like admin email format). Cross-service validation (TLS/HTTPS consistency)
-        // is now enforced by UserInputs in the domain layer.
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+        // Email validation now happens in domain layer (HttpsConfig::new())
+        // This test verifies that valid emails pass through to_environment_params()
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
                 instance_name: None,
             },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
             None,
@@ -1493,18 +1480,58 @@ mod tests {
             }),
         );
 
-        // HTTPS section with valid email should pass this validation
-        // (cross-service TLS check is done at domain layer)
-        assert!(config.validate_https_config().is_ok());
+        // HTTPS section with valid email should convert successfully
+        // (actual cross-service TLS validation happens in domain layer)
+        let result = config.to_environment_params();
+        assert!(result.is_ok(), "Expected Ok but got: {:?}", result.err());
     }
 
     #[test]
-    fn it_should_pass_validation_when_https_section_with_tls() {
+    fn it_should_reject_invalid_email_in_https_section() {
+        use crate::application::command_handlers::create::config::https::HttpsSection;
+        use crate::domain::https::HttpsConfigError;
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+        let config = EnvironmentCreationConfig::new(
+            EnvironmentSection {
+                name: "dev".to_string(),
+                instance_name: None,
+            },
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
+            default_lxd_provider("torrust-profile-dev"),
+            TrackerSection::default(),
+            None,
+            None,
+            Some(HttpsSection {
+                admin_email: "invalid-email".to_string(), // Invalid email
+                use_staging: false,
+            }),
+        );
+
+        let result = config.to_environment_params();
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            CreateConfigError::HttpsConfigInvalid(HttpsConfigError::InvalidEmail { .. })
+        ));
+    }
+
+    #[test]
+    fn it_should_pass_conversion_when_https_section_with_tls() {
         use crate::application::command_handlers::create::config::https::HttpsSection;
         use crate::application::command_handlers::create::config::tracker::{
             DatabaseSection, HealthCheckApiSection, HttpApiSection, HttpTrackerSection,
             TrackerCoreSection, TrackerSection, UdpTrackerSection,
         };
+        use std::env;
+
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
 
         let tracker_section = TrackerSection {
             core: TrackerCoreSection {
@@ -1536,12 +1563,7 @@ mod tests {
                 name: "dev".to_string(),
                 instance_name: None,
             },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
+            SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-dev"),
             tracker_section,
             None,
@@ -1552,6 +1574,10 @@ mod tests {
             }),
         );
 
-        assert!(config.validate_https_config().is_ok());
+        // Note: Email validation now happens in domain layer (HttpsConfig::new())
+        // Cross-service TLS/HTTPS validation happens in domain layer (UserInputs)
+        // This test verifies the DTO can convert to environment params
+        let result = config.to_environment_params();
+        assert!(result.is_ok(), "Expected Ok but got: {:?}", result.err());
     }
 }

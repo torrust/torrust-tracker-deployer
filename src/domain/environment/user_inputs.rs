@@ -623,7 +623,7 @@ mod tests {
             create_tracker_config_without_tls(), // No TLS on any service
             Some(PrometheusConfig::default()),
             Some(GrafanaConfig::default()),
-            Some(HttpsConfig::new("admin@example.com", false)), // HTTPS section present
+            Some(HttpsConfig::new("admin@example.com", false).expect("valid email")), // HTTPS section present
         );
 
         assert!(
@@ -669,7 +669,7 @@ mod tests {
             create_tracker_config_with_tls(),
             Some(PrometheusConfig::default()),
             Some(GrafanaConfig::default()),
-            Some(HttpsConfig::new("admin@example.com", false)),
+            Some(HttpsConfig::new("admin@example.com", false).expect("valid email")),
         );
 
         assert!(result.is_ok());

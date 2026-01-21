@@ -32,15 +32,15 @@ This refactoring plan addresses DDD violations where domain types fail to enforc
 **Total Active Proposals**: 6
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 5
+**Completed**: 6
 **In Progress**: 0
-**Not Started**: 1
+**Not Started**: 0
 
 ### Phase Summary
 
 - **Phase 0 - Foundation (High Impact, Low Effort)**: ✅ 2/2 completed (100%)
 - **Phase 1 - Tracker Config Hardening (High Impact, Medium Effort)**: ✅ 2/2 completed (100%)
-- **Phase 2 - Aggregate Invariants (Medium Impact, Low Effort)**: ⏳ 1/2 completed (50%)
+- **Phase 2 - Aggregate Invariants (Medium Impact, Low Effort)**: ✅ 2/2 completed (100%)
 
 ### Discarded Proposals
 
@@ -1016,18 +1016,19 @@ This change makes `Environment::with_working_dir_and_tracker()` fallible, which 
 
 ### Proposal #5: Move HTTPS Validation to Domain
 
-**Status**: ⏳ Not Started
+**Status**: ✅ COMPLETED
 **Impact**: 🟢🟢 Medium
 **Effort**: 🔵 Low
 **Priority**: P2
 **Depends On**: Proposal #4
+**Completed**: January 21, 2026
 
 #### Problem
 
-`HttpsConfig` doesn't validate the email at construction:
+`HttpsConfig` didn't validate the email at construction:
 
 ```rust
-// Current: HttpsConfig accepts any string
+// Before: HttpsConfig accepted any string
 impl HttpsConfig {
     pub fn new(admin_email: impl Into<String>, use_staging: bool) -> Self {
         Self {
@@ -1038,37 +1039,29 @@ impl HttpsConfig {
 }
 ```
 
-Email validation happens in the application layer.
+Email validation happened in the application layer.
 
-#### Proposed Solution
+#### Implemented Solution
 
-Add email validation to `HttpsConfig`:
+Changed `HttpsConfig::new()` to return `Result<Self, HttpsConfigError>` with email validation:
 
 ```rust
 impl HttpsConfig {
     pub fn new(
-        admin_email: &Email,  // Already validated Email type
-        use_staging: bool,
-    ) -> Self {
-        Self {
-            admin_email: admin_email.to_string(),
-            use_staging,
-        }
-    }
-
-    // Alternative: validate string directly
-    pub fn from_string(
         admin_email: impl Into<String>,
         use_staging: bool,
     ) -> Result<Self, HttpsConfigError> {
         let email_str = admin_email.into();
-        let _ = Email::new(&email_str)
-            .map_err(|_| HttpsConfigError::InvalidEmail(email_str.clone()))?;
+        let email = Email::new(&email_str)?;
         Ok(Self {
-            admin_email: email_str,
+            admin_email: email.to_string(),
             use_staging,
         })
     }
+}
+
+pub enum HttpsConfigError {
+    InvalidEmail { email: String, reason: String },
 }
 ```
 
@@ -1076,19 +1069,22 @@ impl HttpsConfig {
 
 If domain stores an email, it should ensure it's valid.
 
-#### Benefits
+#### Benefits Realized
 
 - ✅ HttpsConfig is always valid
 - ✅ Email validation in domain
 - ✅ Consistent with other validated types
+- ✅ `from_validated_email()` remains infallible for pre-validated emails
 
 #### Implementation Checklist
 
-- [ ] Add email validation to `HttpsConfig::new()` or create `from_validated_email`
-- [ ] Create `HttpsConfigError` if needed
-- [ ] Update application layer
-- [ ] Update tests
-- [ ] Verify all tests pass
+- [x] Add email validation to `HttpsConfig::new()`
+- [x] Create `HttpsConfigError` with `InvalidEmail` variant
+- [x] Add `help()` method with actionable guidance
+- [x] Update application layer (`HttpsConfigInvalid` variant in `CreateConfigError`)
+- [x] Remove duplicate validation from `HttpsSection::validate()`
+- [x] Update tests in domain and application layers
+- [x] Verify all tests pass
 
 ---
 
@@ -1404,4 +1400,4 @@ The proposals should be implemented in order due to dependencies:
 
 **Created**: January 21, 2026
 **Last Updated**: January 21, 2026
-**Status**: 🚧 In Progress (Phase 0)
+**Status**: ✅ COMPLETED (All phases complete)

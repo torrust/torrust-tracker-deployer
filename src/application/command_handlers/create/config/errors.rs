@@ -156,14 +156,12 @@ pub enum CreateConfigError {
     #[error("MySQL database configuration invalid: {0}")]
     MysqlConfigInvalid(#[from] MysqlConfigError),
 
-    /// Invalid admin email format for HTTPS configuration
-    #[error("Invalid admin email '{email}': {reason}")]
-    InvalidAdminEmail {
-        /// The invalid email that was provided
-        email: String,
-        /// The reason why the email is invalid
-        reason: String,
-    },
+    /// HTTPS configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `HttpsConfig::new()`,
+    /// such as invalid admin email format.
+    #[error("HTTPS configuration invalid: {0}")]
+    HttpsConfigInvalid(#[from] crate::domain::https::HttpsConfigError),
 
     /// Invalid domain name format for TLS configuration
     #[error("Invalid domain '{domain}': {reason}")]
@@ -557,31 +555,9 @@ impl CreateConfigError {
                 // Delegate to domain error's help method for detailed guidance
                 inner.help()
             }
-            Self::InvalidAdminEmail { .. } => {
-                "Invalid admin email format for HTTPS configuration.\n\
-                 \n\
-                 The admin email is used for Let's Encrypt certificate notifications:\n\
-                 - Certificate expiration warnings (30 days before expiry)\n\
-                 - Certificate renewal failure notifications\n\
-                 - Important Let's Encrypt service announcements\n\
-                 \n\
-                 Requirements:\n\
-                 - Must contain '@' with content on both sides\n\
-                 - Must have a valid domain part (with at least one dot)\n\
-                 \n\
-                 Valid examples:\n\
-                 - admin@example.com\n\
-                 - certificates@my-company.org\n\
-                 - alerts+ssl@subdomain.example.com\n\
-                 \n\
-                 Fix:\n\
-                 Update the admin_email in your https configuration:\n\
-                 \n\
-                 \"https\": {\n\
-                   \"admin_email\": \"admin@yourdomain.com\"\n\
-                 }\n\
-                 \n\
-                 Note: This email may be visible in certificate transparency logs."
+            Self::HttpsConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
             }
             Self::InvalidDomain { .. } => {
                 "Invalid domain name format for TLS configuration.\n\

@@ -14,4 +14,4 @@
 
 pub mod config;
 
-pub use config::HttpsConfig;
+pub use config::{HttpsConfig, HttpsConfigError};
