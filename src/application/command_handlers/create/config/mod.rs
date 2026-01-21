@@ -53,8 +53,9 @@
 //! ```no_run
 //! use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
 //!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
-//!     ProviderSection, LxdProviderSection, ValidatedEnvironmentParams
+//!     ProviderSection, LxdProviderSection
 //! };
+//! use torrust_tracker_deployer_lib::domain::environment::EnvironmentParams;
 //! use torrust_tracker_deployer_lib::domain::Environment;
 //! use chrono::{TimeZone, Utc};
 //!
@@ -99,17 +100,12 @@
 //! let config: EnvironmentCreationConfig = serde_json::from_str(json)?;
 //!
 //! // Convert to validated domain parameters using TryInto
-//! let params: ValidatedEnvironmentParams = config.try_into()?;
+//! let params: EnvironmentParams = config.try_into()?;
 //!
-//! // Create domain entity using named fields from params
+//! // Create domain entity using the factory pattern
 //! let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
-//! let environment = Environment::new(
-//!     params.environment_name,
-//!     params.provider_config,
-//!     params.ssh_credentials,
-//!     params.ssh_port,
-//!     created_at
-//! );
+//! let working_dir = std::path::Path::new("/tmp/my-env");
+//! let environment = Environment::create(params, working_dir, created_at)?;
 //!
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
@@ -154,4 +150,6 @@ pub use https::HttpsSection;
 pub use prometheus::PrometheusSection;
 pub use provider::{HetznerProviderSection, LxdProviderSection, ProviderSection};
 pub use ssh_credentials_config::SshCredentialsConfig;
-pub use validated_params::ValidatedEnvironmentParams;
+
+// Note: EnvironmentParams is now in domain layer (crate::domain::environment::EnvironmentParams)
+// The validated_params module provides TryFrom<EnvironmentCreationConfig> for EnvironmentParams

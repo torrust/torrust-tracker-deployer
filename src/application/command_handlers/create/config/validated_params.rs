@@ -1,48 +1,35 @@
-//! Validated Environment Parameters
+//! DTO to Domain Conversion for Environment Parameters
 //!
-//! This module provides `ValidatedEnvironmentParams`, a struct that holds all
-//! domain-validated parameters needed to create an `Environment` aggregate.
+//! This module provides the `TryFrom` implementation that converts
+//! `EnvironmentCreationConfig` (a DTO) to `EnvironmentParams` (a domain type).
 //!
-//! This struct replaces the previous 9-element tuple returned by
-//! `to_environment_params()`, providing named fields for clarity and
-//! following the `TryFrom` pattern for DTO-to-domain conversion.
+//! # Architecture
 //!
-//! # Architecture Pattern
-//!
-//! This struct acts as an intermediate representation between:
-//! - **DTO** (`EnvironmentCreationConfig`): Raw string-based user input from JSON
-//! - **Aggregate** (`Environment<Created>`): Fully constructed domain entity
+//! The conversion lives in the Application layer because it references the DTO,
+//! but the target type (`EnvironmentParams`) is a pure domain value object.
 //!
 //! ```text
-//! EnvironmentCreationConfig (DTO)
-//!         |
-//!         | TryFrom
-//!         v
-//! ValidatedEnvironmentParams (Application Layer)
-//!         |
-//!         | Environment::from_validated_params()
-//!         v
+//! EnvironmentCreationConfig (DTO - Application Layer)
+//!         │
+//!         │ TryFrom (this module - Application Layer)
+//!         ▼
+//! EnvironmentParams (Domain Value Object)
+//!         │
+//!         │ Environment::create(params, working_dir, timestamp)
+//!         ▼
 //! Environment<Created> (Domain Aggregate)
 //! ```
-//!
-//! # Benefits
-//!
-//! - **Named fields**: Self-documenting, no positional confusion
-//! - **`TryFrom` pattern**: Idiomatic Rust conversion
-//! - **Clippy-friendly**: No tuple complexity warnings
-//! - **Testable**: Each conversion step can be tested independently
 //!
 //! # Usage
 //!
 //! ```rust,no_run
 //! use std::convert::TryInto;
-//! use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
-//!     EnvironmentCreationConfig, ValidatedEnvironmentParams
-//! };
+//! use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
+//! use torrust_tracker_deployer_lib::domain::environment::EnvironmentParams;
 //!
 //! let config: EnvironmentCreationConfig = // ... load from JSON
 //! # todo!();
-//! let params: ValidatedEnvironmentParams = config.try_into()?;
+//! let params: EnvironmentParams = config.try_into()?;
 //!
 //! // Access validated domain objects by name
 //! println!("Environment: {}", params.environment_name.as_str());
@@ -54,78 +41,14 @@
 use std::convert::TryFrom;
 use std::convert::TryInto;
 
-use crate::adapters::ssh::SshCredentials;
-use crate::domain::grafana::GrafanaConfig;
+use crate::domain::environment::EnvironmentParams;
 use crate::domain::https::HttpsConfig;
-use crate::domain::prometheus::PrometheusConfig;
-use crate::domain::provider::ProviderConfig;
-use crate::domain::tracker::TrackerConfig;
 use crate::domain::{EnvironmentName, InstanceName};
 
 use super::errors::CreateConfigError;
 use super::EnvironmentCreationConfig;
 
-/// Validated environment parameters ready for aggregate construction
-///
-/// This struct contains all domain-validated parameters needed to create
-/// an `Environment<Created>` aggregate. All fields are strongly-typed
-/// domain objects that have passed validation.
-///
-/// # Fields
-///
-/// Each field represents a validated domain concept:
-/// - **Identity**: `environment_name`, `instance_name`
-/// - **Infrastructure**: `provider_config`, `ssh_credentials`, `ssh_port`
-/// - **Application**: `tracker_config`
-/// - **Observability**: `prometheus_config`, `grafana_config`
-/// - **Security**: `https_config`
-///
-/// # Construction
-///
-/// Use `TryFrom<EnvironmentCreationConfig>` to construct this struct:
-///
-/// ```rust,no_run
-/// use std::convert::TryInto;
-/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
-///     EnvironmentCreationConfig, ValidatedEnvironmentParams
-/// };
-///
-/// let config: EnvironmentCreationConfig = // ... load from JSON
-/// # todo!();
-/// let params: ValidatedEnvironmentParams = config.try_into()?;
-/// # Ok::<(), Box<dyn std::error::Error>>(())
-/// ```
-#[derive(Debug, Clone)]
-pub struct ValidatedEnvironmentParams {
-    /// Validated environment name
-    pub environment_name: EnvironmentName,
-
-    /// Validated instance name (auto-generated or user-provided)
-    pub instance_name: InstanceName,
-
-    /// Validated provider configuration (LXD, Hetzner, etc.)
-    pub provider_config: ProviderConfig,
-
-    /// Validated SSH credentials for remote access
-    pub ssh_credentials: SshCredentials,
-
-    /// SSH port for remote connections
-    pub ssh_port: u16,
-
-    /// Validated tracker configuration
-    pub tracker_config: TrackerConfig,
-
-    /// Optional Prometheus monitoring configuration
-    pub prometheus_config: Option<PrometheusConfig>,
-
-    /// Optional Grafana dashboard configuration
-    pub grafana_config: Option<GrafanaConfig>,
-
-    /// Optional HTTPS/TLS configuration
-    pub https_config: Option<HttpsConfig>,
-}
-
-impl TryFrom<EnvironmentCreationConfig> for ValidatedEnvironmentParams {
+impl TryFrom<EnvironmentCreationConfig> for EnvironmentParams {
     type Error = CreateConfigError;
 
     /// Converts DTO configuration to validated domain parameters
@@ -188,7 +111,7 @@ impl TryFrom<EnvironmentCreationConfig> for ValidatedEnvironmentParams {
             .map(|section| HttpsConfig::new(section.admin_email, section.use_staging))
             .transpose()?;
 
-        Ok(Self {
+        Ok(EnvironmentParams::new(
             environment_name,
             instance_name,
             provider_config,
@@ -198,7 +121,7 @@ impl TryFrom<EnvironmentCreationConfig> for ValidatedEnvironmentParams {
             prometheus_config,
             grafana_config,
             https_config,
-        })
+        ))
     }
 }
 
@@ -248,9 +171,9 @@ mod tests {
     }
 
     #[test]
-    fn it_should_convert_valid_config_to_validated_params() {
+    fn it_should_convert_valid_config_to_environment_params() {
         let config = valid_config();
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
 
         assert!(result.is_ok());
         let params = result.unwrap();
@@ -280,7 +203,7 @@ mod tests {
             None,
         );
 
-        let params: ValidatedEnvironmentParams = config.try_into().unwrap();
+        let params: EnvironmentParams = config.try_into().unwrap();
         assert_eq!(params.instance_name.as_str(), "custom-vm-name");
     }
 
@@ -305,14 +228,21 @@ mod tests {
             None,
         );
 
-        let result: Result<ValidatedEnvironmentParams, CreateConfigError> = config.try_into();
+        let result: Result<EnvironmentParams, CreateConfigError> = config.try_into();
         assert!(result.is_err());
     }
 
     #[test]
     fn it_should_provide_named_field_access() {
+        use crate::adapters::ssh::SshCredentials;
+        use crate::domain::grafana::GrafanaConfig;
+        use crate::domain::https::HttpsConfig;
+        use crate::domain::prometheus::PrometheusConfig;
+        use crate::domain::provider::ProviderConfig;
+        use crate::domain::tracker::TrackerConfig;
+
         let config = valid_config();
-        let params: ValidatedEnvironmentParams = config.try_into().unwrap();
+        let params: EnvironmentParams = config.try_into().unwrap();
 
         // All fields are accessible by name (not by position)
         let _name: &EnvironmentName = &params.environment_name;

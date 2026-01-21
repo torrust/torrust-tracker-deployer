@@ -9,9 +9,8 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
-use crate::application::command_handlers::create::config::ValidatedEnvironmentParams;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::domain::environment::{Created, Environment};
+use crate::domain::environment::{Created, Environment, EnvironmentParams};
 use crate::shared::Clock;
 
 use super::errors::CreateCommandHandlerError;
@@ -218,7 +217,7 @@ impl CreateCommandHandler {
         working_dir: &std::path::Path,
     ) -> Result<Environment<Created>, CreateCommandHandlerError> {
         // Convert DTO to validated domain parameters
-        let params: ValidatedEnvironmentParams = config
+        let params: EnvironmentParams = config
             .try_into()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
 
@@ -234,19 +233,8 @@ impl CreateCommandHandler {
         }
 
         // Create environment aggregate from validated params
-        let environment = Environment::create(
-            params.environment_name,
-            params.provider_config,
-            params.ssh_credentials,
-            params.ssh_port,
-            params.tracker_config,
-            params.prometheus_config,
-            params.grafana_config,
-            params.https_config,
-            working_dir,
-            self.clock.now(),
-        )
-        .map_err(|e| CreateCommandHandlerError::InvalidConfiguration(e.into()))?;
+        let environment = Environment::create(params, working_dir, self.clock.now())
+            .map_err(|e| CreateCommandHandlerError::InvalidConfiguration(e.into()))?;
 
         self.environment_repository
             .save(&environment.clone().into_any())

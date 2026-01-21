@@ -36,7 +36,9 @@
 //! where to add new fields as the application evolves.
 
 use crate::adapters::ssh::SshCredentials;
-use crate::domain::environment::{EnvironmentName, InternalConfig, RuntimeOutputs, UserInputs};
+use crate::domain::environment::{
+    EnvironmentName, EnvironmentParams, InternalConfig, RuntimeOutputs, UserInputs,
+};
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::ProviderConfig;
@@ -210,11 +212,16 @@ impl EnvironmentContext {
         }
     }
 
-    /// Creates a new environment context with custom tracker configuration
+    /// Creates a new environment context from validated parameters
     ///
     /// This creates absolute paths for data and build directories by using the
-    /// provided working directory as the base, and allows specifying custom
-    /// tracker, prometheus, grafana, and https configurations.
+    /// provided working directory as the base.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - Validated environment parameters (domain value object)
+    /// * `working_dir` - Base directory for data and build directories
+    /// * `created_at` - Timestamp for context creation
     ///
     /// # Errors
     ///
@@ -222,32 +229,27 @@ impl EnvironmentContext {
     /// - `GrafanaRequiresPrometheus` if Grafana is configured without Prometheus
     /// - `HttpsSectionWithoutTlsServices` if HTTPS section exists but no service uses TLS
     /// - `TlsServicesWithoutHttpsSection` if a service uses TLS but HTTPS section is missing
-    #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
     pub fn create(
-        name: &EnvironmentName,
-        provider_config: ProviderConfig,
-        ssh_credentials: SshCredentials,
-        ssh_port: u16,
-        tracker_config: crate::domain::tracker::TrackerConfig,
-        prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
-        grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
-        https_config: Option<crate::domain::https::HttpsConfig>,
+        params: EnvironmentParams,
         working_dir: &std::path::Path,
         created_at: DateTime<Utc>,
     ) -> Result<Self, crate::domain::environment::UserInputsError> {
         Ok(Self {
             created_at,
             user_inputs: UserInputs::with_tracker(
-                name,
-                provider_config,
-                ssh_credentials,
-                ssh_port,
-                tracker_config,
-                prometheus_config,
-                grafana_config,
-                https_config,
+                &params.environment_name,
+                params.provider_config,
+                params.ssh_credentials,
+                params.ssh_port,
+                params.tracker_config,
+                params.prometheus_config,
+                params.grafana_config,
+                params.https_config,
             )?,
-            internal_config: InternalConfig::with_working_dir(name, working_dir),
+            internal_config: InternalConfig::with_working_dir(
+                &params.environment_name,
+                working_dir,
+            ),
             runtime_outputs: RuntimeOutputs {
                 instance_ip: None,
                 provision_method: None,

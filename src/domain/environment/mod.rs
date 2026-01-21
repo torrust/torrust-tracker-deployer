@@ -102,6 +102,7 @@
 pub mod context;
 pub mod internal_config;
 pub mod name;
+pub mod params;
 pub mod repository;
 pub mod runtime_outputs;
 pub mod state;
@@ -119,6 +120,7 @@ pub use trace_id::TraceId;
 pub use context::EnvironmentContext;
 pub use internal_config::InternalConfig;
 pub use name::{EnvironmentName, EnvironmentNameError};
+pub use params::EnvironmentParams;
 pub use runtime_outputs::{ProvisionMethod, RuntimeOutputs};
 pub use state::{
     AnyEnvironmentState, ConfigureFailed, Configured, Configuring, Created, DestroyFailed,
@@ -296,11 +298,20 @@ impl Environment {
         }
     }
 
-    /// Creates a new environment in Created state with custom tracker configuration
+    /// Creates a new environment in Created state from validated parameters
+    ///
+    /// This is the primary factory method for creating a fully-configured
+    /// `Environment` aggregate. It accepts an `EnvironmentParams` value object
+    /// containing all validated domain inputs.
     ///
     /// This creates absolute paths for data and build directories by using the
-    /// provided working directory as the base, and allows specifying custom
-    /// tracker, prometheus, grafana, and https configurations.
+    /// provided working directory as the base.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - Validated environment parameters (domain value object)
+    /// * `working_dir` - Base directory for data and build directories
+    /// * `created_at` - Timestamp for environment creation
     ///
     /// # Errors
     ///
@@ -309,31 +320,12 @@ impl Environment {
     /// - `HttpsSectionWithoutTlsServices`: HTTPS section exists but no service uses TLS
     /// - `TlsServicesWithoutHttpsSection`: Service has TLS but HTTPS section is missing
     #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
-    #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
     pub fn create(
-        name: EnvironmentName,
-        provider_config: ProviderConfig,
-        ssh_credentials: SshCredentials,
-        ssh_port: u16,
-        tracker_config: TrackerConfig,
-        prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
-        grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
-        https_config: Option<crate::domain::https::HttpsConfig>,
+        params: EnvironmentParams,
         working_dir: &std::path::Path,
         created_at: DateTime<Utc>,
     ) -> Result<Environment<Created>, UserInputsError> {
-        let context = EnvironmentContext::create(
-            &name,
-            provider_config,
-            ssh_credentials,
-            ssh_port,
-            tracker_config,
-            prometheus_config,
-            grafana_config,
-            https_config,
-            working_dir,
-            created_at,
-        )?;
+        let context = EnvironmentContext::create(params, working_dir, created_at)?;
 
         Ok(Environment {
             context,

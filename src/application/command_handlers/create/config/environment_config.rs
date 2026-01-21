@@ -91,20 +91,20 @@ pub struct EnvironmentCreationConfig {
     /// Provider-specific configuration (LXD, Hetzner, etc.)
     ///
     /// Uses `ProviderSection` for JSON parsing with raw primitives.
-    /// Converted to domain `ProviderConfig` via `TryInto<ValidatedEnvironmentParams>`.
+    /// Converted to domain `ProviderConfig` via `TryInto<EnvironmentParams>`.
     pub provider: ProviderSection,
 
     /// Tracker deployment configuration
     ///
     /// Uses `TrackerSection` for JSON parsing with String primitives.
-    /// Converted to domain `TrackerConfig` via `TryInto<ValidatedEnvironmentParams>`.
+    /// Converted to domain `TrackerConfig` via `TryInto<EnvironmentParams>`.
     pub tracker: TrackerSection,
 
     /// Prometheus monitoring configuration (optional)
     ///
     /// When present, Prometheus will be deployed to monitor the tracker.
     /// Uses `PrometheusSection` for JSON parsing with String primitives.
-    /// Converted to domain `PrometheusConfig` via `TryInto<ValidatedEnvironmentParams>`.
+    /// Converted to domain `PrometheusConfig` via `TryInto<EnvironmentParams>`.
     #[serde(default)]
     pub prometheus: Option<PrometheusSection>,
 
@@ -115,7 +115,7 @@ pub struct EnvironmentCreationConfig {
     /// Prometheus as its data source.
     ///
     /// Uses `GrafanaSection` for JSON parsing with String primitives.
-    /// Converted to domain `GrafanaConfig` via `TryInto<ValidatedEnvironmentParams>`.
+    /// Converted to domain `GrafanaConfig` via `TryInto<EnvironmentParams>`.
     #[serde(default)]
     pub grafana: Option<GrafanaSection>,
 
@@ -404,7 +404,7 @@ mod tests {
     use super::*;
     use crate::application::command_handlers::create::config::provider::LxdProviderSection;
     use crate::application::command_handlers::create::config::tracker::TrackerSection;
-    use crate::application::command_handlers::create::config::ValidatedEnvironmentParams;
+    use crate::domain::environment::EnvironmentParams;
     use crate::domain::provider::Provider;
 
     /// Helper to create a default LXD provider section for tests
@@ -611,7 +611,7 @@ mod tests {
             None,
         );
 
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_ok(), "Expected successful conversion");
 
         let params = result.unwrap();
@@ -644,7 +644,7 @@ mod tests {
             None,
         );
 
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_ok(), "Expected successful conversion");
 
         let params = result.unwrap();
@@ -674,7 +674,7 @@ mod tests {
             None,
         );
 
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -706,7 +706,7 @@ mod tests {
             None,
         );
 
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -741,7 +741,7 @@ mod tests {
             None,
         );
 
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -778,7 +778,7 @@ mod tests {
             None,
         );
 
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -814,7 +814,7 @@ mod tests {
             None,
         );
 
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -850,7 +850,7 @@ mod tests {
             None,
         );
 
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -884,14 +884,11 @@ mod tests {
             None,
         );
 
-        let params: ValidatedEnvironmentParams = config.try_into().unwrap();
-        let environment = Environment::new(
-            params.environment_name.clone(),
-            params.provider_config,
-            params.ssh_credentials,
-            params.ssh_port,
-            chrono::Utc::now(),
-        );
+        let params: EnvironmentParams = config.try_into().unwrap();
+
+        // Create environment using the factory pattern with all required parameters
+        let working_dir = std::path::Path::new("/tmp/test-env");
+        let environment = Environment::create(params, working_dir, chrono::Utc::now()).unwrap();
 
         assert_eq!(environment.name().as_str(), "test-env");
         assert_eq!(environment.ssh_username().as_str(), "torrust");
@@ -1241,7 +1238,7 @@ mod tests {
         );
 
         // Config with no HTTPS section should convert successfully
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_ok(), "Expected Ok but got: {:?}", result.err());
     }
 
@@ -1260,7 +1257,7 @@ mod tests {
         let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
 
         // Email validation now happens in domain layer (HttpsConfig::new())
-        // This test verifies that valid emails pass through TryInto<ValidatedEnvironmentParams>
+        // This test verifies that valid emails pass through TryInto<EnvironmentParams>
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
@@ -1279,7 +1276,7 @@ mod tests {
 
         // HTTPS section with valid email should convert successfully
         // (actual cross-service TLS validation happens in domain layer)
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_ok(), "Expected Ok but got: {:?}", result.err());
     }
 
@@ -1309,7 +1306,7 @@ mod tests {
             }),
         );
 
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -1374,7 +1371,7 @@ mod tests {
         // Note: Email validation now happens in domain layer (HttpsConfig::new())
         // Cross-service TLS/HTTPS validation happens in domain layer (UserInputs)
         // This test verifies the DTO can convert to environment params
-        let result: Result<ValidatedEnvironmentParams, _> = config.try_into();
+        let result: Result<EnvironmentParams, _> = config.try_into();
         assert!(result.is_ok(), "Expected Ok but got: {:?}", result.err());
     }
 }
