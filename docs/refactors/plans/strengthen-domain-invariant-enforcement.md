@@ -32,14 +32,14 @@ This refactoring plan addresses DDD violations where domain types fail to enforc
 **Total Active Proposals**: 6
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 3
+**Completed**: 4
 **In Progress**: 0
-**Not Started**: 3
+**Not Started**: 2
 
 ### Phase Summary
 
 - **Phase 0 - Foundation (High Impact, Low Effort)**: ✅ 2/2 completed (100%)
-- **Phase 1 - Tracker Config Hardening (High Impact, Medium Effort)**: ⏳ 1/2 completed (50%)
+- **Phase 1 - Tracker Config Hardening (High Impact, Medium Effort)**: ✅ 2/2 completed (100%)
 - **Phase 2 - Aggregate Invariants (Medium Impact, Low Effort)**: ⏳ 0/2 completed (0%)
 
 ### Discarded Proposals
@@ -669,11 +669,22 @@ impl TrackerConfig {
 
 ### Proposal #3: TrackerCoreConfig and DatabaseConfig Validation
 
-**Status**: ⏳ Not Started
+**Status**: ✅ COMPLETED
 **Impact**: 🟢🟢 Medium
 **Effort**: 🔵 Low
 **Priority**: P1
 **Depends On**: None
+
+#### Implementation Summary
+
+Completed in commit series on `281-strengthen-domain-invariant-enforcement` branch:
+
+- **SqliteConfig**: Made `database_name` private, added `new()` constructor with validation (empty check), added getter, custom `Deserialize` via `SqliteConfigRaw`, `SqliteConfigError` enum with `help()` method
+- **MysqlConfig**: Made all 5 fields private (`host`, `port`, `database_name`, `username`, `password`), added `new()` constructor with validation (empty checks for host/database_name/username, port 0 check), added 5 getters, custom `Deserialize` via `MysqlConfigRaw`, `MysqlConfigError` enum with `help()` method
+- **TrackerCoreConfig**: Made `database` and `private` fields private, added `new()` constructor, added `database()` and `private()` getters, custom `Deserialize` via `TrackerCoreConfigRaw`
+- Updated application DTO layer (`TrackerCoreSection`) to use domain constructors
+- Updated `CreateConfigError` with new variants for database config errors
+- Updated all usages across production and test code to use constructors and getters
 
 #### Problem
 

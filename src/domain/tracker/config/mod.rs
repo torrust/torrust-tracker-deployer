@@ -18,7 +18,10 @@ mod http;
 mod http_api;
 mod udp;
 
-pub use core::{DatabaseConfig, MysqlConfig, SqliteConfig, TrackerCoreConfig};
+pub use core::{
+    DatabaseConfig, MysqlConfig, MysqlConfigError, SqliteConfig, SqliteConfigError,
+    TrackerCoreConfig,
+};
 pub use health_check_api::{HealthCheckApiConfig, HealthCheckApiConfigError};
 pub use http::{HttpTrackerConfig, HttpTrackerConfigError};
 pub use http_api::{HttpApiConfig, HttpApiConfigError};
@@ -60,12 +63,10 @@ pub fn is_localhost(addr: &SocketAddr) -> bool {
 /// };
 ///
 /// let tracker_config = TrackerConfig::new(
-///     TrackerCoreConfig {
-///         database: DatabaseConfig::Sqlite(SqliteConfig {
-///             database_name: "tracker.db".to_string(),
-///         }),
-///         private: false,
-///     },
+///     TrackerCoreConfig::new(
+///         DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+///         false,
+///     ),
 ///     vec![UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap()],
 ///     vec![HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).unwrap()],
 ///     HttpApiConfig::new(
@@ -214,12 +215,10 @@ impl TrackerConfig {
     /// };
     ///
     /// let config = TrackerConfig::new(
-    ///     TrackerCoreConfig {
-    ///         database: DatabaseConfig::Sqlite(SqliteConfig {
-    ///             database_name: "tracker.db".to_string(),
-    ///         }),
-    ///         private: false,
-    ///     },
+    ///     TrackerCoreConfig::new(
+    ///         DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+    ///         false,
+    ///     ),
     ///     vec![UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap()],
     ///     vec![HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).unwrap()],
     ///     HttpApiConfig::new(
@@ -483,12 +482,12 @@ impl Default for TrackerConfig {
     /// - Admin token: `MyAccessToken`
     fn default() -> Self {
         Self::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: false,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(
+                    SqliteConfig::new("tracker.db").expect("default sqlite config is valid"),
+                ),
+                false,
+            ),
             vec![
                 UdpTrackerConfig::new("0.0.0.0:6969".parse().expect("valid address"), None)
                     .expect("default UdpTrackerConfig values are always valid"),
@@ -659,12 +658,10 @@ mod tests {
         health_check_api: HealthCheckApiConfig,
     ) -> TrackerConfig {
         TrackerConfig::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: false,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
             udp_trackers,
             http_trackers,
             http_api,
@@ -689,6 +686,22 @@ mod tests {
             health_check_api,
         )
         .expect("test values should be valid")
+    }
+
+    /// Test helper to create a private core config (`SQLite`)
+    fn test_private_core_config() -> TrackerCoreConfig {
+        TrackerCoreConfig::new(
+            DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+            true,
+        )
+    }
+
+    /// Test helper to create a core config with custom database name
+    fn test_core_config_with_db(database_name: &str) -> TrackerCoreConfig {
+        TrackerCoreConfig::new(
+            DatabaseConfig::Sqlite(SqliteConfig::new(database_name).unwrap()),
+            false,
+        )
     }
 
     mod is_localhost_tests {
@@ -735,20 +748,15 @@ mod tests {
     #[test]
     fn it_should_create_tracker_config() {
         let config = test_tracker_config_with_core(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: true,
-            },
+            test_private_core_config(),
             vec![test_udp_tracker_config("0.0.0.0:6868")],
             vec![test_http_tracker_config("0.0.0.0:7070")],
             test_http_api_config("0.0.0.0:1212", "test_token"),
             test_health_check_api_config("127.0.0.1:1313"),
         );
 
-        assert_eq!(config.core().database.database_name(), "tracker.db");
-        assert!(config.core().private);
+        assert_eq!(config.core().database().database_name(), "tracker.db");
+        assert!(config.core().private());
         assert_eq!(config.udp_trackers().len(), 1);
         assert_eq!(config.http_trackers().len(), 1);
     }
@@ -756,12 +764,7 @@ mod tests {
     #[test]
     fn it_should_serialize_tracker_config() {
         let config = test_tracker_config_with_core(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "test.db".to_string(),
-                }),
-                private: false,
-            },
+            test_core_config_with_db("test.db"),
             vec![],
             vec![],
             test_http_api_config("0.0.0.0:1212", "token123"),
@@ -778,11 +781,11 @@ mod tests {
         let config = TrackerConfig::default();
 
         // Verify default database configuration
-        assert_eq!(config.core().database.database_name(), "tracker.db");
-        assert_eq!(config.core().database.driver_name(), "sqlite3");
+        assert_eq!(config.core().database().database_name(), "tracker.db");
+        assert_eq!(config.core().database().driver_name(), "sqlite3");
 
         // Verify public tracker mode
-        assert!(!config.core().private);
+        assert!(!config.core().private());
 
         // Verify UDP trackers (1 instance)
         assert_eq!(config.udp_trackers().len(), 1);
@@ -815,12 +818,10 @@ mod tests {
         #[test]
         fn it_should_accept_valid_configuration_with_unique_addresses() {
             let result = TrackerConfig::new(
-                TrackerCoreConfig {
-                    database: DatabaseConfig::Sqlite(SqliteConfig {
-                        database_name: "tracker.db".to_string(),
-                    }),
-                    private: false,
-                },
+                TrackerCoreConfig::new(
+                    DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                    false,
+                ),
                 vec![test_udp_tracker_config("0.0.0.0:6969")],
                 vec![test_http_tracker_config("0.0.0.0:7070")],
                 test_http_api_config("0.0.0.0:1212", "token"),
@@ -833,12 +834,10 @@ mod tests {
         #[test]
         fn it_should_reject_duplicate_udp_tracker_ports() {
             let result = TrackerConfig::new(
-                TrackerCoreConfig {
-                    database: DatabaseConfig::Sqlite(SqliteConfig {
-                        database_name: "tracker.db".to_string(),
-                    }),
-                    private: false,
-                },
+                TrackerCoreConfig::new(
+                    DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                    false,
+                ),
                 vec![
                     test_udp_tracker_config("0.0.0.0:7070"),
                     test_udp_tracker_config("0.0.0.0:7070"),
@@ -869,12 +868,10 @@ mod tests {
         #[test]
         fn it_should_reject_duplicate_http_tracker_ports() {
             let result = TrackerConfig::new(
-                TrackerCoreConfig {
-                    database: DatabaseConfig::Sqlite(SqliteConfig {
-                        database_name: "tracker.db".to_string(),
-                    }),
-                    private: false,
-                },
+                TrackerCoreConfig::new(
+                    DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                    false,
+                ),
                 vec![],
                 vec![
                     test_http_tracker_config("0.0.0.0:7070"),
@@ -903,12 +900,10 @@ mod tests {
         #[test]
         fn it_should_reject_http_tracker_and_api_conflict() {
             let result = TrackerConfig::new(
-                TrackerCoreConfig {
-                    database: DatabaseConfig::Sqlite(SqliteConfig {
-                        database_name: "tracker.db".to_string(),
-                    }),
-                    private: false,
-                },
+                TrackerCoreConfig::new(
+                    DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                    false,
+                ),
                 vec![],
                 vec![test_http_tracker_config("0.0.0.0:7070")],
                 test_http_api_config("0.0.0.0:7070", "token"),
@@ -936,12 +931,10 @@ mod tests {
         #[test]
         fn it_should_reject_http_tracker_and_health_check_api_conflict() {
             let result = TrackerConfig::new(
-                TrackerCoreConfig {
-                    database: DatabaseConfig::Sqlite(SqliteConfig {
-                        database_name: "tracker.db".to_string(),
-                    }),
-                    private: false,
-                },
+                TrackerCoreConfig::new(
+                    DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                    false,
+                ),
                 vec![],
                 vec![test_http_tracker_config("0.0.0.0:1313")],
                 test_http_api_config("0.0.0.0:1212", "token"),
@@ -970,12 +963,10 @@ mod tests {
         fn it_should_allow_udp_and_http_on_same_port() {
             // This is valid because UDP and TCP use separate port spaces
             let result = TrackerConfig::new(
-                TrackerCoreConfig {
-                    database: DatabaseConfig::Sqlite(SqliteConfig {
-                        database_name: "tracker.db".to_string(),
-                    }),
-                    private: false,
-                },
+                TrackerCoreConfig::new(
+                    DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                    false,
+                ),
                 vec![test_udp_tracker_config("0.0.0.0:7070")],
                 vec![test_http_tracker_config("0.0.0.0:7070")],
                 test_http_api_config("0.0.0.0:1212", "token"),
@@ -988,12 +979,10 @@ mod tests {
         #[test]
         fn it_should_allow_same_port_different_ips() {
             let result = TrackerConfig::new(
-                TrackerCoreConfig {
-                    database: DatabaseConfig::Sqlite(SqliteConfig {
-                        database_name: "tracker.db".to_string(),
-                    }),
-                    private: false,
-                },
+                TrackerCoreConfig::new(
+                    DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                    false,
+                ),
                 vec![],
                 vec![
                     test_http_tracker_config("192.168.1.10:7070"),
@@ -1009,12 +998,10 @@ mod tests {
         #[test]
         fn it_should_provide_clear_error_message_with_fix_instructions() {
             let result = TrackerConfig::new(
-                TrackerCoreConfig {
-                    database: DatabaseConfig::Sqlite(SqliteConfig {
-                        database_name: "tracker.db".to_string(),
-                    }),
-                    private: false,
-                },
+                TrackerCoreConfig::new(
+                    DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                    false,
+                ),
                 vec![],
                 vec![test_http_tracker_config("0.0.0.0:7070")],
                 test_http_api_config("0.0.0.0:7070", "token"),
@@ -1074,12 +1061,10 @@ mod tests {
         fn it_should_allow_non_localhost_with_tls() {
             let domain = crate::shared::DomainName::new("api.tracker.local").unwrap();
             let config = TrackerConfig::new(
-                TrackerCoreConfig {
-                    database: DatabaseConfig::Sqlite(SqliteConfig {
-                        database_name: "tracker.db".to_string(),
-                    }),
-                    private: false,
-                },
+                TrackerCoreConfig::new(
+                    DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                    false,
+                ),
                 vec![],
                 vec![],
                 test_http_api_config_with_tls("0.0.0.0:1212", "token", Some(domain), true),

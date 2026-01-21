@@ -189,12 +189,10 @@ mod tests {
         };
 
         let tracker_config = TrackerConfig::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: false,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
             vec![
                 UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
                 UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
@@ -229,12 +227,10 @@ mod tests {
         };
 
         let tracker_config = TrackerConfig::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: true,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                true,
+            ),
             vec![],
             vec![],
             HttpApiConfig::new(
@@ -264,12 +260,10 @@ mod tests {
         };
 
         let tracker_config = TrackerConfig::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: false,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
             vec![
                 UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
                 UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),

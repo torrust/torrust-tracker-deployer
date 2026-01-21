@@ -117,10 +117,10 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             DatabaseConfig::Mysql(mysql_config) => Self::create_mysql_contexts(
                 admin_token,
                 tracker,
-                mysql_config.port,
-                mysql_config.database_name.clone(),
-                mysql_config.username.clone(),
-                mysql_config.password.expose_secret().to_string(),
+                mysql_config.port(),
+                mysql_config.database_name().to_string(),
+                mysql_config.username().to_string(),
+                mysql_config.password().expose_secret().to_string(),
             ),
         };
 

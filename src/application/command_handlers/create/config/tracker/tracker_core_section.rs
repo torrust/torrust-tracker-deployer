@@ -68,27 +68,30 @@ impl DatabaseSection {
     ///
     /// # Errors
     ///
-    /// This conversion currently cannot fail, but returns `Result`
-    /// for consistency with other DTO conversions and to allow
-    /// future validation.
+    /// - `SqliteConfigInvalid` if `SQLite` database name validation fails
+    /// - `MysqlConfigInvalid` if `MySQL` configuration validation fails
     pub fn to_database_config(&self) -> Result<DatabaseConfig, CreateConfigError> {
         match self {
-            Self::Sqlite { database_name } => Ok(DatabaseConfig::Sqlite(SqliteConfig {
-                database_name: database_name.clone(),
-            })),
+            Self::Sqlite { database_name } => {
+                let config = SqliteConfig::new(database_name.clone())?;
+                Ok(DatabaseConfig::Sqlite(config))
+            }
             Self::Mysql {
                 host,
                 port,
                 database_name,
                 username,
                 password,
-            } => Ok(DatabaseConfig::Mysql(MysqlConfig {
-                host: host.clone(),
-                port: *port,
-                database_name: database_name.clone(),
-                username: username.clone(),
-                password: Password::from(password.as_str()),
-            })),
+            } => {
+                let config = MysqlConfig::new(
+                    host.clone(),
+                    *port,
+                    database_name.clone(),
+                    username.clone(),
+                    Password::from(password.as_str()),
+                )?;
+                Ok(DatabaseConfig::Mysql(config))
+            }
         }
     }
 }
@@ -123,10 +126,10 @@ impl TrackerCoreSection {
     ///
     /// Returns error if database validation fails.
     pub fn to_tracker_core_config(&self) -> Result<TrackerCoreConfig, CreateConfigError> {
-        Ok(TrackerCoreConfig {
-            database: self.database.to_database_config()?,
-            private: self.private,
-        })
+        Ok(TrackerCoreConfig::new(
+            self.database.to_database_config()?,
+            self.private,
+        ))
     }
 }
 
@@ -146,12 +149,10 @@ mod tests {
         let config = section.to_tracker_core_config().unwrap();
 
         assert_eq!(
-            config.database,
-            DatabaseConfig::Sqlite(SqliteConfig {
-                database_name: "tracker.db".to_string()
-            })
+            *config.database(),
+            DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap())
         );
-        assert!(!config.private);
+        assert!(!config.private());
     }
 
     #[test]
@@ -165,7 +166,7 @@ mod tests {
 
         let config = section.to_tracker_core_config().unwrap();
 
-        assert!(config.private);
+        assert!(config.private());
     }
 
     #[test]
@@ -220,16 +221,19 @@ mod tests {
         let config = section.to_tracker_core_config().unwrap();
 
         assert_eq!(
-            config.database,
-            DatabaseConfig::Mysql(MysqlConfig {
-                host: "localhost".to_string(),
-                port: 3306,
-                database_name: "tracker".to_string(),
-                username: "tracker_user".to_string(),
-                password: Password::from("secure_password"),
-            })
+            *config.database(),
+            DatabaseConfig::Mysql(
+                MysqlConfig::new(
+                    "localhost",
+                    3306,
+                    "tracker",
+                    "tracker_user",
+                    Password::from("secure_password"),
+                )
+                .unwrap()
+            )
         );
-        assert!(!config.private);
+        assert!(!config.private());
     }
 
     #[test]

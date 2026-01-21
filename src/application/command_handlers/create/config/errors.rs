@@ -8,8 +8,8 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use crate::domain::tracker::{
-    HealthCheckApiConfigError, HttpApiConfigError, HttpTrackerConfigError, TrackerConfigError,
-    UdpTrackerConfigError,
+    HealthCheckApiConfigError, HttpApiConfigError, HttpTrackerConfigError, MysqlConfigError,
+    SqliteConfigError, TrackerConfigError, UdpTrackerConfigError,
 };
 use crate::domain::EnvironmentNameError;
 use crate::domain::ProfileNameError;
@@ -141,6 +141,20 @@ pub enum CreateConfigError {
     /// providing a bridge between domain errors and application-level error handling.
     #[error("Health Check API configuration invalid: {0}")]
     HealthCheckApiConfigInvalid(#[from] HealthCheckApiConfigError),
+
+    /// `SQLite` database configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `SqliteConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("SQLite database configuration invalid: {0}")]
+    SqliteConfigInvalid(#[from] SqliteConfigError),
+
+    /// `MySQL` database configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `MysqlConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("MySQL database configuration invalid: {0}")]
+    MysqlConfigInvalid(#[from] MysqlConfigError),
 
     /// Invalid admin email format for HTTPS configuration
     #[error("Invalid admin email '{email}': {reason}")]
@@ -529,6 +543,14 @@ impl CreateConfigError {
                 inner.help()
             }
             Self::HealthCheckApiConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::SqliteConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::MysqlConfigInvalid(inner) => {
                 // Delegate to domain error's help method for detailed guidance
                 inner.help()
             }

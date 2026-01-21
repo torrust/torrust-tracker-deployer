@@ -213,12 +213,10 @@ mod tests {
         let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
 
         let tracker_config = TrackerConfig::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: false,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
             vec![
                 UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
             ],
@@ -263,16 +261,19 @@ mod tests {
         let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
 
         let tracker_config = TrackerConfig::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Mysql(MysqlConfig {
-                    host: "mysql".to_string(),
-                    port: 3306,
-                    database_name: "tracker_db".to_string(),
-                    username: "tracker_user".to_string(),
-                    password: Password::from("secure_pass"),
-                }),
-                private: false,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Mysql(
+                    MysqlConfig::new(
+                        "mysql",
+                        3306,
+                        "tracker_db",
+                        "tracker_user",
+                        Password::from("secure_pass"),
+                    )
+                    .unwrap(),
+                ),
+                false,
+            ),
             vec![
                 UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
             ],

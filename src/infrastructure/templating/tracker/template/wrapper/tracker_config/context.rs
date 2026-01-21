@@ -27,12 +27,10 @@ use crate::domain::environment::TrackerConfig;
 /// use torrust_tracker_deployer_lib::domain::environment::{TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig, UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig};
 ///
 /// let tracker_config = TrackerConfig::new(
-///     TrackerCoreConfig {
-///         database: DatabaseConfig::Sqlite(SqliteConfig {
-///             database_name: "tracker.db".to_string(),
-///         }),
-///         private: true,
-///     },
+///     TrackerCoreConfig::new(
+///         DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+///         true,
+///     ),
 ///     vec![
 ///         UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
 ///         UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
@@ -131,26 +129,26 @@ impl TrackerContext {
         use crate::domain::tracker::DatabaseConfig;
 
         let (mysql_host, mysql_port, mysql_database, mysql_user, mysql_password) =
-            match &config.core().database {
+            match config.core().database() {
                 DatabaseConfig::Mysql(mysql_config) => (
-                    Some(mysql_config.host.clone()),
-                    Some(mysql_config.port),
-                    Some(mysql_config.database_name.clone()),
-                    Some(mysql_config.username.clone()),
-                    Some(mysql_config.password.expose_secret().to_string()),
+                    Some(mysql_config.host().to_string()),
+                    Some(mysql_config.port()),
+                    Some(mysql_config.database_name().to_string()),
+                    Some(mysql_config.username().to_string()),
+                    Some(mysql_config.password().expose_secret().to_string()),
                 ),
                 DatabaseConfig::Sqlite(..) => (None, None, None, None, None),
             };
 
         Self {
-            database_driver: config.core().database.driver_name().to_string(),
-            tracker_database_name: config.core().database.database_name().to_string(),
+            database_driver: config.core().database().driver_name().to_string(),
+            tracker_database_name: config.core().database().database_name().to_string(),
             mysql_host,
             mysql_port,
             mysql_database,
             mysql_user,
             mysql_password,
-            tracker_core_private: config.core().private,
+            tracker_core_private: config.core().private(),
             on_reverse_proxy: config.any_http_tracker_uses_tls_proxy(),
             udp_trackers: config
                 .udp_trackers()
@@ -225,12 +223,10 @@ mod tests {
 
     fn create_test_tracker_config() -> TrackerConfig {
         TrackerConfig::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "test_tracker.db".to_string(),
-                }),
-                private: true,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("test_tracker.db").unwrap()),
+                true,
+            ),
             vec![
                 UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
                 UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
@@ -275,16 +271,19 @@ mod tests {
     #[test]
     fn it_should_create_context_from_mysql_tracker_config() {
         let config = TrackerConfig::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Mysql(MysqlConfig {
-                    host: "mysql".to_string(),
-                    port: 3306,
-                    database_name: "tracker_db".to_string(),
-                    username: "tracker_user".to_string(),
-                    password: Password::from("secure_pass"),
-                }),
-                private: false,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Mysql(
+                    MysqlConfig::new(
+                        "mysql",
+                        3306,
+                        "tracker_db",
+                        "tracker_user",
+                        Password::from("secure_pass"),
+                    )
+                    .unwrap(),
+                ),
+                false,
+            ),
             vec![
                 UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
             ],

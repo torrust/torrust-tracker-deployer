@@ -217,12 +217,10 @@ scrape_configs:
         };
 
         TrackerConfig::new(
-            TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: false,
-            },
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
             vec![],
             vec![],
             HttpApiConfig::new(

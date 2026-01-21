@@ -24,12 +24,10 @@
 //! };
 //!
 //! let config = TrackerConfig::new(
-//!     TrackerCoreConfig {
-//!         database: DatabaseConfig::Sqlite(SqliteConfig {
-//!             database_name: "tracker.db".to_string(),
-//!         }),
-//!         private: false,
-//!     },
+//!     TrackerCoreConfig::new(
+//!         DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+//!         false,
+//!     ),
 //!     vec![
 //!         UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).unwrap(),
 //!     ],
@@ -57,7 +55,8 @@ mod protocol;
 pub use binding_address::BindingAddress;
 pub use config::{
     is_localhost, DatabaseConfig, HealthCheckApiConfig, HealthCheckApiConfigError, HttpApiConfig,
-    HttpApiConfigError, HttpTrackerConfig, HttpTrackerConfigError, MysqlConfig, SqliteConfig,
-    TrackerConfig, TrackerConfigError, TrackerCoreConfig, UdpTrackerConfig, UdpTrackerConfigError,
+    HttpApiConfigError, HttpTrackerConfig, HttpTrackerConfigError, MysqlConfig, MysqlConfigError,
+    SqliteConfig, SqliteConfigError, TrackerConfig, TrackerConfigError, TrackerCoreConfig,
+    UdpTrackerConfig, UdpTrackerConfigError,
 };
 pub use protocol::{Protocol, ProtocolParseError};

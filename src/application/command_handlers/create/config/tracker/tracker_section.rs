@@ -183,12 +183,10 @@ mod tests {
         let config = section.to_tracker_config().unwrap();
 
         assert_eq!(
-            config.core().database,
-            DatabaseConfig::Sqlite(SqliteConfig {
-                database_name: "tracker.db".to_string()
-            })
+            *config.core().database(),
+            DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap())
         );
-        assert!(!config.core().private);
+        assert!(!config.core().private());
         assert_eq!(config.udp_trackers().len(), 1);
         assert_eq!(config.http_trackers().len(), 1);
         assert_eq!(
