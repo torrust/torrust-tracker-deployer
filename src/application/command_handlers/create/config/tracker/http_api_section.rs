@@ -1,3 +1,31 @@
+//! HTTP API configuration DTO (Application Layer)
+//!
+//! This module contains the DTO for HTTP API configuration. It handles JSON
+//! deserialization and delegates validation to the domain layer.
+//!
+//! ## Pattern
+//!
+//! This DTO demonstrates the **Anti-Corruption Layer** pattern using `TryFrom`:
+//! 1. Accept primitive types from external sources (JSON)
+//! 2. Parse/transform primitives (String → `SocketAddr`, String → `DomainName`)
+//! 3. Delegate business validation to domain constructor (`HttpApiConfig::new()`)
+//! 4. Map domain errors to application errors
+//!
+//! ## `TryFrom` Pattern
+//!
+//! We use the standard `TryFrom` trait for DTO→Domain conversion. This provides:
+//! - **Discoverability**: Developers can search for `impl TryFrom<HttpApiSection>`
+//! - **Consistency**: Standard Rust pattern used across the codebase
+//! - **Ergonomics**: Works with `?` operator via `.try_into()`
+//!
+//! See ADR: `docs/decisions/tryfrom-for-dto-to-domain-conversion.md`
+//!
+//! ## For Other DTOs
+//!
+//! Use this file as a reference when refactoring other DTO types to follow
+//! the same pattern. See the refactoring plan:
+//! `docs/refactors/plans/strengthen-domain-invariant-enforcement.md`
+
 use std::net::SocketAddr;
 
 use schemars::JsonSchema;
@@ -8,9 +36,54 @@ use crate::domain::tracker::HttpApiConfig;
 use crate::shared::secrets::PlainApiToken;
 use crate::shared::DomainName;
 
+/// HTTP API configuration section (Application DTO)
+///
+/// This is a Data Transfer Object that uses primitive types (`String`) for
+/// JSON deserialization. It converts to the domain type `HttpApiConfig` via
+/// the `TryFrom` trait, which delegates validation to the domain layer.
+///
+/// # Responsibility Split
+///
+/// - **This DTO**: Parse strings into typed values (`SocketAddr`, `DomainName`)
+/// - **Domain type**: Enforce business invariants (port != 0, TLS requires domain, etc.)
+///
+/// # Usage
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::HttpApiSection;
+/// use torrust_tracker_deployer_lib::domain::tracker::HttpApiConfig;
+///
+/// let section = HttpApiSection {
+///     bind_address: "0.0.0.0:1212".to_string(),
+///     admin_token: "MyToken".to_string(),
+///     domain: None,
+///     use_tls_proxy: None,
+/// };
+///
+/// let config: HttpApiConfig = section.try_into()?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+///
+/// # JSON Example
+///
+/// ```json
+/// {
+///     "bind_address": "0.0.0.0:1212",
+///     "admin_token": "MyAccessToken",
+///     "domain": "api.example.com",
+///     "use_tls_proxy": true
+/// }
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct HttpApiSection {
+    /// Bind address as string (e.g., "0.0.0.0:1212")
+    ///
+    /// Parsed to `SocketAddr` during conversion.
     pub bind_address: String,
+
+    /// Admin token as plain string (at DTO boundary)
+    ///
+    /// Converted to `ApiToken` (secrecy-wrapped) in domain layer.
     pub admin_token: PlainApiToken,
 
     /// Domain name for HTTPS certificate acquisition
@@ -35,46 +108,51 @@ pub struct HttpApiSection {
     pub use_tls_proxy: Option<bool>,
 }
 
-impl HttpApiSection {
-    /// Converts this DTO to a domain `HttpApiConfig`
-    ///
-    /// # Errors
-    ///
-    /// Returns `CreateConfigError::InvalidBindAddress` if the bind address cannot be parsed as a valid IP:PORT combination.
-    /// Returns `CreateConfigError::DynamicPortNotSupported` if port 0 (dynamic port assignment) is specified.
-    /// Returns `CreateConfigError::InvalidDomain` if the domain is invalid.
-    /// Returns `CreateConfigError::TlsProxyWithoutDomain` if `use_tls_proxy` is true but domain is missing.
-    ///
-    /// Note: Localhost + TLS validation is performed at the domain layer
-    /// (see `TrackerConfig::validate()`) to avoid duplicating business rules.
-    pub fn to_http_api_config(&self) -> Result<HttpApiConfig, CreateConfigError> {
-        // Validate that the bind address can be parsed as SocketAddr
-        let bind_address = self.bind_address.parse::<SocketAddr>().map_err(|e| {
+/// Converts `HttpApiSection` (DTO) to `HttpApiConfig` (Domain)
+///
+/// This implementation:
+/// 1. Parses the bind address string to `SocketAddr`
+/// 2. Parses the domain string to `DomainName` (if present)
+/// 3. Delegates business validation to `HttpApiConfig::new()`
+///
+/// # Errors
+///
+/// Returns `CreateConfigError`:
+/// - `InvalidBindAddress` - if bind address cannot be parsed as IP:PORT
+/// - `InvalidDomain` - if domain string is not a valid domain name
+/// - `HttpApiConfigInvalid` - if domain invariants are violated (port 0, TLS without domain, etc.)
+///
+/// # Example
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::HttpApiSection;
+/// use torrust_tracker_deployer_lib::domain::tracker::HttpApiConfig;
+///
+/// let section = HttpApiSection {
+///     bind_address: "0.0.0.0:1212".to_string(),
+///     admin_token: "MyToken".to_string(),
+///     domain: None,
+///     use_tls_proxy: None,
+/// };
+///
+/// let config: HttpApiConfig = section.try_into()?;
+/// assert_eq!(config.bind_address().port(), 1212);
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+impl TryFrom<HttpApiSection> for HttpApiConfig {
+    type Error = CreateConfigError;
+
+    fn try_from(section: HttpApiSection) -> Result<Self, Self::Error> {
+        // Step 1: Parse bind address string to SocketAddr
+        let bind_address = section.bind_address.parse::<SocketAddr>().map_err(|e| {
             CreateConfigError::InvalidBindAddress {
-                address: self.bind_address.clone(),
+                address: section.bind_address.clone(),
                 source: e,
             }
         })?;
 
-        // Reject port 0 (dynamic port assignment)
-        if bind_address.port() == 0 {
-            return Err(CreateConfigError::DynamicPortNotSupported {
-                bind_address: self.bind_address.clone(),
-            });
-        }
-
-        let use_tls_proxy = self.use_tls_proxy.unwrap_or(false);
-
-        // Validate: use_tls_proxy: true requires domain
-        if use_tls_proxy && self.domain.is_none() {
-            return Err(CreateConfigError::TlsProxyWithoutDomain {
-                service_type: "HTTP API".to_string(),
-                bind_address: self.bind_address.clone(),
-            });
-        }
-
-        // Convert domain to domain type with validation (if present)
-        let domain = match &self.domain {
+        // Step 2: Parse domain string to DomainName (if present)
+        let domain = match &section.domain {
             Some(domain_str) => {
                 let domain =
                     DomainName::new(domain_str).map_err(|e| CreateConfigError::InvalidDomain {
@@ -86,18 +164,26 @@ impl HttpApiSection {
             None => None,
         };
 
-        Ok(HttpApiConfig {
+        // Step 3: Delegate business validation to domain constructor
+        // The domain layer enforces: port != 0, TLS requires domain, no localhost with TLS
+        let config = HttpApiConfig::new(
             bind_address,
-            admin_token: self.admin_token.clone().into(),
+            section.admin_token.clone().into(),
             domain,
-            use_tls_proxy,
-        })
+            section.use_tls_proxy.unwrap_or(false),
+        )?; // Uses From<HttpApiConfigError> for CreateConfigError
+
+        Ok(config)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // -------------------------------------------------------------------------
+    // Successful conversion tests
+    // -------------------------------------------------------------------------
 
     #[test]
     fn it_should_convert_valid_config_to_http_api_config() {
@@ -108,17 +194,59 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let result = section.to_http_api_config();
+        let result: Result<HttpApiConfig, _> = section.try_into();
         assert!(result.is_ok());
 
         let config = result.unwrap();
         assert_eq!(
-            config.bind_address,
+            config.bind_address(),
             "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
         );
-        assert_eq!(config.admin_token.expose_secret(), "MyAccessToken");
-        assert!(!config.use_tls_proxy);
+        assert_eq!(config.admin_token().expose_secret(), "MyAccessToken");
+        assert!(!config.use_tls_proxy());
     }
+
+    #[test]
+    fn it_should_allow_non_localhost_with_tls_proxy() {
+        let section = HttpApiSection {
+            bind_address: "0.0.0.0:1212".to_string(),
+            admin_token: "token".to_string(),
+            domain: Some("api.tracker.local".to_string()),
+            use_tls_proxy: Some(true),
+        };
+
+        let result: Result<HttpApiConfig, _> = section.try_into();
+        assert!(result.is_ok());
+
+        let config = result.unwrap();
+        assert!(config.use_tls_proxy());
+        assert!(config.domain().is_some());
+    }
+
+    #[test]
+    fn it_should_accept_domain_without_tls_proxy() {
+        // Domain provided but use_tls_proxy is false - domain is stored but TLS disabled
+        let section = HttpApiSection {
+            bind_address: "0.0.0.0:1212".to_string(),
+            admin_token: "token".to_string(),
+            domain: Some("api.tracker.local".to_string()),
+            use_tls_proxy: Some(false),
+        };
+
+        let result: Result<HttpApiConfig, _> = section.try_into();
+        assert!(result.is_ok());
+
+        let config = result.unwrap();
+        assert!(!config.use_tls_proxy());
+        // tls_domain returns None when TLS is disabled
+        assert!(config.tls_domain().is_none());
+        // But domain() returns the configured domain
+        assert!(config.domain().is_some());
+    }
+
+    // -------------------------------------------------------------------------
+    // DTO-level error tests (parsing failures)
+    // -------------------------------------------------------------------------
 
     #[test]
     fn it_should_fail_for_invalid_bind_address() {
@@ -129,7 +257,7 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let result = section.to_http_api_config();
+        let result = HttpApiConfig::try_from(section);
         assert!(result.is_err());
 
         if let Err(CreateConfigError::InvalidBindAddress { address, .. }) = result {
@@ -140,7 +268,29 @@ mod tests {
     }
 
     #[test]
-    fn it_should_reject_port_zero() {
+    fn it_should_fail_for_invalid_domain() {
+        let section = HttpApiSection {
+            bind_address: "0.0.0.0:1212".to_string(),
+            admin_token: "token".to_string(),
+            domain: Some(String::new()), // Empty domain is invalid
+            use_tls_proxy: Some(true),
+        };
+
+        let result = HttpApiConfig::try_from(section);
+        assert!(result.is_err());
+
+        assert!(matches!(
+            result,
+            Err(CreateConfigError::InvalidDomain { .. })
+        ));
+    }
+
+    // -------------------------------------------------------------------------
+    // Domain-level error tests (delegated to domain layer)
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn it_should_reject_port_zero_via_domain_validation() {
         let section = HttpApiSection {
             bind_address: "0.0.0.0:0".to_string(),
             admin_token: "token".to_string(),
@@ -148,15 +298,55 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let result = section.to_http_api_config();
+        let result = HttpApiConfig::try_from(section);
         assert!(result.is_err());
 
-        if let Err(CreateConfigError::DynamicPortNotSupported { bind_address }) = result {
-            assert_eq!(bind_address, "0.0.0.0:0");
-        } else {
-            panic!("Expected DynamicPortNotSupported error");
-        }
+        // Error comes from domain layer via From impl
+        assert!(matches!(
+            result,
+            Err(CreateConfigError::HttpApiConfigInvalid(_))
+        ));
     }
+
+    #[test]
+    fn it_should_reject_tls_proxy_without_domain_via_domain_validation() {
+        let section = HttpApiSection {
+            bind_address: "0.0.0.0:1212".to_string(),
+            admin_token: "token".to_string(),
+            domain: None,              // No domain
+            use_tls_proxy: Some(true), // But TLS enabled
+        };
+
+        let result = HttpApiConfig::try_from(section);
+        assert!(result.is_err());
+
+        assert!(matches!(
+            result,
+            Err(CreateConfigError::HttpApiConfigInvalid(_))
+        ));
+    }
+
+    #[test]
+    fn it_should_reject_localhost_with_tls_via_domain_validation() {
+        let section = HttpApiSection {
+            bind_address: "127.0.0.1:1212".to_string(),
+            admin_token: "token".to_string(),
+            domain: Some("api.example.com".to_string()),
+            use_tls_proxy: Some(true),
+        };
+
+        let result = HttpApiConfig::try_from(section);
+        assert!(result.is_err());
+
+        assert!(matches!(
+            result,
+            Err(CreateConfigError::HttpApiConfigInvalid(_))
+        ));
+    }
+
+    // -------------------------------------------------------------------------
+    // Serialization tests
+    // -------------------------------------------------------------------------
 
     #[test]
     fn it_should_be_serializable() {
@@ -185,67 +375,7 @@ mod tests {
     }
 
     #[test]
-    fn it_should_allow_non_localhost_with_tls_proxy() {
-        let section = HttpApiSection {
-            bind_address: "0.0.0.0:1212".to_string(),
-            admin_token: "token".to_string(),
-            domain: Some("api.tracker.local".to_string()),
-            use_tls_proxy: Some(true),
-        };
-
-        let result = section.to_http_api_config();
-
-        assert!(result.is_ok());
-        let config = result.unwrap();
-        assert!(config.use_tls_proxy);
-        assert!(config.domain.is_some());
-    }
-
-    #[test]
-    fn it_should_reject_tls_proxy_without_domain() {
-        let section = HttpApiSection {
-            bind_address: "0.0.0.0:1212".to_string(),
-            admin_token: "token".to_string(),
-            domain: None,
-            use_tls_proxy: Some(true),
-        };
-
-        let result = section.to_http_api_config();
-        assert!(result.is_err());
-
-        if let Err(CreateConfigError::TlsProxyWithoutDomain {
-            service_type,
-            bind_address,
-        }) = result
-        {
-            assert_eq!(service_type, "HTTP API");
-            assert_eq!(bind_address, "0.0.0.0:1212");
-        } else {
-            panic!("Expected TlsProxyWithoutDomain error");
-        }
-    }
-
-    #[test]
-    fn it_should_accept_domain_without_tls_proxy() {
-        // Domain provided but use_tls_proxy is false - domain is ignored
-        let section = HttpApiSection {
-            bind_address: "0.0.0.0:1212".to_string(),
-            admin_token: "token".to_string(),
-            domain: Some("api.tracker.local".to_string()),
-            use_tls_proxy: Some(false),
-        };
-
-        let result = section.to_http_api_config();
-        assert!(result.is_ok());
-
-        let config = result.unwrap();
-        assert!(!config.use_tls_proxy);
-        // Domain is still stored but won't be used for TLS
-        assert!(config.domain.is_some());
-    }
-
-    #[test]
-    fn it_should_deserialize_with_new_fields() {
+    fn it_should_deserialize_with_all_fields() {
         let json = r#"{"bind_address":"0.0.0.0:1212","admin_token":"token","domain":"api.example.com","use_tls_proxy":true}"#;
         let section: HttpApiSection = serde_json::from_str(json).unwrap();
         assert_eq!(section.bind_address, "0.0.0.0:1212");

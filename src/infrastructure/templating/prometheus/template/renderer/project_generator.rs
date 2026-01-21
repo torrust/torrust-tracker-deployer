@@ -155,12 +155,12 @@ impl PrometheusProjectGenerator {
         let scrape_interval = prometheus_config.scrape_interval_in_secs().to_string();
         let api_token = tracker_config
             .http_api
-            .admin_token
+            .admin_token()
             .expose_secret()
             .to_string();
 
         // Extract port from SocketAddr
-        let api_port = tracker_config.http_api.bind_address.port();
+        let api_port = tracker_config.http_api.bind_address().port();
 
         PrometheusContext::new(scrape_interval, api_token, api_port)
     }
@@ -205,13 +205,21 @@ scrape_configs:
     }
 
     fn create_test_tracker_config() -> TrackerConfig {
+        create_test_tracker_config_with_options("0.0.0.0:1212", "test_admin_token")
+    }
+
+    fn create_test_tracker_config_with_options(
+        bind_address: &str,
+        admin_token: &str,
+    ) -> TrackerConfig {
         TrackerConfig {
-            http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().expect("valid address"),
-                admin_token: "test_admin_token".to_string().into(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            http_api: HttpApiConfig::new(
+                bind_address.parse().expect("valid address"),
+                admin_token.to_string().into(),
+                None,
+                false,
+            )
+            .expect("valid config"),
             ..Default::default()
         }
     }
@@ -303,8 +311,8 @@ scrape_configs:
         let generator = PrometheusProjectGenerator::new(&build_dir, template_manager);
 
         let prometheus_config = PrometheusConfig::default();
-        let mut tracker_config = create_test_tracker_config();
-        tracker_config.http_api.bind_address = "0.0.0.0:8080".parse().expect("valid address");
+        let tracker_config =
+            create_test_tracker_config_with_options("0.0.0.0:8080", "test_admin_token");
 
         generator
             .render(&prometheus_config, &tracker_config)
@@ -325,8 +333,8 @@ scrape_configs:
         let generator = PrometheusProjectGenerator::new(&build_dir, template_manager);
 
         let prometheus_config = PrometheusConfig::default();
-        let mut tracker_config = create_test_tracker_config();
-        tracker_config.http_api.admin_token = "custom_admin_token_123".to_string().into();
+        let tracker_config =
+            create_test_tracker_config_with_options("0.0.0.0:1212", "custom_admin_token_123");
 
         generator
             .render(&prometheus_config, &tracker_config)

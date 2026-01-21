@@ -36,12 +36,12 @@
 //!     http_trackers: vec![
 //!         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
 //!     ],
-//!     http_api: HttpApiConfig {
-//!         bind_address: "0.0.0.0:1212".parse().unwrap(),
-//!         admin_token: "MyToken".to_string().into(),
-//!         domain: None,
-//!         use_tls_proxy: false,
-//!     },
+//!     http_api: HttpApiConfig::new(
+//!         "0.0.0.0:1212".parse().unwrap(),
+//!         "MyToken".to_string().into(),
+//!         None,
+//!         false,
+//!     ).expect("valid config"),
 //!     health_check_api: HealthCheckApiConfig {
 //!         bind_address: "127.0.0.1:1313".parse().unwrap(),
 //!         domain: None,
@@ -56,8 +56,8 @@ mod protocol;
 
 pub use binding_address::BindingAddress;
 pub use config::{
-    is_localhost, DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig,
-    MysqlConfig, SqliteConfig, TrackerConfig, TrackerConfigError, TrackerCoreConfig,
-    UdpTrackerConfig,
+    is_localhost, DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpApiConfigError,
+    HttpTrackerConfig, MysqlConfig, SqliteConfig, TrackerConfig, TrackerConfigError,
+    TrackerCoreConfig, UdpTrackerConfig,
 };
 pub use protocol::{Protocol, ProtocolParseError};

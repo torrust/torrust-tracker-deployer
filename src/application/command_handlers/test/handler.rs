@@ -172,7 +172,7 @@ impl TestCommandHandler {
 
     /// Build a `ServiceEndpoint` from the HTTP API configuration
     fn build_api_endpoint(server_ip: std::net::IpAddr, config: &HttpApiConfig) -> ServiceEndpoint {
-        let port = config.bind_address.port();
+        let port = config.bind_address().port();
         let path = "/api/health_check";
         let socket_addr = std::net::SocketAddr::new(server_ip, port);
 

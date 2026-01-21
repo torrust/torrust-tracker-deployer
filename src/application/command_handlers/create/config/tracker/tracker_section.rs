@@ -84,7 +84,7 @@ impl TrackerSection {
             .map(HttpTrackerSection::to_http_tracker_config)
             .collect();
 
-        let http_api: HttpApiConfig = self.http_api.to_http_api_config()?;
+        let http_api: HttpApiConfig = self.http_api.clone().try_into()?;
 
         let health_check_api: HealthCheckApiConfig =
             self.health_check_api.to_health_check_api_config()?;
@@ -190,7 +190,7 @@ mod tests {
         assert_eq!(config.udp_trackers.len(), 1);
         assert_eq!(config.http_trackers.len(), 1);
         assert_eq!(
-            config.http_api.bind_address,
+            config.http_api.bind_address(),
             "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
         );
     }

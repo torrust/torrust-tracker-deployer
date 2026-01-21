@@ -7,6 +7,7 @@ This guide will help you understand our development practices and contribution w
 | Topic                                | File                                                                 |
 | ------------------------------------ | -------------------------------------------------------------------- |
 | DDD layer placement (architecture)   | [ddd-layer-placement.md](./ddd-layer-placement.md)                   |
+| DDD practices (domain patterns)      | [ddd-practices.md](./ddd-practices.md)                               |
 | PR review guide for reviewers        | [pr-review-guide.md](./pr-review-guide.md)                           |
 | Creating roadmap issues              | [roadmap-issues.md](./roadmap-issues.md)                             |
 | Branching conventions                | [branching.md](./branching.md)                                       |

@@ -21,7 +21,7 @@ mod udp;
 pub use core::{DatabaseConfig, MysqlConfig, SqliteConfig, TrackerCoreConfig};
 pub use health_check_api::HealthCheckApiConfig;
 pub use http::HttpTrackerConfig;
-pub use http_api::HttpApiConfig;
+pub use http_api::{HttpApiConfig, HttpApiConfigError};
 pub use udp::UdpTrackerConfig;
 
 /// Checks if a socket address is bound to localhost (127.0.0.1 or `::1`).
@@ -72,12 +72,12 @@ pub fn is_localhost(addr: &SocketAddr) -> bool {
 ///     http_trackers: vec![
 ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
 ///     ],
-///     http_api: HttpApiConfig {
-///         bind_address: "0.0.0.0:1212".parse().unwrap(),
-///         admin_token: "MyAccessToken".to_string().into(),
-///         domain: None,
-///         use_tls_proxy: false,
-///     },
+///     http_api: HttpApiConfig::new(
+///         "0.0.0.0:1212".parse().unwrap(),
+///         "MyAccessToken".to_string().into(),
+///         None,
+///         false,
+///     ).expect("valid config"),
 ///     health_check_api: HealthCheckApiConfig {
 ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
 ///         domain: None,
@@ -279,12 +279,12 @@ impl TrackerConfig {
     ///     http_trackers: vec![
     ///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
     ///     ],
-    ///     http_api: HttpApiConfig {
-    ///         bind_address: "0.0.0.0:1212".parse().unwrap(),
-    ///         admin_token: "MyAccessToken".to_string().into(),
-    ///         domain: None,
-    ///         use_tls_proxy: false,
-    ///     },
+    ///     http_api: HttpApiConfig::new(
+    ///         "0.0.0.0:1212".parse().unwrap(),
+    ///         "MyAccessToken".to_string().into(),
+    ///         None,
+    ///         false,
+    ///     ).expect("valid config"),
     ///     health_check_api: HealthCheckApiConfig {
     ///         bind_address: "127.0.0.1:1313".parse().unwrap(),
     ///         domain: None,
@@ -314,10 +314,10 @@ impl TrackerConfig {
     /// both a localhost binding and TLS configuration.
     fn check_localhost_with_tls(&self) -> Result<(), TrackerConfigError> {
         // Check HTTP API
-        if self.http_api.use_tls_proxy && is_localhost(&self.http_api.bind_address) {
+        if self.http_api.use_tls_proxy() && is_localhost(&self.http_api.bind_address()) {
             return Err(TrackerConfigError::LocalhostWithTls {
                 service_name: "HTTP API".to_string(),
-                bind_address: self.http_api.bind_address,
+                bind_address: self.http_api.bind_address(),
             });
         }
 
@@ -395,7 +395,7 @@ impl TrackerConfig {
         // Add HTTP API
         Self::register_binding(
             &mut bindings,
-            self.http_api.bind_address,
+            self.http_api.bind_address(),
             Protocol::Tcp,
             "HTTP API",
         );
@@ -453,7 +453,7 @@ impl TrackerConfig {
     /// Returns the HTTP API port number
     #[must_use]
     pub fn http_api_port(&self) -> u16 {
-        self.http_api.bind_address.port()
+        self.http_api.bind_address().port()
     }
 
     /// Returns the Health Check API TLS domain if configured
@@ -544,12 +544,13 @@ impl Default for TrackerConfig {
                 domain: None,
                 use_tls_proxy: false,
             }],
-            http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().expect("valid address"),
-                admin_token: "MyAccessToken".to_string().into(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            http_api: HttpApiConfig::new(
+                "0.0.0.0:1212".parse().expect("valid address"),
+                "MyAccessToken".to_string().into(),
+                None,
+                false,
+            )
+            .expect("default HttpApiConfig values are always valid"),
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().expect("valid address"),
                 domain: None,
@@ -577,6 +578,34 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Test helper to create an `HttpApiConfig` with default or custom values.
+    /// Uses the validated constructor, making tests more realistic.
+    fn test_http_api_config(bind_address: &str, admin_token: &str) -> HttpApiConfig {
+        HttpApiConfig::new(
+            bind_address.parse().expect("valid address"),
+            admin_token.to_string().into(),
+            None,
+            false,
+        )
+        .expect("test values should be valid")
+    }
+
+    /// Test helper with TLS options
+    fn test_http_api_config_with_tls(
+        bind_address: &str,
+        admin_token: &str,
+        domain: Option<DomainName>,
+        use_tls_proxy: bool,
+    ) -> HttpApiConfig {
+        HttpApiConfig::new(
+            bind_address.parse().expect("valid address"),
+            admin_token.to_string().into(),
+            domain,
+            use_tls_proxy,
+        )
+        .expect("test values should be valid")
+    }
 
     mod is_localhost_tests {
         use super::*;
@@ -637,12 +666,7 @@ mod tests {
                 domain: None,
                 use_tls_proxy: false,
             }],
-            http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_token".to_string().into(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            http_api: test_http_api_config("0.0.0.0:1212", "test_token"),
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
                 domain: None,
@@ -667,12 +691,7 @@ mod tests {
             },
             udp_trackers: vec![],
             http_trackers: vec![],
-            http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "token123".to_string().into(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            http_api: test_http_api_config("0.0.0.0:1212", "token123"),
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
                 domain: None,
@@ -712,10 +731,13 @@ mod tests {
 
         // Verify HTTP API configuration
         assert_eq!(
-            config.http_api.bind_address,
+            config.http_api.bind_address(),
             "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
         );
-        assert_eq!(config.http_api.admin_token.expose_secret(), "MyAccessToken");
+        assert_eq!(
+            config.http_api.admin_token().expose_secret(),
+            "MyAccessToken"
+        );
     }
 
     mod validation {
@@ -739,12 +761,7 @@ mod tests {
                     domain: None,
                     use_tls_proxy: false,
                 }],
-                http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:1212".parse().unwrap(),
-                    admin_token: "token".to_string().into(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                http_api: test_http_api_config("0.0.0.0:1212", "token"),
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
                     domain: None,
@@ -775,12 +792,7 @@ mod tests {
                     },
                 ],
                 http_trackers: vec![],
-                http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:1212".parse().unwrap(),
-                    admin_token: "token".to_string().into(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                http_api: test_http_api_config("0.0.0.0:1212", "token"),
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
                     domain: None,
@@ -829,12 +841,7 @@ mod tests {
                         use_tls_proxy: false,
                     },
                 ],
-                http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:1212".parse().unwrap(),
-                    admin_token: "token".to_string().into(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                http_api: test_http_api_config("0.0.0.0:1212", "token"),
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
                     domain: None,
@@ -874,12 +881,7 @@ mod tests {
                     domain: None,
                     use_tls_proxy: false,
                 }],
-                http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    admin_token: "token".to_string().into(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                http_api: test_http_api_config("0.0.0.0:7070", "token"),
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
                     domain: None,
@@ -921,12 +923,7 @@ mod tests {
                     domain: None,
                     use_tls_proxy: false,
                 }],
-                http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:1212".parse().unwrap(),
-                    admin_token: "token".to_string().into(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                http_api: test_http_api_config("0.0.0.0:1212", "token"),
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "0.0.0.0:1313".parse().unwrap(),
                     domain: None,
@@ -972,12 +969,7 @@ mod tests {
                     domain: None,
                     use_tls_proxy: false,
                 }],
-                http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:1212".parse().unwrap(),
-                    admin_token: "token".to_string().into(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                http_api: test_http_api_config("0.0.0.0:1212", "token"),
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
                     domain: None,
@@ -1010,12 +1002,7 @@ mod tests {
                         use_tls_proxy: false,
                     },
                 ],
-                http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:1212".parse().unwrap(),
-                    admin_token: "token".to_string().into(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                http_api: test_http_api_config("0.0.0.0:1212", "token"),
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
                     domain: None,
@@ -1041,12 +1028,7 @@ mod tests {
                     domain: None,
                     use_tls_proxy: false,
                 }],
-                http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:7070".parse().unwrap(),
-                    admin_token: "token".to_string().into(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                http_api: test_http_api_config("0.0.0.0:7070", "token"),
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
                     domain: None,
@@ -1090,12 +1072,7 @@ mod tests {
                 },
                 udp_trackers: vec![],
                 http_trackers: vec![],
-                http_api: HttpApiConfig {
-                    bind_address: "0.0.0.0:1212".parse().unwrap(),
-                    admin_token: "token".to_string().into(),
-                    domain: None,
-                    use_tls_proxy: false,
-                },
+                http_api: test_http_api_config("0.0.0.0:1212", "token"),
                 health_check_api: HealthCheckApiConfig {
                     bind_address: "127.0.0.1:1313".parse().unwrap(),
                     domain: None,
@@ -1104,60 +1081,9 @@ mod tests {
             }
         }
 
-        #[test]
-        fn it_should_reject_http_api_localhost_ipv4_with_tls() {
-            let domain = crate::shared::DomainName::new("api.tracker.local").unwrap();
-            let mut config = base_config();
-            config.http_api = HttpApiConfig {
-                bind_address: "127.0.0.1:1212".parse().unwrap(),
-                admin_token: "token".to_string().into(),
-                domain: Some(domain),
-                use_tls_proxy: true,
-            };
-
-            let result = config.validate();
-            assert!(result.is_err());
-
-            if let Err(TrackerConfigError::LocalhostWithTls {
-                service_name,
-                bind_address,
-            }) = result
-            {
-                assert_eq!(service_name, "HTTP API");
-                assert_eq!(
-                    bind_address,
-                    "127.0.0.1:1212".parse::<SocketAddr>().unwrap()
-                );
-            } else {
-                panic!("Expected LocalhostWithTls error");
-            }
-        }
-
-        #[test]
-        fn it_should_reject_http_api_localhost_ipv6_with_tls() {
-            let domain = crate::shared::DomainName::new("api.tracker.local").unwrap();
-            let mut config = base_config();
-            config.http_api = HttpApiConfig {
-                bind_address: "[::1]:1212".parse().unwrap(),
-                admin_token: "token".to_string().into(),
-                domain: Some(domain),
-                use_tls_proxy: true,
-            };
-
-            let result = config.validate();
-            assert!(result.is_err());
-
-            if let Err(TrackerConfigError::LocalhostWithTls {
-                service_name,
-                bind_address,
-            }) = result
-            {
-                assert_eq!(service_name, "HTTP API");
-                assert_eq!(bind_address, "[::1]:1212".parse::<SocketAddr>().unwrap());
-            } else {
-                panic!("Expected LocalhostWithTls error");
-            }
-        }
+        // NOTE: Tests for HTTP API localhost + TLS rejection have been removed because
+        // this validation is now enforced at construction time by HttpApiConfig::new().
+        // See http_api.rs for the corresponding tests.
 
         #[test]
         fn it_should_reject_health_check_api_localhost_with_tls() {
@@ -1226,44 +1152,14 @@ mod tests {
         fn it_should_allow_non_localhost_with_tls() {
             let domain = crate::shared::DomainName::new("api.tracker.local").unwrap();
             let mut config = base_config();
-            config.http_api = HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "token".to_string().into(),
-                domain: Some(domain),
-                use_tls_proxy: true,
-            };
+            config.http_api =
+                test_http_api_config_with_tls("0.0.0.0:1212", "token", Some(domain), true);
 
             assert!(config.validate().is_ok());
         }
 
-        #[test]
-        fn it_should_provide_clear_error_message_for_localhost_with_tls() {
-            let domain = crate::shared::DomainName::new("api.tracker.local").unwrap();
-            let mut config = base_config();
-            config.http_api = HttpApiConfig {
-                bind_address: "127.0.0.1:1212".parse().unwrap(),
-                admin_token: "token".to_string().into(),
-                domain: Some(domain),
-                use_tls_proxy: true,
-            };
-
-            let error = config.validate().unwrap_err();
-            let error_message = error.to_string();
-
-            // Verify brief error message
-            assert!(error_message.contains("Localhost with TLS"));
-            assert!(error_message.contains("HTTP API"));
-            assert!(error_message.contains("127.0.0.1:1212"));
-            assert!(error_message.contains("Tip:"));
-
-            // Verify detailed help
-            let help = error.help();
-            assert!(help.contains("Localhost with TLS - Detailed Troubleshooting"));
-            assert!(help.contains("Why this fails"));
-            assert!(help.contains("Caddy"));
-            assert!(help.contains("Fix (choose one)"));
-            assert!(help.contains("0.0.0.0"));
-            assert!(help.contains("SSH tunnel"));
-        }
+        // NOTE: The test it_should_provide_clear_error_message_for_localhost_with_tls
+        // has been removed because HttpApiConfig::new() now validates this invariant
+        // at construction time. See http_api.rs for error message tests.
     }
 }

@@ -210,12 +210,13 @@ mod tests {
                 domain: None,
                 use_tls_proxy: false,
             }],
-            http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "MyAccessToken".to_string().into(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            http_api: HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "MyAccessToken".to_string().into(),
+                None,
+                false,
+            )
+            .expect("valid config"),
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
                 domain: None,
@@ -245,12 +246,13 @@ mod tests {
             },
             udp_trackers: vec![],
             http_trackers: vec![],
-            http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "Token123".to_string().into(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            http_api: HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "Token123".to_string().into(),
+                None,
+                false,
+            )
+            .expect("valid config"),
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
                 domain: None,
@@ -294,12 +296,13 @@ mod tests {
                 domain: None,
                 use_tls_proxy: false,
             }],
-            http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "Token".to_string().into(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            http_api: HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "Token".to_string().into(),
+                None,
+                false,
+            )
+            .expect("valid config"),
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
                 domain: None,

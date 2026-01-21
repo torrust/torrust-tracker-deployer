@@ -343,7 +343,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             .collect();
 
         // Extract HTTP API port
-        let api_port = tracker_config.http_api.bind_address.port();
+        let api_port = tracker_config.http_api.bind_address().port();
 
         // Check if HTTP API has TLS enabled
         let http_api_has_tls = user_inputs.tracker.http_api_tls_domain().is_some();

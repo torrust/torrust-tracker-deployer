@@ -228,12 +228,13 @@ mod tests {
                 domain: None,
                 use_tls_proxy: false,
             }],
-            http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_token".to_string().into(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            http_api: HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "test_token".to_string().into(),
+                None,
+                false,
+            )
+            .expect("valid config"),
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
                 domain: None,
@@ -285,12 +286,13 @@ mod tests {
                 domain: None,
                 use_tls_proxy: false,
             }],
-            http_api: HttpApiConfig {
-                bind_address: "0.0.0.0:1212".parse().unwrap(),
-                admin_token: "test_token".to_string().into(),
-                domain: None,
-                use_tls_proxy: false,
-            },
+            http_api: HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "test_token".to_string().into(),
+                None,
+                false,
+            )
+            .expect("valid config"),
             health_check_api: HealthCheckApiConfig {
                 bind_address: "127.0.0.1:1313".parse().unwrap(),
                 domain: None,

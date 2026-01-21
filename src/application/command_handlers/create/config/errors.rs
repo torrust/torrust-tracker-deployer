@@ -7,7 +7,7 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
-use crate::domain::tracker::TrackerConfigError;
+use crate::domain::tracker::{HttpApiConfigError, TrackerConfigError};
 use crate::domain::EnvironmentNameError;
 use crate::domain::ProfileNameError;
 use crate::shared::UsernameError;
@@ -110,6 +110,13 @@ pub enum CreateConfigError {
     /// Tracker configuration validation failed
     #[error("Tracker configuration validation failed: {0}")]
     TrackerConfigValidation(#[from] TrackerConfigError),
+
+    /// HTTP API configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `HttpApiConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("HTTP API configuration invalid: {0}")]
+    HttpApiConfigInvalid(#[from] HttpApiConfigError),
 
     /// Invalid admin email format for HTTPS configuration
     #[error("Invalid admin email '{email}': {reason}")]
@@ -484,6 +491,10 @@ impl CreateConfigError {
                  but this is not recommended for clarity.\n\
                  \n\
                  Related: docs/external-issues/tracker/udp-tcp-port-sharing-allowed.md"
+            }
+            Self::HttpApiConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
             }
             Self::InvalidAdminEmail { .. } => {
                 "Invalid admin email format for HTTPS configuration.\n\

@@ -40,15 +40,17 @@ Dynamic port assignment would break this expectation and make the system unpredi
 
 ## Decision
 
-We **explicitly reject port 0** in all tracker bind address configurations. This validation occurs at the **DTO-to-Domain boundary** when converting `TrackerSection` (application layer DTO) to `TrackerConfig` (domain type).
+We **explicitly reject port 0** in all tracker bind address configurations. This validation occurs at the **DTO-to-Domain boundary** when converting application layer DTOs (e.g., `HttpApiSection`) to domain types (e.g., `HttpApiConfig`).
 
 ### Implementation Location
 
-Validation is performed in the conversion methods of each tracker section:
+Validation is performed via `TryFrom` implementations for each tracker section:
 
-- `UdpTrackerSection::to_udp_tracker_config()`
-- `HttpTrackerSection::to_http_tracker_config()`
-- `HttpApiSection::to_http_api_config()`
+- `TryFrom<UdpTrackerSection> for UdpTrackerConfig`
+- `TryFrom<HttpTrackerSection> for HttpTrackerConfig`
+- `TryFrom<HttpApiSection> for HttpApiConfig`
+
+See ADR: [TryFrom for DTO to Domain Conversion](tryfrom-for-dto-to-domain-conversion.md)
 
 ### Error Handling
 

@@ -72,9 +72,7 @@ These principles should guide all development decisions, code reviews, and featu
 1. **CRITICAL - Understanding `envs/` vs `data/` directories** (⚠️ **MOST FREQUENTLY VIOLATED RULE**):
 
    **TWO COMPLETELY DIFFERENT FILE PURPOSES:**
-
    - **`envs/` directory** - User Environment Configurations (USER INPUT):
-
      - Purpose: User-created configuration files for environment creation
      - Format: Environment creation schema (see `envs/environment-schema.json`)
      - Contains: Provider config, SSH credentials, tracker settings, database config
@@ -93,64 +91,62 @@ These principles should guide all development decisions, code reviews, and featu
      - **Rule**: You MUST NEVER create/edit files here - READ ONLY for debugging/verification
 
    **NEVER CONFUSE THESE TWO!** When documenting or testing:
-
    - User creates config in `envs/your-env.json`
    - Application manages state in `data/your-env/environment.json`
    - These are completely different JSON structures with different purposes
 
 2. **Before placing code in DDD layers**: Read [`docs/contributing/ddd-layer-placement.md`](docs/contributing/ddd-layer-placement.md) for comprehensive guidance on which code belongs in which layer (Domain, Application, Infrastructure, Presentation). This guide includes rules, red flags, examples, and a decision flowchart to help you make the right architectural decisions.
 
-3. **Before creating branches**: Read [`docs/contributing/branching.md`](docs/contributing/branching.md) for naming conventions (`{issue-number}-{short-description}`)
+3. **When implementing domain types with invariants**: Read [`docs/contributing/ddd-practices.md`](docs/contributing/ddd-practices.md) for domain patterns including validated constructors, custom deserialization, and error types. Domain objects must be "always valid" - use private fields, validated constructors, and custom `Deserialize` implementations. See the [Validated Deserialization ADR](docs/decisions/validated-deserialization-for-domain-types.md) for the full decision record.
 
-4. **Before committing**: Read [`docs/contributing/commit-process.md`](docs/contributing/commit-process.md) for conventional commits
+4. **Before creating branches**: Read [`docs/contributing/branching.md`](docs/contributing/branching.md) for naming conventions (`{issue-number}-{short-description}`)
 
+5. **Before committing**: Read [`docs/contributing/commit-process.md`](docs/contributing/commit-process.md) for conventional commits
    - **With issue branch**: `{type}: [#{issue}] {description}` (when branch name starts with `{issue-number}-`)
    - **Without issue branch**: `{type}: {description}` (when working on main or branch without issue number prefix)
 
-5. **Before committing**: Always run the pre-commit verification script - all checks must pass before staging files or creating commits, regardless of the tool or method used:
+6. **Before committing**: Always run the pre-commit verification script - all checks must pass before staging files or creating commits, regardless of the tool or method used:
 
    ```bash
    ./scripts/pre-commit.sh
    ```
 
    This applies to **any** method of committing:
-
    - Terminal: `git add`, `git commit`, `git commit -am`, `cd ../ && git add ...`, `git add . && git commit -m "..."`
    - VS Code: Git panel, Source Control view, commit shortcuts
    - IDEs: IntelliJ, CLion, RustRover git integration
    - Git clients: GitHub Desktop, GitKraken, etc.
    - CI/CD: Any automated commits or merges
 
-6. **Before working with Tera templates**: Read [`docs/contributing/templates/tera.md`](docs/contributing/templates/tera.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
+7. **Before working with Tera templates**: Read [`docs/contributing/templates/tera.md`](docs/contributing/templates/tera.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
 
-7. **When adding new Ansible playbooks**: Read [`docs/contributing/templates/tera.md`](docs/contributing/templates/tera.md) for the complete guide. **CRITICAL**: Static playbooks (without `.tera` extension) must be registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs` in the `copy_static_templates` method, otherwise they won't be copied to the build directory and Ansible will fail with "playbook not found" error.
+8. **When adding new Ansible playbooks**: Read [`docs/contributing/templates/tera.md`](docs/contributing/templates/tera.md) for the complete guide. **CRITICAL**: Static playbooks (without `.tera` extension) must be registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs` in the `copy_static_templates` method, otherwise they won't be copied to the build directory and Ansible will fail with "playbook not found" error.
 
-8. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
+9. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
 
-9. **When producing any output to users** (CRITICAL for architecture): Read [`docs/contributing/output-handling.md`](docs/contributing/output-handling.md) for output handling conventions. **NEVER use `println!`, `eprintln!`, `print!`, `eprint!`, or direct access to `std::io::stdout()`/`std::io::stderr()`**. Always use `UserOutput` methods through the execution context. This ensures testability, consistent formatting, proper channel routing (stdout vs stderr), verbosity control, and theme support. Example: `ctx.user_output().lock().borrow_mut().progress("Processing...")` instead of `println!("Processing...")`.
+10. **When producing any output to users** (CRITICAL for architecture): Read [`docs/contributing/output-handling.md`](docs/contributing/output-handling.md) for output handling conventions. **NEVER use `println!`, `eprintln!`, `print!`, `eprint!`, or direct access to `std::io::stdout()`/`std::io::stderr()`**. Always use `UserOutput` methods through the execution context. This ensures testability, consistent formatting, proper channel routing (stdout vs stderr), verbosity control, and theme support. Example: `ctx.user_output().lock().borrow_mut().progress("Processing...")` instead of `println!("Processing...")`.
 
-10. **Understanding expected errors**: Read [`docs/contributing/known-issues.md`](docs/contributing/known-issues.md) for known issues and expected behaviors. Some errors that appear red in E2E test output (like SSH host key warnings) are normal and expected - not actual failures.
+11. **Understanding expected errors**: Read [`docs/contributing/known-issues.md`](docs/contributing/known-issues.md) for known issues and expected behaviors. Some errors that appear red in E2E test output (like SSH host key warnings) are normal and expected - not actual failures.
 
-11. **Before making engineering decisions**: Document significant architectural or design decisions as Architectural Decision Records (ADRs) in `docs/decisions/`. Read [`docs/decisions/README.md`](docs/decisions/README.md) for the ADR template and guidelines. This ensures decisions are properly documented with context, rationale, and consequences for future reference.
+12. **Before making engineering decisions**: Document significant architectural or design decisions as Architectural Decision Records (ADRs) in `docs/decisions/`. Read [`docs/decisions/README.md`](docs/decisions/README.md) for the ADR template and guidelines. This ensures decisions are properly documented with context, rationale, and consequences for future reference.
 
-12. **When organizing code within modules**: Follow the module organization conventions in [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md). Use top-down organization with public items first, high-level abstractions before low-level details, and important responsibilities before secondary concerns like error types.
+13. **When organizing code within modules**: Follow the module organization conventions in [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md). Use top-down organization with public items first, high-level abstractions before low-level details, and important responsibilities before secondary concerns like error types.
 
-13. **When writing Rust imports** (CRITICAL for code style): Follow the import conventions in [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md). Two essential rules:
-
+14. **When writing Rust imports** (CRITICAL for code style): Follow the import conventions in [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md). Two essential rules:
     - **Imports Always First**: Keep all imports at the top of the file, organized in groups (std → external crates → internal crate).
     - **Prefer Imports Over Full Paths**: Always import types and use short names (e.g., `Arc<UserOutput>`) rather than fully-qualified paths. Never use long paths like `std::sync::Arc<crate::presentation::views::UserOutput>` in regular code - only use full paths when disambiguating naming conflicts.
 
-14. **When writing Markdown documentation**: Be aware of GitHub Flavored Markdown's automatic linking behavior. Read [`docs/contributing/github-markdown-pitfalls.md`](docs/contributing/github-markdown-pitfalls.md) for critical patterns to avoid. **NEVER use hash-number patterns for enumeration or step numbering** - this creates unintended links to GitHub issues/PRs. Use ordered lists or alternative formats instead.
+15. **When writing Markdown documentation**: Be aware of GitHub Flavored Markdown's automatic linking behavior. Read [`docs/contributing/github-markdown-pitfalls.md`](docs/contributing/github-markdown-pitfalls.md) for critical patterns to avoid. **NEVER use hash-number patterns for enumeration or step numbering** - this creates unintended links to GitHub issues/PRs. Use ordered lists or alternative formats instead.
 
-15. **When creating new environment variables**: Read [`docs/contributing/environment-variables-naming.md`](docs/contributing/environment-variables-naming.md) for comprehensive guidance on naming conventions (condition-based vs action-based), decision frameworks, and best practices. Also review [`docs/decisions/environment-variable-prefix.md`](docs/decisions/environment-variable-prefix.md) to ensure all project environment variables use the `TORRUST_TD_` prefix for proper namespacing and avoiding conflicts with system or user variables.
+16. **When creating new environment variables**: Read [`docs/contributing/environment-variables-naming.md`](docs/contributing/environment-variables-naming.md) for comprehensive guidance on naming conventions (condition-based vs action-based), decision frameworks, and best practices. Also review [`docs/decisions/environment-variable-prefix.md`](docs/decisions/environment-variable-prefix.md) to ensure all project environment variables use the `TORRUST_TD_` prefix for proper namespacing and avoiding conflicts with system or user variables.
 
-16. **When adding new templates**: Read [`docs/contributing/templates/template-system-architecture.md`](docs/contributing/templates/template-system-architecture.md) to understand the Project Generator pattern. The `templates/` directory contains source templates. Dynamic templates (`.tera`) are automatically processed, but static files must be explicitly registered in their respective `ProjectGenerator` to be copied to the build directory.
+17. **When adding new templates**: Read [`docs/contributing/templates/template-system-architecture.md`](docs/contributing/templates/template-system-architecture.md) to understand the Project Generator pattern. The `templates/` directory contains source templates. Dynamic templates (`.tera`) are automatically processed, but static files must be explicitly registered in their respective `ProjectGenerator` to be copied to the build directory.
 
-17. **When writing unit tests** (CRITICAL for test quality): Read [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) and follow the behavior-driven naming convention. **NEVER use the `test_` prefix** for test function names. Always use the `it_should_{expected_behavior}_when_{condition}` or `it_should_{expected_behavior}_given_{state}` pattern. This ensures tests clearly document the behavior being validated and the conditions under which it occurs. Example: `it_should_return_error_when_username_is_invalid()` instead of `test_invalid_username()`. Test names should follow the three-part structure (What-When-Then) and be descriptive enough that the test's purpose is clear without reading the code.
+18. **When writing unit tests** (CRITICAL for test quality): Read [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) and follow the behavior-driven naming convention. **NEVER use the `test_` prefix** for test function names. Always use the `it_should_{expected_behavior}_when_{condition}` or `it_should_{expected_behavior}_given_{state}` pattern. This ensures tests clearly document the behavior being validated and the conditions under which it occurs. Example: `it_should_return_error_when_username_is_invalid()` instead of `test_invalid_username()`. Test names should follow the three-part structure (What-When-Then) and be descriptive enough that the test's purpose is clear without reading the code.
 
-18. **When handling sensitive data (secrets)** (CRITICAL for security): Read [`docs/contributing/secret-handling.md`](docs/contributing/secret-handling.md) for the complete guide. **NEVER use `String` for sensitive data like API tokens, passwords, private keys, or database credentials**. Always use wrapper types from `src/shared/secrets/`: `ApiToken` for API tokens, `Password` for passwords, and their plain type aliases (`PlainApiToken`/`PlainPassword`) at DTO boundaries. Call `.expose_secret()` only when the actual value is needed. See the [ADR](docs/decisions/secrecy-crate-for-sensitive-data.md) for architectural rationale.
+19. **When handling sensitive data (secrets)** (CRITICAL for security): Read [`docs/contributing/secret-handling.md`](docs/contributing/secret-handling.md) for the complete guide. **NEVER use `String` for sensitive data like API tokens, passwords, private keys, or database credentials**. Always use wrapper types from `src/shared/secrets/`: `ApiToken` for API tokens, `Password` for passwords, and their plain type aliases (`PlainApiToken`/`PlainPassword`) at DTO boundaries. Call `.expose_secret()` only when the actual value is needed. See the [ADR](docs/decisions/secrecy-crate-for-sensitive-data.md) for architectural rationale.
 
-19. **When generating environment configurations** (for AI agents): Reference the Rust types in [`src/application/command_handlers/create/config/`](src/application/command_handlers/create/config/) for accurate constraint information. These types express richer validation rules than the JSON schema alone (e.g., `NonZeroU32`, tagged enums, newtype wrappers). Read the [README](src/application/command_handlers/create/config/README.md) in that folder for the full guide. The JSON schema (`schemas/environment-config.json`) provides basic structure, but the Rust types are authoritative for constraints. See the [ADR](docs/decisions/configuration-dto-layer-placement.md) for why these types are in the application layer.
+20. **When generating environment configurations** (for AI agents): Reference the Rust types in [`src/application/command_handlers/create/config/`](src/application/command_handlers/create/config/) for accurate constraint information. These types express richer validation rules than the JSON schema alone (e.g., `NonZeroU32`, tagged enums, newtype wrappers). Read the [README](src/application/command_handlers/create/config/README.md) in that folder for the full guide. The JSON schema (`schemas/environment-config.json`) provides basic structure, but the Rust types are authoritative for constraints. See the [ADR](docs/decisions/configuration-dto-layer-placement.md) for why these types are in the application layer.
 
 ## 🧪 Build & Test
 

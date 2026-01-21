@@ -367,7 +367,7 @@ impl EnvironmentContext {
         self.user_inputs
             .tracker
             .http_api
-            .admin_token
+            .admin_token()
             .expose_secret()
     }
 
