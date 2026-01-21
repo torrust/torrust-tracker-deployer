@@ -3,7 +3,13 @@
 //! This module provides the `SshCredentialsConfig` type which represents
 //! SSH credentials in the configuration layer (distinct from the adapter layer).
 //! It handles string-based paths and usernames that will be converted to domain types.
+//!
+//! # Conversion Pattern
+//!
+//! Uses `TryFrom` for idiomatic Rust conversion from DTO to domain type.
+//! See ADR: `docs/decisions/tryfrom-for-dto-to-domain-conversion.md`
 
+use std::convert::TryFrom;
 use std::path::PathBuf;
 
 use schemars::JsonSchema;
@@ -88,48 +94,18 @@ impl SshCredentialsConfig {
             port,
         }
     }
+}
 
-    /// Converts configuration to domain SSH credentials
-    ///
-    /// This method validates the configuration and converts string-based
-    /// configuration values to strongly-typed domain objects.
-    ///
-    /// # Validation
-    ///
-    /// - Username must follow Linux username requirements
-    /// - Private key file must exist and be accessible
-    /// - Public key file must exist and be accessible
-    /// - Port must be valid (validated by caller, typically 1-65535)
-    ///
-    /// # Errors
-    ///
-    /// Returns `CreateConfigError` if:
-    /// - Username is invalid (see `Username` validation rules)
-    /// - Private key file does not exist
-    /// - Public key file does not exist
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::SshCredentialsConfig;
-    ///
-    /// let config = SshCredentialsConfig::new(
-    ///     "fixtures/testing_rsa".to_string(),
-    ///     "fixtures/testing_rsa.pub".to_string(),
-    ///     "torrust".to_string(),
-    ///     22,
-    /// );
-    ///
-    /// let credentials = config.to_ssh_credentials()?;
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
-    pub fn to_ssh_credentials(self) -> Result<SshCredentials, CreateConfigError> {
+impl TryFrom<SshCredentialsConfig> for SshCredentials {
+    type Error = CreateConfigError;
+
+    fn try_from(config: SshCredentialsConfig) -> Result<Self, Self::Error> {
         // Convert string username to domain Username type
-        let username = Username::new(&self.username)?;
+        let username = Username::new(&config.username)?;
 
         // Convert string paths to PathBuf
-        let private_key_path = PathBuf::from(&self.private_key_path);
-        let public_key_path = PathBuf::from(&self.public_key_path);
+        let private_key_path = PathBuf::from(&config.private_key_path);
+        let public_key_path = PathBuf::from(&config.public_key_path);
 
         // Validate paths are absolute
         if !private_key_path.is_absolute() {
@@ -258,7 +234,7 @@ mod tests {
             22,
         );
 
-        let result = config.to_ssh_credentials();
+        let result: Result<SshCredentials, _> = config.try_into();
         assert!(result.is_ok(), "Expected successful conversion");
 
         let credentials = result.unwrap();
@@ -288,7 +264,7 @@ mod tests {
             22,
         );
 
-        let result = config.to_ssh_credentials();
+        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -313,7 +289,7 @@ mod tests {
             22,
         );
 
-        let result = config.to_ssh_credentials();
+        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -338,7 +314,7 @@ mod tests {
             22,
         );
 
-        let result = config.to_ssh_credentials();
+        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -364,7 +340,7 @@ mod tests {
             22,
         );
 
-        let result = config.to_ssh_credentials();
+        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -385,7 +361,7 @@ mod tests {
             22,
         );
 
-        let result = config.to_ssh_credentials();
+        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -406,7 +382,7 @@ mod tests {
             22,
         );
 
-        let result = config.to_ssh_credentials();
+        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
         assert!(result.is_err());
 
         // Should fail on private key first (checked first in validation)
@@ -444,7 +420,7 @@ mod tests {
             22,
         );
 
-        let result = config.to_ssh_credentials();
+        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
         assert!(
             result.is_ok(),
             "Expected successful conversion with absolute paths"
@@ -471,7 +447,7 @@ mod tests {
             22,
         );
 
-        let result = config.to_ssh_credentials();
+        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
         assert!(result.is_err());
 
         let error = result.unwrap_err();

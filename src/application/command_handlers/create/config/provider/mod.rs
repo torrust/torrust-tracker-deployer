@@ -4,8 +4,8 @@
 //! These types are used for deserializing external configuration (JSON files) and
 //! contain **raw primitives** (e.g., `String`).
 //!
-//! After deserialization, use `to_provider_config()` to convert to domain types
-//! with validation.
+//! After deserialization, use `try_into()` or `ProviderConfig::try_from()` to convert
+//! to domain types with validation.
 //!
 //! # Module Structure
 //!
@@ -18,19 +18,26 @@
 //! - **These config types** (this module): Raw primitives for JSON parsing
 //! - **Domain types** (`domain::provider`): Validated types for business logic
 //!
+//! # Conversion Pattern
+//!
+//! Uses `TryFrom` for idiomatic Rust conversion from DTO to domain type.
+//! See ADR: `docs/decisions/tryfrom-for-dto-to-domain-conversion.md`
+//!
 //! # Examples
 //!
 //! ```rust
 //! use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
 //!     ProviderSection, LxdProviderSection
 //! };
+//! use torrust_tracker_deployer_lib::domain::provider::ProviderConfig;
+//! use std::convert::TryInto;
 //!
 //! // Deserialize from JSON
 //! let json = r#"{"provider": "lxd", "profile_name": "torrust-profile"}"#;
 //! let section: ProviderSection = serde_json::from_str(json).unwrap();
 //!
 //! // Convert to domain type with validation
-//! let config = section.to_provider_config().unwrap();
+//! let config: ProviderConfig = section.try_into().unwrap();
 //! assert_eq!(config.provider_name(), "lxd");
 //! ```
 
@@ -39,6 +46,8 @@ mod lxd;
 
 pub use hetzner::HetznerProviderSection;
 pub use lxd::LxdProviderSection;
+
+use std::convert::TryFrom;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -57,7 +66,7 @@ use crate::shared::ApiToken;
 ///
 /// # Conversion
 ///
-/// Use `to_provider_config()` to validate and convert to domain types.
+/// Use `try_into()` or `ProviderConfig::try_from()` to validate and convert to domain types.
 ///
 /// # Examples
 ///
@@ -65,12 +74,14 @@ use crate::shared::ApiToken;
 /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
 ///     ProviderSection, LxdProviderSection
 /// };
+/// use torrust_tracker_deployer_lib::domain::provider::ProviderConfig;
+/// use std::convert::TryInto;
 ///
 /// let section = ProviderSection::Lxd(LxdProviderSection {
 ///     profile_name: "torrust-profile-dev".to_string(),
 /// });
 ///
-/// let config = section.to_provider_config().unwrap();
+/// let config: ProviderConfig = section.try_into().unwrap();
 /// assert_eq!(config.provider_name(), "lxd");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -108,46 +119,20 @@ impl ProviderSection {
             Self::Hetzner(_) => Provider::Hetzner,
         }
     }
+}
 
-    /// Converts the config to a validated domain `ProviderConfig`.
-    ///
-    /// This method validates raw string fields and converts them to
-    /// domain types with proper validation.
-    ///
-    /// # Errors
-    ///
-    /// Returns `CreateConfigError` if validation fails:
-    /// - `InvalidProfileName` - if the LXD profile name is invalid
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
-    ///     ProviderSection, LxdProviderSection
-    /// };
-    ///
-    /// // Valid conversion
-    /// let section = ProviderSection::Lxd(LxdProviderSection {
-    ///     profile_name: "torrust-profile-dev".to_string(),
-    /// });
-    /// let config = section.to_provider_config().unwrap();
-    /// assert_eq!(config.provider_name(), "lxd");
-    ///
-    /// // Invalid profile name causes error
-    /// let invalid = ProviderSection::Lxd(LxdProviderSection {
-    ///     profile_name: "".to_string(), // Empty is invalid
-    /// });
-    /// assert!(invalid.to_provider_config().is_err());
-    /// ```
-    pub fn to_provider_config(self) -> Result<ProviderConfig, CreateConfigError> {
-        match self {
-            Self::Lxd(lxd) => {
+impl TryFrom<ProviderSection> for ProviderConfig {
+    type Error = CreateConfigError;
+
+    fn try_from(section: ProviderSection) -> Result<Self, Self::Error> {
+        match section {
+            ProviderSection::Lxd(lxd) => {
                 let profile_name = ProfileName::new(lxd.profile_name)?;
-                Ok(ProviderConfig::Lxd(LxdConfig { profile_name }))
+                Ok(Self::Lxd(LxdConfig { profile_name }))
             }
-            Self::Hetzner(hetzner) => {
+            ProviderSection::Hetzner(hetzner) => {
                 // Note: Future improvement could add validation for these fields
-                Ok(ProviderConfig::Hetzner(HetznerConfig {
+                Ok(Self::Hetzner(HetznerConfig {
                     api_token: ApiToken::from(hetzner.api_token),
                     server_type: hetzner.server_type,
                     location: hetzner.location,
@@ -248,7 +233,7 @@ mod tests {
     #[test]
     fn it_should_convert_lxd_section_to_domain_config() {
         let section = create_lxd_section();
-        let config = section.to_provider_config().unwrap();
+        let config: ProviderConfig = section.try_into().unwrap();
 
         assert_eq!(config.provider(), Provider::Lxd);
         assert_eq!(config.provider_name(), "lxd");
@@ -261,7 +246,7 @@ mod tests {
     #[test]
     fn it_should_convert_hetzner_section_to_domain_config() {
         let section = create_hetzner_section();
-        let config = section.to_provider_config().unwrap();
+        let config: ProviderConfig = section.try_into().unwrap();
 
         assert_eq!(config.provider(), Provider::Hetzner);
         assert_eq!(config.provider_name(), "hetzner");
@@ -278,7 +263,7 @@ mod tests {
         let section = ProviderSection::Lxd(LxdProviderSection {
             profile_name: String::new(), // Empty is invalid
         });
-        let result = section.to_provider_config();
+        let result: Result<ProviderConfig, _> = section.try_into();
         assert!(result.is_err());
     }
 
@@ -287,7 +272,7 @@ mod tests {
         let section = ProviderSection::Lxd(LxdProviderSection {
             profile_name: "-invalid".to_string(),
         });
-        let result = section.to_provider_config();
+        let result: Result<ProviderConfig, _> = section.try_into();
         assert!(result.is_err());
     }
 
@@ -296,7 +281,7 @@ mod tests {
         let section = ProviderSection::Lxd(LxdProviderSection {
             profile_name: "invalid-".to_string(),
         });
-        let result = section.to_provider_config();
+        let result: Result<ProviderConfig, _> = section.try_into();
         assert!(result.is_err());
     }
 

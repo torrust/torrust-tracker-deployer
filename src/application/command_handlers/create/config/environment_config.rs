@@ -4,6 +4,8 @@
 //! all configuration needed to create a deployment environment. It handles
 //! deserialization from configuration sources and conversion to domain types.
 
+use std::convert::TryInto;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -327,27 +329,21 @@ impl EnvironmentCreationConfig {
         };
 
         // Convert ProviderSection (DTO) to domain ProviderConfig (validates profile_name, etc.)
-        let provider_config = self.provider.to_provider_config()?;
+        let provider_config = self.provider.try_into()?;
 
         // Get SSH port before consuming ssh_credentials
         let ssh_port = self.ssh_credentials.port;
 
         // Convert SSH credentials config to domain type
-        let ssh_credentials = self.ssh_credentials.to_ssh_credentials()?;
+        let ssh_credentials = self.ssh_credentials.try_into()?;
 
         // Convert TrackerSection (DTO) to domain TrackerConfig (validates bind addresses, etc.)
-        let tracker_config = self.tracker.to_tracker_config()?;
+        let tracker_config = self.tracker.try_into()?;
 
         // Convert Prometheus and Grafana sections to domain types
-        let prometheus_config = self
-            .prometheus
-            .map(|section| section.to_prometheus_config())
-            .transpose()?;
+        let prometheus_config = self.prometheus.map(TryInto::try_into).transpose()?;
 
-        let grafana_config = self
-            .grafana
-            .map(|section| section.to_grafana_config())
-            .transpose()?;
+        let grafana_config = self.grafana.map(TryInto::try_into).transpose()?;
 
         // Note: Grafana-Prometheus dependency is now validated at domain level
         // in UserInputs::with_tracker() when the environment is created
