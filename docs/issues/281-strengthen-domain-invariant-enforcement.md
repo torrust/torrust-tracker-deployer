@@ -2,7 +2,7 @@
 
 **Issue**: [#281](https://github.com/torrust/torrust-tracker-deployer/issues/281)
 **Type**: Refactor
-**Status**: In Progress
+**Status**: ✅ Completed
 
 ## Overview
 
@@ -34,27 +34,28 @@ See: [`docs/refactors/plans/strengthen-domain-invariant-enforcement.md`](../refa
 - [x] `TryFrom<HttpApiSection> for HttpApiConfig`
 - [x] Documentation and ADRs
 
-### Phase 1: Tracker Configuration Types
+### Phase 1: Tracker Configuration Types ✅
 
-- [ ] `UdpTrackerConfig` - validated constructor, private fields, getters
-- [ ] `HttpTrackerConfig` - validated constructor, private fields, getters
-- [ ] `HealthCheckApiConfig` - validated constructor, private fields, getters
-- [ ] `TryFrom` implementations for each DTO section
+- [x] `UdpTrackerConfig` - validated constructor, private fields, getters
+- [x] `HttpTrackerConfig` - validated constructor, private fields, getters
+- [x] `HealthCheckApiConfig` - validated constructor, private fields, getters
+- [x] `TryFrom` implementations for each DTO section
 
-### Phase 2: Cross-Cutting Invariants
+### Phase 2: Cross-Cutting Invariants ✅
 
-- [ ] `TrackerCoreConfig` - database configuration validation
-- [ ] `TrackerConfig` - validates at construction (socket conflicts)
-- [ ] `UserInputs` - validated constructor (Grafana requires Prometheus)
+- [x] `TrackerCoreConfig` - database configuration validation
+- [x] `TrackerConfig` - validates at construction (socket conflicts)
+- [x] `UserInputs` - validated constructor (Grafana requires Prometheus)
+- [x] `HttpsConfig` - validated constructor (email validation)
 
 ## Acceptance Criteria
 
-- [ ] All domain configuration types use validated constructors
-- [ ] All fields are private with getter methods
-- [ ] All types implement custom `Deserialize` with validation
-- [ ] All DTO→Domain conversions use `TryFrom` trait
-- [ ] Validation logic moved from application to domain layer
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] All domain configuration types use validated constructors
+- [x] All fields are private with getter methods
+- [x] All types implement custom `Deserialize` with validation
+- [x] All DTO→Domain conversions use `TryFrom` trait
+- [x] Validation logic moved from application to domain layer
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
 
 ## Contributing Guide
 
