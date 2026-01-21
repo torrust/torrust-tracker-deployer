@@ -53,7 +53,7 @@
 //! ```no_run
 //! use torrust_tracker_deployer_lib::application::command_handlers::create::config::{
 //!     EnvironmentCreationConfig, EnvironmentSection, SshCredentialsConfig,
-//!     ProviderSection, LxdProviderSection
+//!     ProviderSection, LxdProviderSection, ValidatedEnvironmentParams
 //! };
 //! use torrust_tracker_deployer_lib::domain::Environment;
 //! use chrono::{TimeZone, Utc};
@@ -98,12 +98,18 @@
 //!
 //! let config: EnvironmentCreationConfig = serde_json::from_str(json)?;
 //!
-//! // Convert to domain parameters
-//! let (name, instance_name, provider_config, credentials, port, tracker, _prometheus, _grafana, _https) = config.to_environment_params()?;
+//! // Convert to validated domain parameters using TryInto
+//! let params: ValidatedEnvironmentParams = config.try_into()?;
 //!
-//! // Create domain entity - Environment::new() will use the provider_config
+//! // Create domain entity using named fields from params
 //! let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
-//! let environment = Environment::new(name, provider_config, credentials, port, created_at);
+//! let environment = Environment::new(
+//!     params.environment_name,
+//!     params.provider_config,
+//!     params.ssh_credentials,
+//!     params.ssh_port,
+//!     created_at
+//! );
 //!
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
@@ -138,6 +144,7 @@ pub mod prometheus;
 pub mod provider;
 pub mod ssh_credentials_config;
 pub mod tracker;
+pub mod validated_params;
 
 // Re-export commonly used types for convenience
 pub use environment_config::{EnvironmentCreationConfig, EnvironmentSection};
@@ -147,3 +154,4 @@ pub use https::HttpsSection;
 pub use prometheus::PrometheusSection;
 pub use provider::{HetznerProviderSection, LxdProviderSection, ProviderSection};
 pub use ssh_credentials_config::SshCredentialsConfig;
+pub use validated_params::ValidatedEnvironmentParams;

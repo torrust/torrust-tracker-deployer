@@ -4,10 +4,12 @@
 //! creation business logic. It follows the Command Pattern with dependency
 //! injection and is delivery-agnostic.
 
+use std::convert::TryInto;
 use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
+use crate::application::command_handlers::create::config::ValidatedEnvironmentParams;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Created, Environment};
 use crate::shared::Clock;
@@ -215,39 +217,32 @@ impl CreateCommandHandler {
         config: EnvironmentCreationConfig,
         working_dir: &std::path::Path,
     ) -> Result<Environment<Created>, CreateCommandHandlerError> {
-        let (
-            environment_name,
-            _instance_name,
-            provider_config,
-            ssh_credentials,
-            ssh_port,
-            tracker_config,
-            prometheus_config,
-            grafana_config,
-            https_config,
-        ) = config
-            .to_environment_params()
+        // Convert DTO to validated domain parameters
+        let params: ValidatedEnvironmentParams = config
+            .try_into()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
 
+        // Check for duplicate environment
         if self
             .environment_repository
-            .exists(&environment_name)
+            .exists(&params.environment_name)
             .map_err(CreateCommandHandlerError::RepositoryError)?
         {
             return Err(CreateCommandHandlerError::EnvironmentAlreadyExists {
-                name: environment_name.as_str().to_string(),
+                name: params.environment_name.as_str().to_string(),
             });
         }
 
+        // Create environment aggregate from validated params
         let environment = Environment::with_working_dir_and_tracker(
-            environment_name,
-            provider_config,
-            ssh_credentials,
-            ssh_port,
-            tracker_config,
-            prometheus_config,
-            grafana_config,
-            https_config,
+            params.environment_name,
+            params.provider_config,
+            params.ssh_credentials,
+            params.ssh_port,
+            params.tracker_config,
+            params.prometheus_config,
+            params.grafana_config,
+            params.https_config,
             working_dir,
             self.clock.now(),
         )
