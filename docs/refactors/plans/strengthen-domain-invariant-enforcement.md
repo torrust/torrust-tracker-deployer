@@ -32,15 +32,15 @@ This refactoring plan addresses DDD violations where domain types fail to enforc
 **Total Active Proposals**: 6
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 4
+**Completed**: 5
 **In Progress**: 0
-**Not Started**: 2
+**Not Started**: 1
 
 ### Phase Summary
 
 - **Phase 0 - Foundation (High Impact, Low Effort)**: ✅ 2/2 completed (100%)
 - **Phase 1 - Tracker Config Hardening (High Impact, Medium Effort)**: ✅ 2/2 completed (100%)
-- **Phase 2 - Aggregate Invariants (Medium Impact, Low Effort)**: ⏳ 0/2 completed (0%)
+- **Phase 2 - Aggregate Invariants (Medium Impact, Low Effort)**: ⏳ 1/2 completed (50%)
 
 ### Discarded Proposals
 
@@ -771,7 +771,7 @@ Move cross-cutting validation to domain aggregates.
 
 ### Proposal #4: Add Validated Constructor to UserInputs
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢 Medium
 **Effort**: 🔵 Low
 **Priority**: P2
@@ -957,17 +957,52 @@ impl EnvironmentContext {
 
 #### Implementation Checklist
 
-- [ ] Create `UserInputsError` enum with `help()` method in `user_inputs.rs`
-- [ ] Change `UserInputs::new()` to return `Result<Self, UserInputsError>`
-- [ ] Add cross-service validation to `UserInputs::new()`
-- [ ] Update `EnvironmentContext::new()` and `with_working_dir_and_tracker()` to propagate errors
-- [ ] Update `Environment::new()` and `with_working_dir_and_tracker()` to return `Result`
-- [ ] Add `From<UserInputsError>` impl for `CreateConfigError` in application layer
-- [ ] Remove duplicate validation from `EnvironmentCreationConfig::to_environment_params()`
-- [ ] Update all call sites that create `UserInputs` directly
-- [ ] Update tests
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Create `UserInputsError` enum with `help()` method in `user_inputs.rs`
+- [x] Change `UserInputs::new()` to return `Result<Self, UserInputsError>`
+- [x] Add cross-service validation to `UserInputs::with_tracker()`
+- [x] Update `EnvironmentContext::with_working_dir_and_tracker()` to propagate errors
+- [x] Update `Environment::with_working_dir_and_tracker()` to return `Result`
+- [x] Add `From<UserInputsError>` impl for `CreateConfigError` in application layer
+- [x] Remove duplicate validation from `EnvironmentCreationConfig::to_environment_params()`
+- [x] Update all call sites that create `UserInputs` directly
+- [x] Update tests
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
+
+#### Completion Notes
+
+**Completed in commit:** `refactor: [#281] UserInputs validated constructor (Proposal #4)`
+
+**Summary of changes:**
+
+1. **Created `UserInputsError` enum** with 3 variants:
+   - `GrafanaRequiresPrometheus` - Grafana configured without Prometheus
+   - `HttpsSectionWithoutTlsServices` - HTTPS section exists but no service uses TLS
+   - `TlsServicesWithoutHttpsSection` - Service has TLS but no HTTPS section
+
+2. **Made `UserInputs` fields private** and added getter methods:
+   - `name()`, `instance_name()`, `ssh_credentials()`, `ssh_port()`, `tracker()`, `prometheus()`, `grafana()`, `https()`
+
+3. **Added validated constructors**:
+   - `UserInputs::new()` returns `Result<Self, UserInputsError>` (uses defaults that always pass)
+   - `UserInputs::with_tracker()` validates cross-service invariants
+
+4. **Updated `EnvironmentContext`**:
+   - `new()` uses `.expect()` since defaults always pass validation
+   - `with_working_dir_and_tracker()` returns `Result<Self, UserInputsError>`
+
+5. **Added `TrackerConfig::has_any_tls_configured()`** method to check TLS status
+
+6. **Removed duplicate validation from app layer**:
+   - Removed `GrafanaRequiresPrometheus` check from `to_environment_params()`
+   - Simplified `validate_https_config()` to only check HTTPS section details (admin email)
+   - Removed unused `TlsWithoutHttpsSection` and `HttpsSectionWithoutTls` error variants
+
+7. **Updated all field access patterns** to use getter methods across:
+   - `ansible_template_service.rs`
+   - `release/handler.rs`
+   - `caddy_templates.rs`, `docker_compose_templates.rs`, `grafana_templates.rs`, etc.
+   - `environment/context.rs`, `environment/state/mod.rs`
 
 #### Migration Notes
 

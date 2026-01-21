@@ -94,7 +94,7 @@ impl<S> RenderGrafanaTemplatesStep<S> {
     )]
     pub fn execute(&self) -> Result<Option<PathBuf>, GrafanaProjectGeneratorError> {
         // Check if Grafana is configured
-        if self.environment.context().user_inputs.grafana.is_none() {
+        if self.environment.context().user_inputs.grafana().is_none() {
             info!(
                 step = "render_grafana_templates",
                 status = "skipped",
@@ -105,7 +105,7 @@ impl<S> RenderGrafanaTemplatesStep<S> {
         }
 
         // Check if Prometheus is configured (required for datasource)
-        let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus else {
+        let Some(prometheus_config) = self.environment.context().user_inputs.prometheus() else {
             info!(
                 step = "render_grafana_templates",
                 status = "skipped",

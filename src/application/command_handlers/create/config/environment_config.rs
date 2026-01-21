@@ -348,10 +348,8 @@ impl EnvironmentCreationConfig {
             .map(|section| section.to_grafana_config())
             .transpose()?;
 
-        // Validate Grafana-Prometheus dependency
-        if grafana_config.is_some() && prometheus_config.is_none() {
-            return Err(CreateConfigError::GrafanaRequiresPrometheus);
-        }
+        // Note: Grafana-Prometheus dependency is now validated at domain level
+        // in UserInputs::with_tracker() when the environment is created
 
         // Convert HTTPS section to domain type (already validated above)
         let https_config = self
@@ -418,31 +416,23 @@ impl EnvironmentCreationConfig {
         false
     }
 
-    /// Validates HTTPS configuration consistency
+    /// Validates HTTPS section configuration details
     ///
-    /// Validates that:
-    /// - If any service has TLS configured, the HTTPS section must be present
-    /// - If HTTPS section is present, at least one service must have TLS configured
-    /// - If HTTPS section is present, the admin email must be valid
+    /// Note: Cross-service validation (TLS/HTTPS section consistency) is now
+    /// enforced by the domain layer in `UserInputs`. This method only validates
+    /// the HTTPS section's internal details (like admin email format).
     ///
     /// # Errors
     ///
-    /// Returns `CreateConfigError::TlsWithoutHttpsSection` if a service has TLS but no HTTPS section.
-    /// Returns `CreateConfigError::HttpsSectionWithoutTls` if HTTPS section exists but no service has TLS.
     /// Returns `CreateConfigError::InvalidAdminEmail` if the admin email format is invalid.
     pub fn validate_https_config(&self) -> Result<(), CreateConfigError> {
-        let has_tls = self.has_any_tls_configured();
-
-        match (&self.https, has_tls) {
-            // TLS on services but no HTTPS section - error
-            (None, true) => Err(CreateConfigError::TlsWithoutHttpsSection),
-            // HTTPS section but no TLS on any service - error
-            (Some(_), false) => Err(CreateConfigError::HttpsSectionWithoutTls),
-            // HTTPS section with TLS on services - validate the section
-            (Some(https_section), true) => https_section.validate(),
-            // No HTTPS section and no TLS - valid (HTTP-only setup)
-            (None, false) => Ok(()),
+        // Cross-service validation (HTTPS section + TLS consistency) is now
+        // enforced by UserInputs in the domain layer. We only validate the
+        // HTTPS section's internal details here.
+        if let Some(https_section) = &self.https {
+            https_section.validate()?;
         }
+        Ok(())
     }
 
     /// Creates a template instance with placeholder values for a specific provider
@@ -1446,7 +1436,7 @@ mod tests {
     }
 
     #[test]
-    fn it_should_pass_validation_when_no_https_and_no_tls() {
+    fn it_should_pass_validation_when_no_https_section() {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
@@ -1465,71 +1455,23 @@ mod tests {
             None,
         );
 
+        // validate_https_config only checks HTTPS section internal details (admin email)
+        // Cross-service TLS/HTTPS validation is now in domain layer (UserInputs)
         assert!(config.validate_https_config().is_ok());
     }
 
-    #[test]
-    fn it_should_fail_validation_when_tls_without_https_section() {
-        use crate::application::command_handlers::create::config::tracker::{
-            DatabaseSection, HealthCheckApiSection, HttpApiSection, HttpTrackerSection,
-            TrackerCoreSection, TrackerSection, UdpTrackerSection,
-        };
-
-        let tracker_section = TrackerSection {
-            core: TrackerCoreSection {
-                database: DatabaseSection::Sqlite {
-                    database_name: "tracker.db".to_string(),
-                },
-                private: false,
-            },
-            udp_trackers: vec![UdpTrackerSection {
-                bind_address: "0.0.0.0:6969".to_string(),
-                domain: None,
-            }],
-            http_trackers: vec![HttpTrackerSection {
-                bind_address: "0.0.0.0:7070".to_string(),
-                domain: Some("tracker.example.com".to_string()),
-                use_tls_proxy: Some(true),
-            }],
-            http_api: HttpApiSection {
-                bind_address: "0.0.0.0:1212".to_string(),
-                admin_token: "MyAccessToken".to_string(),
-                domain: None,
-                use_tls_proxy: None,
-            },
-            health_check_api: HealthCheckApiSection::default(),
-        };
-
-        let config = EnvironmentCreationConfig::new(
-            EnvironmentSection {
-                name: "dev".to_string(),
-                instance_name: None,
-            },
-            SshCredentialsConfig::new(
-                "fixtures/testing_rsa".to_string(),
-                "fixtures/testing_rsa.pub".to_string(),
-                "torrust".to_string(),
-                22,
-            ),
-            default_lxd_provider("torrust-profile-dev"),
-            tracker_section,
-            None,
-            None,
-            None, // No HTTPS section
-        );
-
-        let result = config.validate_https_config();
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            CreateConfigError::TlsWithoutHttpsSection
-        ));
-    }
+    // Note: Tests for TLS/HTTPS cross-service validation have been moved to domain layer.
+    // See UserInputs::with_tracker() tests in src/domain/environment/user_inputs.rs
+    // - it_should_reject_tls_services_without_https_section
+    // - it_should_reject_https_section_without_tls_services
 
     #[test]
-    fn it_should_fail_validation_when_https_section_without_any_tls() {
+    fn it_should_pass_validation_when_https_section_has_valid_email() {
         use crate::application::command_handlers::create::config::https::HttpsSection;
 
+        // Note: validate_https_config only validates HTTPS section internal details
+        // (like admin email format). Cross-service validation (TLS/HTTPS consistency)
+        // is now enforced by UserInputs in the domain layer.
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
@@ -1542,7 +1484,7 @@ mod tests {
                 22,
             ),
             default_lxd_provider("torrust-profile-dev"),
-            TrackerSection::default(), // No TLS on any service
+            TrackerSection::default(),
             None,
             None,
             Some(HttpsSection {
@@ -1551,12 +1493,9 @@ mod tests {
             }),
         );
 
-        let result = config.validate_https_config();
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            CreateConfigError::HttpsSectionWithoutTls
-        ));
+        // HTTPS section with valid email should pass this validation
+        // (cross-service TLS check is done at domain layer)
+        assert!(config.validate_https_config().is_ok());
     }
 
     #[test]

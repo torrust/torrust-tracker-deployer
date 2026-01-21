@@ -174,14 +174,10 @@ pub enum CreateConfigError {
         reason: String,
     },
 
-    /// TLS configured for services but HTTPS section missing
-    #[error("TLS configured for services but 'https' section is missing")]
-    TlsWithoutHttpsSection,
-
-    /// HTTPS section provided but no services have TLS configured
-    #[error("HTTPS section provided but no services have TLS configured")]
-    HttpsSectionWithoutTls,
-
+    // Note: TLS/HTTPS cross-service validation errors (TlsWithoutHttpsSection, HttpsSectionWithoutTls)
+    // have been moved to domain layer. See UserInputsError variants:
+    // - TlsServicesWithoutHttpsSection
+    // - HttpsSectionWithoutTlsServices
     /// TLS proxy enabled but domain not specified
     #[error("TLS proxy enabled for {service_type} '{bind_address}' but domain is missing")]
     TlsProxyWithoutDomain {
@@ -190,6 +186,13 @@ pub enum CreateConfigError {
         /// The bind address of the service
         bind_address: String,
     },
+
+    /// Cross-service invariant validation failed
+    ///
+    /// This error wraps domain-level cross-service validation errors from `UserInputs`,
+    /// such as Grafana requiring Prometheus or HTTPS/TLS configuration mismatches.
+    #[error("Cross-service configuration validation failed: {0}")]
+    CrossServiceValidation(#[from] crate::domain::environment::UserInputsError),
 }
 
 impl CreateConfigError {
@@ -612,63 +615,9 @@ impl CreateConfigError {
                  \n\
                  Note: The domain must point to your server's IP before certificate acquisition."
             }
-            Self::TlsWithoutHttpsSection => {
-                "TLS configured for services but 'https' section is missing.\n\
-                 \n\
-                 You have configured TLS for one or more services but haven't provided\n\
-                 the required HTTPS configuration section with admin_email.\n\
-                 \n\
-                 The admin_email is required because:\n\
-                 - Let's Encrypt requires an email for certificate management\n\
-                 - You'll receive expiration warnings and renewal failure notifications\n\
-                 \n\
-                 Fix:\n\
-                 Add an 'https' section to your environment configuration:\n\
-                 \n\
-                 \"https\": {\n\
-                   \"admin_email\": \"admin@yourdomain.com\",\n\
-                   \"use_staging\": false  // optional, defaults to false\n\
-                 }\n\
-                 \n\
-                 Note: Set use_staging to true for testing (avoids rate limits, but\n\
-                 certificates will show browser warnings)."
-            }
-            Self::HttpsSectionWithoutTls => {
-                "HTTPS section provided but no services have TLS configured.\n\
-                 \n\
-                 You have provided an 'https' section with admin_email but no services\n\
-                 have TLS enabled. This is likely a configuration error.\n\
-                 \n\
-                 To enable HTTPS for a service, add a 'tls' section to it:\n\
-                 \n\
-                 For Tracker API:\n\
-                 \"http_api\": {\n\
-                   \"bind_address\": \"0.0.0.0:1212\",\n\
-                   \"admin_token\": \"MyAccessToken\",\n\
-                   \"tls\": {\n\
-                     \"domain\": \"api.example.com\"\n\
-                   }\n\
-                 }\n\
-                 \n\
-                 For HTTP Tracker:\n\
-                 \"http_trackers\": [{\n\
-                   \"bind_address\": \"0.0.0.0:7070\",\n\
-                   \"tls\": {\n\
-                     \"domain\": \"tracker.example.com\"\n\
-                   }\n\
-                 }]\n\
-                 \n\
-                 For Grafana:\n\
-                 \"grafana\": {\n\
-                   \"admin_user\": \"admin\",\n\
-                   \"admin_password\": \"admin\",\n\
-                   \"tls\": {\n\
-                     \"domain\": \"grafana.example.com\"\n\
-                   }\n\
-                 }\n\
-                 \n\
-                 Alternatively, remove the 'https' section entirely if you don't want HTTPS."
-            }
+            // Note: TLS/HTTPS cross-service validation errors now use UserInputsError
+            // variants (TlsServicesWithoutHttpsSection, HttpsSectionWithoutTlsServices)
+            // which are wrapped via CrossServiceValidation variant below.
             Self::TlsProxyWithoutDomain { .. } => {
                 "TLS proxy enabled but domain is missing.\n\
                  \n\
@@ -692,6 +641,7 @@ impl CreateConfigError {
                  Alternatively, if you don't want HTTPS for this service,\n\
                  remove or set use_tls_proxy to false."
             }
+            Self::CrossServiceValidation(e) => e.help(),
         }
     }
 }

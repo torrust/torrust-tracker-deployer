@@ -250,7 +250,8 @@ impl CreateCommandHandler {
             https_config,
             working_dir,
             self.clock.now(),
-        );
+        )
+        .map_err(|e| CreateCommandHandlerError::InvalidConfiguration(e.into()))?;
 
         self.environment_repository
             .save(&environment.clone().into_any())

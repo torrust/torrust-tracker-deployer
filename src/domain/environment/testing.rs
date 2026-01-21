@@ -145,24 +145,27 @@ impl EnvironmentTestBuilder {
             ssh_username,
         );
 
-        let instance_name =
-            InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
         let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
         let provider_config = ProviderConfig::Lxd(LxdConfig { profile_name });
 
+        let user_inputs = UserInputs::with_tracker(
+            &env_name,
+            provider_config,
+            ssh_credentials,
+            22,
+            TrackerConfig::default(),
+            self.prometheus_config.clone(),
+            // Grafana is only enabled when Prometheus is enabled (cross-service invariant)
+            self.prometheus_config
+                .as_ref()
+                .map(|_| GrafanaConfig::default()),
+            None,
+        )
+        .expect("Test UserInputs should always be valid with defaults");
+
         let context = EnvironmentContext {
             created_at: test_timestamp(),
-            user_inputs: UserInputs {
-                name: env_name,
-                instance_name,
-                provider_config,
-                ssh_credentials,
-                ssh_port: 22,
-                tracker: TrackerConfig::default(),
-                prometheus: self.prometheus_config,
-                grafana: Some(GrafanaConfig::default()),
-                https: None,
-            },
+            user_inputs,
             internal_config: InternalConfig {
                 data_dir: data_dir.clone(),
                 build_dir: build_dir.clone(),

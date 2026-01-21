@@ -447,6 +447,25 @@ impl TrackerConfig {
             .iter()
             .any(http::HttpTrackerConfig::use_tls_proxy)
     }
+
+    /// Returns true if any service has TLS proxy configured
+    ///
+    /// Checks if at least one of the following services has TLS enabled:
+    /// - HTTP API (`use_tls_proxy: true`)
+    /// - Any HTTP tracker (`use_tls_proxy: true`)
+    /// - Health Check API (`use_tls_proxy: true`)
+    ///
+    /// This is used for cross-service validation to ensure that when the HTTPS
+    /// section is defined, at least one service actually uses TLS.
+    #[must_use]
+    pub fn has_any_tls_configured(&self) -> bool {
+        self.http_api.use_tls_proxy()
+            || self
+                .http_trackers
+                .iter()
+                .any(http::HttpTrackerConfig::use_tls_proxy)
+            || self.health_check_api.use_tls_proxy()
+    }
 }
 
 /// Trait for types that have a bind address

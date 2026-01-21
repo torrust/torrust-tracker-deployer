@@ -125,7 +125,7 @@ pub use state::{
     Destroyed, Destroying, ProvisionFailed, Provisioned, Provisioning, ReleaseFailed, Released,
     Releasing, RunFailed, Running,
 };
-pub use user_inputs::UserInputs;
+pub use user_inputs::{UserInputs, UserInputsError};
 
 // Re-export tracker types for convenience
 pub use crate::domain::tracker::{
@@ -301,7 +301,13 @@ impl Environment {
     /// This creates absolute paths for data and build directories by using the
     /// provided working directory as the base, and allows specifying custom
     /// tracker, prometheus, grafana, and https configurations.
-    #[must_use]
+    ///
+    /// # Errors
+    ///
+    /// Returns `UserInputsError` if the cross-service configuration is invalid:
+    /// - `GrafanaRequiresPrometheus`: Grafana is configured but Prometheus is not
+    /// - `HttpsSectionWithoutTlsServices`: HTTPS section exists but no service uses TLS
+    /// - `TlsServicesWithoutHttpsSection`: Service has TLS but HTTPS section is missing
     #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
     #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
     pub fn with_working_dir_and_tracker(
@@ -315,7 +321,7 @@ impl Environment {
         https_config: Option<crate::domain::https::HttpsConfig>,
         working_dir: &std::path::Path,
         created_at: DateTime<Utc>,
-    ) -> Environment<Created> {
+    ) -> Result<Environment<Created>, UserInputsError> {
         let context = EnvironmentContext::with_working_dir_and_tracker(
             &name,
             provider_config,
@@ -327,12 +333,12 @@ impl Environment {
             https_config,
             working_dir,
             created_at,
-        );
+        )?;
 
-        Environment {
+        Ok(Environment {
             context,
             state: Created,
-        }
+        })
     }
 }
 
@@ -361,8 +367,8 @@ impl<S> Environment<S> {
     fn with_state<T>(self, new_state: T) -> Environment<T> {
         // Log state transition for observability and audit trail
         tracing::info!(
-            environment_name = %self.context.user_inputs.name,
-            instance_name = %self.context.user_inputs.instance_name,
+            environment_name = %self.context.user_inputs.name(),
+            instance_name = %self.context.user_inputs.instance_name(),
             from_state = std::any::type_name::<S>(),
             to_state = std::any::type_name::<T>(),
             "Environment state transition"
@@ -421,7 +427,7 @@ impl<S> Environment<S> {
     /// Returns the environment name
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {
-        &self.context.user_inputs.name
+        self.context.user_inputs.name()
     }
 
     /// Returns the instance name for this environment
@@ -1106,23 +1112,23 @@ mod tests {
                 ssh_username,
             );
 
-            let instance_name =
-                InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
             let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
             let provider_config = ProviderConfig::Lxd(LxdConfig { profile_name });
 
+            let user_inputs = UserInputs::with_tracker(
+                &env_name,
+                provider_config,
+                ssh_credentials,
+                22,
+                TrackerConfig::default(),
+                Some(PrometheusConfig::default()),
+                Some(GrafanaConfig::default()),
+                None,
+            )
+            .expect("Test UserInputs should always be valid with defaults");
+
             let context = EnvironmentContext {
-                user_inputs: UserInputs {
-                    name: env_name,
-                    instance_name,
-                    provider_config,
-                    ssh_credentials,
-                    ssh_port: 22,
-                    tracker: TrackerConfig::default(),
-                    prometheus: Some(PrometheusConfig::default()),
-                    grafana: Some(GrafanaConfig::default()),
-                    https: None,
-                },
+                user_inputs,
                 internal_config: InternalConfig {
                     data_dir: data_dir.clone(),
                     build_dir: build_dir.clone(),
@@ -1546,8 +1552,8 @@ mod tests {
                     .build();
 
                 // Can access user inputs directly
-                assert_eq!(env.context.user_inputs.name.as_str(), "test-split");
-                assert_eq!(env.context.user_inputs.ssh_port, 22);
+                assert_eq!(env.context.user_inputs.name().as_str(), "test-split");
+                assert_eq!(env.context.user_inputs.ssh_port(), 22);
             }
 
             #[test]
