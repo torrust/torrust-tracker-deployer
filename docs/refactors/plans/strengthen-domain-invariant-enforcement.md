@@ -1,5 +1,7 @@
 # Strengthen Domain Invariant Enforcement
 
+**Issue**: [#281](https://github.com/torrust/torrust-tracker-deployer/issues/281)
+
 ## 📋 Overview
 
 This refactoring plan addresses DDD violations where domain types fail to enforce business invariants. Currently, some domain configuration types have public fields and lack validated constructors, allowing the creation of invalid domain objects. This undermines the core DDD principle that domain entities should be "always valid" after construction.
