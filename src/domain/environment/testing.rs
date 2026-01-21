@@ -170,11 +170,7 @@ impl EnvironmentTestBuilder {
                 data_dir: data_dir.clone(),
                 build_dir: build_dir.clone(),
             },
-            runtime_outputs: crate::domain::environment::RuntimeOutputs {
-                instance_ip: None,
-                provision_method: None,
-                service_endpoints: None,
-            },
+            runtime_outputs: crate::domain::environment::RuntimeOutputs::new(),
         };
 
         let environment = Environment {

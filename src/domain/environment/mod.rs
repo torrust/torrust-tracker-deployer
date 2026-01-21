@@ -694,7 +694,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn with_instance_ip(mut self, ip: IpAddr) -> Self {
-        self.context_mut().runtime_outputs.instance_ip = Some(ip);
+        self.context_mut().runtime_outputs.set_instance_ip(ip);
         self
     }
 
@@ -713,7 +713,9 @@ impl<S> Environment<S> {
     /// Returns the environment with the provision method set.
     #[must_use]
     pub fn with_provision_method(mut self, method: runtime_outputs::ProvisionMethod) -> Self {
-        self.context_mut().runtime_outputs.provision_method = Some(method);
+        self.context_mut()
+            .runtime_outputs
+            .set_provision_method(method);
         self
     }
 
@@ -1125,11 +1127,7 @@ mod tests {
                     data_dir: data_dir.clone(),
                     build_dir: build_dir.clone(),
                 },
-                runtime_outputs: RuntimeOutputs {
-                    instance_ip: None,
-                    provision_method: None,
-                    service_endpoints: None,
-                },
+                runtime_outputs: RuntimeOutputs::new(),
                 created_at: chrono::Utc::now(),
             };
 
@@ -1569,7 +1567,7 @@ mod tests {
                     .build();
 
                 // Runtime outputs start empty
-                assert_eq!(env.context.runtime_outputs.instance_ip, None);
+                assert_eq!(env.context.runtime_outputs.instance_ip(), None);
             }
 
             #[test]
@@ -1582,7 +1580,7 @@ mod tests {
                 let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1));
                 let env = env.with_instance_ip(ip);
 
-                assert_eq!(env.context.runtime_outputs.instance_ip, Some(ip));
+                assert_eq!(env.context.runtime_outputs.instance_ip(), Some(ip));
             }
 
             #[test]

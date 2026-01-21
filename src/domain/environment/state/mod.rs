@@ -510,7 +510,7 @@ impl AnyEnvironmentState {
     /// - `None` if the environment hasn't been provisioned yet
     #[must_use]
     pub fn instance_ip(&self) -> Option<std::net::IpAddr> {
-        self.context().runtime_outputs.instance_ip
+        self.context().runtime_outputs.instance_ip()
     }
 
     /// Get when the environment was created
@@ -538,7 +538,7 @@ impl AnyEnvironmentState {
     /// - `None` if the provision method hasn't been set yet (legacy or pre-provisioned state)
     #[must_use]
     pub fn provision_method(&self) -> Option<ProvisionMethod> {
-        self.context().runtime_outputs.provision_method
+        self.context().runtime_outputs.provision_method()
     }
 
     /// Get the service endpoints if available, regardless of current state
@@ -552,7 +552,7 @@ impl AnyEnvironmentState {
     /// - `None` if services haven't been started yet or URLs weren't recorded
     #[must_use]
     pub fn service_endpoints(&self) -> Option<&ServiceEndpoints> {
-        self.context().runtime_outputs.service_endpoints.as_ref()
+        self.context().runtime_outputs.service_endpoints()
     }
 
     /// Get the Prometheus configuration if enabled, regardless of current state

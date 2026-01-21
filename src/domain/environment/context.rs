@@ -204,11 +204,7 @@ impl EnvironmentContext {
             user_inputs: UserInputs::new(name, provider_config, ssh_credentials, ssh_port)
                 .expect("UserInputs::new with defaults should never fail - default config always passes validation"),
             internal_config: InternalConfig::new(name),
-            runtime_outputs: RuntimeOutputs {
-                instance_ip: None,
-                provision_method: None,
-                service_endpoints: None,
-            },
+            runtime_outputs: RuntimeOutputs::new(),
         }
     }
 
@@ -250,11 +246,7 @@ impl EnvironmentContext {
                 &params.environment_name,
                 working_dir,
             ),
-            runtime_outputs: RuntimeOutputs {
-                instance_ip: None,
-                provision_method: None,
-                service_endpoints: None,
-            },
+            runtime_outputs: RuntimeOutputs::new(),
         })
     }
 
@@ -407,13 +399,13 @@ impl EnvironmentContext {
     /// Returns the instance IP address if available
     #[must_use]
     pub fn instance_ip(&self) -> Option<std::net::IpAddr> {
-        self.runtime_outputs.instance_ip
+        self.runtime_outputs.instance_ip()
     }
 
     /// Returns the provision method
     #[must_use]
     pub fn provision_method(&self) -> Option<crate::domain::environment::ProvisionMethod> {
-        self.runtime_outputs.provision_method
+        self.runtime_outputs.provision_method()
     }
 
     /// Returns the creation timestamp
