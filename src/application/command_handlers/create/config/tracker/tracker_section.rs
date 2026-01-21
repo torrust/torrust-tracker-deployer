@@ -2,6 +2,14 @@
 //!
 //! This module provides the aggregated DTO for complete tracker configuration,
 //! used for JSON deserialization and validation before converting to domain types.
+//!
+//! # Conversion Pattern
+//!
+//! Uses `TryFrom` for idiomatic Rust conversion from DTO to domain type.
+//! See ADR: `docs/decisions/tryfrom-for-dto-to-domain-conversion.md`
+
+use std::convert::TryFrom;
+use std::convert::TryInto;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -60,47 +68,39 @@ pub struct TrackerSection {
     pub health_check_api: HealthCheckApiSection,
 }
 
-impl TrackerSection {
-    /// Converts this DTO to the domain `TrackerConfig` type.
-    ///
-    /// # Errors
-    ///
-    /// Returns error if any of the nested sections fail validation:
-    /// - Invalid bind address formats
-    /// - Invalid database configuration
-    /// - Socket address conflicts (multiple services on same IP:Port:Protocol)
-    pub fn to_tracker_config(&self) -> Result<TrackerConfig, CreateConfigError> {
-        let core = self.core.to_tracker_core_config()?;
+impl TryFrom<TrackerSection> for TrackerConfig {
+    type Error = CreateConfigError;
 
-        let udp_trackers: Result<Vec<UdpTrackerConfig>, CreateConfigError> = self
+    fn try_from(section: TrackerSection) -> Result<Self, Self::Error> {
+        let core = section.core.try_into()?;
+
+        // Use TryFrom for DTO to domain conversions
+        let udp_trackers: Result<Vec<UdpTrackerConfig>, CreateConfigError> = section
             .udp_trackers
-            .iter()
-            .map(UdpTrackerSection::to_udp_tracker_config)
+            .into_iter()
+            .map(TryInto::try_into)
             .collect();
 
-        let http_trackers: Result<Vec<HttpTrackerConfig>, CreateConfigError> = self
+        let http_trackers: Result<Vec<HttpTrackerConfig>, CreateConfigError> = section
             .http_trackers
-            .iter()
-            .map(HttpTrackerSection::to_http_tracker_config)
+            .into_iter()
+            .map(TryInto::try_into)
             .collect();
 
-        let http_api: HttpApiConfig = self.http_api.clone().try_into()?;
+        let http_api: HttpApiConfig = section.http_api.try_into()?;
 
-        let health_check_api: HealthCheckApiConfig =
-            self.health_check_api.to_health_check_api_config()?;
+        let health_check_api: HealthCheckApiConfig = section.health_check_api.try_into()?;
 
-        let config = TrackerConfig {
+        // Create TrackerConfig with validated constructor
+        // This validates socket address uniqueness at construction time
+        TrackerConfig::new(
             core,
-            udp_trackers: udp_trackers?,
-            http_trackers: http_trackers?,
+            udp_trackers?,
+            http_trackers?,
             http_api,
             health_check_api,
-        };
-
-        // Validate socket address uniqueness
-        config.validate().map_err(CreateConfigError::from)?;
-
-        Ok(config)
+        )
+        .map_err(CreateConfigError::from)
     }
 }
 
@@ -178,19 +178,17 @@ mod tests {
             health_check_api: HealthCheckApiSection::default(),
         };
 
-        let config = section.to_tracker_config().unwrap();
+        let config: TrackerConfig = section.try_into().unwrap();
 
         assert_eq!(
-            config.core.database,
-            DatabaseConfig::Sqlite(SqliteConfig {
-                database_name: "tracker.db".to_string()
-            })
+            *config.core().database(),
+            DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap())
         );
-        assert!(!config.core.private);
-        assert_eq!(config.udp_trackers.len(), 1);
-        assert_eq!(config.http_trackers.len(), 1);
+        assert!(!config.core().private());
+        assert_eq!(config.udp_trackers().len(), 1);
+        assert_eq!(config.http_trackers().len(), 1);
         assert_eq!(
-            config.http_api.bind_address(),
+            config.http_api().bind_address(),
             "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
         );
     }
@@ -235,10 +233,10 @@ mod tests {
             health_check_api: HealthCheckApiSection::default(),
         };
 
-        let config = section.to_tracker_config().unwrap();
+        let config: TrackerConfig = section.try_into().unwrap();
 
-        assert_eq!(config.udp_trackers.len(), 2);
-        assert_eq!(config.http_trackers.len(), 2);
+        assert_eq!(config.udp_trackers().len(), 2);
+        assert_eq!(config.http_trackers().len(), 2);
     }
 
     #[test]
@@ -264,7 +262,7 @@ mod tests {
             health_check_api: HealthCheckApiSection::default(),
         };
 
-        let result = section.to_tracker_config();
+        let result: Result<TrackerConfig, CreateConfigError> = section.try_into();
 
         assert!(result.is_err());
         assert!(matches!(
@@ -364,7 +362,7 @@ mod tests {
             health_check_api: HealthCheckApiSection::default(),
         };
 
-        let result = section.to_tracker_config();
+        let result: Result<TrackerConfig, CreateConfigError> = section.try_into();
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -400,7 +398,7 @@ mod tests {
             health_check_api: HealthCheckApiSection::default(),
         };
 
-        let result = section.to_tracker_config();
+        let result: Result<TrackerConfig, CreateConfigError> = section.try_into();
         assert!(result.is_ok());
     }
 }

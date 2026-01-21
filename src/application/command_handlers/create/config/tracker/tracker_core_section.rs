@@ -3,6 +3,13 @@
 //! This module provides the DTO for tracker core configuration,
 //! used for JSON deserialization and validation before converting
 //! to domain types.
+//!
+//! # Conversion Pattern
+//!
+//! Uses `TryFrom` for idiomatic Rust conversion from DTO to domain type.
+//! See ADR: `docs/decisions/tryfrom-for-dto-to-domain-conversion.md`
+
+use std::convert::TryFrom;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -63,32 +70,31 @@ pub enum DatabaseSection {
     },
 }
 
-impl DatabaseSection {
-    /// Converts this DTO to the domain `DatabaseConfig` type.
-    ///
-    /// # Errors
-    ///
-    /// This conversion currently cannot fail, but returns `Result`
-    /// for consistency with other DTO conversions and to allow
-    /// future validation.
-    pub fn to_database_config(&self) -> Result<DatabaseConfig, CreateConfigError> {
-        match self {
-            Self::Sqlite { database_name } => Ok(DatabaseConfig::Sqlite(SqliteConfig {
-                database_name: database_name.clone(),
-            })),
-            Self::Mysql {
+impl TryFrom<DatabaseSection> for DatabaseConfig {
+    type Error = CreateConfigError;
+
+    fn try_from(section: DatabaseSection) -> Result<Self, Self::Error> {
+        match section {
+            DatabaseSection::Sqlite { database_name } => {
+                let config = SqliteConfig::new(database_name)?;
+                Ok(Self::Sqlite(config))
+            }
+            DatabaseSection::Mysql {
                 host,
                 port,
                 database_name,
                 username,
                 password,
-            } => Ok(DatabaseConfig::Mysql(MysqlConfig {
-                host: host.clone(),
-                port: *port,
-                database_name: database_name.clone(),
-                username: username.clone(),
-                password: Password::from(password.as_str()),
-            })),
+            } => {
+                let config = MysqlConfig::new(
+                    host,
+                    port,
+                    database_name,
+                    username,
+                    Password::from(password.as_str()),
+                )?;
+                Ok(Self::Mysql(config))
+            }
         }
     }
 }
@@ -116,17 +122,12 @@ pub struct TrackerCoreSection {
     pub private: bool,
 }
 
-impl TrackerCoreSection {
-    /// Converts this DTO to the domain `TrackerCoreConfig` type.
-    ///
-    /// # Errors
-    ///
-    /// Returns error if database validation fails.
-    pub fn to_tracker_core_config(&self) -> Result<TrackerCoreConfig, CreateConfigError> {
-        Ok(TrackerCoreConfig {
-            database: self.database.to_database_config()?,
-            private: self.private,
-        })
+impl TryFrom<TrackerCoreSection> for TrackerCoreConfig {
+    type Error = CreateConfigError;
+
+    fn try_from(section: TrackerCoreSection) -> Result<Self, Self::Error> {
+        let database_config: DatabaseConfig = section.database.try_into()?;
+        Ok(Self::new(database_config, section.private))
     }
 }
 
@@ -143,15 +144,13 @@ mod tests {
             private: false,
         };
 
-        let config = section.to_tracker_core_config().unwrap();
+        let config: TrackerCoreConfig = section.try_into().unwrap();
 
         assert_eq!(
-            config.database,
-            DatabaseConfig::Sqlite(SqliteConfig {
-                database_name: "tracker.db".to_string()
-            })
+            *config.database(),
+            DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap())
         );
-        assert!(!config.private);
+        assert!(!config.private());
     }
 
     #[test]
@@ -163,9 +162,9 @@ mod tests {
             private: true,
         };
 
-        let config = section.to_tracker_core_config().unwrap();
+        let config: TrackerCoreConfig = section.try_into().unwrap();
 
-        assert!(config.private);
+        assert!(config.private());
     }
 
     #[test]
@@ -217,19 +216,22 @@ mod tests {
             private: false,
         };
 
-        let config = section.to_tracker_core_config().unwrap();
+        let config: TrackerCoreConfig = section.try_into().unwrap();
 
         assert_eq!(
-            config.database,
-            DatabaseConfig::Mysql(MysqlConfig {
-                host: "localhost".to_string(),
-                port: 3306,
-                database_name: "tracker".to_string(),
-                username: "tracker_user".to_string(),
-                password: Password::from("secure_password"),
-            })
+            *config.database(),
+            DatabaseConfig::Mysql(
+                MysqlConfig::new(
+                    "localhost",
+                    3306,
+                    "tracker",
+                    "tracker_user",
+                    Password::from("secure_password"),
+                )
+                .unwrap()
+            )
         );
-        assert!(!config.private);
+        assert!(!config.private());
     }
 
     #[test]

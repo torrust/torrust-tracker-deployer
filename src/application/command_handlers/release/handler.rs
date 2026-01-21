@@ -351,7 +351,7 @@ impl ReleaseCommandHandler {
         let current_step = ReleaseStep::RenderPrometheusTemplates;
 
         // Check if Prometheus is configured
-        if environment.context().user_inputs.prometheus.is_none() {
+        if environment.context().user_inputs.prometheus().is_none() {
             info!(
                 command = "release",
                 step = %current_step,
@@ -400,7 +400,7 @@ impl ReleaseCommandHandler {
         let current_step = ReleaseStep::CreatePrometheusStorage;
 
         // Check if Prometheus is configured
-        if environment.context().user_inputs.prometheus.is_none() {
+        if environment.context().user_inputs.prometheus().is_none() {
             info!(
                 command = "release",
                 step = %current_step,
@@ -452,7 +452,7 @@ impl ReleaseCommandHandler {
         let current_step = ReleaseStep::DeployPrometheusConfigToRemote;
 
         // Check if Prometheus is configured
-        if environment.context().user_inputs.prometheus.is_none() {
+        if environment.context().user_inputs.prometheus().is_none() {
             info!(
                 command = "release",
                 step = %current_step,
@@ -497,7 +497,7 @@ impl ReleaseCommandHandler {
         let current_step = ReleaseStep::RenderGrafanaTemplates;
 
         // Check if Grafana is configured
-        if environment.context().user_inputs.grafana.is_none() {
+        if environment.context().user_inputs.grafana().is_none() {
             info!(
                 command = "release",
                 step = %current_step,
@@ -508,7 +508,7 @@ impl ReleaseCommandHandler {
         }
 
         // Check if Prometheus is configured (required for datasource)
-        if environment.context().user_inputs.prometheus.is_none() {
+        if environment.context().user_inputs.prometheus().is_none() {
             info!(
                 command = "release",
                 step = %current_step,
@@ -556,7 +556,7 @@ impl ReleaseCommandHandler {
         let current_step = ReleaseStep::RenderCaddyTemplates;
 
         // Check if HTTPS is configured
-        if environment.context().user_inputs.https.is_none() {
+        if environment.context().user_inputs.https().is_none() {
             info!(
                 command = "release",
                 step = %current_step,
@@ -606,7 +606,7 @@ impl ReleaseCommandHandler {
         let current_step = ReleaseStep::DeployCaddyConfigToRemote;
 
         // Check if HTTPS is configured
-        if environment.context().user_inputs.https.is_none() {
+        if environment.context().user_inputs.https().is_none() {
             info!(
                 command = "release",
                 step = %current_step,
@@ -653,7 +653,7 @@ impl ReleaseCommandHandler {
         let current_step = ReleaseStep::DeployGrafanaProvisioning;
 
         // Check if Grafana is configured
-        if environment.context().user_inputs.grafana.is_none() {
+        if environment.context().user_inputs.grafana().is_none() {
             info!(
                 command = "release",
                 step = %current_step,
@@ -664,7 +664,7 @@ impl ReleaseCommandHandler {
         }
 
         // Check if Prometheus is configured (required for datasource)
-        if environment.context().user_inputs.prometheus.is_none() {
+        if environment.context().user_inputs.prometheus().is_none() {
             info!(
                 command = "release",
                 step = %current_step,

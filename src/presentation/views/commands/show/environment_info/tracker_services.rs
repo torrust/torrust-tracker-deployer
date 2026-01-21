@@ -28,14 +28,26 @@ impl TrackerServicesView {
             "Tracker Services:".to_string(),
         ];
 
-        // UDP Trackers
-        if !services.udp_trackers.is_empty() {
-            lines.push("  UDP Trackers:".to_string());
-            for url in &services.udp_trackers {
-                lines.push(format!("    - {url}"));
-            }
+        Self::render_udp_trackers(services, &mut lines);
+        Self::render_http_trackers(services, &mut lines);
+        Self::render_api_endpoint(services, &mut lines);
+        Self::render_health_check(services, &mut lines);
+
+        lines
+    }
+
+    fn render_udp_trackers(services: &ServiceInfo, lines: &mut Vec<String>) {
+        if services.udp_trackers.is_empty() {
+            return;
         }
 
+        lines.push("  UDP Trackers:".to_string());
+        for url in &services.udp_trackers {
+            lines.push(format!("    - {url}"));
+        }
+    }
+
+    fn render_http_trackers(services: &ServiceInfo, lines: &mut Vec<String>) {
         // HTTPS-enabled HTTP trackers (via Caddy)
         if !services.https_http_trackers.is_empty() {
             lines.push("  HTTP Trackers (HTTPS via Caddy):".to_string());
@@ -62,8 +74,9 @@ impl TrackerServicesView {
                 ));
             }
         }
+    }
 
-        // API endpoint with HTTPS indicator and localhost-only marker
+    fn render_api_endpoint(services: &ServiceInfo, lines: &mut Vec<String>) {
         if services.api_is_localhost_only {
             lines.push("  API Endpoint (internal only):".to_string());
             lines.push(format!(
@@ -77,8 +90,9 @@ impl TrackerServicesView {
             lines.push("  API Endpoint:".to_string());
             lines.push(format!("    - {}", services.api_endpoint));
         }
+    }
 
-        // Health check with HTTPS indicator and localhost-only marker
+    fn render_health_check(services: &ServiceInfo, lines: &mut Vec<String>) {
         if services.health_check_is_localhost_only {
             lines.push("  Health Check (internal only):".to_string());
             lines.push(format!(
@@ -92,8 +106,6 @@ impl TrackerServicesView {
             lines.push("  Health Check:".to_string());
             lines.push(format!("    - {}", services.health_check_url));
         }
-
-        lines
     }
 }
 

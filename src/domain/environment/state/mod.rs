@@ -243,7 +243,7 @@ impl AnyEnvironmentState {
     /// A reference to the `EnvironmentName` contained within the environment.
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {
-        &self.context().user_inputs.name
+        self.context().user_inputs.name()
     }
 
     /// Get the state name as a string
@@ -405,7 +405,7 @@ impl AnyEnvironmentState {
     /// A reference to the `InstanceName` contained within the environment.
     #[must_use]
     pub fn instance_name(&self) -> &crate::domain::environment::InstanceName {
-        &self.context().user_inputs.instance_name
+        self.context().user_inputs.instance_name()
     }
 
     /// Get the LXD profile name regardless of current state
@@ -441,7 +441,7 @@ impl AnyEnvironmentState {
     /// A reference to the `SshCredentials` contained within the environment.
     #[must_use]
     pub fn ssh_credentials(&self) -> &crate::adapters::ssh::SshCredentials {
-        &self.context().user_inputs.ssh_credentials
+        self.context().user_inputs.ssh_credentials()
     }
 
     /// Get the SSH port regardless of current state
@@ -454,7 +454,7 @@ impl AnyEnvironmentState {
     /// The SSH port number.
     #[must_use]
     pub fn ssh_port(&self) -> u16 {
-        self.context().user_inputs.ssh_port
+        self.context().user_inputs.ssh_port()
     }
 
     /// Get the provider name regardless of current state
@@ -496,7 +496,7 @@ impl AnyEnvironmentState {
     /// A reference to the `TrackerConfig` contained within the environment.
     #[must_use]
     pub fn tracker_config(&self) -> &crate::domain::tracker::TrackerConfig {
-        &self.context().user_inputs.tracker
+        self.context().user_inputs.tracker()
     }
 
     /// Get the instance IP address if available, regardless of current state
@@ -510,7 +510,7 @@ impl AnyEnvironmentState {
     /// - `None` if the environment hasn't been provisioned yet
     #[must_use]
     pub fn instance_ip(&self) -> Option<std::net::IpAddr> {
-        self.context().runtime_outputs.instance_ip
+        self.context().runtime_outputs.instance_ip()
     }
 
     /// Get when the environment was created
@@ -538,7 +538,7 @@ impl AnyEnvironmentState {
     /// - `None` if the provision method hasn't been set yet (legacy or pre-provisioned state)
     #[must_use]
     pub fn provision_method(&self) -> Option<ProvisionMethod> {
-        self.context().runtime_outputs.provision_method
+        self.context().runtime_outputs.provision_method()
     }
 
     /// Get the service endpoints if available, regardless of current state
@@ -552,7 +552,7 @@ impl AnyEnvironmentState {
     /// - `None` if services haven't been started yet or URLs weren't recorded
     #[must_use]
     pub fn service_endpoints(&self) -> Option<&ServiceEndpoints> {
-        self.context().runtime_outputs.service_endpoints.as_ref()
+        self.context().runtime_outputs.service_endpoints()
     }
 
     /// Get the Prometheus configuration if enabled, regardless of current state
@@ -566,7 +566,7 @@ impl AnyEnvironmentState {
     /// - `None` if Prometheus is not enabled
     #[must_use]
     pub fn prometheus_config(&self) -> Option<&crate::domain::prometheus::PrometheusConfig> {
-        self.context().user_inputs.prometheus.as_ref()
+        self.context().user_inputs.prometheus()
     }
 
     /// Get the Grafana configuration if enabled, regardless of current state
@@ -580,7 +580,7 @@ impl AnyEnvironmentState {
     /// - `None` if Grafana is not enabled
     #[must_use]
     pub fn grafana_config(&self) -> Option<&crate::domain::grafana::GrafanaConfig> {
-        self.context().user_inputs.grafana.as_ref()
+        self.context().user_inputs.grafana()
     }
 
     /// Get the HTTPS configuration if enabled, regardless of current state
@@ -594,7 +594,7 @@ impl AnyEnvironmentState {
     /// - `None` if HTTPS is not enabled
     #[must_use]
     pub fn https_config(&self) -> Option<&crate::domain::https::HttpsConfig> {
-        self.context().user_inputs.https.as_ref()
+        self.context().user_inputs.https()
     }
 
     /// Check if this environment was registered from existing infrastructure

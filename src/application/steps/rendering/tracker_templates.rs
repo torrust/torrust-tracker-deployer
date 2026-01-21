@@ -109,7 +109,7 @@ impl<S> RenderTrackerTemplatesStep<S> {
             TrackerProjectGenerator::new(&self.build_dir, self.template_manager.clone());
 
         // Extract tracker config from environment (Phase 6)
-        let tracker_config = &self.environment.context().user_inputs.tracker;
+        let tracker_config = self.environment.context().user_inputs.tracker();
         generator.render(Some(tracker_config))?;
 
         let tracker_build_dir = self.build_dir.join("tracker");

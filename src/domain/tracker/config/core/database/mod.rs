@@ -16,8 +16,8 @@ use serde::{Deserialize, Serialize};
 mod mysql;
 mod sqlite;
 
-pub use mysql::MysqlConfig;
-pub use sqlite::SqliteConfig;
+pub use mysql::{MysqlConfig, MysqlConfigError};
+pub use sqlite::{SqliteConfig, SqliteConfigError};
 
 /// `SQLite` driver name constant
 pub const DRIVER_SQLITE: &str = "sqlite3";
@@ -37,18 +37,14 @@ pub const DRIVER_MYSQL: &str = "mysql";
 /// use torrust_tracker_deployer_lib::domain::tracker::{DatabaseConfig, SqliteConfig};
 ///
 /// // SQLite configuration
-/// let sqlite = DatabaseConfig::Sqlite(SqliteConfig {
-///     database_name: "tracker.db".to_string(),
-/// });
+/// let sqlite = DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap());
 ///
-/// // MySQL configuration (future)
-/// // let mysql = DatabaseConfig::Mysql(MysqlConfig {
-/// //     host: "localhost".to_string(),
-/// //     port: 3306,
-/// //     database_name: "tracker".to_string(),
-/// //     username: "tracker_user".to_string(),
-/// //     password: "secure_password".to_string(),
-/// // });
+/// // MySQL configuration
+/// // use torrust_tracker_deployer_lib::domain::tracker::MysqlConfig;
+/// // use torrust_tracker_deployer_lib::shared::Password;
+/// // let mysql = DatabaseConfig::Mysql(MysqlConfig::new(
+/// //     "localhost", 3306, "tracker", "tracker_user", Password::from("secure_password")
+/// // ).unwrap());
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "driver", content = "config")]
@@ -69,9 +65,7 @@ impl DatabaseConfig {
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::tracker::{DatabaseConfig, SqliteConfig};
     ///
-    /// let config = DatabaseConfig::Sqlite(SqliteConfig {
-    ///     database_name: "tracker.db".to_string(),
-    /// });
+    /// let config = DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap());
     /// assert_eq!(config.driver_name(), "sqlite3");
     /// ```
     #[must_use]
@@ -89,16 +83,14 @@ impl DatabaseConfig {
     /// ```rust
     /// use torrust_tracker_deployer_lib::domain::tracker::{DatabaseConfig, SqliteConfig};
     ///
-    /// let config = DatabaseConfig::Sqlite(SqliteConfig {
-    ///     database_name: "tracker.db".to_string(),
-    /// });
+    /// let config = DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap());
     /// assert_eq!(config.database_name(), "tracker.db");
     /// ```
     #[must_use]
     pub fn database_name(&self) -> &str {
         match self {
-            Self::Sqlite(config) => &config.database_name,
-            Self::Mysql(config) => &config.database_name,
+            Self::Sqlite(config) => config.database_name(),
+            Self::Mysql(config) => config.database_name(),
         }
     }
 }
@@ -110,9 +102,7 @@ mod tests {
 
     #[test]
     fn it_should_create_sqlite_database_config() {
-        let config = DatabaseConfig::Sqlite(SqliteConfig {
-            database_name: "test.db".to_string(),
-        });
+        let config = DatabaseConfig::Sqlite(SqliteConfig::new("test.db").unwrap());
 
         assert_eq!(config.driver_name(), "sqlite3");
         assert_eq!(config.database_name(), "test.db");
@@ -120,9 +110,7 @@ mod tests {
 
     #[test]
     fn it_should_serialize_sqlite_config() {
-        let config = DatabaseConfig::Sqlite(SqliteConfig {
-            database_name: "tracker.db".to_string(),
-        });
+        let config = DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap());
 
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(json["driver"], "sqlite3");
@@ -136,7 +124,7 @@ mod tests {
 
         match config {
             DatabaseConfig::Sqlite(sqlite_config) => {
-                assert_eq!(sqlite_config.database_name, "tracker.db");
+                assert_eq!(sqlite_config.database_name(), "tracker.db");
             }
             DatabaseConfig::Mysql(..) => panic!("Expected Sqlite variant"),
         }
@@ -144,15 +132,16 @@ mod tests {
 
     #[test]
     fn it_should_create_mysql_database_config() {
-        use crate::shared::Password;
-
-        let config = DatabaseConfig::Mysql(MysqlConfig {
-            host: "localhost".to_string(),
-            port: 3306,
-            database_name: "tracker".to_string(),
-            username: "tracker_user".to_string(),
-            password: Password::from("secure_password"),
-        });
+        let config = DatabaseConfig::Mysql(
+            MysqlConfig::new(
+                "localhost",
+                3306,
+                "tracker",
+                "tracker_user",
+                Password::from("secure_password"),
+            )
+            .unwrap(),
+        );
 
         assert_eq!(config.driver_name(), "mysql");
         assert_eq!(config.database_name(), "tracker");
@@ -160,15 +149,16 @@ mod tests {
 
     #[test]
     fn it_should_serialize_mysql_config() {
-        use crate::shared::Password;
-
-        let config = DatabaseConfig::Mysql(MysqlConfig {
-            host: "mysql".to_string(),
-            port: 3306,
-            database_name: "tracker".to_string(),
-            username: "tracker_user".to_string(),
-            password: Password::from("pass123"),
-        });
+        let config = DatabaseConfig::Mysql(
+            MysqlConfig::new(
+                "mysql",
+                3306,
+                "tracker",
+                "tracker_user",
+                Password::from("pass123"),
+            )
+            .unwrap(),
+        );
 
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(json["driver"], "mysql");
@@ -195,11 +185,11 @@ mod tests {
 
         match config {
             DatabaseConfig::Mysql(mysql_config) => {
-                assert_eq!(mysql_config.host, "localhost");
-                assert_eq!(mysql_config.port, 3306);
-                assert_eq!(mysql_config.database_name, "tracker");
-                assert_eq!(mysql_config.username, "tracker_user");
-                assert_eq!(mysql_config.password, Password::from("secure_password"));
+                assert_eq!(mysql_config.host(), "localhost");
+                assert_eq!(mysql_config.port(), 3306);
+                assert_eq!(mysql_config.database_name(), "tracker");
+                assert_eq!(mysql_config.username(), "tracker_user");
+                assert_eq!(mysql_config.password(), &Password::from("secure_password"));
             }
             DatabaseConfig::Sqlite(..) => panic!("Expected Mysql variant"),
         }

@@ -94,7 +94,7 @@ impl<S> RenderPrometheusTemplatesStep<S> {
     )]
     pub fn execute(&self) -> Result<Option<PathBuf>, PrometheusProjectGeneratorError> {
         // Check if Prometheus is configured
-        let Some(prometheus_config) = &self.environment.context().user_inputs.prometheus else {
+        let Some(prometheus_config) = self.environment.context().user_inputs.prometheus() else {
             info!(
                 step = "render_prometheus_templates",
                 status = "skipped",
@@ -115,7 +115,7 @@ impl<S> RenderPrometheusTemplatesStep<S> {
             PrometheusProjectGenerator::new(&self.build_dir, self.template_manager.clone());
 
         // Extract tracker config for API token and port
-        let tracker_config = &self.environment.context().user_inputs.tracker;
+        let tracker_config = self.environment.context().user_inputs.tracker();
         generator.render(prometheus_config, tracker_config)?;
 
         let prometheus_build_dir = self.build_dir.join("storage/prometheus/etc");

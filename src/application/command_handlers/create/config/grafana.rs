@@ -3,6 +3,13 @@
 //! This module contains the DTO type for Grafana configuration used in
 //! environment creation. This type uses raw primitives (String) for JSON
 //! deserialization and converts to the rich domain type (`GrafanaConfig`).
+//!
+//! It follows the **`TryFrom` pattern** for DTO to domain conversion, delegating
+//! all business validation to the domain layer.
+//!
+//! See `docs/decisions/tryfrom-for-dto-to-domain-conversion.md` for rationale.
+
+use std::convert::TryFrom;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -82,23 +89,20 @@ impl Default for GrafanaSection {
     }
 }
 
-impl GrafanaSection {
-    /// Converts this DTO to a domain `GrafanaConfig`
-    ///
-    /// This method performs validation and type conversion from the
-    /// string-based DTO to the strongly-typed domain model with secrecy
-    /// protection for the password.
-    ///
-    /// # Errors
-    ///
-    /// Returns `CreateConfigError::InvalidDomain` if the domain is invalid.
-    /// Returns `CreateConfigError::TlsProxyWithoutDomain` if `use_tls_proxy`
-    /// is true but no domain is provided.
-    pub fn to_grafana_config(&self) -> Result<GrafanaConfig, CreateConfigError> {
-        let use_tls_proxy = self.use_tls_proxy.unwrap_or(false);
+/// Converts from application DTO to domain type using `TryFrom` trait
+///
+/// This follows the idiomatic Rust pattern for fallible type
+/// conversions, enabling use of `.try_into()` and `TryFrom::try_from()`.
+///
+/// See `docs/decisions/tryfrom-for-dto-to-domain-conversion.md` for rationale.
+impl TryFrom<GrafanaSection> for GrafanaConfig {
+    type Error = CreateConfigError;
+
+    fn try_from(section: GrafanaSection) -> Result<Self, Self::Error> {
+        let use_tls_proxy = section.use_tls_proxy.unwrap_or(false);
 
         // Validate: use_tls_proxy requires domain
-        if use_tls_proxy && self.domain.is_none() {
+        if use_tls_proxy && section.domain.is_none() {
             return Err(CreateConfigError::TlsProxyWithoutDomain {
                 service_type: "Grafana".to_string(),
                 bind_address: "N/A (hardcoded port 3000)".to_string(),
@@ -107,7 +111,7 @@ impl GrafanaSection {
 
         // Parse domain if present
         let domain =
-            match &self.domain {
+            match &section.domain {
                 Some(domain_str) => Some(DomainName::new(domain_str).map_err(|e| {
                     CreateConfigError::InvalidDomain {
                         domain: domain_str.clone(),
@@ -118,8 +122,8 @@ impl GrafanaSection {
             };
 
         Ok(GrafanaConfig::new(
-            self.admin_user.clone(),
-            self.admin_password.clone(),
+            section.admin_user,
+            section.admin_password,
             domain,
             use_tls_proxy,
         ))
@@ -148,7 +152,7 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let result = section.to_grafana_config();
+        let result: Result<GrafanaConfig, _> = section.try_into();
         assert!(result.is_ok());
 
         let config = result.unwrap();
@@ -159,7 +163,7 @@ mod tests {
     #[test]
     fn it_should_convert_default_section_to_default_config() {
         let section = GrafanaSection::default();
-        let result = section.to_grafana_config();
+        let result: Result<GrafanaConfig, _> = section.try_into();
         assert!(result.is_ok());
 
         let config = result.unwrap();
@@ -175,7 +179,7 @@ mod tests {
             use_tls_proxy: None,
         };
 
-        let config = section.to_grafana_config().unwrap();
+        let config: GrafanaConfig = section.try_into().unwrap();
         let debug_output = format!("{config:?}");
 
         // Password should be redacted in debug output
@@ -192,7 +196,7 @@ mod tests {
             use_tls_proxy: Some(true),
         };
 
-        let result = section.to_grafana_config();
+        let result: Result<GrafanaConfig, _> = section.try_into();
         assert!(result.is_ok());
 
         let config = result.unwrap();
@@ -209,7 +213,7 @@ mod tests {
             use_tls_proxy: Some(false),
         };
 
-        let result = section.to_grafana_config();
+        let result: Result<GrafanaConfig, _> = section.try_into();
         assert!(result.is_ok());
 
         let config = result.unwrap();
@@ -229,7 +233,7 @@ mod tests {
             use_tls_proxy: Some(true),
         };
 
-        let result = section.to_grafana_config();
+        let result: Result<GrafanaConfig, CreateConfigError> = section.try_into();
         assert!(result.is_err());
 
         let err = result.unwrap_err();
@@ -248,7 +252,7 @@ mod tests {
             use_tls_proxy: Some(true),
         };
 
-        let result = section.to_grafana_config();
+        let result: Result<GrafanaConfig, CreateConfigError> = section.try_into();
         assert!(result.is_err());
 
         let err = result.unwrap_err();

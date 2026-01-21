@@ -142,22 +142,12 @@ impl ShowCommandHandler {
 
             // Add service info for Released/Running states
             if Self::should_show_services(any_env.state_name()) {
-                // If HTTPS is configured, always compute from tracker config to show TLS domains
-                // Otherwise, try stored endpoints first for backward compatibility
-                let services = if any_env.https_config().is_some() {
-                    // HTTPS enabled: compute from config to show proper TLS domains
-                    let tracker_config = any_env.tracker_config();
-                    let grafana_config = any_env.grafana_config();
-                    ServiceInfo::from_tracker_config(tracker_config, instance_ip, grafana_config)
-                } else if let Some(endpoints) = any_env.service_endpoints() {
-                    // No HTTPS: use stored endpoints (backward compatibility)
-                    ServiceInfo::from_service_endpoints(endpoints)
-                } else {
-                    // Fallback: compute from tracker config
-                    let tracker_config = any_env.tracker_config();
-                    let grafana_config = any_env.grafana_config();
-                    ServiceInfo::from_tracker_config(tracker_config, instance_ip, grafana_config)
-                };
+                // Always compute from tracker config to show proper service information
+                // including TLS domains, localhost hints, and HTTPS status
+                let tracker_config = any_env.tracker_config();
+                let grafana_config = any_env.grafana_config();
+                let services =
+                    ServiceInfo::from_tracker_config(tracker_config, instance_ip, grafana_config);
                 info = info.with_services(services);
 
                 // Add Prometheus info if configured

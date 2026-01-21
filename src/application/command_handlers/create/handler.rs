@@ -4,12 +4,13 @@
 //! creation business logic. It follows the Command Pattern with dependency
 //! injection and is delivery-agnostic.
 
+use std::convert::TryInto;
 use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::domain::environment::{Created, Environment};
+use crate::domain::environment::{Created, Environment, EnvironmentParams};
 use crate::shared::Clock;
 
 use super::errors::CreateCommandHandlerError;
@@ -215,42 +216,25 @@ impl CreateCommandHandler {
         config: EnvironmentCreationConfig,
         working_dir: &std::path::Path,
     ) -> Result<Environment<Created>, CreateCommandHandlerError> {
-        let (
-            environment_name,
-            _instance_name,
-            provider_config,
-            ssh_credentials,
-            ssh_port,
-            tracker_config,
-            prometheus_config,
-            grafana_config,
-            https_config,
-        ) = config
-            .to_environment_params()
+        // Convert DTO to validated domain parameters
+        let params: EnvironmentParams = config
+            .try_into()
             .map_err(CreateCommandHandlerError::InvalidConfiguration)?;
 
+        // Check for duplicate environment
         if self
             .environment_repository
-            .exists(&environment_name)
+            .exists(&params.environment_name)
             .map_err(CreateCommandHandlerError::RepositoryError)?
         {
             return Err(CreateCommandHandlerError::EnvironmentAlreadyExists {
-                name: environment_name.as_str().to_string(),
+                name: params.environment_name.as_str().to_string(),
             });
         }
 
-        let environment = Environment::with_working_dir_and_tracker(
-            environment_name,
-            provider_config,
-            ssh_credentials,
-            ssh_port,
-            tracker_config,
-            prometheus_config,
-            grafana_config,
-            https_config,
-            working_dir,
-            self.clock.now(),
-        );
+        // Create environment aggregate from validated params
+        let environment = Environment::create(params, working_dir, self.clock.now())
+            .map_err(|e| CreateCommandHandlerError::InvalidConfiguration(e.into()))?;
 
         self.environment_repository
             .save(&environment.clone().into_any())

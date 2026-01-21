@@ -32,8 +32,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::errors::CreateConfigError;
-use crate::shared::Email;
+// Note: Email import and CreateConfigError import removed.
+// Email validation now happens in domain layer (HttpsConfig::new())
 
 /// Common HTTPS configuration (top-level)
 ///
@@ -108,22 +108,8 @@ impl HttpsSection {
         }
     }
 
-    /// Validates the HTTPS configuration
-    ///
-    /// Uses the domain-level `Email` type for RFC-compliant validation via
-    /// the `email_address` crate.
-    ///
-    /// # Errors
-    ///
-    /// Returns `CreateConfigError::InvalidAdminEmail` if the email format is invalid.
-    pub fn validate(&self) -> Result<(), CreateConfigError> {
-        // Validate email using the domain type for RFC-compliant validation
-        Email::new(&self.admin_email).map_err(|e| CreateConfigError::InvalidAdminEmail {
-            email: self.admin_email.clone(),
-            reason: e.to_string(),
-        })?;
-        Ok(())
-    }
+    // Note: validate() method has been removed.
+    // Email validation now happens in domain layer (HttpsConfig::new())
 }
 
 #[cfg(test)]
@@ -146,35 +132,8 @@ mod tests {
             assert!(section.use_staging);
         }
 
-        #[test]
-        fn it_should_validate_valid_email() {
-            let section = HttpsSection::new("admin@example.com".to_string(), false);
-            assert!(section.validate().is_ok());
-        }
-
-        #[test]
-        fn it_should_reject_email_without_at_symbol() {
-            let section = HttpsSection::new("invalid-email".to_string(), false);
-            let result = section.validate();
-            assert!(result.is_err());
-            if let Err(CreateConfigError::InvalidAdminEmail { email, .. }) = result {
-                assert_eq!(email, "invalid-email");
-            } else {
-                panic!("Expected InvalidAdminEmail error");
-            }
-        }
-
-        #[test]
-        fn it_should_reject_email_with_empty_local_part() {
-            let section = HttpsSection::new("@example.com".to_string(), false);
-            assert!(section.validate().is_err());
-        }
-
-        #[test]
-        fn it_should_reject_email_with_empty_domain_part() {
-            let section = HttpsSection::new("admin@".to_string(), false);
-            assert!(section.validate().is_err());
-        }
+        // Note: Email validation tests have been moved to domain layer.
+        // See HttpsConfig tests in src/domain/https/config.rs
 
         #[test]
         fn it_should_deserialize_from_json() {
@@ -192,27 +151,6 @@ mod tests {
         }
     }
 
-    /// Tests for email validation in HTTPS context
-    ///
-    /// Note: Comprehensive email format validation tests are in `src/shared/email.rs`.
-    /// These tests verify the integration of the `Email` type with `HttpsSection`.
-    mod email_validation_integration_tests {
-        use super::*;
-
-        #[test]
-        fn it_should_accept_rfc_compliant_email() {
-            let section = HttpsSection::new("user@example.com".to_string(), false);
-            assert!(section.validate().is_ok());
-        }
-
-        #[test]
-        fn it_should_reject_rfc_non_compliant_email() {
-            let section = HttpsSection::new("invalid-email".to_string(), false);
-            let result = section.validate();
-            assert!(matches!(
-                result,
-                Err(CreateConfigError::InvalidAdminEmail { .. })
-            ));
-        }
-    }
+    // Note: Email validation integration tests have been moved to domain layer.
+    // See HttpsConfig tests in src/domain/https/config.rs
 }

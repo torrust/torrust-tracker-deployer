@@ -18,6 +18,10 @@
 //!
 //! Add new fields here when: User needs to configure something at environment creation time.
 
+use std::fmt;
+
+use serde::{Deserialize, Serialize};
+
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::EnvironmentName;
 use crate::domain::grafana::GrafanaConfig;
@@ -26,13 +30,83 @@ use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::tracker::TrackerConfig;
 use crate::domain::InstanceName;
-use serde::{Deserialize, Serialize};
+
+/// Errors for user inputs validation
+///
+/// These errors represent cross-service invariant violations that can only be
+/// detected when considering multiple service configurations together.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UserInputsError {
+    /// Grafana requires Prometheus to be configured as its data source
+    GrafanaRequiresPrometheus,
+
+    /// HTTPS section is defined but no service has TLS configured
+    HttpsSectionWithoutTlsServices,
+
+    /// At least one service has TLS configured but HTTPS section is missing
+    TlsServicesWithoutHttpsSection,
+}
+
+impl fmt::Display for UserInputsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::GrafanaRequiresPrometheus => {
+                write!(
+                    f,
+                    "Grafana requires Prometheus to be configured as its data source"
+                )
+            }
+            Self::HttpsSectionWithoutTlsServices => {
+                write!(
+                    f,
+                    "HTTPS section is defined but no service has TLS configured"
+                )
+            }
+            Self::TlsServicesWithoutHttpsSection => {
+                write!(
+                    f,
+                    "At least one service has TLS configured but HTTPS section is missing"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for UserInputsError {}
+
+impl UserInputsError {
+    /// Provides actionable help text for fixing the error
+    #[must_use]
+    pub fn help(&self) -> &'static str {
+        match self {
+            Self::GrafanaRequiresPrometheus => {
+                "Add a 'prometheus' section to your configuration, or remove the 'grafana' section. \
+                Grafana needs Prometheus as its metrics data source."
+            }
+            Self::HttpsSectionWithoutTlsServices => {
+                "Either remove the 'https' section, or set 'use_tls_proxy: true' on at least one \
+                service (http_api, http_trackers, or health_check_api)."
+            }
+            Self::TlsServicesWithoutHttpsSection => {
+                "Add an 'https' section with 'admin_email' for Let's Encrypt certificate management. \
+                Services with 'use_tls_proxy: true' require Caddy for TLS termination."
+            }
+        }
+    }
+}
 
 /// User-provided configuration when creating an environment
 ///
 /// This struct contains all fields that are provided by the user when creating
 /// an environment. These fields are immutable throughout the environment lifecycle
 /// and represent the user's configuration choices.
+///
+/// # Cross-Service Invariants
+///
+/// The following invariants are validated at construction time:
+/// - **Grafana requires Prometheus**: If Grafana is enabled, Prometheus must also be enabled
+/// - **HTTPS requires TLS services**: If HTTPS section is present, at least one service must have TLS
+/// - **TLS requires HTTPS**: If any service has TLS, HTTPS section must be present
 ///
 /// # Examples
 ///
@@ -50,69 +124,69 @@ use serde::{Deserialize, Serialize};
 /// let provider_config = ProviderConfig::Lxd(LxdConfig {
 ///     profile_name: ProfileName::new("torrust-profile-production".to_string())?,
 /// });
+/// let ssh_credentials = SshCredentials::new(
+///     PathBuf::from("keys/prod_rsa"),
+///     PathBuf::from("keys/prod_rsa.pub"),
+///     Username::new("torrust".to_string())?,
+/// );
+/// let env_name = EnvironmentName::new("production".to_string())?;
 ///
-/// let user_inputs = UserInputs {
-///     name: EnvironmentName::new("production".to_string())?,
-///     instance_name: InstanceName::new("torrust-tracker-vm-production".to_string())?,
-///     provider_config,
-///     ssh_credentials: SshCredentials::new(
-///         PathBuf::from("keys/prod_rsa"),
-///         PathBuf::from("keys/prod_rsa.pub"),
-///         Username::new("torrust".to_string())?,
-///     ),
-///     ssh_port: 22,
-///     tracker: TrackerConfig::default(),
-///     prometheus: Some(PrometheusConfig::default()),
-///     grafana: Some(GrafanaConfig::default()),
-///     https: None,
-/// };
+/// // Create with defaults (includes Prometheus and Grafana)
+/// let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22)?;
+///
+/// assert_eq!(user_inputs.name().as_str(), "production");
+/// assert!(user_inputs.prometheus().is_some());
+/// assert!(user_inputs.grafana().is_some());
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserInputs {
     /// The validated environment name
-    pub name: EnvironmentName,
+    name: EnvironmentName,
 
     /// The instance name for this environment (auto-generated from name)
-    pub instance_name: InstanceName,
+    instance_name: InstanceName,
 
     /// Provider-specific configuration (e.g., LXD profile, Hetzner settings)
-    pub provider_config: ProviderConfig,
+    provider_config: ProviderConfig,
 
     /// SSH credentials for connecting to instances in this environment
-    pub ssh_credentials: SshCredentials,
+    ssh_credentials: SshCredentials,
 
     /// SSH port for connecting to instances in this environment
-    pub ssh_port: u16,
+    ssh_port: u16,
 
     /// Tracker deployment configuration
-    pub tracker: TrackerConfig,
+    tracker: TrackerConfig,
 
     /// Prometheus metrics collection configuration (optional)
     ///
     /// When present, Prometheus service is enabled in the deployment.
     /// When absent (`None`), Prometheus service is disabled.
     /// Default: `Some(PrometheusConfig::default())` in generated templates.
-    pub prometheus: Option<PrometheusConfig>,
+    prometheus: Option<PrometheusConfig>,
 
     /// Grafana visualization and dashboard configuration (optional)
     ///
     /// When present, Grafana service is enabled in the deployment.
     /// When absent (`None`), Grafana service is disabled.
-    /// Requires Prometheus to be enabled - dependency validated at configuration time.
+    /// Requires Prometheus to be enabled - dependency validated at construction time.
     /// Default: `Some(GrafanaConfig::default())` in generated templates.
-    pub grafana: Option<GrafanaConfig>,
+    grafana: Option<GrafanaConfig>,
 
     /// HTTPS/TLS configuration for Caddy reverse proxy (optional)
     ///
     /// When present, Caddy service is deployed as a TLS termination proxy.
     /// When absent (`None`), services are exposed directly over HTTP.
     /// Requires at least one service to have TLS configuration.
-    pub https: Option<HttpsConfig>,
+    https: Option<HttpsConfig>,
 }
 
 impl UserInputs {
-    /// Creates a new `UserInputs` with auto-generated instance name
+    /// Creates a new `UserInputs` with auto-generated instance name and default services
+    ///
+    /// Creates a `UserInputs` with default tracker configuration, Prometheus, and Grafana
+    /// enabled. This is the standard setup for most deployments.
     ///
     /// # Arguments
     ///
@@ -125,6 +199,13 @@ impl UserInputs {
     ///
     /// A new `UserInputs` with:
     /// - Auto-generated instance name: `torrust-tracker-vm-{env_name}`
+    /// - Default tracker configuration
+    /// - Prometheus and Grafana enabled (satisfies cross-service invariants)
+    ///
+    /// # Errors
+    ///
+    /// This constructor with defaults cannot fail because the default configuration
+    /// (Prometheus + Grafana, no HTTPS) always satisfies cross-service invariants.
     ///
     /// # Examples
     ///
@@ -147,45 +228,54 @@ impl UserInputs {
     ///     profile_name: ProfileName::new("torrust-profile-production".to_string())?,
     /// });
     ///
-    /// let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22);
+    /// let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22)?;
     ///
-    /// assert_eq!(user_inputs.instance_name.as_str(), "torrust-tracker-vm-production");
+    /// assert_eq!(user_inputs.instance_name().as_str(), "torrust-tracker-vm-production");
     /// assert_eq!(user_inputs.provider(), Provider::Lxd);
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    ///
-    /// # Panics
-    ///
-    /// This function does not panic. All name generation is guaranteed to succeed
-    /// for valid environment names.
-    #[must_use]
     pub fn new(
         name: &EnvironmentName,
         provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
         ssh_port: u16,
-    ) -> Self {
-        let instance_name = Self::generate_instance_name(name);
-
-        Self {
-            name: name.clone(),
-            instance_name,
+    ) -> Result<Self, UserInputsError> {
+        // Default configuration: Prometheus + Grafana, no HTTPS
+        // This always passes validation (Grafana has Prometheus, no TLS configured)
+        Self::with_tracker(
+            name,
             provider_config,
             ssh_credentials,
             ssh_port,
-            tracker: TrackerConfig::default(),
-            prometheus: Some(PrometheusConfig::default()),
-            grafana: Some(GrafanaConfig::default()),
-            https: None,
-        }
+            TrackerConfig::default(),
+            Some(PrometheusConfig::default()),
+            Some(GrafanaConfig::default()),
+            None,
+        )
     }
 
-    /// Creates a new `UserInputs` with custom tracker configuration
+    /// Creates a new `UserInputs` with custom tracker and service configuration
     ///
-    /// This is similar to `new` but allows specifying custom tracker,
-    /// prometheus, grafana, and https configurations instead of using defaults.
-    #[must_use]
+    /// This constructor allows full control over all service configurations.
+    /// Cross-service invariants are validated at construction time.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The validated environment name
+    /// * `provider_config` - Provider-specific configuration
+    /// * `ssh_credentials` - SSH credentials for connecting to instances
+    /// * `ssh_port` - SSH port for connecting to instances
+    /// * `tracker` - Tracker deployment configuration
+    /// * `prometheus` - Optional Prometheus configuration
+    /// * `grafana` - Optional Grafana configuration (requires Prometheus)
+    /// * `https` - Optional HTTPS/TLS configuration (requires TLS services)
+    ///
+    /// # Errors
+    ///
+    /// - `GrafanaRequiresPrometheus` if Grafana is configured without Prometheus
+    /// - `HttpsSectionWithoutTlsServices` if HTTPS section exists but no service uses TLS
+    /// - `TlsServicesWithoutHttpsSection` if a service uses TLS but HTTPS section is missing
     #[allow(clippy::too_many_arguments)]
     pub fn with_tracker(
         name: &EnvironmentName,
@@ -196,10 +286,26 @@ impl UserInputs {
         prometheus: Option<PrometheusConfig>,
         grafana: Option<GrafanaConfig>,
         https: Option<HttpsConfig>,
-    ) -> Self {
+    ) -> Result<Self, UserInputsError> {
+        // Cross-service invariant: Grafana requires Prometheus as data source
+        if grafana.is_some() && prometheus.is_none() {
+            return Err(UserInputsError::GrafanaRequiresPrometheus);
+        }
+
+        // Cross-service invariant: HTTPS section requires at least one TLS service
+        let has_tls = tracker.has_any_tls_configured();
+        if https.is_some() && !has_tls {
+            return Err(UserInputsError::HttpsSectionWithoutTlsServices);
+        }
+
+        // Inverse: TLS services require HTTPS section
+        if has_tls && https.is_none() {
+            return Err(UserInputsError::TlsServicesWithoutHttpsSection);
+        }
+
         let instance_name = Self::generate_instance_name(name);
 
-        Self {
+        Ok(Self {
             name: name.clone(),
             instance_name,
             provider_config,
@@ -209,7 +315,59 @@ impl UserInputs {
             prometheus,
             grafana,
             https,
-        }
+        })
+    }
+
+    // ========================================================================
+    // Getter Methods
+    // ========================================================================
+
+    /// Returns the environment name
+    #[must_use]
+    pub fn name(&self) -> &EnvironmentName {
+        &self.name
+    }
+
+    /// Returns the instance name
+    #[must_use]
+    pub fn instance_name(&self) -> &InstanceName {
+        &self.instance_name
+    }
+
+    /// Returns the SSH credentials
+    #[must_use]
+    pub fn ssh_credentials(&self) -> &SshCredentials {
+        &self.ssh_credentials
+    }
+
+    /// Returns the SSH port
+    #[must_use]
+    pub fn ssh_port(&self) -> u16 {
+        self.ssh_port
+    }
+
+    /// Returns the tracker configuration
+    #[must_use]
+    pub fn tracker(&self) -> &TrackerConfig {
+        &self.tracker
+    }
+
+    /// Returns the Prometheus configuration if enabled
+    #[must_use]
+    pub fn prometheus(&self) -> Option<&PrometheusConfig> {
+        self.prometheus.as_ref()
+    }
+
+    /// Returns the Grafana configuration if enabled
+    #[must_use]
+    pub fn grafana(&self) -> Option<&GrafanaConfig> {
+        self.grafana.as_ref()
+    }
+
+    /// Returns the HTTPS configuration if enabled
+    #[must_use]
+    pub fn https(&self) -> Option<&HttpsConfig> {
+        self.https.as_ref()
     }
 
     // ========================================================================
@@ -238,7 +396,7 @@ impl UserInputs {
     ///     profile_name: ProfileName::new("test-profile".to_string())?,
     /// });
     ///
-    /// let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22);
+    /// let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22)?;
     /// assert_eq!(user_inputs.provider(), Provider::Lxd);
     ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -282,11 +440,16 @@ impl UserInputs {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
     use crate::domain::provider::LxdConfig;
+    use crate::domain::tracker::{
+        DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, SqliteConfig, TrackerCoreConfig,
+        UdpTrackerConfig,
+    };
     use crate::domain::ProfileName;
-    use crate::shared::{ApiToken, Username};
-    use std::path::PathBuf;
+    use crate::shared::{ApiToken, DomainName, Username};
 
     fn create_test_ssh_credentials() -> SshCredentials {
         SshCredentials::new(
@@ -302,31 +465,59 @@ mod tests {
         })
     }
 
+    fn create_test_env_name() -> EnvironmentName {
+        EnvironmentName::new("test-env".to_string()).unwrap()
+    }
+
+    fn create_tracker_config_with_tls() -> TrackerConfig {
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap()],
+            vec![],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "token".to_string().into(),
+                Some(DomainName::new("api.example.com").unwrap()),
+                true, // TLS enabled
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
+    fn create_tracker_config_without_tls() -> TrackerConfig {
+        TrackerConfig::default()
+    }
+
     #[test]
     fn it_should_create_user_inputs_with_lxd_provider() {
-        let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
+        let env_name = create_test_env_name();
         let provider_config = create_lxd_provider_config("test-profile");
         let ssh_credentials = create_test_ssh_credentials();
 
-        let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22);
+        let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22).unwrap();
 
-        assert_eq!(user_inputs.name.as_str(), "test-env");
+        assert_eq!(user_inputs.name().as_str(), "test-env");
         assert_eq!(
-            user_inputs.instance_name.as_str(),
+            user_inputs.instance_name().as_str(),
             "torrust-tracker-vm-test-env"
         );
         assert_eq!(user_inputs.provider(), Provider::Lxd);
         assert_eq!(user_inputs.provider_config().provider_name(), "lxd");
-        assert_eq!(user_inputs.ssh_port, 22);
+        assert_eq!(user_inputs.ssh_port(), 22);
     }
 
     #[test]
     fn it_should_return_provider_config_for_lxd() {
-        let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
+        let env_name = create_test_env_name();
         let provider_config = create_lxd_provider_config("my-custom-profile");
         let ssh_credentials = create_test_ssh_credentials();
 
-        let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22);
+        let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22).unwrap();
 
         let lxd_config = user_inputs.provider_config().as_lxd().unwrap();
         assert_eq!(lxd_config.profile_name.as_str(), "my-custom-profile");
@@ -336,7 +527,7 @@ mod tests {
     fn it_should_return_provider_config_for_hetzner() {
         use crate::domain::provider::HetznerConfig;
 
-        let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
+        let env_name = create_test_env_name();
         let provider_config = ProviderConfig::Hetzner(HetznerConfig {
             api_token: ApiToken::from("test-token"),
             server_type: "cx22".to_string(),
@@ -345,7 +536,7 @@ mod tests {
         });
         let ssh_credentials = create_test_ssh_credentials();
 
-        let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22);
+        let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22).unwrap();
 
         assert_eq!(user_inputs.provider(), Provider::Hetzner);
         assert!(user_inputs.provider_config().as_lxd().is_none());
@@ -363,11 +554,163 @@ mod tests {
         let provider_config = create_lxd_provider_config("prod-profile");
         let ssh_credentials = create_test_ssh_credentials();
 
-        let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22);
+        let user_inputs = UserInputs::new(&env_name, provider_config, ssh_credentials, 22).unwrap();
 
         assert_eq!(
-            user_inputs.instance_name.as_str(),
+            user_inputs.instance_name().as_str(),
             "torrust-tracker-vm-production"
         );
+    }
+
+    // ========================================================================
+    // Cross-Service Invariant Tests
+    // ========================================================================
+
+    #[test]
+    fn it_should_reject_grafana_without_prometheus() {
+        let env_name = create_test_env_name();
+        let provider_config = create_lxd_provider_config("test-profile");
+        let ssh_credentials = create_test_ssh_credentials();
+
+        let result = UserInputs::with_tracker(
+            &env_name,
+            provider_config,
+            ssh_credentials,
+            22,
+            create_tracker_config_without_tls(),
+            None,                           // No Prometheus
+            Some(GrafanaConfig::default()), // Grafana enabled
+            None,
+        );
+
+        assert!(
+            matches!(result, Err(UserInputsError::GrafanaRequiresPrometheus)),
+            "Expected GrafanaRequiresPrometheus error, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn it_should_accept_grafana_with_prometheus() {
+        let env_name = create_test_env_name();
+        let provider_config = create_lxd_provider_config("test-profile");
+        let ssh_credentials = create_test_ssh_credentials();
+
+        let result = UserInputs::with_tracker(
+            &env_name,
+            provider_config,
+            ssh_credentials,
+            22,
+            create_tracker_config_without_tls(),
+            Some(PrometheusConfig::default()), // Prometheus enabled
+            Some(GrafanaConfig::default()),    // Grafana enabled
+            None,
+        );
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn it_should_reject_https_section_without_tls_services() {
+        let env_name = create_test_env_name();
+        let provider_config = create_lxd_provider_config("test-profile");
+        let ssh_credentials = create_test_ssh_credentials();
+
+        let result = UserInputs::with_tracker(
+            &env_name,
+            provider_config,
+            ssh_credentials,
+            22,
+            create_tracker_config_without_tls(), // No TLS on any service
+            Some(PrometheusConfig::default()),
+            Some(GrafanaConfig::default()),
+            Some(HttpsConfig::new("admin@example.com", false).expect("valid email")), // HTTPS section present
+        );
+
+        assert!(
+            matches!(result, Err(UserInputsError::HttpsSectionWithoutTlsServices)),
+            "Expected HttpsSectionWithoutTlsServices error, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn it_should_reject_tls_services_without_https_section() {
+        let env_name = create_test_env_name();
+        let provider_config = create_lxd_provider_config("test-profile");
+        let ssh_credentials = create_test_ssh_credentials();
+
+        let result = UserInputs::with_tracker(
+            &env_name,
+            provider_config,
+            ssh_credentials,
+            22,
+            create_tracker_config_with_tls(), // Has TLS on HTTP API
+            Some(PrometheusConfig::default()),
+            Some(GrafanaConfig::default()),
+            None, // No HTTPS section
+        );
+
+        assert!(
+            matches!(result, Err(UserInputsError::TlsServicesWithoutHttpsSection)),
+            "Expected TlsServicesWithoutHttpsSection error, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn it_should_accept_tls_services_with_https_section() {
+        let env_name = create_test_env_name();
+        let provider_config = create_lxd_provider_config("test-profile");
+        let ssh_credentials = create_test_ssh_credentials();
+
+        let result = UserInputs::with_tracker(
+            &env_name,
+            provider_config,
+            ssh_credentials,
+            22,
+            create_tracker_config_with_tls(),
+            Some(PrometheusConfig::default()),
+            Some(GrafanaConfig::default()),
+            Some(HttpsConfig::new("admin@example.com", false).expect("valid email")),
+        );
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn it_should_accept_no_tls_and_no_https() {
+        let env_name = create_test_env_name();
+        let provider_config = create_lxd_provider_config("test-profile");
+        let ssh_credentials = create_test_ssh_credentials();
+
+        let result = UserInputs::with_tracker(
+            &env_name,
+            provider_config,
+            ssh_credentials,
+            22,
+            create_tracker_config_without_tls(),
+            Some(PrometheusConfig::default()),
+            Some(GrafanaConfig::default()),
+            None, // No HTTPS
+        );
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn it_should_provide_helpful_error_messages() {
+        assert_eq!(
+            UserInputsError::GrafanaRequiresPrometheus.to_string(),
+            "Grafana requires Prometheus to be configured as its data source"
+        );
+        assert!(UserInputsError::GrafanaRequiresPrometheus
+            .help()
+            .contains("prometheus"));
+
+        assert!(UserInputsError::HttpsSectionWithoutTlsServices
+            .help()
+            .contains("use_tls_proxy"));
+
+        assert!(UserInputsError::TlsServicesWithoutHttpsSection
+            .help()
+            .contains("https"));
     }
 }

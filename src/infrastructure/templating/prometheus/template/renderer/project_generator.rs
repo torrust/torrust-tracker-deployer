@@ -154,13 +154,13 @@ impl PrometheusProjectGenerator {
     ) -> PrometheusContext {
         let scrape_interval = prometheus_config.scrape_interval_in_secs().to_string();
         let api_token = tracker_config
-            .http_api
+            .http_api()
             .admin_token()
             .expose_secret()
             .to_string();
 
         // Extract port from SocketAddr
-        let api_port = tracker_config.http_api.bind_address().port();
+        let api_port = tracker_config.http_api().bind_address().port();
 
         PrometheusContext::new(scrape_interval, api_token, api_port)
     }
@@ -212,16 +212,28 @@ scrape_configs:
         bind_address: &str,
         admin_token: &str,
     ) -> TrackerConfig {
-        TrackerConfig {
-            http_api: HttpApiConfig::new(
+        use crate::domain::tracker::{
+            DatabaseConfig, HealthCheckApiConfig, SqliteConfig, TrackerCoreConfig,
+        };
+
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![],
+            vec![],
+            HttpApiConfig::new(
                 bind_address.parse().expect("valid address"),
                 admin_token.to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            ..Default::default()
-        }
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config")
     }
 
     #[test]

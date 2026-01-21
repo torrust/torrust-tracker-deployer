@@ -78,16 +78,16 @@ impl AnsibleVariablesContext {
 
         // Extract UDP tracker ports
         let udp_ports: Vec<u16> = config
-            .udp_trackers
+            .udp_trackers()
             .iter()
-            .map(|tracker| Self::extract_port(&tracker.bind_address))
+            .map(|tracker| Self::extract_port(&tracker.bind_address()))
             .collect();
 
         // Extract HTTP tracker ports
         let http_ports: Vec<u16> = config
-            .http_trackers
+            .http_trackers()
             .iter()
-            .map(|tracker| Self::extract_port(&tracker.bind_address))
+            .map(|tracker| Self::extract_port(&tracker.bind_address()))
             .collect();
 
         // Extract HTTP API port (hardcoded to 1212 for now - can be made configurable later)
@@ -188,41 +188,30 @@ mod tests {
             TrackerCoreConfig, UdpTrackerConfig,
         };
 
-        let tracker_config = TrackerConfig {
-            core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: false,
-            },
-            udp_trackers: vec![
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6868".parse().unwrap(),
-                    domain: None,
-                },
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".parse().unwrap(),
-                    domain: None,
-                },
+        let tracker_config = TrackerConfig::new(
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![
+                UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
             ],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
-            http_api: HttpApiConfig::new(
+            vec![
+                HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false)
+                    .expect("valid config"),
+            ],
+            HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "MyAccessToken".to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
-        };
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config");
 
         let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
 
@@ -237,28 +226,24 @@ mod tests {
             DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, SqliteConfig, TrackerCoreConfig,
         };
 
-        let tracker_config = TrackerConfig {
-            core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: true,
-            },
-            udp_trackers: vec![],
-            http_trackers: vec![],
-            http_api: HttpApiConfig::new(
+        let tracker_config = TrackerConfig::new(
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                true,
+            ),
+            vec![],
+            vec![],
+            HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "Token123".to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
-        };
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config");
 
         let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
 
@@ -274,41 +259,30 @@ mod tests {
             TrackerCoreConfig, UdpTrackerConfig,
         };
 
-        let tracker_config = TrackerConfig {
-            core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: false,
-            },
-            udp_trackers: vec![
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6868".parse().unwrap(), // Valid address
-                    domain: None,
-                },
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".parse().unwrap(), // Valid address
-                    domain: None,
-                },
+        let tracker_config = TrackerConfig::new(
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![
+                UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
             ],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(), // Valid address
-                domain: None,
-                use_tls_proxy: false,
-            }],
-            http_api: HttpApiConfig::new(
+            vec![
+                HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false)
+                    .expect("valid config"),
+            ],
+            HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "Token".to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
-        };
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config");
 
         let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
 

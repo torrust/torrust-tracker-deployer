@@ -137,7 +137,7 @@ impl AnsibleTemplateService {
         instance_ip: IpAddr,
         ssh_port_override: Option<u16>,
     ) -> Result<(), AnsibleTemplateServiceError> {
-        let effective_ssh_port = ssh_port_override.unwrap_or(user_inputs.ssh_port);
+        let effective_ssh_port = ssh_port_override.unwrap_or(user_inputs.ssh_port());
 
         info!(
             instance_ip = %instance_ip,
@@ -150,10 +150,10 @@ impl AnsibleTemplateService {
 
         RenderAnsibleTemplatesStep::new(
             self.ansible_template_renderer.clone(),
-            user_inputs.ssh_credentials.clone(),
+            user_inputs.ssh_credentials().clone(),
             ssh_socket_addr,
-            user_inputs.tracker.clone(),
-            user_inputs.grafana.clone(),
+            user_inputs.tracker().clone(),
+            user_inputs.grafana().cloned(),
         )
         .execute()
         .await

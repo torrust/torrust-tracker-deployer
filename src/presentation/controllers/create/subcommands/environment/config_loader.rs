@@ -4,6 +4,7 @@
 //! Figment is used only in the presentation layer as a delivery mechanism,
 //! following DDD architecture boundaries.
 
+use std::convert::TryInto;
 use std::path::Path;
 
 use figment::{
@@ -12,6 +13,7 @@ use figment::{
 };
 
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
+use crate::domain::environment::EnvironmentParams;
 
 use super::errors::{ConfigFormat, CreateEnvironmentCommandError};
 
@@ -90,9 +92,9 @@ impl ConfigLoader {
 
         // Step 3: Validate using domain rules
         // This converts string-based config to domain types and validates
-        config
+        let _validated: EnvironmentParams = config
             .clone()
-            .to_environment_params()
+            .try_into()
             .map_err(|source| CreateEnvironmentCommandError::ConfigValidationFailed { source })?;
 
         Ok(config)

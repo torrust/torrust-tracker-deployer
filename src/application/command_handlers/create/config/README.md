@@ -27,7 +27,7 @@ User JSON → [Config DTOs] → validate/transform → [Domain Types]
 | **Layer**      | Application                                      | Domain                                           |
 | **Purpose**    | JSON parsing                                     | Business logic                                   |
 | **Types**      | Raw primitives (`String`, `u32`)                 | Validated newtypes (`NonZeroU32`, `ProfileName`) |
-| **Validation** | Deferred to `to_*_config()`                      | Enforced at construction                         |
+| **Validation** | Deferred to `TryFrom` conversion                 | Enforced at construction                         |
 | **Serde**      | Heavy (`Deserialize`, `Serialize`, `JsonSchema`) | Minimal                                          |
 
 ## Module Structure
@@ -53,18 +53,24 @@ config/
 
 ## Conversion Pattern
 
-Each DTO provides a `to_*_config()` method that validates and converts to domain types:
+Each DTO implements `TryFrom` for idiomatic Rust conversion to domain types.
+This follows the pattern documented in `docs/decisions/tryfrom-for-dto-to-domain-conversion.md`.
 
 ```rust
 // Example: PrometheusSection → PrometheusConfig
-impl PrometheusSection {
-    pub fn to_prometheus_config(&self) -> Result<PrometheusConfig, CreateConfigError> {
+impl TryFrom<PrometheusSection> for PrometheusConfig {
+    type Error = CreateConfigError;
+
+    fn try_from(section: PrometheusSection) -> Result<Self, Self::Error> {
         // Validates: scrape_interval must be > 0
-        let interval = NonZeroU32::new(self.scrape_interval_in_secs)
+        let interval = NonZeroU32::new(section.scrape_interval_in_secs)
             .ok_or_else(|| CreateConfigError::InvalidPrometheusConfig(...))?;
         Ok(PrometheusConfig::new(interval))
     }
 }
+
+// Usage:
+let config: PrometheusConfig = section.try_into()?;
 ```
 
 ## Constraints Expressed in Rust (Not in JSON Schema)
@@ -77,7 +83,7 @@ The Rust types express constraints that JSON Schema cannot fully capture:
 | Mutually exclusive options | Tagged enums with `#[serde(tag = "...")]`   | `oneOf` is complex and error-prone |
 | Path validation            | `PathBuf` with existence checks             | No file system awareness           |
 | Format validation          | Newtype constructors (`ProfileName::new()`) | Regex patterns are limited         |
-| Cross-field validation     | Custom `to_*_config()` logic                | No support                         |
+| Cross-field validation     | Custom `TryFrom` implementation logic       | No support                         |
 | Secret handling            | `Password`, `ApiToken` wrappers             | No security semantics              |
 
 ## For AI Agents
@@ -86,7 +92,7 @@ When generating environment configuration:
 
 1. **Reference these Rust types** for accurate constraint information
 2. **Follow the structure** in `EnvironmentCreationConfig` as the root type
-3. **Check validation logic** in `to_*_config()` methods for business rules
+3. **Check validation logic** in `TryFrom` implementations for business rules
 4. **Use JSON schema** (`schemas/environment-config.json`) for basic structure, but trust Rust types for constraints
 
 ## Related Documentation

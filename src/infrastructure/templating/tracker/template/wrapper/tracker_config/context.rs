@@ -26,32 +26,30 @@ use crate::domain::environment::TrackerConfig;
 /// use torrust_tracker_deployer_lib::infrastructure::templating::tracker::TrackerContext;
 /// use torrust_tracker_deployer_lib::domain::environment::{TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig, UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig};
 ///
-/// let tracker_config = TrackerConfig {
-///     core: TrackerCoreConfig {
-///         database: DatabaseConfig::Sqlite(SqliteConfig {
-///             database_name: "tracker.db".to_string(),
-///         }),
-///         private: true,
-///     },
-///     udp_trackers: vec![
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6868".parse().unwrap(), domain: None },
-///         UdpTrackerConfig { bind_address: "0.0.0.0:6969".parse().unwrap(), domain: None },
+/// let tracker_config = TrackerConfig::new(
+///     TrackerCoreConfig::new(
+///         DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+///         true,
+///     ),
+///     vec![
+///         UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
+///         UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
 ///     ],
-///     http_trackers: vec![
-///         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
+///     vec![
+///         HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).expect("valid config"),
 ///     ],
-///     http_api: HttpApiConfig::new(
+///     HttpApiConfig::new(
 ///         "0.0.0.0:1212".parse().unwrap(),
 ///         "MyToken".to_string().into(),
 ///         None,
 ///         false,
 ///     ).expect("valid config"),
-///     health_check_api: HealthCheckApiConfig {
-///         bind_address: "127.0.0.1:1313".parse().unwrap(),
-///         domain: None,
-///         use_tls_proxy: false,
-///     },
-/// };
+///     HealthCheckApiConfig::new(
+///         "127.0.0.1:1313".parse().unwrap(),
+///         None,
+///         false,
+///     ).expect("valid config"),
+/// ).expect("valid tracker config");
 /// let context = TrackerContext::from_config(&tracker_config);
 /// ```
 #[derive(Debug, Clone, Serialize)]
@@ -131,43 +129,43 @@ impl TrackerContext {
         use crate::domain::tracker::DatabaseConfig;
 
         let (mysql_host, mysql_port, mysql_database, mysql_user, mysql_password) =
-            match &config.core.database {
+            match config.core().database() {
                 DatabaseConfig::Mysql(mysql_config) => (
-                    Some(mysql_config.host.clone()),
-                    Some(mysql_config.port),
-                    Some(mysql_config.database_name.clone()),
-                    Some(mysql_config.username.clone()),
-                    Some(mysql_config.password.expose_secret().to_string()),
+                    Some(mysql_config.host().to_string()),
+                    Some(mysql_config.port()),
+                    Some(mysql_config.database_name().to_string()),
+                    Some(mysql_config.username().to_string()),
+                    Some(mysql_config.password().expose_secret().to_string()),
                 ),
                 DatabaseConfig::Sqlite(..) => (None, None, None, None, None),
             };
 
         Self {
-            database_driver: config.core.database.driver_name().to_string(),
-            tracker_database_name: config.core.database.database_name().to_string(),
+            database_driver: config.core().database().driver_name().to_string(),
+            tracker_database_name: config.core().database().database_name().to_string(),
             mysql_host,
             mysql_port,
             mysql_database,
             mysql_user,
             mysql_password,
-            tracker_core_private: config.core.private,
+            tracker_core_private: config.core().private(),
             on_reverse_proxy: config.any_http_tracker_uses_tls_proxy(),
             udp_trackers: config
-                .udp_trackers
+                .udp_trackers()
                 .iter()
                 .map(|t| UdpTrackerEntry {
-                    bind_address: t.bind_address.to_string(),
+                    bind_address: t.bind_address().to_string(),
                 })
                 .collect(),
             http_trackers: config
-                .http_trackers
+                .http_trackers()
                 .iter()
                 .map(|t| HttpTrackerEntry {
-                    bind_address: t.bind_address.to_string(),
+                    bind_address: t.bind_address().to_string(),
                 })
                 .collect(),
-            http_api_bind_address: config.http_api.bind_address().to_string(),
-            health_check_api_bind_address: config.health_check_api.bind_address.to_string(),
+            http_api_bind_address: config.http_api().bind_address().to_string(),
+            health_check_api_bind_address: config.health_check_api().bind_address().to_string(),
         }
     }
 
@@ -224,41 +222,30 @@ mod tests {
     use crate::shared::Password;
 
     fn create_test_tracker_config() -> TrackerConfig {
-        TrackerConfig {
-            core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "test_tracker.db".to_string(),
-                }),
-                private: true,
-            },
-            udp_trackers: vec![
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6868".parse().unwrap(),
-                    domain: None,
-                },
-                UdpTrackerConfig {
-                    bind_address: "0.0.0.0:6969".parse().unwrap(),
-                    domain: None,
-                },
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("test_tracker.db").unwrap()),
+                true,
+            ),
+            vec![
+                UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).expect("valid config"),
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config"),
             ],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
-            http_api: HttpApiConfig::new(
+            vec![
+                HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false)
+                    .expect("valid config"),
+            ],
+            HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_admin_token".to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
-        }
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config")
     }
 
     #[test]
@@ -283,39 +270,38 @@ mod tests {
 
     #[test]
     fn it_should_create_context_from_mysql_tracker_config() {
-        let config = TrackerConfig {
-            core: TrackerCoreConfig {
-                database: DatabaseConfig::Mysql(MysqlConfig {
-                    host: "mysql".to_string(),
-                    port: 3306,
-                    database_name: "tracker_db".to_string(),
-                    username: "tracker_user".to_string(),
-                    password: Password::from("secure_pass"),
-                }),
-                private: false,
-            },
-            udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6969".parse().unwrap(),
-                domain: None,
-            }],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
-            http_api: HttpApiConfig::new(
+        let config = TrackerConfig::new(
+            TrackerCoreConfig::new(
+                DatabaseConfig::Mysql(
+                    MysqlConfig::new(
+                        "mysql",
+                        3306,
+                        "tracker_db",
+                        "tracker_user",
+                        Password::from("secure_pass"),
+                    )
+                    .unwrap(),
+                ),
+                false,
+            ),
+            vec![
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
+            ],
+            vec![
+                HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false)
+                    .expect("valid config"),
+            ],
+            HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_token".to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
-        };
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config");
 
         let context = TrackerContext::from_config(&config);
 

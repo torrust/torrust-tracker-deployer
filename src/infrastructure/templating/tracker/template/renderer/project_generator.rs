@@ -212,35 +212,29 @@ mod tests {
         let template_manager = create_test_template_manager();
         let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
 
-        let tracker_config = TrackerConfig {
-            core: TrackerCoreConfig {
-                database: DatabaseConfig::Sqlite(SqliteConfig {
-                    database_name: "tracker.db".to_string(),
-                }),
-                private: false,
-            },
-            udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6969".parse().unwrap(),
-                domain: None,
-            }],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
-            http_api: HttpApiConfig::new(
+        let tracker_config = TrackerConfig::new(
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
+            ],
+            vec![
+                HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false)
+                    .expect("valid config"),
+            ],
+            HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_token".to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
-        };
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config");
 
         generator
             .render(Some(&tracker_config))
@@ -266,39 +260,38 @@ mod tests {
         let template_manager = create_test_template_manager();
         let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
 
-        let tracker_config = TrackerConfig {
-            core: TrackerCoreConfig {
-                database: DatabaseConfig::Mysql(MysqlConfig {
-                    host: "mysql".to_string(),
-                    port: 3306,
-                    database_name: "tracker_db".to_string(),
-                    username: "tracker_user".to_string(),
-                    password: Password::from("secure_pass"),
-                }),
-                private: false,
-            },
-            udp_trackers: vec![UdpTrackerConfig {
-                bind_address: "0.0.0.0:6969".parse().unwrap(),
-                domain: None,
-            }],
-            http_trackers: vec![HttpTrackerConfig {
-                bind_address: "0.0.0.0:7070".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            }],
-            http_api: HttpApiConfig::new(
+        let tracker_config = TrackerConfig::new(
+            TrackerCoreConfig::new(
+                DatabaseConfig::Mysql(
+                    MysqlConfig::new(
+                        "mysql",
+                        3306,
+                        "tracker_db",
+                        "tracker_user",
+                        Password::from("secure_pass"),
+                    )
+                    .unwrap(),
+                ),
+                false,
+            ),
+            vec![
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
+            ],
+            vec![
+                HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false)
+                    .expect("valid config"),
+            ],
+            HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_token".to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig {
-                bind_address: "127.0.0.1:1313".parse().unwrap(),
-                domain: None,
-                use_tls_proxy: false,
-            },
-        };
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config");
 
         generator
             .render(Some(&tracker_config))

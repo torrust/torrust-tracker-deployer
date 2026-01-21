@@ -37,7 +37,9 @@ impl Environment<Released> {
         mut self,
         service_endpoints: ServiceEndpoints,
     ) -> Environment<Running> {
-        self.context.runtime_outputs.service_endpoints = Some(service_endpoints);
+        self.context
+            .runtime_outputs
+            .record_services_started(service_endpoints);
         self.with_state(Running)
     }
 

@@ -23,31 +23,29 @@
 //!     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig
 //! };
 //!
-//! let config = TrackerConfig {
-//!     core: TrackerCoreConfig {
-//!         database: DatabaseConfig::Sqlite(SqliteConfig {
-//!             database_name: "tracker.db".to_string(),
-//!         }),
-//!         private: false,
-//!     },
-//!     udp_trackers: vec![
-//!         UdpTrackerConfig { bind_address: "0.0.0.0:6868".parse().unwrap(), domain: None },
+//! let config = TrackerConfig::new(
+//!     TrackerCoreConfig::new(
+//!         DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+//!         false,
+//!     ),
+//!     vec![
+//!         UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).unwrap(),
 //!     ],
-//!     http_trackers: vec![
-//!         HttpTrackerConfig { bind_address: "0.0.0.0:7070".parse().unwrap(), domain: None, use_tls_proxy: false },
+//!     vec![
+//!         HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).unwrap(),
 //!     ],
-//!     http_api: HttpApiConfig::new(
+//!     HttpApiConfig::new(
 //!         "0.0.0.0:1212".parse().unwrap(),
 //!         "MyToken".to_string().into(),
 //!         None,
 //!         false,
 //!     ).expect("valid config"),
-//!     health_check_api: HealthCheckApiConfig {
-//!         bind_address: "127.0.0.1:1313".parse().unwrap(),
-//!         domain: None,
-//!         use_tls_proxy: false,
-//!     },
-//! };
+//!     HealthCheckApiConfig::new(
+//!         "127.0.0.1:1313".parse().unwrap(),
+//!         None,
+//!         false,
+//!     ).expect("valid config"),
+//! ).expect("valid tracker config");
 //! ```
 
 mod binding_address;
@@ -56,8 +54,9 @@ mod protocol;
 
 pub use binding_address::BindingAddress;
 pub use config::{
-    is_localhost, DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpApiConfigError,
-    HttpTrackerConfig, MysqlConfig, SqliteConfig, TrackerConfig, TrackerConfigError,
-    TrackerCoreConfig, UdpTrackerConfig,
+    is_localhost, DatabaseConfig, HealthCheckApiConfig, HealthCheckApiConfigError, HttpApiConfig,
+    HttpApiConfigError, HttpTrackerConfig, HttpTrackerConfigError, MysqlConfig, MysqlConfigError,
+    SqliteConfig, SqliteConfigError, TrackerConfig, TrackerConfigError, TrackerCoreConfig,
+    UdpTrackerConfig, UdpTrackerConfigError,
 };
 pub use protocol::{Protocol, ProtocolParseError};

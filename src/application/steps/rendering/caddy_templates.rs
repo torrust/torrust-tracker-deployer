@@ -99,7 +99,7 @@ impl<S> RenderCaddyTemplatesStep<S> {
     )]
     pub fn execute(&self) -> Result<Option<PathBuf>, CaddyProjectGeneratorError> {
         // Check if HTTPS is configured
-        let Some(https_config) = &self.environment.context().user_inputs.https else {
+        let Some(https_config) = self.environment.context().user_inputs.https() else {
             info!(
                 step = "render_caddy_templates",
                 status = "skipped",
@@ -157,7 +157,7 @@ impl<S> RenderCaddyTemplatesStep<S> {
         https_config: &crate::domain::https::HttpsConfig,
     ) -> CaddyContext {
         let user_inputs = &self.environment.context().user_inputs;
-        let tracker = &user_inputs.tracker;
+        let tracker = user_inputs.tracker();
 
         let mut context = CaddyContext::new(https_config.admin_email(), https_config.use_staging());
 
@@ -179,7 +179,7 @@ impl<S> RenderCaddyTemplatesStep<S> {
         }
 
         // Add Grafana if TLS configured
-        if let Some(ref grafana) = user_inputs.grafana {
+        if let Some(grafana) = user_inputs.grafana() {
             if let Some(tls_domain) = grafana.tls_domain() {
                 // Grafana default port is 3000
                 context = context.with_grafana(CaddyService::new(tls_domain, 3000));

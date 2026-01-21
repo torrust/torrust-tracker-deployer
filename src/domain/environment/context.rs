@@ -36,7 +36,9 @@
 //! where to add new fields as the application evolves.
 
 use crate::adapters::ssh::SshCredentials;
-use crate::domain::environment::{EnvironmentName, InternalConfig, RuntimeOutputs, UserInputs};
+use crate::domain::environment::{
+    EnvironmentName, EnvironmentParams, InternalConfig, RuntimeOutputs, UserInputs,
+};
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::ProviderConfig;
@@ -176,7 +178,7 @@ impl EnvironmentContext {
     /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
     /// let context = EnvironmentContext::new(&env_name, provider_config, ssh_credentials, 22, created_at);
     ///
-    /// assert_eq!(context.user_inputs.instance_name.as_str(), "torrust-tracker-vm-production");
+    /// assert_eq!(context.user_inputs.instance_name().as_str(), "torrust-tracker-vm-production");
     /// let lxd_config = context.user_inputs.provider_config().as_lxd().unwrap();
     /// assert_eq!(lxd_config.profile_name.as_str(), "torrust-profile-production");
     /// assert_eq!(context.internal_config.data_dir, PathBuf::from("./data/production"));
@@ -199,72 +201,71 @@ impl EnvironmentContext {
     ) -> Self {
         Self {
             created_at,
-            user_inputs: UserInputs::new(name, provider_config, ssh_credentials, ssh_port),
+            user_inputs: UserInputs::new(name, provider_config, ssh_credentials, ssh_port)
+                .expect("UserInputs::new with defaults should never fail - default config always passes validation"),
             internal_config: InternalConfig::new(name),
-            runtime_outputs: RuntimeOutputs {
-                instance_ip: None,
-                provision_method: None,
-                service_endpoints: None,
-            },
+            runtime_outputs: RuntimeOutputs::new(),
         }
     }
 
-    /// Creates a new environment context with custom tracker configuration
+    /// Creates a new environment context from validated parameters
     ///
     /// This creates absolute paths for data and build directories by using the
-    /// provided working directory as the base, and allows specifying custom
-    /// tracker, prometheus, grafana, and https configurations.
-    #[must_use]
-    #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
-    pub fn with_working_dir_and_tracker(
-        name: &EnvironmentName,
-        provider_config: ProviderConfig,
-        ssh_credentials: SshCredentials,
-        ssh_port: u16,
-        tracker_config: crate::domain::tracker::TrackerConfig,
-        prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
-        grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
-        https_config: Option<crate::domain::https::HttpsConfig>,
+    /// provided working directory as the base.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - Validated environment parameters (domain value object)
+    /// * `working_dir` - Base directory for data and build directories
+    /// * `created_at` - Timestamp for context creation
+    ///
+    /// # Errors
+    ///
+    /// Returns `UserInputsError` if cross-service invariant validation fails:
+    /// - `GrafanaRequiresPrometheus` if Grafana is configured without Prometheus
+    /// - `HttpsSectionWithoutTlsServices` if HTTPS section exists but no service uses TLS
+    /// - `TlsServicesWithoutHttpsSection` if a service uses TLS but HTTPS section is missing
+    pub fn create(
+        params: EnvironmentParams,
         working_dir: &std::path::Path,
         created_at: DateTime<Utc>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, crate::domain::environment::UserInputsError> {
+        Ok(Self {
             created_at,
             user_inputs: UserInputs::with_tracker(
-                name,
-                provider_config,
-                ssh_credentials,
-                ssh_port,
-                tracker_config,
-                prometheus_config,
-                grafana_config,
-                https_config,
+                &params.environment_name,
+                params.provider_config,
+                params.ssh_credentials,
+                params.ssh_port,
+                params.tracker_config,
+                params.prometheus_config,
+                params.grafana_config,
+                params.https_config,
+            )?,
+            internal_config: InternalConfig::with_working_dir(
+                &params.environment_name,
+                working_dir,
             ),
-            internal_config: InternalConfig::with_working_dir(name, working_dir),
-            runtime_outputs: RuntimeOutputs {
-                instance_ip: None,
-                provision_method: None,
-                service_endpoints: None,
-            },
-        }
+            runtime_outputs: RuntimeOutputs::new(),
+        })
     }
 
     /// Returns the SSH username for this environment
     #[must_use]
     pub fn ssh_username(&self) -> &crate::shared::Username {
-        &self.user_inputs.ssh_credentials.ssh_username
+        &self.user_inputs.ssh_credentials().ssh_username
     }
 
     /// Returns the SSH private key path for this environment
     #[must_use]
     pub fn ssh_private_key_path(&self) -> &PathBuf {
-        &self.user_inputs.ssh_credentials.ssh_priv_key_path
+        &self.user_inputs.ssh_credentials().ssh_priv_key_path
     }
 
     /// Returns the SSH public key path for this environment
     #[must_use]
     pub fn ssh_public_key_path(&self) -> &PathBuf {
-        &self.user_inputs.ssh_credentials.ssh_pub_key_path
+        &self.user_inputs.ssh_credentials().ssh_pub_key_path
     }
 
     /// Returns the templates directory for this environment
@@ -299,7 +300,7 @@ impl EnvironmentContext {
     /// configuration (e.g., LXD, Hetzner).
     #[must_use]
     pub fn tofu_build_dir(&self) -> PathBuf {
-        let provider = self.user_inputs.provider_config.provider();
+        let provider = self.user_inputs.provider_config().provider();
         self.internal_config.tofu_build_dir_for_provider(provider)
     }
 
@@ -322,51 +323,51 @@ impl EnvironmentContext {
     /// Returns the environment name
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {
-        &self.user_inputs.name
+        self.user_inputs.name()
     }
 
     /// Returns the instance name
     #[must_use]
     pub fn instance_name(&self) -> &crate::domain::InstanceName {
-        &self.user_inputs.instance_name
+        self.user_inputs.instance_name()
     }
 
     /// Returns the provider configuration
     #[must_use]
     pub fn provider_config(&self) -> &ProviderConfig {
-        &self.user_inputs.provider_config
+        self.user_inputs.provider_config()
     }
 
     /// Returns the SSH credentials
     #[must_use]
     pub fn ssh_credentials(&self) -> &SshCredentials {
-        &self.user_inputs.ssh_credentials
+        self.user_inputs.ssh_credentials()
     }
 
     /// Returns the SSH port
     #[must_use]
     pub fn ssh_port(&self) -> u16 {
-        self.user_inputs.ssh_port
+        self.user_inputs.ssh_port()
     }
 
     /// Returns the database configuration
     #[must_use]
     pub fn database_config(&self) -> &crate::domain::tracker::DatabaseConfig {
-        &self.user_inputs.tracker.core.database
+        self.user_inputs.tracker().core().database()
     }
 
     /// Returns the tracker configuration
     #[must_use]
     pub fn tracker_config(&self) -> &crate::domain::tracker::TrackerConfig {
-        &self.user_inputs.tracker
+        self.user_inputs.tracker()
     }
 
     /// Returns the admin token
     #[must_use]
     pub fn admin_token(&self) -> &str {
         self.user_inputs
-            .tracker
-            .http_api
+            .tracker()
+            .http_api()
             .admin_token()
             .expose_secret()
     }
@@ -374,13 +375,13 @@ impl EnvironmentContext {
     /// Returns the Prometheus configuration if enabled
     #[must_use]
     pub fn prometheus_config(&self) -> Option<&PrometheusConfig> {
-        self.user_inputs.prometheus.as_ref()
+        self.user_inputs.prometheus()
     }
 
     /// Returns the Grafana configuration if enabled
     #[must_use]
     pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
-        self.user_inputs.grafana.as_ref()
+        self.user_inputs.grafana()
     }
 
     /// Returns the build directory
@@ -398,13 +399,13 @@ impl EnvironmentContext {
     /// Returns the instance IP address if available
     #[must_use]
     pub fn instance_ip(&self) -> Option<std::net::IpAddr> {
-        self.runtime_outputs.instance_ip
+        self.runtime_outputs.instance_ip()
     }
 
     /// Returns the provision method
     #[must_use]
     pub fn provision_method(&self) -> Option<crate::domain::environment::ProvisionMethod> {
-        self.runtime_outputs.provision_method
+        self.runtime_outputs.provision_method()
     }
 
     /// Returns the creation timestamp

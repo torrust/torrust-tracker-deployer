@@ -32,15 +32,15 @@ This refactoring plan addresses DDD violations where domain types fail to enforc
 **Total Active Proposals**: 6
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 1
+**Completed**: 6
 **In Progress**: 0
-**Not Started**: 5
+**Not Started**: 0
 
 ### Phase Summary
 
-- **Phase 0 - Foundation (High Impact, Low Effort)**: ⏳ 1/2 completed (50%)
-- **Phase 1 - Tracker Config Hardening (High Impact, Medium Effort)**: ⏳ 0/2 completed (0%)
-- **Phase 2 - Aggregate Invariants (Medium Impact, Low Effort)**: ⏳ 0/2 completed (0%)
+- **Phase 0 - Foundation (High Impact, Low Effort)**: ✅ 2/2 completed (100%)
+- **Phase 1 - Tracker Config Hardening (High Impact, Medium Effort)**: ✅ 2/2 completed (100%)
+- **Phase 2 - Aggregate Invariants (Medium Impact, Low Effort)**: ✅ 2/2 completed (100%)
 
 ### Discarded Proposals
 
@@ -330,7 +330,7 @@ impl TryFrom<HttpApiSection> for HttpApiConfig {
 
 ### Proposal #1: Apply Same Pattern to UdpTrackerConfig, HttpTrackerConfig, HealthCheckApiConfig
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵🔵 Medium
 **Priority**: P0
@@ -416,44 +416,44 @@ Consistent pattern across all tracker configuration types.
 
 #### Implementation Checklist
 
-- [ ] **UdpTrackerConfig**:
-  - [ ] Create `UdpTrackerConfigError` enum with `help()` method
-  - [ ] Create `UdpTrackerConfigRaw` struct for deserialization
-  - [ ] Make fields private
-  - [ ] Add `UdpTrackerConfig::new()` with port validation
-  - [ ] Add getter methods
-  - [ ] Implement custom `Deserialize`
-  - [ ] Implement `TryFrom<UdpTrackerSection> for UdpTrackerConfig` (standard trait conversion)
-  - [ ] Add `From<UdpTrackerConfigError>` for `CreateConfigError`
-  - [ ] Update tests
+- [x] **UdpTrackerConfig**:
+  - [x] Create `UdpTrackerConfigError` enum with `help()` method
+  - [x] Create `UdpTrackerConfigRaw` struct for deserialization
+  - [x] Make fields private
+  - [x] Add `UdpTrackerConfig::new()` with port validation
+  - [x] Add getter methods
+  - [x] Implement custom `Deserialize`
+  - [x] Implement `TryFrom<UdpTrackerSection> for UdpTrackerConfig` (standard trait conversion)
+  - [x] Add `From<UdpTrackerConfigError>` for `CreateConfigError`
+  - [x] Update tests
 
-- [ ] **HttpTrackerConfig**:
-  - [ ] Create `HttpTrackerConfigError` enum (same variants as HttpApiConfigError minus admin_token)
-  - [ ] Create `HttpTrackerConfigRaw` struct
-  - [ ] Make fields private
-  - [ ] Add `HttpTrackerConfig::new()` with full validation
-  - [ ] Add getter methods
-  - [ ] Implement custom `Deserialize`
-  - [ ] Implement `TryFrom<HttpTrackerSection> for HttpTrackerConfig` (standard trait conversion)
-  - [ ] Add `From<HttpTrackerConfigError>` for `CreateConfigError`
-  - [ ] Update tests
+- [x] **HttpTrackerConfig**:
+  - [x] Create `HttpTrackerConfigError` enum (same variants as HttpApiConfigError minus admin_token)
+  - [x] Create `HttpTrackerConfigRaw` struct
+  - [x] Make fields private
+  - [x] Add `HttpTrackerConfig::new()` with full validation
+  - [x] Add getter methods
+  - [x] Implement custom `Deserialize`
+  - [x] Implement `TryFrom<HttpTrackerSection> for HttpTrackerConfig` (standard trait conversion)
+  - [x] Add `From<HttpTrackerConfigError>` for `CreateConfigError`
+  - [x] Update tests
 
-- [ ] **HealthCheckApiConfig**:
-  - [ ] Create `HealthCheckApiConfigError` enum
-  - [ ] Create `HealthCheckApiConfigRaw` struct
-  - [ ] Make fields private
-  - [ ] Add `HealthCheckApiConfig::new()` with full validation
-  - [ ] Add getter methods
-  - [ ] Implement custom `Deserialize`
-  - [ ] Implement `TryFrom<HealthCheckApiSection> for HealthCheckApiConfig` (standard trait conversion)
-  - [ ] Add `From<HealthCheckApiConfigError>` for `CreateConfigError`
-  - [ ] Update tests
+- [x] **HealthCheckApiConfig**:
+  - [x] Create `HealthCheckApiConfigError` enum
+  - [x] Create `HealthCheckApiConfigRaw` struct
+  - [x] Make fields private
+  - [x] Add `HealthCheckApiConfig::new()` with full validation
+  - [x] Add getter methods
+  - [x] Implement custom `Deserialize`
+  - [x] Implement `TryFrom<HealthCheckApiSection> for HealthCheckApiConfig` (standard trait conversion)
+  - [x] Add `From<HealthCheckApiConfigError>` for `CreateConfigError`
+  - [x] Update tests
 
-- [ ] **Final verification**:
-  - [ ] Remove redundant localhost+TLS tests from `TrackerConfig::validate()` tests
-  - [ ] Verify all tests pass
-  - [ ] Run clippy and fix any issues
-  - [ ] Run doc tests
+- [x] **Final verification**:
+  - [x] Remove redundant localhost+TLS tests from `TrackerConfig::validate()` tests
+  - [x] Verify all tests pass
+  - [x] Run clippy and fix any issues
+  - [x] Run doc tests
 
 #### Estimated Effort
 
@@ -472,6 +472,34 @@ Based on Proposal #0 experience:
 4. Check that `TrackerConfig::validate()` still catches aggregate-level issues
 5. Integration tests remain unchanged (behavior preserved)
 
+#### Implementation Notes (Completed)
+
+**Key Files Modified:**
+
+- `src/domain/tracker/config/udp.rs` - Rewritten with validated constructor pattern
+- `src/domain/tracker/config/http.rs` - Rewritten with validated constructor pattern
+- `src/domain/tracker/config/health_check_api.rs` - Rewritten with validated constructor pattern
+- `src/domain/tracker/config/mod.rs` - Updated `TrackerConfig::default()` to use `::new()` constructors, updated tests with helper functions, removed redundant localhost+TLS tests
+- `src/application/command_handlers/create/config/tracker/udp_tracker_section.rs` - Added `TryFrom` impl
+- `src/application/command_handlers/create/config/tracker/http_tracker_section.rs` - Added `TryFrom` impl
+- `src/application/command_handlers/create/config/tracker/health_check_api_section.rs` - Added `TryFrom` impl
+- `src/application/command_handlers/create/config/tracker/tracker_section.rs` - Updated to use `.try_into()` for conversions
+- `src/application/command_handlers/create/config/errors.rs` - Added three new error variants with `From` implementations
+- Multiple infrastructure test files updated to use `::new()` constructors
+
+**Key Decisions:**
+
+1. Custom `Deserialize` implementation via serde `deserialize_with` attribute (same pattern as HttpApiConfig)
+2. Test helper functions added: `test_udp_tracker_config()`, `test_http_tracker_config()`, `test_health_check_api_config()` (and TLS variants)
+3. Localhost+TLS validation tests removed from `TrackerConfig::validate()` tests since these invariants are now enforced at construction time by individual config types
+4. All field accesses updated to use getter methods (`.bind_address()`, `.domain()`, `.use_tls_proxy()`)
+
+**Lessons Learned:**
+
+- Bulk replacement of field accesses (`.field` → `.field()`) required updates across many files
+- Test code changes were more extensive than production code changes
+- The `HasBindAddress` trait implementations needed fully-qualified method calls to avoid ambiguity
+
 ---
 
 ## Phase 1: Tracker Config Hardening (High Priority)
@@ -480,7 +508,7 @@ Strengthen the aggregate root TrackerConfig.
 
 ### Proposal #2: TrackerConfig Validates at Construction
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵🔵 Medium
 **Priority**: P1
@@ -572,24 +600,91 @@ impl TrackerConfig {
 
 #### Implementation Checklist
 
-- [ ] Make TrackerConfig fields private
-- [ ] Create `TrackerConfig::new()` with aggregate validation
-- [ ] Remove public `validate()` method (internalize it)
-- [ ] Add getter methods for all fields
-- [ ] Implement `TryFrom<TrackerSection> for TrackerConfig` (standard trait conversion)
-- [ ] Update all tests
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Make TrackerConfig fields private
+- [x] Create `TrackerConfig::new()` with aggregate validation
+- [x] Remove public `validate()` method (internalize it)
+- [x] Add getter methods for all fields
+- [x] Implement `TryFrom<TrackerSection> for TrackerConfig` (standard trait conversion)
+- [x] Update all tests
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
+
+#### Implementation Notes (Completed)
+
+**Changes Made:**
+
+1. **Made all fields private** in `TrackerConfig`:
+   - `core`, `udp_trackers`, `http_trackers`, `http_api`, `health_check_api`
+
+2. **Added `TrackerConfig::new()` validated constructor**:
+   - Accepts all component configs (already validated by their own constructors)
+   - Performs aggregate-level validation: socket address conflict detection
+   - Returns `Result<Self, TrackerConfigError>`
+
+3. **Added getter methods**:
+   - `core() -> &TrackerCoreConfig`
+   - `udp_trackers() -> &[UdpTrackerConfig]`
+   - `http_trackers() -> &[HttpTrackerConfig]`
+   - `http_api() -> &HttpApiConfig`
+   - `health_check_api() -> &HealthCheckApiConfig`
+
+4. **Removed `LocalhostWithTls` error variant**:
+   - This validation is now handled by child config constructors (Phase 0)
+   - `TrackerConfigError` only contains aggregate-level errors
+
+5. **Internalized `validate()` as `check_socket_address_conflicts()`**:
+   - Private method called during construction
+   - No separate validation step needed
+
+6. **Added custom `Deserialize` implementation**:
+   - Uses `TrackerConfigRaw` intermediate struct
+   - Calls `TrackerConfig::new()` to ensure deserialized data is validated
+
+7. **Updated `Default` implementation**:
+   - Now uses `TrackerConfig::new()` to ensure defaults are validated
+
+**Files Modified:**
+
+- `src/domain/tracker/config/mod.rs` - Main implementation
+- `src/domain/tracker/mod.rs` - Updated doc example
+- `src/domain/environment/context.rs` - Field access → getter methods
+- `src/domain/environment/runtime_outputs.rs` - Field access → getter methods
+- `src/application/command_handlers/create/config/tracker/tracker_section.rs`
+- `src/application/command_handlers/show/info/tracker.rs`
+- `src/application/command_handlers/test/handler.rs`
+- `src/application/steps/rendering/docker_compose_templates.rs`
+- `src/infrastructure/templating/prometheus/template/renderer/project_generator.rs`
+- `src/infrastructure/templating/ansible/template/wrappers/variables/context.rs`
+- `src/infrastructure/templating/tracker/template/wrapper/tracker_config/context.rs`
+- `src/infrastructure/templating/tracker/template/renderer/project_generator.rs`
+
+**Observations:**
+
+- Test code changes were more extensive than production code due to struct literal usage
+- The pattern of using getter methods is consistent with Phase 0 types
+- Aggregate-level validation (socket conflicts) remains the only `TrackerConfig`-specific check
+- Child-level validation (ports, TLS rules) correctly delegated to child constructors
 
 ---
 
 ### Proposal #3: TrackerCoreConfig and DatabaseConfig Validation
 
-**Status**: ⏳ Not Started
+**Status**: ✅ COMPLETED
 **Impact**: 🟢🟢 Medium
 **Effort**: 🔵 Low
 **Priority**: P1
 **Depends On**: None
+
+#### Implementation Summary
+
+Completed in commit series on `281-strengthen-domain-invariant-enforcement` branch:
+
+- **SqliteConfig**: Made `database_name` private, added `new()` constructor with validation (empty check), added getter, custom `Deserialize` via `SqliteConfigRaw`, `SqliteConfigError` enum with `help()` method
+- **MysqlConfig**: Made all 5 fields private (`host`, `port`, `database_name`, `username`, `password`), added `new()` constructor with validation (empty checks for host/database_name/username, port 0 check), added 5 getters, custom `Deserialize` via `MysqlConfigRaw`, `MysqlConfigError` enum with `help()` method
+- **TrackerCoreConfig**: Made `database` and `private` fields private, added `new()` constructor, added `database()` and `private()` getters, custom `Deserialize` via `TrackerCoreConfigRaw`
+- Updated application DTO layer (`TrackerCoreSection`) to use domain constructors
+- Updated `CreateConfigError` with new variants for database config errors
+- Updated all usages across production and test code to use constructors and getters
 
 #### Problem
 
@@ -676,7 +771,7 @@ Move cross-cutting validation to domain aggregates.
 
 ### Proposal #4: Add Validated Constructor to UserInputs
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢 Medium
 **Effort**: 🔵 Low
 **Priority**: P2
@@ -720,7 +815,7 @@ EnvironmentCreationConfig  →   Build partial domain objects:
                                         ↓
                                UserInputs validates cross-cutting invariants
                                         ↓
-                               Environment::with_working_dir_and_tracker()
+                               Environment::create()
                                creates the complete aggregate
 ```
 
@@ -820,7 +915,7 @@ Then update `EnvironmentContext` to use the validated constructor:
 
 ```rust
 impl EnvironmentContext {
-    pub fn with_working_dir_and_tracker(
+    pub fn create(
         // ... params ...
     ) -> Result<Self, UserInputsError> {
         let user_inputs = UserInputs::new(
@@ -862,21 +957,56 @@ impl EnvironmentContext {
 
 #### Implementation Checklist
 
-- [ ] Create `UserInputsError` enum with `help()` method in `user_inputs.rs`
-- [ ] Change `UserInputs::new()` to return `Result<Self, UserInputsError>`
-- [ ] Add cross-service validation to `UserInputs::new()`
-- [ ] Update `EnvironmentContext::new()` and `with_working_dir_and_tracker()` to propagate errors
-- [ ] Update `Environment::new()` and `with_working_dir_and_tracker()` to return `Result`
-- [ ] Add `From<UserInputsError>` impl for `CreateConfigError` in application layer
-- [ ] Remove duplicate validation from `EnvironmentCreationConfig::to_environment_params()`
-- [ ] Update all call sites that create `UserInputs` directly
-- [ ] Update tests
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Create `UserInputsError` enum with `help()` method in `user_inputs.rs`
+- [x] Change `UserInputs::new()` to return `Result<Self, UserInputsError>`
+- [x] Add cross-service validation to `UserInputs::with_tracker()`
+- [x] Update `EnvironmentContext::create()` to propagate errors
+- [x] Update `Environment::create()` to return `Result`
+- [x] Add `From<UserInputsError>` impl for `CreateConfigError` in application layer
+- [x] Remove duplicate validation from `EnvironmentCreationConfig::to_environment_params()`
+- [x] Update all call sites that create `UserInputs` directly
+- [x] Update tests
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
+
+#### Completion Notes
+
+**Completed in commit:** `refactor: [#281] UserInputs validated constructor (Proposal #4)`
+
+**Summary of changes:**
+
+1. **Created `UserInputsError` enum** with 3 variants:
+   - `GrafanaRequiresPrometheus` - Grafana configured without Prometheus
+   - `HttpsSectionWithoutTlsServices` - HTTPS section exists but no service uses TLS
+   - `TlsServicesWithoutHttpsSection` - Service has TLS but no HTTPS section
+
+2. **Made `UserInputs` fields private** and added getter methods:
+   - `name()`, `instance_name()`, `ssh_credentials()`, `ssh_port()`, `tracker()`, `prometheus()`, `grafana()`, `https()`
+
+3. **Added validated constructors**:
+   - `UserInputs::new()` returns `Result<Self, UserInputsError>` (uses defaults that always pass)
+   - `UserInputs::with_tracker()` validates cross-service invariants
+
+4. **Updated `EnvironmentContext`**:
+   - `new()` uses `.expect()` since defaults always pass validation
+   - `create()` returns `Result<Self, UserInputsError>`
+
+5. **Added `TrackerConfig::has_any_tls_configured()`** method to check TLS status
+
+6. **Removed duplicate validation from app layer**:
+   - Removed `GrafanaRequiresPrometheus` check from `to_environment_params()`
+   - Simplified `validate_https_config()` to only check HTTPS section details (admin email)
+   - Removed unused `TlsWithoutHttpsSection` and `HttpsSectionWithoutTls` error variants
+
+7. **Updated all field access patterns** to use getter methods across:
+   - `ansible_template_service.rs`
+   - `release/handler.rs`
+   - `caddy_templates.rs`, `docker_compose_templates.rs`, `grafana_templates.rs`, etc.
+   - `environment/context.rs`, `environment/state/mod.rs`
 
 #### Migration Notes
 
-This change makes `Environment::with_working_dir_and_tracker()` fallible, which is a breaking change. However:
+This change makes `Environment::create()` fallible, which is a breaking change. However:
 
 1. The function is primarily called from `CreateCommandHandler::execute()` which already handles errors
 2. Test helpers may need updating to use `.expect()` or propagate errors
@@ -886,18 +1016,19 @@ This change makes `Environment::with_working_dir_and_tracker()` fallible, which 
 
 ### Proposal #5: Move HTTPS Validation to Domain
 
-**Status**: ⏳ Not Started
+**Status**: ✅ COMPLETED
 **Impact**: 🟢🟢 Medium
 **Effort**: 🔵 Low
 **Priority**: P2
 **Depends On**: Proposal #4
+**Completed**: January 21, 2026
 
 #### Problem
 
-`HttpsConfig` doesn't validate the email at construction:
+`HttpsConfig` didn't validate the email at construction:
 
 ```rust
-// Current: HttpsConfig accepts any string
+// Before: HttpsConfig accepted any string
 impl HttpsConfig {
     pub fn new(admin_email: impl Into<String>, use_staging: bool) -> Self {
         Self {
@@ -908,37 +1039,29 @@ impl HttpsConfig {
 }
 ```
 
-Email validation happens in the application layer.
+Email validation happened in the application layer.
 
-#### Proposed Solution
+#### Implemented Solution
 
-Add email validation to `HttpsConfig`:
+Changed `HttpsConfig::new()` to return `Result<Self, HttpsConfigError>` with email validation:
 
 ```rust
 impl HttpsConfig {
     pub fn new(
-        admin_email: &Email,  // Already validated Email type
-        use_staging: bool,
-    ) -> Self {
-        Self {
-            admin_email: admin_email.to_string(),
-            use_staging,
-        }
-    }
-
-    // Alternative: validate string directly
-    pub fn from_string(
         admin_email: impl Into<String>,
         use_staging: bool,
     ) -> Result<Self, HttpsConfigError> {
         let email_str = admin_email.into();
-        let _ = Email::new(&email_str)
-            .map_err(|_| HttpsConfigError::InvalidEmail(email_str.clone()))?;
+        let email = Email::new(&email_str)?;
         Ok(Self {
-            admin_email: email_str,
+            admin_email: email.to_string(),
             use_staging,
         })
     }
+}
+
+pub enum HttpsConfigError {
+    InvalidEmail { email: String, reason: String },
 }
 ```
 
@@ -946,19 +1069,22 @@ impl HttpsConfig {
 
 If domain stores an email, it should ensure it's valid.
 
-#### Benefits
+#### Benefits Realized
 
 - ✅ HttpsConfig is always valid
 - ✅ Email validation in domain
 - ✅ Consistent with other validated types
+- ✅ `from_validated_email()` remains infallible for pre-validated emails
 
 #### Implementation Checklist
 
-- [ ] Add email validation to `HttpsConfig::new()` or create `from_validated_email`
-- [ ] Create `HttpsConfigError` if needed
-- [ ] Update application layer
-- [ ] Update tests
-- [ ] Verify all tests pass
+- [x] Add email validation to `HttpsConfig::new()`
+- [x] Create `HttpsConfigError` with `InvalidEmail` variant
+- [x] Add `help()` method with actionable guidance
+- [x] Update application layer (`HttpsConfigInvalid` variant in `CreateConfigError`)
+- [x] Remove duplicate validation from `HttpsSection::validate()`
+- [x] Update tests in domain and application layers
+- [x] Verify all tests pass
 
 ---
 
@@ -1274,4 +1400,4 @@ The proposals should be implemented in order due to dependencies:
 
 **Created**: January 21, 2026
 **Last Updated**: January 21, 2026
-**Status**: 🚧 In Progress (Phase 0)
+**Status**: ✅ COMPLETED (All phases complete)

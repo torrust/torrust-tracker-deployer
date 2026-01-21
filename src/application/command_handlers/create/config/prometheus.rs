@@ -3,7 +3,13 @@
 //! This module contains the DTO type for Prometheus configuration used in
 //! environment creation. This type uses raw primitives (u32) for JSON
 //! deserialization and converts to the rich domain type (`PrometheusConfig`).
+//!
+//! # Conversion Pattern
+//!
+//! Uses `TryFrom` for idiomatic Rust conversion from DTO to domain type.
+//! See ADR: `docs/decisions/tryfrom-for-dto-to-domain-conversion.md`
 
+use std::convert::TryFrom;
 use std::num::NonZeroU32;
 
 use schemars::JsonSchema;
@@ -41,20 +47,14 @@ impl Default for PrometheusSection {
     }
 }
 
-impl PrometheusSection {
-    /// Converts this DTO to a domain `PrometheusConfig`
-    ///
-    /// This method performs validation and type conversion from the
-    /// u32 DTO to the strongly-typed domain model with `NonZeroU32`.
-    ///
-    /// # Errors
-    ///
-    /// Returns error if scrape interval is 0
-    pub fn to_prometheus_config(&self) -> Result<PrometheusConfig, CreateConfigError> {
-        let interval = NonZeroU32::new(self.scrape_interval_in_secs).ok_or_else(|| {
+impl TryFrom<PrometheusSection> for PrometheusConfig {
+    type Error = CreateConfigError;
+
+    fn try_from(section: PrometheusSection) -> Result<Self, Self::Error> {
+        let interval = NonZeroU32::new(section.scrape_interval_in_secs).ok_or_else(|| {
             CreateConfigError::InvalidPrometheusConfig(format!(
                 "Scrape interval must be greater than 0, got: {}",
-                self.scrape_interval_in_secs
+                section.scrape_interval_in_secs
             ))
         })?;
         Ok(PrometheusConfig::new(interval))
@@ -77,14 +77,14 @@ mod tests {
             scrape_interval_in_secs: 30,
         };
 
-        let config = section.to_prometheus_config().expect("Valid config");
+        let config: PrometheusConfig = section.try_into().expect("Valid config");
         assert_eq!(config.scrape_interval_in_secs(), 30);
     }
 
     #[test]
     fn it_should_convert_default_section_to_default_config() {
         let section = PrometheusSection::default();
-        let config = section.to_prometheus_config().expect("Valid config");
+        let config: PrometheusConfig = section.try_into().expect("Valid config");
 
         assert_eq!(config, PrometheusConfig::default());
     }
@@ -95,7 +95,7 @@ mod tests {
             scrape_interval_in_secs: 0,
         };
 
-        let result = section.to_prometheus_config();
+        let result: Result<PrometheusConfig, _> = section.try_into();
         assert!(result.is_err());
     }
 }

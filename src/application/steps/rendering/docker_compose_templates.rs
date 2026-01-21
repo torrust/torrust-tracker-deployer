@@ -117,10 +117,10 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             DatabaseConfig::Mysql(mysql_config) => Self::create_mysql_contexts(
                 admin_token,
                 tracker,
-                mysql_config.port,
-                mysql_config.database_name.clone(),
-                mysql_config.username.clone(),
-                mysql_config.password.expose_secret().to_string(),
+                mysql_config.port(),
+                mysql_config.database_name().to_string(),
+                mysql_config.username().to_string(),
+                mysql_config.password().expose_secret().to_string(),
             ),
         };
 
@@ -186,18 +186,17 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         let user_inputs = &self.environment.context().user_inputs;
 
         // Check if HTTPS is configured
-        if user_inputs.https.is_none() {
+        if user_inputs.https().is_none() {
             return false;
         }
 
-        let tracker = &user_inputs.tracker;
+        let tracker = user_inputs.tracker();
 
         // Check if any service has TLS configured
         let tracker_api_has_tls = tracker.http_api_tls_domain().is_some();
         let http_trackers_have_tls = !tracker.http_trackers_with_tls().is_empty();
         let grafana_has_tls = user_inputs
-            .grafana
-            .as_ref()
+            .grafana()
             .is_some_and(|g| g.tls_domain().is_some());
 
         // Caddy is enabled if HTTPS is configured AND at least one service has TLS
@@ -275,18 +274,17 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         let user_inputs = &self.environment.context().user_inputs;
 
         // Check if HTTPS is configured
-        let Some(https_config) = &user_inputs.https else {
+        let Some(https_config) = user_inputs.https() else {
             return builder;
         };
 
-        let tracker = &user_inputs.tracker;
+        let tracker = user_inputs.tracker();
 
         // Check if any service has TLS configured
         let has_tracker_api_tls = tracker.http_api_tls_domain().is_some();
         let has_http_tracker_tls = !tracker.http_trackers_with_tls().is_empty();
         let has_grafana_tls = user_inputs
-            .grafana
-            .as_ref()
+            .grafana()
             .is_some_and(|g| g.tls_domain().is_some());
 
         let has_any_tls = has_tracker_api_tls || has_http_tracker_tls || has_grafana_tls;
@@ -321,14 +319,14 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
     ) -> (Vec<u16>, Vec<u16>, u16, bool) {
         // Extract UDP tracker ports (always exposed - no TLS termination via Caddy)
         let udp_ports: Vec<u16> = tracker_config
-            .udp_trackers
+            .udp_trackers()
             .iter()
-            .map(|tracker| tracker.bind_address.port())
+            .map(|tracker| tracker.bind_address().port())
             .collect();
 
         // Get the set of HTTP tracker ports that have TLS enabled
         let tls_enabled_ports: std::collections::HashSet<u16> = user_inputs
-            .tracker
+            .tracker()
             .http_trackers_with_tls()
             .iter()
             .map(|(_, port)| *port)
@@ -336,17 +334,17 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         // Extract HTTP tracker ports WITHOUT TLS (these need to be exposed)
         let http_ports_without_tls: Vec<u16> = tracker_config
-            .http_trackers
+            .http_trackers()
             .iter()
-            .map(|tracker| tracker.bind_address.port())
+            .map(|tracker| tracker.bind_address().port())
             .filter(|port| !tls_enabled_ports.contains(port))
             .collect();
 
         // Extract HTTP API port
-        let api_port = tracker_config.http_api.bind_address().port();
+        let api_port = tracker_config.http_api().bind_address().port();
 
         // Check if HTTP API has TLS enabled
-        let http_api_has_tls = user_inputs.tracker.http_api_tls_domain().is_some();
+        let http_api_has_tls = user_inputs.tracker().http_api_tls_domain().is_some();
 
         (
             udp_ports,

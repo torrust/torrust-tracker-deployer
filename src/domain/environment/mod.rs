@@ -102,6 +102,7 @@
 pub mod context;
 pub mod internal_config;
 pub mod name;
+pub mod params;
 pub mod repository;
 pub mod runtime_outputs;
 pub mod state;
@@ -119,13 +120,14 @@ pub use trace_id::TraceId;
 pub use context::EnvironmentContext;
 pub use internal_config::InternalConfig;
 pub use name::{EnvironmentName, EnvironmentNameError};
+pub use params::EnvironmentParams;
 pub use runtime_outputs::{ProvisionMethod, RuntimeOutputs};
 pub use state::{
     AnyEnvironmentState, ConfigureFailed, Configured, Configuring, Created, DestroyFailed,
     Destroyed, Destroying, ProvisionFailed, Provisioned, Provisioning, ReleaseFailed, Released,
     Releasing, RunFailed, Running,
 };
-pub use user_inputs::UserInputs;
+pub use user_inputs::{UserInputs, UserInputsError};
 
 // Re-export tracker types for convenience
 pub use crate::domain::tracker::{
@@ -296,43 +298,39 @@ impl Environment {
         }
     }
 
-    /// Creates a new environment in Created state with custom tracker configuration
+    /// Creates a new environment in Created state from validated parameters
+    ///
+    /// This is the primary factory method for creating a fully-configured
+    /// `Environment` aggregate. It accepts an `EnvironmentParams` value object
+    /// containing all validated domain inputs.
     ///
     /// This creates absolute paths for data and build directories by using the
-    /// provided working directory as the base, and allows specifying custom
-    /// tracker, prometheus, grafana, and https configurations.
-    #[must_use]
+    /// provided working directory as the base.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - Validated environment parameters (domain value object)
+    /// * `working_dir` - Base directory for data and build directories
+    /// * `created_at` - Timestamp for environment creation
+    ///
+    /// # Errors
+    ///
+    /// Returns `UserInputsError` if the cross-service configuration is invalid:
+    /// - `GrafanaRequiresPrometheus`: Grafana is configured but Prometheus is not
+    /// - `HttpsSectionWithoutTlsServices`: HTTPS section exists but no service uses TLS
+    /// - `TlsServicesWithoutHttpsSection`: Service has TLS but HTTPS section is missing
     #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
-    #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
-    pub fn with_working_dir_and_tracker(
-        name: EnvironmentName,
-        provider_config: ProviderConfig,
-        ssh_credentials: SshCredentials,
-        ssh_port: u16,
-        tracker_config: TrackerConfig,
-        prometheus_config: Option<crate::domain::prometheus::PrometheusConfig>,
-        grafana_config: Option<crate::domain::grafana::GrafanaConfig>,
-        https_config: Option<crate::domain::https::HttpsConfig>,
+    pub fn create(
+        params: EnvironmentParams,
         working_dir: &std::path::Path,
         created_at: DateTime<Utc>,
-    ) -> Environment<Created> {
-        let context = EnvironmentContext::with_working_dir_and_tracker(
-            &name,
-            provider_config,
-            ssh_credentials,
-            ssh_port,
-            tracker_config,
-            prometheus_config,
-            grafana_config,
-            https_config,
-            working_dir,
-            created_at,
-        );
+    ) -> Result<Environment<Created>, UserInputsError> {
+        let context = EnvironmentContext::create(params, working_dir, created_at)?;
 
-        Environment {
+        Ok(Environment {
             context,
             state: Created,
-        }
+        })
     }
 }
 
@@ -361,8 +359,8 @@ impl<S> Environment<S> {
     fn with_state<T>(self, new_state: T) -> Environment<T> {
         // Log state transition for observability and audit trail
         tracing::info!(
-            environment_name = %self.context.user_inputs.name,
-            instance_name = %self.context.user_inputs.instance_name,
+            environment_name = %self.context.user_inputs.name(),
+            instance_name = %self.context.user_inputs.instance_name(),
             from_state = std::any::type_name::<S>(),
             to_state = std::any::type_name::<T>(),
             "Environment state transition"
@@ -421,7 +419,7 @@ impl<S> Environment<S> {
     /// Returns the environment name
     #[must_use]
     pub fn name(&self) -> &EnvironmentName {
-        &self.context.user_inputs.name
+        self.context.user_inputs.name()
     }
 
     /// Returns the instance name for this environment
@@ -696,7 +694,7 @@ impl<S> Environment<S> {
     /// ```
     #[must_use]
     pub fn with_instance_ip(mut self, ip: IpAddr) -> Self {
-        self.context_mut().runtime_outputs.instance_ip = Some(ip);
+        self.context_mut().runtime_outputs.set_instance_ip(ip);
         self
     }
 
@@ -715,7 +713,9 @@ impl<S> Environment<S> {
     /// Returns the environment with the provision method set.
     #[must_use]
     pub fn with_provision_method(mut self, method: runtime_outputs::ProvisionMethod) -> Self {
-        self.context_mut().runtime_outputs.provision_method = Some(method);
+        self.context_mut()
+            .runtime_outputs
+            .set_provision_method(method);
         self
     }
 
@@ -1106,32 +1106,28 @@ mod tests {
                 ssh_username,
             );
 
-            let instance_name =
-                InstanceName::new(format!("torrust-tracker-vm-{}", env_name.as_str())).unwrap();
             let profile_name = ProfileName::new(format!("lxd-{}", env_name.as_str())).unwrap();
             let provider_config = ProviderConfig::Lxd(LxdConfig { profile_name });
 
+            let user_inputs = UserInputs::with_tracker(
+                &env_name,
+                provider_config,
+                ssh_credentials,
+                22,
+                TrackerConfig::default(),
+                Some(PrometheusConfig::default()),
+                Some(GrafanaConfig::default()),
+                None,
+            )
+            .expect("Test UserInputs should always be valid with defaults");
+
             let context = EnvironmentContext {
-                user_inputs: UserInputs {
-                    name: env_name,
-                    instance_name,
-                    provider_config,
-                    ssh_credentials,
-                    ssh_port: 22,
-                    tracker: TrackerConfig::default(),
-                    prometheus: Some(PrometheusConfig::default()),
-                    grafana: Some(GrafanaConfig::default()),
-                    https: None,
-                },
+                user_inputs,
                 internal_config: InternalConfig {
                     data_dir: data_dir.clone(),
                     build_dir: build_dir.clone(),
                 },
-                runtime_outputs: RuntimeOutputs {
-                    instance_ip: None,
-                    provision_method: None,
-                    service_endpoints: None,
-                },
+                runtime_outputs: RuntimeOutputs::new(),
                 created_at: chrono::Utc::now(),
             };
 
@@ -1546,8 +1542,8 @@ mod tests {
                     .build();
 
                 // Can access user inputs directly
-                assert_eq!(env.context.user_inputs.name.as_str(), "test-split");
-                assert_eq!(env.context.user_inputs.ssh_port, 22);
+                assert_eq!(env.context.user_inputs.name().as_str(), "test-split");
+                assert_eq!(env.context.user_inputs.ssh_port(), 22);
             }
 
             #[test]
@@ -1571,7 +1567,7 @@ mod tests {
                     .build();
 
                 // Runtime outputs start empty
-                assert_eq!(env.context.runtime_outputs.instance_ip, None);
+                assert_eq!(env.context.runtime_outputs.instance_ip(), None);
             }
 
             #[test]
@@ -1584,7 +1580,7 @@ mod tests {
                 let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1));
                 let env = env.with_instance_ip(ip);
 
-                assert_eq!(env.context.runtime_outputs.instance_ip, Some(ip));
+                assert_eq!(env.context.runtime_outputs.instance_ip(), Some(ip));
             }
 
             #[test]

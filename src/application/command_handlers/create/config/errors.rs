@@ -7,7 +7,10 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
-use crate::domain::tracker::{HttpApiConfigError, TrackerConfigError};
+use crate::domain::tracker::{
+    HealthCheckApiConfigError, HttpApiConfigError, HttpTrackerConfigError, MysqlConfigError,
+    SqliteConfigError, TrackerConfigError, UdpTrackerConfigError,
+};
 use crate::domain::EnvironmentNameError;
 use crate::domain::ProfileNameError;
 use crate::shared::UsernameError;
@@ -118,14 +121,47 @@ pub enum CreateConfigError {
     #[error("HTTP API configuration invalid: {0}")]
     HttpApiConfigInvalid(#[from] HttpApiConfigError),
 
-    /// Invalid admin email format for HTTPS configuration
-    #[error("Invalid admin email '{email}': {reason}")]
-    InvalidAdminEmail {
-        /// The invalid email that was provided
-        email: String,
-        /// The reason why the email is invalid
-        reason: String,
-    },
+    /// UDP tracker configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `UdpTrackerConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("UDP tracker configuration invalid: {0}")]
+    UdpTrackerConfigInvalid(#[from] UdpTrackerConfigError),
+
+    /// HTTP tracker configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `HttpTrackerConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("HTTP tracker configuration invalid: {0}")]
+    HttpTrackerConfigInvalid(#[from] HttpTrackerConfigError),
+
+    /// Health Check API configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `HealthCheckApiConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("Health Check API configuration invalid: {0}")]
+    HealthCheckApiConfigInvalid(#[from] HealthCheckApiConfigError),
+
+    /// `SQLite` database configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `SqliteConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("SQLite database configuration invalid: {0}")]
+    SqliteConfigInvalid(#[from] SqliteConfigError),
+
+    /// `MySQL` database configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `MysqlConfig::new()`,
+    /// providing a bridge between domain errors and application-level error handling.
+    #[error("MySQL database configuration invalid: {0}")]
+    MysqlConfigInvalid(#[from] MysqlConfigError),
+
+    /// HTTPS configuration validation failed (domain invariant violation)
+    ///
+    /// This error wraps domain-level validation errors from `HttpsConfig::new()`,
+    /// such as invalid admin email format.
+    #[error("HTTPS configuration invalid: {0}")]
+    HttpsConfigInvalid(#[from] crate::domain::https::HttpsConfigError),
 
     /// Invalid domain name format for TLS configuration
     #[error("Invalid domain '{domain}': {reason}")]
@@ -136,14 +172,10 @@ pub enum CreateConfigError {
         reason: String,
     },
 
-    /// TLS configured for services but HTTPS section missing
-    #[error("TLS configured for services but 'https' section is missing")]
-    TlsWithoutHttpsSection,
-
-    /// HTTPS section provided but no services have TLS configured
-    #[error("HTTPS section provided but no services have TLS configured")]
-    HttpsSectionWithoutTls,
-
+    // Note: TLS/HTTPS cross-service validation errors (TlsWithoutHttpsSection, HttpsSectionWithoutTls)
+    // have been moved to domain layer. See UserInputsError variants:
+    // - TlsServicesWithoutHttpsSection
+    // - HttpsSectionWithoutTlsServices
     /// TLS proxy enabled but domain not specified
     #[error("TLS proxy enabled for {service_type} '{bind_address}' but domain is missing")]
     TlsProxyWithoutDomain {
@@ -152,6 +184,13 @@ pub enum CreateConfigError {
         /// The bind address of the service
         bind_address: String,
     },
+
+    /// Cross-service invariant validation failed
+    ///
+    /// This error wraps domain-level cross-service validation errors from `UserInputs`,
+    /// such as Grafana requiring Prometheus or HTTPS/TLS configuration mismatches.
+    #[error("Cross-service configuration validation failed: {0}")]
+    CrossServiceValidation(#[from] crate::domain::environment::UserInputsError),
 }
 
 impl CreateConfigError {
@@ -496,31 +535,29 @@ impl CreateConfigError {
                 // Delegate to domain error's help method for detailed guidance
                 inner.help()
             }
-            Self::InvalidAdminEmail { .. } => {
-                "Invalid admin email format for HTTPS configuration.\n\
-                 \n\
-                 The admin email is used for Let's Encrypt certificate notifications:\n\
-                 - Certificate expiration warnings (30 days before expiry)\n\
-                 - Certificate renewal failure notifications\n\
-                 - Important Let's Encrypt service announcements\n\
-                 \n\
-                 Requirements:\n\
-                 - Must contain '@' with content on both sides\n\
-                 - Must have a valid domain part (with at least one dot)\n\
-                 \n\
-                 Valid examples:\n\
-                 - admin@example.com\n\
-                 - certificates@my-company.org\n\
-                 - alerts+ssl@subdomain.example.com\n\
-                 \n\
-                 Fix:\n\
-                 Update the admin_email in your https configuration:\n\
-                 \n\
-                 \"https\": {\n\
-                   \"admin_email\": \"admin@yourdomain.com\"\n\
-                 }\n\
-                 \n\
-                 Note: This email may be visible in certificate transparency logs."
+            Self::UdpTrackerConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::HttpTrackerConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::HealthCheckApiConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::SqliteConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::MysqlConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
+            }
+            Self::HttpsConfigInvalid(inner) => {
+                // Delegate to domain error's help method for detailed guidance
+                inner.help()
             }
             Self::InvalidDomain { .. } => {
                 "Invalid domain name format for TLS configuration.\n\
@@ -554,63 +591,9 @@ impl CreateConfigError {
                  \n\
                  Note: The domain must point to your server's IP before certificate acquisition."
             }
-            Self::TlsWithoutHttpsSection => {
-                "TLS configured for services but 'https' section is missing.\n\
-                 \n\
-                 You have configured TLS for one or more services but haven't provided\n\
-                 the required HTTPS configuration section with admin_email.\n\
-                 \n\
-                 The admin_email is required because:\n\
-                 - Let's Encrypt requires an email for certificate management\n\
-                 - You'll receive expiration warnings and renewal failure notifications\n\
-                 \n\
-                 Fix:\n\
-                 Add an 'https' section to your environment configuration:\n\
-                 \n\
-                 \"https\": {\n\
-                   \"admin_email\": \"admin@yourdomain.com\",\n\
-                   \"use_staging\": false  // optional, defaults to false\n\
-                 }\n\
-                 \n\
-                 Note: Set use_staging to true for testing (avoids rate limits, but\n\
-                 certificates will show browser warnings)."
-            }
-            Self::HttpsSectionWithoutTls => {
-                "HTTPS section provided but no services have TLS configured.\n\
-                 \n\
-                 You have provided an 'https' section with admin_email but no services\n\
-                 have TLS enabled. This is likely a configuration error.\n\
-                 \n\
-                 To enable HTTPS for a service, add a 'tls' section to it:\n\
-                 \n\
-                 For Tracker API:\n\
-                 \"http_api\": {\n\
-                   \"bind_address\": \"0.0.0.0:1212\",\n\
-                   \"admin_token\": \"MyAccessToken\",\n\
-                   \"tls\": {\n\
-                     \"domain\": \"api.example.com\"\n\
-                   }\n\
-                 }\n\
-                 \n\
-                 For HTTP Tracker:\n\
-                 \"http_trackers\": [{\n\
-                   \"bind_address\": \"0.0.0.0:7070\",\n\
-                   \"tls\": {\n\
-                     \"domain\": \"tracker.example.com\"\n\
-                   }\n\
-                 }]\n\
-                 \n\
-                 For Grafana:\n\
-                 \"grafana\": {\n\
-                   \"admin_user\": \"admin\",\n\
-                   \"admin_password\": \"admin\",\n\
-                   \"tls\": {\n\
-                     \"domain\": \"grafana.example.com\"\n\
-                   }\n\
-                 }\n\
-                 \n\
-                 Alternatively, remove the 'https' section entirely if you don't want HTTPS."
-            }
+            // Note: TLS/HTTPS cross-service validation errors now use UserInputsError
+            // variants (TlsServicesWithoutHttpsSection, HttpsSectionWithoutTlsServices)
+            // which are wrapped via CrossServiceValidation variant below.
             Self::TlsProxyWithoutDomain { .. } => {
                 "TLS proxy enabled but domain is missing.\n\
                  \n\
@@ -634,6 +617,7 @@ impl CreateConfigError {
                  Alternatively, if you don't want HTTPS for this service,\n\
                  remove or set use_tls_proxy to false."
             }
+            Self::CrossServiceValidation(e) => e.help(),
         }
     }
 }

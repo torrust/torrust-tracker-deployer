@@ -4,7 +4,6 @@
 
 use std::net::IpAddr;
 
-use crate::domain::environment::runtime_outputs::ServiceEndpoints;
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::tracker::config::is_localhost;
 use crate::domain::tracker::TrackerConfig;
@@ -124,119 +123,25 @@ impl ServiceInfo {
     /// * `instance_ip` - The IP address of the deployed instance
     /// * `grafana_config` - Optional Grafana configuration (for TLS domain info)
     #[must_use]
-    #[allow(clippy::too_many_lines)]
     pub fn from_tracker_config(
         tracker_config: &TrackerConfig,
         instance_ip: IpAddr,
         grafana_config: Option<&GrafanaConfig>,
     ) -> Self {
-        let udp_trackers = tracker_config
-            .udp_trackers
-            .iter()
-            .map(|udp| {
-                let host = udp
-                    .domain
-                    .as_ref()
-                    .map_or_else(|| instance_ip.to_string(), |d| d.as_str().to_string());
-                format!("udp://{}:{}/announce", host, udp.bind_address.port())
-            })
-            .collect();
-
-        // Separate HTTP trackers by TLS configuration and localhost status
-        let mut https_http_trackers = Vec::new();
-        let mut direct_http_trackers = Vec::new();
-        let mut localhost_http_trackers = Vec::new();
         let mut tls_domains = Vec::new();
 
-        for (index, http) in tracker_config.http_trackers.iter().enumerate() {
-            if http.use_tls_proxy {
-                if let Some(domain) = &http.domain {
-                    // TLS-enabled tracker - use HTTPS domain URL
-                    // Note: localhost + TLS is rejected at config validation time,
-                    // so we don't need to check for it here
-                    https_http_trackers.push(format!("https://{}/announce", domain.as_str()));
-                    tls_domains.push(TlsDomainInfo {
-                        domain: domain.as_str().to_string(),
-                        internal_port: http.bind_address.port(),
-                    });
-                }
-            } else if is_localhost(&http.bind_address) {
-                // Localhost-only tracker - internal access only
-                localhost_http_trackers.push(LocalhostServiceInfo {
-                    service_name: format!("http_tracker_{}", index + 1),
-                    port: http.bind_address.port(),
-                });
-            } else {
-                // Non-TLS, non-localhost tracker - use direct IP URL
-                direct_http_trackers.push(format!(
-                    "http://{}:{}/announce", // DevSkim: ignore DS137138
-                    instance_ip,
-                    http.bind_address.port()
-                ));
-            }
-        }
+        let udp_trackers = Self::build_udp_tracker_urls(tracker_config, instance_ip);
 
-        // Build API endpoint based on TLS configuration and localhost status
-        let api_is_localhost_only = is_localhost(&tracker_config.http_api.bind_address());
-        let (api_endpoint, api_uses_https) = if tracker_config.http_api.use_tls_proxy() {
-            if let Some(domain) = tracker_config.http_api.domain() {
-                tls_domains.push(TlsDomainInfo {
-                    domain: domain.as_str().to_string(),
-                    internal_port: tracker_config.http_api.bind_address().port(),
-                });
-                (format!("https://{}/api", domain.as_str()), true)
-            } else {
-                // TLS proxy without domain shouldn't happen after validation
-                (
-                    format!(
-                        "http://{}:{}/api", // DevSkim: ignore DS137138
-                        instance_ip,
-                        tracker_config.http_api.bind_address().port()
-                    ),
-                    false,
-                )
-            }
-        } else {
-            (
-                format!(
-                    "http://{}:{}/api", // DevSkim: ignore DS137138
-                    instance_ip,
-                    tracker_config.http_api.bind_address().port()
-                ),
-                false,
-            )
-        };
+        let (https_http_trackers, direct_http_trackers, localhost_http_trackers) =
+            Self::build_http_tracker_info(tracker_config, instance_ip, &mut tls_domains);
 
-        // Add Grafana TLS domain if configured
-        if let Some(grafana) = grafana_config {
-            if let Some(domain) = grafana.tls_domain() {
-                tls_domains.push(TlsDomainInfo {
-                    domain: domain.to_string(),
-                    internal_port: 3000, // Grafana internal port
-                });
-            }
-        }
+        let (api_endpoint, api_uses_https, api_is_localhost_only) =
+            Self::build_api_endpoint_info(tracker_config, instance_ip, &mut tls_domains);
 
-        // Build health check URL based on TLS configuration and localhost status
-        let health_check_is_localhost_only =
-            is_localhost(&tracker_config.health_check_api.bind_address);
-        let (health_check_url, health_check_uses_https) =
-            if let Some(domain) = tracker_config.health_check_api.tls_domain() {
-                tls_domains.push(TlsDomainInfo {
-                    domain: domain.to_string(),
-                    internal_port: tracker_config.health_check_api.bind_address.port(),
-                });
-                (format!("https://{domain}/health_check"), true)
-            } else {
-                (
-                    format!(
-                        "http://{}:{}/health_check", // DevSkim: ignore DS137138
-                        instance_ip,
-                        tracker_config.health_check_api.bind_address.port()
-                    ),
-                    false,
-                )
-            };
+        Self::collect_grafana_tls_domain(grafana_config, &mut tls_domains);
+
+        let (health_check_url, health_check_uses_https, health_check_is_localhost_only) =
+            Self::build_health_check_info(tracker_config, instance_ip, &mut tls_domains);
 
         Self::new(
             udp_trackers,
@@ -253,52 +158,153 @@ impl ServiceInfo {
         )
     }
 
-    /// Build `ServiceInfo` from stored `ServiceEndpoints`
-    ///
-    /// This method extracts service URLs from the runtime outputs
-    /// that were stored when services were started.
-    ///
-    /// Note: This method is for backward compatibility with stored endpoints.
-    /// New deployments should use `from_tracker_config` which has full TLS awareness.
-    #[must_use]
-    pub fn from_service_endpoints(endpoints: &ServiceEndpoints) -> Self {
-        let udp_trackers = endpoints
-            .udp_trackers
+    /// Build UDP tracker URLs from configuration
+    fn build_udp_tracker_urls(tracker_config: &TrackerConfig, instance_ip: IpAddr) -> Vec<String> {
+        tracker_config
+            .udp_trackers()
             .iter()
-            .map(ToString::to_string)
-            .collect();
+            .map(|udp| {
+                let host = udp
+                    .domain()
+                    .map_or_else(|| instance_ip.to_string(), |d| d.as_str().to_string());
+                format!("udp://{}:{}/announce", host, udp.bind_address().port())
+            })
+            .collect()
+    }
 
-        // For backward compatibility, all HTTP trackers go to direct access
-        // (stored endpoints don't have TLS or localhost information)
-        let direct_http_trackers = endpoints
-            .http_trackers
-            .iter()
-            .map(ToString::to_string)
-            .collect();
+    /// Build HTTP tracker information, separating by TLS and localhost status
+    ///
+    /// Returns (`https_trackers`, `direct_trackers`, `localhost_trackers`)
+    fn build_http_tracker_info(
+        tracker_config: &TrackerConfig,
+        instance_ip: IpAddr,
+        tls_domains: &mut Vec<TlsDomainInfo>,
+    ) -> (Vec<String>, Vec<String>, Vec<LocalhostServiceInfo>) {
+        let mut https_http_trackers = Vec::new();
+        let mut direct_http_trackers = Vec::new();
+        let mut localhost_http_trackers = Vec::new();
 
-        let api_endpoint = endpoints
-            .api_endpoint
-            .as_ref()
-            .map_or_else(String::new, ToString::to_string);
+        for (index, http) in tracker_config.http_trackers().iter().enumerate() {
+            if http.use_tls_proxy() {
+                if let Some(domain) = http.domain() {
+                    // TLS-enabled tracker - use HTTPS domain URL
+                    // Note: localhost + TLS is rejected at config validation time
+                    https_http_trackers.push(format!("https://{}/announce", domain.as_str()));
+                    tls_domains.push(TlsDomainInfo {
+                        domain: domain.as_str().to_string(),
+                        internal_port: http.bind_address().port(),
+                    });
+                }
+            } else if is_localhost(&http.bind_address()) {
+                // Localhost-only tracker - internal access only
+                localhost_http_trackers.push(LocalhostServiceInfo {
+                    service_name: format!("http_tracker_{}", index + 1),
+                    port: http.bind_address().port(),
+                });
+            } else {
+                // Non-TLS, non-localhost tracker - use direct IP URL
+                direct_http_trackers.push(format!(
+                    "http://{}:{}/announce", // DevSkim: ignore DS137138
+                    instance_ip,
+                    http.bind_address().port()
+                ));
+            }
+        }
 
-        let health_check_url = endpoints
-            .health_check_url
-            .as_ref()
-            .map_or_else(String::new, ToString::to_string);
-
-        Self::new(
-            udp_trackers,
-            Vec::new(), // No HTTPS trackers from legacy endpoints
+        (
+            https_http_trackers,
             direct_http_trackers,
-            Vec::new(), // No localhost tracker info from legacy endpoints
-            api_endpoint,
-            false, // Legacy endpoints don't have TLS info
-            false, // Legacy endpoints don't have localhost info
-            health_check_url,
-            false,      // Legacy endpoints don't have health check TLS info
-            false,      // Legacy endpoints don't have localhost info
-            Vec::new(), // No TLS domains from legacy endpoints
+            localhost_http_trackers,
         )
+    }
+
+    /// Build API endpoint information
+    ///
+    /// Returns (`endpoint_url`, `uses_https`, `is_localhost_only`)
+    fn build_api_endpoint_info(
+        tracker_config: &TrackerConfig,
+        instance_ip: IpAddr,
+        tls_domains: &mut Vec<TlsDomainInfo>,
+    ) -> (String, bool, bool) {
+        let api = tracker_config.http_api();
+        let is_localhost_only = is_localhost(&api.bind_address());
+
+        let (endpoint, uses_https) = if api.use_tls_proxy() {
+            if let Some(domain) = api.domain() {
+                tls_domains.push(TlsDomainInfo {
+                    domain: domain.as_str().to_string(),
+                    internal_port: api.bind_address().port(),
+                });
+                (format!("https://{}/api", domain.as_str()), true)
+            } else {
+                // TLS proxy without domain shouldn't happen after validation
+                (
+                    format!(
+                        "http://{}:{}/api", // DevSkim: ignore DS137138
+                        instance_ip,
+                        api.bind_address().port()
+                    ),
+                    false,
+                )
+            }
+        } else {
+            (
+                format!(
+                    "http://{}:{}/api", // DevSkim: ignore DS137138
+                    instance_ip,
+                    api.bind_address().port()
+                ),
+                false,
+            )
+        };
+
+        (endpoint, uses_https, is_localhost_only)
+    }
+
+    /// Collect Grafana TLS domain if configured
+    fn collect_grafana_tls_domain(
+        grafana_config: Option<&GrafanaConfig>,
+        tls_domains: &mut Vec<TlsDomainInfo>,
+    ) {
+        if let Some(grafana) = grafana_config {
+            if let Some(domain) = grafana.tls_domain() {
+                tls_domains.push(TlsDomainInfo {
+                    domain: domain.to_string(),
+                    internal_port: 3000, // Grafana internal port
+                });
+            }
+        }
+    }
+
+    /// Build health check endpoint information
+    ///
+    /// Returns (`url`, `uses_https`, `is_localhost_only`)
+    fn build_health_check_info(
+        tracker_config: &TrackerConfig,
+        instance_ip: IpAddr,
+        tls_domains: &mut Vec<TlsDomainInfo>,
+    ) -> (String, bool, bool) {
+        let health_check = tracker_config.health_check_api();
+        let is_localhost_only = is_localhost(&health_check.bind_address());
+
+        let (url, uses_https) = if let Some(domain) = health_check.tls_domain() {
+            tls_domains.push(TlsDomainInfo {
+                domain: domain.to_string(),
+                internal_port: health_check.bind_address().port(),
+            });
+            (format!("https://{domain}/health_check"), true)
+        } else {
+            (
+                format!(
+                    "http://{}:{}/health_check", // DevSkim: ignore DS137138
+                    instance_ip,
+                    health_check.bind_address().port()
+                ),
+                false,
+            )
+        };
+
+        (url, uses_https, is_localhost_only)
     }
 
     /// Returns true if any service has TLS enabled
