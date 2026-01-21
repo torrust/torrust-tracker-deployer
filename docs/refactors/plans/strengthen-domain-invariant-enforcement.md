@@ -32,14 +32,14 @@ This refactoring plan addresses DDD violations where domain types fail to enforc
 **Total Active Proposals**: 6
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 2
+**Completed**: 3
 **In Progress**: 0
-**Not Started**: 4
+**Not Started**: 3
 
 ### Phase Summary
 
 - **Phase 0 - Foundation (High Impact, Low Effort)**: ✅ 2/2 completed (100%)
-- **Phase 1 - Tracker Config Hardening (High Impact, Medium Effort)**: ⏳ 0/2 completed (0%)
+- **Phase 1 - Tracker Config Hardening (High Impact, Medium Effort)**: ⏳ 1/2 completed (50%)
 - **Phase 2 - Aggregate Invariants (Medium Impact, Low Effort)**: ⏳ 0/2 completed (0%)
 
 ### Discarded Proposals
@@ -508,7 +508,7 @@ Strengthen the aggregate root TrackerConfig.
 
 ### Proposal #2: TrackerConfig Validates at Construction
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵🔵 Medium
 **Priority**: P1
@@ -600,14 +600,70 @@ impl TrackerConfig {
 
 #### Implementation Checklist
 
-- [ ] Make TrackerConfig fields private
-- [ ] Create `TrackerConfig::new()` with aggregate validation
-- [ ] Remove public `validate()` method (internalize it)
-- [ ] Add getter methods for all fields
-- [ ] Implement `TryFrom<TrackerSection> for TrackerConfig` (standard trait conversion)
-- [ ] Update all tests
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Make TrackerConfig fields private
+- [x] Create `TrackerConfig::new()` with aggregate validation
+- [x] Remove public `validate()` method (internalize it)
+- [x] Add getter methods for all fields
+- [x] Implement `TryFrom<TrackerSection> for TrackerConfig` (standard trait conversion)
+- [x] Update all tests
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
+
+#### Implementation Notes (Completed)
+
+**Changes Made:**
+
+1. **Made all fields private** in `TrackerConfig`:
+   - `core`, `udp_trackers`, `http_trackers`, `http_api`, `health_check_api`
+
+2. **Added `TrackerConfig::new()` validated constructor**:
+   - Accepts all component configs (already validated by their own constructors)
+   - Performs aggregate-level validation: socket address conflict detection
+   - Returns `Result<Self, TrackerConfigError>`
+
+3. **Added getter methods**:
+   - `core() -> &TrackerCoreConfig`
+   - `udp_trackers() -> &[UdpTrackerConfig]`
+   - `http_trackers() -> &[HttpTrackerConfig]`
+   - `http_api() -> &HttpApiConfig`
+   - `health_check_api() -> &HealthCheckApiConfig`
+
+4. **Removed `LocalhostWithTls` error variant**:
+   - This validation is now handled by child config constructors (Phase 0)
+   - `TrackerConfigError` only contains aggregate-level errors
+
+5. **Internalized `validate()` as `check_socket_address_conflicts()`**:
+   - Private method called during construction
+   - No separate validation step needed
+
+6. **Added custom `Deserialize` implementation**:
+   - Uses `TrackerConfigRaw` intermediate struct
+   - Calls `TrackerConfig::new()` to ensure deserialized data is validated
+
+7. **Updated `Default` implementation**:
+   - Now uses `TrackerConfig::new()` to ensure defaults are validated
+
+**Files Modified:**
+
+- `src/domain/tracker/config/mod.rs` - Main implementation
+- `src/domain/tracker/mod.rs` - Updated doc example
+- `src/domain/environment/context.rs` - Field access → getter methods
+- `src/domain/environment/runtime_outputs.rs` - Field access → getter methods
+- `src/application/command_handlers/create/config/tracker/tracker_section.rs`
+- `src/application/command_handlers/show/info/tracker.rs`
+- `src/application/command_handlers/test/handler.rs`
+- `src/application/steps/rendering/docker_compose_templates.rs`
+- `src/infrastructure/templating/prometheus/template/renderer/project_generator.rs`
+- `src/infrastructure/templating/ansible/template/wrappers/variables/context.rs`
+- `src/infrastructure/templating/tracker/template/wrapper/tracker_config/context.rs`
+- `src/infrastructure/templating/tracker/template/renderer/project_generator.rs`
+
+**Observations:**
+
+- Test code changes were more extensive than production code due to struct literal usage
+- The pattern of using getter methods is consistent with Phase 0 types
+- Aggregate-level validation (socket conflicts) remains the only `TrackerConfig`-specific check
+- Child-level validation (ports, TLS rules) correctly delegated to child constructors
 
 ---
 

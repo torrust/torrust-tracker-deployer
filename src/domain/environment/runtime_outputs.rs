@@ -143,13 +143,13 @@ impl ServiceEndpoints {
         tracker_config: &crate::domain::tracker::TrackerConfig,
         instance_ip: IpAddr,
     ) -> Self {
-        let udp_trackers = Self::build_udp_tracker_urls(&tracker_config.udp_trackers, instance_ip);
+        let udp_trackers = Self::build_udp_tracker_urls(tracker_config.udp_trackers(), instance_ip);
         let http_trackers =
-            Self::build_http_tracker_urls(&tracker_config.http_trackers, instance_ip);
+            Self::build_http_tracker_urls(tracker_config.http_trackers(), instance_ip);
         let api_endpoint =
-            Self::build_api_endpoint_url(tracker_config.http_api.bind_address(), instance_ip);
+            Self::build_api_endpoint_url(tracker_config.http_api().bind_address(), instance_ip);
         let health_check_url = Self::build_health_check_url(
-            tracker_config.health_check_api.bind_address(),
+            tracker_config.health_check_api().bind_address(),
             instance_ip,
         );
 

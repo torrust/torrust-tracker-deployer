@@ -321,7 +321,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
     ) -> (Vec<u16>, Vec<u16>, u16, bool) {
         // Extract UDP tracker ports (always exposed - no TLS termination via Caddy)
         let udp_ports: Vec<u16> = tracker_config
-            .udp_trackers
+            .udp_trackers()
             .iter()
             .map(|tracker| tracker.bind_address().port())
             .collect();
@@ -336,14 +336,14 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         // Extract HTTP tracker ports WITHOUT TLS (these need to be exposed)
         let http_ports_without_tls: Vec<u16> = tracker_config
-            .http_trackers
+            .http_trackers()
             .iter()
             .map(|tracker| tracker.bind_address().port())
             .filter(|port| !tls_enabled_ports.contains(port))
             .collect();
 
         // Extract HTTP API port
-        let api_port = tracker_config.http_api.bind_address().port();
+        let api_port = tracker_config.http_api().bind_address().port();
 
         // Check if HTTP API has TLS enabled
         let http_api_has_tls = user_inputs.tracker.http_api_tls_domain().is_some();

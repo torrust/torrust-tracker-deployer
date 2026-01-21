@@ -136,9 +136,9 @@ impl TestCommandHandler {
         let tracker_config = any_env.tracker_config();
 
         // Build service endpoints from configuration (with server IP)
-        let tracker_api_endpoint = Self::build_api_endpoint(instance_ip, &tracker_config.http_api);
+        let tracker_api_endpoint = Self::build_api_endpoint(instance_ip, tracker_config.http_api());
         let http_tracker_endpoints: Vec<ServiceEndpoint> = tracker_config
-            .http_trackers
+            .http_trackers()
             .iter()
             .map(|config| Self::build_http_tracker_endpoint(instance_ip, config))
             .collect();

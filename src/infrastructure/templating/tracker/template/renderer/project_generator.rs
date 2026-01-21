@@ -212,36 +212,31 @@ mod tests {
         let template_manager = create_test_template_manager();
         let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
 
-        let tracker_config = TrackerConfig {
-            core: TrackerCoreConfig {
+        let tracker_config = TrackerConfig::new(
+            TrackerCoreConfig {
                 database: DatabaseConfig::Sqlite(SqliteConfig {
                     database_name: "tracker.db".to_string(),
                 }),
                 private: false,
             },
-            udp_trackers: vec![
+            vec![
                 UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
             ],
-            http_trackers: vec![HttpTrackerConfig::new(
-                "0.0.0.0:7070".parse().unwrap(),
-                None,
-                false,
-            )
-            .expect("valid config")],
-            http_api: HttpApiConfig::new(
+            vec![
+                HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false)
+                    .expect("valid config"),
+            ],
+            HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_token".to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig::new(
-                "127.0.0.1:1313".parse().unwrap(),
-                None,
-                false,
-            )
-            .expect("valid config"),
-        };
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config");
 
         generator
             .render(Some(&tracker_config))
@@ -267,8 +262,8 @@ mod tests {
         let template_manager = create_test_template_manager();
         let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
 
-        let tracker_config = TrackerConfig {
-            core: TrackerCoreConfig {
+        let tracker_config = TrackerConfig::new(
+            TrackerCoreConfig {
                 database: DatabaseConfig::Mysql(MysqlConfig {
                     host: "mysql".to_string(),
                     port: 3306,
@@ -278,29 +273,24 @@ mod tests {
                 }),
                 private: false,
             },
-            udp_trackers: vec![
+            vec![
                 UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).expect("valid config")
             ],
-            http_trackers: vec![HttpTrackerConfig::new(
-                "0.0.0.0:7070".parse().unwrap(),
-                None,
-                false,
-            )
-            .expect("valid config")],
-            http_api: HttpApiConfig::new(
+            vec![
+                HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false)
+                    .expect("valid config"),
+            ],
+            HttpApiConfig::new(
                 "0.0.0.0:1212".parse().unwrap(),
                 "test_token".to_string().into(),
                 None,
                 false,
             )
             .expect("valid config"),
-            health_check_api: HealthCheckApiConfig::new(
-                "127.0.0.1:1313".parse().unwrap(),
-                None,
-                false,
-            )
-            .expect("valid config"),
-        };
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false)
+                .expect("valid config"),
+        )
+        .expect("valid tracker config");
 
         generator
             .render(Some(&tracker_config))

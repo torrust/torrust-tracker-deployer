@@ -131,7 +131,7 @@ impl ServiceInfo {
         grafana_config: Option<&GrafanaConfig>,
     ) -> Self {
         let udp_trackers = tracker_config
-            .udp_trackers
+            .udp_trackers()
             .iter()
             .map(|udp| {
                 let host = udp
@@ -147,7 +147,7 @@ impl ServiceInfo {
         let mut localhost_http_trackers = Vec::new();
         let mut tls_domains = Vec::new();
 
-        for (index, http) in tracker_config.http_trackers.iter().enumerate() {
+        for (index, http) in tracker_config.http_trackers().iter().enumerate() {
             if http.use_tls_proxy() {
                 if let Some(domain) = http.domain() {
                     // TLS-enabled tracker - use HTTPS domain URL
@@ -176,12 +176,12 @@ impl ServiceInfo {
         }
 
         // Build API endpoint based on TLS configuration and localhost status
-        let api_is_localhost_only = is_localhost(&tracker_config.http_api.bind_address());
-        let (api_endpoint, api_uses_https) = if tracker_config.http_api.use_tls_proxy() {
-            if let Some(domain) = tracker_config.http_api.domain() {
+        let api_is_localhost_only = is_localhost(&tracker_config.http_api().bind_address());
+        let (api_endpoint, api_uses_https) = if tracker_config.http_api().use_tls_proxy() {
+            if let Some(domain) = tracker_config.http_api().domain() {
                 tls_domains.push(TlsDomainInfo {
                     domain: domain.as_str().to_string(),
-                    internal_port: tracker_config.http_api.bind_address().port(),
+                    internal_port: tracker_config.http_api().bind_address().port(),
                 });
                 (format!("https://{}/api", domain.as_str()), true)
             } else {
@@ -190,7 +190,7 @@ impl ServiceInfo {
                     format!(
                         "http://{}:{}/api", // DevSkim: ignore DS137138
                         instance_ip,
-                        tracker_config.http_api.bind_address().port()
+                        tracker_config.http_api().bind_address().port()
                     ),
                     false,
                 )
@@ -200,7 +200,7 @@ impl ServiceInfo {
                 format!(
                     "http://{}:{}/api", // DevSkim: ignore DS137138
                     instance_ip,
-                    tracker_config.http_api.bind_address().port()
+                    tracker_config.http_api().bind_address().port()
                 ),
                 false,
             )
@@ -218,12 +218,12 @@ impl ServiceInfo {
 
         // Build health check URL based on TLS configuration and localhost status
         let health_check_is_localhost_only =
-            is_localhost(&tracker_config.health_check_api.bind_address());
+            is_localhost(&tracker_config.health_check_api().bind_address());
         let (health_check_url, health_check_uses_https) =
-            if let Some(domain) = tracker_config.health_check_api.tls_domain() {
+            if let Some(domain) = tracker_config.health_check_api().tls_domain() {
                 tls_domains.push(TlsDomainInfo {
                     domain: domain.to_string(),
-                    internal_port: tracker_config.health_check_api.bind_address().port(),
+                    internal_port: tracker_config.health_check_api().bind_address().port(),
                 });
                 (format!("https://{domain}/health_check"), true)
             } else {
@@ -231,7 +231,7 @@ impl ServiceInfo {
                     format!(
                         "http://{}:{}/health_check", // DevSkim: ignore DS137138
                         instance_ip,
-                        tracker_config.health_check_api.bind_address().port()
+                        tracker_config.health_check_api().bind_address().port()
                     ),
                     false,
                 )

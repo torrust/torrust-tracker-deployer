@@ -93,18 +93,16 @@ impl TrackerSection {
 
         let health_check_api: HealthCheckApiConfig = self.health_check_api.clone().try_into()?;
 
-        let config = TrackerConfig {
+        // Create TrackerConfig with validated constructor
+        // This validates socket address uniqueness at construction time
+        TrackerConfig::new(
             core,
-            udp_trackers: udp_trackers?,
-            http_trackers: http_trackers?,
+            udp_trackers?,
+            http_trackers?,
             http_api,
             health_check_api,
-        };
-
-        // Validate socket address uniqueness
-        config.validate().map_err(CreateConfigError::from)?;
-
-        Ok(config)
+        )
+        .map_err(CreateConfigError::from)
     }
 }
 
@@ -185,16 +183,16 @@ mod tests {
         let config = section.to_tracker_config().unwrap();
 
         assert_eq!(
-            config.core.database,
+            config.core().database,
             DatabaseConfig::Sqlite(SqliteConfig {
                 database_name: "tracker.db".to_string()
             })
         );
-        assert!(!config.core.private);
-        assert_eq!(config.udp_trackers.len(), 1);
-        assert_eq!(config.http_trackers.len(), 1);
+        assert!(!config.core().private);
+        assert_eq!(config.udp_trackers().len(), 1);
+        assert_eq!(config.http_trackers().len(), 1);
         assert_eq!(
-            config.http_api.bind_address(),
+            config.http_api().bind_address(),
             "0.0.0.0:1212".parse::<SocketAddr>().unwrap()
         );
     }
@@ -241,8 +239,8 @@ mod tests {
 
         let config = section.to_tracker_config().unwrap();
 
-        assert_eq!(config.udp_trackers.len(), 2);
-        assert_eq!(config.http_trackers.len(), 2);
+        assert_eq!(config.udp_trackers().len(), 2);
+        assert_eq!(config.http_trackers().len(), 2);
     }
 
     #[test]

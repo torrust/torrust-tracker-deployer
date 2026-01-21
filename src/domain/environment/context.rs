@@ -352,7 +352,7 @@ impl EnvironmentContext {
     /// Returns the database configuration
     #[must_use]
     pub fn database_config(&self) -> &crate::domain::tracker::DatabaseConfig {
-        &self.user_inputs.tracker.core.database
+        &self.user_inputs.tracker.core().database
     }
 
     /// Returns the tracker configuration
@@ -366,7 +366,7 @@ impl EnvironmentContext {
     pub fn admin_token(&self) -> &str {
         self.user_inputs
             .tracker
-            .http_api
+            .http_api()
             .admin_token()
             .expose_secret()
     }
