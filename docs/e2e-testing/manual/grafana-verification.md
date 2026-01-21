@@ -641,8 +641,8 @@ docker exec <grafana_container_id> env | grep GF_SECURITY_ADMIN_PASSWORD
 This was a bug where the configured password wasn't being passed from the environment config to the `.env` file. It was fixed by updating:
 
 - `UserInputs::with_tracker()` to accept optional Prometheus/Grafana configs
-- `EnvironmentContext::with_working_dir_and_tracker()` to pass configs through
-- `Environment::with_working_dir_and_tracker()` to accept configs
+- `EnvironmentContext::create()` to pass configs through
+- `Environment::create()` to accept configs
 - Create handler to pass configs instead of using defaults
 
 **Solution:**

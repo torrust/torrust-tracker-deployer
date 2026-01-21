@@ -234,7 +234,7 @@ impl CreateCommandHandler {
         }
 
         // Create environment aggregate from validated params
-        let environment = Environment::with_working_dir_and_tracker(
+        let environment = Environment::create(
             params.environment_name,
             params.provider_config,
             params.ssh_credentials,

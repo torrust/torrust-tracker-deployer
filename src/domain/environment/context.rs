@@ -223,7 +223,7 @@ impl EnvironmentContext {
     /// - `HttpsSectionWithoutTlsServices` if HTTPS section exists but no service uses TLS
     /// - `TlsServicesWithoutHttpsSection` if a service uses TLS but HTTPS section is missing
     #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
-    pub fn with_working_dir_and_tracker(
+    pub fn create(
         name: &EnvironmentName,
         provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,

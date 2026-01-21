@@ -310,7 +310,7 @@ impl Environment {
     /// - `TlsServicesWithoutHttpsSection`: Service has TLS but HTTPS section is missing
     #[allow(clippy::needless_pass_by_value)] // Public API takes ownership for ergonomics
     #[allow(clippy::too_many_arguments)] // Public API with necessary configuration parameters
-    pub fn with_working_dir_and_tracker(
+    pub fn create(
         name: EnvironmentName,
         provider_config: ProviderConfig,
         ssh_credentials: SshCredentials,
@@ -322,7 +322,7 @@ impl Environment {
         working_dir: &std::path::Path,
         created_at: DateTime<Utc>,
     ) -> Result<Environment<Created>, UserInputsError> {
-        let context = EnvironmentContext::with_working_dir_and_tracker(
+        let context = EnvironmentContext::create(
             &name,
             provider_config,
             ssh_credentials,

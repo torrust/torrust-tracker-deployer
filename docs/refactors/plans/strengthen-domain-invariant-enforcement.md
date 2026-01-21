@@ -815,7 +815,7 @@ EnvironmentCreationConfig  →   Build partial domain objects:
                                         ↓
                                UserInputs validates cross-cutting invariants
                                         ↓
-                               Environment::with_working_dir_and_tracker()
+                               Environment::create()
                                creates the complete aggregate
 ```
 
@@ -915,7 +915,7 @@ Then update `EnvironmentContext` to use the validated constructor:
 
 ```rust
 impl EnvironmentContext {
-    pub fn with_working_dir_and_tracker(
+    pub fn create(
         // ... params ...
     ) -> Result<Self, UserInputsError> {
         let user_inputs = UserInputs::new(
@@ -960,8 +960,8 @@ impl EnvironmentContext {
 - [x] Create `UserInputsError` enum with `help()` method in `user_inputs.rs`
 - [x] Change `UserInputs::new()` to return `Result<Self, UserInputsError>`
 - [x] Add cross-service validation to `UserInputs::with_tracker()`
-- [x] Update `EnvironmentContext::with_working_dir_and_tracker()` to propagate errors
-- [x] Update `Environment::with_working_dir_and_tracker()` to return `Result`
+- [x] Update `EnvironmentContext::create()` to propagate errors
+- [x] Update `Environment::create()` to return `Result`
 - [x] Add `From<UserInputsError>` impl for `CreateConfigError` in application layer
 - [x] Remove duplicate validation from `EnvironmentCreationConfig::to_environment_params()`
 - [x] Update all call sites that create `UserInputs` directly
@@ -989,7 +989,7 @@ impl EnvironmentContext {
 
 4. **Updated `EnvironmentContext`**:
    - `new()` uses `.expect()` since defaults always pass validation
-   - `with_working_dir_and_tracker()` returns `Result<Self, UserInputsError>`
+   - `create()` returns `Result<Self, UserInputsError>`
 
 5. **Added `TrackerConfig::has_any_tls_configured()`** method to check TLS status
 
@@ -1006,7 +1006,7 @@ impl EnvironmentContext {
 
 #### Migration Notes
 
-This change makes `Environment::with_working_dir_and_tracker()` fallible, which is a breaking change. However:
+This change makes `Environment::create()` fallible, which is a breaking change. However:
 
 1. The function is primarily called from `CreateCommandHandler::execute()` which already handles errors
 2. Test helpers may need updating to use `.expect()` or propagate errors
