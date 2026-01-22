@@ -3,6 +3,7 @@ AAAAC
 AAAAI
 AGENTS
 Alertmanager
+Aridane
 Ashburn
 Avalonia
 BBDBE
@@ -18,6 +19,8 @@ Dockerfiles
 EAAAADAQABAAABAQC
 EPEL
 Falkenstein
+josecelano
+mysqldump
 Gossman
 Grafana
 Grafonnet
@@ -29,6 +32,7 @@ Hostnames
 LUKS
 Liskov
 MAAACBA
+Martín
 MLKEM
 MVVM
 Mermaid
@@ -65,6 +69,7 @@ Wazuh
 Zeroize
 addgroup
 adduser
+agentskills
 alpn
 appender
 appendonly
@@ -140,6 +145,7 @@ exitcode
 filesd
 flatlined
 frontends
+frontmatter
 fswc
 getent
 getopt
@@ -248,6 +254,7 @@ promtool
 ptracker
 publickey
 publicsuffix
+purgeable
 pytest
 readlink
 realpath

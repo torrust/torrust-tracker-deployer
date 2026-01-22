@@ -1,0 +1,59 @@
+{
+    "environment": {
+        "name": "lxd-local-https-example"
+    },
+    "ssh_credentials": {
+        "private_key_path": "/home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-01/fixtures/testing_rsa",
+        "public_key_path": "/home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-01/fixtures/testing_rsa.pub"
+    },
+    "provider": {
+        "provider": "lxd",
+        "profile_name": "torrust-profile-lxd-local-https-example"
+    },
+    "tracker": {
+        "core": {
+            "database": {
+                "driver": "sqlite3",
+                "database_name": "tracker.db"
+            },
+            "private": false
+        },
+        "udp_trackers": [
+            {
+                "bind_address": "0.0.0.0:6969",
+                "domain": "udp.tracker.local"
+            }
+        ],
+        "http_trackers": [
+            {
+                "bind_address": "0.0.0.0:7070",
+                "domain": "http.tracker.local",
+                "use_tls_proxy": true
+            }
+        ],
+        "http_api": {
+            "bind_address": "0.0.0.0:1212",
+            "admin_token": "MyAccessToken",
+            "domain": "api.tracker.local",
+            "use_tls_proxy": true
+        },
+        "health_check_api": {
+            "bind_address": "0.0.0.0:1313",
+            "domain": "health.tracker.local",
+            "use_tls_proxy": true
+        }
+    },
+    "grafana": {
+        "admin_user": "admin",
+        "admin_password": "admin-password",
+        "domain": "grafana.tracker.local",
+        "use_tls_proxy": true
+    },
+    "prometheus": {
+        "scrape_interval_in_secs": 15
+    },
+    "https": {
+        "admin_email": "admin@tracker.local",
+        "use_staging": true
+    }
+}

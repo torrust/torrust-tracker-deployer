@@ -129,17 +129,123 @@ When starting work on a new feature:
   - Added HTTPS support for Grafana
   - **Research Complete**: [Issue #270](https://github.com/torrust/torrust-tracker-deployer/issues/270) - Caddy evaluation successful, production deployment verified
 
-### 7. Add backup and disaster recovery
+### 7. Add backup support
 
-- [ ] **7.1** Implement database backups for MySQL
-- [ ] **7.2** Implement configuration backups
-- [ ] **7.3** Create recovery procedures documentation
+- [ ] **7.1** Research database backup strategies
+  - Investigate SQLite backup approaches (file copy while service is running)
+  - Investigate MySQL backup approaches (concurrency issues, locking, `mysqldump` vs hot backups)
+  - Document findings and recommend approach for each database type
+- [ ] **7.2** Define backup feature specification
+  - Design backup configuration schema (enabled per service type)
+  - Configuration file backups (affects all services)
+  - Database backups with per-database-type configuration (SQLite, MySQL)
+  - User-provided destination path for backup files
+  - **Note**: Volume management is out of scope - user provides a mounted location
+- [ ] **7.3** Implement configuration file backups
+- [ ] **7.4** Implement SQLite database backups
+  - Based on Torrust Live Demo approach (copy and compress DB file)
+- [ ] **7.5** Implement MySQL database backups
+  - Based on research findings for handling concurrency
 
 ### 8. Add levels of verbosity
 
 - [ ] **8.1** Add levels of verbosity as described in the UX research
   - Implement `-v`, `-vv`, `-vvv` flags for user-facing output
   - See [`docs/research/UX/`](https://github.com/torrust/torrust-tracker-deployer/tree/main/docs/research/UX) for detailed UX research
+
+### 9. Extend deployer usability
+
+Add new commands to allow users to take advantage of the deployer even if they do not want to use all functionalities. This enables partial adoption of the tool.
+
+These commands complete a trilogy of "lightweight" entry points:
+
+- `register` - For users with pre-provisioned instances
+- `validate` - For users who only want to validate a deployment configuration
+- `render` - For users who only want to build artifacts and handle deployment manually
+
+This makes the deployer more versatile for different scenarios and more AI-agent friendly (dry-run commands provide feedback without side effects).
+
+- [ ] **9.1** Implement `validate` command
+  - Validate deployment configuration without executing any deployment steps
+  - See feature specification: [`docs/features/config-validation-command/`](./features/config-validation-command/)
+- [ ] **9.2** Implement artifact generation command
+  - **Command name TBD** - candidates: `render`, `generate`, `export`, `prepare`, `scaffold`
+  - Generate all build artifacts (docker-compose, tracker config, Ansible playbooks, etc.) to a `build/` directory
+  - Users can copy these files to their own servers and deploy manually
+  - Target audience: System administrators who only need the final configuration files
+  - Generate all artifacts and let users decide which ones to use
+  - **TODO**: Create feature specification in `docs/features/`
+
+### 10. Improve usability (UX)
+
+Minor changes to improve the output of some commands and overall user experience.
+
+- [ ] **10.1** Add DNS setup reminder in `provision` command output
+  - Display reminder when any service has a domain configured
+  - See draft: [`docs/issues/drafts/dns-setup-reminder-in-provision-command.md`](./issues/drafts/dns-setup-reminder-in-provision-command.md)
+- [ ] **10.2** Improve `run` command output with service URLs
+  - Show service URLs immediately after services start
+  - Include hint about `show` command for full details
+  - See draft: [`docs/issues/drafts/improve-run-command-output-with-service-urls.md`](./issues/drafts/improve-run-command-output-with-service-urls.md)
+- [ ] **10.3** Add DNS resolution check to `test` command
+  - Verify configured domains resolve to the expected instance IP
+  - Advisory warning only (doesn't fail tests) - DNS is decoupled from service tests
+  - See draft: [`docs/issues/drafts/add-dns-resolution-check-to-test-command.md`](./issues/drafts/add-dns-resolution-check-to-test-command.md)
+- [ ] **10.4** Add `purge` command to remove local environment data
+  - Removes `data/{env}/` and `build/{env}/` for destroyed environments
+  - Allows reusing environment names after destruction
+  - Users don't need to know internal storage details
+  - See draft: [`docs/issues/drafts/add-purge-command-to-remove-local-data.md`](./issues/drafts/add-purge-command-to-remove-local-data.md)
+
+### 11. Improve AI agent experience
+
+Add features and documentation that make the use of AI agents to operate the deployer easier, more efficient, more reliable, and less prone to hallucinations.
+
+**Context**: We assume users will increasingly interact with the deployer indirectly via AI agents (GitHub Copilot, Cursor, etc.) rather than running commands directly. This section ensures AI agents have the best possible experience when working with the deployer.
+
+- [ ] **11.1** Consider using [agentskills.io](https://agentskills.io) for AI agent capabilities
+  - Agent Skills is an open format for extending AI agent capabilities with specialized knowledge and workflows
+  - Developed by Anthropic, adopted by Claude Code, OpenAI Codex, Amp, and others
+  - Provides progressive disclosure: metadata at startup, instructions on activation, resources on demand
+  - Skills can bundle scripts, templates, and reference materials
+  - Evaluate compatibility with current `AGENTS.md` approach
+  - See issue: [#274](https://github.com/torrust/torrust-tracker-deployer/issues/274)
+  - See spec: [`docs/issues/274-consider-using-agentskills-io.md`](./issues/274-consider-using-agentskills-io.md)
+
+- [ ] **11.2** Add AI-discoverable documentation headers to template files
+  - Templates generate production config files (docker-compose, tracker.toml, Caddyfile, etc.)
+  - Documentation is moving from templates to Rust wrapper types (published on docs.rs)
+  - Problem: AI agents in production only see rendered output, not the source repo
+  - Solution: Add standardized header to templates with links to repo, wrapper path, and docs.rs
+  - Enables AI agents to find documentation even when working with deployed configs
+  - See draft: [`docs/issues/drafts/add-ai-discoverable-documentation-headers-to-templates.md`](./issues/drafts/add-ai-discoverable-documentation-headers-to-templates.md)
+
+- [ ] **11.3** Provide configuration examples and questionnaire for AI agent guidance
+  - Problem: AI agents struggle with the many valid configuration combinations
+  - Questionnaire template: structured decision tree to gather all required user information
+  - Example dataset: real-world scenarios mapping requirements to validated configs
+  - Covers: provider selection, database type, tracker protocols, HTTPS, monitoring, etc.
+  - Benefits: few-shot learning for agents, reduced hallucination, training/RAG dataset
+  - Can integrate with `create-environment-config` skill from task 11.1
+  - See draft: [`docs/issues/drafts/provide-config-examples-and-questionnaire-for-ai-agents.md`](./issues/drafts/provide-config-examples-and-questionnaire-for-ai-agents.md)
+
+- [ ] **11.4** Add dry-run mode for all commands
+  - Allow AI agents (and users) to preview what will happen before executing operations
+  - Particularly valuable for destructive commands (`destroy`, `stop`)
+  - Flag: `--dry-run` shows planned actions without executing
+  - Reduces risk when AI agents operate autonomously
+
+---
+
+## Deferred Features
+
+Features considered valuable but **out of scope for v1**. We want to release the first version and wait for user acceptance before investing more time. These can be revisited based on user feedback.
+
+| Feature                                      | Rationale                                                  | Notes                                                     |
+| -------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
+| Machine-readable JSON output (`--json` flag) | Easy to add thanks to MVC pattern, but not critical for v1 | Structured output helps AI agents parse results reliably  |
+| MCP (Model Context Protocol) server          | Native AI integration without shell commands               | Would let AI agents call deployer as MCP tools directly   |
+| Structured error format for AI agents        | Already improving errors in section 10                     | Could formalize with error codes, fix suggestions in JSON |
 
 ---
 
