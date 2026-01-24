@@ -685,7 +685,7 @@ mod tests {
 
     #[test]
     fn it_should_format_seconds_correctly() {
-        let duration = Duration::from_millis(1000);
+        let duration = Duration::from_secs(1);
         assert_eq!(format_duration(duration), "1.0s");
 
         let duration = Duration::from_millis(2345);

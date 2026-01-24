@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                                  | Summary                                                                                    |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ✅ Accepted   | 2026-01-24 | [Bind Mount Standardization](./bind-mount-standardization.md)                                             | Use bind mounts exclusively for all Docker Compose volumes for observability and backup    |
 | ✅ Accepted   | 2026-01-21 | [TryFrom for DTO to Domain Conversion](./tryfrom-for-dto-to-domain-conversion.md)                         | Use standard TryFrom trait for self-documenting, discoverable DTO→Domain conversions       |
 | ✅ Accepted   | 2026-01-21 | [Validated Deserialization for Domain Types](./validated-deserialization-for-domain-types.md)             | Use custom Deserialize impl with Raw struct to enforce domain invariants during parsing    |
 | ✅ Accepted   | 2026-01-20 | [Grafana Default Port 3000](./grafana-default-port-3000.md)                                               | Use Grafana's default port 3000 instead of 3100 for dedicated VM deployments               |

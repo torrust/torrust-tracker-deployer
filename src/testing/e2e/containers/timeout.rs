@@ -24,10 +24,10 @@ pub struct ContainerTimeouts {
 impl Default for ContainerTimeouts {
     fn default() -> Self {
         Self {
-            docker_build: Duration::from_secs(300),   // 5 minutes
-            container_start: Duration::from_secs(60), // 1 minute
-            ssh_ready: Duration::from_secs(30),       // 30 seconds
-            ssh_setup: Duration::from_secs(15),       // 15 seconds
+            docker_build: Duration::from_mins(5),    // 5 minutes
+            container_start: Duration::from_mins(1), // 1 minute
+            ssh_ready: Duration::from_secs(30),      // 30 seconds
+            ssh_setup: Duration::from_secs(15),      // 15 seconds
         }
     }
 }

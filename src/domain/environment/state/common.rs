@@ -104,7 +104,7 @@ mod tests {
 
         let context: BaseFailureContext = serde_json::from_str(&json).unwrap();
         assert_eq!(context.error_summary, "Deserialized error");
-        assert_eq!(context.execution_duration, Duration::from_secs(60));
+        assert_eq!(context.execution_duration, Duration::from_mins(1));
     }
 
     #[test]
