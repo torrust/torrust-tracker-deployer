@@ -32,15 +32,15 @@ This refactoring plan addresses architectural issues in the docker-compose templ
 **Bugs to Fix**: 1  
 **Total Postponed**: 0  
 **Total Discarded**: 0  
-**Completed**: 0  
+**Completed**: 4  
 **In Progress**: 0  
-**Not Started**: 8 (including pre-phase task and bugs)
+**Not Started**: 4
 
 ### Phase Summary
 
-- **Bugs to Fix (Priority)**: ⏳ 0/1 fixed (0%) - Fix before or during relevant phase
-- **Pre-Phase - ADR Documentation**: ⏳ 0/1 completed (0%)
-- **Phase 0 - Bind Mount Standardization (Medium Impact, Low Effort)**: ⏳ 0/2 completed (0%)
+- **Bugs to Fix (Priority)**: ✅ 1/1 fixed (100%) - Fix before or during relevant phase
+- **Pre-Phase - ADR Documentation**: ✅ 1/1 completed (100%)
+- **Phase 0 - Bind Mount Standardization (Medium Impact, Low Effort)**: ✅ 2/2 completed (100%)
 - **Phase 1 - Domain Network Types (High Impact, Medium Effort)**: ⏳ 0/2 completed (0%)
 - **Phase 2 - Topology Aggregate & Network Derivation (High Impact, Medium Effort)**: ⏳ 0/2 completed (0%)
 
@@ -50,10 +50,10 @@ This table provides a single view of all work items for easy tracking:
 
 | ID     | Phase     | Task                                                        | Status         | Depends On | Notes                                                                                     |
 | ------ | --------- | ----------------------------------------------------------- | -------------- | ---------- | ----------------------------------------------------------------------------------------- |
-| BUG-01 | Priority  | Remove invalid "Grafana without Prometheus" template branch | ⏳ Not Started | -          | Dead code, see [BUG-01](#bug-01-template-handles-invalid-grafana-without-prometheus-case) |
-| ADR-01 | Pre-Phase | Create ADR for Bind Mount Standardization                   | ⏳ Not Started | -          | See [Pre-Phase Task](#pre-phase-task-create-adr-for-bind-mount-standardization)           |
-| P0.1   | Phase 0   | Convert Named Volumes to Bind Mounts                        | ⏳ Not Started | ADR-01     | See [Proposal 0.1](#proposal-01-convert-named-volumes-to-bind-mounts)                     |
-| P0.2   | Phase 0   | Create BindMount Domain Type                                | ⏳ Not Started | P0.1       | See [Proposal 0.2](#proposal-02-create-bindmount-domain-type)                             |
+| BUG-01 | Priority  | Remove invalid "Grafana without Prometheus" template branch | ✅ Completed   | -          | Dead code, see [BUG-01](#bug-01-template-handles-invalid-grafana-without-prometheus-case) |
+| ADR-01 | Pre-Phase | Create ADR for Bind Mount Standardization                   | ✅ Completed   | -          | See [Pre-Phase Task](#pre-phase-task-create-adr-for-bind-mount-standardization)           |
+| P0.1   | Phase 0   | Convert Named Volumes to Bind Mounts                        | ✅ Completed   | ADR-01     | See [Proposal 0.1](#proposal-01-convert-named-volumes-to-bind-mounts)                     |
+| P0.2   | Phase 0   | Create BindMount Domain Type                                | ✅ Completed   | P0.1       | See [Proposal 0.2](#proposal-02-create-bindmount-domain-type)                             |
 | P1.1   | Phase 1   | Create Network Domain Types                                 | ⏳ Not Started | -          | See [Proposal 1.1](#proposal-11-create-network-domain-types)                              |
 | P1.2   | Phase 1   | Migrate Service Configs to Use Network Enum                 | ⏳ Not Started | P1.1       | See [Proposal 1.2](#proposal-12-migrate-service-configs-to-use-network-enum)              |
 | P2.1   | Phase 2   | Create DockerComposeTopology Aggregate                      | ⏳ Not Started | P1.2       | See [Proposal 2.1](#proposal-21-create-dockercomposetopology-aggregate)                   |
@@ -72,9 +72,12 @@ This table provides a single view of all work items for easy tracking:
 
 Track completed items with dates and any relevant notes:
 
-| Date | ID  | Task                     | Commit/PR | Notes |
-| ---- | --- | ------------------------ | --------- | ----- |
-| -    | -   | _No items completed yet_ | -         | -     |
+| Date       | ID     | Task                                                        | Commit/PR                                                               | Notes                                               |
+| ---------- | ------ | ----------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------- |
+| 2025-07-17 | ADR-01 | Create ADR for Bind Mount Standardization                   | [PR #289](https://github.com/torrust/torrust-tracker-deployer/pull/289) | Documented 9 reasons for bind mount standardization |
+| 2025-07-17 | BUG-01 | Remove invalid "Grafana without Prometheus" template branch | [PR #291](https://github.com/torrust/torrust-tracker-deployer/pull/291) | Removed dead code from docker-compose template      |
+| 2025-07-17 | P0.1   | Convert Named Volumes to Bind Mounts                        | [PR #293](https://github.com/torrust/torrust-tracker-deployer/pull/293) | Bind mounts with BindMount domain type              |
+| 2025-07-17 | P0.2   | Create BindMount Domain Type                                | [PR #293](https://github.com/torrust/torrust-tracker-deployer/pull/293) | Storage playbooks with proper ownership             |
 
 ### Discarded Proposals
 
