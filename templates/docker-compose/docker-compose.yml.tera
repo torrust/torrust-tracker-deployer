@@ -154,12 +154,8 @@ services:
       retries: 5
       start_period: 30s
     depends_on:
-{%- if prometheus %}
       prometheus:
         condition: service_healthy
-{%- else %}
-      - tracker
-{%- endif %}
 {%- endif %}
 {%- if mysql %}
 
