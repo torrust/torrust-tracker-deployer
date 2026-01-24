@@ -98,8 +98,7 @@ impl ImageBuilder {
             .arg("inspect")
             .arg(full_image_name)
             .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
+            .is_ok_and(|output| output.status.success())
     }
 }
 

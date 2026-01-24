@@ -341,8 +341,7 @@ impl E2eTestRunner {
     pub fn run_services(&self) -> Result<()> {
         // Check if run should be skipped (Docker not available in test container)
         let skip_run = std::env::var("TORRUST_TD_SKIP_RUN_IN_CONTAINER")
-            .map(|v| v.to_lowercase() == "true")
-            .unwrap_or(false);
+            .is_ok_and(|v| v.to_lowercase() == "true");
 
         if skip_run {
             info!(

@@ -155,7 +155,7 @@ impl ContainerImageBuilder {
             tag: "latest".to_string(),
             dockerfile_path: None,
             context_path: PathBuf::from("."),
-            build_timeout: Duration::from_secs(300),
+            build_timeout: Duration::from_mins(5),
         }
     }
 
@@ -433,7 +433,7 @@ mod tests {
         assert_eq!(builder.tag(), "latest");
         assert_eq!(builder.dockerfile_path(), None);
         assert_eq!(builder.context_path(), &PathBuf::from("."));
-        assert_eq!(builder.build_timeout(), Duration::from_secs(300));
+        assert_eq!(builder.build_timeout(), Duration::from_mins(5));
     }
 
     #[test]
@@ -480,7 +480,7 @@ mod tests {
 
     #[test]
     fn it_should_configure_build_timeout() {
-        let timeout = Duration::from_secs(600);
+        let timeout = Duration::from_mins(10);
         let builder = ContainerImageBuilder::new().with_build_timeout(timeout);
 
         assert_eq!(builder.build_timeout(), timeout);
@@ -493,7 +493,7 @@ mod tests {
             .with_tag("v2.0")
             .with_dockerfile(PathBuf::from("custom/Dockerfile"))
             .with_context(PathBuf::from("./src"))
-            .with_build_timeout(Duration::from_secs(900));
+            .with_build_timeout(Duration::from_mins(15));
 
         assert_eq!(builder.image_name(), Some("my-app"));
         assert_eq!(builder.tag(), "v2.0");
@@ -503,7 +503,7 @@ mod tests {
             Some(&PathBuf::from("custom/Dockerfile"))
         );
         assert_eq!(builder.context_path(), &PathBuf::from("./src"));
-        assert_eq!(builder.build_timeout(), Duration::from_secs(900));
+        assert_eq!(builder.build_timeout(), Duration::from_mins(15));
     }
 
     #[test]

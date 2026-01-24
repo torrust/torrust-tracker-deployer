@@ -144,9 +144,8 @@ impl ConfigureCommandHandler {
 
         // Allow tests or CI to skip Docker installation
         // (useful for container-based tests where Docker is already installed via Dockerfile)
-        let skip_docker = std::env::var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER")
-            .map(|v| v == "true")
-            .unwrap_or(false);
+        let skip_docker =
+            std::env::var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER").is_ok_and(|v| v == "true");
 
         let current_step = ConfigureStep::InstallDocker;
         if skip_docker {
@@ -185,9 +184,8 @@ impl ConfigureCommandHandler {
         // Allow tests or CI to explicitly skip the firewall configuration step
         // (useful for container-based test runs where iptables/ufw require
         // elevated kernel capabilities not available in unprivileged containers).
-        let skip_firewall = std::env::var("TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER")
-            .map(|v| v == "true")
-            .unwrap_or(false);
+        let skip_firewall =
+            std::env::var("TORRUST_TD_SKIP_FIREWALL_IN_CONTAINER").is_ok_and(|v| v == "true");
 
         if skip_firewall {
             info!(
