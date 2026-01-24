@@ -1,0 +1,32 @@
+---
+# Create MySQL Storage Directory
+#
+# This playbook creates the MySQL data directory with correct ownership.
+# MySQL container runs as user 999:999 (mysql), so the host directory
+# must be owned by that user/group for the container to write data.
+#
+# This is required because we use bind mounts instead of named volumes.
+# Docker named volumes automatically handle ownership, but bind mounts
+# require explicit directory creation with correct permissions.
+#
+# Variables:
+# - deploy_dir: Base deployment directory (e.g., /opt/torrust)
+# - mysql_enabled: Whether MySQL is enabled (from variables.yml)
+#
+# See ADR: docs/decisions/bind-mount-standardization.md
+
+- name: Create MySQL storage directory
+  hosts: all
+  become: true
+  vars_files:
+    - variables.yml
+
+  tasks:
+    - name: Create MySQL data directory with correct ownership
+      ansible.builtin.file:
+        path: "{{ deploy_dir }}/storage/mysql/data"
+        state: directory
+        mode: "0755"
+        owner: "999"
+        group: "999"
+      when: mysql_enabled | default(false)

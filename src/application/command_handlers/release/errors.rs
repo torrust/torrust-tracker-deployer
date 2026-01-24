@@ -52,6 +52,14 @@ pub enum ReleaseCommandHandlerError {
     #[error("Prometheus storage creation failed: {0}")]
     PrometheusStorageCreation(String),
 
+    /// Grafana storage directory creation failed
+    #[error("Grafana storage creation failed: {0}")]
+    GrafanaStorageCreation(String),
+
+    /// `MySQL` storage directory creation failed
+    #[error("MySQL storage creation failed: {0}")]
+    MysqlStorageCreation(String),
+
     /// Caddy configuration deployment failed
     #[error("Caddy configuration deployment failed: {0}")]
     CaddyConfigDeployment(String),
@@ -115,6 +123,12 @@ impl Traceable for ReleaseCommandHandlerError {
                     "ReleaseCommandHandlerError: Prometheus storage creation failed - {message}"
                 )
             }
+            Self::GrafanaStorageCreation(message) => {
+                format!("ReleaseCommandHandlerError: Grafana storage creation failed - {message}")
+            }
+            Self::MysqlStorageCreation(message) => {
+                format!("ReleaseCommandHandlerError: MySQL storage creation failed - {message}")
+            }
             Self::CaddyConfigDeployment(message) => {
                 format!(
                     "ReleaseCommandHandlerError: Caddy configuration deployment failed - {message}"
@@ -144,6 +158,8 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::TrackerStorageCreation(_)
             | Self::TrackerDatabaseInit(_)
             | Self::PrometheusStorageCreation(_)
+            | Self::GrafanaStorageCreation(_)
+            | Self::MysqlStorageCreation(_)
             | Self::CaddyConfigDeployment(_)
             | Self::ReleaseOperationFailed { .. } => None,
         }
@@ -159,6 +175,8 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::TrackerStorageCreation(_)
             | Self::TrackerDatabaseInit(_)
             | Self::PrometheusStorageCreation(_)
+            | Self::GrafanaStorageCreation(_)
+            | Self::MysqlStorageCreation(_)
             | Self::CaddyConfigDeployment(_) => ErrorKind::TemplateRendering,
             Self::Deployment { .. } | Self::ReleaseOperationFailed { .. } => {
                 ErrorKind::InfrastructureOperation
@@ -356,6 +374,54 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
+            Self::GrafanaStorageCreation(_) => {
+                "Grafana Storage Creation Failed - Troubleshooting:
+
+1. Verify the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+2. Check that the instance has sufficient disk space:
+   df -h
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/create-grafana-storage.yml
+
+4. Check Ansible execution permissions
+
+5. Review the error message above for specific details
+
+Common causes:
+- Insufficient disk space on target instance
+- Permission denied on target directories
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::MysqlStorageCreation(_) => {
+                "MySQL Storage Creation Failed - Troubleshooting:
+
+1. Verify the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+2. Check that the instance has sufficient disk space:
+   df -h
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/create-mysql-storage.yml
+
+4. Check Ansible execution permissions
+
+5. Review the error message above for specific details
+
+Common causes:
+- Insufficient disk space on target instance
+- Permission denied on target directories
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
             Self::CaddyConfigDeployment(_) => {
                 "Caddy Configuration Deployment Failed - Troubleshooting:
 
@@ -517,6 +583,12 @@ mod tests {
             }),
             ReleaseCommandHandlerError::StatePersistence(RepositoryError::NotFound),
             ReleaseCommandHandlerError::TemplateRendering("test".to_string()),
+            ReleaseCommandHandlerError::TrackerStorageCreation("test".to_string()),
+            ReleaseCommandHandlerError::TrackerDatabaseInit("test".to_string()),
+            ReleaseCommandHandlerError::PrometheusStorageCreation("test".to_string()),
+            ReleaseCommandHandlerError::GrafanaStorageCreation("test".to_string()),
+            ReleaseCommandHandlerError::MysqlStorageCreation("test".to_string()),
+            ReleaseCommandHandlerError::CaddyConfigDeployment("test".to_string()),
             ReleaseCommandHandlerError::DeploymentFailed {
                 message: "test".to_string(),
                 source: DeployComposeFilesStepError::ComposeBuildDirNotFound {

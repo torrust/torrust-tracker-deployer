@@ -286,6 +286,47 @@ impl TrackerConfig {
         &self.health_check_api
     }
 
+    /// Returns whether the tracker is configured to use `MySQL` database.
+    ///
+    /// This is useful for determining if MySQL-related infrastructure
+    /// (like storage directories) needs to be created.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::tracker::{
+    ///     TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig,
+    ///     UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig
+    /// };
+    ///
+    /// let tracker_config = TrackerConfig::new(
+    ///     TrackerCoreConfig::new(
+    ///         DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+    ///         false,
+    ///     ),
+    ///     vec![UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap()],
+    ///     vec![HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).unwrap()],
+    ///     HttpApiConfig::new(
+    ///         "0.0.0.0:1212".parse().unwrap(),
+    ///         "MyAccessToken".to_string().into(),
+    ///         None,
+    ///         false,
+    ///     ).expect("valid config"),
+    ///     HealthCheckApiConfig::new(
+    ///         "127.0.0.1:1313".parse().unwrap(),
+    ///         None,
+    ///         false,
+    ///     ).expect("valid config"),
+    /// ).expect("valid config");
+    ///
+    /// // SQLite config -> not MySQL
+    /// assert!(!tracker_config.uses_mysql());
+    /// ```
+    #[must_use]
+    pub fn uses_mysql(&self) -> bool {
+        matches!(self.core.database(), DatabaseConfig::Mysql(_))
+    }
+
     /// Checks for socket address conflicts
     ///
     /// Validates that no two services using the same protocol attempt to bind
