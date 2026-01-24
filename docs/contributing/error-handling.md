@@ -296,6 +296,142 @@ impl From<anyhow::Error> for DeploymentError {
 }
 ```
 
+### Box Wrapping for Large Error Enums
+
+When a top-level error aggregates multiple specific error types, use `Box<T>` to wrap them. This prevents the parent enum from becoming excessively large (Rust enums are sized to their largest variant).
+
+```rust
+use thiserror::Error;
+
+/// Top-level error that wraps command-specific errors
+#[derive(Debug, Error)]
+pub enum CommandError {
+    /// Create command specific errors
+    #[error("Create command failed: {0}")]
+    Create(Box<CreateCommandError>),
+
+    /// Destroy command specific errors
+    #[error("Destroy command failed: {0}")]
+    Destroy(Box<DestroySubcommandError>),
+
+    /// Provision command specific errors
+    #[error("Provision command failed: {0}")]
+    Provision(Box<ProvisionSubcommandError>),
+}
+
+// Provide From implementations for ergonomic conversion
+impl From<CreateCommandError> for CommandError {
+    fn from(error: CreateCommandError) -> Self {
+        Self::Create(Box::new(error))
+    }
+}
+
+impl From<DestroySubcommandError> for CommandError {
+    fn from(error: DestroySubcommandError) -> Self {
+        Self::Destroy(Box::new(error))
+    }
+}
+```
+
+#### When to Use Box Wrapping
+
+- ✅ Top-level errors aggregating multiple command/module errors
+- ✅ When clippy warns about large enum variant sizes
+- ✅ Error types containing other large error types
+- ❌ Simple errors with primitive fields (strings, paths, numbers)
+
+### Transparent Error Propagation
+
+For wrapper enums that simply delegate to inner error types, use `#[error(transparent)]` with `#[from]` for automatic conversion:
+
+```rust
+use thiserror::Error;
+
+/// Unified error type for all create subcommands
+#[derive(Debug, Error)]
+pub enum CreateCommandError {
+    /// Environment creation errors - delegates display to inner type
+    #[error(transparent)]
+    Environment(#[from] CreateEnvironmentCommandError),
+
+    /// Template generation errors - delegates display to inner type
+    #[error(transparent)]
+    Template(#[from] CreateEnvironmentTemplateCommandError),
+
+    /// Schema generation errors - delegates display to inner type
+    #[error(transparent)]
+    Schema(#[from] CreateSchemaCommandError),
+}
+
+impl CreateCommandError {
+    /// Delegate help to the specific inner error
+    #[must_use]
+    pub fn help(&self) -> String {
+        match self {
+            Self::Environment(err) => err.help().to_string(),
+            Self::Template(err) => err.help().to_string(),
+            Self::Schema(err) => err.help(),
+        }
+    }
+}
+```
+
+#### Benefits of Transparent Errors
+
+- **No message duplication**: The inner error's message is displayed directly
+- **Automatic conversion**: `#[from]` enables `?` operator without explicit mapping
+- **Clean hierarchy**: Parent errors act as pure wrappers
+
+### Error Hierarchy by DDD Layers
+
+Errors in this project are organized following Domain-Driven Design layers. Each layer has its own error types with clear boundaries:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Presentation Layer                                              │
+│  CommandError, DestroySubcommandError, CreateCommandError, etc. │
+│  - Unified errors for CLI commands                              │
+│  - Wrap application layer errors                                │
+│  - Include user-friendly messages and tips                      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Application Layer                                               │
+│  CreateCommandHandlerError, ProvisionCommandHandlerError, etc.  │
+│  - Use case/command handler specific errors                     │
+│  - Wrap domain and infrastructure errors                        │
+│  - Include step-level context                                   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Domain Layer                                                    │
+│  UserInputsError, EnvironmentNameError, TrackerConfigError      │
+│  - Business rule violations                                     │
+│  - Validation errors for domain types                           │
+│  - Pure, no infrastructure dependencies                         │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Infrastructure Layer                                            │
+│  SshError, DockerError, FileLockError, RepositoryError          │
+│  - External system failures (SSH, Docker, filesystem)           │
+│  - I/O and network errors                                       │
+│  - Include system-level troubleshooting                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Layer Guidelines
+
+| Layer          | Error Responsibility                       | Example Types                          |
+| -------------- | ------------------------------------------ | -------------------------------------- |
+| Presentation   | User-facing CLI errors, wraps app errors   | `CommandError`, `*SubcommandError`     |
+| Application    | Use case failures, orchestration errors    | `*CommandHandlerError`                 |
+| Domain         | Business rule violations, invariant errors | `UserInputsError`, `*ConfigError`      |
+| Infrastructure | External system failures, I/O errors       | `SshError`, `DockerError`, `FileLock*` |
+
 ### Unwrap and Expect Usage
 
 The use of `unwrap()` is generally **discouraged** in this project. While it may make sense in certain contexts, we prefer alternatives that align with our principles of observability, traceability, and user-friendliness.
@@ -578,7 +714,7 @@ match FileLock::acquire(&path, timeout) {
 
 When defining new error types, use this template to ensure consistency:
 
-```rust
+````rust
 use thiserror::Error;
 use std::path::PathBuf;
 
@@ -725,7 +861,7 @@ mod tests {
         // Test that context fields appear in error messages
     }
 }
-```
+````
 
 ### Template Guidelines
 
@@ -753,6 +889,11 @@ When reviewing error handling code, verify:
 - [ ] **Unwrap/Expect**: Is `unwrap()` avoided in favor of `expect()` with descriptive messages?
 - [ ] **Consistency**: Does the error follow project conventions?
 - [ ] **Error Grouping**: Are related errors grouped with section comments?
+- [ ] **Box Wrapping**: Are large nested errors wrapped with `Box<T>` to avoid enum bloat?
+- [ ] **Transparent Delegation**: Do wrapper errors use `#[error(transparent)]` when appropriate?
+- [ ] **From Implementations**: Are `From` conversions provided for ergonomic error propagation?
+- [ ] **Layer Placement**: Is the error defined in the correct DDD layer?
+- [ ] **Must Use Help**: Does the `.help()` method have `#[must_use]` attribute?
 
 ## 🔗 Related Documentation
 
