@@ -1,0 +1,32 @@
+---
+# Create Grafana Storage Directory
+#
+# This playbook creates the Grafana data directory with correct ownership.
+# Grafana container runs as user 472:472 (grafana), so the host directory
+# must be owned by that user/group for the container to write data.
+#
+# This is required because we use bind mounts instead of named volumes.
+# Docker named volumes automatically handle ownership, but bind mounts
+# require explicit directory creation with correct permissions.
+#
+# Variables:
+# - deploy_dir: Base deployment directory (e.g., /opt/torrust)
+# - grafana_enabled: Whether Grafana is enabled (from variables.yml)
+#
+# See ADR: docs/decisions/bind-mount-standardization.md
+
+- name: Create Grafana storage directory
+  hosts: all
+  become: true
+  vars_files:
+    - variables.yml
+
+  tasks:
+    - name: Create Grafana data directory with correct ownership
+      ansible.builtin.file:
+        path: "{{ deploy_dir }}/storage/grafana/data"
+        state: directory
+        mode: "0755"
+        owner: "472"
+        group: "472"
+      when: grafana_enabled | default(false)

@@ -44,10 +44,14 @@ pub enum ReleaseStep {
     RenderPrometheusTemplates,
     /// Deploying Prometheus configuration to the remote host via Ansible
     DeployPrometheusConfigToRemote,
+    /// Creating Grafana storage directories on remote host
+    CreateGrafanaStorage,
     /// Rendering Grafana provisioning templates to the build directory
     RenderGrafanaTemplates,
     /// Deploying Grafana provisioning configuration to the remote host via Ansible
     DeployGrafanaProvisioning,
+    /// Creating `MySQL` storage directories on remote host
+    CreateMysqlStorage,
     /// Rendering Caddy configuration templates to the build directory (if HTTPS enabled)
     RenderCaddyTemplates,
     /// Deploying Caddy configuration to the remote host via Ansible (if HTTPS enabled)
@@ -68,8 +72,10 @@ impl fmt::Display for ReleaseStep {
             Self::CreatePrometheusStorage => "Create Prometheus Storage",
             Self::RenderPrometheusTemplates => "Render Prometheus Templates",
             Self::DeployPrometheusConfigToRemote => "Deploy Prometheus Config to Remote",
+            Self::CreateGrafanaStorage => "Create Grafana Storage",
             Self::RenderGrafanaTemplates => "Render Grafana Templates",
             Self::DeployGrafanaProvisioning => "Deploy Grafana Provisioning",
+            Self::CreateMysqlStorage => "Create MySQL Storage",
             Self::RenderCaddyTemplates => "Render Caddy Templates",
             Self::DeployCaddyConfigToRemote => "Deploy Caddy Config to Remote",
             Self::RenderDockerComposeTemplates => "Render Docker Compose Templates",

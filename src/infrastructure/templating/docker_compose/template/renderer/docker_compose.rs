@@ -291,14 +291,15 @@ mod tests {
         );
         assert!(content.contains("ping"), "Should use ping command");
 
-        // Verify MySQL volume
+        // Verify MySQL volume uses bind mount (not named volume)
         assert!(
-            content.contains("mysql_data:"),
-            "Should have mysql_data volume definition"
+            content.contains("./storage/mysql/data:/var/lib/mysql"),
+            "Should use bind mount for mysql data"
         );
+        // Named volumes section should NOT contain mysql_data (we use bind mounts now)
         assert!(
-            content.contains("driver: local"),
-            "Volume should use local driver"
+            !content.contains("mysql_data:"),
+            "Should NOT have named mysql_data volume (using bind mounts)"
         );
 
         // Verify port is NOT exposed (security fix: https://github.com/torrust/torrust-tracker-deployer/issues/277)

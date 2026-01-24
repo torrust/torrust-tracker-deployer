@@ -11,9 +11,9 @@ use crate::adapters::ansible::AnsibleClient;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::steps::{
     application::{
-        CreatePrometheusStorageStep, CreateTrackerStorageStep, DeployCaddyConfigStep,
-        DeployGrafanaProvisioningStep, DeployPrometheusConfigStep, DeployTrackerConfigStep,
-        InitTrackerDatabaseStep,
+        CreateGrafanaStorageStep, CreateMysqlStorageStep, CreatePrometheusStorageStep,
+        CreateTrackerStorageStep, DeployCaddyConfigStep, DeployGrafanaProvisioningStep,
+        DeployPrometheusConfigStep, DeployTrackerConfigStep, InitTrackerDatabaseStep,
     },
     rendering::{
         RenderCaddyTemplatesStep, RenderGrafanaTemplatesStep, RenderPrometheusTemplatesStep,
@@ -215,22 +215,28 @@ impl ReleaseCommandHandler {
         // Step 7: Deploy Prometheus configuration to remote (if enabled)
         self.deploy_prometheus_config_to_remote(environment, instance_ip)?;
 
-        // Step 8: Render Grafana provisioning templates (if enabled)
+        // Step 8: Create Grafana storage directories (if enabled)
+        Self::create_grafana_storage(environment, instance_ip)?;
+
+        // Step 9: Render Grafana provisioning templates (if enabled)
         Self::render_grafana_templates(environment)?;
 
-        // Step 9: Deploy Grafana provisioning to remote (if enabled)
+        // Step 10: Deploy Grafana provisioning to remote (if enabled)
         self.deploy_grafana_provisioning_to_remote(environment, instance_ip)?;
 
-        // Step 10: Render Caddy configuration templates (if HTTPS enabled)
+        // Step 11: Create MySQL storage directories (if enabled)
+        Self::create_mysql_storage(environment, instance_ip)?;
+
+        // Step 12: Render Caddy configuration templates (if HTTPS enabled)
         Self::render_caddy_templates(environment)?;
 
-        // Step 11: Deploy Caddy configuration to remote (if HTTPS enabled)
+        // Step 13: Deploy Caddy configuration to remote (if HTTPS enabled)
         self.deploy_caddy_config_to_remote(environment, instance_ip)?;
 
-        // Step 12: Render Docker Compose templates
+        // Step 14: Render Docker Compose templates
         let compose_build_dir = self.render_docker_compose_templates(environment).await?;
 
-        // Step 13: Deploy compose files to remote
+        // Step 15: Deploy compose files to remote
         self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
 
         let released = environment.clone().released();
@@ -425,6 +431,98 @@ impl ReleaseCommandHandler {
             command = "release",
             step = %current_step,
             "Prometheus storage directories created successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Create Grafana storage directories on the remote host (if enabled)
+    ///
+    /// This step is optional and only executes if Grafana is configured in the environment.
+    /// If Grafana is not configured, the step is skipped without error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::CreateGrafanaStorage`) if creation fails
+    #[allow(clippy::result_large_err)]
+    fn create_grafana_storage(
+        environment: &Environment<Releasing>,
+        _instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::CreateGrafanaStorage;
+
+        // Check if Grafana is configured
+        if environment.context().user_inputs.grafana().is_none() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "Grafana not configured - skipping storage creation"
+            );
+            return Ok(());
+        }
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
+
+        CreateGrafanaStorageStep::new(ansible_client)
+            .execute()
+            .map_err(|e| {
+                (
+                    ReleaseCommandHandlerError::GrafanaStorageCreation(e.to_string()),
+                    current_step,
+                )
+            })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "Grafana storage directories created successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Create `MySQL` storage directories on the remote host (if enabled)
+    ///
+    /// This step is optional and only executes if `MySQL` is configured as the tracker database.
+    /// If `MySQL` is not configured, the step is skipped without error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, `ReleaseStep::CreateMysqlStorage`) if creation fails
+    #[allow(clippy::result_large_err)]
+    fn create_mysql_storage(
+        environment: &Environment<Releasing>,
+        _instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let current_step = ReleaseStep::CreateMysqlStorage;
+
+        // Check if MySQL is configured (via tracker database driver)
+        if !environment.context().user_inputs.tracker().uses_mysql() {
+            info!(
+                command = "release",
+                step = %current_step,
+                status = "skipped",
+                "MySQL not configured - skipping storage creation"
+            );
+            return Ok(());
+        }
+
+        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
+
+        CreateMysqlStorageStep::new(ansible_client)
+            .execute()
+            .map_err(|e| {
+                (
+                    ReleaseCommandHandlerError::MysqlStorageCreation(e.to_string()),
+                    current_step,
+                )
+            })?;
+
+        info!(
+            command = "release",
+            step = %current_step,
+            "MySQL storage directories created successfully"
         );
 
         Ok(())

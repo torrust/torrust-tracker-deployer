@@ -11,7 +11,9 @@
 //! - `deploy_tracker_config` - Deploys tracker.toml configuration file to remote host
 //! - `create_prometheus_storage` - Creates Prometheus storage directory structure on remote host
 //! - `deploy_prometheus_config` - Deploys prometheus.yml configuration file to remote host
+//! - `create_grafana_storage` - Creates Grafana storage directory structure on remote host
 //! - `deploy_grafana_provisioning` - Deploys Grafana provisioning files (datasources/dashboards) to remote host
+//! - `create_mysql_storage` - Creates `MySQL` storage directory structure on remote host
 //! - `deploy_compose_files` - Deploys Docker Compose files to remote host via Ansible
 //! - `start_services` - Starts Docker Compose services via Ansible
 //! - `run` - Legacy run step (placeholder)
@@ -29,6 +31,8 @@
 //! software installation steps to provide complete deployment workflows
 //! from infrastructure provisioning to application operation.
 
+pub mod create_grafana_storage;
+pub mod create_mysql_storage;
 pub mod create_prometheus_storage;
 pub mod create_tracker_storage;
 pub mod deploy_caddy_config;
@@ -40,6 +44,8 @@ pub mod init_tracker_database;
 pub mod run;
 pub mod start_services;
 
+pub use create_grafana_storage::CreateGrafanaStorageStep;
+pub use create_mysql_storage::CreateMysqlStorageStep;
 pub use create_prometheus_storage::CreatePrometheusStorageStep;
 pub use create_tracker_storage::CreateTrackerStorageStep;
 pub use deploy_caddy_config::DeployCaddyConfigStep;

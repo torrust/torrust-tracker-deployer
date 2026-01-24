@@ -14,6 +14,7 @@ deploy_dir: /opt/torrust
 
 # Service Enablement Flags
 grafana_enabled: {{ grafana_config is defined }}
+mysql_enabled: {{ mysql_config is defined }}
 
 # Tracker Firewall Configuration
 {% if tracker_udp_ports is defined and tracker_udp_ports | length > 0 -%}

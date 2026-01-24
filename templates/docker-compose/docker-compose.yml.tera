@@ -47,8 +47,8 @@ services:
       - "443:443/udp" # HTTP/3 (QUIC)
     volumes:
       - ./storage/caddy/etc/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data     # TLS certificates (MUST persist!)
-      - caddy_config_vol:/config
+      - ./storage/caddy/data:/data     # TLS certificates (MUST persist!)
+      - ./storage/caddy/config:/config
     networks:
 {%- for network in caddy.networks %}
       - {{ network }}
@@ -145,7 +145,7 @@ services:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
     volumes:
-      - grafana_data:/var/lib/grafana
+      - ./storage/grafana/data:/var/lib/grafana
       - ./storage/grafana/provisioning:/etc/grafana/provisioning:ro
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
@@ -178,7 +178,7 @@ services:
     # - This prevents unauthorized external access to the database
     # See: https://github.com/torrust/torrust-tracker-deployer/issues/277
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ./storage/mysql/data:/var/lib/mysql
     command: --mysql-native-password=ON
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
@@ -232,22 +232,3 @@ networks:
   proxy_network:
     driver: bridge
 {%- endif %}
-
-
-{%- if mysql or grafana or caddy %}
-volumes:
-{%- if mysql %}
-  mysql_data:
-    driver: local
-{%- endif %}
-{%- if grafana %}
-  grafana_data:
-    driver: local
-{%- endif %}
-{%- if caddy %}
-  caddy_data:
-    driver: local
-  caddy_config_vol:
-    driver: local
-{%- endif %}
-{% endif %}
