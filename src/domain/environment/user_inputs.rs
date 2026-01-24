@@ -18,9 +18,8 @@
 //!
 //! Add new fields here when: User needs to configure something at environment creation time.
 
-use std::fmt;
-
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::environment::EnvironmentName;
@@ -35,44 +34,35 @@ use crate::domain::InstanceName;
 ///
 /// These errors represent cross-service invariant violations that can only be
 /// detected when considering multiple service configurations together.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Error)]
 pub enum UserInputsError {
     /// Grafana requires Prometheus to be configured as its data source
+    ///
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "Grafana requires Prometheus to be configured as its data source
+Tip: Add a 'prometheus' section or remove the 'grafana' section"
+    )]
     GrafanaRequiresPrometheus,
 
     /// HTTPS section is defined but no service has TLS configured
+    ///
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "HTTPS section is defined but no service has TLS configured
+Tip: Set 'use_tls_proxy: true' on at least one service, or remove the 'https' section"
+    )]
     HttpsSectionWithoutTlsServices,
 
     /// At least one service has TLS configured but HTTPS section is missing
+    ///
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error(
+        "At least one service has TLS configured but HTTPS section is missing
+Tip: Add an 'https' section with 'admin_email' for Let's Encrypt certificate management"
+    )]
     TlsServicesWithoutHttpsSection,
 }
-
-impl fmt::Display for UserInputsError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::GrafanaRequiresPrometheus => {
-                write!(
-                    f,
-                    "Grafana requires Prometheus to be configured as its data source"
-                )
-            }
-            Self::HttpsSectionWithoutTlsServices => {
-                write!(
-                    f,
-                    "HTTPS section is defined but no service has TLS configured"
-                )
-            }
-            Self::TlsServicesWithoutHttpsSection => {
-                write!(
-                    f,
-                    "At least one service has TLS configured but HTTPS section is missing"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for UserInputsError {}
 
 impl UserInputsError {
     /// Provides actionable help text for fixing the error
@@ -697,18 +687,26 @@ mod tests {
 
     #[test]
     fn it_should_provide_helpful_error_messages() {
-        assert_eq!(
-            UserInputsError::GrafanaRequiresPrometheus.to_string(),
-            "Grafana requires Prometheus to be configured as its data source"
-        );
+        assert!(UserInputsError::GrafanaRequiresPrometheus
+            .to_string()
+            .contains("Grafana requires Prometheus"));
+        assert!(UserInputsError::GrafanaRequiresPrometheus
+            .to_string()
+            .contains("Tip:"));
         assert!(UserInputsError::GrafanaRequiresPrometheus
             .help()
             .contains("prometheus"));
 
         assert!(UserInputsError::HttpsSectionWithoutTlsServices
+            .to_string()
+            .contains("Tip:"));
+        assert!(UserInputsError::HttpsSectionWithoutTlsServices
             .help()
             .contains("use_tls_proxy"));
 
+        assert!(UserInputsError::TlsServicesWithoutHttpsSection
+            .to_string()
+            .contains("Tip:"));
         assert!(UserInputsError::TlsServicesWithoutHttpsSection
             .help()
             .contains("https"));
