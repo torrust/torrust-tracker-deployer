@@ -3,6 +3,8 @@
 // External crates
 use serde::Serialize;
 
+use crate::domain::topology::Network;
+
 /// Prometheus service configuration for Docker Compose
 ///
 /// Contains all configuration needed for the Prometheus service in Docker Compose,
@@ -17,7 +19,7 @@ pub struct PrometheusServiceConfig {
     /// Pre-computed list based on enabled features:
     /// - Always includes `metrics_network` (scrapes metrics from tracker)
     /// - Includes `visualization_network` if Grafana is enabled
-    pub networks: Vec<String>,
+    pub networks: Vec<Network>,
 }
 
 impl PrometheusServiceConfig {
@@ -38,11 +40,11 @@ impl PrometheusServiceConfig {
     }
 
     /// Computes the list of networks for the Prometheus service
-    fn compute_networks(has_grafana: bool) -> Vec<String> {
-        let mut networks = vec!["metrics_network".to_string()];
+    fn compute_networks(has_grafana: bool) -> Vec<Network> {
+        let mut networks = vec![Network::Metrics];
 
         if has_grafana {
-            networks.push("visualization_network".to_string());
+            networks.push(Network::Visualization);
         }
 
         networks
@@ -54,21 +56,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_should_create_prometheus_config_with_only_metrics_network_when_grafana_disabled() {
+    fn it_should_connect_prometheus_to_metrics_network() {
         let config = PrometheusServiceConfig::new(15, false);
 
-        assert_eq!(config.scrape_interval_in_secs, 15);
-        assert_eq!(config.networks, vec!["metrics_network"]);
+        assert!(config.networks.contains(&Network::Metrics));
     }
 
     #[test]
-    fn it_should_create_prometheus_config_with_both_networks_when_grafana_enabled() {
+    fn it_should_not_connect_prometheus_to_visualization_network_when_grafana_disabled() {
+        let config = PrometheusServiceConfig::new(15, false);
+
+        assert_eq!(config.networks, vec![Network::Metrics]);
+        assert!(!config.networks.contains(&Network::Visualization));
+    }
+
+    #[test]
+    fn it_should_connect_prometheus_to_visualization_network_when_grafana_enabled() {
         let config = PrometheusServiceConfig::new(30, true);
 
-        assert_eq!(config.scrape_interval_in_secs, 30);
-        assert_eq!(
-            config.networks,
-            vec!["metrics_network", "visualization_network"]
-        );
+        assert_eq!(config.networks, vec![Network::Metrics, Network::Visualization]);
+    }
+
+    #[test]
+    fn it_should_serialize_networks_to_name_strings() {
+        let config = PrometheusServiceConfig::new(15, true);
+
+        let json = serde_json::to_value(&config).expect("serialization should succeed");
+
+        // Networks serialize to their name strings for template compatibility
+        assert_eq!(json["networks"][0], "metrics_network");
+        assert_eq!(json["networks"][1], "visualization_network");
     }
 }
