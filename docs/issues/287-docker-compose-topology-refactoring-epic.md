@@ -30,7 +30,7 @@ Implementation follows a 5-PR strategy:
 - [x] [#290](https://github.com/torrust/torrust-tracker-deployer/issues/290) - [BUG] Remove invalid "Grafana without Prometheus" template branch (BUG-01)
 - [x] [#292](https://github.com/torrust/torrust-tracker-deployer/issues/292) - [Refactor] Phase 0: Convert volumes to bind mounts with domain type (P0.1, P0.2)
 - [x] [#294](https://github.com/torrust/torrust-tracker-deployer/issues/294) - [Refactor] Phase 1: Create Network domain types (P1.1, P1.2)
-- [ ] [#296](https://github.com/torrust/torrust-tracker-deployer/issues/296) - [Refactor] Phase 2: Create DockerComposeTopology aggregate (P2.1, P2.2)
+- [x] [#296](https://github.com/torrust/torrust-tracker-deployer/issues/296) - [Refactor] Phase 2: Create DockerComposeTopology aggregate (P2.1, P2.2) → [PR #297](https://github.com/torrust/torrust-tracker-deployer/pull/297)
 
 (Tasks will be created and linked as work progresses)
 

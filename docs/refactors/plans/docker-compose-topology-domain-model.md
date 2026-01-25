@@ -48,16 +48,16 @@ This refactoring plan addresses architectural issues in the docker-compose templ
 
 This table provides a single view of all work items for easy tracking:
 
-| ID     | Phase     | Task                                                        | Status         | Depends On | Notes                                                                                     |
-| ------ | --------- | ----------------------------------------------------------- | -------------- | ---------- | ----------------------------------------------------------------------------------------- |
-| BUG-01 | Priority  | Remove invalid "Grafana without Prometheus" template branch | ✅ Completed   | -          | Dead code, see [BUG-01](#bug-01-template-handles-invalid-grafana-without-prometheus-case) |
-| ADR-01 | Pre-Phase | Create ADR for Bind Mount Standardization                   | ✅ Completed   | -          | See [Pre-Phase Task](#pre-phase-task-create-adr-for-bind-mount-standardization)           |
-| P0.1   | Phase 0   | Convert Named Volumes to Bind Mounts                        | ✅ Completed   | ADR-01     | See [Proposal 0.1](#proposal-01-convert-named-volumes-to-bind-mounts)                     |
-| P0.2   | Phase 0   | Create BindMount Domain Type                                | ✅ Completed   | P0.1       | See [Proposal 0.2](#proposal-02-create-bindmount-domain-type)                             |
-| P1.1   | Phase 1   | Create Network Domain Types                                 | ✅ Completed   | -          | See [Proposal 1.1](#proposal-11-create-network-domain-types)                              |
-| P1.2   | Phase 1   | Migrate Service Configs to Use Network Enum                 | ✅ Completed   | P1.1       | See [Proposal 1.2](#proposal-12-migrate-service-configs-to-use-network-enum)              |
-| P2.1   | Phase 2   | Create DockerComposeTopology Aggregate                      | ⏳ Not Started | P1.2       | See [Proposal 2.1](#proposal-21-create-dockercomposetopology-aggregate)                   |
-| P2.2   | Phase 2   | Derive Required Networks in Context                         | ⏳ Not Started | P2.1       | See [Proposal 2.2](#proposal-22-derive-required-networks-in-context)                      |
+| ID     | Phase     | Task                                                        | Status       | Depends On | Notes                                                                                     |
+| ------ | --------- | ----------------------------------------------------------- | ------------ | ---------- | ----------------------------------------------------------------------------------------- |
+| BUG-01 | Priority  | Remove invalid "Grafana without Prometheus" template branch | ✅ Completed | -          | Dead code, see [BUG-01](#bug-01-template-handles-invalid-grafana-without-prometheus-case) |
+| ADR-01 | Pre-Phase | Create ADR for Bind Mount Standardization                   | ✅ Completed | -          | See [Pre-Phase Task](#pre-phase-task-create-adr-for-bind-mount-standardization)           |
+| P0.1   | Phase 0   | Convert Named Volumes to Bind Mounts                        | ✅ Completed | ADR-01     | See [Proposal 0.1](#proposal-01-convert-named-volumes-to-bind-mounts)                     |
+| P0.2   | Phase 0   | Create BindMount Domain Type                                | ✅ Completed | P0.1       | See [Proposal 0.2](#proposal-02-create-bindmount-domain-type)                             |
+| P1.1   | Phase 1   | Create Network Domain Types                                 | ✅ Completed | -          | See [Proposal 1.1](#proposal-11-create-network-domain-types)                              |
+| P1.2   | Phase 1   | Migrate Service Configs to Use Network Enum                 | ✅ Completed | P1.1       | See [Proposal 1.2](#proposal-12-migrate-service-configs-to-use-network-enum)              |
+| P2.1   | Phase 2   | Create DockerComposeTopology Aggregate                      | ✅ Completed | P1.2       | See [Proposal 2.1](#proposal-21-create-dockercomposetopology-aggregate)                   |
+| P2.2   | Phase 2   | Derive Required Networks in Context                         | ✅ Completed | P2.1       | See [Proposal 2.2](#proposal-22-derive-required-networks-in-context)                      |
 
 **Status Legend**:
 
@@ -72,14 +72,16 @@ This table provides a single view of all work items for easy tracking:
 
 Track completed items with dates and any relevant notes:
 
-| Date       | ID     | Task                                                        | Commit/PR                                                               | Notes                                               |
-| ---------- | ------ | ----------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------- |
-| 2025-07-17 | ADR-01 | Create ADR for Bind Mount Standardization                   | [PR #289](https://github.com/torrust/torrust-tracker-deployer/pull/289) | Documented 9 reasons for bind mount standardization |
-| 2025-07-17 | BUG-01 | Remove invalid "Grafana without Prometheus" template branch | [PR #291](https://github.com/torrust/torrust-tracker-deployer/pull/291) | Removed dead code from docker-compose template      |
-| 2025-07-17 | P0.1   | Convert Named Volumes to Bind Mounts                        | [PR #293](https://github.com/torrust/torrust-tracker-deployer/pull/293) | Bind mounts with BindMount domain type              |
-| 2025-07-17 | P0.2   | Create BindMount Domain Type                                | [PR #293](https://github.com/torrust/torrust-tracker-deployer/pull/293) | Storage playbooks with proper ownership             |
-| 2025-07-17 | P1.1   | Create Network Domain Types                                 | [PR #295](https://github.com/torrust/torrust-tracker-deployer/pull/295) | Network enum in src/domain/topology/                |
-| 2025-07-17 | P1.2   | Migrate Service Configs to Use Network Enum                 | [PR #295](https://github.com/torrust/torrust-tracker-deployer/pull/295) | All service configs use Vec<Network>                |
+| Date       | ID     | Task                                                        | Commit/PR                                                               | Notes                                                 |
+| ---------- | ------ | ----------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------- |
+| 2025-07-17 | ADR-01 | Create ADR for Bind Mount Standardization                   | [PR #289](https://github.com/torrust/torrust-tracker-deployer/pull/289) | Documented 9 reasons for bind mount standardization   |
+| 2025-07-17 | BUG-01 | Remove invalid "Grafana without Prometheus" template branch | [PR #291](https://github.com/torrust/torrust-tracker-deployer/pull/291) | Removed dead code from docker-compose template        |
+| 2025-07-17 | P0.1   | Convert Named Volumes to Bind Mounts                        | [PR #293](https://github.com/torrust/torrust-tracker-deployer/pull/293) | Bind mounts with BindMount domain type                |
+| 2025-07-17 | P0.2   | Create BindMount Domain Type                                | [PR #293](https://github.com/torrust/torrust-tracker-deployer/pull/293) | Storage playbooks with proper ownership               |
+| 2025-07-17 | P1.1   | Create Network Domain Types                                 | [PR #295](https://github.com/torrust/torrust-tracker-deployer/pull/295) | Network enum in src/domain/topology/                  |
+| 2025-07-17 | P1.2   | Migrate Service Configs to Use Network Enum                 | [PR #295](https://github.com/torrust/torrust-tracker-deployer/pull/295) | All service configs use Vec<Network>                  |
+| 2025-07-25 | P2.1   | Create DockerComposeTopology Aggregate                      | [PR #297](https://github.com/torrust/torrust-tracker-deployer/pull/297) | Service enum + aggregate in domain/topology/          |
+| 2025-07-25 | P2.2   | Derive Required Networks in Context                         | [PR #297](https://github.com/torrust/torrust-tracker-deployer/pull/297) | required_networks loop replaces template conditionals |
 
 ### Discarded Proposals
 
