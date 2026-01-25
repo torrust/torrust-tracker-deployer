@@ -39,7 +39,7 @@ Implementation follows a 5-PR strategy (original scope), with Phase 3 added as a
 
 > **Note**: Phase 3 was part of the original refactoring plan analysis (see PORT-01 through PORT-11 rules in [docker-compose-topology-domain-model.md](../refactors/plans/docker-compose-topology-domain-model.md#port-exposure-rules)) but was not included in the initial 5-PR strategy. It follows the same pattern as networks and completes the topology domain model.
 
-- [ ] Phase 3: Create Port Topology Domain Model (P3.1, P3.2, P3.3, P3.4) → [Draft](drafts/298-phase-3-port-topology-domain-model.md)
+- [ ] [#298](https://github.com/torrust/torrust-tracker-deployer/issues/298) - [Refactor] Phase 3: Create Port Topology Domain Model (P3.1, P3.2, P3.3, P3.4) → [Spec](298-phase-3-port-topology-domain-model.md)
   - P3.1: Create Port domain types (`PortBinding`, `Protocol`)
   - P3.2: Extend `ServiceTopology` with port derivation
   - P3.3: Add cross-service port conflict validation
@@ -76,4 +76,4 @@ PR 6 (Phase 3) ◄─── Extension: Port topology (added post-completion)
 
 - Plan Review: #285 (merged)
 - Refactoring Plan: [docs/refactors/plans/docker-compose-topology-domain-model.md](../refactors/plans/docker-compose-topology-domain-model.md)
-- Phase 3 Draft: [drafts/298-phase-3-port-topology-domain-model.md](drafts/298-phase-3-port-topology-domain-model.md)
+- Phase 3 Spec: [298-phase-3-port-topology-domain-model.md](298-phase-3-port-topology-domain-model.md)
