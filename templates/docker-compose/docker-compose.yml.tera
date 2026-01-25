@@ -188,32 +188,8 @@ services:
       start_period: 30s
 {%- endif %}
 
-# SECURITY: Three-Network Segmentation (Defense in Depth)
-# =========================================================
-# Network isolation prevents lateral movement between services and reduces attack surface.
-# Each service is placed in the minimum networks required for its function.
-#
-# Network Topology:
-#   database_network: Tracker ↔ MySQL
-#     - Only tracker can access MySQL (reduces attack vectors from 3 services to 1)
-#     - Prometheus/Grafana cannot access database even if compromised
-#
-#   metrics_network: Tracker ↔ Prometheus
-#     - Prometheus scrapes metrics from tracker
-#     - Grafana cannot directly access tracker metrics
-#
-#   visualization_network: Prometheus ↔ Grafana
-#     - Grafana queries Prometheus as data source
-#     - Grafana cannot access tracker or MySQL directly
-#
-# Security Benefits:
-#   1. MySQL isolation: Only tracker has database access (least privilege)
-#   2. Metrics isolation: Grafana must query through Prometheus (no direct tracker access)
-#   3. Lateral movement prevention: Compromised service cannot access unrelated services
-#   4. Defense in depth: Network segmentation + authentication + Docker port bindings + UFW
-#
-# See ADR: docs/decisions/docker-ufw-firewall-security-strategy.md
-# See Analysis: docs/analysis/security/docker-network-segmentation-analysis.md
+# Networks are derived from service configurations in Rust code.
+# See: src/domain/topology/network.rs for security rationale.
 {%- if required_networks | length > 0 %}
 
 networks:

@@ -4,14 +4,31 @@
 //! used for service isolation. Each network serves a specific security purpose
 //! in the deployment topology.
 //!
-//! ## Network Purposes
+//! ## Security: Three-Network Segmentation (Defense in Depth)
 //!
-//! | Network | Purpose | Connected Services |
-//! |---------|---------|-------------------|
-//! | `Database` | Isolates database access | Tracker ↔ `MySQL` |
-//! | `Metrics` | Metrics scraping | Tracker ↔ Prometheus |
-//! | `Visualization` | Dashboard queries | Prometheus ↔ Grafana |
-//! | `Proxy` | TLS termination | Caddy ↔ backend services |
+//! Network isolation prevents lateral movement between services and reduces attack surface.
+//! Each service is placed in the minimum networks required for its function.
+//!
+//! ### Network Topology
+//!
+//! | Network | Purpose | Connected Services | Security Boundary |
+//! |---------|---------|-------------------|-------------------|
+//! | `Database` | Isolates database access | Tracker ↔ `MySQL` | Only tracker can access database |
+//! | `Metrics` | Metrics scraping | Tracker ↔ Prometheus | Prometheus cannot access database |
+//! | `Visualization` | Dashboard queries | Prometheus ↔ Grafana | Grafana cannot access tracker directly |
+//! | `Proxy` | TLS termination | Caddy ↔ backend services | External traffic goes through Caddy |
+//!
+//! ### Security Benefits
+//!
+//! 1. **`MySQL` isolation**: Only tracker has database access (least privilege)
+//! 2. **Metrics isolation**: Grafana must query through Prometheus (no direct tracker access)
+//! 3. **Lateral movement prevention**: Compromised service cannot access unrelated services
+//! 4. **Defense in depth**: Network segmentation + authentication + Docker port bindings + UFW
+//!
+//! ### References
+//!
+//! - ADR: `docs/decisions/docker-ufw-firewall-security-strategy.md`
+//! - Analysis: `docs/analysis/security/docker-network-segmentation-analysis.md`
 //!
 //! ## Usage
 //!
