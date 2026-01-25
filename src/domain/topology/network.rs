@@ -4,14 +4,31 @@
 //! used for service isolation. Each network serves a specific security purpose
 //! in the deployment topology.
 //!
-//! ## Network Purposes
+//! ## Security: Three-Network Segmentation (Defense in Depth)
 //!
-//! | Network | Purpose | Connected Services |
-//! |---------|---------|-------------------|
-//! | `Database` | Isolates database access | Tracker ↔ `MySQL` |
-//! | `Metrics` | Metrics scraping | Tracker ↔ Prometheus |
-//! | `Visualization` | Dashboard queries | Prometheus ↔ Grafana |
-//! | `Proxy` | TLS termination | Caddy ↔ backend services |
+//! Network isolation prevents lateral movement between services and reduces attack surface.
+//! Each service is placed in the minimum networks required for its function.
+//!
+//! ### Network Topology
+//!
+//! | Network | Purpose | Connected Services | Security Boundary |
+//! |---------|---------|-------------------|-------------------|
+//! | `Database` | Isolates database access | Tracker ↔ `MySQL` | Only tracker can access database |
+//! | `Metrics` | Metrics scraping | Tracker ↔ Prometheus | Prometheus cannot access database |
+//! | `Visualization` | Dashboard queries | Prometheus ↔ Grafana | Grafana cannot access tracker directly |
+//! | `Proxy` | TLS termination | Caddy ↔ backend services | External traffic goes through Caddy |
+//!
+//! ### Security Benefits
+//!
+//! 1. **`MySQL` isolation**: Only tracker has database access (least privilege)
+//! 2. **Metrics isolation**: Grafana must query through Prometheus (no direct tracker access)
+//! 3. **Lateral movement prevention**: Compromised service cannot access unrelated services
+//! 4. **Defense in depth**: Network segmentation + authentication + Docker port bindings + UFW
+//!
+//! ### References
+//!
+//! - ADR: `docs/decisions/docker-ufw-firewall-security-strategy.md`
+//! - Analysis: `docs/analysis/security/docker-network-segmentation-analysis.md`
 //!
 //! ## Usage
 //!
@@ -107,6 +124,29 @@ impl Network {
     #[must_use]
     pub fn driver(&self) -> &'static str {
         "bridge"
+    }
+
+    /// Returns a short description of the network's purpose
+    ///
+    /// This description is rendered as a comment in docker-compose.yml
+    /// to help system administrators understand each network's role.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::topology::Network;
+    ///
+    /// assert_eq!(Network::Database.description(), "Database isolation: Tracker ↔ MySQL");
+    /// assert_eq!(Network::Metrics.description(), "Metrics scraping: Tracker ↔ Prometheus");
+    /// ```
+    #[must_use]
+    pub fn description(&self) -> &'static str {
+        match self {
+            Network::Database => "Database isolation: Tracker ↔ MySQL",
+            Network::Metrics => "Metrics scraping: Tracker ↔ Prometheus",
+            Network::Visualization => "Dashboard queries: Prometheus ↔ Grafana",
+            Network::Proxy => "TLS termination: Caddy ↔ backend services",
+        }
     }
 
     /// Returns all network variants
@@ -309,5 +349,41 @@ mod tests {
         assert_eq!(set.len(), 2);
         assert!(set.contains(&Network::Database));
         assert!(set.contains(&Network::Metrics));
+    }
+
+    // ==========================================================================
+    // Description tests
+    // ==========================================================================
+
+    #[test]
+    fn it_should_return_description_for_database_network() {
+        assert_eq!(
+            Network::Database.description(),
+            "Database isolation: Tracker ↔ MySQL"
+        );
+    }
+
+    #[test]
+    fn it_should_return_description_for_metrics_network() {
+        assert_eq!(
+            Network::Metrics.description(),
+            "Metrics scraping: Tracker ↔ Prometheus"
+        );
+    }
+
+    #[test]
+    fn it_should_return_description_for_visualization_network() {
+        assert_eq!(
+            Network::Visualization.description(),
+            "Dashboard queries: Prometheus ↔ Grafana"
+        );
+    }
+
+    #[test]
+    fn it_should_return_description_for_proxy_network() {
+        assert_eq!(
+            Network::Proxy.description(),
+            "TLS termination: Caddy ↔ backend services"
+        );
     }
 }

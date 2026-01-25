@@ -1,6 +1,7 @@
 # [Refactor] Phase 2: Create DockerComposeTopology Aggregate
 
 **Issue**: [#296](https://github.com/torrust/torrust-tracker-deployer/issues/296)
+**Pull Request**: [#297](https://github.com/torrust/torrust-tracker-deployer/pull/297)
 **Parent Epic**: [#287](https://github.com/torrust/torrust-tracker-deployer/issues/287) - Docker Compose Topology Domain Model Refactoring
 **Related**:
 
@@ -13,11 +14,11 @@ This task creates the `DockerComposeTopology` aggregate and derives required net
 
 ## Goals
 
-- [ ] Create `DockerComposeTopology` aggregate with service topology collection
-- [ ] Create `Service` enum for type-safe service identification
-- [ ] Derive required networks from service configurations (single source of truth)
-- [ ] Remove conditional network logic from docker-compose template
-- [ ] Enforce invariant: "if a service uses a network, that network must be defined"
+- [x] Create `DockerComposeTopology` aggregate with service topology collection
+- [x] Create `Service` enum for type-safe service identification
+- [x] Derive required networks from service configurations (single source of truth)
+- [x] Remove conditional network logic from docker-compose template
+- [x] Enforce invariant: "if a service uses a network, that network must be defined"
 
 ## 🏗️ Architecture Requirements
 

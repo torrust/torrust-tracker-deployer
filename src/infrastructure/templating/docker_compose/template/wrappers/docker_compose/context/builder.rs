@@ -1,13 +1,17 @@
 //! Builder for `DockerComposeContext`
 
+use std::collections::HashSet;
+
 // Internal crate
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
+use crate::domain::topology::Network;
 
 use super::caddy::CaddyServiceConfig;
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
 use super::grafana::GrafanaServiceConfig;
 use super::mysql::MysqlServiceConfig;
+use super::network_definition::NetworkDefinition;
 use super::prometheus::PrometheusServiceConfig;
 use super::{DockerComposeContext, TrackerServiceConfig};
 
@@ -126,6 +130,15 @@ impl DockerComposeContextBuilder {
             None
         };
 
+        // Derive required networks from all service configurations
+        let required_networks = Self::derive_required_networks(
+            &self.tracker,
+            prometheus.as_ref(),
+            grafana.as_ref(),
+            caddy.as_ref(),
+            mysql.as_ref(),
+        );
+
         DockerComposeContext {
             database: self.database,
             tracker: self.tracker,
@@ -133,6 +146,44 @@ impl DockerComposeContextBuilder {
             grafana,
             caddy,
             mysql,
+            required_networks,
         }
+    }
+
+    /// Derives required networks from all service configurations
+    ///
+    /// Collects networks from all enabled services, deduplicates them,
+    /// and returns in deterministic alphabetical order.
+    fn derive_required_networks(
+        tracker: &TrackerServiceConfig,
+        prometheus: Option<&PrometheusServiceConfig>,
+        grafana: Option<&GrafanaServiceConfig>,
+        caddy: Option<&CaddyServiceConfig>,
+        mysql: Option<&MysqlServiceConfig>,
+    ) -> Vec<NetworkDefinition> {
+        let mut networks: HashSet<Network> = HashSet::new();
+
+        // Collect from tracker (always present)
+        networks.extend(tracker.networks.iter().copied());
+
+        // Collect from optional services
+        if let Some(prom) = prometheus {
+            networks.extend(prom.networks.iter().copied());
+        }
+        if let Some(graf) = grafana {
+            networks.extend(graf.networks.iter().copied());
+        }
+        if let Some(cad) = caddy {
+            networks.extend(cad.networks.iter().copied());
+        }
+        if let Some(my) = mysql {
+            networks.extend(my.networks.iter().copied());
+        }
+
+        // Sort for deterministic output (alphabetically by name)
+        let mut result: Vec<NetworkDefinition> =
+            networks.into_iter().map(NetworkDefinition::from).collect();
+        result.sort_by(|a, b| a.name().cmp(b.name()));
+        result
     }
 }

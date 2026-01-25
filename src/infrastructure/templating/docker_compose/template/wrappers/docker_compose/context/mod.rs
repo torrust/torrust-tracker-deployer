@@ -12,6 +12,7 @@ mod caddy;
 mod database;
 mod grafana;
 mod mysql;
+mod network_definition;
 mod prometheus;
 mod tracker;
 
@@ -21,6 +22,7 @@ pub use caddy::CaddyServiceConfig;
 pub use database::{DatabaseConfig, MysqlSetupConfig};
 pub use grafana::GrafanaServiceConfig;
 pub use mysql::MysqlServiceConfig;
+pub use network_definition::NetworkDefinition;
 pub use prometheus::PrometheusServiceConfig;
 pub use tracker::{TrackerPorts, TrackerServiceConfig};
 
@@ -54,6 +56,12 @@ pub struct DockerComposeContext {
     /// This is separate from `MysqlSetupConfig` which contains credentials.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mysql: Option<MysqlServiceConfig>,
+    /// All networks required by enabled services (derived)
+    ///
+    /// This list is computed from the networks used by all services.
+    /// The template should iterate over this for the global `networks:` section
+    /// instead of using conditionals.
+    pub required_networks: Vec<NetworkDefinition>,
 }
 
 impl DockerComposeContext {
@@ -137,6 +145,15 @@ impl DockerComposeContext {
     #[must_use]
     pub fn mysql(&self) -> Option<&MysqlServiceConfig> {
         self.mysql.as_ref()
+    }
+
+    /// Get all networks required by enabled services
+    ///
+    /// This list is derived from all service network configurations and
+    /// should be used in the template for the global `networks:` section.
+    #[must_use]
+    pub fn required_networks(&self) -> &[NetworkDefinition] {
+        &self.required_networks
     }
 }
 
@@ -367,5 +384,291 @@ mod tests {
             grafana.networks,
             vec![Network::Visualization, Network::Proxy]
         );
+    }
+
+    // P2.2: Required networks derivation tests
+
+    mod required_networks {
+        use super::*;
+        use crate::domain::grafana::GrafanaConfig;
+
+        #[test]
+        fn it_should_have_empty_required_networks_for_minimal_deployment() {
+            let tracker = test_tracker_config();
+            let context = DockerComposeContext::builder(tracker).build();
+
+            assert!(context.required_networks().is_empty());
+        }
+
+        #[test]
+        fn it_should_include_database_network_when_mysql_enabled() {
+            let tracker = TrackerServiceConfig::new(
+                vec![6868],
+                vec![],
+                1212,
+                false,
+                false,
+                true, // has_mysql
+                false,
+            );
+            let mysql_config = MysqlSetupConfig {
+                root_password: "root".to_string(),
+                database: "db".to_string(),
+                user: "user".to_string(),
+                password: "pass".to_string(),
+                port: 3306,
+            };
+            let context = DockerComposeContext::builder(tracker)
+                .with_mysql(mysql_config)
+                .build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+            assert!(network_names.contains(&"database_network"));
+        }
+
+        #[test]
+        fn it_should_include_metrics_network_when_prometheus_enabled() {
+            let tracker = TrackerServiceConfig::new(
+                vec![6868],
+                vec![],
+                1212,
+                false,
+                true, // has_prometheus
+                false,
+                false,
+            );
+            let prometheus_config =
+                PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
+            let context = DockerComposeContext::builder(tracker)
+                .with_prometheus(prometheus_config)
+                .build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+            assert!(network_names.contains(&"metrics_network"));
+        }
+
+        #[test]
+        fn it_should_include_visualization_network_when_grafana_enabled() {
+            let tracker = test_tracker_config();
+            let grafana_config =
+                GrafanaConfig::new("admin".to_string(), "password".to_string(), None, false);
+            let context = DockerComposeContext::builder(tracker)
+                .with_grafana(grafana_config)
+                .build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+            assert!(network_names.contains(&"visualization_network"));
+        }
+
+        #[test]
+        fn it_should_include_proxy_network_when_caddy_enabled() {
+            let tracker = TrackerServiceConfig::new(
+                vec![6868],
+                vec![],
+                1212,
+                true, // API has TLS
+                false,
+                false,
+                true, // has_caddy
+            );
+            let context = DockerComposeContext::builder(tracker).with_caddy().build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+            assert!(network_names.contains(&"proxy_network"));
+        }
+
+        #[test]
+        fn it_should_not_include_database_network_when_mysql_disabled() {
+            let tracker = test_tracker_config();
+            let context = DockerComposeContext::builder(tracker).build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+            assert!(!network_names.contains(&"database_network"));
+        }
+
+        #[test]
+        fn it_should_not_include_metrics_network_when_prometheus_disabled() {
+            let tracker = test_tracker_config();
+            let context = DockerComposeContext::builder(tracker).build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+            assert!(!network_names.contains(&"metrics_network"));
+        }
+
+        #[test]
+        fn it_should_not_include_visualization_network_when_grafana_disabled() {
+            let tracker = test_tracker_config();
+            let context = DockerComposeContext::builder(tracker).build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+            assert!(!network_names.contains(&"visualization_network"));
+        }
+
+        #[test]
+        fn it_should_not_include_proxy_network_when_caddy_disabled() {
+            let tracker = test_tracker_config();
+            let context = DockerComposeContext::builder(tracker).build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+            assert!(!network_names.contains(&"proxy_network"));
+        }
+
+        #[test]
+        fn it_should_include_all_networks_for_full_https_deployment() {
+            let tracker = TrackerServiceConfig::new(
+                vec![6868],
+                vec![],
+                1212,
+                true, // API has TLS
+                true, // has_prometheus
+                true, // has_mysql
+                true, // has_caddy
+            );
+            let mysql_config = MysqlSetupConfig {
+                root_password: "root".to_string(),
+                database: "db".to_string(),
+                user: "user".to_string(),
+                password: "pass".to_string(),
+                port: 3306,
+            };
+            let prometheus_config =
+                PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
+            let grafana_config =
+                GrafanaConfig::new("admin".to_string(), "password".to_string(), None, true);
+            let context = DockerComposeContext::builder(tracker)
+                .with_mysql(mysql_config)
+                .with_prometheus(prometheus_config)
+                .with_grafana(grafana_config)
+                .with_caddy()
+                .build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+
+            assert_eq!(network_names.len(), 4);
+            assert!(network_names.contains(&"database_network"));
+            assert!(network_names.contains(&"metrics_network"));
+            assert!(network_names.contains(&"visualization_network"));
+            assert!(network_names.contains(&"proxy_network"));
+        }
+
+        #[test]
+        fn it_should_return_networks_in_deterministic_alphabetical_order() {
+            let tracker = TrackerServiceConfig::new(
+                vec![6868],
+                vec![],
+                1212,
+                true, // API has TLS
+                true, // has_prometheus
+                true, // has_mysql
+                true, // has_caddy
+            );
+            let mysql_config = MysqlSetupConfig {
+                root_password: "root".to_string(),
+                database: "db".to_string(),
+                user: "user".to_string(),
+                password: "pass".to_string(),
+                port: 3306,
+            };
+            let prometheus_config =
+                PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
+            let grafana_config =
+                GrafanaConfig::new("admin".to_string(), "password".to_string(), None, true);
+            let context = DockerComposeContext::builder(tracker)
+                .with_mysql(mysql_config)
+                .with_prometheus(prometheus_config)
+                .with_grafana(grafana_config)
+                .with_caddy()
+                .build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+
+            // Alphabetical order
+            assert_eq!(
+                network_names,
+                vec![
+                    "database_network",
+                    "metrics_network",
+                    "proxy_network",
+                    "visualization_network"
+                ]
+            );
+        }
+
+        #[test]
+        fn it_should_deduplicate_networks_from_multiple_services() {
+            // Prometheus and Grafana both use visualization_network
+            let tracker = TrackerServiceConfig::new(
+                vec![6868],
+                vec![],
+                1212,
+                false,
+                true, // has_prometheus
+                false,
+                false,
+            );
+            let prometheus_config =
+                PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
+            let grafana_config =
+                GrafanaConfig::new("admin".to_string(), "password".to_string(), None, false);
+            let context = DockerComposeContext::builder(tracker)
+                .with_prometheus(prometheus_config)
+                .with_grafana(grafana_config)
+                .build();
+
+            let network_names: Vec<&str> = context
+                .required_networks()
+                .iter()
+                .map(NetworkDefinition::name)
+                .collect();
+
+            // visualization_network appears only once despite being used by both
+            assert_eq!(
+                network_names
+                    .iter()
+                    .filter(|n| **n == "visualization_network")
+                    .count(),
+                1
+            );
+        }
     }
 }
