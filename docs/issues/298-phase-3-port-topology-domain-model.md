@@ -2,7 +2,16 @@
 
 **Epic**: [#287](https://github.com/torrust/torrust-tracker-deployer/issues/287) - Docker Compose Topology Domain Model Refactoring
 **Related Plan**: [docs/refactors/plans/docker-compose-topology-domain-model.md](../../refactors/plans/docker-compose-topology-domain-model.md)
-**Status**: Draft
+**Status**: In Progress (P3.1-P3.3 Complete)
+
+## Implementation Notes
+
+> **PR Strategy**: This phase is split into two PRs for better reviewability:
+>
+> - **PR #298 (this PR)**: Domain layer foundation - P3.1, P3.2, P3.3
+> - **Follow-up PR**: Template integration - P3.4
+>
+> The domain types are stable and well-tested. Template integration is a larger change that benefits from being a separate, focused PR.
 
 ## Overview
 
@@ -177,46 +186,60 @@ services:
 
 ## Tasks
 
-### P3.1: Create Port Domain Types
+### P3.1: Create Port Domain Types ✅
 
-- [ ] Create `Protocol` enum (or reuse from `domain/tracker`)
-- [ ] Create `PortBinding` struct with description support
-- [ ] Add `PortDefinition` context type for template rendering
-- [ ] Add unit tests for port binding creation
+- [x] Reuse `Protocol` enum from `domain/tracker/protocol.rs`
+- [x] Create `PortBinding` struct with description support
+- [x] Add convenience constructors: `tcp()`, `udp()`, `localhost_tcp()`
+- [x] Add `docker_compose_binding()` method for YAML rendering
+- [x] Add unit tests for port binding creation (10 tests)
 
-### P3.2: Extend ServiceTopology with Ports
+### P3.2: Extend ServiceTopology with Ports ✅
 
-- [ ] Add `ports: Vec<PortBinding>` to `ServiceTopology`
+- [x] Add `ports: Vec<PortBinding>` to `ServiceTopology`
+- [x] Add `new()` constructor with ports parameter
+- [x] Add `with_networks()` for backward compatibility
+- [x] Add `ports()` and `has_ports()` getters with `#[must_use]`
+- [x] Make all fields private with getters (DDD compliance)
+- [x] Add unit tests for port field (4 tests)
+
+### P3.3: Add Cross-Service Port Validation ✅
+
+- [x] Implement `DockerComposeTopology::validate_port_uniqueness()`
+- [x] Create `PortConflict` error type with full context
+- [x] Create `TopologyError` enum with `help()` method (DDD error conventions)
+- [x] Add tests for conflict detection scenarios (6 tests)
+
+### P3.4: Update Template and Context (Follow-up PR)
+
+- [ ] Create `PortDefinition` with `binding()` and `description()` for template
+- [ ] Update `DockerComposeContext` to use derived ports
+- [ ] Simplify `docker-compose.yml.tera` port sections
+- [ ] Remove conditional port logic from template
 - [ ] Implement port derivation for each service type:
   - Tracker: UDP ports, HTTP ports (TLS-dependent), API (TLS-dependent)
   - Caddy: 80, 443, 443/udp (fixed)
   - Prometheus: 9090 (localhost)
   - Grafana: 3000 (TLS-dependent)
   - MySQL: none
-- [ ] Add unit tests for each service's port derivation
-
-### P3.3: Add Cross-Service Port Validation
-
-- [ ] Implement `DockerComposeTopology::validate_port_uniqueness()`
-- [ ] Create `TopologyError::PortConflict` variant
-- [ ] Add tests for conflict detection scenarios
-
-### P3.4: Update Template and Context
-
-- [ ] Create `PortDefinition` with `binding()` and `description()` for template
-- [ ] Update `DockerComposeContext` to use derived ports
-- [ ] Simplify `docker-compose.yml.tera` port sections
-- [ ] Remove conditional port logic from template
 
 ## Acceptance Criteria
 
+### PR #298 (Domain Foundation) ✅
+
+- [x] `PortBinding` type with description support created
+- [x] `ServiceTopology` extended with ports field
+- [x] Cross-service port conflicts detected with actionable `help()` message
+- [x] All fields private with getters (DDD compliance)
+- [x] No duplication with `TrackerConfig` validation (different scopes)
+- [x] All existing E2E tests pass
+- [x] Pre-commit checks pass
+
+### Follow-up PR (Template Integration)
+
 - [ ] All PORT-\* rules from refactoring plan are implemented in domain
 - [ ] Port descriptions render as YAML comments in output
-- [ ] Cross-service port conflicts are detected and reported with actionable error
 - [ ] Template has no conditional port logic (just loops)
-- [ ] No duplication with `TrackerConfig` validation (different scopes)
-- [ ] All existing E2E tests pass
-- [ ] Pre-commit checks pass
 
 ## Testing Strategy
 
