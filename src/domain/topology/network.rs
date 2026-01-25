@@ -8,7 +8,7 @@
 //!
 //! | Network | Purpose | Connected Services |
 //! |---------|---------|-------------------|
-//! | `Database` | Isolates database access | Tracker ↔ MySQL |
+//! | `Database` | Isolates database access | Tracker ↔ `MySQL` |
 //! | `Metrics` | Metrics scraping | Tracker ↔ Prometheus |
 //! | `Visualization` | Dashboard queries | Prometheus ↔ Grafana |
 //! | `Proxy` | TLS termination | Caddy ↔ backend services |
@@ -46,9 +46,9 @@ use serde::Serialize;
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Network {
-    /// Network for database access (Tracker ↔ MySQL)
+    /// Network for database access (Tracker ↔ `MySQL`)
     ///
-    /// Only the tracker and MySQL are connected to this network,
+    /// Only the tracker and `MySQL` are connected to this network,
     /// ensuring database isolation from other services.
     Database,
 

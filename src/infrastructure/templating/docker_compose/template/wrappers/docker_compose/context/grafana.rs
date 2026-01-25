@@ -92,7 +92,10 @@ mod tests {
         let config =
             GrafanaServiceConfig::new("admin".to_string(), Password::new("password"), true, true);
 
-        assert_eq!(config.networks, vec![Network::Visualization, Network::Proxy]);
+        assert_eq!(
+            config.networks,
+            vec![Network::Visualization, Network::Proxy]
+        );
     }
 
     #[test]

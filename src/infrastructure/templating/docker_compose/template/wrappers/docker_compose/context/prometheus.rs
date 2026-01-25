@@ -74,7 +74,10 @@ mod tests {
     fn it_should_connect_prometheus_to_visualization_network_when_grafana_enabled() {
         let config = PrometheusServiceConfig::new(30, true);
 
-        assert_eq!(config.networks, vec![Network::Metrics, Network::Visualization]);
+        assert_eq!(
+            config.networks,
+            vec![Network::Metrics, Network::Visualization]
+        );
     }
 
     #[test]

@@ -13,9 +13,32 @@ This task creates domain types for Docker Compose networks and migrates service 
 
 ## Goals
 
-- [ ] Create type-safe `Network` enum to eliminate string-based network references
-- [ ] Migrate all service configs to use domain network types
-- [ ] Establish foundation for Phase 2 (automatic network derivation)
+- [x] Create type-safe `Network` enum to eliminate string-based network references
+- [x] Migrate all service configs to use domain network types
+- [x] Establish foundation for Phase 2 (automatic network derivation)
+
+## Implementation
+
+**PR**: [#295](https://github.com/torrust/torrust-tracker-deployer/pull/295)
+**Commit**: `11ed1b0e`
+
+### Changes Made
+
+- Created `Network` enum in `src/domain/topology/network.rs` with 4 variants:
+  - `Database` - for database services
+  - `Metrics` - for Prometheus/exporters
+  - `Visualization` - for Grafana
+  - `Proxy` - for Caddy reverse proxy
+- Implemented `name()`, `driver()`, `all()`, `Display`, custom `Serialize`
+- Migrated all 5 service configs to use `Vec<Network>`:
+  - `TrackerServiceConfig`
+  - `MysqlServiceConfig`
+  - `CaddyServiceConfig`
+  - `PrometheusServiceConfig`
+  - `GrafanaServiceConfig`
+- Added comprehensive unit tests (16 for Network, plus per-service tests)
+- All 1953 unit tests pass
+- E2E infrastructure and deployment tests pass
 
 ## 🏗️ Architecture Requirements
 
