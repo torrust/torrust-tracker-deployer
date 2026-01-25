@@ -21,10 +21,13 @@ From [docs/refactors/plans/docker-compose-topology-domain-model.md](../refactors
 - Derive global network lists from service configurations (single source of truth)
 - Move topology decision logic from template conditionals to domain layer
 - Enforce invariants like "if a service uses a network, that network must be defined"
+- Move port exposure logic from templates to domain (Phase 3 - added post-completion)
 
 ## Tasks
 
-Implementation follows a 5-PR strategy:
+Implementation follows a 5-PR strategy (original scope), with Phase 3 added as a continuation:
+
+### Original 5-PR Strategy (Completed)
 
 - [x] [#288](https://github.com/torrust/torrust-tracker-deployer/issues/288) - [ADR] Bind Mount Standardization for Docker Compose (ADR-01)
 - [x] [#290](https://github.com/torrust/torrust-tracker-deployer/issues/290) - [BUG] Remove invalid "Grafana without Prometheus" template branch (BUG-01)
@@ -32,7 +35,15 @@ Implementation follows a 5-PR strategy:
 - [x] [#294](https://github.com/torrust/torrust-tracker-deployer/issues/294) - [Refactor] Phase 1: Create Network domain types (P1.1, P1.2)
 - [x] [#296](https://github.com/torrust/torrust-tracker-deployer/issues/296) - [Refactor] Phase 2: Create DockerComposeTopology aggregate (P2.1, P2.2) → [PR #297](https://github.com/torrust/torrust-tracker-deployer/pull/297)
 
-(Tasks will be created and linked as work progresses)
+### Phase 3: Port Topology (Added Extension)
+
+> **Note**: Phase 3 was part of the original refactoring plan analysis (see PORT-01 through PORT-11 rules in [docker-compose-topology-domain-model.md](../refactors/plans/docker-compose-topology-domain-model.md#port-exposure-rules)) but was not included in the initial 5-PR strategy. It follows the same pattern as networks and completes the topology domain model.
+
+- [ ] Phase 3: Create Port Topology Domain Model (P3.1, P3.2, P3.3, P3.4) → [Draft](drafts/298-phase-3-port-topology-domain-model.md)
+  - P3.1: Create Port domain types (`PortBinding`, `Protocol`)
+  - P3.2: Extend `ServiceTopology` with port derivation
+  - P3.3: Add cross-service port conflict validation
+  - P3.4: Update template to use derived ports with descriptions
 
 ## PR Dependencies
 
@@ -47,6 +58,9 @@ PR 4 (Phase 1)
     │
     ▼
 PR 5 (Phase 2)
+    │
+    ▼
+PR 6 (Phase 3) ◄─── Extension: Port topology (added post-completion)
 ```
 
 ## Key Decisions
@@ -55,8 +69,11 @@ PR 5 (Phase 2)
 - Type-safe `MountOption` enum (ReadOnly, SELinux)
 - Domain-driven network derivation (single source of truth)
 - ~47 domain rules identified with test specifications
+- Network descriptions rendered as YAML comments for sysadmin documentation
+- Port topology follows same pattern as networks (Phase 3)
 
 ## Related
 
 - Plan Review: #285 (merged)
 - Refactoring Plan: [docs/refactors/plans/docker-compose-topology-domain-model.md](../refactors/plans/docker-compose-topology-domain-model.md)
+- Phase 3 Draft: [drafts/298-phase-3-port-topology-domain-model.md](drafts/298-phase-3-port-topology-domain-model.md)
