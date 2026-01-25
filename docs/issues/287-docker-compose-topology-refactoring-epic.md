@@ -41,11 +41,11 @@ Implementation follows a 5-PR strategy (original scope), with Phase 3 added as a
 >
 > **Implementation Note**: Phase 3 is split into two PRs for better reviewability. PR #298 delivers the domain layer foundation (P3.1-P3.3), while a follow-up PR will integrate ports into the template (P3.4).
 
-- [ ] [#298](https://github.com/torrust/torrust-tracker-deployer/issues/298) - [Refactor] Phase 3: Port Topology Domain Model - Foundation (P3.1, P3.2, P3.3) → [Spec](298-phase-3-port-topology-domain-model.md)
+- [x] [#298](https://github.com/torrust/torrust-tracker-deployer/issues/298) - [Refactor] Phase 3: Port Topology Domain Model - Foundation (P3.1, P3.2, P3.3) → [Spec](298-phase-3-port-topology-domain-model.md) → [PR #299](https://github.com/torrust/torrust-tracker-deployer/pull/299)
   - P3.1: Create Port domain types (`PortBinding`, reuse `Protocol`)
   - P3.2: Extend `ServiceTopology` with ports field
   - P3.3: Add cross-service port conflict validation with `help()` method
-- [ ] TBD - [Refactor] Phase 3: Port Topology Template Integration (P3.4)
+- [ ] [#300](https://github.com/torrust/torrust-tracker-deployer/issues/300) - [Refactor] Phase 3: Port Topology Template Integration (P3.4) → [Spec](300-phase-3-port-topology-template-integration.md)
   - P3.4: Update template to use derived ports with descriptions
 
 ## PR Dependencies
