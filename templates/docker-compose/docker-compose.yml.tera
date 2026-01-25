@@ -41,10 +41,13 @@ services:
     # The configure-firewall.yml playbook closes all ports except SSH,
     # but Docker creates its own iptables chains that take precedence.
     # See: docs/user-guide/security.md for the full security model.
+{%- if caddy.ports | length > 0 %}
     ports:
-      - "80:80"       # HTTP (ACME HTTP-01 challenge)
-      - "443:443"     # HTTPS
-      - "443:443/udp" # HTTP/3 (QUIC)
+{%- for port in caddy.ports %}
+      # {{ port.description }}
+      - "{{ port.binding }}"
+{%- endfor %}
+{%- endif %}
     volumes:
       - ./storage/caddy/etc/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./storage/caddy/data:/data     # TLS certificates (MUST persist!)
@@ -83,20 +86,12 @@ services:
 {%- for network in tracker.networks %}
       - {{ network }}
 {%- endfor %}
-{%- if tracker.needs_ports_section %}
+{%- if tracker.ports | length > 0 %}
     ports:
-      # UDP Tracker Ports (always exposed - UDP doesn't use TLS)
-{%- for port in tracker.udp_tracker_ports %}
-      - {{ port }}:{{ port }}/udp
+{%- for port in tracker.ports %}
+      # {{ port.description }}
+      - "{{ port.binding }}"
 {%- endfor %}
-      # HTTP Tracker Ports (only ports without TLS - Caddy handles HTTPS)
-{%- for port in tracker.http_tracker_ports_without_tls %}
-      - {{ port }}:{{ port }}
-{%- endfor %}
-{%- if not tracker.http_api_has_tls %}
-      # HTTP API Port (dynamically configured)
-      - {{ tracker.http_api_port }}:{{ tracker.http_api_port }}
-{%- endif %}
 {%- endif %}
     volumes:
       - ./storage/tracker/lib:/var/lib/torrust/tracker:Z
@@ -112,8 +107,13 @@ services:
 {%- for network in prometheus.networks %}
       - {{ network }}
 {%- endfor %}
+{%- if prometheus.ports | length > 0 %}
     ports:
-      - "127.0.0.1:9090:9090"  # Localhost only - not exposed to external network
+{%- for port in prometheus.ports %}
+      # {{ port.description }}
+      - "{{ port.binding }}"
+{%- endfor %}
+{%- endif %}
     # Grafana accesses Prometheus via Docker network: http://prometheus:9090
     # Host can access for validation via: curl http://localhost:9090
     volumes:
@@ -137,9 +137,12 @@ services:
 {%- for network in grafana.networks %}
       - {{ network }}
 {%- endfor %}
-{%- if not grafana.has_tls %}
+{%- if grafana.ports | length > 0 %}
     ports:
-      - "3000:3000"
+{%- for port in grafana.ports %}
+      # {{ port.description }}
+      - "{{ port.binding }}"
+{%- endfor %}
 {%- endif %}
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}

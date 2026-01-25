@@ -5,15 +5,22 @@ use serde::Serialize;
 
 use crate::domain::topology::Network;
 
+use super::port_definition::PortDefinition;
+use super::port_derivation::derive_prometheus_ports;
+
 /// Prometheus service configuration for Docker Compose
 ///
 /// Contains all configuration needed for the Prometheus service in Docker Compose,
-/// including the scrape interval and network connections. All logic is pre-computed
-/// in Rust to keep the Tera template simple.
+/// including the scrape interval, port mappings, and network connections. All logic
+/// is pre-computed in Rust to keep the Tera template simple.
 #[derive(Serialize, Debug, Clone)]
 pub struct PrometheusServiceConfig {
     /// Scrape interval in seconds
     pub scrape_interval_in_secs: u32,
+    /// Port bindings for Docker Compose
+    ///
+    /// Prometheus exposes port 9090 on localhost only for security.
+    pub ports: Vec<PortDefinition>,
     /// Networks the Prometheus service should connect to
     ///
     /// Pre-computed list based on enabled features:
@@ -23,7 +30,7 @@ pub struct PrometheusServiceConfig {
 }
 
 impl PrometheusServiceConfig {
-    /// Creates a new `PrometheusServiceConfig` with pre-computed networks
+    /// Creates a new `PrometheusServiceConfig` with pre-computed networks and ports
     ///
     /// # Arguments
     ///
@@ -32,9 +39,12 @@ impl PrometheusServiceConfig {
     #[must_use]
     pub fn new(scrape_interval_in_secs: u32, has_grafana: bool) -> Self {
         let networks = Self::compute_networks(has_grafana);
+        let port_bindings = derive_prometheus_ports();
+        let ports = port_bindings.iter().map(PortDefinition::from).collect();
 
         Self {
             scrape_interval_in_secs,
+            ports,
             networks,
         }
     }
@@ -89,5 +99,23 @@ mod tests {
         // Networks serialize to their name strings for template compatibility
         assert_eq!(json["networks"][0], "metrics_network");
         assert_eq!(json["networks"][1], "visualization_network");
+    }
+
+    #[test]
+    fn it_should_expose_localhost_port_9090() {
+        let config = PrometheusServiceConfig::new(15, false);
+
+        assert_eq!(config.ports.len(), 1);
+        assert_eq!(config.ports[0].binding(), "127.0.0.1:9090:9090");
+    }
+
+    #[test]
+    fn it_should_serialize_ports_with_binding_and_description() {
+        let config = PrometheusServiceConfig::new(15, false);
+
+        let json = serde_json::to_value(&config).expect("serialization should succeed");
+
+        assert!(json["ports"][0]["binding"].is_string());
+        assert!(json["ports"][0]["description"].is_string());
     }
 }

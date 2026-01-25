@@ -19,6 +19,9 @@ use serde::Serialize;
 
 use crate::domain::topology::Network;
 
+use super::port_definition::PortDefinition;
+use super::port_derivation::derive_mysql_ports;
+
 /// `MySQL` service configuration for Docker Compose
 ///
 /// Contains configuration for the `MySQL` service definition in docker-compose.yml.
@@ -32,9 +35,14 @@ use crate::domain::topology::Network;
 ///
 /// let mysql = MysqlServiceConfig::new();
 /// assert_eq!(mysql.networks, vec![torrust_tracker_deployer_lib::domain::topology::Network::Database]);
+/// assert!(mysql.ports.is_empty()); // MySQL never exposes ports externally
 /// ```
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct MysqlServiceConfig {
+    /// Port bindings for Docker Compose
+    ///
+    /// `MySQL` never exposes ports externally - only tracker can access it via internal network.
+    pub ports: Vec<PortDefinition>,
     /// Networks this service connects to
     ///
     /// `MySQL` only connects to `database_network` for isolation.
@@ -43,13 +51,19 @@ pub struct MysqlServiceConfig {
 }
 
 impl MysqlServiceConfig {
-    /// Creates a new `MysqlServiceConfig` with default networks
+    /// Creates a new `MysqlServiceConfig` with default networks and empty ports
     ///
     /// `MySQL` connects to:
     /// - `database_network`: For database access by the tracker
+    ///
+    /// `MySQL` never exposes ports externally for security.
     #[must_use]
     pub fn new() -> Self {
+        let port_bindings = derive_mysql_ports();
+        let ports = port_bindings.iter().map(PortDefinition::from).collect();
+
         Self {
+            ports,
             networks: vec![Network::Database],
         }
     }
@@ -87,5 +101,12 @@ mod tests {
 
         // Network serializes to its name string for template compatibility
         assert_eq!(json["networks"][0], "database_network");
+    }
+
+    #[test]
+    fn it_should_not_expose_any_ports() {
+        let mysql = MysqlServiceConfig::new();
+
+        assert!(mysql.ports.is_empty());
     }
 }

@@ -1,6 +1,6 @@
 //! Builder for `DockerComposeContext`
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 // Internal crate
 use crate::domain::grafana::GrafanaConfig;
@@ -12,6 +12,7 @@ use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQL
 use super::grafana::GrafanaServiceConfig;
 use super::mysql::MysqlServiceConfig;
 use super::network_definition::NetworkDefinition;
+use super::port_definition::PortDefinition;
 use super::prometheus::PrometheusServiceConfig;
 use super::{DockerComposeContext, TrackerServiceConfig};
 
@@ -95,8 +96,46 @@ impl DockerComposeContextBuilder {
     ///
     /// Transforms domain configuration objects into service configuration
     /// objects with pre-computed networks based on enabled features.
+    ///
+    /// # Panics
+    ///
+    /// This method does not validate port uniqueness. Use `try_build()` if you
+    /// need validation to detect port conflicts before rendering.
     #[must_use]
     pub fn build(self) -> DockerComposeContext {
+        // Note: This infallible version skips validation for backward compatibility.
+        // Prefer try_build() for new code.
+        self.build_internal()
+    }
+
+    /// Builds the `DockerComposeContext` with port conflict validation
+    ///
+    /// Validates that no two services expose the same host port before building
+    /// the context. This prevents port conflicts that would cause Docker Compose
+    /// to fail at runtime.
+    ///
+    /// # Errors
+    ///
+    /// Returns `PortConflictError` if two services try to bind the same host port.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let context = DockerComposeContext::builder(tracker_config)
+    ///     .with_prometheus(prometheus_config)
+    ///     .try_build()?;
+    /// ```
+    pub fn try_build(self) -> Result<DockerComposeContext, Box<PortConflictError>> {
+        let context = self.build_internal();
+
+        // Collect all ports from all services for validation
+        Self::validate_port_uniqueness(&context)?;
+
+        Ok(context)
+    }
+
+    /// Internal build logic shared by `build()` and `try_build()`
+    fn build_internal(self) -> DockerComposeContext {
         let has_grafana = self.grafana_config.is_some();
         let has_caddy = self.has_caddy;
 
@@ -185,5 +224,246 @@ impl DockerComposeContextBuilder {
             networks.into_iter().map(NetworkDefinition::from).collect();
         result.sort_by(|a, b| a.name().cmp(b.name()));
         result
+    }
+
+    /// Validates that no two services bind the same host port
+    ///
+    /// Collects all ports from all services and checks for duplicates.
+    fn validate_port_uniqueness(
+        context: &DockerComposeContext,
+    ) -> Result<(), Box<PortConflictError>> {
+        // Map: host_port -> (service_name, binding_string)
+        let mut port_bindings: HashMap<String, (&'static str, &PortDefinition)> = HashMap::new();
+
+        // Helper to extract host port from binding string (e.g., "6969:6969/udp" -> "6969")
+        // Also handles "127.0.0.1:9090:9090" -> "127.0.0.1:9090"
+        let extract_host_port = |binding: &str| -> String {
+            let parts: Vec<&str> = binding.split(':').collect();
+            match parts.len() {
+                2 => parts[0].to_string(),                 // "6969:6969" -> "6969"
+                3 => format!("{}:{}", parts[0], parts[1]), // "127.0.0.1:9090:9090" -> "127.0.0.1:9090"
+                _ => binding.to_string(),
+            }
+        };
+
+        // Collect ports with service names
+        let service_ports: Vec<(&'static str, &[PortDefinition])> = vec![
+            ("tracker", &context.tracker.ports),
+            (
+                "prometheus",
+                context.prometheus.as_ref().map_or(&[][..], |p| &p.ports),
+            ),
+            (
+                "grafana",
+                context.grafana.as_ref().map_or(&[][..], |g| &g.ports),
+            ),
+            (
+                "caddy",
+                context.caddy.as_ref().map_or(&[][..], |c| &c.ports),
+            ),
+            (
+                "mysql",
+                context.mysql.as_ref().map_or(&[][..], |m| &m.ports),
+            ),
+        ];
+
+        for (service_name, ports) in service_ports {
+            for port in ports {
+                let host_port = extract_host_port(port.binding());
+
+                if let Some((first_service, first_port)) = port_bindings.get(&host_port) {
+                    return Err(Box::new(PortConflictError::new(
+                        host_port,
+                        first_service,
+                        first_port.binding().to_string(),
+                        first_port.description().to_string(),
+                        service_name,
+                        port.binding().to_string(),
+                        port.description().to_string(),
+                    )));
+                }
+
+                port_bindings.insert(host_port, (service_name, port));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// Error indicating a port conflict between two services
+///
+/// This error is returned when two services try to bind the same host port,
+/// which would cause Docker Compose to fail at runtime.
+#[derive(Debug, Clone)]
+pub struct PortConflictError {
+    /// The conflicting host port (e.g., "9090" or "127.0.0.1:9090")
+    pub host_port: String,
+    /// Name of the first service that claimed the port
+    pub first_service: &'static str,
+    /// Port binding string of the first service
+    pub first_binding: String,
+    /// Description of the first port
+    pub first_description: String,
+    /// Name of the second service that also wants the port
+    pub second_service: &'static str,
+    /// Port binding string of the second service
+    pub second_binding: String,
+    /// Description of the second port
+    pub second_description: String,
+}
+
+impl PortConflictError {
+    /// Creates a new port conflict error
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        host_port: String,
+        first_service: &'static str,
+        first_binding: String,
+        first_description: String,
+        second_service: &'static str,
+        second_binding: String,
+        second_description: String,
+    ) -> Self {
+        Self {
+            host_port,
+            first_service,
+            first_binding,
+            first_description,
+            second_service,
+            second_binding,
+            second_description,
+        }
+    }
+
+    /// Returns a help message suggesting how to resolve the conflict
+    #[must_use]
+    pub fn help(&self) -> String {
+        format!(
+            "Port {} is used by both '{}' ({}) and '{}' ({}).\n\
+             To resolve:\n\
+             - Configure different ports in your environment configuration\n\
+             - Or disable one of the conflicting services",
+            self.host_port,
+            self.first_service,
+            self.first_description,
+            self.second_service,
+            self.second_description
+        )
+    }
+}
+
+impl std::fmt::Display for PortConflictError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Port conflict: {} ({}) and {} ({}) both bind to host port {}",
+            self.first_service,
+            self.first_binding,
+            self.second_service,
+            self.second_binding,
+            self.host_port
+        )
+    }
+}
+
+impl std::error::Error for PortConflictError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::prometheus::PrometheusConfig;
+
+    /// Helper to create a minimal tracker config
+    fn minimal_tracker_config() -> TrackerServiceConfig {
+        TrackerServiceConfig::new(
+            vec![], // No UDP ports
+            vec![], // No HTTP ports
+            1212,   // API port
+            true,   // TLS enabled (so API port not exposed)
+            false,  // No Prometheus
+            false,  // No MySQL
+            false,  // No Caddy
+        )
+    }
+
+    /// Helper to create a tracker config that exposes specific ports
+    fn tracker_config_with_ports(
+        udp_ports: Vec<u16>,
+        http_ports: Vec<u16>,
+    ) -> TrackerServiceConfig {
+        TrackerServiceConfig::new(
+            udp_ports, http_ports, 1212, true, // TLS enabled
+            false, false, false,
+        )
+    }
+
+    // ==========================================================================
+    // try_build validation tests
+    // ==========================================================================
+
+    #[test]
+    fn it_should_build_successfully_when_no_port_conflicts() {
+        let tracker = tracker_config_with_ports(vec![6969], vec![7070]);
+
+        let result = DockerComposeContext::builder(tracker).try_build();
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn it_should_build_successfully_with_prometheus() {
+        let tracker = minimal_tracker_config();
+        let prometheus = PrometheusConfig::default();
+
+        let result = DockerComposeContext::builder(tracker)
+            .with_prometheus(prometheus)
+            .try_build();
+
+        assert!(result.is_ok());
+    }
+
+    // ==========================================================================
+    // PortConflictError tests
+    // ==========================================================================
+
+    #[test]
+    fn it_should_display_port_conflict_error() {
+        let error = PortConflictError::new(
+            "9090".to_string(),
+            "tracker",
+            "9090:9090".to_string(),
+            "Health check".to_string(),
+            "prometheus",
+            "127.0.0.1:9090:9090".to_string(),
+            "Web UI".to_string(),
+        );
+
+        let display = error.to_string();
+
+        assert!(display.contains("tracker"));
+        assert!(display.contains("prometheus"));
+        assert!(display.contains("9090"));
+    }
+
+    #[test]
+    fn it_should_provide_help_message() {
+        let error = PortConflictError::new(
+            "9090".to_string(),
+            "tracker",
+            "9090:9090".to_string(),
+            "Health check".to_string(),
+            "prometheus",
+            "127.0.0.1:9090:9090".to_string(),
+            "Web UI".to_string(),
+        );
+
+        let help = error.help();
+
+        assert!(help.contains("Port 9090"));
+        assert!(help.contains("tracker"));
+        assert!(help.contains("prometheus"));
+        assert!(help.contains("To resolve"));
     }
 }

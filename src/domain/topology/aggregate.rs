@@ -127,7 +127,7 @@ impl ServiceTopology {
 /// let topology = DockerComposeTopology::new(vec![
 ///     ServiceTopology::with_networks(Service::Tracker, vec![Network::Database, Network::Metrics]),
 ///     ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
-/// ]);
+/// ]).expect("no port conflicts");
 ///
 /// let required = topology.required_networks();
 /// assert!(required.contains(&Network::Database));
@@ -142,9 +142,40 @@ pub struct DockerComposeTopology {
 
 impl DockerComposeTopology {
     /// Creates a new topology aggregate from service topologies
-    #[must_use]
-    pub fn new(services: Vec<ServiceTopology>) -> Self {
-        Self { services }
+    ///
+    /// Validates that no two services bind to the same host port.
+    /// This enforces the "always valid" invariant - a `DockerComposeTopology`
+    /// instance is guaranteed to have no port conflicts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PortConflict`] if two services try to bind the same host port.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::topology::{
+    ///     DockerComposeTopology, ServiceTopology, Service, PortBinding
+    /// };
+    ///
+    /// // Valid: different ports
+    /// let valid = DockerComposeTopology::new(vec![
+    ///     ServiceTopology::new(Service::Tracker, vec![], vec![PortBinding::tcp(6969, "Tracker")]),
+    ///     ServiceTopology::new(Service::Prometheus, vec![], vec![PortBinding::tcp(9090, "Prometheus")]),
+    /// ]);
+    /// assert!(valid.is_ok());
+    ///
+    /// // Invalid: same port
+    /// let invalid = DockerComposeTopology::new(vec![
+    ///     ServiceTopology::new(Service::Tracker, vec![], vec![PortBinding::tcp(9090, "A")]),
+    ///     ServiceTopology::new(Service::Prometheus, vec![], vec![PortBinding::tcp(9090, "B")]),
+    /// ]);
+    /// assert!(invalid.is_err());
+    /// ```
+    pub fn new(services: Vec<ServiceTopology>) -> Result<Self, PortConflict> {
+        let topology = Self { services };
+        topology.validate_port_uniqueness_internal()?;
+        Ok(topology)
     }
 
     /// Returns all networks required by enabled services
@@ -188,35 +219,17 @@ impl DockerComposeTopology {
     /// Note: Binding to different IPs (e.g., 127.0.0.1:8080 and 0.0.0.0:8080)
     /// is still considered a conflict since 0.0.0.0 includes all interfaces.
     ///
+    /// Note: This method is primarily used internally by the constructor.
+    /// Since `DockerComposeTopology` is "always valid" (validated at construction),
+    /// a valid instance will always return `Ok(())`. This method remains available
+    /// for cases where you need to re-validate or for testing purposes.
+    ///
     /// # Errors
     ///
     /// Returns [`PortConflict`] when two services expose the same host port.
     /// The error includes details about both conflicting services and their
     /// port bindings, enabling actionable error messages.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::domain::topology::{
-    ///     DockerComposeTopology, ServiceTopology, Service, PortBinding
-    /// };
-    ///
-    /// let topology = DockerComposeTopology::new(vec![
-    ///     ServiceTopology::new(
-    ///         Service::Tracker,
-    ///         vec![],
-    ///         vec![PortBinding::tcp(9090, "Health check")]
-    ///     ),
-    ///     ServiceTopology::new(
-    ///         Service::Prometheus,
-    ///         vec![],
-    ///         vec![PortBinding::tcp(9090, "Web UI")]  // Conflict!
-    ///     ),
-    /// ]);
-    ///
-    /// assert!(topology.validate_port_uniqueness().is_err());
-    /// ```
-    pub fn validate_port_uniqueness(&self) -> Result<(), PortConflict> {
+    fn validate_port_uniqueness_internal(&self) -> Result<(), PortConflict> {
         // Track which service has bound each host port
         let mut port_bindings: HashMap<u16, (Service, PortBinding)> = HashMap::new();
 
@@ -307,7 +320,8 @@ mod tests {
                 ),
                 ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
                 ServiceTopology::with_networks(Service::Prometheus, vec![Network::Metrics]),
-            ]);
+            ])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -320,7 +334,8 @@ mod tests {
             let topology = DockerComposeTopology::new(vec![ServiceTopology::with_networks(
                 Service::Tracker,
                 vec![Network::Metrics],
-            )]);
+            )])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -340,7 +355,8 @@ mod tests {
                 ServiceTopology::with_networks(Service::Tracker, vec![Network::Database]),
                 ServiceTopology::with_networks(Service::Prometheus, vec![Network::Metrics]),
                 ServiceTopology::with_networks(Service::Grafana, vec![Network::Visualization]),
-            ]);
+            ])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -362,7 +378,8 @@ mod tests {
             let topology = DockerComposeTopology::new(vec![
                 ServiceTopology::with_networks(Service::Tracker, vec![Network::Metrics]),
                 ServiceTopology::with_networks(Service::Prometheus, vec![Network::Metrics]),
-            ]);
+            ])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -373,7 +390,7 @@ mod tests {
 
         #[test]
         fn it_should_return_empty_when_no_services() {
-            let topology = DockerComposeTopology::new(vec![]);
+            let topology = DockerComposeTopology::new(vec![]).unwrap();
 
             let required = topology.required_networks();
 
@@ -385,7 +402,8 @@ mod tests {
             let topology = DockerComposeTopology::new(vec![ServiceTopology::with_networks(
                 Service::Tracker,
                 vec![],
-            )]);
+            )])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -402,7 +420,8 @@ mod tests {
             let topology = DockerComposeTopology::new(vec![ServiceTopology::with_networks(
                 Service::Tracker,
                 vec![],
-            )]);
+            )])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -414,7 +433,8 @@ mod tests {
             let topology = DockerComposeTopology::new(vec![
                 ServiceTopology::with_networks(Service::Tracker, vec![Network::Database]),
                 ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
-            ]);
+            ])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -431,7 +451,8 @@ mod tests {
                     vec![Network::Metrics, Network::Visualization],
                 ),
                 ServiceTopology::with_networks(Service::Grafana, vec![Network::Visualization]),
-            ]);
+            ])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -453,7 +474,8 @@ mod tests {
                     vec![Network::Metrics, Network::Visualization],
                 ),
                 ServiceTopology::with_networks(Service::Grafana, vec![Network::Visualization]),
-            ]);
+            ])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -481,7 +503,8 @@ mod tests {
                     vec![Network::Visualization, Network::Proxy],
                 ),
                 ServiceTopology::with_networks(Service::Caddy, vec![Network::Proxy]),
-            ]);
+            ])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -498,7 +521,8 @@ mod tests {
             let topology = DockerComposeTopology::new(vec![
                 ServiceTopology::with_networks(Service::Tracker, vec![Network::Proxy]),
                 ServiceTopology::with_networks(Service::Caddy, vec![Network::Proxy]),
-            ]);
+            ])
+            .unwrap();
 
             let required = topology.required_networks();
 
@@ -512,7 +536,7 @@ mod tests {
 
         #[test]
         fn it_should_succeed_when_no_port_conflicts() {
-            let topology = DockerComposeTopology::new(vec![
+            let result = DockerComposeTopology::new(vec![
                 ServiceTopology::new(
                     Service::Tracker,
                     vec![],
@@ -528,12 +552,12 @@ mod tests {
                 ),
             ]);
 
-            assert!(topology.validate_port_uniqueness().is_ok());
+            assert!(result.is_ok());
         }
 
         #[test]
-        fn it_should_fail_when_same_host_port_bound_by_two_services() {
-            let topology = DockerComposeTopology::new(vec![
+        fn it_should_fail_construction_when_same_host_port_bound_by_two_services() {
+            let result = DockerComposeTopology::new(vec![
                 ServiceTopology::new(
                     Service::Tracker,
                     vec![],
@@ -546,8 +570,6 @@ mod tests {
                 ),
             ]);
 
-            let result = topology.validate_port_uniqueness();
-
             assert!(result.is_err());
             let conflict = result.unwrap_err();
             assert_eq!(conflict.host_port, 9090);
@@ -555,25 +577,25 @@ mod tests {
 
         #[test]
         fn it_should_succeed_when_services_have_no_ports() {
-            let topology = DockerComposeTopology::new(vec![
+            let result = DockerComposeTopology::new(vec![
                 ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
                 ServiceTopology::with_networks(Service::Tracker, vec![Network::Database]),
             ]);
 
-            assert!(topology.validate_port_uniqueness().is_ok());
+            assert!(result.is_ok());
         }
 
         #[test]
         fn it_should_succeed_when_empty_topology() {
-            let topology = DockerComposeTopology::new(vec![]);
+            let result = DockerComposeTopology::new(vec![]);
 
-            assert!(topology.validate_port_uniqueness().is_ok());
+            assert!(result.is_ok());
         }
 
         #[test]
         fn it_should_allow_same_container_port_on_different_host_ports() {
             // Both services use container port 80 but mapped to different host ports
-            let topology = DockerComposeTopology::new(vec![
+            let result = DockerComposeTopology::new(vec![
                 ServiceTopology::new(
                     Service::Tracker,
                     vec![],
@@ -598,12 +620,12 @@ mod tests {
                 ),
             ]);
 
-            assert!(topology.validate_port_uniqueness().is_ok());
+            assert!(result.is_ok());
         }
 
         #[test]
         fn it_should_include_conflict_details_in_error() {
-            let topology = DockerComposeTopology::new(vec![
+            let result = DockerComposeTopology::new(vec![
                 ServiceTopology::new(
                     Service::Tracker,
                     vec![],
@@ -616,7 +638,7 @@ mod tests {
                 ),
             ]);
 
-            let conflict = topology.validate_port_uniqueness().unwrap_err();
+            let conflict = result.unwrap_err();
 
             assert_eq!(conflict.first_service, Service::Tracker);
             assert_eq!(conflict.second_service, Service::Prometheus);
