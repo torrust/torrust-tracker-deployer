@@ -17,8 +17,7 @@
 
 use serde::Serialize;
 
-/// Network names used by the `MySQL` service
-const DATABASE_NETWORK: &str = "database_network";
+use crate::domain::topology::Network;
 
 /// `MySQL` service configuration for Docker Compose
 ///
@@ -32,7 +31,7 @@ const DATABASE_NETWORK: &str = "database_network";
 /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::context::MysqlServiceConfig;
 ///
 /// let mysql = MysqlServiceConfig::new();
-/// assert_eq!(mysql.networks, vec!["database_network"]);
+/// assert_eq!(mysql.networks, vec![torrust_tracker_deployer_lib::domain::topology::Network::Database]);
 /// ```
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct MysqlServiceConfig {
@@ -40,7 +39,7 @@ pub struct MysqlServiceConfig {
     ///
     /// `MySQL` only connects to `database_network` for isolation.
     /// Only the tracker can access `MySQL` through this network.
-    pub networks: Vec<String>,
+    pub networks: Vec<Network>,
 }
 
 impl MysqlServiceConfig {
@@ -51,7 +50,7 @@ impl MysqlServiceConfig {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            networks: vec![DATABASE_NETWORK.to_string()],
+            networks: vec![Network::Database],
         }
     }
 }
@@ -67,25 +66,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_should_create_mysql_config_with_database_network() {
+    fn it_should_connect_mysql_to_database_network() {
         let mysql = MysqlServiceConfig::new();
 
-        assert_eq!(mysql.networks, vec!["database_network"]);
+        assert_eq!(mysql.networks, vec![Network::Database]);
     }
 
     #[test]
     fn it_should_implement_default() {
         let mysql = MysqlServiceConfig::default();
 
-        assert_eq!(mysql.networks, vec!["database_network"]);
+        assert_eq!(mysql.networks, vec![Network::Database]);
     }
 
     #[test]
-    fn it_should_serialize_to_json() {
+    fn it_should_serialize_network_to_name_string() {
         let mysql = MysqlServiceConfig::new();
 
         let json = serde_json::to_value(&mysql).expect("serialization should succeed");
 
+        // Network serializes to its name string for template compatibility
         assert_eq!(json["networks"][0], "database_network");
     }
 }

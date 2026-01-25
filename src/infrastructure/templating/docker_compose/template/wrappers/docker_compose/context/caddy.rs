@@ -16,8 +16,7 @@
 
 use serde::Serialize;
 
-/// Network names used by the Caddy service
-const PROXY_NETWORK: &str = "proxy_network";
+use crate::domain::topology::Network;
 
 /// Caddy reverse proxy service configuration for Docker Compose
 ///
@@ -29,9 +28,10 @@ const PROXY_NETWORK: &str = "proxy_network";
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::context::CaddyServiceConfig;
+/// use torrust_tracker_deployer_lib::domain::topology::Network;
 ///
 /// let caddy = CaddyServiceConfig::new();
-/// assert_eq!(caddy.networks, vec!["proxy_network"]);
+/// assert_eq!(caddy.networks, vec![Network::Proxy]);
 /// ```
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct CaddyServiceConfig {
@@ -39,7 +39,7 @@ pub struct CaddyServiceConfig {
     ///
     /// Caddy always connects to `proxy_network` for reverse proxying
     /// to backend services (tracker API, HTTP trackers, Grafana).
-    pub networks: Vec<String>,
+    pub networks: Vec<Network>,
 }
 
 impl CaddyServiceConfig {
@@ -50,7 +50,7 @@ impl CaddyServiceConfig {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            networks: vec![PROXY_NETWORK.to_string()],
+            networks: vec![Network::Proxy],
         }
     }
 }
@@ -66,25 +66,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_should_create_caddy_config_with_proxy_network() {
+    fn it_should_connect_caddy_to_proxy_network() {
         let caddy = CaddyServiceConfig::new();
 
-        assert_eq!(caddy.networks, vec!["proxy_network"]);
+        assert_eq!(caddy.networks, vec![Network::Proxy]);
     }
 
     #[test]
     fn it_should_implement_default() {
         let caddy = CaddyServiceConfig::default();
 
-        assert_eq!(caddy.networks, vec!["proxy_network"]);
+        assert_eq!(caddy.networks, vec![Network::Proxy]);
     }
 
     #[test]
-    fn it_should_serialize_to_json() {
+    fn it_should_serialize_network_to_name_string() {
         let caddy = CaddyServiceConfig::new();
 
         let json = serde_json::to_value(&caddy).expect("serialization should succeed");
 
+        // Network serializes to its name string for template compatibility
         assert_eq!(json["networks"][0], "proxy_network");
     }
 }

@@ -297,6 +297,8 @@ mod tests {
 
     #[test]
     fn it_should_compute_prometheus_networks_without_grafana() {
+        use crate::domain::topology::Network;
+
         let tracker = test_tracker_config();
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
@@ -305,12 +307,13 @@ mod tests {
             .build();
 
         let prometheus = context.prometheus().unwrap();
-        assert_eq!(prometheus.networks, vec!["metrics_network"]);
+        assert_eq!(prometheus.networks, vec![Network::Metrics]);
     }
 
     #[test]
     fn it_should_compute_prometheus_networks_with_grafana() {
         use crate::domain::grafana::GrafanaConfig;
+        use crate::domain::topology::Network;
 
         let tracker = test_tracker_config();
         let prometheus_config =
@@ -325,13 +328,14 @@ mod tests {
         let prometheus = context.prometheus().unwrap();
         assert_eq!(
             prometheus.networks,
-            vec!["metrics_network", "visualization_network"]
+            vec![Network::Metrics, Network::Visualization]
         );
     }
 
     #[test]
     fn it_should_compute_grafana_networks_without_caddy() {
         use crate::domain::grafana::GrafanaConfig;
+        use crate::domain::topology::Network;
 
         let tracker = test_tracker_config();
         let grafana_config =
@@ -341,13 +345,14 @@ mod tests {
             .build();
 
         let grafana = context.grafana().unwrap();
-        assert_eq!(grafana.networks, vec!["visualization_network"]);
+        assert_eq!(grafana.networks, vec![Network::Visualization]);
         assert!(!grafana.has_tls);
     }
 
     #[test]
     fn it_should_compute_grafana_networks_with_caddy() {
         use crate::domain::grafana::GrafanaConfig;
+        use crate::domain::topology::Network;
 
         let tracker = test_tracker_config();
         let grafana_config =
@@ -360,7 +365,7 @@ mod tests {
         let grafana = context.grafana().unwrap();
         assert_eq!(
             grafana.networks,
-            vec!["visualization_network", "proxy_network"]
+            vec![Network::Visualization, Network::Proxy]
         );
     }
 }

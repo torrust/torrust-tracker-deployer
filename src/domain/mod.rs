@@ -12,6 +12,7 @@
 //! - `profile_name` - LXD profile name validation and management
 //! - `provider` - Infrastructure provider types (LXD, Hetzner) and configuration
 //! - `template` - Core template domain models and business logic
+//! - `topology` - Docker Compose topology domain types (networks, services)
 
 pub mod environment;
 pub mod grafana;
@@ -21,6 +22,7 @@ pub mod profile_name;
 pub mod prometheus;
 pub mod provider;
 pub mod template;
+pub mod topology;
 pub mod tracker;
 
 // Re-export commonly used domain types for convenience
@@ -33,3 +35,4 @@ pub use instance_name::{InstanceName, InstanceNameError};
 pub use profile_name::{ProfileName, ProfileNameError};
 pub use provider::{HetznerConfig, LxdConfig, Provider, ProviderConfig};
 pub use template::{TemplateEngine, TemplateEngineError, TemplateManager, TemplateManagerError};
+pub use topology::Network;
