@@ -194,6 +194,7 @@ services:
 
 networks:
 {%- for net in required_networks %}
+  # {{ net.description }}
   {{ net.name }}:
     driver: {{ net.driver }}
 {%- endfor %}

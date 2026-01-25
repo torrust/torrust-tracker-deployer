@@ -126,6 +126,29 @@ impl Network {
         "bridge"
     }
 
+    /// Returns a short description of the network's purpose
+    ///
+    /// This description is rendered as a comment in docker-compose.yml
+    /// to help system administrators understand each network's role.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::topology::Network;
+    ///
+    /// assert_eq!(Network::Database.description(), "Database isolation: Tracker ↔ MySQL");
+    /// assert_eq!(Network::Metrics.description(), "Metrics scraping: Tracker ↔ Prometheus");
+    /// ```
+    #[must_use]
+    pub fn description(&self) -> &'static str {
+        match self {
+            Network::Database => "Database isolation: Tracker ↔ MySQL",
+            Network::Metrics => "Metrics scraping: Tracker ↔ Prometheus",
+            Network::Visualization => "Dashboard queries: Prometheus ↔ Grafana",
+            Network::Proxy => "TLS termination: Caddy ↔ backend services",
+        }
+    }
+
     /// Returns all network variants
     ///
     /// Useful for iteration when generating the global networks section
@@ -326,5 +349,41 @@ mod tests {
         assert_eq!(set.len(), 2);
         assert!(set.contains(&Network::Database));
         assert!(set.contains(&Network::Metrics));
+    }
+
+    // ==========================================================================
+    // Description tests
+    // ==========================================================================
+
+    #[test]
+    fn it_should_return_description_for_database_network() {
+        assert_eq!(
+            Network::Database.description(),
+            "Database isolation: Tracker ↔ MySQL"
+        );
+    }
+
+    #[test]
+    fn it_should_return_description_for_metrics_network() {
+        assert_eq!(
+            Network::Metrics.description(),
+            "Metrics scraping: Tracker ↔ Prometheus"
+        );
+    }
+
+    #[test]
+    fn it_should_return_description_for_visualization_network() {
+        assert_eq!(
+            Network::Visualization.description(),
+            "Dashboard queries: Prometheus ↔ Grafana"
+        );
+    }
+
+    #[test]
+    fn it_should_return_description_for_proxy_network() {
+        assert_eq!(
+            Network::Proxy.description(),
+            "TLS termination: Caddy ↔ backend services"
+        );
     }
 }

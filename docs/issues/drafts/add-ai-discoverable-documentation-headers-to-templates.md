@@ -149,6 +149,37 @@ This would require passing the version to the template context.
 - [Template System Architecture](../../docs/contributing/templates/template-system-architecture.md)
 - [Tera Template Guide](../../docs/contributing/templates/tera.md)
 
+## Already Implemented: Inline Network Descriptions
+
+As a first step toward self-documenting rendered files, we've implemented inline network descriptions in docker-compose.yml. The `Network` enum now has a `description()` method that provides short purpose strings for each network type:
+
+| Network       | Description                                 |
+| ------------- | ------------------------------------------- |
+| Database      | `Database isolation: Tracker ↔ MySQL`       |
+| Metrics       | `Metrics scraping: Tracker ↔ Prometheus`    |
+| Visualization | `Dashboard queries: Prometheus ↔ Grafana`   |
+| Proxy         | `TLS termination: Caddy ↔ backend services` |
+
+These descriptions are rendered as YAML comments in the generated docker-compose.yml:
+
+```yaml
+networks:
+  # Database isolation: Tracker ↔ MySQL
+  db_network:
+    driver: bridge
+  # Metrics scraping: Tracker ↔ Prometheus
+  metrics_network:
+    driver: bridge
+```
+
+**Implementation details:**
+
+- `src/domain/topology/network.rs` - `Network::description()` method
+- `context/network_definition.rs` - `NetworkDefinition.description` field
+- `templates/docker-compose/docker-compose.yml.tera` - Renders `# {{ net.description }}`
+
+This pattern can be extended to other configuration elements (services, volumes, etc.) as we implement the full documentation headers.
+
 ## Open Questions
 
 1. Should we include the deployer version in the header?

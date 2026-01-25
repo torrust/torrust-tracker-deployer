@@ -21,6 +21,7 @@ use crate::domain::topology::Network;
 /// let definition = NetworkDefinition::from(Network::Database);
 /// assert_eq!(definition.name(), "database_network");
 /// assert_eq!(definition.driver(), "bridge");
+/// assert_eq!(definition.description(), "Database isolation: Tracker ↔ MySQL");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct NetworkDefinition {
@@ -28,6 +29,8 @@ pub struct NetworkDefinition {
     name: String,
     /// The Docker network driver (e.g., "bridge")
     driver: String,
+    /// A short description of the network's purpose (rendered as comment)
+    description: String,
 }
 
 impl NetworkDefinition {
@@ -42,6 +45,12 @@ impl NetworkDefinition {
     pub fn driver(&self) -> &str {
         &self.driver
     }
+
+    /// Returns the network description
+    #[must_use]
+    pub fn description(&self) -> &str {
+        &self.description
+    }
 }
 
 impl From<Network> for NetworkDefinition {
@@ -49,6 +58,7 @@ impl From<Network> for NetworkDefinition {
         Self {
             name: network.name().to_string(),
             driver: network.driver().to_string(),
+            description: network.description().to_string(),
         }
     }
 }
@@ -63,6 +73,10 @@ mod tests {
 
         assert_eq!(definition.name(), "database_network");
         assert_eq!(definition.driver(), "bridge");
+        assert_eq!(
+            definition.description(),
+            "Database isolation: Tracker ↔ MySQL"
+        );
     }
 
     #[test]
@@ -71,6 +85,10 @@ mod tests {
 
         assert_eq!(definition.name(), "metrics_network");
         assert_eq!(definition.driver(), "bridge");
+        assert_eq!(
+            definition.description(),
+            "Metrics scraping: Tracker ↔ Prometheus"
+        );
     }
 
     #[test]
@@ -79,6 +97,10 @@ mod tests {
 
         assert_eq!(definition.name(), "visualization_network");
         assert_eq!(definition.driver(), "bridge");
+        assert_eq!(
+            definition.description(),
+            "Dashboard queries: Prometheus ↔ Grafana"
+        );
     }
 
     #[test]
@@ -87,6 +109,10 @@ mod tests {
 
         assert_eq!(definition.name(), "proxy_network");
         assert_eq!(definition.driver(), "bridge");
+        assert_eq!(
+            definition.description(),
+            "TLS termination: Caddy ↔ backend services"
+        );
     }
 
     #[test]
@@ -96,5 +122,6 @@ mod tests {
         let json = serde_json::to_string(&definition).unwrap();
         assert!(json.contains("\"name\":\"database_network\""));
         assert!(json.contains("\"driver\":\"bridge\""));
+        assert!(json.contains("\"description\":"));
     }
 }
