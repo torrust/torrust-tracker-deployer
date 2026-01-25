@@ -214,21 +214,11 @@ services:
 #
 # See ADR: docs/decisions/docker-ufw-firewall-security-strategy.md
 # See Analysis: docs/analysis/security/docker-network-segmentation-analysis.md
+{%- if required_networks | length > 0 %}
 
 networks:
-{%- if mysql %}
-  database_network:
-    driver: bridge
-{%- endif %}
-{%- if prometheus %}
-  metrics_network:
-    driver: bridge
-{%- endif %}
-{%- if grafana %}
-  visualization_network:
-    driver: bridge
-{%- endif %}
-{%- if caddy %}
-  proxy_network:
-    driver: bridge
+{%- for net in required_networks %}
+  {{ net.name }}:
+    driver: {{ net.driver }}
+{%- endfor %}
 {%- endif %}

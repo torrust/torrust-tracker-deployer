@@ -35,4 +35,4 @@ pub use instance_name::{InstanceName, InstanceNameError};
 pub use profile_name::{ProfileName, ProfileNameError};
 pub use provider::{HetznerConfig, LxdConfig, Provider, ProviderConfig};
 pub use template::{TemplateEngine, TemplateEngineError, TemplateManager, TemplateManagerError};
-pub use topology::Network;
+pub use topology::{DockerComposeTopology, Network, Service, ServiceTopology};
