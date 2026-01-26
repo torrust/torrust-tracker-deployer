@@ -22,6 +22,7 @@
 //! ## Module Organization
 //!
 //! - `handler.rs` - Core handler with `execute()`, state transitions, workflow orchestration
+//! - `workflow.rs` - Release workflow orchestration (step coordination)
 //! - `errors.rs` - Error types for release operations
 //! - `steps/` - Service-specific step implementations (tracker, prometheus, etc.)
 //!
@@ -47,6 +48,7 @@
 pub mod errors;
 pub mod handler;
 mod steps;
+mod workflow;
 
 #[cfg(test)]
 mod tests;

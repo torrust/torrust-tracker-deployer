@@ -1,13 +1,11 @@
 //! Release command handler implementation
 
-use std::net::IpAddr;
 use std::sync::Arc;
 
 use tracing::{error, info, instrument};
 
 use super::errors::ReleaseCommandHandlerError;
-use super::steps;
-use crate::application::command_handlers::common::StepResult;
+use super::workflow;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ReleaseFailureContext, ReleaseStep};
 use crate::domain::environment::{Configured, Environment, Released, Releasing};
@@ -120,10 +118,7 @@ impl ReleaseCommandHandler {
             "Releasing state persisted. Executing release steps."
         );
 
-        match self
-            .execute_release_workflow(&releasing_env, instance_ip)
-            .await
-        {
+        match workflow::execute(&releasing_env, instance_ip).await {
             Ok(released) => {
                 info!(
                     command = "release",
@@ -154,56 +149,6 @@ impl ReleaseCommandHandler {
                 Err(e)
             }
         }
-    }
-
-    /// Execute the release workflow with step tracking
-    ///
-    /// This method orchestrates the complete release workflow, organized by service:
-    ///
-    /// 1. **Tracker**: Storage creation, database init, config rendering, deployment
-    /// 2. **Prometheus**: Storage creation, config rendering, deployment (if enabled)
-    /// 3. **Grafana**: Storage creation, provisioning rendering, deployment (if enabled)
-    /// 4. **`MySQL`**: Storage creation (if enabled)
-    /// 5. **Caddy**: Config rendering, deployment (if HTTPS enabled)
-    /// 6. **Docker Compose**: Template rendering, deployment
-    ///
-    /// If an error occurs, it returns both the error and the step that was being
-    /// executed, enabling accurate failure context generation.
-    ///
-    /// # Arguments
-    ///
-    /// * `environment` - The environment in Releasing state
-    /// * `instance_ip` - The validated instance IP address (used for Docker Compose deployment logging)
-    ///
-    /// # Errors
-    ///
-    /// Returns a tuple of (error, `current_step`) if any release step fails
-    async fn execute_release_workflow(
-        &self,
-        environment: &Environment<Releasing>,
-        instance_ip: IpAddr,
-    ) -> StepResult<Environment<Released>, ReleaseCommandHandlerError, ReleaseStep> {
-        // Tracker service steps
-        steps::tracker::release(environment)?;
-
-        // Prometheus service steps (if enabled)
-        steps::prometheus::release(environment)?;
-
-        // Grafana service steps (if enabled)
-        steps::grafana::release(environment)?;
-
-        // MySQL service steps (if enabled)
-        steps::mysql::release(environment)?;
-
-        // Caddy service steps (if HTTPS enabled)
-        steps::caddy::release(environment)?;
-
-        // Docker Compose deployment
-        steps::compose::release(environment, instance_ip).await?;
-
-        let released = environment.clone().released();
-
-        Ok(released)
     }
 
     // =========================================================================
