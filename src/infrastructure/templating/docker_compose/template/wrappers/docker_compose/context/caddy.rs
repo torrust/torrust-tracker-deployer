@@ -16,10 +16,9 @@
 
 use serde::Serialize;
 
-use crate::domain::topology::Network;
+use crate::domain::topology::{caddy_ports, Network};
 
 use super::port_definition::PortDefinition;
-use super::port_derivation::derive_caddy_ports;
 
 /// Caddy reverse proxy service configuration for Docker Compose
 ///
@@ -62,7 +61,7 @@ impl CaddyServiceConfig {
     /// - Port 443/udp: HTTP/3 QUIC
     #[must_use]
     pub fn new() -> Self {
-        let port_bindings = derive_caddy_ports();
+        let port_bindings = caddy_ports();
         let ports = port_bindings.iter().map(PortDefinition::from).collect();
 
         Self {

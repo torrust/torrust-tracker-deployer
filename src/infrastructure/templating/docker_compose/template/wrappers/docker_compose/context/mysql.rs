@@ -17,10 +17,9 @@
 
 use serde::Serialize;
 
-use crate::domain::topology::Network;
+use crate::domain::topology::{mysql_ports, Network};
 
 use super::port_definition::PortDefinition;
-use super::port_derivation::derive_mysql_ports;
 
 /// `MySQL` service configuration for Docker Compose
 ///
@@ -59,7 +58,7 @@ impl MysqlServiceConfig {
     /// `MySQL` never exposes ports externally for security.
     #[must_use]
     pub fn new() -> Self {
-        let port_bindings = derive_mysql_ports();
+        let port_bindings = mysql_ports();
         let ports = port_bindings.iter().map(PortDefinition::from).collect();
 
         Self {

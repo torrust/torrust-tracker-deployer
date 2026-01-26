@@ -26,10 +26,7 @@ pub use grafana::GrafanaServiceConfig;
 pub use mysql::MysqlServiceConfig;
 pub use network_definition::NetworkDefinition;
 pub use port_definition::PortDefinition;
-pub use port_derivation::{
-    derive_caddy_ports, derive_grafana_ports, derive_mysql_ports, derive_prometheus_ports,
-    derive_tracker_ports,
-};
+pub use port_derivation::derive_tracker_ports;
 pub use prometheus::PrometheusServiceConfig;
 pub use tracker::{TrackerPorts, TrackerServiceConfig};
 

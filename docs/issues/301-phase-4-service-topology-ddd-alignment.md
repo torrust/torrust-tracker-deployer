@@ -328,10 +328,10 @@ impl TrackerServiceContext {
 
 ### Step 5: Fixed Port Services (Caddy, MySQL)
 
-- [ ] 5.1 Create `src/domain/topology/fixed_ports.rs` with `caddy_ports()` and `mysql_ports()`
-- [ ] 5.2 Add unit tests for fixed port functions
-- [ ] 5.3 Update infrastructure to use domain fixed port functions
-- [ ] 5.4 Remove `derive_caddy_ports()` and `derive_mysql_ports()` from infrastructure
+- [x] 5.1 Create `src/domain/topology/fixed_ports.rs` with `caddy_ports()` and `mysql_ports()`
+- [x] 5.2 Add unit tests for fixed port functions
+- [x] 5.3 Update infrastructure to use domain fixed port functions
+- [x] 5.4 Remove `derive_caddy_ports()` and `derive_mysql_ports()` from infrastructure
 
 ### Step 6: Network Computation - Domain Topology Builder
 
