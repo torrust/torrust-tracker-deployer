@@ -28,10 +28,10 @@ These are business rules that should be in the domain layer:
 
 ## Goals
 
-- [ ] Move port derivation logic to domain layer using `PortDerivation` trait
+- [x] Move port derivation logic to domain layer using `PortDerivation` trait
 - [ ] Move network computation logic to domain `DockerComposeTopologyBuilder`
 - [ ] Convert infrastructure context types to pure DTOs (no business logic)
-- [ ] Maintain all existing functionality and E2E tests passing
+- [x] Maintain all existing functionality and E2E tests passing
 
 ## 🏗️ Architecture Requirements
 
@@ -324,7 +324,11 @@ impl TrackerServiceContext {
 - [x] 4.1 Implement `PortDerivation` for `TrackerConfig` in domain
 - [x] 4.2 Add unit tests for Tracker port derivation
 - [x] 4.3 Update infrastructure `TrackerServiceConfig` to use domain trait
-- [ ] 4.4 Remove `derive_tracker_ports()` calls from infrastructure
+- [x] 4.4 Remove `derive_tracker_ports()` calls from infrastructure
+- [x] 4.5 Remove `TrackerServiceConfig::new()` - all callers migrated to `from_domain_config()`
+  - Application layer (`docker_compose_templates.rs`) now uses domain `TrackerConfig` directly
+  - All test code updated with domain config helper functions
+  - Deleted `port_derivation.rs` entirely
 
 ### Step 5: Fixed Port Services (Caddy, MySQL)
 
@@ -353,10 +357,10 @@ impl TrackerServiceContext {
 
 ### Step 8: Cleanup and Verification
 
-- [ ] 8.1 Delete `src/infrastructure/.../context/port_derivation.rs`
-- [ ] 8.2 Remove unused imports and dead code
-- [ ] 8.3 Run full E2E test suite
-- [ ] 8.4 Run pre-commit checks: `./scripts/pre-commit.sh`
+- [x] 8.1 Delete `src/infrastructure/.../context/port_derivation.rs`
+- [x] 8.2 Remove unused imports and dead code
+- [x] 8.3 Run full E2E test suite
+- [x] 8.4 Run pre-commit checks: `./scripts/pre-commit.sh`
 
 ## Files Changed
 

@@ -7,7 +7,6 @@ use crate::domain::topology::{Network, PortDerivation};
 use crate::domain::tracker::TrackerConfig;
 
 use super::port_definition::PortDefinition;
-use super::port_derivation::derive_tracker_ports;
 
 /// Tracker service configuration for Docker Compose
 ///
@@ -45,54 +44,6 @@ pub struct TrackerServiceConfig {
 }
 
 impl TrackerServiceConfig {
-    /// Creates a new `TrackerServiceConfig` with pre-computed flags
-    ///
-    /// # Arguments
-    ///
-    /// * `udp_tracker_ports` - UDP tracker ports (always exposed)
-    /// * `http_tracker_ports_without_tls` - HTTP tracker ports that don't have TLS
-    /// * `http_api_port` - The HTTP API port number
-    /// * `http_api_has_tls` - Whether the API uses TLS (Caddy handles it)
-    /// * `has_prometheus` - Whether Prometheus is enabled (adds `metrics_network`)
-    /// * `has_mysql` - Whether `MySQL` is the database driver (adds `database_network`)
-    /// * `has_caddy` - Whether Caddy TLS proxy is enabled (adds `proxy_network`)
-    #[must_use]
-    #[allow(clippy::fn_params_excessive_bools)]
-    pub fn new(
-        udp_tracker_ports: Vec<u16>,
-        http_tracker_ports_without_tls: Vec<u16>,
-        http_api_port: u16,
-        http_api_has_tls: bool,
-        has_prometheus: bool,
-        has_mysql: bool,
-        has_caddy: bool,
-    ) -> Self {
-        let needs_ports_section = !udp_tracker_ports.is_empty()
-            || !http_tracker_ports_without_tls.is_empty()
-            || !http_api_has_tls;
-
-        let networks = Self::compute_networks(has_prometheus, has_mysql, has_caddy);
-
-        // Derive ports using the domain logic
-        let port_bindings = derive_tracker_ports(
-            &udp_tracker_ports,
-            &http_tracker_ports_without_tls,
-            http_api_port,
-            http_api_has_tls,
-        );
-        let ports = port_bindings.iter().map(PortDefinition::from).collect();
-
-        Self {
-            udp_tracker_ports,
-            http_tracker_ports_without_tls,
-            http_api_port,
-            http_api_has_tls,
-            needs_ports_section,
-            ports,
-            networks,
-        }
-    }
-
     /// Creates a new `TrackerServiceConfig` from domain configuration
     ///
     /// Uses the domain `PortDerivation` trait for port derivation logic,
@@ -174,17 +125,139 @@ pub type TrackerPorts = TrackerServiceConfig;
 mod tests {
     use super::*;
 
+    use crate::domain::tracker::{
+        DatabaseConfig as TrackerDatabaseConfig, HealthCheckApiConfig, HttpApiConfig,
+        HttpTrackerConfig, SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+    };
+
+    /// Helper to create a basic domain `TrackerConfig` for network tests
+    fn basic_domain_tracker_config() -> TrackerConfig {
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap()],
+            vec![],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                None,
+                false,
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
+    /// Helper to create a domain `TrackerConfig` with TLS on API
+    fn domain_tracker_config_with_api_tls() -> TrackerConfig {
+        use crate::shared::DomainName;
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap()],
+            vec![],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                Some(DomainName::new("api.example.com").unwrap()),
+                true, // TLS enabled
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
+    /// Helper to create a domain `TrackerConfig` with multiple UDP ports
+    fn domain_tracker_config_with_udp_ports(ports: &[u16]) -> TrackerConfig {
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            ports
+                .iter()
+                .map(|p| {
+                    UdpTrackerConfig::new(format!("0.0.0.0:{p}").parse().unwrap(), None).unwrap()
+                })
+                .collect(),
+            vec![],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                None,
+                false,
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
+    /// Helper to create a domain `TrackerConfig` with HTTP ports (no TLS)
+    fn domain_tracker_config_with_http_ports(ports: &[u16]) -> TrackerConfig {
+        use crate::shared::DomainName;
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![],
+            ports
+                .iter()
+                .map(|p| {
+                    HttpTrackerConfig::new(format!("0.0.0.0:{p}").parse().unwrap(), None, false)
+                        .unwrap()
+                })
+                .collect(),
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                Some(DomainName::new("api.example.com").unwrap()),
+                true, // API has TLS so only HTTP tracker ports are tested
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
+    /// Helper to create a minimal domain `TrackerConfig` (no UDP, no HTTP, API has TLS)
+    fn minimal_domain_tracker_config_with_api_tls() -> TrackerConfig {
+        use crate::shared::DomainName;
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![],
+            vec![],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                Some(DomainName::new("api.example.com").unwrap()),
+                true,
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
     // ==========================================================================
     // Network assignment tests
     // ==========================================================================
 
     #[test]
     fn it_should_connect_tracker_to_metrics_network_when_prometheus_enabled() {
-        let config = TrackerServiceConfig::new(
-            vec![6969],
-            vec![],
-            1212,
-            false,
+        let domain_config = basic_domain_tracker_config();
+        let config = TrackerServiceConfig::from_domain_config(
+            &domain_config,
             true,  // has_prometheus
             false, // has_mysql
             false, // has_caddy
@@ -195,11 +268,9 @@ mod tests {
 
     #[test]
     fn it_should_not_connect_tracker_to_metrics_network_when_prometheus_disabled() {
-        let config = TrackerServiceConfig::new(
-            vec![6969],
-            vec![],
-            1212,
-            false,
+        let domain_config = basic_domain_tracker_config();
+        let config = TrackerServiceConfig::from_domain_config(
+            &domain_config,
             false, // has_prometheus
             false, // has_mysql
             false, // has_caddy
@@ -210,11 +281,9 @@ mod tests {
 
     #[test]
     fn it_should_connect_tracker_to_database_network_when_mysql_enabled() {
-        let config = TrackerServiceConfig::new(
-            vec![6969],
-            vec![],
-            1212,
-            false,
+        let domain_config = basic_domain_tracker_config();
+        let config = TrackerServiceConfig::from_domain_config(
+            &domain_config,
             false, // has_prometheus
             true,  // has_mysql
             false, // has_caddy
@@ -225,11 +294,9 @@ mod tests {
 
     #[test]
     fn it_should_not_connect_tracker_to_database_network_when_mysql_disabled() {
-        let config = TrackerServiceConfig::new(
-            vec![6969],
-            vec![],
-            1212,
-            false,
+        let domain_config = basic_domain_tracker_config();
+        let config = TrackerServiceConfig::from_domain_config(
+            &domain_config,
             false, // has_prometheus
             false, // has_mysql (SQLite)
             false, // has_caddy
@@ -240,11 +307,9 @@ mod tests {
 
     #[test]
     fn it_should_connect_tracker_to_proxy_network_when_caddy_enabled() {
-        let config = TrackerServiceConfig::new(
-            vec![6969],
-            vec![],
-            1212,
-            true,  // http_api_has_tls
+        let domain_config = domain_tracker_config_with_api_tls();
+        let config = TrackerServiceConfig::from_domain_config(
+            &domain_config,
             false, // has_prometheus
             false, // has_mysql
             true,  // has_caddy
@@ -255,11 +320,9 @@ mod tests {
 
     #[test]
     fn it_should_not_connect_tracker_to_proxy_network_when_caddy_disabled() {
-        let config = TrackerServiceConfig::new(
-            vec![6969],
-            vec![],
-            1212,
-            false,
+        let domain_config = basic_domain_tracker_config();
+        let config = TrackerServiceConfig::from_domain_config(
+            &domain_config,
             false, // has_prometheus
             false, // has_mysql
             false, // has_caddy
@@ -270,11 +333,9 @@ mod tests {
 
     #[test]
     fn it_should_connect_tracker_to_all_networks_when_all_services_enabled() {
-        let config = TrackerServiceConfig::new(
-            vec![6969],
-            vec![],
-            1212,
-            true,
+        let domain_config = domain_tracker_config_with_api_tls();
+        let config = TrackerServiceConfig::from_domain_config(
+            &domain_config,
             true, // has_prometheus
             true, // has_mysql
             true, // has_caddy
@@ -288,11 +349,9 @@ mod tests {
 
     #[test]
     fn it_should_have_no_networks_when_minimal_deployment() {
-        let config = TrackerServiceConfig::new(
-            vec![6969],
-            vec![],
-            1212,
-            false,
+        let domain_config = basic_domain_tracker_config();
+        let config = TrackerServiceConfig::from_domain_config(
+            &domain_config,
             false, // has_prometheus
             false, // has_mysql (SQLite)
             false, // has_caddy
@@ -307,11 +366,9 @@ mod tests {
 
     #[test]
     fn it_should_serialize_networks_to_name_strings() {
-        let config = TrackerServiceConfig::new(
-            vec![6969],
-            vec![],
-            1212,
-            true,
+        let domain_config = domain_tracker_config_with_api_tls();
+        let config = TrackerServiceConfig::from_domain_config(
+            &domain_config,
             true,  // has_prometheus
             true,  // has_mysql
             false, // has_caddy
@@ -325,38 +382,32 @@ mod tests {
     }
 
     // ==========================================================================
-    // Port derivation tests
+    // Port derivation tests (testing from_domain_config delegation to domain)
     // ==========================================================================
 
     #[test]
     fn it_should_derive_udp_ports() {
-        let config = TrackerServiceConfig::new(
-            vec![6969, 6970],
-            vec![],
-            1212,
-            true, // TLS enabled, so API port not exposed
-            false,
-            false,
-            false,
-        );
+        let domain_config = domain_tracker_config_with_udp_ports(&[6969, 6970]);
+        let config = TrackerServiceConfig::from_domain_config(&domain_config, false, false, false);
 
-        assert_eq!(config.ports.len(), 2);
-        assert_eq!(config.ports[0].binding(), "6969:6969/udp");
-        assert_eq!(config.ports[1].binding(), "6970:6970/udp");
+        // UDP ports + API port (no TLS) = 3 ports
+        // Filter just UDP ports
+        let udp_ports: Vec<_> = config
+            .ports
+            .iter()
+            .filter(|p| p.binding().ends_with("/udp"))
+            .collect();
+        assert_eq!(udp_ports.len(), 2);
+        assert_eq!(udp_ports[0].binding(), "6969:6969/udp");
+        assert_eq!(udp_ports[1].binding(), "6970:6970/udp");
     }
 
     #[test]
     fn it_should_derive_http_ports_without_tls() {
-        let config = TrackerServiceConfig::new(
-            vec![],
-            vec![7070, 7071],
-            1212,
-            true, // TLS enabled, so API port not exposed
-            false,
-            false,
-            false,
-        );
+        let domain_config = domain_tracker_config_with_http_ports(&[7070, 7071]);
+        let config = TrackerServiceConfig::from_domain_config(&domain_config, false, false, false);
 
+        // HTTP tracker ports only (API has TLS so not exposed)
         assert_eq!(config.ports.len(), 2);
         assert_eq!(config.ports[0].binding(), "7070:7070");
         assert_eq!(config.ports[1].binding(), "7071:7071");
@@ -364,39 +415,28 @@ mod tests {
 
     #[test]
     fn it_should_derive_api_port_when_no_tls() {
-        let config = TrackerServiceConfig::new(
-            vec![],
-            vec![],
-            1212,
-            false, // No TLS, so API port exposed
-            false,
-            false,
-            false,
-        );
+        let domain_config = basic_domain_tracker_config();
+        let config = TrackerServiceConfig::from_domain_config(&domain_config, false, false, false);
 
-        assert_eq!(config.ports.len(), 1);
-        assert_eq!(config.ports[0].binding(), "1212:1212");
+        // UDP port + API port = 2 ports
+        // API port is the second one
+        let api_port = config.ports.iter().find(|p| p.binding() == "1212:1212");
+        assert!(api_port.is_some());
     }
 
     #[test]
     fn it_should_not_derive_api_port_when_tls_enabled() {
-        let config = TrackerServiceConfig::new(
-            vec![],
-            vec![],
-            1212,
-            true, // TLS enabled, so API port not exposed
-            false,
-            false,
-            false,
-        );
+        let domain_config = minimal_domain_tracker_config_with_api_tls();
+        let config = TrackerServiceConfig::from_domain_config(&domain_config, false, false, false);
 
+        // No UDP, no HTTP without TLS, API has TLS = no ports
         assert!(config.ports.is_empty());
     }
 
     #[test]
     fn it_should_serialize_ports_with_binding_and_description() {
-        let config =
-            TrackerServiceConfig::new(vec![6969], vec![], 1212, false, false, false, false);
+        let domain_config = basic_domain_tracker_config();
+        let config = TrackerServiceConfig::from_domain_config(&domain_config, false, false, false);
 
         let json = serde_json::to_value(&config).expect("serialization should succeed");
 

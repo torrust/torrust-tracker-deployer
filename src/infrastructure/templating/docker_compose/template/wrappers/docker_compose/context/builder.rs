@@ -370,18 +370,73 @@ impl std::error::Error for PortConflictError {}
 mod tests {
     use super::*;
     use crate::domain::prometheus::PrometheusConfig;
+    use crate::domain::tracker::{
+        DatabaseConfig as TrackerDatabaseConfig, HealthCheckApiConfig, HttpApiConfig,
+        HttpTrackerConfig, SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+    };
+
+    /// Helper to create a minimal domain tracker config with TLS (API not exposed)
+    fn minimal_domain_tracker_config() -> TrackerConfig {
+        use crate::shared::DomainName;
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![], // No UDP trackers
+            vec![], // No HTTP trackers
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                Some(DomainName::new("api.example.com").unwrap()),
+                true, // TLS enabled
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
+    /// Helper to create a domain tracker config with specific UDP and HTTP ports
+    fn domain_tracker_config_with_ports(
+        udp_ports: Vec<u16>,
+        http_ports: Vec<u16>,
+    ) -> TrackerConfig {
+        use crate::shared::DomainName;
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            udp_ports
+                .into_iter()
+                .map(|p| {
+                    UdpTrackerConfig::new(format!("0.0.0.0:{p}").parse().unwrap(), None).unwrap()
+                })
+                .collect(),
+            http_ports
+                .into_iter()
+                .map(|p| {
+                    HttpTrackerConfig::new(format!("0.0.0.0:{p}").parse().unwrap(), None, false)
+                        .unwrap()
+                })
+                .collect(),
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                Some(DomainName::new("api.example.com").unwrap()),
+                true, // TLS enabled
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
 
     /// Helper to create a minimal tracker config
     fn minimal_tracker_config() -> TrackerServiceConfig {
-        TrackerServiceConfig::new(
-            vec![], // No UDP ports
-            vec![], // No HTTP ports
-            1212,   // API port
-            true,   // TLS enabled (so API port not exposed)
-            false,  // No Prometheus
-            false,  // No MySQL
-            false,  // No Caddy
-        )
+        let domain_config = minimal_domain_tracker_config();
+        TrackerServiceConfig::from_domain_config(&domain_config, false, false, false)
     }
 
     /// Helper to create a tracker config that exposes specific ports
@@ -389,10 +444,8 @@ mod tests {
         udp_ports: Vec<u16>,
         http_ports: Vec<u16>,
     ) -> TrackerServiceConfig {
-        TrackerServiceConfig::new(
-            udp_ports, http_ports, 1212, true, // TLS enabled
-            false, false, false,
-        )
+        let domain_config = domain_tracker_config_with_ports(udp_ports, http_ports);
+        TrackerServiceConfig::from_domain_config(&domain_config, false, false, false)
     }
 
     // ==========================================================================

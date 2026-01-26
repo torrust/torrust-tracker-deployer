@@ -7,7 +7,7 @@
 //! ## Services
 //!
 //! - **Caddy**: Always exposes 80, 443, and 443/udp for TLS termination
-//! - **MySQL**: Never exposes ports (internal-only database access)
+//! - **`MySQL`**: Never exposes ports (internal-only database access)
 //!
 //! ## Port Rules Reference
 //!
@@ -46,11 +46,11 @@ pub fn caddy_ports() -> Vec<PortBinding> {
     ]
 }
 
-/// Derives port bindings for the MySQL database service
+/// Derives port bindings for the `MySQL` database service
 ///
-/// Implements PORT-11: MySQL has no exposed ports
+/// Implements PORT-11: `MySQL` has no exposed ports
 ///
-/// MySQL is accessed only via Docker network by the tracker service.
+/// `MySQL` is accessed only via Docker network by the tracker service.
 /// It should never be exposed to the host network for security reasons.
 ///
 /// # Examples

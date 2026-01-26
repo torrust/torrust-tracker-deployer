@@ -29,10 +29,9 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
-use crate::domain::environment::user_inputs::UserInputs;
 use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
-use crate::domain::tracker::{DatabaseConfig, TrackerConfig};
+use crate::domain::tracker::DatabaseConfig;
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
     DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerServiceConfig,
 };
@@ -157,10 +156,6 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
     fn build_tracker_config(&self) -> TrackerServiceConfig {
         let tracker_config = self.environment.tracker_config();
-        let user_inputs = &self.environment.context().user_inputs;
-
-        let (udp_tracker_ports, http_tracker_ports_without_tls, http_api_port, http_api_has_tls) =
-            Self::extract_tracker_ports(tracker_config, user_inputs);
 
         // Determine which features are enabled (affects tracker networks)
         let has_prometheus = self.environment.prometheus_config().is_some();
@@ -170,11 +165,8 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         );
         let has_caddy = self.has_caddy_enabled();
 
-        TrackerServiceConfig::new(
-            udp_tracker_ports,
-            http_tracker_ports_without_tls,
-            http_api_port,
-            http_api_has_tls,
+        TrackerServiceConfig::from_domain_config(
+            tracker_config,
             has_prometheus,
             has_mysql,
             has_caddy,
@@ -311,47 +303,6 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         } else {
             env_context
         }
-    }
-
-    fn extract_tracker_ports(
-        tracker_config: &TrackerConfig,
-        user_inputs: &UserInputs,
-    ) -> (Vec<u16>, Vec<u16>, u16, bool) {
-        // Extract UDP tracker ports (always exposed - no TLS termination via Caddy)
-        let udp_ports: Vec<u16> = tracker_config
-            .udp_trackers()
-            .iter()
-            .map(|tracker| tracker.bind_address().port())
-            .collect();
-
-        // Get the set of HTTP tracker ports that have TLS enabled
-        let tls_enabled_ports: std::collections::HashSet<u16> = user_inputs
-            .tracker()
-            .http_trackers_with_tls()
-            .iter()
-            .map(|(_, port)| *port)
-            .collect();
-
-        // Extract HTTP tracker ports WITHOUT TLS (these need to be exposed)
-        let http_ports_without_tls: Vec<u16> = tracker_config
-            .http_trackers()
-            .iter()
-            .map(|tracker| tracker.bind_address().port())
-            .filter(|port| !tls_enabled_ports.contains(port))
-            .collect();
-
-        // Extract HTTP API port
-        let api_port = tracker_config.http_api().bind_address().port();
-
-        // Check if HTTP API has TLS enabled
-        let http_api_has_tls = user_inputs.tracker().http_api_tls_domain().is_some();
-
-        (
-            udp_ports,
-            http_ports_without_tls,
-            api_port,
-            http_api_has_tls,
-        )
     }
 }
 

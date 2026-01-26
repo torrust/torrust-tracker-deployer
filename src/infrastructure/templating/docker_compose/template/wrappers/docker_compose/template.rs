@@ -84,16 +84,43 @@ mod tests {
     use super::super::context::{MysqlSetupConfig, TrackerServiceConfig};
     use super::*;
 
+    use crate::domain::tracker::{
+        DatabaseConfig as TrackerDatabaseConfig, HealthCheckApiConfig, HttpApiConfig,
+        HttpTrackerConfig, SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+    };
+
+    /// Helper to create a domain `TrackerConfig` for tests
+    fn test_domain_tracker_config() -> TrackerConfig {
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![
+                UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).unwrap(),
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap(),
+            ],
+            vec![HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).unwrap()],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                None,
+                false,
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
     /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
     fn test_tracker_config() -> TrackerServiceConfig {
-        TrackerServiceConfig::new(
-            vec![6868, 6969], // UDP ports
-            vec![7070],       // HTTP ports without TLS
-            1212,             // API port
-            false,            // API has no TLS
-            false,            // has_prometheus
-            false,            // has_mysql
-            false,            // has_caddy
+        let domain_config = test_domain_tracker_config();
+        TrackerServiceConfig::from_domain_config(
+            &domain_config,
+            false, // has_prometheus
+            false, // has_mysql
+            false, // has_caddy
         )
     }
 
