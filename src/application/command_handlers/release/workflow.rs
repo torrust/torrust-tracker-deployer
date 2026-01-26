@@ -3,8 +3,6 @@
 //! This module orchestrates the complete release workflow by coordinating
 //! all service-specific release steps in the correct order.
 
-use std::net::IpAddr;
-
 use super::errors::ReleaseCommandHandlerError;
 use super::steps::{caddy, compose, grafana, mysql, prometheus, tracker};
 use crate::application::command_handlers::common::StepResult;
@@ -22,14 +20,13 @@ use crate::domain::environment::{Environment, Released, Releasing};
 /// Returns a tuple of (error, `current_step`) if any release step fails
 pub async fn execute(
     environment: &Environment<Releasing>,
-    instance_ip: IpAddr,
 ) -> StepResult<Environment<Released>, ReleaseCommandHandlerError, ReleaseStep> {
     tracker::release(environment)?;
     prometheus::release(environment)?;
     grafana::release(environment)?;
     mysql::release(environment)?;
     caddy::release(environment)?;
-    compose::release(environment, instance_ip).await?;
+    compose::release(environment).await?;
 
     Ok(environment.clone().released())
 }

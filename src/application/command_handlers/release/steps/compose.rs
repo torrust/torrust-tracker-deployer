@@ -4,7 +4,6 @@
 //! - Template rendering
 //! - Compose files deployment to remote
 
-use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -29,10 +28,9 @@ use crate::domain::template::TemplateManager;
 /// Returns a tuple of (error, step) if any Docker Compose step fails
 pub async fn release(
     environment: &Environment<Releasing>,
-    instance_ip: IpAddr,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let compose_build_dir = render_templates(environment).await?;
-    deploy_files_to_remote(environment, &compose_build_dir, instance_ip)?;
+    deploy_files_to_remote(environment, &compose_build_dir)?;
     Ok(())
 }
 
@@ -78,7 +76,6 @@ async fn render_templates(
 ///
 /// * `environment` - The environment in Releasing state
 /// * `compose_build_dir` - Path to the rendered compose files
-/// * `instance_ip` - The target instance IP address
 ///
 /// # Errors
 ///
@@ -87,7 +84,6 @@ async fn render_templates(
 fn deploy_files_to_remote(
     environment: &Environment<Releasing>,
     compose_build_dir: &Path,
-    instance_ip: IpAddr,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::DeployComposeFilesToRemote;
 
@@ -107,7 +103,7 @@ fn deploy_files_to_remote(
     info!(
         command = "release",
         compose_build_dir = %compose_build_dir.display(),
-        instance_ip = %instance_ip,
+        instance_ip = ?environment.instance_ip(),
         "Compose files deployed to remote host successfully"
     );
 

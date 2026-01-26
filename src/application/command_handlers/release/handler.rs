@@ -90,6 +90,7 @@ impl ReleaseCommandHandler {
     ) -> Result<Environment<Released>, ReleaseCommandHandlerError> {
         let environment = self.load_configured_environment(env_name)?;
 
+        // Validate instance IP exists before proceeding (fail early)
         let instance_ip = environment.instance_ip().ok_or_else(|| {
             ReleaseCommandHandlerError::MissingInstanceIp {
                 name: env_name.to_string(),
@@ -118,7 +119,7 @@ impl ReleaseCommandHandler {
             "Releasing state persisted. Executing release steps."
         );
 
-        match workflow::execute(&releasing_env, instance_ip).await {
+        match workflow::execute(&releasing_env).await {
             Ok(released) => {
                 info!(
                     command = "release",
