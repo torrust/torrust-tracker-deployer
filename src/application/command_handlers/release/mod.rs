@@ -19,6 +19,12 @@
 //! - **Explicit State Transitions**: Type-safe state machine for environment lifecycle
 //! - **Explicit Errors**: All errors implement `.help()` with actionable guidance
 //!
+//! ## Module Organization
+//!
+//! - `handler.rs` - Core handler with `execute()`, state transitions, workflow orchestration
+//! - `errors.rs` - Error types for release operations
+//! - `steps/` - Service-specific step implementations (tracker, prometheus, etc.)
+//!
 //! ## Release Workflow
 //!
 //! The command handler orchestrates a multi-step workflow:
@@ -40,6 +46,7 @@
 
 pub mod errors;
 pub mod handler;
+mod steps;
 
 #[cfg(test)]
 mod tests;
