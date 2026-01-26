@@ -187,7 +187,7 @@ impl ReleaseCommandHandler {
     /// # Arguments
     ///
     /// * `environment` - The environment in Releasing state
-    /// * `instance_ip` - The validated instance IP address (precondition checked by caller)
+    /// * `instance_ip` - The validated instance IP address (used for Docker Compose deployment logging)
     ///
     /// # Errors
     ///
@@ -198,19 +198,19 @@ impl ReleaseCommandHandler {
         instance_ip: IpAddr,
     ) -> StepResult<Environment<Released>, ReleaseCommandHandlerError, ReleaseStep> {
         // Tracker service steps
-        self.release_tracker_service(environment, instance_ip)?;
+        self.release_tracker_service(environment)?;
 
         // Prometheus service steps (if enabled)
-        self.release_prometheus_service(environment, instance_ip)?;
+        self.release_prometheus_service(environment)?;
 
         // Grafana service steps (if enabled)
-        self.release_grafana_service(environment, instance_ip)?;
+        self.release_grafana_service(environment)?;
 
         // MySQL service steps (if enabled)
-        Self::release_mysql_service(environment, instance_ip)?;
+        Self::release_mysql_service(environment)?;
 
         // Caddy service steps (if HTTPS enabled)
-        self.release_caddy_service(environment, instance_ip)?;
+        self.release_caddy_service(environment)?;
 
         // Docker Compose deployment
         self.release_docker_compose(environment, instance_ip)
@@ -240,12 +240,11 @@ impl ReleaseCommandHandler {
     fn release_tracker_service(
         &self,
         environment: &Environment<Releasing>,
-        instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
-        Self::create_tracker_storage(environment, instance_ip)?;
-        Self::init_tracker_database(environment, instance_ip)?;
+        Self::create_tracker_storage(environment)?;
+        Self::init_tracker_database(environment)?;
         let tracker_build_dir = Self::render_tracker_templates(environment)?;
-        self.deploy_tracker_config_to_remote(environment, &tracker_build_dir, instance_ip)?;
+        self.deploy_tracker_config_to_remote(environment, &tracker_build_dir)?;
         Ok(())
     }
 
@@ -265,11 +264,10 @@ impl ReleaseCommandHandler {
     fn release_prometheus_service(
         &self,
         environment: &Environment<Releasing>,
-        instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
-        Self::create_prometheus_storage(environment, instance_ip)?;
+        Self::create_prometheus_storage(environment)?;
         Self::render_prometheus_templates(environment)?;
-        self.deploy_prometheus_config_to_remote(environment, instance_ip)?;
+        self.deploy_prometheus_config_to_remote(environment)?;
         Ok(())
     }
 
@@ -289,11 +287,10 @@ impl ReleaseCommandHandler {
     fn release_grafana_service(
         &self,
         environment: &Environment<Releasing>,
-        instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
-        Self::create_grafana_storage(environment, instance_ip)?;
+        Self::create_grafana_storage(environment)?;
         Self::render_grafana_templates(environment)?;
-        self.deploy_grafana_provisioning_to_remote(environment, instance_ip)?;
+        self.deploy_grafana_provisioning_to_remote(environment)?;
         Ok(())
     }
 
@@ -310,9 +307,8 @@ impl ReleaseCommandHandler {
     #[allow(clippy::result_large_err)]
     fn release_mysql_service(
         environment: &Environment<Releasing>,
-        instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
-        Self::create_mysql_storage(environment, instance_ip)?;
+        Self::create_mysql_storage(environment)?;
         Ok(())
     }
 
@@ -331,10 +327,9 @@ impl ReleaseCommandHandler {
     fn release_caddy_service(
         &self,
         environment: &Environment<Releasing>,
-        instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         Self::render_caddy_templates(environment)?;
-        self.deploy_caddy_config_to_remote(environment, instance_ip)?;
+        self.deploy_caddy_config_to_remote(environment)?;
         Ok(())
     }
 
@@ -376,7 +371,6 @@ impl ReleaseCommandHandler {
     #[allow(clippy::result_large_err)]
     fn create_tracker_storage(
         environment: &Environment<Releasing>,
-        _instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::CreateTrackerStorage;
 
@@ -406,7 +400,6 @@ impl ReleaseCommandHandler {
     #[allow(clippy::result_large_err)]
     fn init_tracker_database(
         environment: &Environment<Releasing>,
-        _instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::InitTrackerDatabase;
 
@@ -521,7 +514,6 @@ impl ReleaseCommandHandler {
     #[allow(clippy::result_large_err)]
     fn create_prometheus_storage(
         environment: &Environment<Releasing>,
-        _instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::CreatePrometheusStorage;
 
@@ -565,7 +557,6 @@ impl ReleaseCommandHandler {
     #[allow(clippy::result_large_err)]
     fn create_grafana_storage(
         environment: &Environment<Releasing>,
-        _instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::CreateGrafanaStorage;
 
@@ -609,7 +600,6 @@ impl ReleaseCommandHandler {
     #[allow(clippy::result_large_err)]
     fn create_mysql_storage(
         environment: &Environment<Releasing>,
-        _instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::CreateMysqlStorage;
 
@@ -650,7 +640,6 @@ impl ReleaseCommandHandler {
     /// # Arguments
     ///
     /// * `environment` - The environment in Releasing state
-    /// * `instance_ip` - The target instance IP address
     ///
     /// # Errors
     ///
@@ -659,7 +648,6 @@ impl ReleaseCommandHandler {
     fn deploy_prometheus_config_to_remote(
         &self,
         environment: &Environment<Releasing>,
-        _instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::DeployPrometheusConfigToRemote;
 
@@ -811,7 +799,6 @@ impl ReleaseCommandHandler {
     fn deploy_caddy_config_to_remote(
         &self,
         environment: &Environment<Releasing>,
-        _instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::DeployCaddyConfigToRemote;
 
@@ -856,7 +843,6 @@ impl ReleaseCommandHandler {
     fn deploy_grafana_provisioning_to_remote(
         &self,
         environment: &Environment<Releasing>,
-        _instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::DeployGrafanaProvisioning;
 
@@ -906,7 +892,6 @@ impl ReleaseCommandHandler {
     ///
     /// * `environment` - The environment in Releasing state
     /// * `tracker_build_dir` - Path to the rendered tracker configuration
-    /// * `instance_ip` - The target instance IP address
     ///
     /// # Errors
     ///
@@ -916,7 +901,6 @@ impl ReleaseCommandHandler {
         &self,
         environment: &Environment<Releasing>,
         tracker_build_dir: &Path,
-        _instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::DeployTrackerConfigToRemote;
 
