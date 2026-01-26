@@ -256,7 +256,6 @@ impl DockerComposeTopology {
 }
 
 #[cfg(test)]
-#[allow(clippy::large_stack_arrays)] // False positive with vec![] macro for ServiceTopology items
 mod tests {
     use super::*;
 
