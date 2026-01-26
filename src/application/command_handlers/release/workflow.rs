@@ -6,29 +6,16 @@
 use std::net::IpAddr;
 
 use super::errors::ReleaseCommandHandlerError;
-use super::steps;
+use super::steps::{caddy, compose, grafana, mysql, prometheus, tracker};
 use crate::application::command_handlers::common::StepResult;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Released, Releasing};
 
-/// Execute the release workflow with step tracking
+/// Execute the release workflow
 ///
-/// This function orchestrates the complete release workflow, organized by service:
-///
-/// 1. **Tracker**: Storage creation, database init, config rendering, deployment
-/// 2. **Prometheus**: Storage creation, config rendering, deployment (if enabled)
-/// 3. **Grafana**: Storage creation, provisioning rendering, deployment (if enabled)
-/// 4. **`MySQL`**: Storage creation (if enabled)
-/// 5. **Caddy**: Config rendering, deployment (if HTTPS enabled)
-/// 6. **Docker Compose**: Template rendering, deployment
-///
-/// If an error occurs, it returns both the error and the step that was being
-/// executed, enabling accurate failure context generation.
-///
-/// # Arguments
-///
-/// * `environment` - The environment in Releasing state
-/// * `instance_ip` - The validated instance IP address (used for Docker Compose deployment logging)
+/// Orchestrates the complete release workflow by calling each service's
+/// release steps in the correct order. Each service module handles its
+/// own conditional logic (e.g., skipping if not enabled).
 ///
 /// # Errors
 ///
@@ -37,25 +24,12 @@ pub async fn execute(
     environment: &Environment<Releasing>,
     instance_ip: IpAddr,
 ) -> StepResult<Environment<Released>, ReleaseCommandHandlerError, ReleaseStep> {
-    // Tracker service steps
-    steps::tracker::release(environment)?;
+    tracker::release(environment)?;
+    prometheus::release(environment)?;
+    grafana::release(environment)?;
+    mysql::release(environment)?;
+    caddy::release(environment)?;
+    compose::release(environment, instance_ip).await?;
 
-    // Prometheus service steps (if enabled)
-    steps::prometheus::release(environment)?;
-
-    // Grafana service steps (if enabled)
-    steps::grafana::release(environment)?;
-
-    // MySQL service steps (if enabled)
-    steps::mysql::release(environment)?;
-
-    // Caddy service steps (if HTTPS enabled)
-    steps::caddy::release(environment)?;
-
-    // Docker Compose deployment
-    steps::compose::release(environment, instance_ip).await?;
-
-    let released = environment.clone().released();
-
-    Ok(released)
+    Ok(environment.clone().released())
 }
