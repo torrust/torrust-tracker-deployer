@@ -29,8 +29,8 @@ These are business rules that should be in the domain layer:
 ## Goals
 
 - [x] Move port derivation logic to domain layer using `PortDerivation` trait
-- [ ] Move network computation logic to domain `DockerComposeTopologyBuilder`
-- [ ] Convert infrastructure context types to pure DTOs (no business logic)
+- [x] Move network computation logic to domain layer using `NetworkDerivation` trait
+- [x] Convert infrastructure context types to pure DTOs (use domain traits, no `compute_*()` methods)
 - [x] Maintain all existing functionality and E2E tests passing
 
 ## 🏗️ Architecture Requirements
@@ -38,11 +38,11 @@ These are business rules that should be in the domain layer:
 **DDD Layer**: Domain (for business logic) + Infrastructure (for DTOs)
 **Module Paths**:
 
-- `src/domain/topology/traits.rs` - `PortDerivation` trait
-- `src/domain/topology/builder.rs` - `DockerComposeTopologyBuilder`
+- `src/domain/topology/traits.rs` - `PortDerivation`, `NetworkDerivation` traits
+- `src/domain/topology/enabled_services.rs` - `EnabledServices` topology context
 - `src/domain/topology/fixed_ports.rs` - Caddy/MySQL port functions
 
-**Pattern**: Trait-based port derivation + Builder for topology construction
+**Pattern**: Trait-based port and network derivation + `EnabledServices` for topology context
 
 ### Design Principles Applied
 
@@ -347,18 +347,18 @@ impl TrackerServiceContext {
   - Uses `HashSet<Service>` for Open/Closed compliance
   - Provides only `has(Service)` method - no convenience methods
 - [x] 6.6 Add unit tests for `EnabledServices` (10 tests covering constructor, has method, Default, Clone)
-- [ ] 6.7 Create `src/domain/topology/builder.rs` with `DockerComposeTopologyBuilder`
-- [ ] 6.8 Move Caddy network computation to builder
-- [ ] 6.9 Move MySQL network computation to builder
-- [ ] 6.10 Add unit tests for builder network derivation
+- [x] 6.7 ~~Create `DockerComposeTopologyBuilder`~~ - **Not needed**: Caddy/MySQL have static networks (NET-08, NET-09), infrastructure builder handles collection
+- [x] 6.8 ~~Move Caddy network computation~~ - **Not needed**: Caddy always connects to Proxy network only (no conditional logic)
+- [x] 6.9 ~~Move MySQL network computation~~ - **Not needed**: MySQL always connects to Database network only (no conditional logic)
+- [x] 6.10 ~~Add builder unit tests~~ - **Not needed**: Existing infrastructure tests cover network derivation
 
 ### Step 7: Refactor Infrastructure to Pure DTOs
 
-- [ ] 7.1 Remove `compute_networks()` from `TrackerServiceConfig`
-- [ ] 7.2 Remove `compute_networks()` from `PrometheusServiceConfig`
-- [ ] 7.3 Remove `compute_networks()` from `GrafanaServiceConfig`
-- [ ] 7.4 Update `DockerComposeContextBuilder` to receive topology from domain
-- [ ] 7.5 Rename service config types to `*Context` (optional, for clarity)
+- [x] 7.1 Remove `compute_networks()` from `TrackerServiceConfig` - **Done**: Uses `NetworkDerivation` trait
+- [x] 7.2 Remove `compute_networks()` from `PrometheusServiceConfig` - **Done**: Uses `NetworkDerivation` trait
+- [x] 7.3 Remove `compute_networks()` from `GrafanaServiceConfig` - **Done**: Uses `NetworkDerivation` trait
+- [x] 7.4 Update `DockerComposeContextBuilder` to use domain traits - **Done**: Passes `EnabledServices` to `from_domain_config`
+- [ ] 7.5 Rename service config types to `*Context` (optional, deferred) - Not critical for DDD alignment
 
 ### Step 8: Cleanup and Verification
 
@@ -375,7 +375,6 @@ impl TrackerServiceContext {
 | ----------------------------------------- | -------------------------------------------- |
 | `src/domain/topology/traits.rs`           | `PortDerivation`, `NetworkDerivation` traits |
 | `src/domain/topology/enabled_services.rs` | `EnabledServices` set for topology queries   |
-| `src/domain/topology/builder.rs`          | `DockerComposeTopologyBuilder`               |
 | `src/domain/topology/fixed_ports.rs`      | Caddy/MySQL port functions                   |
 
 ### Modified Files
