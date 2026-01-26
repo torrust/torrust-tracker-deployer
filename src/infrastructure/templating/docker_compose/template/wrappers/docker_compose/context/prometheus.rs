@@ -7,24 +7,22 @@ use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::topology::{EnabledServices, Network, NetworkDerivation, PortDerivation};
 
 use super::port_definition::PortDefinition;
+use super::service_topology::ServiceTopology;
 
 /// Prometheus service configuration for Docker Compose
 ///
 /// Contains configuration needed for the Prometheus service definition in docker-compose.yml.
 /// Only includes fields actually used by the template (ports and networks).
 /// Scrape configuration is handled separately by the prometheus.yml template context.
+///
+/// Uses `ServiceTopology` to share the common topology structure with other services.
 #[derive(Serialize, Debug, Clone)]
 pub struct PrometheusServiceContext {
-    /// Port bindings for Docker Compose
+    /// Service topology (ports and networks)
     ///
-    /// Prometheus exposes port 9090 on localhost only for security.
-    pub ports: Vec<PortDefinition>,
-    /// Networks the Prometheus service should connect to
-    ///
-    /// Pre-computed list based on enabled features:
-    /// - Always includes `metrics_network` (scrapes metrics from tracker)
-    /// - Includes `visualization_network` if Grafana is enabled
-    pub networks: Vec<Network>,
+    /// Flattened for template compatibility - serializes ports/networks at top level.
+    #[serde(flatten)]
+    pub topology: ServiceTopology,
 }
 
 impl PrometheusServiceContext {
@@ -48,7 +46,21 @@ impl PrometheusServiceContext {
             .iter()
             .map(PortDefinition::from)
             .collect();
-        Self { ports, networks }
+        Self {
+            topology: ServiceTopology::new(ports, networks),
+        }
+    }
+
+    /// Returns a reference to the port bindings
+    #[must_use]
+    pub fn ports(&self) -> &[PortDefinition] {
+        &self.topology.ports
+    }
+
+    /// Returns a reference to the networks
+    #[must_use]
+    pub fn networks(&self) -> &[Network] {
+        &self.topology.networks
     }
 }
 
@@ -77,7 +89,7 @@ mod tests {
         let context = make_context(false);
         let config = PrometheusServiceContext::from_domain_config(&make_config(15), &context);
 
-        assert!(config.networks.contains(&Network::Metrics));
+        assert!(config.networks().contains(&Network::Metrics));
     }
 
     #[test]
@@ -85,8 +97,8 @@ mod tests {
         let context = make_context(false);
         let config = PrometheusServiceContext::from_domain_config(&make_config(15), &context);
 
-        assert_eq!(config.networks, vec![Network::Metrics]);
-        assert!(!config.networks.contains(&Network::Visualization));
+        assert_eq!(config.networks(), &[Network::Metrics]);
+        assert!(!config.networks().contains(&Network::Visualization));
     }
 
     #[test]
@@ -95,8 +107,8 @@ mod tests {
         let config = PrometheusServiceContext::from_domain_config(&make_config(30), &context);
 
         assert_eq!(
-            config.networks,
-            vec![Network::Metrics, Network::Visualization]
+            config.networks(),
+            &[Network::Metrics, Network::Visualization]
         );
     }
 
@@ -117,8 +129,8 @@ mod tests {
         let context = make_context(false);
         let config = PrometheusServiceContext::from_domain_config(&make_config(15), &context);
 
-        assert_eq!(config.ports.len(), 1);
-        assert_eq!(config.ports[0].binding(), "127.0.0.1:9090:9090");
+        assert_eq!(config.ports().len(), 1);
+        assert_eq!(config.ports()[0].binding(), "127.0.0.1:9090:9090");
     }
 
     #[test]

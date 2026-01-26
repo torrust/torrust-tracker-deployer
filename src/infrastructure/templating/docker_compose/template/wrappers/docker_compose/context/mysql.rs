@@ -23,12 +23,15 @@ use crate::domain::mysql::MysqlServiceConfig as DomainMysqlConfig;
 use crate::domain::topology::{EnabledServices, Network, NetworkDerivation, PortDerivation};
 
 use super::port_definition::PortDefinition;
+use super::service_topology::ServiceTopology;
 
 /// `MySQL` service configuration for Docker Compose
 ///
 /// Contains configuration for the `MySQL` service definition in docker-compose.yml.
 /// This is intentionally minimal - the actual `MySQL` setup configuration (credentials)
 /// is in `MysqlSetupConfig`.
+///
+/// Uses `ServiceTopology` to share the common topology structure with other services.
 ///
 /// # Example
 ///
@@ -38,20 +41,16 @@ use super::port_definition::PortDefinition;
 /// use torrust_tracker_deployer_lib::domain::topology::EnabledServices;
 ///
 /// let mysql = MysqlServiceContext::from_domain_config(&MysqlServiceConfig::new(), &EnabledServices::default());
-/// assert_eq!(mysql.networks, vec![torrust_tracker_deployer_lib::domain::topology::Network::Database]);
-/// assert!(mysql.ports.is_empty()); // MySQL never exposes ports externally
+/// assert_eq!(mysql.networks(), &[torrust_tracker_deployer_lib::domain::topology::Network::Database]);
+/// assert!(mysql.ports().is_empty()); // MySQL never exposes ports externally
 /// ```
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct MysqlServiceContext {
-    /// Port bindings for Docker Compose
+    /// Service topology (ports and networks)
     ///
-    /// `MySQL` never exposes ports externally - only tracker can access it via internal network.
-    pub ports: Vec<PortDefinition>,
-    /// Networks this service connects to
-    ///
-    /// `MySQL` only connects to `database_network` for isolation.
-    /// Only the tracker can access `MySQL` through this network.
-    pub networks: Vec<Network>,
+    /// Flattened for template compatibility - serializes ports/networks at top level.
+    #[serde(flatten)]
+    pub topology: ServiceTopology,
 }
 
 impl MysqlServiceContext {
@@ -73,7 +72,9 @@ impl MysqlServiceContext {
         let ports = port_bindings.iter().map(PortDefinition::from).collect();
         let networks = config.derive_networks(enabled_services);
 
-        Self { ports, networks }
+        Self {
+            topology: ServiceTopology::new(ports, networks),
+        }
     }
 
     /// Creates a new `MysqlServiceContext` with default configuration
@@ -82,6 +83,18 @@ impl MysqlServiceContext {
     #[must_use]
     pub fn new() -> Self {
         Self::from_domain_config(&DomainMysqlConfig::new(), &EnabledServices::default())
+    }
+
+    /// Returns a reference to the port bindings
+    #[must_use]
+    pub fn ports(&self) -> &[PortDefinition] {
+        &self.topology.ports
+    }
+
+    /// Returns a reference to the networks
+    #[must_use]
+    pub fn networks(&self) -> &[Network] {
+        &self.topology.networks
     }
 }
 
@@ -99,14 +112,14 @@ mod tests {
     fn it_should_connect_mysql_to_database_network() {
         let mysql = MysqlServiceContext::new();
 
-        assert_eq!(mysql.networks, vec![Network::Database]);
+        assert_eq!(mysql.networks(), &[Network::Database]);
     }
 
     #[test]
     fn it_should_implement_default() {
         let mysql = MysqlServiceContext::default();
 
-        assert_eq!(mysql.networks, vec![Network::Database]);
+        assert_eq!(mysql.networks(), &[Network::Database]);
     }
 
     #[test]
@@ -123,7 +136,7 @@ mod tests {
     fn it_should_not_expose_any_ports() {
         let mysql = MysqlServiceContext::new();
 
-        assert!(mysql.ports.is_empty());
+        assert!(mysql.ports().is_empty());
     }
 
     #[test]
@@ -133,7 +146,7 @@ mod tests {
         let mysql = MysqlServiceContext::from_domain_config(&config, &enabled_services);
 
         // Verify ports come from domain trait (empty for MySQL)
-        assert!(mysql.ports.is_empty());
+        assert!(mysql.ports().is_empty());
     }
 
     #[test]
@@ -143,6 +156,6 @@ mod tests {
         let mysql = MysqlServiceContext::from_domain_config(&config, &enabled_services);
 
         // Verify networks come from domain trait
-        assert_eq!(mysql.networks, vec![Network::Database]);
+        assert_eq!(mysql.networks(), &[Network::Database]);
     }
 }

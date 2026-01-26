@@ -15,6 +15,7 @@ mod mysql;
 mod network_definition;
 mod port_definition;
 mod prometheus;
+mod service_topology;
 mod tracker;
 
 // Re-exports - service contexts
@@ -29,6 +30,7 @@ pub use builder::{DockerComposeContextBuilder, PortConflictError};
 pub use database::{DatabaseConfig, MysqlSetupConfig};
 pub use network_definition::NetworkDefinition;
 pub use port_definition::PortDefinition;
+pub use service_topology::ServiceTopology;
 
 /// Context for rendering the docker-compose.yml template
 ///
@@ -288,11 +290,11 @@ mod tests {
         assert_eq!(context.database().driver(), "sqlite3");
         assert!(context.database().mysql().is_none());
         // Verify ports are derived correctly (2 UDP + 1 HTTP + 1 API = 4 ports)
-        assert_eq!(context.tracker().ports.len(), 4);
-        assert_eq!(context.tracker().ports[0].binding(), "6868:6868/udp");
-        assert_eq!(context.tracker().ports[1].binding(), "6969:6969/udp");
-        assert_eq!(context.tracker().ports[2].binding(), "7070:7070");
-        assert_eq!(context.tracker().ports[3].binding(), "1212:1212");
+        assert_eq!(context.tracker().ports().len(), 4);
+        assert_eq!(context.tracker().ports()[0].binding(), "6868:6868/udp");
+        assert_eq!(context.tracker().ports()[1].binding(), "6969:6969/udp");
+        assert_eq!(context.tracker().ports()[2].binding(), "7070:7070");
+        assert_eq!(context.tracker().ports()[3].binding(), "1212:1212");
     }
 
     #[test]
@@ -320,9 +322,9 @@ mod tests {
         assert_eq!(mysql.port, 3306);
 
         // Verify ports are derived correctly (2 UDP + 1 HTTP + 1 API = 4 ports)
-        assert_eq!(context.tracker().ports.len(), 4);
-        assert_eq!(context.tracker().ports[0].binding(), "6868:6868/udp");
-        assert_eq!(context.tracker().ports[1].binding(), "6969:6969/udp");
+        assert_eq!(context.tracker().ports().len(), 4);
+        assert_eq!(context.tracker().ports()[0].binding(), "6868:6868/udp");
+        assert_eq!(context.tracker().ports()[1].binding(), "6969:6969/udp");
     }
 
     #[test]
@@ -394,7 +396,7 @@ mod tests {
             .build();
 
         assert!(context.prometheus().is_some());
-        assert!(!context.prometheus().unwrap().ports.is_empty());
+        assert!(!context.prometheus().unwrap().ports().is_empty());
     }
 
     #[test]
@@ -432,7 +434,7 @@ mod tests {
             .build();
 
         let prometheus = context.prometheus().unwrap();
-        assert_eq!(prometheus.networks, vec![Network::Metrics]);
+        assert_eq!(prometheus.networks(), &[Network::Metrics]);
     }
 
     #[test]
@@ -452,8 +454,8 @@ mod tests {
 
         let prometheus = context.prometheus().unwrap();
         assert_eq!(
-            prometheus.networks,
-            vec![Network::Metrics, Network::Visualization]
+            prometheus.networks(),
+            &[Network::Metrics, Network::Visualization]
         );
     }
 
@@ -470,7 +472,7 @@ mod tests {
             .build();
 
         let grafana = context.grafana().unwrap();
-        assert_eq!(grafana.networks, vec![Network::Visualization]);
+        assert_eq!(grafana.networks(), &[Network::Visualization]);
     }
 
     #[test]
@@ -482,14 +484,14 @@ mod tests {
         let grafana_config =
             GrafanaConfig::new("admin".to_string(), "password".to_string(), None, false);
         let context = DockerComposeContext::builder(tracker)
-            .with_grafana(grafana_config)
             .with_caddy()
+            .with_grafana(grafana_config)
             .build();
 
         let grafana = context.grafana().unwrap();
         assert_eq!(
-            grafana.networks,
-            vec![Network::Visualization, Network::Proxy]
+            grafana.networks(),
+            &[Network::Visualization, Network::Proxy]
         );
     }
 

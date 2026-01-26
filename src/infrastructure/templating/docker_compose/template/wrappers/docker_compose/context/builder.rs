@@ -218,20 +218,20 @@ impl DockerComposeContextBuilder {
         let mut networks: HashSet<Network> = HashSet::new();
 
         // Collect from tracker (always present)
-        networks.extend(tracker.networks.iter().copied());
+        networks.extend(tracker.networks().iter().copied());
 
         // Collect from optional services
         if let Some(prom) = prometheus {
-            networks.extend(prom.networks.iter().copied());
+            networks.extend(prom.networks().iter().copied());
         }
         if let Some(graf) = grafana {
-            networks.extend(graf.networks.iter().copied());
+            networks.extend(graf.networks().iter().copied());
         }
         if let Some(cad) = caddy {
-            networks.extend(cad.networks.iter().copied());
+            networks.extend(cad.networks().iter().copied());
         }
         if let Some(my) = mysql {
-            networks.extend(my.networks.iter().copied());
+            networks.extend(my.networks().iter().copied());
         }
 
         // Sort for deterministic output (alphabetically by name)
@@ -263,22 +263,22 @@ impl DockerComposeContextBuilder {
 
         // Collect ports with service names
         let service_ports: Vec<(&'static str, &[PortDefinition])> = vec![
-            ("tracker", &context.tracker.ports),
+            ("tracker", context.tracker.ports()),
             (
                 "prometheus",
-                context.prometheus.as_ref().map_or(&[][..], |p| &p.ports),
+                context.prometheus.as_ref().map_or(&[][..], |p| p.ports()),
             ),
             (
                 "grafana",
-                context.grafana.as_ref().map_or(&[][..], |g| &g.ports),
+                context.grafana.as_ref().map_or(&[][..], |g| g.ports()),
             ),
             (
                 "caddy",
-                context.caddy.as_ref().map_or(&[][..], |c| &c.ports),
+                context.caddy.as_ref().map_or(&[][..], |c| c.ports()),
             ),
             (
                 "mysql",
-                context.mysql.as_ref().map_or(&[][..], |m| &m.ports),
+                context.mysql.as_ref().map_or(&[][..], |m| m.ports()),
             ),
         ];
 

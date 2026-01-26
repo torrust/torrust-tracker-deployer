@@ -7,23 +7,22 @@ use crate::domain::topology::{EnabledServices, Network, NetworkDerivation, PortD
 use crate::domain::tracker::TrackerConfig;
 
 use super::port_definition::PortDefinition;
+use super::service_topology::ServiceTopology;
 
 /// Tracker service context for Docker Compose template
 ///
 /// Contains all configuration needed for the tracker service in Docker Compose,
 /// including port mappings and network connections. All logic is pre-computed
 /// in Rust to keep the Tera template simple.
+///
+/// Uses `ServiceTopology` to share the common topology structure with other services.
 #[derive(Serialize, Debug, Clone)]
 pub struct TrackerServiceContext {
-    /// Port bindings for Docker Compose
+    /// Service topology (ports and networks)
     ///
-    /// Pre-computed list of all ports the tracker should expose.
-    /// Derived from UDP ports, HTTP ports without TLS, and API port (if no TLS).
-    pub ports: Vec<PortDefinition>,
-    /// Networks the tracker service should connect to
-    ///
-    /// Pre-computed list based on enabled features (prometheus, mysql, caddy).
-    pub networks: Vec<Network>,
+    /// Flattened for template compatibility - serializes ports/networks at top level.
+    #[serde(flatten)]
+    pub topology: ServiceTopology,
 }
 
 impl TrackerServiceContext {
@@ -45,7 +44,21 @@ impl TrackerServiceContext {
             .map(PortDefinition::from)
             .collect();
 
-        Self { ports, networks }
+        Self {
+            topology: ServiceTopology::new(ports, networks),
+        }
+    }
+
+    /// Returns a reference to the port bindings
+    #[must_use]
+    pub fn ports(&self) -> &[PortDefinition] {
+        &self.topology.ports
+    }
+
+    /// Returns a reference to the networks
+    #[must_use]
+    pub fn networks(&self) -> &[Network] {
+        &self.topology.networks
     }
 }
 
@@ -203,7 +216,7 @@ mod tests {
         let context = make_context(true, false, false);
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
-        assert!(config.networks.contains(&Network::Metrics));
+        assert!(config.networks().contains(&Network::Metrics));
     }
 
     #[test]
@@ -212,7 +225,7 @@ mod tests {
         let context = make_context(false, false, false);
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
-        assert!(!config.networks.contains(&Network::Metrics));
+        assert!(!config.networks().contains(&Network::Metrics));
     }
 
     #[test]
@@ -221,7 +234,7 @@ mod tests {
         let context = make_context(false, true, false);
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
-        assert!(config.networks.contains(&Network::Database));
+        assert!(config.networks().contains(&Network::Database));
     }
 
     #[test]
@@ -230,7 +243,7 @@ mod tests {
         let context = make_context(false, false, false);
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
-        assert!(!config.networks.contains(&Network::Database));
+        assert!(!config.networks().contains(&Network::Database));
     }
 
     #[test]
@@ -239,7 +252,7 @@ mod tests {
         let context = make_context(false, false, true);
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
-        assert!(config.networks.contains(&Network::Proxy));
+        assert!(config.networks().contains(&Network::Proxy));
     }
 
     #[test]
@@ -248,7 +261,7 @@ mod tests {
         let context = make_context(false, false, false);
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
-        assert!(!config.networks.contains(&Network::Proxy));
+        assert!(!config.networks().contains(&Network::Proxy));
     }
 
     #[test]
@@ -258,8 +271,8 @@ mod tests {
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
         assert_eq!(
-            config.networks,
-            vec![Network::Metrics, Network::Database, Network::Proxy]
+            config.networks(),
+            &[Network::Metrics, Network::Database, Network::Proxy]
         );
     }
 
@@ -269,7 +282,7 @@ mod tests {
         let context = make_context(false, false, false);
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
-        assert!(config.networks.is_empty());
+        assert!(config.networks().is_empty());
     }
 
     // ==========================================================================
@@ -302,7 +315,7 @@ mod tests {
         // UDP ports + API port (no TLS) = 3 ports
         // Filter just UDP ports
         let udp_ports: Vec<_> = config
-            .ports
+            .ports()
             .iter()
             .filter(|p| p.binding().ends_with("/udp"))
             .collect();
@@ -318,9 +331,9 @@ mod tests {
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
         // HTTP tracker ports only (API has TLS so not exposed)
-        assert_eq!(config.ports.len(), 2);
-        assert_eq!(config.ports[0].binding(), "7070:7070");
-        assert_eq!(config.ports[1].binding(), "7071:7071");
+        assert_eq!(config.ports().len(), 2);
+        assert_eq!(config.ports()[0].binding(), "7070:7070");
+        assert_eq!(config.ports()[1].binding(), "7071:7071");
     }
 
     #[test]
@@ -331,7 +344,7 @@ mod tests {
 
         // UDP port + API port = 2 ports
         // API port is the second one
-        let api_port = config.ports.iter().find(|p| p.binding() == "1212:1212");
+        let api_port = config.ports().iter().find(|p| p.binding() == "1212:1212");
         assert!(api_port.is_some());
     }
 
@@ -342,7 +355,7 @@ mod tests {
         let config = TrackerServiceContext::from_domain_config(&domain_config, &context);
 
         // No UDP, no HTTP without TLS, API has TLS = no ports
-        assert!(config.ports.is_empty());
+        assert!(config.ports().is_empty());
     }
 
     #[test]
