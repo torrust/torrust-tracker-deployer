@@ -5,24 +5,16 @@ use serde::Serialize;
 
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::topology::{EnabledServices, Network, NetworkDerivation, PortDerivation};
-use crate::shared::secrets::Password;
 
 use super::port_definition::PortDefinition;
 
 /// Grafana service configuration for Docker Compose
 ///
-/// Contains all configuration needed for the Grafana service in Docker Compose,
-/// including admin credentials, TLS settings, port mappings, and network connections.
-/// All logic is pre-computed in Rust to keep the Tera template simple.
+/// Contains configuration needed for the Grafana service definition in docker-compose.yml.
+/// Only includes fields actually used by the template (ports and networks).
+/// Credentials are handled separately by the env context for .env template.
 #[derive(Serialize, Debug, Clone)]
 pub struct GrafanaServiceContext {
-    /// Grafana admin username
-    pub admin_user: String,
-    /// Grafana admin password
-    pub admin_password: Password,
-    /// Whether Grafana has TLS enabled (port should not be exposed if true)
-    #[serde(default)]
-    pub has_tls: bool,
     /// Port bindings for Docker Compose
     ///
     /// When TLS is disabled, Grafana exposes port 3000 directly.
@@ -48,19 +40,13 @@ impl GrafanaServiceContext {
     /// * `context` - Topology context with information about enabled services
     #[must_use]
     pub fn from_domain_config(config: &GrafanaConfig, enabled_services: &EnabledServices) -> Self {
-        // Use domain NetworkDerivation trait for network logic
         let networks = config.derive_networks(enabled_services);
-        // Use domain PortDerivation trait for port logic
-        let port_bindings = config.derive_ports();
-        let ports = port_bindings.iter().map(PortDefinition::from).collect();
-
-        Self {
-            admin_user: config.admin_user().to_string(),
-            admin_password: config.admin_password().clone(),
-            has_tls: config.use_tls_proxy(),
-            ports,
-            networks,
-        }
+        let ports = config
+            .derive_ports()
+            .iter()
+            .map(PortDefinition::from)
+            .collect();
+        Self { ports, networks }
     }
 }
 

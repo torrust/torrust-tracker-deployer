@@ -10,13 +10,11 @@ use super::port_definition::PortDefinition;
 
 /// Prometheus service configuration for Docker Compose
 ///
-/// Contains all configuration needed for the Prometheus service in Docker Compose,
-/// including the scrape interval, port mappings, and network connections. All logic
-/// is pre-computed in Rust to keep the Tera template simple.
+/// Contains configuration needed for the Prometheus service definition in docker-compose.yml.
+/// Only includes fields actually used by the template (ports and networks).
+/// Scrape configuration is handled separately by the prometheus.yml template context.
 #[derive(Serialize, Debug, Clone)]
 pub struct PrometheusServiceContext {
-    /// Scrape interval in seconds
-    pub scrape_interval_in_secs: u32,
     /// Port bindings for Docker Compose
     ///
     /// Prometheus exposes port 9090 on localhost only for security.
@@ -44,17 +42,13 @@ impl PrometheusServiceContext {
         config: &PrometheusConfig,
         enabled_services: &EnabledServices,
     ) -> Self {
-        // Use domain NetworkDerivation trait for network logic
         let networks = config.derive_networks(enabled_services);
-        // Use domain PortDerivation trait for port logic
-        let port_bindings = config.derive_ports();
-        let ports = port_bindings.iter().map(PortDefinition::from).collect();
-
-        Self {
-            scrape_interval_in_secs: config.scrape_interval_in_secs(),
-            ports,
-            networks,
-        }
+        let ports = config
+            .derive_ports()
+            .iter()
+            .map(PortDefinition::from)
+            .collect();
+        Self { ports, networks }
     }
 }
 

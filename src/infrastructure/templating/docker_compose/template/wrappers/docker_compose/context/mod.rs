@@ -394,7 +394,7 @@ mod tests {
             .build();
 
         assert!(context.prometheus().is_some());
-        assert_eq!(context.prometheus().unwrap().scrape_interval_in_secs, 30);
+        assert!(!context.prometheus().unwrap().ports.is_empty());
     }
 
     #[test]
@@ -417,7 +417,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&context).unwrap();
         assert!(serialized.contains("prometheus"));
-        assert!(serialized.contains("\"scrape_interval_in_secs\":20"));
+        assert!(serialized.contains("ports"));
     }
 
     #[test]
@@ -471,7 +471,6 @@ mod tests {
 
         let grafana = context.grafana().unwrap();
         assert_eq!(grafana.networks, vec![Network::Visualization]);
-        assert!(!grafana.has_tls);
     }
 
     #[test]
