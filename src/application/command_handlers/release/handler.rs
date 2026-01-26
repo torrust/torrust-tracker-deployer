@@ -172,11 +172,14 @@ impl ReleaseCommandHandler {
 
     /// Execute the release workflow with step tracking
     ///
-    /// This method orchestrates the complete release workflow:
-    /// 1. Create tracker storage directories
-    /// 2. Initialize tracker `SQLite` database
-    /// 3. Render Docker Compose templates to the build directory
-    /// 4. Deploy compose files to the remote host via Ansible
+    /// This method orchestrates the complete release workflow, organized by service:
+    ///
+    /// 1. **Tracker**: Storage creation, database init, config rendering, deployment
+    /// 2. **Prometheus**: Storage creation, config rendering, deployment (if enabled)
+    /// 3. **Grafana**: Storage creation, provisioning rendering, deployment (if enabled)
+    /// 4. **`MySQL`**: Storage creation (if enabled)
+    /// 5. **Caddy**: Config rendering, deployment (if HTTPS enabled)
+    /// 6. **Docker Compose**: Template rendering, deployment
     ///
     /// If an error occurs, it returns both the error and the step that was being
     /// executed, enabling accurate failure context generation.
@@ -194,55 +197,169 @@ impl ReleaseCommandHandler {
         environment: &Environment<Releasing>,
         instance_ip: IpAddr,
     ) -> StepResult<Environment<Released>, ReleaseCommandHandlerError, ReleaseStep> {
-        // Step 1: Create tracker storage directories
-        Self::create_tracker_storage(environment, instance_ip)?;
+        // Tracker service steps
+        self.release_tracker_service(environment, instance_ip)?;
 
-        // Step 2: Initialize tracker database
-        Self::init_tracker_database(environment, instance_ip)?;
+        // Prometheus service steps (if enabled)
+        self.release_prometheus_service(environment, instance_ip)?;
 
-        // Step 3: Render tracker configuration templates
-        let tracker_build_dir = Self::render_tracker_templates(environment)?;
+        // Grafana service steps (if enabled)
+        self.release_grafana_service(environment, instance_ip)?;
 
-        // Step 4: Deploy tracker configuration to remote
-        self.deploy_tracker_config_to_remote(environment, &tracker_build_dir, instance_ip)?;
+        // MySQL service steps (if enabled)
+        Self::release_mysql_service(environment, instance_ip)?;
 
-        // Step 5: Create Prometheus storage directories (if enabled)
-        Self::create_prometheus_storage(environment, instance_ip)?;
+        // Caddy service steps (if HTTPS enabled)
+        self.release_caddy_service(environment, instance_ip)?;
 
-        // Step 6: Render Prometheus configuration templates (if enabled)
-        Self::render_prometheus_templates(environment)?;
-
-        // Step 7: Deploy Prometheus configuration to remote (if enabled)
-        self.deploy_prometheus_config_to_remote(environment, instance_ip)?;
-
-        // Step 8: Create Grafana storage directories (if enabled)
-        Self::create_grafana_storage(environment, instance_ip)?;
-
-        // Step 9: Render Grafana provisioning templates (if enabled)
-        Self::render_grafana_templates(environment)?;
-
-        // Step 10: Deploy Grafana provisioning to remote (if enabled)
-        self.deploy_grafana_provisioning_to_remote(environment, instance_ip)?;
-
-        // Step 11: Create MySQL storage directories (if enabled)
-        Self::create_mysql_storage(environment, instance_ip)?;
-
-        // Step 12: Render Caddy configuration templates (if HTTPS enabled)
-        Self::render_caddy_templates(environment)?;
-
-        // Step 13: Deploy Caddy configuration to remote (if HTTPS enabled)
-        self.deploy_caddy_config_to_remote(environment, instance_ip)?;
-
-        // Step 14: Render Docker Compose templates
-        let compose_build_dir = self.render_docker_compose_templates(environment).await?;
-
-        // Step 15: Deploy compose files to remote
-        self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
+        // Docker Compose deployment
+        self.release_docker_compose(environment, instance_ip)
+            .await?;
 
         let released = environment.clone().released();
 
         Ok(released)
     }
+
+    // =========================================================================
+    // Service-level release orchestration
+    // =========================================================================
+
+    /// Release the Tracker service
+    ///
+    /// Executes all steps required to release the Tracker:
+    /// 1. Create storage directories
+    /// 2. Initialize database
+    /// 3. Render configuration templates
+    /// 4. Deploy configuration to remote
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, step) if any tracker step fails
+    #[allow(clippy::result_large_err, clippy::unused_self)]
+    fn release_tracker_service(
+        &self,
+        environment: &Environment<Releasing>,
+        instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        Self::create_tracker_storage(environment, instance_ip)?;
+        Self::init_tracker_database(environment, instance_ip)?;
+        let tracker_build_dir = Self::render_tracker_templates(environment)?;
+        self.deploy_tracker_config_to_remote(environment, &tracker_build_dir, instance_ip)?;
+        Ok(())
+    }
+
+    /// Release the Prometheus service (if enabled)
+    ///
+    /// Executes all steps required to release Prometheus:
+    /// 1. Create storage directories
+    /// 2. Render configuration templates
+    /// 3. Deploy configuration to remote
+    ///
+    /// If Prometheus is not configured, all steps are skipped.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, step) if any Prometheus step fails
+    #[allow(clippy::result_large_err, clippy::unused_self)]
+    fn release_prometheus_service(
+        &self,
+        environment: &Environment<Releasing>,
+        instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        Self::create_prometheus_storage(environment, instance_ip)?;
+        Self::render_prometheus_templates(environment)?;
+        self.deploy_prometheus_config_to_remote(environment, instance_ip)?;
+        Ok(())
+    }
+
+    /// Release the Grafana service (if enabled)
+    ///
+    /// Executes all steps required to release Grafana:
+    /// 1. Create storage directories
+    /// 2. Render provisioning templates
+    /// 3. Deploy provisioning to remote
+    ///
+    /// If Grafana is not configured, all steps are skipped.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, step) if any Grafana step fails
+    #[allow(clippy::result_large_err, clippy::unused_self)]
+    fn release_grafana_service(
+        &self,
+        environment: &Environment<Releasing>,
+        instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        Self::create_grafana_storage(environment, instance_ip)?;
+        Self::render_grafana_templates(environment)?;
+        self.deploy_grafana_provisioning_to_remote(environment, instance_ip)?;
+        Ok(())
+    }
+
+    /// Release the `MySQL` service (if enabled)
+    ///
+    /// Executes all steps required to release `MySQL`:
+    /// 1. Create storage directories
+    ///
+    /// If `MySQL` is not configured as the tracker database, this step is skipped.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, step) if `MySQL` storage creation fails
+    #[allow(clippy::result_large_err)]
+    fn release_mysql_service(
+        environment: &Environment<Releasing>,
+        instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        Self::create_mysql_storage(environment, instance_ip)?;
+        Ok(())
+    }
+
+    /// Release the Caddy service (if HTTPS enabled)
+    ///
+    /// Executes all steps required to release Caddy:
+    /// 1. Render configuration templates
+    /// 2. Deploy configuration to remote
+    ///
+    /// If HTTPS is not configured, all steps are skipped.
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, step) if any Caddy step fails
+    #[allow(clippy::result_large_err, clippy::unused_self)]
+    fn release_caddy_service(
+        &self,
+        environment: &Environment<Releasing>,
+        instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        Self::render_caddy_templates(environment)?;
+        self.deploy_caddy_config_to_remote(environment, instance_ip)?;
+        Ok(())
+    }
+
+    /// Release Docker Compose configuration
+    ///
+    /// Executes all steps required to deploy Docker Compose:
+    /// 1. Render Docker Compose templates
+    /// 2. Deploy compose files to remote
+    ///
+    /// # Errors
+    ///
+    /// Returns a tuple of (error, step) if any Docker Compose step fails
+    async fn release_docker_compose(
+        &self,
+        environment: &Environment<Releasing>,
+        instance_ip: IpAddr,
+    ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+        let compose_build_dir = self.render_docker_compose_templates(environment).await?;
+        self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
+        Ok(())
+    }
+
+    // =========================================================================
+    // Individual step implementations
+    // =========================================================================
 
     /// Create tracker storage directories on the remote host
     ///
