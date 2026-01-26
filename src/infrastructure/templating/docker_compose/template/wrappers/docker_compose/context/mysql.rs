@@ -4,20 +4,23 @@
 //!
 //! ## Note on Configuration Separation
 //!
-//! There are two `MySQL`-related types in the docker-compose context:
+//! There are multiple `MySQL`-related types:
 //!
 //! - `MysqlSetupConfig` (in database.rs): Contains credentials and initialization settings
 //!   for Docker Compose environment variables (root password, database name, user, etc.)
 //!
-//! - `MysqlServiceConfig` (this module): Contains service definition settings like networks,
-//!   following the same pattern as `CaddyServiceConfig`, `PrometheusServiceConfig`, etc.
+//! - `MysqlDockerServiceConfig` (this module): Contains service definition settings like networks,
+//!   following the same pattern as `CaddyDockerServiceConfig`, `PrometheusServiceConfig`, etc.
+//!
+//! - `domain::mysql::MysqlServiceConfig`: Domain configuration for port/network derivation
 //!
 //! This separation keeps the pattern consistent across all services - each service
 //! has its own config type for networks and service-specific settings.
 
 use serde::Serialize;
 
-use crate::domain::topology::{mysql_ports, Network};
+use crate::domain::mysql::MysqlServiceConfig as DomainMysqlConfig;
+use crate::domain::topology::{EnabledServices, Network, NetworkDerivation, PortDerivation};
 
 use super::port_definition::PortDefinition;
 
@@ -30,14 +33,16 @@ use super::port_definition::PortDefinition;
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::context::MysqlServiceConfig;
+/// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::context::MysqlDockerServiceConfig;
+/// use torrust_tracker_deployer_lib::domain::mysql::MysqlServiceConfig;
+/// use torrust_tracker_deployer_lib::domain::topology::EnabledServices;
 ///
-/// let mysql = MysqlServiceConfig::new();
+/// let mysql = MysqlDockerServiceConfig::from_domain_config(&MysqlServiceConfig::new(), &EnabledServices::default());
 /// assert_eq!(mysql.networks, vec![torrust_tracker_deployer_lib::domain::topology::Network::Database]);
 /// assert!(mysql.ports.is_empty()); // MySQL never exposes ports externally
 /// ```
 #[derive(Debug, Clone, Serialize, PartialEq)]
-pub struct MysqlServiceConfig {
+pub struct MysqlDockerServiceConfig {
     /// Port bindings for Docker Compose
     ///
     /// `MySQL` never exposes ports externally - only tracker can access it via internal network.
@@ -49,30 +54,45 @@ pub struct MysqlServiceConfig {
     pub networks: Vec<Network>,
 }
 
-impl MysqlServiceConfig {
-    /// Creates a new `MysqlServiceConfig` with default networks and empty ports
+impl MysqlDockerServiceConfig {
+    /// Creates a new `MysqlDockerServiceConfig` from domain configuration
     ///
-    /// `MySQL` connects to:
-    /// - `database_network`: For database access by the tracker
+    /// Uses the domain `PortDerivation` and `NetworkDerivation` traits,
+    /// ensuring business rules live in the domain layer.
     ///
-    /// `MySQL` never exposes ports externally for security.
+    /// # Arguments
+    ///
+    /// * `config` - The domain `MySQL` service configuration
+    /// * `enabled_services` - Topology context with information about enabled services
+    #[must_use]
+    pub fn from_domain_config(
+        config: &DomainMysqlConfig,
+        enabled_services: &EnabledServices,
+    ) -> Self {
+        let port_bindings = config.derive_ports();
+        let ports = port_bindings.iter().map(PortDefinition::from).collect();
+        let networks = config.derive_networks(enabled_services);
+
+        Self { ports, networks }
+    }
+
+    /// Creates a new `MysqlDockerServiceConfig` with default configuration
+    ///
+    /// Convenience method that creates a default domain config and empty enabled services.
     #[must_use]
     pub fn new() -> Self {
-        let port_bindings = mysql_ports();
-        let ports = port_bindings.iter().map(PortDefinition::from).collect();
-
-        Self {
-            ports,
-            networks: vec![Network::Database],
-        }
+        Self::from_domain_config(&DomainMysqlConfig::new(), &EnabledServices::default())
     }
 }
 
-impl Default for MysqlServiceConfig {
+impl Default for MysqlDockerServiceConfig {
     fn default() -> Self {
         Self::new()
     }
 }
+
+/// Type alias for backward compatibility
+pub type MysqlServiceConfig = MysqlDockerServiceConfig;
 
 #[cfg(test)]
 mod tests {
@@ -80,21 +100,21 @@ mod tests {
 
     #[test]
     fn it_should_connect_mysql_to_database_network() {
-        let mysql = MysqlServiceConfig::new();
+        let mysql = MysqlDockerServiceConfig::new();
 
         assert_eq!(mysql.networks, vec![Network::Database]);
     }
 
     #[test]
     fn it_should_implement_default() {
-        let mysql = MysqlServiceConfig::default();
+        let mysql = MysqlDockerServiceConfig::default();
 
         assert_eq!(mysql.networks, vec![Network::Database]);
     }
 
     #[test]
     fn it_should_serialize_network_to_name_string() {
-        let mysql = MysqlServiceConfig::new();
+        let mysql = MysqlDockerServiceConfig::new();
 
         let json = serde_json::to_value(&mysql).expect("serialization should succeed");
 
@@ -104,8 +124,28 @@ mod tests {
 
     #[test]
     fn it_should_not_expose_any_ports() {
-        let mysql = MysqlServiceConfig::new();
+        let mysql = MysqlDockerServiceConfig::new();
 
         assert!(mysql.ports.is_empty());
+    }
+
+    #[test]
+    fn it_should_use_domain_traits_for_port_derivation() {
+        let config = DomainMysqlConfig::new();
+        let enabled_services = EnabledServices::default();
+        let mysql = MysqlDockerServiceConfig::from_domain_config(&config, &enabled_services);
+
+        // Verify ports come from domain trait (empty for MySQL)
+        assert!(mysql.ports.is_empty());
+    }
+
+    #[test]
+    fn it_should_use_domain_traits_for_network_derivation() {
+        let config = DomainMysqlConfig::new();
+        let enabled_services = EnabledServices::default();
+        let mysql = MysqlDockerServiceConfig::from_domain_config(&config, &enabled_services);
+
+        // Verify networks come from domain trait
+        assert_eq!(mysql.networks, vec![Network::Database]);
     }
 }

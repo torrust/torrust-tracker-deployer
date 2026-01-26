@@ -19,10 +19,10 @@ mod tracker;
 
 // Re-exports
 pub use builder::{DockerComposeContextBuilder, PortConflictError};
-pub use caddy::CaddyServiceConfig;
+pub use caddy::{CaddyDockerServiceConfig, CaddyServiceConfig};
 pub use database::{DatabaseConfig, MysqlSetupConfig};
 pub use grafana::GrafanaServiceConfig;
-pub use mysql::MysqlServiceConfig;
+pub use mysql::{MysqlDockerServiceConfig, MysqlServiceConfig};
 pub use network_definition::NetworkDefinition;
 pub use port_definition::PortDefinition;
 pub use prometheus::PrometheusServiceConfig;

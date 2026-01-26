@@ -332,10 +332,16 @@ impl TrackerServiceContext {
 
 ### Step 5: Fixed Port Services (Caddy, MySQL)
 
-- [x] 5.1 Create `src/domain/topology/fixed_ports.rs` with `caddy_ports()` and `mysql_ports()`
-- [x] 5.2 Add unit tests for fixed port functions
+- [x] 5.1 ~~Create `src/domain/topology/fixed_ports.rs` with `caddy_ports()` and `mysql_ports()`~~ - **Replaced**: Created proper domain types instead
+- [x] 5.2 ~~Add unit tests for fixed port functions~~ - **Replaced**: Domain types have their own unit tests
 - [x] 5.3 Update infrastructure to use domain fixed port functions
 - [x] 5.4 Remove `derive_caddy_ports()` and `derive_mysql_ports()` from infrastructure
+- [x] 5.5 Create `src/domain/caddy/config.rs` with `CaddyConfig` implementing `PortDerivation` and `NetworkDerivation`
+- [x] 5.6 Create `src/domain/mysql/config.rs` with `MysqlServiceConfig` implementing `PortDerivation` and `NetworkDerivation`
+- [x] 5.7 Delete `src/domain/topology/fixed_ports.rs` - no longer needed
+- [x] 5.8 Update infrastructure `CaddyDockerServiceConfig` and `MysqlDockerServiceConfig` to use `from_domain_config()`
+
+**Rationale for change**: Even though Caddy and MySQL have fixed port/network behavior, they should follow the same trait-based patterns as other services for consistency and Open/Closed compliance.
 
 ### Step 6: Network Computation - Domain Topology Builder
 
@@ -358,7 +364,13 @@ impl TrackerServiceContext {
 - [x] 7.2 Remove `compute_networks()` from `PrometheusServiceConfig` - **Done**: Uses `NetworkDerivation` trait
 - [x] 7.3 Remove `compute_networks()` from `GrafanaServiceConfig` - **Done**: Uses `NetworkDerivation` trait
 - [x] 7.4 Update `DockerComposeContextBuilder` to use domain traits - **Done**: Passes `EnabledServices` to `from_domain_config`
-- [ ] 7.5 Rename service config types to `*Context` (optional, deferred) - Not critical for DDD alignment
+- [ ] 7.5 Rename infrastructure service config types to `*Context` (optional, deferred)
+  - **What**: Rename infrastructure DTOs to better reflect their purpose as template contexts
+  - **Current names**: `TrackerServiceConfig`, `GrafanaServiceConfig`, `PrometheusServiceConfig`, `CaddyDockerServiceConfig`, `MysqlDockerServiceConfig`
+  - **Proposed names**: `TrackerServiceContext`, `GrafanaServiceContext`, `PrometheusServiceContext`, `CaddyServiceContext`, `MysqlServiceContext`
+  - **Why deferred**: Not critical for DDD alignment since the types are already pure DTOs
+  - **Benefit**: Clearer naming distinction between domain configs (`*Config`) and infrastructure contexts (`*Context`)
+  - **Scope**: ~5 files + all usages (~20-30 files), type aliases can ease migration
 
 ### Step 8: Cleanup and Verification
 
@@ -371,30 +383,35 @@ impl TrackerServiceContext {
 
 ### New Files
 
-| File                                      | Purpose                                      |
-| ----------------------------------------- | -------------------------------------------- |
-| `src/domain/topology/traits.rs`           | `PortDerivation`, `NetworkDerivation` traits |
-| `src/domain/topology/enabled_services.rs` | `EnabledServices` set for topology queries   |
-| `src/domain/topology/fixed_ports.rs`      | Caddy/MySQL port functions                   |
+| File                                      | Purpose                                                         |
+| ----------------------------------------- | --------------------------------------------------------------- |
+| `src/domain/topology/traits.rs`           | `PortDerivation`, `NetworkDerivation` traits                    |
+| `src/domain/topology/enabled_services.rs` | `EnabledServices` set for topology queries                      |
+| `src/domain/caddy/config.rs`              | `CaddyConfig` with `PortDerivation`, `NetworkDerivation`        |
+| `src/domain/mysql/config.rs`              | `MysqlServiceConfig` with `PortDerivation`, `NetworkDerivation` |
 
 ### Modified Files
 
-| File                                           | Change                                  |
-| ---------------------------------------------- | --------------------------------------- |
-| `src/domain/topology/mod.rs`                   | Export new modules                      |
-| `src/domain/tracker/config.rs`                 | Implement `PortDerivation`              |
-| `src/domain/grafana/config.rs`                 | Implement `PortDerivation`              |
-| `src/domain/prometheus/config.rs`              | Implement `PortDerivation`              |
-| `src/infrastructure/.../context/tracker.rs`    | Remove `compute_networks()`, become DTO |
-| `src/infrastructure/.../context/grafana.rs`    | Remove `compute_networks()`, become DTO |
-| `src/infrastructure/.../context/prometheus.rs` | Remove `compute_networks()`, become DTO |
-| `src/infrastructure/.../context/builder.rs`    | Receive domain topology                 |
+| File                                           | Change                                                           |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| `src/domain/mod.rs`                            | Export new `caddy` and `mysql` modules                           |
+| `src/domain/topology/mod.rs`                   | Export new modules                                               |
+| `src/domain/tracker/config.rs`                 | Implement `PortDerivation`, `NetworkDerivation`                  |
+| `src/domain/grafana/config.rs`                 | Implement `PortDerivation`, `NetworkDerivation`                  |
+| `src/domain/prometheus/config.rs`              | Implement `PortDerivation`, `NetworkDerivation`                  |
+| `src/infrastructure/.../context/caddy.rs`      | Use `from_domain_config()`, rename to `CaddyDockerServiceConfig` |
+| `src/infrastructure/.../context/mysql.rs`      | Use `from_domain_config()`, rename to `MysqlDockerServiceConfig` |
+| `src/infrastructure/.../context/tracker.rs`    | Remove `compute_networks()`, become DTO                          |
+| `src/infrastructure/.../context/grafana.rs`    | Remove `compute_networks()`, become DTO                          |
+| `src/infrastructure/.../context/prometheus.rs` | Remove `compute_networks()`, become DTO                          |
+| `src/infrastructure/.../context/builder.rs`    | Receive domain topology                                          |
 
 ### Deleted Files
 
-| File                                                | Reason                |
-| --------------------------------------------------- | --------------------- |
-| `src/infrastructure/.../context/port_derivation.rs` | Logic moved to domain |
+| File                                                | Reason                                        |
+| --------------------------------------------------- | --------------------------------------------- |
+| `src/infrastructure/.../context/port_derivation.rs` | Logic moved to domain                         |
+| `src/domain/topology/fixed_ports.rs`                | Replaced by proper domain types (Caddy/MySQL) |
 
 ## Acceptance Criteria
 
@@ -407,7 +424,7 @@ impl TrackerServiceContext {
 **Task-Specific Criteria**:
 
 - [x] `PortDerivation` trait defined in `domain/topology/traits.rs`
-- [x] All service configs (`TrackerConfig`, `GrafanaConfig`, `PrometheusConfig`) implement `PortDerivation`
+- [x] All service configs (`TrackerConfig`, `GrafanaConfig`, `PrometheusConfig`, `CaddyConfig`, `MysqlServiceConfig`) implement `PortDerivation`
 - [x] `NetworkDerivation` trait defined in `domain/topology/traits.rs` for network computation
 - [x] Infrastructure context types are pure DTOs with no `compute_*()` methods
 - [x] `port_derivation.rs` deleted from infrastructure
@@ -417,12 +434,12 @@ impl TrackerServiceContext {
 
 ## Design Decisions (Resolved)
 
-| Question                                                                          | Decision                                         | Rationale                                                                                                                           |
-| --------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Should `PortDerivation` trait be in `domain/topology/` or a shared traits module? | `domain/topology/traits.rs`                      | The trait exists for topology purposes. Consumer (builder) defines it, implementers import it. Keeps topology concerns cohesive.    |
-| Should we rename infrastructure context types to `*Context` now or defer?         | Deferred (optional)                              | Not critical for DDD alignment. Can be done in a future cleanup phase.                                                              |
-| Should `fixed_ports.rs` functions be in the builder or a separate module?         | Separate module `domain/topology/fixed_ports.rs` | Keeps builder focused on orchestration. Single responsibility. Easy to find, extend, test.                                          |
-| Should we create `DockerComposeTopologyBuilder` for network computation?          | Not needed                                       | Caddy/MySQL have static networks (NET-08, NET-09). Trait-based approach with `NetworkDerivation` + `EnabledServices` is sufficient. |
+| Question                                                                          | Decision                                               | Rationale                                                                                                                           |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Should `PortDerivation` trait be in `domain/topology/` or a shared traits module? | `domain/topology/traits.rs`                            | The trait exists for topology purposes. Consumer (builder) defines it, implementers import it. Keeps topology concerns cohesive.    |
+| Should we rename infrastructure context types to `*Context` now or defer?         | Deferred (optional)                                    | Not critical for DDD alignment. Can be done in a future cleanup phase.                                                              |
+| Should fixed-port services (Caddy, MySQL) use `fixed_ports.rs` or domain types?   | Domain types with `PortDerivation`/`NetworkDerivation` | Consistency with other services. All services follow same trait-based pattern, even if behavior is static. Open/Closed compliance.  |
+| Should we create `DockerComposeTopologyBuilder` for network computation?          | Not needed                                             | Caddy/MySQL have static networks (NET-08, NET-09). Trait-based approach with `NetworkDerivation` + `EnabledServices` is sufficient. |
 
 ## Related Documentation
 
