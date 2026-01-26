@@ -1,8 +1,34 @@
 //! Error types for the Release command handler
+//!
+//! # Design Decision: Boxed Error Sources
+//!
+//! All step-related error variants use `Box<dyn std::error::Error + Send + Sync>`
+//! as the source type rather than concrete step error types. This design choice
+//! was made because:
+//!
+//! 1. **Many heterogeneous step types**: The release workflow involves 15+ steps,
+//!    each with its own error type (`CommandError`, `TrackerProjectGeneratorError`,
+//!    `DeployComposeFilesStepError`, etc.). Using concrete types would require
+//!    either a massive wrapper enum or many separate error variants.
+//!
+//! 2. **Extensibility**: New steps can be added without modifying the error enum.
+//!
+//! 3. **Uniform error handling**: All step errors can be handled uniformly with
+//!    the `with_step` helper pattern.
+//!
+//! **Trade-off**: We lose the ability to pattern match on the concrete source type
+//! and `Traceable::trace_source()` returns `None` for boxed errors. However, the
+//! error message is preserved via `to_string()`, and the trace file captures full
+//! context for debugging.
+//!
+//! **Preferred pattern**: In cases where there are fewer, well-defined error sources,
+//! prefer using concrete types with `#[source]` for better type safety and traceability.
 
-use crate::application::steps::application::DeployComposeFilesStepError;
 use crate::domain::environment::state::StateTypeError;
 use crate::shared::error::{ErrorKind, Traceable};
+
+/// Type alias for boxed step errors to reduce verbosity
+pub type BoxedStepError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Comprehensive error type for the `ReleaseCommandHandler`
 ///
@@ -37,51 +63,113 @@ pub enum ReleaseCommandHandlerError {
     StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
 
     /// Template rendering failed
-    #[error("Template rendering failed: {0}")]
-    TemplateRendering(String),
-
-    /// Tracker storage directory creation failed
-    #[error("Tracker storage creation failed: {0}")]
-    TrackerStorageCreation(String),
-
-    /// Tracker database initialization failed
-    #[error("Tracker database initialization failed: {0}")]
-    TrackerDatabaseInit(String),
-
-    /// Prometheus storage directory creation failed
-    #[error("Prometheus storage creation failed: {0}")]
-    PrometheusStorageCreation(String),
-
-    /// Grafana storage directory creation failed
-    #[error("Grafana storage creation failed: {0}")]
-    GrafanaStorageCreation(String),
-
-    /// `MySQL` storage directory creation failed
-    #[error("MySQL storage creation failed: {0}")]
-    MysqlStorageCreation(String),
-
-    /// Caddy configuration deployment failed
-    #[error("Caddy configuration deployment failed: {0}")]
-    CaddyConfigDeployment(String),
-
-    /// General deployment operation failed
-    #[error("Deployment failed: {message}")]
-    Deployment {
-        /// The error message
+    #[error("Template rendering failed: {message}")]
+    TemplateRendering {
+        /// Description of the rendering failure
         message: String,
-        /// The underlying error source
+        /// The underlying error from the template step
         #[source]
-        source: Box<dyn std::error::Error + Send + Sync>,
+        source: BoxedStepError,
     },
 
-    /// Deployment to remote host failed
-    #[error("Deployment to remote host failed: {message}")]
-    DeploymentFailed {
+    /// Tracker storage directory creation failed
+    #[error("Tracker storage creation failed: {message}")]
+    TrackerStorageCreation {
         /// Description of the failure
         message: String,
-        /// The underlying deployment step error
+        /// The underlying error from the storage creation step
         #[source]
-        source: DeployComposeFilesStepError,
+        source: BoxedStepError,
+    },
+
+    /// Tracker database initialization failed
+    #[error("Tracker database initialization failed: {message}")]
+    TrackerDatabaseInit {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the database init step
+        #[source]
+        source: BoxedStepError,
+    },
+
+    /// Prometheus storage directory creation failed
+    #[error("Prometheus storage creation failed: {message}")]
+    PrometheusStorageCreation {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the storage creation step
+        #[source]
+        source: BoxedStepError,
+    },
+
+    /// Grafana storage directory creation failed
+    #[error("Grafana storage creation failed: {message}")]
+    GrafanaStorageCreation {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the storage creation step
+        #[source]
+        source: BoxedStepError,
+    },
+
+    /// `MySQL` storage directory creation failed
+    #[error("MySQL storage creation failed: {message}")]
+    MysqlStorageCreation {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the storage creation step
+        #[source]
+        source: BoxedStepError,
+    },
+
+    /// Caddy configuration deployment failed
+    #[error("Caddy configuration deployment failed: {message}")]
+    CaddyConfigDeployment {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the deployment step
+        #[source]
+        source: BoxedStepError,
+    },
+
+    /// Tracker configuration deployment failed
+    #[error("Tracker configuration deployment failed: {message}")]
+    TrackerConfigDeployment {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the deployment step
+        #[source]
+        source: BoxedStepError,
+    },
+
+    /// Grafana provisioning deployment failed
+    #[error("Grafana provisioning deployment failed: {message}")]
+    GrafanaProvisioningDeployment {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the deployment step
+        #[source]
+        source: BoxedStepError,
+    },
+
+    /// Prometheus configuration deployment failed
+    #[error("Prometheus configuration deployment failed: {message}")]
+    PrometheusConfigDeployment {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the deployment step
+        #[source]
+        source: BoxedStepError,
+    },
+
+    /// Docker Compose files deployment failed
+    #[error("Docker Compose deployment failed: {message}")]
+    ComposeFilesDeployment {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the deployment step
+        #[source]
+        source: BoxedStepError,
     },
 
     /// Release operation failed
@@ -109,33 +197,48 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::StatePersistence(e) => {
                 format!("ReleaseCommandHandlerError: Failed to persist environment state - {e}")
             }
-            Self::TemplateRendering(message) => {
+            Self::TemplateRendering { message, .. } => {
                 format!("ReleaseCommandHandlerError: Template rendering failed - {message}")
             }
-            Self::TrackerStorageCreation(message) => {
+            Self::TrackerStorageCreation { message, .. } => {
                 format!("ReleaseCommandHandlerError: Tracker storage creation failed - {message}")
             }
-            Self::TrackerDatabaseInit(message) => {
+            Self::TrackerDatabaseInit { message, .. } => {
                 format!("ReleaseCommandHandlerError: Tracker database initialization failed - {message}")
             }
-            Self::PrometheusStorageCreation(message) => {
+            Self::PrometheusStorageCreation { message, .. } => {
                 format!(
                     "ReleaseCommandHandlerError: Prometheus storage creation failed - {message}"
                 )
             }
-            Self::GrafanaStorageCreation(message) => {
+            Self::GrafanaStorageCreation { message, .. } => {
                 format!("ReleaseCommandHandlerError: Grafana storage creation failed - {message}")
             }
-            Self::MysqlStorageCreation(message) => {
+            Self::MysqlStorageCreation { message, .. } => {
                 format!("ReleaseCommandHandlerError: MySQL storage creation failed - {message}")
             }
-            Self::CaddyConfigDeployment(message) => {
+            Self::CaddyConfigDeployment { message, .. } => {
                 format!(
                     "ReleaseCommandHandlerError: Caddy configuration deployment failed - {message}"
                 )
             }
-            Self::Deployment { message, .. } | Self::DeploymentFailed { message, .. } => {
-                format!("ReleaseCommandHandlerError: Deployment failed - {message}")
+            Self::TrackerConfigDeployment { message, .. } => {
+                format!(
+                    "ReleaseCommandHandlerError: Tracker configuration deployment failed - {message}"
+                )
+            }
+            Self::GrafanaProvisioningDeployment { message, .. } => {
+                format!(
+                    "ReleaseCommandHandlerError: Grafana provisioning deployment failed - {message}"
+                )
+            }
+            Self::PrometheusConfigDeployment { message, .. } => {
+                format!(
+                    "ReleaseCommandHandlerError: Prometheus configuration deployment failed - {message}"
+                )
+            }
+            Self::ComposeFilesDeployment { message, .. } => {
+                format!("ReleaseCommandHandlerError: Docker Compose deployment failed - {message}")
             }
             Self::ReleaseOperationFailed { name, message } => {
                 format!(
@@ -146,21 +249,25 @@ impl Traceable for ReleaseCommandHandlerError {
     }
 
     fn trace_source(&self) -> Option<&dyn Traceable> {
+        // Box<dyn Error> doesn't implement Traceable, so we return None for all
+        // step-related errors. The error message is preserved via `to_string()`
+        // and the trace file captures full context for debugging.
         match self {
-            // Box<dyn Error> doesn't implement Traceable
-            Self::DeploymentFailed { source, .. } => Some(source),
-            Self::Deployment { .. }
-            | Self::StatePersistence(_)
-            | Self::EnvironmentNotFound { .. }
+            Self::EnvironmentNotFound { .. }
             | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_)
-            | Self::TemplateRendering(_)
-            | Self::TrackerStorageCreation(_)
-            | Self::TrackerDatabaseInit(_)
-            | Self::PrometheusStorageCreation(_)
-            | Self::GrafanaStorageCreation(_)
-            | Self::MysqlStorageCreation(_)
-            | Self::CaddyConfigDeployment(_)
+            | Self::StatePersistence(_)
+            | Self::TemplateRendering { .. }
+            | Self::TrackerStorageCreation { .. }
+            | Self::TrackerDatabaseInit { .. }
+            | Self::PrometheusStorageCreation { .. }
+            | Self::GrafanaStorageCreation { .. }
+            | Self::MysqlStorageCreation { .. }
+            | Self::CaddyConfigDeployment { .. }
+            | Self::TrackerConfigDeployment { .. }
+            | Self::GrafanaProvisioningDeployment { .. }
+            | Self::PrometheusConfigDeployment { .. }
+            | Self::ComposeFilesDeployment { .. }
             | Self::ReleaseOperationFailed { .. } => None,
         }
     }
@@ -171,17 +278,18 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::MissingInstanceIp { .. }
             | Self::InvalidState(_) => ErrorKind::Configuration,
             Self::StatePersistence(_) => ErrorKind::StatePersistence,
-            Self::TemplateRendering(_)
-            | Self::TrackerStorageCreation(_)
-            | Self::TrackerDatabaseInit(_)
-            | Self::PrometheusStorageCreation(_)
-            | Self::GrafanaStorageCreation(_)
-            | Self::MysqlStorageCreation(_)
-            | Self::CaddyConfigDeployment(_) => ErrorKind::TemplateRendering,
-            Self::Deployment { .. } | Self::ReleaseOperationFailed { .. } => {
-                ErrorKind::InfrastructureOperation
-            }
-            Self::DeploymentFailed { source, .. } => source.error_kind(),
+            Self::TemplateRendering { .. } => ErrorKind::TemplateRendering,
+            Self::TrackerStorageCreation { .. }
+            | Self::TrackerDatabaseInit { .. }
+            | Self::PrometheusStorageCreation { .. }
+            | Self::GrafanaStorageCreation { .. }
+            | Self::MysqlStorageCreation { .. }
+            | Self::CaddyConfigDeployment { .. }
+            | Self::TrackerConfigDeployment { .. }
+            | Self::GrafanaProvisioningDeployment { .. }
+            | Self::PrometheusConfigDeployment { .. }
+            | Self::ComposeFilesDeployment { .. }
+            | Self::ReleaseOperationFailed { .. } => ErrorKind::InfrastructureOperation,
         }
     }
 }
@@ -285,7 +393,7 @@ State files are stored in: data/<env-name>/
 
 If the problem persists, report it with full system details."
             }
-            Self::TemplateRendering(_) => {
+            Self::TemplateRendering { .. } => {
                 "Template Rendering Failed - Troubleshooting:
 
 1. Check that template files exist in the templates directory
@@ -301,7 +409,7 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
-            Self::TrackerStorageCreation(_) => {
+            Self::TrackerStorageCreation { .. } => {
                 "Tracker Storage Creation Failed - Troubleshooting:
 
 1. Verify the target instance is reachable:
@@ -325,7 +433,7 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
-            Self::TrackerDatabaseInit(_) => {
+            Self::TrackerDatabaseInit { .. } => {
                 "Tracker Database Initialization Failed - Troubleshooting:
 
 1. Verify the tracker storage directories were created:
@@ -350,7 +458,7 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
-            Self::PrometheusStorageCreation(_) => {
+            Self::PrometheusStorageCreation { .. } => {
                 "Prometheus Storage Creation Failed - Troubleshooting:
 
 1. Verify the target instance is reachable:
@@ -374,7 +482,7 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
-            Self::GrafanaStorageCreation(_) => {
+            Self::GrafanaStorageCreation { .. } => {
                 "Grafana Storage Creation Failed - Troubleshooting:
 
 1. Verify the target instance is reachable:
@@ -398,7 +506,7 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
-            Self::MysqlStorageCreation(_) => {
+            Self::MysqlStorageCreation { .. } => {
                 "MySQL Storage Creation Failed - Troubleshooting:
 
 1. Verify the target instance is reachable:
@@ -422,7 +530,7 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
-            Self::CaddyConfigDeployment(_) => {
+            Self::CaddyConfigDeployment { .. } => {
                 "Caddy Configuration Deployment Failed - Troubleshooting:
 
 1. Verify the target instance is reachable:
@@ -448,10 +556,89 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
-            Self::Deployment { .. } => {
-                "Deployment Failed - Troubleshooting:
+            Self::TrackerConfigDeployment { .. } => {
+                "Tracker Configuration Deployment Failed - Troubleshooting:
 
-1. Verify the build directory exists and contains expected files
+1. Verify the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+2. Check that the tracker configuration was generated in the build directory:
+   ls build/<env-name>/tracker/
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/deploy-tracker-config.yml
+
+4. Check that the instance has sufficient disk space:
+   df -h
+
+5. Review the error message above for specific details
+
+Common causes:
+- Configuration files not generated
+- Insufficient disk space on target instance
+- Permission denied on target directories
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::GrafanaProvisioningDeployment { .. } => {
+                "Grafana Provisioning Deployment Failed - Troubleshooting:
+
+1. Verify the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+2. Check that the Grafana provisioning files were generated:
+   ls build/<env-name>/grafana/
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/deploy-grafana-provisioning.yml
+
+4. Check that the instance has sufficient disk space:
+   df -h
+
+5. Review the error message above for specific details
+
+Common causes:
+- Provisioning files not generated
+- Insufficient disk space on target instance
+- Permission denied on target directories
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::PrometheusConfigDeployment { .. } => {
+                "Prometheus Configuration Deployment Failed - Troubleshooting:
+
+1. Verify the target instance is reachable:
+   ssh <user>@<instance-ip>
+
+2. Check that the Prometheus configuration was generated:
+   ls build/<env-name>/prometheus/
+
+3. Verify the Ansible playbook exists:
+   ls templates/ansible/deploy-prometheus-config.yml
+
+4. Check that the instance has sufficient disk space:
+   df -h
+
+5. Review the error message above for specific details
+
+Common causes:
+- Configuration files not generated
+- Insufficient disk space on target instance
+- Permission denied on target directories
+- Ansible playbook not found
+- Network connectivity issues
+
+For more information, see docs/user-guide/commands.md"
+            }
+            Self::ComposeFilesDeployment { .. } => {
+                "Docker Compose Deployment Failed - Troubleshooting:
+
+1. Verify the build directory exists and contains expected files:
+   ls build/<env-name>/docker-compose/
 
 2. Check that the target instance is reachable:
    ssh <user>@<instance-ip>
@@ -471,7 +658,6 @@ Common causes:
 
 For more information, see docs/user-guide/commands.md"
             }
-            Self::DeploymentFailed { source, .. } => source.help(),
             Self::ReleaseOperationFailed { .. } => {
                 "Release Operation Failed - Troubleshooting:
 
@@ -503,6 +689,12 @@ mod tests {
     use super::*;
     use crate::domain::environment::repository::RepositoryError;
     use crate::domain::environment::state::StateTypeError;
+    use std::io;
+
+    /// Helper function to create a boxed error for testing
+    fn make_boxed_error(msg: &str) -> BoxedStepError {
+        Box::new(io::Error::other(msg))
+    }
 
     #[test]
     fn it_should_provide_help_for_environment_not_found() {
@@ -538,7 +730,10 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_template_rendering() {
-        let error = ReleaseCommandHandlerError::TemplateRendering("Test error".to_string());
+        let error = ReleaseCommandHandlerError::TemplateRendering {
+            message: "Test error".to_string(),
+            source: make_boxed_error("underlying error"),
+        };
 
         let help = error.help();
         assert!(help.contains("Template Rendering"));
@@ -582,18 +777,49 @@ mod tests {
                 actual: "created".to_string(),
             }),
             ReleaseCommandHandlerError::StatePersistence(RepositoryError::NotFound),
-            ReleaseCommandHandlerError::TemplateRendering("test".to_string()),
-            ReleaseCommandHandlerError::TrackerStorageCreation("test".to_string()),
-            ReleaseCommandHandlerError::TrackerDatabaseInit("test".to_string()),
-            ReleaseCommandHandlerError::PrometheusStorageCreation("test".to_string()),
-            ReleaseCommandHandlerError::GrafanaStorageCreation("test".to_string()),
-            ReleaseCommandHandlerError::MysqlStorageCreation("test".to_string()),
-            ReleaseCommandHandlerError::CaddyConfigDeployment("test".to_string()),
-            ReleaseCommandHandlerError::DeploymentFailed {
+            ReleaseCommandHandlerError::TemplateRendering {
                 message: "test".to_string(),
-                source: DeployComposeFilesStepError::ComposeBuildDirNotFound {
-                    path: "/tmp/test".to_string(),
-                },
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::TrackerStorageCreation {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::TrackerDatabaseInit {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::PrometheusStorageCreation {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::GrafanaStorageCreation {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::MysqlStorageCreation {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::CaddyConfigDeployment {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::TrackerConfigDeployment {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::GrafanaProvisioningDeployment {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::PrometheusConfigDeployment {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
+            },
+            ReleaseCommandHandlerError::ComposeFilesDeployment {
+                message: "test".to_string(),
+                source: make_boxed_error("test"),
             },
             ReleaseCommandHandlerError::ReleaseOperationFailed {
                 name: "test".to_string(),

@@ -372,7 +372,10 @@ impl ReleaseCommandHandler {
             .execute()
             .map_err(|e| {
                 (
-                    ReleaseCommandHandlerError::TrackerStorageCreation(e.to_string()),
+                    ReleaseCommandHandlerError::TrackerStorageCreation {
+                        message: e.to_string(),
+                        source: Box::new(e),
+                    },
                     current_step,
                 )
             })?;
@@ -401,7 +404,10 @@ impl ReleaseCommandHandler {
             .execute()
             .map_err(|e| {
                 (
-                    ReleaseCommandHandlerError::TrackerDatabaseInit(e.to_string()),
+                    ReleaseCommandHandlerError::TrackerDatabaseInit {
+                        message: e.to_string(),
+                        source: Box::new(e),
+                    },
                     current_step,
                 )
             })?;
@@ -435,7 +441,10 @@ impl ReleaseCommandHandler {
 
         let tracker_build_dir = step.execute().map_err(|e| {
             (
-                ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                ReleaseCommandHandlerError::TemplateRendering {
+                    message: e.to_string(),
+                    source: Box::new(e),
+                },
                 current_step,
             )
         })?;
@@ -483,7 +492,10 @@ impl ReleaseCommandHandler {
 
         step.execute().map_err(|e| {
             (
-                ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                ReleaseCommandHandlerError::TemplateRendering {
+                    message: e.to_string(),
+                    source: Box::new(e),
+                },
                 current_step,
             )
         })?;
@@ -526,7 +538,10 @@ impl ReleaseCommandHandler {
             .execute()
             .map_err(|e| {
                 (
-                    ReleaseCommandHandlerError::PrometheusStorageCreation(e.to_string()),
+                    ReleaseCommandHandlerError::PrometheusStorageCreation {
+                        message: e.to_string(),
+                        source: Box::new(e),
+                    },
                     current_step,
                 )
             })?;
@@ -569,7 +584,10 @@ impl ReleaseCommandHandler {
             .execute()
             .map_err(|e| {
                 (
-                    ReleaseCommandHandlerError::GrafanaStorageCreation(e.to_string()),
+                    ReleaseCommandHandlerError::GrafanaStorageCreation {
+                        message: e.to_string(),
+                        source: Box::new(e),
+                    },
                     current_step,
                 )
             })?;
@@ -612,7 +630,10 @@ impl ReleaseCommandHandler {
             .execute()
             .map_err(|e| {
                 (
-                    ReleaseCommandHandlerError::MysqlStorageCreation(e.to_string()),
+                    ReleaseCommandHandlerError::MysqlStorageCreation {
+                        message: e.to_string(),
+                        source: Box::new(e),
+                    },
                     current_step,
                 )
             })?;
@@ -659,7 +680,10 @@ impl ReleaseCommandHandler {
             .execute()
             .map_err(|e| {
                 (
-                    ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                    ReleaseCommandHandlerError::PrometheusConfigDeployment {
+                        message: e.to_string(),
+                        source: Box::new(e),
+                    },
                     current_step,
                 )
             })?;
@@ -718,7 +742,10 @@ impl ReleaseCommandHandler {
 
         step.execute().map_err(|e| {
             (
-                ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                ReleaseCommandHandlerError::TemplateRendering {
+                    message: e.to_string(),
+                    source: Box::new(e),
+                },
                 current_step,
             )
         })?;
@@ -766,7 +793,10 @@ impl ReleaseCommandHandler {
 
         step.execute().map_err(|e| {
             (
-                ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                ReleaseCommandHandlerError::TemplateRendering {
+                    message: e.to_string(),
+                    source: Box::new(e),
+                },
                 current_step,
             )
         })?;
@@ -809,7 +839,10 @@ impl ReleaseCommandHandler {
             .execute()
             .map_err(|e| {
                 (
-                    ReleaseCommandHandlerError::CaddyConfigDeployment(e.to_string()),
+                    ReleaseCommandHandlerError::CaddyConfigDeployment {
+                        message: e.to_string(),
+                        source: Box::new(e),
+                    },
                     current_step,
                 )
             })?;
@@ -863,7 +896,10 @@ impl ReleaseCommandHandler {
             .execute()
             .map_err(|e| {
                 (
-                    ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                    ReleaseCommandHandlerError::GrafanaProvisioningDeployment {
+                        message: e.to_string(),
+                        source: Box::new(e),
+                    },
                     current_step,
                 )
             })?;
@@ -901,7 +937,7 @@ impl ReleaseCommandHandler {
         .execute()
         .map_err(|e| {
             (
-                ReleaseCommandHandlerError::Deployment {
+                ReleaseCommandHandlerError::TrackerConfigDeployment {
                     message: e.to_string(),
                     source: Box::new(e),
                 },
@@ -937,7 +973,10 @@ impl ReleaseCommandHandler {
 
         let compose_build_dir = step.execute().await.map_err(|e| {
             (
-                ReleaseCommandHandlerError::TemplateRendering(e.to_string()),
+                ReleaseCommandHandlerError::TemplateRendering {
+                    message: e.to_string(),
+                    source: Box::new(e),
+                },
                 current_step,
             )
         })?;
@@ -975,9 +1014,9 @@ impl ReleaseCommandHandler {
 
         step.execute().map_err(|e| {
             (
-                ReleaseCommandHandlerError::DeploymentFailed {
+                ReleaseCommandHandlerError::ComposeFilesDeployment {
                     message: e.to_string(),
-                    source: e,
+                    source: Box::new(e),
                 },
                 current_step,
             )
