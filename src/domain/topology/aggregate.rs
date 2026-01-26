@@ -256,6 +256,7 @@ impl DockerComposeTopology {
 }
 
 #[cfg(test)]
+#[allow(clippy::large_stack_arrays)] // False positive with vec![] macro for ServiceTopology items
 mod tests {
     use super::*;
 
@@ -311,26 +312,23 @@ mod tests {
     mod required_networks {
         use super::*;
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // when creating 3+ ServiceTopology items. See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_derive_required_networks_from_all_services() {
-        //     let topology = DockerComposeTopology::new(vec![
-        //         ServiceTopology::with_networks(
-        //             Service::Tracker,
-        //             vec![Network::Database, Network::Metrics],
-        //         ),
-        //         ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
-        //         ServiceTopology::with_networks(Service::Prometheus, vec![Network::Metrics]),
-        //     ])
-        //     .unwrap();
-        //
-        //     let required = topology.required_networks();
-        //
-        //     assert!(required.contains(&Network::Database));
-        //     assert!(required.contains(&Network::Metrics));
-        // }
+        #[test]
+        fn it_should_derive_required_networks_from_all_services() {
+            let topology = DockerComposeTopology::new(vec![
+                ServiceTopology::with_networks(
+                    Service::Tracker,
+                    vec![Network::Database, Network::Metrics],
+                ),
+                ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
+                ServiceTopology::with_networks(Service::Prometheus, vec![Network::Metrics]),
+            ])
+            .unwrap();
+
+            let required = topology.required_networks();
+
+            assert!(required.contains(&Network::Database));
+            assert!(required.contains(&Network::Metrics));
+        }
 
         #[test]
         fn it_should_not_have_orphan_networks() {
@@ -350,52 +348,46 @@ mod tests {
             assert!(!required.contains(&Network::Proxy));
         }
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // when creating 3+ ServiceTopology items. See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_return_networks_in_deterministic_order() {
-        //     // Create topology with networks added in non-alphabetical order
-        //     let topology = DockerComposeTopology::new(vec![
-        //         ServiceTopology::with_networks(Service::Caddy, vec![Network::Proxy]),
-        //         ServiceTopology::with_networks(Service::Tracker, vec![Network::Database]),
-        //         ServiceTopology::with_networks(Service::Prometheus, vec![Network::Metrics]),
-        //         ServiceTopology::with_networks(Service::Grafana, vec![Network::Visualization]),
-        //     ])
-        //     .unwrap();
-        //
-        //     let required = topology.required_networks();
-        //
-        //     // Should be sorted alphabetically by name
-        //     let names: Vec<&str> = required.iter().map(Network::name).collect();
-        //     assert_eq!(
-        //         names,
-        //         vec![
-        //             "database_network",
-        //             "metrics_network",
-        //             "proxy_network",
-        //             "visualization_network"
-        //         ]
-        //     );
-        // }
+        #[test]
+        fn it_should_return_networks_in_deterministic_order() {
+            // Create topology with networks added in non-alphabetical order
+            let topology = DockerComposeTopology::new(vec![
+                ServiceTopology::with_networks(Service::Caddy, vec![Network::Proxy]),
+                ServiceTopology::with_networks(Service::Tracker, vec![Network::Database]),
+                ServiceTopology::with_networks(Service::Prometheus, vec![Network::Metrics]),
+                ServiceTopology::with_networks(Service::Grafana, vec![Network::Visualization]),
+            ])
+            .unwrap();
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_deduplicate_networks_used_by_multiple_services() {
-        //     let topology = DockerComposeTopology::new(vec![
-        //         ServiceTopology::with_networks(Service::Tracker, vec![Network::Metrics]),
-        //         ServiceTopology::with_networks(Service::Prometheus, vec![Network::Metrics]),
-        //     ])
-        //     .unwrap();
-        //
-        //     let required = topology.required_networks();
-        //
-        //     // Metrics appears twice but should only be in result once
-        //     assert_eq!(required.len(), 1);
-        //     assert!(required.contains(&Network::Metrics));
-        // }
+            let required = topology.required_networks();
+
+            // Should be sorted alphabetically by name
+            let names: Vec<&str> = required.iter().map(Network::name).collect();
+            assert_eq!(
+                names,
+                vec![
+                    "database_network",
+                    "metrics_network",
+                    "proxy_network",
+                    "visualization_network"
+                ]
+            );
+        }
+
+        #[test]
+        fn it_should_deduplicate_networks_used_by_multiple_services() {
+            let topology = DockerComposeTopology::new(vec![
+                ServiceTopology::with_networks(Service::Tracker, vec![Network::Metrics]),
+                ServiceTopology::with_networks(Service::Prometheus, vec![Network::Metrics]),
+            ])
+            .unwrap();
+
+            let required = topology.required_networks();
+
+            // Metrics appears twice but should only be in result once
+            assert_eq!(required.len(), 1);
+            assert!(required.contains(&Network::Metrics));
+        }
 
         #[test]
         fn it_should_return_empty_when_no_services() {
@@ -437,173 +429,152 @@ mod tests {
             assert!(required.is_empty());
         }
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_configure_deployment_with_mysql() {
-        //     let topology = DockerComposeTopology::new(vec![
-        //         ServiceTopology::with_networks(Service::Tracker, vec![Network::Database]),
-        //         ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
-        //     ])
-        //     .unwrap();
-        //
-        //     let required = topology.required_networks();
-        //
-        //     assert_eq!(required.len(), 1);
-        //     assert!(required.contains(&Network::Database));
-        // }
+        #[test]
+        fn it_should_configure_deployment_with_mysql() {
+            let topology = DockerComposeTopology::new(vec![
+                ServiceTopology::with_networks(Service::Tracker, vec![Network::Database]),
+                ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
+            ])
+            .unwrap();
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // when creating 3+ ServiceTopology items. See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_configure_deployment_with_monitoring() {
-        //     let topology = DockerComposeTopology::new(vec![
-        //         ServiceTopology::with_networks(Service::Tracker, vec![Network::Metrics]),
-        //         ServiceTopology::with_networks(
-        //             Service::Prometheus,
-        //             vec![Network::Metrics, Network::Visualization],
-        //         ),
-        //         ServiceTopology::with_networks(Service::Grafana, vec![Network::Visualization]),
-        //     ])
-        //     .unwrap();
-        //
-        //     let required = topology.required_networks();
-        //
-        //     assert_eq!(required.len(), 2);
-        //     assert!(required.contains(&Network::Metrics));
-        //     assert!(required.contains(&Network::Visualization));
-        // }
+            let required = topology.required_networks();
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // when creating 3+ ServiceTopology items. See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_configure_full_http_deployment() {
-        //     let topology = DockerComposeTopology::new(vec![
-        //         ServiceTopology::with_networks(
-        //             Service::Tracker,
-        //             vec![Network::Database, Network::Metrics],
-        //         ),
-        //         ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
-        //         ServiceTopology::with_networks(
-        //             Service::Prometheus,
-        //             vec![Network::Metrics, Network::Visualization],
-        //         ),
-        //         ServiceTopology::with_networks(Service::Grafana, vec![Network::Visualization]),
-        //     ])
-        //     .unwrap();
-        //
-        //     let required = topology.required_networks();
-        //
-        //     assert_eq!(required.len(), 3);
-        //     assert!(required.contains(&Network::Database));
-        //     assert!(required.contains(&Network::Metrics));
-        //     assert!(required.contains(&Network::Visualization));
-        //     assert!(!required.contains(&Network::Proxy)); // No Caddy
-        // }
+            assert_eq!(required.len(), 1);
+            assert!(required.contains(&Network::Database));
+        }
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // when creating 3+ ServiceTopology items. See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_configure_full_https_deployment() {
-        //     let topology = DockerComposeTopology::new(vec![
-        //         ServiceTopology::with_networks(
-        //             Service::Tracker,
-        //             vec![Network::Database, Network::Metrics, Network::Proxy],
-        //         ),
-        //         ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
-        //         ServiceTopology::with_networks(
-        //             Service::Prometheus,
-        //             vec![Network::Metrics, Network::Visualization],
-        //         ),
-        //         ServiceTopology::with_networks(
-        //             Service::Grafana,
-        //             vec![Network::Visualization, Network::Proxy],
-        //         ),
-        //         ServiceTopology::with_networks(Service::Caddy, vec![Network::Proxy]),
-        //     ])
-        //     .unwrap();
-        //
-        //     let required = topology.required_networks();
-        //
-        //     assert_eq!(required.len(), 4);
-        //     assert!(required.contains(&Network::Database));
-        //     assert!(required.contains(&Network::Metrics));
-        //     assert!(required.contains(&Network::Visualization));
-        //     assert!(required.contains(&Network::Proxy));
-        // }
+        #[test]
+        fn it_should_configure_deployment_with_monitoring() {
+            let topology = DockerComposeTopology::new(vec![
+                ServiceTopology::with_networks(Service::Tracker, vec![Network::Metrics]),
+                ServiceTopology::with_networks(
+                    Service::Prometheus,
+                    vec![Network::Metrics, Network::Visualization],
+                ),
+                ServiceTopology::with_networks(Service::Grafana, vec![Network::Visualization]),
+            ])
+            .unwrap();
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_configure_https_minimal_deployment() {
-        //     // Tracker + Caddy only (HTTPS with no monitoring or database)
-        //     let topology = DockerComposeTopology::new(vec![
-        //         ServiceTopology::with_networks(Service::Tracker, vec![Network::Proxy]),
-        //         ServiceTopology::with_networks(Service::Caddy, vec![Network::Proxy]),
-        //     ])
-        //     .unwrap();
-        //
-        //     let required = topology.required_networks();
-        //
-        //     assert_eq!(required.len(), 1);
-        //     assert!(required.contains(&Network::Proxy));
-        // }
+            let required = topology.required_networks();
+
+            assert_eq!(required.len(), 2);
+            assert!(required.contains(&Network::Metrics));
+            assert!(required.contains(&Network::Visualization));
+        }
+
+        #[test]
+        fn it_should_configure_full_http_deployment() {
+            let topology = DockerComposeTopology::new(vec![
+                ServiceTopology::with_networks(
+                    Service::Tracker,
+                    vec![Network::Database, Network::Metrics],
+                ),
+                ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
+                ServiceTopology::with_networks(
+                    Service::Prometheus,
+                    vec![Network::Metrics, Network::Visualization],
+                ),
+                ServiceTopology::with_networks(Service::Grafana, vec![Network::Visualization]),
+            ])
+            .unwrap();
+
+            let required = topology.required_networks();
+
+            assert_eq!(required.len(), 3);
+            assert!(required.contains(&Network::Database));
+            assert!(required.contains(&Network::Metrics));
+            assert!(required.contains(&Network::Visualization));
+            assert!(!required.contains(&Network::Proxy)); // No Caddy
+        }
+
+        #[test]
+        fn it_should_configure_full_https_deployment() {
+            let topology = DockerComposeTopology::new(vec![
+                ServiceTopology::with_networks(
+                    Service::Tracker,
+                    vec![Network::Database, Network::Metrics, Network::Proxy],
+                ),
+                ServiceTopology::with_networks(Service::MySQL, vec![Network::Database]),
+                ServiceTopology::with_networks(
+                    Service::Prometheus,
+                    vec![Network::Metrics, Network::Visualization],
+                ),
+                ServiceTopology::with_networks(
+                    Service::Grafana,
+                    vec![Network::Visualization, Network::Proxy],
+                ),
+                ServiceTopology::with_networks(Service::Caddy, vec![Network::Proxy]),
+            ])
+            .unwrap();
+
+            let required = topology.required_networks();
+
+            assert_eq!(required.len(), 4);
+            assert!(required.contains(&Network::Database));
+            assert!(required.contains(&Network::Metrics));
+            assert!(required.contains(&Network::Visualization));
+            assert!(required.contains(&Network::Proxy));
+        }
+
+        #[test]
+        fn it_should_configure_https_minimal_deployment() {
+            // Tracker + Caddy only (HTTPS with no monitoring or database)
+            let topology = DockerComposeTopology::new(vec![
+                ServiceTopology::with_networks(Service::Tracker, vec![Network::Proxy]),
+                ServiceTopology::with_networks(Service::Caddy, vec![Network::Proxy]),
+            ])
+            .unwrap();
+
+            let required = topology.required_networks();
+
+            assert_eq!(required.len(), 1);
+            assert!(required.contains(&Network::Proxy));
+        }
     }
 
     mod port_validation {
         use super::*;
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_succeed_when_no_port_conflicts() {
-        //     let result = DockerComposeTopology::new(vec![
-        //         ServiceTopology::new(
-        //             Service::Tracker,
-        //             vec![],
-        //             vec![
-        //                 PortBinding::udp(6969, "UDP announce"),
-        //                 PortBinding::tcp(7070, "HTTP announce"),
-        //             ],
-        //         ),
-        //         ServiceTopology::new(
-        //             Service::Prometheus,
-        //             vec![],
-        //             vec![PortBinding::tcp(9090, "Web UI")],
-        //         ),
-        //     ]);
-        //
-        //     assert!(result.is_ok());
-        // }
+        #[test]
+        fn it_should_succeed_when_no_port_conflicts() {
+            let result = DockerComposeTopology::new(vec![
+                ServiceTopology::new(
+                    Service::Tracker,
+                    vec![],
+                    vec![
+                        PortBinding::udp(6969, "UDP announce"),
+                        PortBinding::tcp(7070, "HTTP announce"),
+                    ],
+                ),
+                ServiceTopology::new(
+                    Service::Prometheus,
+                    vec![],
+                    vec![PortBinding::tcp(9090, "Web UI")],
+                ),
+            ]);
 
-        // TODO: Re-enable after Phase 4 DDD refactoring (Issue #301)
-        // Disabled due to clippy::large_stack_arrays false positive with vec![] macro
-        // See: https://github.com/rust-lang/rust-clippy/issues/12586
-        // #[test]
-        // fn it_should_fail_construction_when_same_host_port_bound_by_two_services() {
-        //     let result = DockerComposeTopology::new(vec![
-        //         ServiceTopology::new(
-        //             Service::Tracker,
-        //             vec![],
-        //             vec![PortBinding::tcp(9090, "Health check")],
-        //         ),
-        //         ServiceTopology::new(
-        //             Service::Prometheus,
-        //             vec![],
-        //             vec![PortBinding::tcp(9090, "Web UI")],
-        //         ),
-        //     ]);
-        //
-        //     assert!(result.is_err());
-        //     let conflict = result.unwrap_err();
-        //     assert_eq!(conflict.host_port, 9090);
-        // }
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn it_should_fail_construction_when_same_host_port_bound_by_two_services() {
+            let result = DockerComposeTopology::new(vec![
+                ServiceTopology::new(
+                    Service::Tracker,
+                    vec![],
+                    vec![PortBinding::tcp(9090, "Health check")],
+                ),
+                ServiceTopology::new(
+                    Service::Prometheus,
+                    vec![],
+                    vec![PortBinding::tcp(9090, "Web UI")],
+                ),
+            ]);
+
+            assert!(result.is_err());
+            let conflict = result.unwrap_err();
+            assert_eq!(conflict.host_port, 9090);
+        }
 
         #[test]
         fn it_should_succeed_when_services_have_no_ports() {
