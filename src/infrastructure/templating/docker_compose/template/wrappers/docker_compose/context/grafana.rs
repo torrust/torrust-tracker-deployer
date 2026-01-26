@@ -37,14 +37,17 @@ pub struct GrafanaServiceConfig {
 }
 
 impl GrafanaServiceConfig {
-    /// Creates a new `GrafanaServiceConfig` with pre-computed networks and ports
+    /// Creates a new `GrafanaServiceConfig` from domain configuration
+    ///
+    /// Uses the domain `PortDerivation` trait for port derivation logic,
+    /// ensuring business rules live in the domain layer.
     ///
     /// # Arguments
     ///
     /// * `config` - The domain Grafana configuration
     /// * `has_caddy` - Whether Caddy TLS proxy is enabled (adds `proxy_network`)
     #[must_use]
-    pub fn new(config: &GrafanaConfig, has_caddy: bool) -> Self {
+    pub fn from_domain_config(config: &GrafanaConfig, has_caddy: bool) -> Self {
         let networks = Self::compute_networks(has_caddy);
         // Use domain PortDerivation trait for port logic
         let port_bindings = config.derive_ports();
@@ -91,14 +94,14 @@ mod tests {
 
     #[test]
     fn it_should_connect_grafana_to_visualization_network() {
-        let config = GrafanaServiceConfig::new(&make_config(false), false);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(false), false);
 
         assert!(config.networks.contains(&Network::Visualization));
     }
 
     #[test]
     fn it_should_not_connect_grafana_to_proxy_network_when_caddy_disabled() {
-        let config = GrafanaServiceConfig::new(&make_config(false), false);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(false), false);
 
         assert_eq!(config.networks, vec![Network::Visualization]);
         assert!(!config.networks.contains(&Network::Proxy));
@@ -106,7 +109,7 @@ mod tests {
 
     #[test]
     fn it_should_connect_grafana_to_proxy_network_when_caddy_enabled() {
-        let config = GrafanaServiceConfig::new(&make_config(true), true);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(true), true);
 
         assert_eq!(
             config.networks,
@@ -116,7 +119,7 @@ mod tests {
 
     #[test]
     fn it_should_serialize_networks_to_name_strings() {
-        let config = GrafanaServiceConfig::new(&make_config(true), true);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(true), true);
 
         let json = serde_json::to_value(&config).expect("serialization should succeed");
 
@@ -127,7 +130,7 @@ mod tests {
 
     #[test]
     fn it_should_expose_port_3000_when_tls_disabled() {
-        let config = GrafanaServiceConfig::new(&make_config(false), false);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(false), false);
 
         assert_eq!(config.ports.len(), 1);
         assert_eq!(config.ports[0].binding(), "3000:3000");
@@ -135,7 +138,7 @@ mod tests {
 
     #[test]
     fn it_should_not_expose_ports_when_tls_enabled() {
-        let config = GrafanaServiceConfig::new(&make_config(true), true);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(true), true);
 
         assert!(config.ports.is_empty());
     }

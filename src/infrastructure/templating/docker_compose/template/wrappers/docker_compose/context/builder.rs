@@ -143,13 +143,13 @@ impl DockerComposeContextBuilder {
         let prometheus = self
             .prometheus_config
             .as_ref()
-            .map(|config| PrometheusServiceConfig::new(config, has_grafana));
+            .map(|config| PrometheusServiceConfig::from_domain_config(config, has_grafana));
 
         // Build Grafana service config if enabled
         let grafana = self
             .grafana_config
             .as_ref()
-            .map(|config| GrafanaServiceConfig::new(config, has_caddy));
+            .map(|config| GrafanaServiceConfig::from_domain_config(config, has_caddy));
 
         // Build Caddy service config if enabled
         let caddy = if has_caddy {
